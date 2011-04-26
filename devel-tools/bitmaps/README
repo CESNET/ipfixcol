@@ -1,0 +1,13 @@
+
+bmgen tool generates bitmap file (VAH so far, should be COMPAX in near future)
+
+The output of the bmgen can be then read by bmread tool.
+
+Test files
+==========
+
+Example list of dst/src ports from records collected by NFDUMP is available
+on cellar machines in directory /home/data/groups/test/ipfixcol/bitmaps/.
+There are examples of 5min time window and 1hour time window. These files
+are supposed to be an input files of bmgen tool.
+
