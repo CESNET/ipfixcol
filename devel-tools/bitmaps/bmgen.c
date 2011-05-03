@@ -217,6 +217,18 @@ int main (int argc, char* argv[])
 					obuffer_list_tail->buffer = &obuffer[bmword[i].index];
 					obuffer_list_tail->next = NULL;
 				}
+
+				/*check if is offset realy empty (zero count can be there!)*/
+				if(obuffer[bmword[i].index].data[obuffer[bmword[i].index].offset] != 0 ){
+					/*skip zero count by increasing offset (alocated memory check needed)*/
+					obuffer[bmword[i].index].offset++;
+					if (obuffer[bmword[i].index].offset == obuffer[bmword[i].index].size) {
+						/* double size of the memory buffer for this index */
+						obuffer[bmword[i].index].size *= 2;
+						obuffer[bmword[i].index].data = (uint32_t*) realloc ( obuffer[bmword[i].index].data, sizeof(uint32_t) * obuffer[bmword[i].index].size);
+						memset(&obuffer[bmword[i].index].data[obuffer_list_tail->buffer->offset], 0, (obuffer[bmword[i].index].size / 2));
+					}
+				}
 				obuffer[bmword[i].index].data[obuffer[bmword[i].index].offset] = bmword[i].VAH_bm;
 				i++;
 			}
