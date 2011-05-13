@@ -1,7 +1,14 @@
 
-bmgen tool generates bitmap file (VAH so far, should be COMPAX in near future)
+bmgen tool generates bitmap file (VAH so far, should be COMPAX in near future) (work stoped)
+The output of the bmgen can be then read by bmread tool. (work stoped)
 
-The output of the bmgen can be then read by bmread tool.
+compaxgen generates COMPAX bitmap file (first working implementation (dirty))
+compaxread reads COMPAX file (first working implementation (dirty))
+
+ozrgen generates bitmap file with zero words reductions (first working implementation)
+ozrread reads 'OZR' bitmap file (first working implementation)
+
+
 
 Test files
 ==========
