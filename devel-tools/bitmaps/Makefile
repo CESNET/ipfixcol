@@ -3,13 +3,25 @@
 ##########################################
 
 CC      = gcc
-CFLAGS  = -Wall -O3
+CFLAGS  = -Wall -g #-O3 
 #flags for debugging: -g -pg -Wextra
 
-all: bmgen bmread
+all: bmgen bmread compaxgen compaxread ozrgen ozrread
 
 # bmgen
 bmgen: bmgen.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+compaxgen: compaxgen.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+compaxread: compaxread.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+ozrgen: ozrgen.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+ozrread: ozrread.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 # bmread
@@ -18,5 +30,5 @@ bmread: bmread.c
 
 
 clean:
-	rm -f bmgen bmread
+	rm -f bmgen bmread compaxgen compaxread ozrgen ozrread
 
