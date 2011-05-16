@@ -40,7 +40,7 @@ NAME = @PACKAGE_NAME@
 TARGETS = ipfixcol
 MANPAGES = ipfixcol.1
 MANSRCS = ipfixcol.dbk
-SRCS =	ipfixcol.c
+SRCS =	src/ipfixcol.c
 
 HDRS =	ipfixcol.h \
 	headers/ipfix.h \
@@ -97,7 +97,7 @@ $(OBJDIR)/%.o: %.c
 		(mkdir -p $$(dirname $@))
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) $(DBG) -c $< -o $@
 
-doxygen: $(DOXYGEN_CONFIG)
+doxygen: $(DOXYGEN_CONFIG) $(HDRS) $(SRCS)
 	@if [ -n "$(DOXYGEN)" ]; then \
 		(cat $(DOXYGEN_CONFIG); \
 		echo 'OUTPUT_DIRECTORY = $(DOXYGEN_DIR)' ) | \
