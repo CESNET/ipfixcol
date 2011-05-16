@@ -1,0 +1,51 @@
+Summary: IPFIX Collector Toolset.
+Name: ipfixcol
+Version: %(cut -f1 ./VERSION | tr -d '\n')
+Release: @RELEASE@
+URL: http://www.liberouter.org/
+Source: http://homeproj.cesnet.cz/rpm/liberouter/stable/SOURCES/%{name}-%{version}-%{release}.tar.gz
+Group: Liberouter
+License: BSD
+Vendor: CESNET, z.s.p.o.
+Packager: @USERNAME@ <@USERMAIL@>
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
+
+BuildRequires: gcc make doxygen pkgconfig
+
+%description
+IPFIX Collector Toolset
+
+%package devel
+Summary: IPFIX Collector development package
+Group: Liberouter
+Requires: ipfixcol = %{version}-%{release}
+
+%description devel
+This package contains header files needed for development of plugins for IPFIX Collector (ipfixcol).
+
+%prep
+%setup
+
+%post
+
+%preun
+
+%postun
+
+
+%build
+./configure --with-distro=@DISTRO@ --prefix=%{_prefix} @CONFIGURE_PARAMS@;
+make
+make doc
+
+%install
+make DESTDIR=$RPM_BUILD_ROOT install
+
+%files
+%{_bindir}/ipfixcol
+%{_mandir}/man1/ipfixcol.1*
+%{_mandir}/man5/ipfixcol.conf.5*
+
+%files devel
+%{_prefix}/include/ipfixcol.h
+%{_prefix}/include/ipfixcol/*.h

@@ -1,0 +1,172 @@
+#
+# Copyright (c) 2011 CESNET
+#
+# LICENSE TERMS
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with the
+#    distribution.
+# 3. Neither the name of the Company nor the names of its contributors
+#    may be used to endorse or promote products derived from this
+#    software without specific prior written permission.
+#
+# ALTERNATIVELY, provided that this notice is retained in full, this
+# product may be distributed under the terms of the GNU General Public
+# License (GPL) version 2 or later, in which case the provisions
+# of the GPL apply INSTEAD OF those given above.
+#
+# This software is provided ``as is'', and any express or implied
+# warranties, including, but not limited to, the implied warranties of
+# merchantability and fitness for a particular purpose are disclaimed.
+# In no event shall the company or contributors be liable for any
+# direct, indirect, incidental, special, exemplary, or consequential
+# damages (including, but not limited to, procurement of substitute
+# goods or services; loss of use, data, or profits; or business
+# interruption) however caused and on any theory of liability, whether
+# in contract, strict liability, or tort (including negligence or
+# otherwise) arising in any way out of the use of this software, even
+# if advised of the possibility of such damage.
+#
+# $Id$
+#
+
+NAME = @PACKAGE_NAME@
+TARGETS = ipfixcol
+MANPAGES = ipfixcol.1
+MANSRCS = ipfixcol.dbk
+SRCS =	ipfixcol.c
+
+HDRS =	ipfixcol.h \
+	headers/ipfix.h \
+	headers/input.h \
+	headers/storage.h
+
+# Various configurable paths (remember to edit Makefile.in, not Makefile)
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+datarootdir = @datarootdir@
+datadir = @datadir@
+bindir = @bindir@
+includedir = @includedir@
+libdir =  @libdir@
+mandir = @mandir@
+
+CC = @CC@
+LN_S = @LN_S@
+DOXYGEN = @DOXYGEN@
+DOXYGEN_CONFIG = Doxyfile
+DOXYGEN_DIR = doxygen
+RPMBUILD = @RPMBUILD@
+INSTALL = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+INSTALL_DATA = @INSTALL_DATA@
+RPMDIR = RPMBUILD
+LIBS = @LIBS@
+CFLAGS = -Wall @CFLAGS@
+CPPFLAGS = @CPPFLAGS@
+
+OBJDIR= .obj
+VERSION = $(shell cut -f1 ./VERSION | tr -d '\n')
+MAJOR_VER = $(shell echo $(VERSION) | cut -d. -f1)
+RELEASE = @RELEASE@
+
+OBJS = $(SRCS:%.c=$(OBJDIR)/%.o)
+
+MANPATH=$(DESTDIR)$(mandir)/man$(subst .,,$(suffix $(1)))                                                                                                                                                                                    
+define MANINSTALL                                                                                                                                                                                                                            
+[ -d $(call MANPATH,$(1)) ] || \
+	(mkdir -p $(call MANPATH,$(1)); \
+	chmod 755 $(call MANPATH,$(1))); \
+$(INSTALL_DATA) $(1) $(call MANPATH,$(1))/;
+endef
+
+all: ipfixcol
+
+ipfixcol: $(OBJS)
+	@rm -f $@;
+	$(CC) -Wall $(CFLAGS) $(CPPFLAGS) $(DBG) $(LIBS) $(OBJS) -o $@
+
+$(OBJDIR)/%.o: %.c
+	@[ -d $$(dirname $@) ] || \
+		(mkdir -p $$(dirname $@))
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) $(DBG) -c $< -o $@
+
+doxygen: $(DOXYGEN_CONFIG)
+	@if [ -n "$(DOXYGEN)" ]; then \
+		(cat $(DOXYGEN_CONFIG); \
+		echo 'OUTPUT_DIRECTORY = $(DOXYGEN_DIR)' ) | \
+		$(DOXYGEN) - > /dev/null 2>&1; \
+	else \
+		echo "Missing doxygen"; \
+		exit 1; \
+	fi
+
+.PHONY: doc
+doc: doxygen
+
+.PHONY: dist
+dist: tarball rpm
+
+.PHONY: tarball
+tarball: $(SRCS) $(HEADERS)
+	@rm -rf $(NAME)-$(VERSION); \
+	mkdir -p $(NAME)-$(VERSION)/ipfixcol; \
+	for i in $(SRCS) $(HDRS) configure.in configure Makefile.in VERSION \
+	    Doxyfile $(NAME).spec.in $(NAME).pc.in install-sh; do \
+		cp $$i $(NAME)-$(VERSION)/$$i; \
+	done;
+	@rm -rf $(RPMDIR)/SOURCES/; \
+	mkdir -p $(RPMDIR)/SOURCES/; \
+	tar -c -z -f $(RPMDIR)/SOURCES/$(NAME)-$(VERSION)-$(RELEASE).tar.gz \
+	    $(NAME)-$(VERSION); \
+	rm -rf $(NAME)-$(VERSION);
+
+.PHONY: rpm
+rpm: tarball $(NAME).spec
+	@mkdir -p $(RPMDIR)/BUILD $(RPMDIR)/RPMS $(RPMDIR)/SOURCES $(RPMDIR)/SPECS $(RPMDIR)/SRPMS;
+	$(RPMBUILD) -ba $(NAME).spec \
+		--define "_topdir `pwd`/$(RPMDIR)";
+
+.PHONY: cleanall
+cleanall: clean distclean
+
+.PHONY: distclean
+distclean:
+	rm -rf $(RPMDIR)
+
+.PHONY: install
+install: install-devel install-doc $(TARGETS) $(MANPAGES)
+	[ -d $(DESTDIR)/$(bindir) ] || \
+	    (mkdir -p $(DESTDIR)/$(bindir); chmod 755 $(DESTDIR)/$(bindir))
+	$(INSTALL_PROGRAM) $(TARGETS) $(DESTDIR)/$(bindir)/;
+	$(foreach man,$(MANPAGES),$(call MANINSTALL,$(man)))
+
+.PHONY: install-devel
+install-devel:
+	[ -d $(DESTDIR)/$(libdir)/pkgconfig ] || \
+	    (mkdir -p $(DESTDIR)/$(libdir)/pkgconfig; chmod 755 $(DESTDIR)/$(libdir)/pkgconfig)
+	[ -d $(DESTDIR)/$(includedir) ] || \
+	    (mkdir -p $(DESTDIR)/$(includedir); chmod 755 $(DESTDIR)/$(includedir))
+	[ -d $(DESTDIR)/$(includedir)/ipfixcol ] || \
+	    (mkdir -p $(DESTDIR)/$(includedir)/ipfixcol; chmod 755 $(DESTDIR)/$(includedir)/ipfixcol)
+	for i in $(HDRS); do \
+		$(INSTALL_DATA) $$i $(DESTDIR)/$(includedir)/`dirname $$i | sed s'/headers/ipfixcol/'`/; \
+	done; \
+	$(INSTALL_DATA) $(NAME).pc $(DESTDIR)/$(libdir)/pkgconfig/$(NAME).pc;
+
+.PHONY: install-doc
+install-doc:
+	[ -d $(DESTDIR)/$(datadir)/$(NAME)/$(DOXYGEN_DIR) ] || \
+		(mkdir -p $(DESTDIR)/$(datadir)/$(NAME)/$(DOXYGEN_DIR); \
+		chmod -R 755 $(DESTDIR)/$(datadir)/$(NAME))
+	cp -r $(DOXYGEN_DIR)/* $(DESTDIR)/$(datadir)/$(NAME)/$(DOXYGEN_DIR)/;
+
+.PHONY: clean
+clean:
+	rm -rf *.a *.so* $(OBJDIR) $(DOXYGEN_DIR)/
