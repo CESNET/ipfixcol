@@ -37,7 +37,18 @@
  *
  */
 
-
+/**
+ * \defgroup inputAPI Public Input Plugin API
+ *
+ * These functions specifies a communication interface between ipficol core and
+ * input plugins receiving data. Input plugins pass data to the ipfixcol in
+ * a form of the IPFIX packet. The source of data is completely independent and
+ * any needed parsing or transformation to the IPFIX packet format is up to the
+ * input plugin. Generally we distinguish two kinds of sources - network and
+ * file. Together with the data also an information about data source is passed.
+ *
+ * @{
+ */
 #ifndef IPFIXCOL_INPUT_H_
 #define IPFIXCOL_INPUT_H_
 
@@ -49,7 +60,7 @@
  * information structure\endlink (like \link #input_info_network network\endlink
  * or \link #input_info_file file\endlink).
  */
-typedef enum SOURCE_TYPE {
+enum SOURCE_TYPE{
 	SOURCE_TYPE_UDP,          /**< IPFIX over UDP */
 	SOURCE_TYPE_TCP,          /**< IPFIX over TCP */
 	SOURCE_TYPE_TCPTLS,       /**< IPFIX over TCP secured with TLS */
@@ -58,7 +69,7 @@ typedef enum SOURCE_TYPE {
 	SOURCE_TYPE_NF9,          /**< NetFlow v9 */
 	SOURCE_TYPE_IPFIX_FILE,   /**< IPFIX File Format */
 	SOURCE_TYPE_COUNT         /**< number of defined SOURCE_TYPEs */
-} SOURCE_TYPE;
+};
 
 /**
  * \struct input_info
@@ -66,7 +77,7 @@ typedef enum SOURCE_TYPE {
  * input information type.
  */
 struct input_info {
-	SOURCE_TYPE type;         /**< type of source defined by enum #SOURCE_TYPE */
+	enum SOURCE_TYPE type;    /**< type of source defined by enum #SOURCE_TYPE */
 };
 
 /**
@@ -74,7 +85,7 @@ struct input_info {
  * \brief Input information structure specific for network based data sources.
  */
 struct input_info_network {
-	SOURCE_TYPE type;         /**< type of source - #SOURCE_TYPE_UDP,
+	enum SOURCE_TYPE type;    /**< type of source - #SOURCE_TYPE_UDP,
 	                           * #SOURCE_TYPE_TCP, #SOURCE_TYPE_TCPTLS,
 	                           * #SOURCE_TYPE_SCTP, #SOURCE_TYPE_NF5,
 	                           * #SOURCE_TYPE_NF9 */
@@ -100,7 +111,7 @@ struct input_info_network {
  * \brief Input information structure specific for file based data sources.
  */
 struct input_info_file {
-	SOURCE_TYPE type;         /**< type of source - #SOURCE_TYPE_IPFIX_FILE */
+	enum SOURCE_TYPE type;    /**< type of source - #SOURCE_TYPE_IPFIX_FILE */
 	char *name;               /**< name of the input file */
 };
 
@@ -109,11 +120,11 @@ struct input_info_file {
  *
  * The function is called just once before any other input API's function.
  *
- * @param[in]  params  String with specific parameters for the input plugin.
- * @param[out] config  Plugin-specific configuration structure. ipfixcol is not
+ * \param[in]  params  String with specific parameters for the input plugin.
+ * \param[out] config  Plugin-specific configuration structure. ipfixcol is not
  * involved in the config's structure, it is just passed to the following calls
  * of input API's functions.
- * @return 0 on success, nonzero else.
+ * \return 0 on success, nonzero else.
  */
 int input_init(char *params, void **config);
 
@@ -131,11 +142,11 @@ int input_init(char *params, void **config);
  * the fact that this information data will be only read and not changed by
  * ipfixcol core.
  *
- * @param[in] config  Plugin-specific configuration data prepared by init
+ * \param[in] config  Plugin-specific configuration data prepared by init
  * function.
- * @param[out] info   Information structure describing the source of the data.
- * @param[out] packet Flow information data in the form of IPFIX packet.
- * @return 0 on success, nonzero else.
+ * \param[out] info   Information structure describing the source of the data.
+ * \param[out] packet Flow information data in the form of IPFIX packet.
+ * \return 0 on success, nonzero else.
  */
 int get_packet(void *config, struct input_info** info, char **packet);
 
@@ -146,9 +157,12 @@ int get_packet(void *config, struct input_info** info, char **packet);
  * function is used only once as a last function call of the specific input
  * plugin.
  *
- * @param[in,out] config  Plugin-specific configuration data prepared by init
- * @return 0 on success and config is changed to NULL, nonzero else.
+ * \param[in,out] config  Plugin-specific configuration data prepared by init
+ * \return 0 on success and config is changed to NULL, nonzero else.
  */
 int input_close(void **config);
 
 #endif /* IPFIXCOL_INPUT_H_ */
+
+/**@}*/
+
