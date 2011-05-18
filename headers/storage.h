@@ -37,10 +37,114 @@
  *
  */
 
-
 #ifndef IPFIXCOL_STORAGE_H_
 #define IPFIXCOL_STORAGE_H_
 
-/* TODO */
+#include "ipfix.h"
+#include "input.h"
+#include "templates.h"
+
+/**
+ * \defgroup storageAPI Public Storage Plugin API
+ *
+ * These functions specifies a communication interface between ipficol core,
+ * namely a data manager handling specific Observation Domain ID, and storage
+ * plugins. More precisely, each storage plugin communicates with a separated
+ * thread of the data manager.
+ *
+ * \image html arch_scheme_core_comm.png "ipfixcol internal communication"
+ * \image latex arch_scheme_core_comm.png "ipfixcol internal communication" width=10cm
+ *
+ * @{
+ */
+
+/**
+ * \struct data_template_couple
+ * \brief This structure connects Data set from the IPFIX packet with the
+ * template structure describing the Data set
+ *
+ */
+struct data_template_couple{
+	ipfix_data_set_t *data_set;  /**< Address of the Data Set in the packet */
+	ipfix_template_t *template;  /**< Template structure corresponding to this Data set */
+};
+
+/**
+ * \struct ipfix_message
+ * \brief Structure covering main parts of the IPFIX packet by pointers into it.
+ */
+struct ipfix_message {
+	/** IPFIX header*/
+	struct ipfix_header               *pkt_header;
+	/** Input source information */
+	struct input_info                 *input_info;
+	/** List of Template Sets in the packet */
+	struct ipfix_template_set         *templ_set[1024];
+	/** List of Options Template Sets in the packet */
+	struct ipfix_options_template_set *opt_templ_set[1024];
+	/** List of Data Sets (with a link to corresponding template) in the packet */
+	data_template_couple              data_set[1023];
+};
+
+/**
+ * \brief Storage plugin initialization function.
+ *
+ * The function is called just once before any other storage API's function.
+ *
+ * \param[in]  params  String with specific parameters for the storage plugin.
+ * \param[out] config  Plugin-specific configuration structure. ipfixcol is not
+ * involved in the config's structure, it is just passed to the following calls
+ * of storage API's functions.
+ * \return 0 on success, nonzero else.
+ */
+int storage_init (char *params, void **config);
+
+/**
+ * \brief Pass IPFIX data with supplemental structures from ipfixcol core into
+ * the storage plugin.
+ *
+ * The way of data processing is completely up to the specific storage plugin.
+ * The basic usage is to store all data in a specific format, but also various
+ * processing (statistics, etc.) can be done by storage plugin. In general any
+ * processing with IPFIX data can be done by the storage plugin.
+ *
+ * \param[in] config     Plugin-specific configuration data prepared by init
+ * function.
+ * \param[in] ipfix_msg  Covering structure including IPFIX data as well as
+ * supplementary structures for better/faster parsing of IPFIX data.
+ * \param[in] templates  The list of preprocessed templates for possible
+ * better/faster data processing.
+ * \return 0 on success, nonzero else.
+ */
+int store_packet (void *config, const struct ipfix_message *ipfix_msg,
+        const ipfix_template_t *templates);
+
+/**
+ * \brief Announce willing to store currently processing data.
+ *
+ * This way ipfixcol announces willing to store immediately as much data as
+ * possible. The impulse to this action is taken from the user and broadcasted
+ * by ipfixcol to all storage plugins. The real response of the storage plugin
+ * is completely up to the specific plugin.
+ *
+ * \param[in] config  Plugin-specific configuration data prepared by init
+ * function.
+ * \return 0 on success, nonzero else.
+ */
+int store_now (const void *config);
+
+/**
+ * \brief Storage plugin "destructor".
+ *
+ * Clean up all used plugin-specific structures and memory allocations. This
+ * function is used only once as a last function call of the specific storage
+ * plugin.
+ *
+ * \param[in,out] config  Plugin-specific configuration data prepared by init
+ * \return 0 on success and config is changed to NULL, nonzero else.
+ */
+int storage_close (void **config);
+
+/**@}*/
 
 #endif /* IPFIXCOL_STORAGE_H_ */
