@@ -42,8 +42,7 @@ MANPAGES = ipfixcol.1
 MANSRCS = ipfixcol.dbk
 SRCS =	src/ipfixcol.c
 
-HDRS =	ipfixcol.h \
-	headers/ipfix.h \
+HDRS =	headers/ipfix.h \
 	headers/input.h \
 	headers/storage.h
 
@@ -98,10 +97,11 @@ $(OBJDIR)/%.o: %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) $(DBG) -c $< -o $@
 
 doxygen: $(DOXYGEN_CONFIG) $(HDRS) $(SRCS)
-	@if [ -n "$(DOXYGEN)" ]; then \
+	@[ -d $(DOXYGEN_DIR) ] || mkdir -p $(DOXYGEN_DIR); \
+	if [ -n "$(DOXYGEN)" ]; then \
 		(cat $(DOXYGEN_CONFIG); \
 		echo 'OUTPUT_DIRECTORY = $(DOXYGEN_DIR)' ) | \
-		$(DOXYGEN) - > /dev/null 2>&1; \
+		$(DOXYGEN) - > /dev/null; \
 	else \
 		echo "Missing doxygen"; \
 		exit 1; \
@@ -148,7 +148,7 @@ install: install-devel install-doc $(TARGETS) $(MANPAGES)
 	$(foreach man,$(MANPAGES),$(call MANINSTALL,$(man)))
 
 .PHONY: install-devel
-install-devel:
+install-devel: $(HDRS) headers/ipfixcol.h $(NAME).pc
 	[ -d $(DESTDIR)/$(libdir)/pkgconfig ] || \
 	    (mkdir -p $(DESTDIR)/$(libdir)/pkgconfig; chmod 755 $(DESTDIR)/$(libdir)/pkgconfig)
 	[ -d $(DESTDIR)/$(includedir) ] || \
@@ -158,6 +158,7 @@ install-devel:
 	for i in $(HDRS); do \
 		$(INSTALL_DATA) $$i $(DESTDIR)/$(includedir)/`dirname $$i | sed s'/headers/ipfixcol/'`/; \
 	done; \
+	$(INSTALL_DATA) headers/ipfixcol.h $(DESTDIR)/$(includedir)/ipfixcol.h;
 	$(INSTALL_DATA) $(NAME).pc $(DESTDIR)/$(libdir)/pkgconfig/$(NAME).pc;
 
 .PHONY: install-doc
