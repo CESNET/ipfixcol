@@ -44,7 +44,8 @@ SRCS =	src/ipfixcol.c
 
 HDRS =	headers/ipfix.h \
 	headers/input.h \
-	headers/storage.h
+	headers/storage.h \
+	headers/templates.h
 
 # Various configurable paths (remember to edit Makefile.in, not Makefile)
 prefix = @prefix@

@@ -1,11 +1,10 @@
 /**
- * \file ipfixcol.h
+ * \file templates.h
  * \author Radek Krejci <rkrejci@cesnet.cz>
- * \brief The main devel header for IPFIX Collector.
+ * \brief Public structures and functions (API) of the ipfixcol's Template
+ * Manager
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
- *
- * LICENSE TERMS
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +24,7 @@
  * License (GPL) version 2 or later, in which case the provisions
  * of the GPL apply INSTEAD OF those given above.
  *
- * This software is provided ``as is'', and any express or implied
+ * This software is provided ``as is, and any express or implied
  * warranties, including, but not limited to, the implied warranties of
  * merchantability and fitness for a particular purpose are disclaimed.
  * In no event shall the company or contributors be liable for any
@@ -39,20 +38,18 @@
  *
  */
 
-#ifndef IPFIXCOL_H_
-#define IPFIXCOL_H_
+#ifndef TEMPLATES_H_
+#define TEMPLATES_H_
 
 /**
- * \mainpage IPFIX Collector Developer's Documentation
+ * \defgroup templateMngAPI Template Manager API
  *
- * This documents provides documentation of IPFIX Collector (ipfixcol). We
- * provides public API of the collector's input plugins as well as its storage
- * (output) plugins.
+ * \todo ipfix_template_t
+ * \todo Template Manager functions
+ *
+ * @{
  */
 
-#include "headers/input.h"
-#include "headers/storage.h"
-#include "headers/ipfix.h"
-#include "headers/templates.h"
+/**@}*/
 
-#endif /* IPFIXCOL_H_ */
+#endif /* TEMPLATES_H_ */
