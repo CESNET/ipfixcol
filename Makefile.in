@@ -47,6 +47,14 @@ HDRS =	headers/ipfix.h \
 	headers/storage.h \
 	headers/templates.h
 
+# The form of name is 'storage-'<name of subdir in src/storage/>
+STORAGE_PLUGINS = storage-ipfix \
+		  storage-ipfixcol
+
+# The form of name is 'input-'<name of subdir in src/input/>
+INPUT_PLUGINS = input-udp \
+		input-ipfix
+
 # Various configurable paths (remember to edit Makefile.in, not Makefile)
 prefix = @prefix@
 exec_prefix = @exec_prefix@
@@ -70,6 +78,7 @@ RPMDIR = RPMBUILD
 LIBS = @LIBS@
 CFLAGS = -Wall @CFLAGS@
 CPPFLAGS = @CPPFLAGS@
+@SET_MAKE@
 
 OBJDIR= .obj
 VERSION = $(shell cut -f1 ./VERSION | tr -d '\n')
@@ -97,6 +106,19 @@ $(OBJDIR)/%.o: %.c
 		(mkdir -p $$(dirname $@))
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(INCLUDES) $(DBG) -c $< -o $@
 
+.PHONY: plugins input-plugins storage-plugins $(STORAGE_PLUGINS) $(INPUT_PLUGINS)
+plugins: input-plugins storage-plugins
+
+input-plugins: $(INPUT_PLUGINS)
+
+storage-plugins: $(STORAGE_PLUGINS)
+
+$(INPUT_PLUGINS):
+	$(MAKE) -C src/input/${@##*-}
+
+$(STORAGE_PLUGINS):
+	$(MAKE) -C src/storage/${@##*-}
+
 doxygen: $(DOXYGEN_CONFIG) $(HDRS) $(SRCS)
 	@[ -d $(DOXYGEN_DIR) ] || mkdir -p $(DOXYGEN_DIR); \
 	if [ -n "$(DOXYGEN)" ]; then \
@@ -117,10 +139,15 @@ dist: tarball rpm
 .PHONY: tarball
 tarball: $(SRCS) $(HEADERS)
 	@rm -rf $(NAME)-$(VERSION); \
-	mkdir -p $(NAME)-$(VERSION)/ipfixcol; \
+	mkdir $(NAME)-$(VERSION); \
 	for i in $(SRCS) $(HDRS) configure.in configure Makefile.in VERSION \
 	    Doxyfile $(NAME).spec.in $(NAME).pc.in install-sh; do \
+		[ "$$i" != "$${i%/*}" -a ! -d $(NAME)-$(VERSION)/$${i%/*} ] && mkdir -p $(NAME)-$(VERSION)/$${i%/*}; \
 		cp $$i $(NAME)-$(VERSION)/$$i; \
+	done;
+	for i in $(STORAGE_PLUGINS) $(INPUT_PLUGINS); do \
+		[ -d $(NAME)-$(VERSION)/src/$${i%%-*}/$${i#*-} ] || mkdir -p $(NAME)-$(VERSION)/src/$${i%%-*}/$${i#*-}; \
+		cp -R src/$${i%%-*}/$${i#*-} $(NAME)-$(VERSION)/src/$${i%%-*}/; \
 	done;
 	@rm -rf $(RPMDIR)/SOURCES/; \
 	mkdir -p $(RPMDIR)/SOURCES/; \
