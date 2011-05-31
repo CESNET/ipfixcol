@@ -80,12 +80,12 @@ void set_msg_level(int level){
 \brief MSG levels
 */
 typedef enum msg_level{
-	MSG_DEBUG = -1,/*!< Print msg as debug msg (only if DEBUG macro is defined) */ 
 	MSG_ERROR = 0, /*!< Print msg as error msg (printed with default msg_level)*/
 	MSG_WARNING = 1, /*!< Print msg as warning msg (printed with default msg_level)*/
 	MSG_NOTICE = 2, /*!< Print msg as verbose msg (printed with default msg_level)*/
 	MSG_VERBOSE = 3, /*!< Print msg as verbose msg (print only if msg_level is increased )*/
 	MSG_VERBOSE_ADVANCED = 4, /*!< Print msg as verbose msg (print only if msg_level is increased even more )*/
+	MSG_DEBUG = 5 /*!< Print msg as debug msg (only if DEBUG macro is defined) */
 }msg_level_t;
 
 
