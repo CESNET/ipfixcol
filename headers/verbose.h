@@ -45,7 +45,7 @@
 /*! controls messages level */
 int msg_level = 2;
 
-/* controls usage of syslog */
+/*! controls usage of syslog */
 int syslog_on = 0;
 
 /*! buffer for messages */
@@ -65,10 +65,10 @@ void use_syslog(char *progname){
 }
 
 /**
- * \brief set messages level
+ * \brief set output messages level
  *
- * All messages with lower or equal level
- * are printed.
+ * All messages with lower or equal message 
+ * level are printed.
  *
  *\param level level of messages
  */
@@ -77,7 +77,7 @@ void set_msg_level(int level){
 }
 
 /*!
-\brief MSG levels
+ *\brief msg levels
 */
 typedef enum msg_level{
 	MSG_ERROR = 0, /*!< Print msg as error msg (printed with default msg_level)*/
@@ -90,7 +90,7 @@ typedef enum msg_level{
 
 
 /**
- * \brief send message to stderr or syslog without new line
+ * \brief send message to stderr or syslog
  *
  * send message to stderr or syslog according to global syslog_on variable
  * messages with MSG_DEBUG level are printed only if DEBUG macro is defined
@@ -148,6 +148,16 @@ void print_msg(int level, char *string)
 
 
 
+/**
+ * \brief send message to stderr or syslog
+ *
+ * send message to stderr or syslog according to global syslog_on variable
+ * messages with MSG_DEBUG level are printed only if DEBUG macro is defined
+ *
+ * \param level message level
+ * \param format format string, like in printf function
+ * \param args additional arguments specified in fromat string
+ */
 #	define MSG(level,format,args...) if(msg_level>=level){snprintf(msg_buffer,4095,format,##args); print_msg(level,msg_buffer);}
 
 #endif /* VERBOSE_H_ */
