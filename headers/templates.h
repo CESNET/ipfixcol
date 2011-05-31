@@ -66,7 +66,7 @@ struct ipfix_template_t {
 	uint16_t template_id;        /**Template ID */
 	uint16_t field_count;        /**Number of fields in Template Record */
 	uint16_t scope_field_count;  /**Number of scope fields */
-	template_ie_u fields[1];     /**Template fields */
+	template_ie fields[1];       /**Template fields */
 };
 
 /**
