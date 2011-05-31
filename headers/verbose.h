@@ -1,5 +1,5 @@
 /**
- * \file ipfixcol-msg.h
+ * \file verbose.h
  * \author Petr Kramolis <kramolis@cesnet.cz>
  * \brief Debug, warning and verbose MACROS for ipfixcol and its pulgins
  *
@@ -39,8 +39,8 @@
 
 #include <syslog.h>
 
-#ifndef IPFIXCOL_MSG_H_
-#define IPFIXCOL_MSG_H_
+#ifndef VERBOSE_H_
+#define VERBOSE_H_
 
 /*! controls messages level */
 int msg_level = 2;
@@ -150,4 +150,4 @@ void print_msg(int level, char *string)
 
 #	define MSG(level,format,args...) if(msg_level>=level){snprintf(msg_buffer,4095,format,##args); print_msg(level,msg_buffer);}
 
-#endif /* IPFIXCOL_MSG_H_ */
+#endif /* VERBOSE_H_ */
