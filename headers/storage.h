@@ -65,8 +65,10 @@
  *
  */
 struct data_template_couple{
-	ipfix_data_set_t *data_set;  /**< Address of the Data Set in the packet */
-	ipfix_template_t *template;  /**< Template structure corresponding to this Data set */
+	/**< Address of the Data Set in the packet */
+	struct ipfix_data_set *data_set;
+	/**< Template structure corresponding to this Data set */
+	struct ipfix_template *template;
 };
 
 /**
@@ -83,7 +85,7 @@ struct ipfix_message {
 	/** List of Options Template Sets in the packet */
 	struct ipfix_options_template_set *opt_templ_set[1024];
 	/** List of Data Sets (with a link to corresponding template) in the packet */
-	data_template_couple              data_set[1023];
+	struct data_template_couple       data_set[1023];
 };
 
 /**
@@ -117,7 +119,7 @@ int storage_init (char *params, void **config);
  * \return 0 on success, nonzero else.
  */
 int store_packet (void *config, const struct ipfix_message *ipfix_msg,
-        const ipfix_template_t *templates);
+        const struct ipfix_template_t *templates);
 
 /**
  * \brief Announce willing to store currently processing data.
