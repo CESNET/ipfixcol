@@ -41,10 +41,11 @@
 
 /**
  * \defgroup templateMngAPI Template Manager API
- * 
+ * \ingroup publicAPIs
+ *
  * These functions should be used to work with Template Manager. Template
- * Manager is unique for every Data Manager and is represented by \link 
- * #ipfix_template_mgr_t ipfix_template_mgr_t structure\endlink. Its job 
+ * Manager is unique for every Data Manager and is represented by \link
+ * #ipfix_template_mgr_t ipfix_template_mgr_t structure\endlink. Its job
  * is to manage (Options) Templates.
  *
  * \todo ipfix_template_t
@@ -59,7 +60,7 @@
  * \brief Structure for storing Template Record/Options Template Record
  */
 struct ipfix_template_t {
-	uint8_t template_type;       /**Type of Template - 0 = Template, 
+	uint8_t template_type;       /**Type of Template - 0 = Template,
 	                              * 1 = Options Template */
 	time_t last_transmission;    /**Time of last transmission of Template,
 	                              * UDP only */
@@ -71,7 +72,7 @@ struct ipfix_template_t {
 
 /**
  * \struct ipfix_template_mgr_t
- * \brief Template Manager structure. 
+ * \brief Template Manager structure.
  */
 struct ipfix_template_mgr_t {
 	struct ipfix_template_t **templates;/**array of pointers to Templates */
@@ -100,7 +101,7 @@ int tm_add_template(struct ipfix_template_mgr_t *tm, void *template,
  * Template.
  * \return 0 on success, negative value if error occurs.
  */
-int tm_update_template(struct ipfix_template_mgr_t *tm, void *template, 
+int tm_update_template(struct ipfix_template_mgr_t *tm, void *template,
                        int type);
 
 /**
@@ -111,7 +112,7 @@ int tm_update_template(struct ipfix_template_mgr_t *tm, void *template,
  * \return pointer on the Temaplate on success, NULL if there is no such
  * Temaplate.
  */
-struct ipfix_template_t *tm_get_template(struct ipfix_template_mgr_t *tm, 
+struct ipfix_template_t *tm_get_template(struct ipfix_template_mgr_t *tm,
                                          uint16_t template_id);
 
 /**

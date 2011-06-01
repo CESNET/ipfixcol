@@ -38,8 +38,9 @@
  */
 
 /**
- * \defgroup ipfixFileFormat Input plugin for IPFIX file format
- * 
+ * \defgroup ipfixInputFileFormat Input plugin for IPFIX file format
+ * \ingroup inputPlugins
+ *
  * This is implementation of the input plugin API for IPFIX file format.
  * Currently supported input parameters:
  * path   - path to an IPFIX file. This parameter is mandatory.
@@ -70,7 +71,7 @@ struct ipfix_config {
 
 /*
  * Input plugin API implementation
-*/ 
+*/
 
 int input_init(char *params, void **config)
 {
@@ -122,7 +123,7 @@ int get_packet(void *config, struct input_info** info, char **packet)
 
 	conf = (struct ipfix_config *) config;
 
-	header = (struct ipfix_header *) malloc(sizeof(*header));	
+	header = (struct ipfix_header *) malloc(sizeof(*header));
 	if (!header) {
 		/* TODO - log, out of memory */
 		return -1;
@@ -150,7 +151,7 @@ int get_packet(void *config, struct input_info** info, char **packet)
 		/* TODO - log */
 		goto err_header;
 	}
-	
+
 	/* allocate memory for whole IPFIX message */
 	*packet = (char *) malloc(packet_len);
 	if (*packet == NULL) {
@@ -160,7 +161,7 @@ int get_packet(void *config, struct input_info** info, char **packet)
 
 	memcpy(*packet, header, sizeof(*header));
 	counter += sizeof(*header);
-	
+
 	ret = read(conf->fd, (*packet)+counter, packet_len-counter);
 	if (ret == -1) {
 		/* error during reading */

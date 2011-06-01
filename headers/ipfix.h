@@ -42,6 +42,8 @@
 
 /**
  * \defgroup ipfix IPFIX Structures
+ * \ingroup publicAPIs
+ *
  * IPFIX structures allowing access to the data
  * @{
  */

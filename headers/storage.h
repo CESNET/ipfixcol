@@ -45,7 +45,8 @@
 #include "templates.h"
 
 /**
- * \defgroup storageAPI Public Storage Plugin API
+ * \defgroup storageAPI Storage Plugins API
+ * \ingroup publicAPIs
  *
  * These functions specifies a communication interface between ipficol core,
  * namely a data manager handling specific Observation Domain ID, and storage

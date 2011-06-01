@@ -38,7 +38,8 @@
  */
 
 /**
- * \defgroup inputAPI Public Input Plugin API
+ * \defgroup inputAPI Input Plugins API
+ * \ingroup publicAPIs
  *
  * These functions specifies a communication interface between ipficol core and
  * input plugins receiving data. Input plugins pass data to the ipfixcol in

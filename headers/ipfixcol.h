@@ -41,6 +41,24 @@
 #ifndef IPFIXCOL_H_
 #define IPFIXCOL_H_
 
+/**
+ * \mainpage IPFIX Collector Developer's Documentation
+ *
+ * This documents provides documentation of IPFIX Collector (ipfixcol). We
+ * provides public API of the collector's input plugins as well as its storage
+ * (output) plugins.
+ */
+
+/**
+ * \defgroup publicAPIs Public ipfixcol's APIs
+ * \brief APIs for connecting plugins into the ipfixcol.
+ */
+
+/**
+ * \defgroup inputPlugins ipficol's Input Plugins
+ * \brief Input plugins for the ipfixcol.
+ */
+
 #include <ipfixcol/input.h>
 #include <ipfixcol/storage.h>
 #include <ipfixcol/ipfix.h>

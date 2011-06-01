@@ -50,6 +50,21 @@
  * (output) plugins.
  */
 
+/**
+ * \defgroup publicAPIs Public ipfixcol's APIs
+ * \brief APIs for connecting plugins into the ipfixcol.
+ */
+
+/**
+ * \defgroup inputPlugins ipficol's Input Plugins
+ * \brief Input plugins for the ipfixcol.
+ */
+
+/**
+ * \defgroup storagePlugins ipficol's Storage Plugins
+ * \brief Storage plugins for the ipfixcol.
+ */
+
 #include "headers/input.h"
 #include "headers/storage.h"
 #include "headers/ipfix.h"

@@ -39,7 +39,8 @@
 
 /**
  * \defgroup ipfixFileFormat Storage plugin for IPFIX file format
- * 
+ * \ingroup storagePlugins
+ *
  * This is implementation of the storage plugin API for IPFIX file format.
  * Currently supported input parameters are:
  * path     - where to store output files.
@@ -73,18 +74,18 @@
 struct ipfix_config {
 	int fd;                     /* file descriptor of an output file */
 	char *filename;             /* name of an output file */
-	char *dir;                  /* absolute or relative path where to 
+	char *dir;                  /* absolute or relative path where to
 	                             * store output file */
 	char prefix[32];            /* prefix for an output file */
-	char *output_path;          /* actual path to an output file 
+	char *output_path;          /* actual path to an output file
 	                             * (dir + prefix + filename) */
 	uint64_t filesize;          /* maximum size of an output file */
 	uint32_t fcounter;          /* number of created files */
-	uint64_t bcounter;          /* bytes written into a current output 
+	uint64_t bcounter;          /* bytes written into a current output
 	                             * file */
 };
 
-/* 
+/*
  * List of valid parameters. These params can be used in input string.
  * Sample input string: "-path=/tmp/file -filesize=1000000"
  * All parameters are optional.
@@ -113,9 +114,9 @@ static int __select_param(char *string)
 /* create prefix for output file */
 static char * __create_prefix(struct ipfix_config *config)
 {
-	snprintf(config->prefix, sizeof(config->prefix)-1, "%05u", 
+	snprintf(config->prefix, sizeof(config->prefix)-1, "%05u",
 	         config->fcounter);
-	
+
 	return config->prefix;
 }
 
@@ -128,20 +129,20 @@ static int __prepare_output_file(struct ipfix_config *config)
 	config->fcounter += 1;
 
 	snprintf(config->output_path, OUTPUT_PATH_MAX_LENGTH(config->dir)-1,
-                 "%s/%s-%s", config->dir, __create_prefix(config), 
+                 "%s/%s-%s", config->dir, __create_prefix(config),
                  config->filename);
 
 	/* open output file */
-	fd = open(config->output_path, O_WRONLY | O_CREAT | O_TRUNC, 
+	fd = open(config->output_path, O_WRONLY | O_CREAT | O_TRUNC,
 	          S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (fd == -1) {
 		/* TODO - log */
 		config->fcounter -= 1;
 		return -1;
 	}
-	
+
 	config->fd = fd;
-	
+
 	return 0;
 }
 
@@ -155,10 +156,10 @@ static int __close_output_file(struct ipfix_config *config)
 		/* TODO - log */
 		return -1;
 	}
-	
+
 	config->fd = -1;
 	config->bcounter = 0;
-	
+
 	return 0;
 }
 
@@ -167,7 +168,7 @@ static void __rstrtrim(char *str)
 {
 	int len = strlen(str);
 	char *end = str+(len-1);
-	
+
 	for ( ; end > str; end--) {
 		if (!isspace(*end)) {
 			break;
@@ -177,15 +178,15 @@ static void __rstrtrim(char *str)
 }
 
 
-/* 
- * Storage Plugin API implementation 
+/*
+ * Storage Plugin API implementation
 */
 
 
 /**
  * \brief Storage plugin initialization.
  *
- * Initialize IPFIX storage plugin. This function allocates, fills and 
+ * Initialize IPFIX storage plugin. This function allocates, fills and
  * returns config structure.
  *
  * \param[in] params parameters for this storage plugin
@@ -200,7 +201,7 @@ int storage_init(char *params, void **config)
 	char *token;
 	char *subtoken;
 	int ret;
-	
+
 	/* config structure */
 	conf = (struct ipfix_config *) malloc(sizeof(*conf));
 	if (conf == NULL) {
@@ -224,16 +225,16 @@ int storage_init(char *params, void **config)
 			if (token == NULL) {
 				break;
 			}
-	
+
 			subtoken = strtok_r(token, "=", &saveptr2);
-	
+
 			switch (__select_param(subtoken)) {
 			case 0:
 				/* path */
 				subtoken = strtok_r(NULL, "=", &saveptr2);
-	
+
 				__rstrtrim(subtoken);
-	
+
 				conf->dir = dirname(subtoken);
 				conf->filename = basename(subtoken);
 				break;
@@ -251,9 +252,9 @@ int storage_init(char *params, void **config)
 		}
 	}
 
-	
+
 	conf->output_path = (char *) malloc(OUTPUT_PATH_MAX_LENGTH(conf->dir));
-	
+
 	ret = __prepare_output_file(conf);
 	if (ret < 0) {
 		/* TODO - log */
@@ -282,9 +283,9 @@ int store_packet(void *config, struct ipfix_message_t *ipfix_msg, struct ipfix_t
 	struct ipfix_config *conf;
 	conf = (struct ipfix_config *) config;
 
-	/* check whether there is a free space for the packet in current 
+	/* check whether there is a free space for the packet in current
  	 * output file */
-	if (ntohs(ipfix_msg->msg_header->length) + conf->bcounter 
+	if (ntohs(ipfix_msg->msg_header->length) + conf->bcounter
 	    > conf->filesize) {
 		if (conf->filesize < ntohs(ipfix_msg->msg_header->length)) {
 			/* this packet is bigger than our filesize limit */
@@ -299,7 +300,7 @@ int store_packet(void *config, struct ipfix_message_t *ipfix_msg, struct ipfix_t
 
 	/* write IPFIX message into an output file */
 	while (count < ntohs(ipfix_msg->msg_header->length)) {
-		count = write(conf->fd, (ipfix_msg->msg_header)+wbytes, 
+		count = write(conf->fd, (ipfix_msg->msg_header)+wbytes,
 		              ntohs(ipfix_msg->msg_header->length)-wbytes);
 		if (count == -1) {
 			if (errno == EINTR) {
@@ -344,7 +345,7 @@ int store_now(const void *config)
 /**
  * \brief Remove storage plugin.
  *
- * This function is called when we don't want to use this storage plugin 
+ * This function is called when we don't want to use this storage plugin
  * anymore. All it does is that it cleans up after the storage plugin.
  *
  * \param[in] config the plugin specific configuration structure
@@ -359,7 +360,7 @@ int storage_remove(void *config)
 
 	if (conf->bcounter == 0) {
 		/* current output file is empty, get rid of it */
-		unlink(conf->output_path);	
+		unlink(conf->output_path);
 	}
 
 	free(conf->output_path);
@@ -414,7 +415,7 @@ static int __load_packet_from_file(char *path, char *buf, size_t size)
 	}
 
 	close(fd_packet);
-	
+
 	return st.st_size;
 }
 
