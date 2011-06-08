@@ -64,6 +64,7 @@
 #include <libgen.h>
 #include <ctype.h>
 #include <arpa/inet.h>
+
 #include "ipfixcol.h"
 
 
@@ -98,7 +99,7 @@ static char *valid_params[] = {
 
 
 /* auxiliary function used during parsing of input parameters */
-static int __select_param(char *string)
+static int select_param(char *string)
 {
 	int i;
 
@@ -112,7 +113,7 @@ static int __select_param(char *string)
 }
 
 /* create prefix for output file */
-static char * __create_prefix(struct ipfix_config *config)
+static char * create_prefix(struct ipfix_config *config)
 {
 	snprintf(config->prefix, sizeof(config->prefix)-1, "%05u",
 	         config->fcounter);
@@ -121,7 +122,7 @@ static char * __create_prefix(struct ipfix_config *config)
 }
 
 /* prepare (open, create) output file  */
-static int __prepare_output_file(struct ipfix_config *config)
+static int prepare_output_file(struct ipfix_config *config)
 {
 	int fd;
 
@@ -129,7 +130,7 @@ static int __prepare_output_file(struct ipfix_config *config)
 	config->fcounter += 1;
 
 	snprintf(config->output_path, OUTPUT_PATH_MAX_LENGTH(config->dir)-1,
-                 "%s/%s-%s", config->dir, __create_prefix(config),
+                 "%s/%s-%s", config->dir, create_prefix(config),
                  config->filename);
 
 	/* open output file */
@@ -147,7 +148,7 @@ static int __prepare_output_file(struct ipfix_config *config)
 }
 
 /* close output file */
-static int __close_output_file(struct ipfix_config *config)
+static int close_output_file(struct ipfix_config *config)
 {
 	int ret;
 
@@ -164,7 +165,7 @@ static int __close_output_file(struct ipfix_config *config)
 }
 
 /* trim whitespaces from the right side of the string */
-static void __rstrtrim(char *str)
+static void rstrtrim(char *str)
 {
 	int len = strlen(str);
 	char *end = str+(len-1);
@@ -228,12 +229,12 @@ int storage_init(char *params, void **config)
 
 			subtoken = strtok_r(token, "=", &saveptr2);
 
-			switch (__select_param(subtoken)) {
+			switch (select_param(subtoken)) {
 			case 0:
 				/* path */
 				subtoken = strtok_r(NULL, "=", &saveptr2);
 
-				__rstrtrim(subtoken);
+				rstrtrim(subtoken);
 
 				conf->dir = dirname(subtoken);
 				conf->filename = basename(subtoken);
@@ -255,7 +256,7 @@ int storage_init(char *params, void **config)
 
 	conf->output_path = (char *) malloc(OUTPUT_PATH_MAX_LENGTH(conf->dir));
 
-	ret = __prepare_output_file(conf);
+	ret = prepare_output_file(conf);
 	if (ret < 0) {
 		/* TODO - log */
 		return -1;
@@ -276,7 +277,8 @@ int storage_init(char *params, void **config)
  * \param[in] templates All currently known templates, not just templates in the message
  * \return 0 on success, negative value otherwise
  */
-int store_packet(void *config, struct ipfix_message_t *ipfix_msg, struct ipfix_template_t *templates)
+int store_packet(void *config, const struct ipfix_message *ipfix_msg, 
+                 const struct ipfix_template_t *templates)
 {
 	ssize_t count = 0;
 	uint16_t wbytes = 0;
@@ -285,23 +287,23 @@ int store_packet(void *config, struct ipfix_message_t *ipfix_msg, struct ipfix_t
 
 	/* check whether there is a free space for the packet in current
  	 * output file */
-	if (ntohs(ipfix_msg->msg_header->length) + conf->bcounter
+	if (ntohs(ipfix_msg->pkt_header->length) + conf->bcounter
 	    > conf->filesize) {
-		if (conf->filesize < ntohs(ipfix_msg->msg_header->length)) {
+		if (conf->filesize < ntohs(ipfix_msg->pkt_header->length)) {
 			/* this packet is bigger than our filesize limit */
 			/* TODO - log */
 			return -1;
 		}
 
 		/* there is not enough space in this file, prepare new one */
-		__close_output_file(conf);
-		__prepare_output_file(conf);
+		close_output_file(conf);
+		prepare_output_file(conf);
 	}
 
 	/* write IPFIX message into an output file */
-	while (count < ntohs(ipfix_msg->msg_header->length)) {
-		count = write(conf->fd, (ipfix_msg->msg_header)+wbytes,
-		              ntohs(ipfix_msg->msg_header->length)-wbytes);
+	while (count < ntohs(ipfix_msg->pkt_header->length)) {
+		count = write(conf->fd, (ipfix_msg->pkt_header)+wbytes,
+		              ntohs(ipfix_msg->pkt_header->length)-wbytes);
 		if (count == -1) {
 			if (errno == EINTR) {
 				/* interrupted by signal, try again */
@@ -334,9 +336,9 @@ int store_now(const void *config)
 	struct ipfix_config *conf;
 	conf = (struct ipfix_config *) config;
 
-	__close_output_file(conf);
+	close_output_file(conf);
 
-	__prepare_output_file(conf);
+	prepare_output_file(conf);
 
 	return 0;
 }
@@ -356,7 +358,7 @@ int storage_remove(void *config)
 	struct ipfix_config *conf;
 	conf = (struct ipfix_config *) config;
 
-	__close_output_file(conf);
+	close_output_file(conf);
 
 	if (conf->bcounter == 0) {
 		/* current output file is empty, get rid of it */
@@ -374,23 +376,23 @@ int storage_remove(void *config)
 
 
 
-#ifdef	__DEBUG_STORAGE_PLUGIN_IPFIX
+#ifdef	_DEBUG_STORAGE_PLUGIN_IPFIX
 /* debug and self test section, it can be safely ignored or deleted */
 
-#define __PRINT_CONFIG_STRUCT(conf) do {                       \
-	printf("\tfd: %d\n", conf->fd);                        \
-	printf("\tfilename: \"%s\"\n", conf->filename);        \
-	printf("\tdir: \"%s\"\n", conf->dir);                  \
-	printf("\tprefix: \"%s\"\n", conf->prefix);            \
-	printf("\toutput_path: \"%s\"\n", conf->output_path);  \
-	printf("\tfilesize: %lu\n", conf->filesize);           \
-	printf("\tfcounter: %u\n", conf->fcounter);            \
-	printf("\tbcounter: %lu\n", conf->bcounter);           \
+#define _PRINT_CONFIG_STRUCT(conf) do {		                       \
+		printf("\tfd: %d\n", conf->fd);                        \
+		printf("\tfilename: \"%s\"\n", conf->filename);        \
+		printf("\tdir: \"%s\"\n", conf->dir);                  \
+		printf("\tprefix: \"%s\"\n", conf->prefix);            \
+		printf("\toutput_path: \"%s\"\n", conf->output_path);  \
+		printf("\tfilesize: %lu\n", conf->filesize);           \
+		printf("\tfcounter: %u\n", conf->fcounter);            \
+		printf("\tbcounter: %lu\n", conf->bcounter);           \
 	} while (0);
 
-#define __TEST_BIG_BUFFER	1000000
+#define _TEST_BIG_BUFFER	1000000
 
-static int __load_packet_from_file(char *path, char *buf, size_t size)
+static int load_packet_from_file(char *path, char *buf, size_t size)
 {
 	int fd_packet;
 	int ret;
@@ -423,7 +425,7 @@ int main(int argc, char **argv)
 {
 	struct ipfix_config *conf;
 	int ret;
-	struct ipfix_message_t msg;
+	struct ipfix_message msg;
 	char *buf;
 	char *params = "";
 
@@ -447,23 +449,23 @@ int main(int argc, char **argv)
 	printf(" done [%d]\n", ret);
 
 	printf("config structure:\n");
-	__PRINT_CONFIG_STRUCT(conf);
+	_PRINT_CONFIG_STRUCT(conf);
 
 	/* store_packet() */
 	printf("\n--- store\n");
 
-	buf = (char *) malloc (__TEST_BIG_BUFFER);
+	buf = (char *) malloc (_TEST_BIG_BUFFER);
 	if (!buf) {
 		fprintf(stderr, "not enough memory\n");
 		exit(-1);
 	}
 
-	ret = __load_packet_from_file(argv[1], buf, __TEST_BIG_BUFFER);
+	ret = load_packet_from_file(argv[1], buf, _TEST_BIG_BUFFER);
 	if (ret <= 0) {
 		return -1;
 	}
 
-	msg.msg_header = (struct ipfix_header_t *) buf;
+	msg.pkt_header = (struct ipfix_header *) buf;
 
 	printf("calling storage_packet()...");
 	ret = store_packet(conf, &msg, NULL);
@@ -484,7 +486,7 @@ int main(int argc, char **argv)
 	printf(" done [%d]\n", ret);
 
 	printf("config structure:\n");
-	__PRINT_CONFIG_STRUCT(conf);
+	_PRINT_CONFIG_STRUCT(conf);
 
 	/* storage_remove() */
 	printf("\n--- storage remove\n");
