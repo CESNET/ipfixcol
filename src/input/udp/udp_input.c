@@ -57,6 +57,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <commlbr.h>
 
 #include <ipfixcol.h>
 
@@ -88,7 +89,7 @@ int input_init(char *params, void **config)
 {
     if (params == NULL)  /* no port to listen on */
     {
-        MSG(MSG_ERROR, "No port to listen on\n");
+        VERBOSE(CL_VERBOSE_OFF, "No port to listen on");
         return 1;    
     }
 
@@ -118,14 +119,14 @@ int input_init(char *params, void **config)
     conf = malloc(sizeof(struct plugin_conf));
     if (conf == NULL) 
     {
-        MSG(MSG_ERROR, "Cannot allocate memory for config structure: %s\n", strerror(errno));
+        VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory for config structure: %s", strerror(errno));
         return 1;
     }
 
     conf->info = malloc(sizeof(struct input_info_network));
     if (conf->info == NULL) 
     {
-        MSG(MSG_ERROR, "Cannot allocate memory for input_info structure: %s\n", strerror(errno));
+        VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory for input_info structure: %s", strerror(errno));
         return 1;
     }
     /* and pass it to the collector */
@@ -140,7 +141,7 @@ int input_init(char *params, void **config)
     /* get server address */
     if ((ret = getaddrinfo(NULL, port, &hints, &addrinfo)) != 0) 
     {
-        MSG(MSG_ERROR, "getaddrinfo failed: %s\n", gai_strerror(ret));
+        VERBOSE(CL_VERBOSE_OFF, "getaddrinfo failed: %s", gai_strerror(ret));
         return 1;
     }
 
@@ -148,7 +149,7 @@ int input_init(char *params, void **config)
     conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
     if (conf->socket == -1) 
     {
-        MSG(MSG_ERROR, "Cannot create socket: %s\n", strerror(errno));
+        VERBOSE(CL_VERBOSE_OFF, "Cannot create socket: %s", strerror(errno));
         return 1;
     }
    
@@ -156,20 +157,20 @@ int input_init(char *params, void **config)
     if ((addrinfo->ai_family == AF_INET6) && 
         (setsockopt(conf->socket, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_only, sizeof(ipv6_only)) == -1)) 
     {
-        MSG(MSG_WARNING, "Cannot turn off socket option IPV6_V6ONLY. Plugin might not accept IPv4 connections\n");
+        VERBOSE(CL_VERBOSE_BASIC, "Cannot turn off socket option IPV6_V6ONLY. Plugin might not accept IPv4 connections");
     }
 
     /* bind socket to address */
     if (bind(conf->socket, addrinfo->ai_addr, addrinfo->ai_addrlen) != 0) 
     {
-        MSG(MSG_ERROR, "Cannot bind socket: %s\n", strerror(errno));
+        VERBOSE(CL_VERBOSE_OFF, "Cannot bind socket: %s\n", strerror(errno));
         return 1;
     }
 
     /* get binded address -- we listen on all interfaces, so it should be 0.0.0.0*/
     if (getsockname(conf->socket, (struct sockaddr*) saddrp, &saddr_len) != 0) 
     {
-        MSG(MSG_WARNING, "Cannot get socket name, input_info might lack destination port and address\n");
+        VERBOSE(CL_VERBOSE_BASIC, "Cannot get socket name, input_info might lack destination port and address");
         saddrp = (struct sockaddr_storage *) addrinfo->ai_addr;
     }
 
@@ -198,7 +199,7 @@ int input_init(char *params, void **config)
 
     freeaddrinfo(addrinfo);
 
-    MSG(MSG_VERBOSE, "Plugin initialization completed successfully\n");
+    VERBOSE(CL_VERBOSE_BASIC, "Plugin initialization completed successfully");
 
     return 0; 
 }
@@ -229,7 +230,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
     length = recvfrom(sock, &buffer, BUFF_LEN, 0, (struct sockaddr*) &address, &addr_length);
     if (length == -1) 
     {
-        MSG(MSG_ERROR, "Failed to receive packet: %s\n", strerror(errno));
+        VERBOSE(CL_VERBOSE_OFF, "Failed to receive packet: %s", strerror(errno));
         return 1;    
     }
 
@@ -279,14 +280,14 @@ int input_close(void **config)
     int sock = ((struct plugin_conf*) *config)->socket;
     if ((ret = close(sock)) == -1)
     {
-        MSG(MSG_WARNING, "Cannot close socket: %s\n", strerror(errno));
+        VERBOSE(CL_VERBOSE_OFF, "Cannot close socket: %s", strerror(errno));
     }
     
     /* free allocated structures */
     free(((struct plugin_conf*) *config)->info);
     free(*config);
 
-    MSG(MSG_VERBOSE, "All allocated resources have been freed\n");
+    VERBOSE(CL_VERBOSE_BASIC, "All allocated resources have been freed");
 
     return 0;    
 }

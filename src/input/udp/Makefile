@@ -9,7 +9,7 @@ all: udp_input.so
 
 # udp_input.so
 udp_input.so: udp_input.o
-	$(CC) $(CFLAGS) -shared -Wl,-soname,udp_input.so.1 -o $@ $< -lc
+	$(CC) $(CFLAGS) -shared -Wl,-soname,udp_input.so.1 -lcommlbr -o $@ $< -lc
 	rm udp_input.o
 	
 udp_input.o: udp_input.c
