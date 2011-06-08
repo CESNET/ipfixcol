@@ -99,8 +99,8 @@ struct input_info_network {
 		struct in6_addr ipv6;
 		struct in_addr ipv4;
 	} dst_addr;               /**< destination IP address*/
-	uint16_t src_port;        /**< source transport port */
-	uint16_t dst_port;        /**< destination transport port */
+	uint16_t src_port;        /**< source transport port in host byte order */
+	uint16_t dst_port;        /**< destination transport port in host byte order */
 	void *exporter_cert;      /**< X.509 certificate used by exporter when
 	                           * using TLS/DTLS */
 	void *collector_cert;     /**< X.509 certificate used by collector when
