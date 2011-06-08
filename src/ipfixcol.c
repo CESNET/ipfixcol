@@ -43,6 +43,8 @@
 #include <string.h>
 #include <stdbool.h>
 
+#include <commlbr.h>
+
 #include "../ipfixcol.h"
 
 /** Version number */
@@ -50,6 +52,9 @@
 
 /** Acceptable command-line parameters */
 #define OPTSTRING "dhv:V"
+
+/* verbose from libcommlbr */
+extern int verbose;
 
 /**
  * \brief Print program version information
@@ -96,17 +101,21 @@ int main (int argc, char* argv[])
 			exit (EXIT_SUCCESS);
 			break;
 		case 'v':
-//			set_msg_level (atoi (optarg));
+			verbose = atoi (optarg);
+			break;
+		case 'V':
+			version (progname);
+			exit (EXIT_SUCCESS);
 			break;
 		default:
-			fprintf (stderr, "Unknown parameter %c", c);
+			VERBOSE (CL_VERBOSE_OFF, "Unknown parameter %c", c);
 			help (progname);
 			exit (EXIT_FAILURE);
 			break;
 		}
 	}
 
-	fprintf (stderr, "done :)");
+	VERBOSE (CL_VERBOSE_BASIC, "done :)");
 
 	return (0);
 }
