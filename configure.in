@@ -70,6 +70,10 @@ AC_ARG_WITH([distro],
 	DISTRO=redhat
 )
 
+# Add --with-libxml2-path parameter
+AC_ARG_WITH([libxml2-path],
+	AC_HELP_STRING([--with-libxml2-path=DIR],[Path prefix to Libxml2 library]))
+
 ############################ Check for programs ################################
 
 # in case of cross-compilation, try to gues cross-compiler if not set
@@ -165,6 +169,25 @@ AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
 ############################ Check for libraries ###############################
+
+### LibXML2 ###
+# Test whether Libxml2 exist
+if test -n "$with_libxml2_path" ; then
+	LIBS_LIB_XML="-lxml2"
+	LDFLAGS_LIB_XML="-L$with_libxml2_path/lib"
+else
+	AC_CHECK_LIB([xml2], [main],
+		[ LIBS_LIB_XML="-lxml2"],
+		[ echo "Libxml2 not found - exiting! (use --with-libxml2-path=DIR if you has it in some other directory)" ; exit 1 ])
+fi
+AC_CHECK_PROG([XML2_CONFIG], [xml2-config], ["yes"], ["no"])
+if test "$XML2_CONFIG" = "no"; then
+	echo "xml2-config not found - exiting!"
+	exit 1
+fi
+CFLAGS="$CFLAGS `xml2-config --cflags`"
+LIBS="$LIBS $LIBS_LIB_XML"
+LDFLAGS="$LDFLAGS $LDFLAGS_LIB_XML"
 
 ###################### Check for configure parameters ##########################
 
