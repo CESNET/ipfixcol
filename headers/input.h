@@ -53,6 +53,9 @@
 #ifndef IPFIXCOL_INPUT_H_
 #define IPFIXCOL_INPUT_H_
 
+#include <stdint.h>
+#include <arpa/inet.h>
+
 /**
  * \enum SOURCE_TYPE
  * \brief Type of the source of the input data.
