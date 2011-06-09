@@ -52,8 +52,15 @@
  * @{
  */
 
-#define INTERNAL_CONFIG_FILE "/etc/ipfixcol/internal_config.xml"
+/** Path to internal ipfixcol's configuration file */
+#define INTERNAL_CONFIG_FILE "/etc/ipfixcol/internalcfg.xml"
 
+/** Path to default (if not specified) user configuration file */
+#define DEFAULT_CONFIG_FILE "/etc/ipfixcol/startup.xml"
+
+/**
+ * \brief Item in list of ipfixcol's plugins (both input and storage).
+ */
 struct plugin_list {
 	char* file;
 	xmlNodePtr xmldata;

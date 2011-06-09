@@ -71,9 +71,7 @@
 #define VERSION "0.1"
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "dhv:V"
-
-#define CONFIG_FILE "/etc/ipfixcol/full_example.xml"
+#define OPTSTRING "c:dhv:V"
 
 /* verbose from libcommlbr */
 extern int verbose;
@@ -96,10 +94,11 @@ void version (char* progname)
 void help (char* progname)
 {
 	printf ("Usage: %s [-dhV] [-v level]\n", progname);
-	printf ("\t-d        Daemonize\n");
-	printf ("\t-h        Print this help\n");
-	printf ("\t-v level  Print verbose messages up to specified level\n");
-	printf ("\t-V        Print version information\n\n");
+	printf ("  -c file   Path to configuration file (%s by default)\n", DEFAULT_CONFIG_FILE);
+	printf ("  -d        Daemonize\n");
+	printf ("  -h        Print this help\n");
+	printf ("  -v level  Print verbose messages up to specified level\n");
+	printf ("  -V        Print version information\n\n");
 }
 
 struct input {
@@ -125,7 +124,7 @@ int main (int argc, char* argv[])
 	int c, i, fd, retval = 0;
 	pid_t pid;
 	bool daemonize = false;
-	char *progname;
+	char *progname, *config_file = NULL;
 	struct plugin_list* input_plugins = NULL, *storage_plugins = NULL,
 	        *aux_plugins = NULL;
 	struct input input;
@@ -146,6 +145,9 @@ int main (int argc, char* argv[])
 	/* parse command line parameters */
 	while ((c = getopt (argc, argv, OPTSTRING)) != -1) {
 		switch (c) {
+		case 'c':
+			config_file = optarg;
+			break;
 		case 'd':
 			daemonize = true;
 			break;
@@ -169,6 +171,14 @@ int main (int argc, char* argv[])
 		}
 	}
 
+	/* check config file */
+	if (config_file == NULL) {
+		/* and use default if not specified */
+		config_file = DEFAULT_CONFIG_FILE;
+		VERBOSE(CL_VERBOSE_BASIC, "Using default configuration file %s.", config_file);
+	}
+
+
 	/* daemonize */
 	if (daemonize) {
 		debug_init(progname, 1);
@@ -189,14 +199,14 @@ int main (int argc, char* argv[])
 
 	/* open and prepare XML configuration file */
 	/* TODO: this part should be in the future replaced by NETCONF configuration */
-	fd = open (CONFIG_FILE, O_RDONLY);
+	fd = open (config_file, O_RDONLY);
 	if (fd == -1) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to open configuration file %s (%s)", CONFIG_FILE, strerror(errno));
+		VERBOSE(CL_VERBOSE_OFF, "Unable to open configuration file %s (%s)", config_file, strerror(errno));
 		exit (EXIT_FAILURE);
 	}
 	xml_config = xmlReadFd (fd, NULL, NULL, XML_PARSE_NOERROR | XML_PARSE_NOWARNING | XML_PARSE_NOBLANKS);
 	if (xml_config == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to parse configuration file %s", CONFIG_FILE);
+		VERBOSE(CL_VERBOSE_OFF, "Unable to parse configuration file %s", config_file);
 		close (fd);
 		exit (EXIT_FAILURE);
 	}
@@ -254,31 +264,35 @@ int main (int argc, char* argv[])
 	}
 
 	/* prepare input plugin */
-	VERBOSE(CL_VERBOSE_ADVANCED, "Opening input plugin: %s", input_plugins->file);
-	input_plugin_handler = dlopen (input_plugins->file, RTLD_LAZY);
-	if (input_plugin_handler == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
-		retval = EXIT_FAILURE;
-		goto cleanup;
-	}
-	input.dll_handler = input_plugin_handler;
+	for (i = 0; i == 0; i++) {
+		VERBOSE(CL_VERBOSE_ADVANCED, "Opening input plugin: %s", input_plugins->file);
+		input_plugin_handler = dlopen (input_plugins->file, RTLD_LAZY);
+		if (input_plugin_handler == NULL) {
+			VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
+			continue;
+		}
+		input.dll_handler = input_plugin_handler;
 
-	/* prepare Input API routines */
-	input.init = dlsym (input_plugin_handler, "input_init");
-	if (input.init == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
-		retval = EXIT_FAILURE;
-		goto cleanup;
+		/* prepare Input API routines */
+		input.init = dlsym (input_plugin_handler, "input_init");
+		if (input.init == NULL) {
+			VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
+			continue;
+		}
+		input.get = dlsym (input_plugin_handler, "get_packet");
+		if (input.get == NULL) {
+			VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
+			continue;
+		}
+		input.close = dlsym (input_plugin_handler, "input_close");
+		if (input.close == NULL) {
+			VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
+			continue;
+		}
 	}
-	input.get = dlsym (input_plugin_handler, "get_packet");
-	if (input.get == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
-		retval = EXIT_FAILURE;
-		goto cleanup;
-	}
-	input.close = dlsym (input_plugin_handler, "input_close");
-	if (input.close == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
+	/* check if we have found any input plugin */
+	if (!input.dll_handler || !input.init || !input.get || !input.close) {
+		VERBOSE(CL_VERBOSE_OFF, "Input plugin initialization failed.");
 		retval = EXIT_FAILURE;
 		goto cleanup;
 	}
@@ -338,13 +352,6 @@ int main (int argc, char* argv[])
 		}
 		storage->next = aux_storage;
 		aux_plugins = aux_plugins->next;
-	}
-
-	/* check if we have found any input plugin */
-	if (!input.dll_handler) {
-		VERBOSE(CL_VERBOSE_OFF, "Input plugin initialization failed.");
-		retval = EXIT_FAILURE;
-		goto cleanup;
 	}
 	/* check if we have found at least one storage plugin */
 	if (!storage) {
