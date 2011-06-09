@@ -187,13 +187,6 @@ int main (int argc, char* argv[])
 		}
 	}
 
-	/* check config file */
-	if (config_file == NULL) {
-		/* and use default if not specified */
-		config_file = DEFAULT_CONFIG_FILE;
-		VERBOSE(CL_VERBOSE_BASIC, "Using default configuration file %s.", config_file);
-	}
-
 	/* prepare signal handling */
 	/* establish the signal handler */
 	sigemptyset(&action.sa_mask);
@@ -221,7 +214,16 @@ int main (int argc, char* argv[])
 	 */LIBXML_TEST_VERSION
 	xmlIndentTreeOutput = 1;
 
-	/* open and prepare XML configuration file */
+	/*
+	 * open and prepare XML configuration file
+	 */
+	/* check config file */
+	if (config_file == NULL) {
+		/* and use default if not specified */
+		config_file = DEFAULT_CONFIG_FILE;
+		VERBOSE(CL_VERBOSE_BASIC, "Using default configuration file %s.", config_file);
+	}
+
 	/* TODO: this part should be in the future replaced by NETCONF configuration */
 	fd = open (config_file, O_RDONLY);
 	if (fd == -1) {
@@ -316,7 +318,7 @@ int main (int argc, char* argv[])
 	}
 	/* check if we have found any input plugin */
 	if (!input.dll_handler || !input.init || !input.get || !input.close) {
-		VERBOSE(CL_VERBOSE_OFF, "Input plugin initialization failed.");
+		VERBOSE(CL_VERBOSE_OFF, "Loading input plugin failed.");
 		retval = EXIT_FAILURE;
 		goto cleanup;
 	}
@@ -345,6 +347,7 @@ int main (int argc, char* argv[])
 			storage_plugin_handler = NULL;
 			free (storage);
 			storage = aux_storage;
+			aux_plugins = aux_plugins->next;
 			continue;
 		}
 		storage->store = dlsym (storage_plugin_handler, "store_packet");
@@ -354,6 +357,7 @@ int main (int argc, char* argv[])
 			storage_plugin_handler = NULL;
 			free (storage);
 			storage = aux_storage;
+			aux_plugins = aux_plugins->next;
 			continue;
 		}
 		storage->store_now = dlsym (storage_plugin_handler, "store_now");
@@ -363,6 +367,7 @@ int main (int argc, char* argv[])
 			storage_plugin_handler = NULL;
 			free (storage);
 			storage = aux_storage;
+			aux_plugins = aux_plugins->next;
 			continue;
 		}
 		storage->close = dlsym (storage_plugin_handler, "storage_close");
@@ -372,6 +377,7 @@ int main (int argc, char* argv[])
 			storage_plugin_handler = NULL;
 			free (storage);
 			storage = aux_storage;
+			aux_plugins = aux_plugins->next;
 			continue;
 		}
 		storage->next = aux_storage;
@@ -379,7 +385,7 @@ int main (int argc, char* argv[])
 	}
 	/* check if we have found at least one storage plugin */
 	if (!storage) {
-		VERBOSE(CL_VERBOSE_OFF, "Storage plugin(s) initialization failed.");
+		VERBOSE(CL_VERBOSE_OFF, "Loading storage plugin(s) failed.");
 		retval = EXIT_FAILURE;
 		goto cleanup;
 	}
