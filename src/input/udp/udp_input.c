@@ -129,8 +129,6 @@ int input_init(char *params, void **config)
         VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory for input_info structure: %s", strerror(errno));
         return 1;
     }
-    /* and pass it to the collector */
-    *config = (void*) conf;
 
     /* specify parameters of the connection */
     memset (&hints, 0, sizeof(struct addrinfo));
@@ -198,6 +196,9 @@ int input_init(char *params, void **config)
     }
 
     freeaddrinfo(addrinfo);
+
+    /* and pass it to the collector */
+    *config = (void*) conf;
 
     VERBOSE(CL_VERBOSE_BASIC, "Plugin initialization completed successfully");
 
