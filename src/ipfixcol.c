@@ -242,9 +242,6 @@ int main (int argc, char* argv[])
 	close (fd);
 
 	/* get collectors' specification from the configuration file */
-	/* TODO: now we handle only one collector, but we'll have to support
-	 * launching multiple collectors specified in a single configuration file
-	 */
 	collectors = get_collectors (xml_config);
 	if (collectors == NULL) {
 		/* no collectingProcess configured */
@@ -439,10 +436,10 @@ storage_plugin_remove:
 	/* main loop */
 	while (!done) {
 		/* get data to process */
+		/* TODO */
 		VERBOSE(CL_VERBOSE_BASIC, "loop");
 		sleep (5);
 	}
-	/* TODO */
 
 cleanup:
 	/* xml cleanup */
