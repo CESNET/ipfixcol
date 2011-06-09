@@ -48,9 +48,10 @@
 #include <fcntl.h>
 #include <dlfcn.h>
 #include <commlbr.h>
+#include <signal.h>
+#include <syslog.h>
 
 #include <pthread.h>
-#include <syslog.h>
 
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
@@ -76,6 +77,9 @@
 /* verbose from libcommlbr */
 extern int verbose;
 
+/* main loop indicator */
+volatile int done = 0;
+
 /**
  * \brief Print program version information
  * @param progname Name of the program
@@ -99,6 +103,17 @@ void help (char* progname)
 	printf ("  -h        Print this help\n");
 	printf ("  -v level  Print verbose messages up to specified level\n");
 	printf ("  -V        Print version information\n\n");
+}
+
+void term_signal_handler(int sig)
+{
+	if (done) {
+		VERBOSE(CL_VERBOSE_OFF, "Another termination signal (%i) detected - quiting without cleanup.", sig);
+		exit (EXIT_FAILURE);
+	} else {
+		VERBOSE(CL_VERBOSE_OFF, "Signal: %i detected, will exit as soon as possible", sig);
+		done = 1;
+	}
 }
 
 struct input {
@@ -130,6 +145,7 @@ int main (int argc, char* argv[])
 	struct input input;
 	struct storage *storage = NULL, *aux_storage = NULL;
 	void *input_plugin_handler = NULL, *storage_plugin_handler = NULL;
+	struct sigaction action;
 
 	xmlXPathObjectPtr collectors;
 	xmlNodePtr collector_node;
@@ -178,6 +194,14 @@ int main (int argc, char* argv[])
 		VERBOSE(CL_VERBOSE_BASIC, "Using default configuration file %s.", config_file);
 	}
 
+	/* prepare signal handling */
+	/* establish the signal handler */
+	sigemptyset(&action.sa_mask);
+	action.sa_flags = 0;
+	action.sa_handler = term_signal_handler;
+	sigaction(SIGINT, &action, NULL);
+	sigaction(SIGQUIT, &action, NULL);
+	sigaction(SIGTERM, &action, NULL);
 
 	/* daemonize */
 	if (daemonize) {
@@ -366,9 +390,14 @@ int main (int argc, char* argv[])
 	xmlDocSetRootElement (collector_doc, xmlCopyNode (collector_node, 1));
 	xmlDocDumpMemory(collector_doc, &plugin_params, NULL);
 	retval = input.init((char*)plugin_params, &input.config);
-	if ( retval != 0) {
+	if (retval != 0) {
 		VERBOSE(CL_VERBOSE_OFF, "Initiating input plugin failed.");
 		goto cleanup;
+	}
+	while(!done) {
+		/* get data to process */
+		VERBOSE(CL_VERBOSE_BASIC, "loop");
+		sleep(5);
 	}
 	/* TODO */
 
