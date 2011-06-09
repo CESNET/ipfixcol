@@ -277,7 +277,7 @@ int storage_init(char *params, void **config)
  * \param[in] templates All currently known templates, not just templates in the message
  * \return 0 on success, negative value otherwise
  */
-int store_packet(void *config, const struct ipfix_message *ipfix_msg, 
+int store_packet(void *config, const struct ipfix_message *ipfix_msg,
                  const struct ipfix_template_t *templates)
 {
 	ssize_t count = 0;
@@ -353,10 +353,10 @@ int store_now(const void *config)
  * \param[in] config the plugin specific configuration structure
  * \return 0 on success, negative value otherwise
  */
-int storage_remove(void *config)
+int storage_close(void **config)
 {
 	struct ipfix_config *conf;
-	conf = (struct ipfix_config *) config;
+	conf = (struct ipfix_config *) *config;
 
 	close_output_file(conf);
 
@@ -367,6 +367,8 @@ int storage_remove(void *config)
 
 	free(conf->output_path);
 	free(conf);
+
+	*config = NULL;
 
 	return 0;
 }
