@@ -71,6 +71,11 @@
  */
 static inline xmlNodePtr get_children (xmlNodePtr node, const xmlChar* children_name)
 {
+	/* check validity of parameters */
+	if (!node || !children_name) {
+		return (NULL);
+	}
+
 	xmlNodePtr children = node->children;
 
 	while (children) {
@@ -446,7 +451,7 @@ struct plugin_list* get_input_plugins (xmlNodePtr collector_node)
 	}
 
 	/* remember node with input plugin parameters */
-	retval->xmldata = auxNode;
+	retval->xmldata = xmlCopyNode(auxNode, 1);
 
 	/*
 	 * remember filename of input plugin implementation
