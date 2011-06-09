@@ -122,6 +122,7 @@ struct input {
 	int (*get) (void*, struct input_info**, char**);
 	int (*close) (void**);
 	void *dll_handler;
+	struct plugin_list* plugin;
 };
 
 struct storage {
@@ -132,6 +133,7 @@ struct storage {
 	int (*close) (void**);
 	void *dll_handler;
 	struct storage *next;
+	struct plugin_list* plugin;
 };
 
 int main (int argc, char* argv[])
@@ -149,11 +151,12 @@ int main (int argc, char* argv[])
 
 	xmlXPathObjectPtr collectors;
 	xmlNodePtr collector_node;
-	xmlDocPtr xml_config, collector_doc;
+	xmlDocPtr xml_config;
 	xmlChar *plugin_params;
 
 	/* some initialization */
 	input.dll_handler = NULL;
+	input.config = NULL;
 
 	/* get program name withou execute path */
 	progname = ((progname = strrchr (argv[0], '/')) != NULL) ? (progname + 1) : argv[0];
@@ -291,6 +294,7 @@ int main (int argc, char* argv[])
 
 	/* prepare input plugin */
 	for (i = 0; i == 0; i++) {
+		input.plugin = input_plugins;
 		VERBOSE(CL_VERBOSE_ADVANCED, "Opening input plugin: %s", input_plugins->file);
 		input_plugin_handler = dlopen (input_plugins->file, RTLD_LAZY);
 		if (input_plugin_handler == NULL) {
@@ -325,14 +329,13 @@ int main (int argc, char* argv[])
 
 	/* prepare storage plugin(s) */
 	aux_plugins = storage_plugins;
-	while (aux_plugins) {
-		VERBOSE(CL_VERBOSE_ADVANCED, "Opening storage plugin: %s", aux_plugins->file);
+	while (storage_plugins) {
+		VERBOSE(CL_VERBOSE_ADVANCED, "Opening storage plugin: %s", storage_plugins->file);
 
-		storage_plugin_handler = dlopen (aux_plugins->file, RTLD_LAZY);
+		storage_plugin_handler = dlopen (storage_plugins->file, RTLD_LAZY);
 		if (storage_plugin_handler == NULL) {
 			VERBOSE(CL_VERBOSE_OFF, "Unable to load storage plugin (%s)", dlerror());
-			aux_plugins = aux_plugins->next;
-			continue;
+			goto storage_plugin_remove;
 		}
 
 		aux_storage = storage;
@@ -347,8 +350,7 @@ int main (int argc, char* argv[])
 			storage_plugin_handler = NULL;
 			free (storage);
 			storage = aux_storage;
-			aux_plugins = aux_plugins->next;
-			continue;
+			goto storage_plugin_remove;
 		}
 		storage->store = dlsym (storage_plugin_handler, "store_packet");
 		if (storage->store == NULL) {
@@ -357,8 +359,7 @@ int main (int argc, char* argv[])
 			storage_plugin_handler = NULL;
 			free (storage);
 			storage = aux_storage;
-			aux_plugins = aux_plugins->next;
-			continue;
+			goto storage_plugin_remove;
 		}
 		storage->store_now = dlsym (storage_plugin_handler, "store_now");
 		if (storage->store_now == NULL) {
@@ -367,8 +368,7 @@ int main (int argc, char* argv[])
 			storage_plugin_handler = NULL;
 			free (storage);
 			storage = aux_storage;
-			aux_plugins = aux_plugins->next;
-			continue;
+			goto storage_plugin_remove;
 		}
 		storage->close = dlsym (storage_plugin_handler, "storage_close");
 		if (storage->close == NULL) {
@@ -377,11 +377,28 @@ int main (int argc, char* argv[])
 			storage_plugin_handler = NULL;
 			free (storage);
 			storage = aux_storage;
-			aux_plugins = aux_plugins->next;
-			continue;
+			goto storage_plugin_remove;
 		}
+		storage->plugin = storage_plugins;
+		storage_plugins = storage_plugins->next;
+		storage->plugin->next = NULL;
 		storage->next = aux_storage;
-		aux_plugins = aux_plugins->next;
+		aux_plugins = storage_plugins;
+		continue;
+
+storage_plugin_remove:
+		/* if something went wrong, remove the storage_plugin structure */
+		storage_plugins = storage_plugins->next;
+			if (aux_plugins) {
+			if (aux_plugins->file) {
+				free (aux_plugins->file);
+			}
+			if (aux_plugins->xmldata) {
+				xmlFreeDoc (aux_plugins->xmldata);
+			}
+			free (aux_plugins);
+		}
+		aux_plugins = storage_plugins;
 	}
 	/* check if we have found at least one storage plugin */
 	if (!storage) {
@@ -390,20 +407,40 @@ int main (int argc, char* argv[])
 		goto cleanup;
 	}
 
-	/* CAPTURE DATA */
+	/*
+	 * CAPTURE DATA
+	 */
+
 	/* init input plugin */
-	collector_doc = xmlNewDoc (BAD_CAST "1.0");
-	xmlDocSetRootElement (collector_doc, xmlCopyNode (collector_node, 1));
-	xmlDocDumpMemory(collector_doc, &plugin_params, NULL);
-	retval = input.init((char*)plugin_params, &input.config);
+	xmlDocDumpMemory (input.plugin->xmldata, &plugin_params, NULL);
+	retval = input.init ((char*) plugin_params, &(input.config));
+	xmlFree (plugin_params);
 	if (retval != 0) {
 		VERBOSE(CL_VERBOSE_OFF, "Initiating input plugin failed.");
 		goto cleanup;
 	}
-	while(!done) {
+
+	/* init storage plugins */
+	/* if at least one storage plugin will not be initialized, we will stop the collector */
+	done = 1;
+	aux_storage = storage;
+	while (aux_storage) {
+		xmlDocDumpMemory (aux_storage->plugin->xmldata, &plugin_params, NULL);
+		retval = storage->init ((char*) plugin_params, &(aux_storage->config));
+		xmlFree (plugin_params);
+		aux_storage = aux_storage->next;
+		if (retval == 0) {
+			done = 0;
+		} else {
+			VERBOSE(CL_VERBOSE_OFF, "Initiating storage plugin failed.");
+		}
+	}
+
+	/* main loop */
+	while (!done) {
 		/* get data to process */
 		VERBOSE(CL_VERBOSE_BASIC, "loop");
-		sleep(5);
+		sleep (5);
 	}
 	/* TODO */
 
@@ -417,25 +454,25 @@ cleanup:
 			free (input_plugins->file);
 		}
 		if (input_plugins->xmldata) {
-			xmlFreeNode (input_plugins->xmldata);
+			xmlFreeDoc (input_plugins->xmldata);
 		}
 		free (input_plugins);
-	}
-	while (storage_plugins) {
-		if (storage_plugins->file) {
-			free (storage_plugins->file);
-		}
-		if (storage_plugins->xmldata) {
-			xmlFreeNode (storage_plugins->xmldata);
-		}
-		aux_plugins = storage_plugins->next;
-		free (storage_plugins);
-		storage_plugins = aux_plugins;
 	}
 	if (xml_config) {
 		xmlFreeDoc (xml_config);
 	}
 	xmlCleanupParser ();
+	while (storage_plugins) { /* while is just for sure, it should be always one */
+		if (storage_plugins->file) {
+			free (storage_plugins->file);
+		}
+		if (storage_plugins->xmldata) {
+			xmlFreeDoc (storage_plugins->xmldata);
+		}
+		aux_plugins = storage_plugins->next;
+		free (storage_plugins);
+		storage_plugins = aux_plugins;
+	}
 
 	/* DLLs cleanup */
 	if (input_plugin_handler) {
@@ -445,6 +482,17 @@ cleanup:
 		aux_storage = storage->next;
 		if (storage->dll_handler) {
 			dlclose (storage->dll_handler);
+		}
+		while (storage->plugin) { /* while is just for sure, it should be always one */
+			if (storage->plugin->file) {
+				free (storage->plugin->file);
+			}
+			if (storage->plugin->xmldata) {
+				xmlFreeDoc (storage->plugin->xmldata);
+			}
+			aux_plugins = storage->plugin->next;
+			free (storage->plugin);
+			storage->plugin = aux_plugins;
 		}
 		free (storage);
 		storage = aux_storage;

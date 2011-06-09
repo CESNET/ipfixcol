@@ -63,7 +63,7 @@
  */
 struct plugin_list {
 	char* file;
-	xmlNodePtr xmldata;
+	xmlDocPtr xmldata;
 	struct plugin_list *next;
 };
 

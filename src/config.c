@@ -324,7 +324,8 @@ struct plugin_list* get_storage_plugins (xmlNodePtr collector_node, xmlDocPtr co
 									aux_plugin = (struct plugin_list*) malloc (sizeof(struct plugin_list));
 									aux_plugin->file = (char*) malloc (sizeof(char) * (xmlStrlen (plugin_file) + 1));
 									strncpy (aux_plugin->file, (char*) plugin_file, xmlStrlen (plugin_file) + 1);
-									aux_plugin->xmldata = xmlCopyNode (xpath_obj_filewriters->nodesetval->nodeTab[k], 1);
+									aux_plugin->xmldata = xmlNewDoc (BAD_CAST "1.0");
+									xmlDocSetRootElement (aux_plugin->xmldata, xmlCopyNode (xpath_obj_filewriters->nodesetval->nodeTab[k], 1));
 									/* link new plugin item into the return list */
 									aux_plugin->next = plugins;
 									plugins = aux_plugin;
@@ -451,7 +452,8 @@ struct plugin_list* get_input_plugins (xmlNodePtr collector_node)
 	}
 
 	/* remember node with input plugin parameters */
-	retval->xmldata = xmlCopyNode(auxNode, 1);
+	retval->xmldata = xmlNewDoc (BAD_CAST "1.0");
+	xmlDocSetRootElement (retval->xmldata, xmlCopyNode (auxNode, 1));
 
 	/*
 	 * remember filename of input plugin implementation
