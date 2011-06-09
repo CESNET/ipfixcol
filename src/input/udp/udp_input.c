@@ -72,7 +72,7 @@
 struct plugin_conf
 {
     int socket; /**< listening socket */
-    struct input_info_network *info; /**< infromation structure passed 
+    struct input_info_network *info; /**< infromation structure passed
                                       * to collector */
 };
 
@@ -80,9 +80,9 @@ struct plugin_conf
 /**
  * \brief Input plugin initializtion function
  *
- * \param[in]  params  Expects at least port to listen on, handles space 
+ * \param[in]  params  Expects at least port to listen on, handles space
  * separated number specifying ip version (4 or 6)
- * \param[out] config  Sets source and destination IP, destination port. 
+ * \param[out] config  Sets source and destination IP, destination port.
  * \return 0 on success, nonzero else.
  */
 int input_init(char *params, void **config)
@@ -90,7 +90,7 @@ int input_init(char *params, void **config)
     if (params == NULL)  /* no port to listen on */
     {
         VERBOSE(CL_VERBOSE_OFF, "No port to listen on");
-        return 1;    
+        return 1;
     }
 
     /* necessary structures */
@@ -107,7 +107,7 @@ int input_init(char *params, void **config)
     /* parse params */
     /* expecting format "port ip_version" */
     port = strtok(params, " ");
-    ip_version = strtok(NULL, " "); 
+    ip_version = strtok(NULL, " ");
     if (ip_version != NULL)
     {
         if (ip_version[0] == '4') ai_family = AF_INET;
@@ -117,14 +117,14 @@ int input_init(char *params, void **config)
 
     /* allocate plugin_conf structure */
     conf = malloc(sizeof(struct plugin_conf));
-    if (conf == NULL) 
+    if (conf == NULL)
     {
         VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory for config structure: %s", strerror(errno));
         return 1;
     }
 
     conf->info = malloc(sizeof(struct input_info_network));
-    if (conf->info == NULL) 
+    if (conf->info == NULL)
     {
         VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory for input_info structure: %s", strerror(errno));
         return 1;
@@ -137,9 +137,9 @@ int input_init(char *params, void **config)
     hints.ai_socktype = SOCK_DGRAM; /* UDP */
     hints.ai_family = ai_family; /* both IPv4 and IPv6*/
     hints.ai_flags = AI_PASSIVE; /* server side */
-    
+
     /* get server address */
-    if ((ret = getaddrinfo(NULL, port, &hints, &addrinfo)) != 0) 
+    if ((ret = getaddrinfo(NULL, port, &hints, &addrinfo)) != 0)
     {
         VERBOSE(CL_VERBOSE_OFF, "getaddrinfo failed: %s", gai_strerror(ret));
         return 1;
@@ -147,28 +147,28 @@ int input_init(char *params, void **config)
 
     /* create socket */
     conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
-    if (conf->socket == -1) 
+    if (conf->socket == -1)
     {
         VERBOSE(CL_VERBOSE_OFF, "Cannot create socket: %s", strerror(errno));
         return 1;
     }
-   
+
     /* allow IPv4 connections on IPv6 */
-    if ((addrinfo->ai_family == AF_INET6) && 
-        (setsockopt(conf->socket, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_only, sizeof(ipv6_only)) == -1)) 
+    if ((addrinfo->ai_family == AF_INET6) &&
+        (setsockopt(conf->socket, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_only, sizeof(ipv6_only)) == -1))
     {
         VERBOSE(CL_VERBOSE_BASIC, "Cannot turn off socket option IPV6_V6ONLY. Plugin might not accept IPv4 connections");
     }
 
     /* bind socket to address */
-    if (bind(conf->socket, addrinfo->ai_addr, addrinfo->ai_addrlen) != 0) 
+    if (bind(conf->socket, addrinfo->ai_addr, addrinfo->ai_addrlen) != 0)
     {
         VERBOSE(CL_VERBOSE_OFF, "Cannot bind socket: %s\n", strerror(errno));
         return 1;
     }
 
     /* get binded address -- we listen on all interfaces, so it should be 0.0.0.0*/
-    if (getsockname(conf->socket, (struct sockaddr*) saddrp, &saddr_len) != 0) 
+    if (getsockname(conf->socket, (struct sockaddr*) saddrp, &saddr_len) != 0)
     {
         VERBOSE(CL_VERBOSE_BASIC, "Cannot get socket name, input_info might lack destination port and address");
         saddrp = (struct sockaddr_storage *) addrinfo->ai_addr;
@@ -180,9 +180,9 @@ int input_init(char *params, void **config)
     if (addrinfo->ai_family == AF_INET) /* IPv4 */
     {
         conf->info->l3_proto = 4;
-        
+
         /* copy dst IPv4 address */
-        conf->info->dst_addr.ipv4.s_addr = 
+        conf->info->dst_addr.ipv4.s_addr =
             ((struct sockaddr_in*) saddrp)->sin_addr.s_addr;
     } else /* IPv6 */
     {
@@ -190,7 +190,7 @@ int input_init(char *params, void **config)
 
         /* copy dst IPv6 address */
         int i;
-        for (i=0; i<4;i++) 
+        for (i=0; i<4;i++)
         {
             conf->info->dst_addr.ipv6.s6_addr32[i] =
                 ((struct sockaddr_in6*) saddrp)->sin6_addr.s6_addr32[i];
@@ -201,37 +201,37 @@ int input_init(char *params, void **config)
 
     VERBOSE(CL_VERBOSE_BASIC, "Plugin initialization completed successfully");
 
-    return 0; 
+    return 0;
 }
 
 
 /**
  * \brief Pass input data from the input plugin into the ipfixcol core.
- * 
- * IP addresses are passed as returned by recvfrom and getsockname, 
+ *
+ * IP addresses are passed as returned by recvfrom and getsockname,
  * ports are in host byte order
  *
- * \param[in] config  plugin_conf structure 
+ * \param[in] config  plugin_conf structure
  * \param[out] info   Information structure describing the source of the data.
  * \param[out] packet Flow information data in the form of IPFIX packet.
  * \return 0 on success, nonzero else.
  */
 int get_packet(void *config, struct input_info **info, char **packet)
 {
-    /* get socket */ 
+    /* get socket */
     int sock = ((struct plugin_conf*) config)->socket;
     size_t length = 0;
     socklen_t addr_length = sizeof(struct sockaddr_storage);
     char buffer[BUFF_LEN];
     struct sockaddr_storage address;
     struct plugin_conf *conf = config;
-    
+
     /* receive packet */
     length = recvfrom(sock, &buffer, BUFF_LEN, 0, (struct sockaddr*) &address, &addr_length);
-    if (length == -1) 
+    if (length == -1)
     {
         VERBOSE(CL_VERBOSE_OFF, "Failed to receive packet: %s", strerror(errno));
-        return 1;    
+        return 1;
     }
 
     /* copy packet to collector */
@@ -246,7 +246,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
 
         /* copy port */
         conf->info->src_port = ntohs(((struct sockaddr_in*)  &address)->sin_port);
-    } else 
+    } else
     {
         /* copy src IPv6 address */
         int i;
@@ -259,7 +259,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
         /* copy port */
         conf->info->src_port = ntohs(((struct sockaddr_in6*)  &address)->sin6_port);
     }
-   
+
     /* pass info to the collector */
     *info = (struct input_info*) conf->info;
 
@@ -282,13 +282,13 @@ int input_close(void **config)
     {
         VERBOSE(CL_VERBOSE_OFF, "Cannot close socket: %s", strerror(errno));
     }
-    
+
     /* free allocated structures */
     free(((struct plugin_conf*) *config)->info);
     free(*config);
 
     VERBOSE(CL_VERBOSE_BASIC, "All allocated resources have been freed");
 
-    return 0;    
+    return 0;
 }
 /**@}*/
