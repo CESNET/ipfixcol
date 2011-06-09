@@ -49,6 +49,9 @@
 #include <dlfcn.h>
 #include <commlbr.h>
 
+#include <pthread.h>
+#include <syslog.h>
+
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
 
@@ -100,6 +103,7 @@ void help (char* progname)
 }
 
 struct input {
+	void* config;
 	int (*init) (char*, void**);
 	int (*get) (void*, struct input_info**, char**);
 	int (*close) (void**);
@@ -107,6 +111,7 @@ struct input {
 };
 
 struct storage {
+	void* config;
 	int (*init) (char*, void**);
 	int (*store) (void*, const struct ipfix_message*, const struct ipfix_template_t*);
 	int (*store_now) (const void*);
@@ -117,7 +122,8 @@ struct storage {
 
 int main (int argc, char* argv[])
 {
-	int c, i, fd;
+	int c, i, fd, retval = 0;
+	pid_t pid;
 	bool daemonize = false;
 	char *progname;
 	struct plugin_list* input_plugins = NULL, *storage_plugins = NULL,
@@ -127,7 +133,9 @@ int main (int argc, char* argv[])
 	void *input_plugin_handler = NULL, *storage_plugin_handler = NULL;
 
 	xmlXPathObjectPtr collectors;
-	xmlDocPtr xml_config;
+	xmlNodePtr collector_node;
+	xmlDocPtr xml_config, collector_doc;
+	xmlChar *plugin_params;
 
 	/* some initialization */
 	input.dll_handler = NULL;
@@ -163,6 +171,9 @@ int main (int argc, char* argv[])
 
 	/* daemonize */
 	if (daemonize) {
+		debug_init(progname, 1);
+		closelog();
+		openlog(progname, LOG_PID, 0);
 		/* and send all following messages to the syslog */
 		if (daemon (1, 0)) {
 			VERBOSE(CL_VERBOSE_OFF, "%s", strerror(errno));
@@ -178,13 +189,15 @@ int main (int argc, char* argv[])
 
 	/* open and prepare XML configuration file */
 	/* TODO: this part should be in the future replaced by NETCONF configuration */
-	if ((fd = open (CONFIG_FILE, O_RDONLY)) == -1) {
+	fd = open (CONFIG_FILE, O_RDONLY);
+	if (fd == -1) {
 		VERBOSE(CL_VERBOSE_OFF, "Unable to open configuration file %s (%s)", CONFIG_FILE, strerror(errno));
 		exit (EXIT_FAILURE);
 	}
-	if ((xml_config = xmlReadFd (fd, NULL, NULL, XML_PARSE_NOERROR
-	        | XML_PARSE_NOWARNING | XML_PARSE_NOBLANKS)) == NULL) {
+	xml_config = xmlReadFd (fd, NULL, NULL, XML_PARSE_NOERROR | XML_PARSE_NOWARNING | XML_PARSE_NOBLANKS);
+	if (xml_config == NULL) {
 		VERBOSE(CL_VERBOSE_OFF, "Unable to parse configuration file %s", CONFIG_FILE);
+		close (fd);
 		exit (EXIT_FAILURE);
 	}
 	close (fd);
@@ -193,135 +206,166 @@ int main (int argc, char* argv[])
 	/* TODO: now we handle only one collector, but we'll have to support
 	 * launching multiple collectors specified in a single configuration file
 	 */
-	if ((collectors = get_collectors (xml_config)) == NULL) {
+	collectors = get_collectors (xml_config);
+	if (collectors == NULL) {
 		/* no collectingProcess configured */
 		VERBOSE(CL_VERBOSE_OFF, "No collectingProcess configured - nothing to do.");
-		exit (EXIT_FAILURE);
+		retval = EXIT_FAILURE;
+		goto cleanup;
 	}
 
-	/* initialize plugins for the collector */
-	for (i = 0; i < collectors->nodesetval->nodeNr; i++) {
-		/* get input plugin - one */
-		if ((input_plugins
-		        = get_input_plugins (collectors->nodesetval->nodeTab[i]))
-		        == NULL) {
+	/* create separate process for each <collectingProcess */
+	for (i = (collectors->nodesetval->nodeNr - 1); i >= 0; i--) {
+
+		/*
+		 * fork for multiple collectors - original parent process handle only
+		 * collector 0
+		 */
+		if (i > 0) {
+			pid = fork();
+			if (pid > 0) { /* parent process waits for collector 0 */
+				continue;
+			} else if (pid < 0) { /* error occured, fork failed */
+				VERBOSE(CL_VERBOSE_OFF, "Forking collector process failed (%s), skipping collector %d.", strerror(errno), i);
+				continue;
+			}
+			/* else child - just continue to handle plugins */
+			VERBOSE(CL_VERBOSE_BASIC, "New collector process started.");
+		}
+		collector_node = collectors->nodesetval->nodeTab[i];
+		break;
+	}
+
+	/*
+	 * initialize plugins for the collector
+	 */
+	/* get input plugin - one */
+	input_plugins = get_input_plugins (collector_node);
+	if (input_plugins == NULL) {
+		retval = EXIT_FAILURE;
+		goto cleanup;
+	}
+
+	/* get storage plugins - at least one */
+	storage_plugins = get_storage_plugins (collector_node, xml_config);
+	if (storage_plugins == NULL) {
+		retval = EXIT_FAILURE;
+		goto cleanup;
+	}
+
+	/* prepare input plugin */
+	VERBOSE(CL_VERBOSE_ADVANCED, "Opening input plugin: %s", input_plugins->file);
+	input_plugin_handler = dlopen (input_plugins->file, RTLD_LAZY);
+	if (input_plugin_handler == NULL) {
+		VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
+		retval = EXIT_FAILURE;
+		goto cleanup;
+	}
+	input.dll_handler = input_plugin_handler;
+
+	/* prepare Input API routines */
+	input.init = dlsym (input_plugin_handler, "input_init");
+	if (input.init == NULL) {
+		VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
+		retval = EXIT_FAILURE;
+		goto cleanup;
+	}
+	input.get = dlsym (input_plugin_handler, "get_packet");
+	if (input.get == NULL) {
+		VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
+		retval = EXIT_FAILURE;
+		goto cleanup;
+	}
+	input.close = dlsym (input_plugin_handler, "input_close");
+	if (input.close == NULL) {
+		VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
+		retval = EXIT_FAILURE;
+		goto cleanup;
+	}
+
+	/* prepare storage plugin(s) */
+	aux_plugins = storage_plugins;
+	while (aux_plugins) {
+		VERBOSE(CL_VERBOSE_ADVANCED, "Opening storage plugin: %s", aux_plugins->file);
+
+		storage_plugin_handler = dlopen (aux_plugins->file, RTLD_LAZY);
+		if (storage_plugin_handler == NULL) {
+			VERBOSE(CL_VERBOSE_OFF, "Unable to load storage plugin (%s)", dlerror());
+			aux_plugins = aux_plugins->next;
 			continue;
 		}
 
-		/* get storage plugins - at least one */
-		if ((storage_plugins
-		        = get_storage_plugins (collectors->nodesetval->nodeTab[i], xml_config))
-		        == NULL) {
-			free (input_plugins->file);
-			free (input_plugins);
-			continue;
-		}
-
-		/* prepare input plugin */
-		VERBOSE(CL_VERBOSE_ADVANCED, "Opening input plugin: %s", input_plugins->file);
-
-		if ((input_plugin_handler = dlopen (input_plugins->file, RTLD_LAZY))
-		        == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
-			continue;
-		}
-		input.dll_handler = input_plugin_handler;
+		aux_storage = storage;
+		storage = (struct storage*) malloc (sizeof(struct storage));
+		storage->dll_handler = storage_plugin_handler;
 
 		/* prepare Input API routines */
-		if ((input.init = dlsym (input_plugin_handler, "input_init")) == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
-			dlclose (input_plugin_handler);
-			input_plugin_handler = NULL;
+		storage->init = dlsym (storage_plugin_handler, "storage_init");
+		if (storage->init == NULL) {
+			VERBOSE(CL_VERBOSE_OFF, "Unable to load storage plugin (%s)", dlerror());
+			dlclose (storage_plugin_handler);
+			storage_plugin_handler = NULL;
+			free (storage);
+			storage = aux_storage;
 			continue;
 		}
-		if ((input.get = dlsym (input_plugin_handler, "get_packet")) == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
-			dlclose (input_plugin_handler);
-			input_plugin_handler = NULL;
+		storage->store = dlsym (storage_plugin_handler, "store_packet");
+		if (storage->store == NULL) {
+			VERBOSE(CL_VERBOSE_OFF, "Unable to load storage plugin (%s)", dlerror());
+			dlclose (storage_plugin_handler);
+			storage_plugin_handler = NULL;
+			free (storage);
+			storage = aux_storage;
 			continue;
 		}
-		if ((input.close = dlsym (input_plugin_handler, "input_close")) == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
-			dlclose (input_plugin_handler);
-			input_plugin_handler = NULL;
+		storage->store_now = dlsym (storage_plugin_handler, "store_now");
+		if (storage->store_now == NULL) {
+			VERBOSE(CL_VERBOSE_OFF, "Unable to load storage plugin (%s)", dlerror());
+			dlclose (storage_plugin_handler);
+			storage_plugin_handler = NULL;
+			free (storage);
+			storage = aux_storage;
 			continue;
 		}
-
-		/* prepare storage plugins */
-		aux_plugins = storage_plugins;
-		while (aux_plugins) {
-			VERBOSE(CL_VERBOSE_ADVANCED, "Opening storage plugin: %s", aux_plugins->file);
-
-			if ((storage_plugin_handler = dlopen (aux_plugins->file, RTLD_LAZY))
-			        == NULL) {
-				VERBOSE(CL_VERBOSE_OFF, "Unable to load storage plugin (%s)", dlerror());
-				continue;
-			}
-
-			aux_storage = storage;
-			storage = (struct storage*) malloc (sizeof(struct storage));
-
-			storage->dll_handler = storage_plugin_handler;
-
-			/* prepare Input API routines */
-			if ((storage->init = dlsym (storage_plugin_handler, "storage_init"))
-			        == NULL) {
-				VERBOSE(CL_VERBOSE_OFF, "Unable to load storage plugin (%s)", dlerror());
-				dlclose (storage_plugin_handler);
-				storage_plugin_handler = NULL;
-				free (storage);
-				storage = aux_storage;
-				continue;
-			}
-			if ((storage->store
-			        = dlsym (storage_plugin_handler, "store_packet")) == NULL) {
-				VERBOSE(CL_VERBOSE_OFF, "Unable to load storage plugin (%s)", dlerror());
-				dlclose (storage_plugin_handler);
-				storage_plugin_handler = NULL;
-				free (storage);
-				storage = aux_storage;
-				continue;
-			}
-			if ((storage->store_now
-			        = dlsym (storage_plugin_handler, "store_now")) == NULL) {
-				VERBOSE(CL_VERBOSE_OFF, "Unable to load storage plugin (%s)", dlerror());
-				dlclose (storage_plugin_handler);
-				storage_plugin_handler = NULL;
-				free (storage);
-				storage = aux_storage;
-				continue;
-			}
-			if ((storage->close
-			        = dlsym (storage_plugin_handler, "storage_close")) == NULL) {
-				VERBOSE(CL_VERBOSE_OFF, "Unable to load storage plugin (%s)", dlerror());
-				dlclose (storage_plugin_handler);
-				storage_plugin_handler = NULL;
-				free (storage);
-				storage = aux_storage;
-				continue;
-			}
-			storage->next = aux_storage;
-			aux_plugins = aux_plugins->next;
+		storage->close = dlsym (storage_plugin_handler, "storage_close");
+		if (storage->close == NULL) {
+			VERBOSE(CL_VERBOSE_OFF, "Unable to load storage plugin (%s)", dlerror());
+			dlclose (storage_plugin_handler);
+			storage_plugin_handler = NULL;
+			free (storage);
+			storage = aux_storage;
+			continue;
 		}
-
-		/* finnish looking for input plugin */
-		break;
+		storage->next = aux_storage;
+		aux_plugins = aux_plugins->next;
 	}
 
 	/* check if we have found any input plugin */
 	if (!input.dll_handler) {
 		VERBOSE(CL_VERBOSE_OFF, "Input plugin initialization failed.");
-		exit (EXIT_FAILURE);
+		retval = EXIT_FAILURE;
+		goto cleanup;
 	}
 	/* check if we have found at least one storage plugin */
 	if (!storage) {
-		VERBOSE(CL_VERBOSE_OFF, "Input plugin initialization failed.");
-		exit (EXIT_FAILURE);
+		VERBOSE(CL_VERBOSE_OFF, "Storage plugin(s) initialization failed.");
+		retval = EXIT_FAILURE;
+		goto cleanup;
 	}
 
-	/* start capturing data */
+	/* CAPTURE DATA */
+	/* init input plugin */
+	collector_doc = xmlNewDoc (BAD_CAST "1.0");
+	xmlDocSetRootElement (collector_doc, xmlCopyNode (collector_node, 1));
+	xmlDocDumpMemory(collector_doc, &plugin_params, NULL);
+	retval = input.init((char*)plugin_params, &input.config);
+	if ( retval != 0) {
+		VERBOSE(CL_VERBOSE_OFF, "Initiating input plugin failed.");
+		goto cleanup;
+	}
 	/* TODO */
 
+cleanup:
 	/* xml cleanup */
 	if (collectors) {
 		xmlXPathFreeObject (collectors);
@@ -337,7 +381,7 @@ int main (int argc, char* argv[])
 	}
 	while (storage_plugins) {
 		if (storage_plugins->file) {
-			free (input_plugins->file);
+			free (storage_plugins->file);
 		}
 		if (storage_plugins->xmldata) {
 			xmlFreeNode (storage_plugins->xmldata);
@@ -352,9 +396,18 @@ int main (int argc, char* argv[])
 	xmlCleanupParser ();
 
 	/* DLLs cleanup */
-	dlclose (input_plugin_handler);
+	if (input_plugin_handler) {
+		dlclose (input_plugin_handler);
+	}
+	while (storage) {
+		aux_storage = storage->next;
+		if (storage->dll_handler) {
+			dlclose (storage->dll_handler);
+		}
+		free (storage);
+		storage = aux_storage;
+	}
+	VERBOSE(CL_VERBOSE_BASIC, "Closing collector.");
 
-	VERBOSE(CL_VERBOSE_BASIC, "done :)");
-
-	return (0);
+	return (retval);
 }
