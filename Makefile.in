@@ -41,7 +41,9 @@ TARGETS = ipfixcol
 MANPAGES = ipfixcol.1
 MANSRCS = ipfixcol.dbk
 SRCS =	src/ipfixcol.c \
-	src/config.c
+	src/config.c \
+	src/queues.c \
+	src/ipfix_parser.c
 
 HDRS =	headers/ipfix.h \
 	headers/input.h \
