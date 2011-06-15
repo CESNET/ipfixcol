@@ -56,8 +56,10 @@
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
 
-#include "config.h"
 #include "../ipfixcol.h"
+
+#include "config.h"
+#include "data_mngmt.h"
 
 /**
  * \defgroup internalAPIs ipfixcol's Internal APIs
@@ -115,26 +117,6 @@ void term_signal_handler(int sig)
 		done = 1;
 	}
 }
-
-struct input {
-	void* config;
-	int (*init) (char*, void**);
-	int (*get) (void*, struct input_info**, char**);
-	int (*close) (void**);
-	void *dll_handler;
-	struct plugin_list* plugin;
-};
-
-struct storage {
-	void* config;
-	int (*init) (char*, void**);
-	int (*store) (void*, const struct ipfix_message*, const struct ipfix_template_t*);
-	int (*store_now) (const void*);
-	int (*close) (void**);
-	void *dll_handler;
-	struct storage *next;
-	struct plugin_list* plugin;
-};
 
 int main (int argc, char* argv[])
 {
@@ -473,11 +455,17 @@ cleanup:
 
 	/* DLLs cleanup */
 	if (input_plugin_handler) {
+		if (input.config != NULL) {
+			input.close (&(input.config));
+		}
 		dlclose (input_plugin_handler);
 	}
 	while (storage) {
 		aux_storage = storage->next;
 		if (storage->dll_handler) {
+			if (storage->config != NULL) {
+				storage->close (&(storage->config));
+			}
 			dlclose (storage->dll_handler);
 		}
 		while (storage->plugin) { /* while is just for sure, it should be always one */
