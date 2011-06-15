@@ -41,6 +41,7 @@
 #define CONFIG_H_
 
 #include <libxml/tree.h>
+#include <libxml/xpath.h>
 
 /**
  * \defgroup internalConfig Configuration Processing
@@ -67,6 +68,31 @@ struct plugin_list {
 	struct plugin_list *next;
 };
 
+/**
+ * \brief Input plugin handler structure
+ */
+struct input {
+	void* config;
+	int (*init) (char*, void**);
+	int (*get) (void*, struct input_info**, char**);
+	int (*close) (void**);
+	void *dll_handler;
+	struct plugin_list* plugin;
+};
+
+/**
+ * \brief Storage plugin handler structure.
+ */
+struct storage {
+	void* config;
+	int (*init) (char*, void**);
+	int (*store) (void*, const struct ipfix_message*, const struct ipfix_template_t*);
+	int (*store_now) (const void*);
+	int (*close) (void**);
+	void *dll_handler;
+	struct plugin_list* plugin;
+	struct storage *next;
+};
 
 /**
  * \brief Get list of \<collectingPrecoess\>es from user configuration.
