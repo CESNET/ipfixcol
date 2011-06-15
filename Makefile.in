@@ -43,7 +43,8 @@ MANSRCS = ipfixcol.dbk
 SRCS =	src/ipfixcol.c \
 	src/config.c \
 	src/queues.c \
-	src/ipfix_parser.c
+	src/ipfix_parser.c \
+	src/data_mngmt.c
 
 HDRS =	headers/ipfix.h \
 	headers/input.h \
