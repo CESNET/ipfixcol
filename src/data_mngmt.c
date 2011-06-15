@@ -107,6 +107,10 @@ static void* storage_plugin_thread (void* cfg)
 	while (!done) {
 		/* get next data */
 		msg = rbuffer_read (config->queue, index);
+		if (msg == NULL) {
+			VERBOSE (CL_VERBOSE_BASIC, "Error on reading data from Data manager.");
+			continue;
+		}
 
 		/* do the job */
 		/**
@@ -121,6 +125,9 @@ static void* storage_plugin_thread (void* cfg)
 		/* move the index */
 		index = (index + 1) % config->queue->size;
 	}
+
+	/* close plugin */
+	config->plugin->close (&(config->plugin->config));
 
 	VERBOSE (CL_VERBOSE_ADVANCED, "Closing storage plugin's thread.");
 	return (NULL);
