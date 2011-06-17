@@ -172,7 +172,7 @@ int get_packet(void *config, struct input_info** info, char **packet)
 
 	header = (struct ipfix_header *) malloc(sizeof(*header));
 	if (!header) {
-		/* TODO - log */
+		VERBOSE(CL_VERBOSE_OFF, "not enough memory");
 		return -1;
 	}
 
@@ -180,14 +180,14 @@ int get_packet(void *config, struct input_info** info, char **packet)
 	ret = read(conf->fd, header, sizeof(*header));
 	if ((ret == -1) || (ret == 0)) {
 		/* error during reading */
-		/* TODO - log */
+		VERBOSE(CL_VERBOSE_OFF, "error while reading from input file");
 		goto err_header;
 	}
 
 	/* check magic number */
 	if (ntohs(header->version) != IPFIX_VERSION) {
 		/* not an IPFIX file */
-		/* TODO - log */
+		VERBOSE(CL_VERBOSE_OFF, "input file is not an IPFIX file");
 		goto err_header;
 	}
 
@@ -195,14 +195,14 @@ int get_packet(void *config, struct input_info** info, char **packet)
 	packet_len = ntohs(header->length);
 	if (packet_len < sizeof(*header)) {
 		/* invalid length of the IPFIX message */
-		/* TODO - log */
+		VERBOSE(CL_VERBOSE_OFF, "input file has invalid length (too short)");
 		goto err_header;
 	}
 
 	/* allocate memory for whole IPFIX message */
 	*packet = (char *) malloc(packet_len);
 	if (*packet == NULL) {
-		/* TODO - log, out of memory */
+		VERBOSE(CL_VERBOSE_OFF, "not enough memory");
 		goto err_header;
 	}
 
@@ -212,7 +212,7 @@ int get_packet(void *config, struct input_info** info, char **packet)
 	ret = read(conf->fd, (*packet)+counter, packet_len-counter);
 	if (ret == -1) {
 		/* error during reading */
-		/* TODO - log */
+		VERBOSE(CL_VERBOSE_OFF, "error while reading from input file");
 		goto err_header;
 	}
 	counter += ret;
@@ -221,7 +221,7 @@ int get_packet(void *config, struct input_info** info, char **packet)
 	in_info = (struct input_info *) malloc(sizeof(*in_info));
 	if (!info) {
 		/* out of memory */
-		/* TODO - log */
+		VERBOSE(CL_VERBOSE_OFF, "not enough memory");
 		goto err_info;
 	}
 
@@ -248,7 +248,7 @@ int input_close(void **config)
 
 	ret = close(conf->fd);
 	if (ret == -1) {
-		/* TODO - log warning */
+		VERBOSE(CL_VERBOSE_OFF, "error while closing output file");
 	}
 
 	xmlFree(conf->xml_file);
