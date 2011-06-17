@@ -42,11 +42,6 @@
  * \ingroup inputPlugins
  *
  * This is implementation of the input plugin API for IPFIX file format.
- * Currently supported input parameters:
- * path   - path to an IPFIX file. This parameter is mandatory.
- *
- * Sample input string:
- * "/tmp/ipfix.file"
  *
  * @{
  */
@@ -60,12 +55,19 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <stdio.h>
+#include <libxml/xmlmemory.h>
+#include <libxml/parser.h>
+#include <commlbr.h>
 
 #include "ipfixcol.h"
+
 
 /* IPFIX input plugin specific "config" structure */
 struct ipfix_config {
 	int fd;                  /* file descriptor */
+	xmlChar *xml_file;       /* input file URI from XML configuration 
+	                          * file */
+	char *file;              /* actual path where to store messages */
 };
 
 
@@ -78,22 +80,67 @@ int input_init(char *params, void **config)
 	int fd;
 	struct ipfix_config *conf;
 
+	xmlDocPtr doc;
+	xmlNodePtr cur;
 
-	if (!params) {
-		/* TODO - log, bad params */
+
+	/* allocate memory for config structure */
+	conf = (struct ipfix_config *) malloc(sizeof(*conf));
+	if (!conf) {
+		VERBOSE(CL_VERBOSE_OFF, "not enough memory");
 		return -1;
 	}
-
-	conf = (struct ipfix_config *) malloc (sizeof(*conf));
-
 	memset(conf, '\0', sizeof(*conf));
+
+
+	/* try to parse configuration file */
+	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
+	if (doc == NULL) {
+		VERBOSE(CL_VERBOSE_OFF, "plugin configuration not parsed successfully");
+		goto err_init;
+	}
+	cur = xmlDocGetRootElement(doc);
+	if (cur == NULL) {
+		VERBOSE(CL_VERBOSE_OFF, "empty configuration");
+		goto err_init;
+	}
+	if (xmlStrcmp(cur->name, (const xmlChar *) "fileReader")) {
+		VERBOSE(CL_VERBOSE_OFF, "root node != fileReader");
+		goto err_init;
+	}
+	cur = cur->xmlChildrenNode;
+	while (cur != NULL) {
+		/* find out where to look for input file */
+		if ((!xmlStrcmp(cur->name, (const xmlChar *) "file"))) {
+			conf->xml_file = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+		}
+		break;
+	}
+
+	/* check whether we have found "file" element in configuration file */
+	if (conf->xml_file == NULL) {
+		VERBOSE(CL_VERBOSE_OFF, "\"file\" element is missing. no input, "
+		                        "nothing to do");
+		goto err_init;
+	}
+
+	/* we only support local files */
+	if (strncmp((char *) conf->xml_file, "file:", 5)) {
+		VERBOSE(CL_VERBOSE_OFF, "element \"file\": invalid URI - "
+		                        "only allowed scheme is \"file:\"");
+		goto err_init;
+	}
+
+	/* skip "file:" at the beginning of the URI */
+	conf->file = (char *) conf->xml_file + 5;
+
 
 	/* open IPFIX file */
 	fd = open(params, O_RDONLY);
 	if (fd == -1) {
 		/* input file doesn't exist or we don't have read permission */
-		/* TODO - log, no input, nothing to do */
-		goto err_open;
+		VERBOSE(CL_VERBOSE_OFF, "unable to open input file");
+		goto err_init;
 	}
 
 	conf->fd = fd;
@@ -102,7 +149,7 @@ int input_init(char *params, void **config)
 
 	return 0;
 
-err_open:
+err_init:
 	/* plugin initialization failed */
 	free(conf);
 	*config = NULL;
@@ -125,7 +172,7 @@ int get_packet(void *config, struct input_info** info, char **packet)
 
 	header = (struct ipfix_header *) malloc(sizeof(*header));
 	if (!header) {
-		/* TODO - log, out of memory */
+		/* TODO - log */
 		return -1;
 	}
 
@@ -204,60 +251,11 @@ int input_close(void **config)
 		/* TODO - log warning */
 	}
 
+	xmlFree(conf->xml_file);
 	free(conf);
 
 	return ret;
 }
 
 /**@}*/
-
-
-/* DEBUG - this can be safely ignored or deleted */
-#ifdef __DEBUG_INPUT_PLUGIN_IPFIX
-
-#include <stdio.h>
-int main(int argc, char **argv)
-{
-	struct ipfix_config *config;
-	int ret;
-
-	ret = input_init(argv[1], (void **) &config);
-	printf("input_init() [%d]\n", ret);
-	if (ret != 0) {
-		return ret;
-	}
-
-	printf("%d\n", config->fd);
-
-	int output;
-	output = open("output.ipfix", O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	if (output == -1) {
-		return -1;
-	}
-
-	char *packet;
-	struct input_info *nfo;
-
-	ret = 1;
-	while (ret > 0) {
-		ret = get_packet((void *) config, &nfo, &packet);
-		printf("get_packet() [%d], ", ret);
-		if (ret > 0) {
-			printf("source %d\n", nfo->type);
-			write(output, packet, ret);
-			free(packet);
-			free(nfo);
-		}
-	}
-
-	close(output);
-
-
-	ret = input_close((void **) &config);
-	printf("\ninput_close() [%d]\n", ret);
-
-	return 0;
-}
-#endif
-/* DEBUG */
 
