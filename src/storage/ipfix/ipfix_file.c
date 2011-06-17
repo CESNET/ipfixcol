@@ -42,12 +42,6 @@
  * \ingroup storagePlugins
  *
  * This is implementation of the storage plugin API for IPFIX file format.
- * Currently supported input parameters are:
- * path     - where to store output files.
- * filesize - maximum size of an output file (in bytes).
- *
- * Sample input string:
- * "-path=/tmp/file -filesize=10000"
  *
  * @{
  */
@@ -64,62 +58,23 @@
 #include <libgen.h>
 #include <ctype.h>
 #include <arpa/inet.h>
+#include <libxml/xmlmemory.h>
+#include <libxml/parser.h>
 
+#include "commlbr.h"
 #include "ipfixcol.h"
-
-
-#define OUTPUT_PATH_MAX_LENGTH(dir) pathconf((dir), _PC_PATH_MAX)
 
 
 /* IPFIX storage plugin specific "config" structure */
 struct ipfix_config {
 	int fd;                     /* file descriptor of an output file */
-	char *filename;             /* name of an output file */
-	char *dir;                  /* absolute or relative path where to
-	                             * store output file */
-	char prefix[32];            /* prefix for an output file */
-	char *output_path;          /* actual path to an output file
-	                             * (dir + prefix + filename) */
-	uint64_t filesize;          /* maximum size of an output file */
 	uint32_t fcounter;          /* number of created files */
 	uint64_t bcounter;          /* bytes written into a current output
 	                             * file */
+	xmlChar *xml_file;          /* URI from xml configuration file */
+	char *file;                 /* actual path where to store messages */
 };
 
-/*
- * List of valid parameters. These params can be used in input string.
- * Sample input string: "-path=/tmp/file -filesize=1000000"
- * All parameters are optional.
-*/
-static char *valid_params[] = {
-	"path",       /** path where to store files */
-	"filesize",   /** maximum size of an output file in bytes */
-};
-#define	NUMBER_OF_VALID_PARAMS 2
-
-
-/* auxiliary function used during parsing of input parameters */
-static int select_param(char *string)
-{
-	int i;
-
-	for (i = 0; i < NUMBER_OF_VALID_PARAMS; i++) {
-		if (!strcmp(string, valid_params[i])) {
-			return i;
-		}
-	}
-
-	return -1;
-}
-
-/* create prefix for output file */
-static char * create_prefix(struct ipfix_config *config)
-{
-	snprintf(config->prefix, sizeof(config->prefix)-1, "%05u",
-	         config->fcounter);
-
-	return config->prefix;
-}
 
 /* prepare (open, create) output file  */
 static int prepare_output_file(struct ipfix_config *config)
@@ -129,16 +84,11 @@ static int prepare_output_file(struct ipfix_config *config)
 	/* file counter */
 	config->fcounter += 1;
 
-	snprintf(config->output_path, OUTPUT_PATH_MAX_LENGTH(config->dir)-1,
-                 "%s/%s-%s", config->dir, create_prefix(config),
-                 config->filename);
-
-	/* open output file */
-	fd = open(config->output_path, O_WRONLY | O_CREAT | O_TRUNC,
+	fd = open(config->file, O_WRONLY | O_CREAT | O_TRUNC,
 	          S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (fd == -1) {
-		/* TODO - log */
 		config->fcounter -= 1;
+		VERBOSE(CL_VERBOSE_OFF, "unable to open output file");
 		return -1;
 	}
 
@@ -154,7 +104,7 @@ static int close_output_file(struct ipfix_config *config)
 
 	ret = close(config->fd);
 	if (ret == -1) {
-		/* TODO - log */
+		VERBOSE(CL_VERBOSE_OFF, "error when closing output file");
 		return -1;
 	}
 
@@ -164,19 +114,7 @@ static int close_output_file(struct ipfix_config *config)
 	return 0;
 }
 
-/* trim whitespaces from the right side of the string */
-static void rstrtrim(char *str)
-{
-	int len = strlen(str);
-	char *end = str+(len-1);
 
-	for ( ; end > str; end--) {
-		if (!isspace(*end)) {
-			break;
-		}
-	}
-	*(end+1) = '\0';
-}
 
 
 /*
@@ -197,74 +135,70 @@ static void rstrtrim(char *str)
 int storage_init(char *params, void **config)
 {
 	struct ipfix_config *conf;
-	char *saveptr1;
-	char *saveptr2;
-	char *token;
-	char *subtoken;
-	int ret;
 
-	/* config structure */
+	xmlDocPtr doc;
+	xmlNodePtr cur;
+
+ 	/* allocate space for config structure */
 	conf = (struct ipfix_config *) malloc(sizeof(*conf));
 	if (conf == NULL) {
-		/* TODO - log */
+		VERBOSE(CL_VERBOSE_OFF, "not enough memory");
 		return -1;
 	}
 	memset(conf, '\0', sizeof(*conf));
 
-
-	/* default values */
-	conf->dir = ".";
-	conf->filename = "output";
-	conf->filesize = 100*65536; /* 65536 is maximum size of an IPFIX
-	                             * message. TODO - macro in some header
-	                             * file */
-
-	/* parse parameters from input string */
-	if (params) {
-		while (1) {
-			token = strtok_r(params, "-", &saveptr1);
-			if (token == NULL) {
-				break;
-			}
-
-			subtoken = strtok_r(token, "=", &saveptr2);
-
-			switch (select_param(subtoken)) {
-			case 0:
-				/* path */
-				subtoken = strtok_r(NULL, "=", &saveptr2);
-
-				rstrtrim(subtoken);
-
-				conf->dir = dirname(subtoken);
-				conf->filename = basename(subtoken);
-				break;
-			case 1:
-				/* maximum file size */
-				subtoken = strtok_r(NULL, "=", &saveptr2);
-				conf->filesize = atoi(subtoken);
-				break;
-			default:
-				/* unknown parameter */
-				/* TODO - log */
-				return -1;
-			}
-			params = NULL;
+	/* try to parse configuration file */
+	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
+	if (doc == NULL) {
+		VERBOSE(CL_VERBOSE_OFF, "plugin configuration not parsed successfully");
+		goto err_init;
+	}
+	cur = xmlDocGetRootElement(doc);
+	if (cur == NULL) {
+		VERBOSE(CL_VERBOSE_OFF, "empty configuration");
+		goto err_init;
+	}
+	if (xmlStrcmp(cur->name, (const xmlChar *) "fileWriter")) {
+		VERBOSE(CL_VERBOSE_OFF, "root node != fileWriter");
+		goto err_init;
+	}
+	cur = cur->xmlChildrenNode;
+	while (cur != NULL) {
+		/* find out where to store output files */
+		if ((!xmlStrcmp(cur->name, (const xmlChar *) "file"))) {
+			conf->xml_file = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
 		}
+		break;
 	}
 
-
-	conf->output_path = (char *) malloc(OUTPUT_PATH_MAX_LENGTH(conf->dir));
-
-	ret = prepare_output_file(conf);
-	if (ret < 0) {
-		/* TODO - log */
-		return -1;
+	/* check whether we have found "file" element in configuration file */
+	if (conf->xml_file == NULL) {
+		VERBOSE(CL_VERBOSE_OFF, "configuration file doesn't specify where "
+		                        "to store output files (\"file\" element "
+								"is missing)");
+		goto err_init;
 	}
+
+	/* we only support local files */
+	if (strncmp((char *) conf->xml_file, "file:", 5)) {
+		VERBOSE(CL_VERBOSE_OFF, "element \"file\": invalid URI - "
+		                        "only allowed scheme is \"file:\"");
+		goto err_init;
+	}
+
+	/* skip "file:" at the beginning of the URI */
+	conf->file = (char *) conf->xml_file + 5;
+
+	prepare_output_file(conf);
 
 	*config = conf;
 
 	return 0;
+
+
+err_init:
+	free(conf);
+	return -1;
 }
 
 /**
@@ -274,7 +208,8 @@ int storage_init(char *params, void **config)
  *
  * \param[in] config the plugin specific configuration structure
  * \param[in] ipfix_msg IPFIX message
- * \param[in] templates All currently known templates, not just templates in the message
+ * \param[in] templates All currently known templates, not just templates 
+ * in the message
  * \return 0 on success, negative value otherwise
  */
 int store_packet(void *config, const struct ipfix_message *ipfix_msg,
@@ -285,20 +220,6 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	struct ipfix_config *conf;
 	conf = (struct ipfix_config *) config;
 
-	/* check whether there is a free space for the packet in current
- 	 * output file */
-	if (ntohs(ipfix_msg->pkt_header->length) + conf->bcounter
-	    > conf->filesize) {
-		if (conf->filesize < ntohs(ipfix_msg->pkt_header->length)) {
-			/* this packet is bigger than our filesize limit */
-			/* TODO - log */
-			return -1;
-		}
-
-		/* there is not enough space in this file, prepare new one */
-		close_output_file(conf);
-		prepare_output_file(conf);
-	}
 
 	/* write IPFIX message into an output file */
 	while (count < ntohs(ipfix_msg->pkt_header->length)) {
@@ -326,19 +247,18 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 /**
  * \brief Store everything we have immediately and close output file.
  *
- * Just close current output file, no matter how big it is, and prepare new one.
+ * Just flush all buffers.
  *
  * \param[in] config the plugin specific configuration structure
  * \return 0 on success, negative value otherwise
  */
 int store_now(const void *config)
 {
+	/* FIXME - is this enough? */
 	struct ipfix_config *conf;
 	conf = (struct ipfix_config *) config;
 
-	close_output_file(conf);
-
-	prepare_output_file(conf);
+	fsync(conf->fd);
 
 	return 0;
 }
@@ -362,10 +282,10 @@ int storage_close(void **config)
 
 	if (conf->bcounter == 0) {
 		/* current output file is empty, get rid of it */
-		unlink(conf->output_path);
+		unlink(conf->file);
 	}
 
-	free(conf->output_path);
+	xmlFree(conf->xml_file);
 	free(conf);
 
 	*config = NULL;
@@ -374,129 +294,4 @@ int storage_close(void **config)
 }
 
 /**@}*/
-
-
-
-
-#ifdef	_DEBUG_STORAGE_PLUGIN_IPFIX
-/* debug and self test section, it can be safely ignored or deleted */
-
-#define _PRINT_CONFIG_STRUCT(conf) do {		                       \
-		printf("\tfd: %d\n", conf->fd);                        \
-		printf("\tfilename: \"%s\"\n", conf->filename);        \
-		printf("\tdir: \"%s\"\n", conf->dir);                  \
-		printf("\tprefix: \"%s\"\n", conf->prefix);            \
-		printf("\toutput_path: \"%s\"\n", conf->output_path);  \
-		printf("\tfilesize: %lu\n", conf->filesize);           \
-		printf("\tfcounter: %u\n", conf->fcounter);            \
-		printf("\tbcounter: %lu\n", conf->bcounter);           \
-	} while (0);
-
-#define _TEST_BIG_BUFFER	1000000
-
-static int load_packet_from_file(char *path, char *buf, size_t size)
-{
-	int fd_packet;
-	int ret;
-	struct stat st;
-
-	fd_packet = open(path, O_RDONLY);
-	if (fd_packet == -1) {
-		perror("open");
-		return -1;
-	}
-
-	fstat(fd_packet, &st);
-
-	if ((unsigned long) st.st_size > size) {
-		fprintf(stderr, "buffer is too small\n");
-		return -2;
-	}
-
-	ret = read(fd_packet, buf, st.st_size);
-	if (ret != st.st_size) {
-		printf("WARNING: packet is crippled\n");
-	}
-
-	close(fd_packet);
-
-	return st.st_size;
-}
-
-int main(int argc, char **argv)
-{
-	struct ipfix_config *conf;
-	int ret;
-	struct ipfix_message msg;
-	char *buf;
-	char *params = "";
-
-	if (argc < 2) {
-		printf("Usage: %s path_to_sample_ipfix_file input_string"
-	                "\n", argv[0]);
-		return -1;
-	}
-
-	if (argc >= 3) {
-		params = argv[2];
-	}
-
-	printf("\ninput string: \"%s\"\n\n", params);
-
-	/* stoage_init() */
-	printf("--- init\n");
-
-	printf("calling storage_init()...");
-	ret = storage_init(params, (void **) &conf);
-	printf(" done [%d]\n", ret);
-
-	printf("config structure:\n");
-	_PRINT_CONFIG_STRUCT(conf);
-
-	/* store_packet() */
-	printf("\n--- store\n");
-
-	buf = (char *) malloc (_TEST_BIG_BUFFER);
-	if (!buf) {
-		fprintf(stderr, "not enough memory\n");
-		exit(-1);
-	}
-
-	ret = load_packet_from_file(argv[1], buf, _TEST_BIG_BUFFER);
-	if (ret <= 0) {
-		return -1;
-	}
-
-	msg.pkt_header = (struct ipfix_header *) buf;
-
-	printf("calling storage_packet()...");
-	ret = store_packet(conf, &msg, NULL);
-	printf(" done [%d]\n", ret);
-	printf("calling storage_packet()...");
-	ret = store_packet(conf, &msg, NULL);
-	printf(" done [%d]\n", ret);
-	printf("calling storage_packet()...");
-	ret = store_packet(conf, &msg, NULL);
-	printf(" done [%d]\n", ret);
-
-	free(buf);
-
-	/* store_now() */
-	printf("\n--- store now\n");
-	printf("calling storage_packet()...");
-	ret = store_now(conf);
-	printf(" done [%d]\n", ret);
-
-	printf("config structure:\n");
-	_PRINT_CONFIG_STRUCT(conf);
-
-	/* storage_remove() */
-	printf("\n--- storage remove\n");
-	printf("calling storage_remove()...");
-	ret = storage_remove(conf);
-	printf(" done [%d]\n", ret);
-
-	return 0;
-}
-#endif
 
