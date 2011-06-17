@@ -211,7 +211,7 @@ int test_get_packet(func_type function, char *udp_port, char *tcp_port)
         printf("  %s: plugin did not return any packet data\n", (data_sent!=0)? "ERROR": "INFO");
     } else 
     {
-        printf("  Expecting some data from plugin... OK\n");    
+        printf("  Expecting some data from plugin... OK\n");
     }
 
     if (input_info == NULL) 
