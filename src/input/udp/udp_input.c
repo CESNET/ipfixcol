@@ -59,6 +59,9 @@
 #include <stdlib.h>
 #include <commlbr.h>
 
+#include <libxml/parser.h>
+#include <libxml/tree.h>
+
 #include <ipfixcol.h>
 
 /* input buffer length */
@@ -105,6 +108,7 @@ int input_init(char *params, void **config)
     saddrp = &saddr;
 
     /* parse params */
+    printf(params);return 5;
     /* expecting format "port ip_version" */
     port = strtok(params, " ");
     ip_version = strtok(NULL, " ");

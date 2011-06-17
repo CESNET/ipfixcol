@@ -266,7 +266,7 @@ void usage(char *name)
     printf("Options:\n");
     printf("  -f input_module  specify input plugin to test\n");
     printf("  -s num           set timeout to num seconds for plugin functions. Default is %ds\n", TIMEOUT);
-    printf("  -p parameters    specify parameters that will be passed to the plugin input_init function\n");
+    printf("  -p plugin_config file with xml plugin configurationpassed to the plugin input_init function\n");
     printf("  -u udp_port      send test data to UDP port udp_port. Cannot be used with -t\n");
     printf("  -t tcp_port      send test data to TCP port tcp_port. Cannot be used with -u\n");
     printf("  -6               use IPv6 to send test data");
@@ -308,7 +308,7 @@ int main(int argc, char *argv[])
 
     int c;
     char *input_plugin = NULL;
-    char *params = NULL;
+    char *pc_file = NULL;
     char *udp_port = NULL;
     char *tcp_port = NULL;
     /* parse given parameters */
@@ -327,7 +327,7 @@ int main(int argc, char *argv[])
             break;
 
         case 'p': /* input plugin parameters */
-            params = optarg;
+            pc_file = optarg;
             break;
 
         case 'u':
@@ -367,6 +367,38 @@ int main(int argc, char *argv[])
         fprintf(stderr, "An error occured while opening the plugin: %s\n", dlerror());
         exit(1);
     }
+
+    /* load plugin config file */
+    char *params;
+    long pc_size;
+    int res;
+    FILE *pc = fopen(pc_file, "r");
+    if (pc == NULL) 
+    {
+        fprintf(stderr, "Cannot open plugin configuration file: %s\n", pc_file);    
+        exit(1);
+    }
+    /* obtain file size */
+    fseek(pc , 0 , SEEK_END);
+    pc_size = ftell(pc);
+    rewind(pc);
+
+    /* allocate memory to contain the whole file */
+    params = (char*) malloc (sizeof(char)*pc_size);
+    if (params == NULL) 
+    {
+        fprintf(stderr, "Cannot allocate memory for plugin configuration file\n"); 
+        exit (1);
+    }
+
+    /* copy the file into the buffer */
+    res = fread(params,1,pc_size,pc);
+    if (res != pc_size) 
+    {
+        fprintf(stderr, "Cannot read the configuration file\n"); 
+        exit(1);
+    }
+
 
 
     /* fork the process so that buggy plugin does not kill us */
@@ -448,6 +480,8 @@ int main(int argc, char *argv[])
             }
         }
     }
+
+    free(params);
 
     /* give final report */
     if (!errors) printf("\nAll functions are present and working\n");
