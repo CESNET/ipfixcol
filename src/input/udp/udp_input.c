@@ -58,7 +58,6 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <commlbr.h>
-
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
@@ -125,7 +124,7 @@ int input_init(char *params, void **config)
     xmlNode *cur_node = NULL;
 
     /* parse xml string */
-    doc = xmlParseDoc((xmlChar *) params);
+    doc = xmlParseDoc(BAD_CAST params);
     if (doc == NULL) {
         printf("%s", params);
         VERBOSE(CL_VERBOSE_OFF, "Cannot parse config xml\n");
@@ -140,8 +139,8 @@ int input_init(char *params, void **config)
         goto out;
     }
 
-    /* check that we have the right config xml */
-    if (strcmp((char *) root_element->name, "udpCollector") != 0) {
+    /* check that we have the right config xml, BAD_CAST is (xmlChar *) cast defined by libxml */
+    if (!xmlStrEqual(root_element->name, BAD_CAST "udpCollector")) {
         VERBOSE(CL_VERBOSE_OFF, "Expecting udpCollector root element, got %s", root_element->name);
         retval = 1;
         goto out;
@@ -152,6 +151,7 @@ int input_init(char *params, void **config)
         if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
             /* copy value to memory - don't forget the terminating zero */ 
             char *tmp_val = malloc(sizeof(char)*strlen((char *)cur_node->children->content)+1);
+            /* this is not a preferred cast, but we really want to use plain chars here */
             strcpy(tmp_val, (char *)cur_node->children->content);
             if (tmp_val == NULL) {
                 VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory: %s", strerror(errno));
@@ -159,19 +159,18 @@ int input_init(char *params, void **config)
                 goto out;
             }
 
-            if (strcmp((char *) cur_node->name, "localPort") == 0) { /* set local port */
+            if (xmlStrEqual(cur_node->name, BAD_CAST "localPort")) { /* set local port */
                 port = tmp_val;
-            } else if (strcmp((char *) cur_node->name, "localIPAddress") == 0) { /* set local address */
+            } else if (xmlStrEqual(cur_node->name, BAD_CAST "localIPAddress")) { /* set local address */
                 address = tmp_val;
-
             /* save following configuration to input_info */
-            } else if (strcmp((char *) cur_node->name, "templateLifeTime") == 0) { 
+            } else if (xmlStrEqual(cur_node->name, BAD_CAST "templateLifeTime")) { 
                 conf->info->template_life_time = tmp_val;
-            } else if (strcmp((char *) cur_node->name, "optionsTemplateLifeTime") == 0) { 
+            } else if (xmlStrEqual(cur_node->name, BAD_CAST "optionsTemplateLifeTime")) { 
                 conf->info->options_template_life_time = tmp_val;
-            } else if (strcmp((char *) cur_node->name, "templateLifePacket") == 0) {
+            } else if (xmlStrEqual(cur_node->name, BAD_CAST "templateLifePacket")) {
                 conf->info->template_life_packet = tmp_val;
-            } else if (strcmp((char *) cur_node->name, "optionsTemplateLifePacket") == 0) { 
+            } else if (xmlStrEqual(cur_node->name, BAD_CAST "optionsTemplateLifePacket")) { 
                 conf->info->options_template_life_packet = tmp_val;
             } else { /* unknown parameter, ignore */
                 free(tmp_val);
