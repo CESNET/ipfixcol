@@ -71,7 +71,7 @@ struct ipfix_config {
 	uint32_t fcounter;          /* number of created files */
 	uint64_t bcounter;          /* bytes written into a current output
 	                             * file */
-	xmlChar *xml_file;          /* URI from xml configuration file */
+	xmlChar *xml_file;          /* URI from XML configuration file */
 	char *file;                 /* actual path where to store messages */
 };
 
@@ -231,7 +231,8 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 				break;
 			} else {
 				/* serious error occurs */
-				/* TODO - log */
+				VERBOSE(CL_VERBOSE_OFF, "error while writing into the "
+				                        "output file");
 				return -1;
 			}
 		} else {
