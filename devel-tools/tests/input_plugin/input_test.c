@@ -383,8 +383,8 @@ int main(int argc, char *argv[])
     pc_size = ftell(pc);
     rewind(pc);
 
-    /* allocate memory to contain the whole file */
-    params = (char*) malloc (sizeof(char)*pc_size);
+    /* allocate memory to contain the whole file + terminating zero */
+    params = (char*) malloc (sizeof(char)*pc_size + 1);
     if (params == NULL) 
     {
         fprintf(stderr, "Cannot allocate memory for plugin configuration file\n"); 
@@ -398,6 +398,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Cannot read the configuration file\n"); 
         exit(1);
     }
+    params[pc_size] = '\0';
 
 
 

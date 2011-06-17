@@ -92,13 +92,15 @@ struct plugin_conf
 int input_init(char *params, void **config)
 {
     /* necessary structures */
-    struct addrinfo *addrinfo, hints;
-    struct plugin_conf *conf;
+    struct addrinfo *addrinfo=NULL, hints;
+    struct plugin_conf *conf=NULL;
     char *port = NULL, *address = NULL;
     int ai_family = AF_INET6; /* IPv6 is default */
-    struct sockaddr_storage saddr, *saddrp;
+    struct sockaddr_storage saddr, *saddrp=NULL;
     socklen_t saddr_len;
     int ret, ipv6_only = 0, retval = 0;
+    /* 1 when using default port - don't free memory */
+    int def_port = 0;
 
     saddrp = &saddr;
 
@@ -125,6 +127,7 @@ int input_init(char *params, void **config)
     /* parse xml string */
     doc = xmlParseDoc((xmlChar *) params);
     if (doc == NULL) {
+        printf("%s", params);
         VERBOSE(CL_VERBOSE_OFF, "Cannot parse config xml\n");
         retval = 1;
         goto out;
@@ -147,8 +150,8 @@ int input_init(char *params, void **config)
     /* go over all elements */ 
     for (cur_node = root_element->children; cur_node; cur_node = cur_node->next) {
         if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
-            /* copy value to memory */ 
-            char *tmp_val = malloc(sizeof(char)*strlen((char *)cur_node->children->content));
+            /* copy value to memory - don't forget the terminating zero */ 
+            char *tmp_val = malloc(sizeof(char)*strlen((char *)cur_node->children->content)+1);
             strcpy(tmp_val, (char *)cur_node->children->content);
             if (tmp_val == NULL) {
                 VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory: %s", strerror(errno));
@@ -158,22 +161,20 @@ int input_init(char *params, void **config)
 
             if (strcmp((char *) cur_node->name, "localPort") == 0) { /* set local port */
                 port = tmp_val;
-            }
-            if (strcmp((char *) cur_node->name, "localIPAddress") == 0) { /* set local address */
+            } else if (strcmp((char *) cur_node->name, "localIPAddress") == 0) { /* set local address */
                 address = tmp_val;
-            }
+
             /* save following configuration to input_info */
-            if (strcmp((char *) cur_node->name, "templateLifeTime") == 0) { 
+            } else if (strcmp((char *) cur_node->name, "templateLifeTime") == 0) { 
                 conf->info->template_life_time = tmp_val;
-            }
-            if (strcmp((char *) cur_node->name, "optionsTemplateLifeTime") == 0) { 
+            } else if (strcmp((char *) cur_node->name, "optionsTemplateLifeTime") == 0) { 
                 conf->info->options_template_life_time = tmp_val;
-            }
-            if (strcmp((char *) cur_node->name, "templateLifePacket") == 0) {
+            } else if (strcmp((char *) cur_node->name, "templateLifePacket") == 0) {
                 conf->info->template_life_packet = tmp_val;
-            }
-            if (strcmp((char *) cur_node->name, "optionsTemplateLifePacket") == 0) { 
+            } else if (strcmp((char *) cur_node->name, "optionsTemplateLifePacket") == 0) { 
                 conf->info->options_template_life_packet = tmp_val;
+            } else { /* unknown parameter, ignore */
+                free(tmp_val);
             }
         }
     }
@@ -181,6 +182,7 @@ int input_init(char *params, void **config)
     /* set default port if none given */
     if (port == NULL) {
         port = DEFAULT_PORT;
+        def_port = 1;
     }
 
     /* specify parameters of the connection */
@@ -253,7 +255,7 @@ int input_init(char *params, void **config)
     VERBOSE(CL_VERBOSE_BASIC, "Plugin initialization completed successfully");
 
 out:
-    if (port != NULL) {
+    if (def_port == 0 && port != NULL) { /* free when memory was actually allocated*/
         free(port);
     }
 
@@ -290,7 +292,8 @@ out:
             }
             free(conf->info);
         }
-        free(conf);    
+        free(conf);
+
     }
 
     return retval;
