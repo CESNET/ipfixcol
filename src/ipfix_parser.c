@@ -115,6 +115,29 @@ void parse_ipfix (void* packet, struct input_info* input_info, struct storage* s
 	/**
 	 * \todo process IPFIX and fillup the ipfix_message structure
 	 */
+    uint8_t *p = packet + IPFIX_HEADER_LENGTH;
+    int t_set_count = 0; ot_set_count = 0, d_set_count = 0;
+    struct ipfix_set_header *set_header;
+    while (p < (uint8_t) packet + msg->pkt_header->length) {
+        set_header = (struct ipfix_set_header*) p;
+        switch (set_header->flowset_id) {
+            case IPFIX_TEMPLATE_FLOWSET_ID:
+                msg->templ_set[t_set_count++] = (struct ipfix_template_set *) set_header;
+                break;
+            case IPFIX_OPTION_FLOWSET_ID: 
+                 msg->opt_templ_set[ot_set_count++] = (struct ipfix_option_template_set *) set_header;
+                break;
+            default:
+                if (set_header->flowset_id < IPFIX_MIN_RECORD_FLOWSET_ID) {
+                    VERBOSE (CL_VERBOSE_BASIC, "Unknown Set ID %d", set_header->flowset_id);
+                } else {
+                    msg->data_set[d_set_count++]->data_set = (struct ipfix_data_set*) set_header;
+                    /* \todo: add ipfix_template, careful with d_set_count++ */;
+                }
+                break;
+        }
+        p += set_header->length;
+    }
 
 
 	if (rbuffer_write (config->in_queue, msg, 1) != 0) {
