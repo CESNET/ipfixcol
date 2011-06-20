@@ -2,18 +2,20 @@
 # Makefile for the ipfixcol input plugin test  #
 ################################################
 
-CC      = gcc
-CFLAGS  = -Wall
+CC      = @CC@
+CFLAGS  = @CFLAGS@
+LIBS    = @LIBS@
+INCLUDE = "-I../../../"
 
 all: udp_input.so
 
 # udp_input.so
 udp_input.so: udp_input.o
-	$(CC) $(CFLAGS) -shared -Wl,-soname,udp_input.so.1 -lcommlbr -lxml2 -o $@ $< -lc
+	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,udp_input.so.1 -o $@ $< -lc
 	rm udp_input.o
 	
 udp_input.o: udp_input.c
-	$(CC) $(CFLAGS) -I../../../ -I/usr/include/libxml2 -fPIC -c $<
+	$(CC) $(CFLAGS) $(INCLUDE) -fPIC -c $<
 
 clean:
 	rm -f udp_input.so

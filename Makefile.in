@@ -41,7 +41,10 @@ TARGETS = ipfixcol
 MANPAGES = ipfixcol.1
 MANSRCS = ipfixcol.dbk
 SRCS =	src/ipfixcol.c \
-	src/config.c
+	src/config.c \
+	src/queues.c \
+	src/ipfix_parser.c \
+	src/data_mngmt.c
 
 HDRS =	headers/ipfix.h \
 	headers/input.h \
@@ -49,15 +52,13 @@ HDRS =	headers/ipfix.h \
 	headers/templates.h
 
 # The form of name is 'storage/'<name of subdir in src/storage/>
-STORAGE_PLUGINS = storage/ipfix \
-		  storage/ipfixcol
+STORAGE_PLUGINS = @STORAGE_PLUGINS@
 
 # The form of name is 'input/'<name of subdir in src/input/>
-INPUT_PLUGINS = input/udp \
-		input/ipfix
+INPUT_PLUGINS = @INPUT_PLUGINS@
 
 # Tests in devel-tools/tests that should be built on "make test"
-TESTS = input_plugin
+TESTS = @TESTS@
 
 # Various configurable paths (remember to edit Makefile.in, not Makefile)
 prefix = @prefix@

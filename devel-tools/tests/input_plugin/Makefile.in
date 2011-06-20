@@ -2,14 +2,16 @@
 # Makefile for the ipfixcol input plugin test  #
 ################################################
 
-CC      = gcc
-CFLAGS  = -Wall -ldl
+CC      = @CC@
+CFLAGS  = @CFLAGS@
+LIBS    = @LIBS@
+INCLUDE = "-I../../../"
 
 all: input_test
 
 # input_test
 input_test: input_test.c
-	$(CC) $(CFLAGS) -I../../../ -o $@ $<
+	$(CC) $(CFLAGS) $(LIBS) $(INCLUDE) -o $@ $<
 
 clean:
 	rm -f input_test

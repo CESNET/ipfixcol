@@ -130,6 +130,8 @@ int main (int argc, char* argv[])
 	struct storage *storage = NULL, *aux_storage = NULL;
 	void *input_plugin_handler = NULL, *storage_plugin_handler = NULL;
 	struct sigaction action;
+	char *packet = NULL;
+	struct input_info* input_info;
 
 	xmlXPathObjectPtr collectors;
 	xmlNodePtr collector_node;
@@ -399,28 +401,16 @@ storage_plugin_remove:
 		goto cleanup;
 	}
 
-	/* init storage plugins */
-	/* if at least one storage plugin will not be initialized, we will stop the collector */
-	done = 1;
-	aux_storage = storage;
-	while (aux_storage) {
-		xmlDocDumpMemory (aux_storage->plugin->xmldata, &plugin_params, NULL);
-		retval = storage->init ((char*) plugin_params, &(aux_storage->config));
-		xmlFree (plugin_params);
-		aux_storage = aux_storage->next;
-		if (retval == 0) {
-			done = 0;
-		} else {
-			VERBOSE(CL_VERBOSE_OFF, "Initiating storage plugin failed.");
-		}
-	}
-
 	/* main loop */
 	while (!done) {
 		/* get data to process */
 		/* TODO */
-		VERBOSE(CL_VERBOSE_BASIC, "loop");
-		sleep (5);
+		if (input.get (input.config, &input_info, &packet) != 0) {
+			VERBOSE(CL_VERBOSE_OFF, "Getting IPFIX data failed!");
+			continue;
+		}
+		/* distribute data to the particular Data Manager for further processing */
+		parse_ipfix (packet, input_info, storage);
 	}
 
 cleanup:

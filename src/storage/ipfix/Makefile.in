@@ -1,0 +1,16 @@
+CC      = @CC@
+CFLAGS  = @CFLAGS@
+LIBS    = @LIBS@
+INCLUDE = "-I../../../"
+
+all: ipfix_output.so
+
+ipfix_output.so: ipfix_output.o
+	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfix_output.so.1 ipfix_output.o -o $@ -lc
+	
+ipfix_output.o: ipfix_file.c
+	$(CC) $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
+
+clean:
+	-rm ipfix_output.so ipfix_output.o
+
