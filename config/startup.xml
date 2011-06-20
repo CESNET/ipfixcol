@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
+	<collectingProcess>
+		<name>UDP collector</name>
+		<udpCollector>
+			<name>Listening port 4739</name>
+			<localPort>4739</localPort>
+			<localIPAddress>127.0.0.1</localIPAddress>
+		</udpCollector>
+		<exportingProcess>File writer UDP</exportingProcess>
+	</collectingProcess>
+
+	<collectingProcess>
+		<name>SCTP collector</name>
+		<sctpCollector>
+			<name>Listening port 4739</name>
+			<localPort>4739</localPort>
+			<localIPAddress>127.0.0.1</localIPAddress>
+		</sctpCollector>
+		<exportingProcess>File writer SCTP</exportingProcess>
+	</collectingProcess>
+
+	<exportingProcess>
+		<name>File writer UDP</name>
+		<destination>
+			<name>Write to /tmp folder</name>
+			<fileWriter>
+				<fileFormat>ipfix</fileFormat>
+				<file>file://tmp/collected-records-udp.ipfix</file>
+			</fileWriter>
+		</destination>
+		<destination>
+			<name>lksdfkdsjhgsld</name>
+			<fileWriter>
+				<fileFormat>ipfixcol</fileFormat>
+				<file>test.udp.data</file>
+			</fileWriter>
+		</destination>
+	</exportingProcess>
+
+	<exportingProcess>
+		<name>File writer SCTP</name>
+		<destination>
+			<name>Write to /tmp folder</name>
+			<fileWriter>
+				<fileFormat>ipfix</fileFormat>
+				<file>file://tmp/collected-records-sctp.ipfix</file>
+			</fileWriter>
+		</destination>
+		<destination>
+			<name>kdsjhgsld</name>
+			<fileWriter>
+				<fileFormat>ipfixcol</fileFormat>
+				<file>test.sctp.data</file>
+			</fileWriter>
+		</destination>
+	</exportingProcess>
+</ipfix>

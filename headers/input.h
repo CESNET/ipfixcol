@@ -108,6 +108,14 @@ struct input_info_network {
 	                           * using TLS/DTLS */
 	void *collector_cert;     /**< X.509 certificate used by collector when
 	                           * using TLS/DTLS */
+    char *template_life_time;           /**< value templateLifeTime from plugin 
+                                         * config xml */
+    char *options_template_life_time;   /**< value optionsTemplateLifeTime 
+                                         * from config xml */
+    char *template_life_packet;         /**< value templateLifePacket from 
+                                         * plugin config xml*/
+    char *options_template_life_packet; /**< value optionsTemplateLifePacket
+                                         * from plugin config xml */
 };
 
 /**
