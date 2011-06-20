@@ -411,6 +411,8 @@ storage_plugin_remove:
 		}
 		/* distribute data to the particular Data Manager for further processing */
 		parse_ipfix (packet, input_info, storage);
+		packet = NULL;
+		input_info = NULL;
 	}
 
 cleanup:
