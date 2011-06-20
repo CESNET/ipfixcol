@@ -167,8 +167,8 @@ int storage_init(char *params, void **config)
 		/* find out where to store output files */
 		if ((!xmlStrcmp(cur->name, (const xmlChar *) "file"))) {
 			conf->xml_file = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+			break;
 		}
-		break;
 	}
 
 	/* check whether we have found "file" element in configuration file */
@@ -208,7 +208,7 @@ err_init:
  *
  * \param[in] config the plugin specific configuration structure
  * \param[in] ipfix_msg IPFIX message
- * \param[in] templates All currently known templates, not just templates 
+ * \param[in] templates All currently known templates, not just templates
  * in the message
  * \return 0 on success, negative value otherwise
  */
