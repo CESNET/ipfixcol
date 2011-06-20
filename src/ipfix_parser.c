@@ -44,6 +44,7 @@
 
 #include "data_mngmt.h"
 #include "queues.h"
+#include "../ipfixcol.h"
 
 static struct data_manager_config *data_mngmts = NULL;
 
@@ -88,7 +89,7 @@ void parse_ipfix (void* packet, struct input_info* input_info, struct storage* s
 			msg->pkt_header->observation_domain_id);
 
 	/* check IPFIX version */
-	if (msg->pkt_header->version != IPFIX_VERSION) {
+	if (msg->pkt_header->version != htons(IPFIX_VERSION)) {
 		VERBOSE (CL_VERBOSE_BASIC, "Unexpected IPFIX version detected (%X), skipping packet.",
 				msg->pkt_header->version);
 		free (msg);
