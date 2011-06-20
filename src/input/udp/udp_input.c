@@ -146,10 +146,10 @@ int input_init(char *params, void **config)
         goto out;
     }
 
-    /* go over all elements */ 
+    /* go over all elements */
     for (cur_node = root_element->children; cur_node; cur_node = cur_node->next) {
         if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
-            /* copy value to memory - don't forget the terminating zero */ 
+            /* copy value to memory - don't forget the terminating zero */
             char *tmp_val = malloc(sizeof(char)*strlen((char *)cur_node->children->content)+1);
             /* this is not a preferred cast, but we really want to use plain chars here */
             strcpy(tmp_val, (char *)cur_node->children->content);
@@ -164,13 +164,13 @@ int input_init(char *params, void **config)
             } else if (xmlStrEqual(cur_node->name, BAD_CAST "localIPAddress")) { /* set local address */
                 address = tmp_val;
             /* save following configuration to input_info */
-            } else if (xmlStrEqual(cur_node->name, BAD_CAST "templateLifeTime")) { 
+            } else if (xmlStrEqual(cur_node->name, BAD_CAST "templateLifeTime")) {
                 conf->info->template_life_time = tmp_val;
-            } else if (xmlStrEqual(cur_node->name, BAD_CAST "optionsTemplateLifeTime")) { 
+            } else if (xmlStrEqual(cur_node->name, BAD_CAST "optionsTemplateLifeTime")) {
                 conf->info->options_template_life_time = tmp_val;
             } else if (xmlStrEqual(cur_node->name, BAD_CAST "templateLifePacket")) {
                 conf->info->template_life_packet = tmp_val;
-            } else if (xmlStrEqual(cur_node->name, BAD_CAST "optionsTemplateLifePacket")) { 
+            } else if (xmlStrEqual(cur_node->name, BAD_CAST "optionsTemplateLifePacket")) {
                 conf->info->options_template_life_packet = tmp_val;
             } else { /* unknown parameter, ignore */
                 free(tmp_val);
