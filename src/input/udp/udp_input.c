@@ -42,8 +42,7 @@
  * \ingroup inputPLugins
  *
  * This is implementation of the input plugin API for UDP network input.
- * Input parameters are expected to be in format "port ip_version",
- * port is mandatory and ip_version can be 4 or 6 (default)
+ * Input parameters are passed in xml format
  *
  * @{
  */
@@ -83,8 +82,7 @@ struct plugin_conf
 /**
  * \brief Input plugin initializtion function
  *
- * \param[in]  params  Expects at least port to listen on, handles space
- * separated number specifying ip version (4 or 6)
+ * \param[in]  params XML with input parameters
  * \param[out] config  Sets source and destination IP, destination port.
  * \return 0 on success, nonzero else.
  */
