@@ -1,7 +1,7 @@
 /**
- * \file udp_input.c
+ * \file tcp_input.c
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief IPFIX Collector UDP Input Plugin
+ * \brief IPFIX Collector TCP Input Plugin
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -38,11 +38,11 @@
  */
 
 /**
- * \defgroup udpInput UDP input plugin for ipfixcol
+ * \defgroup tcpInput TCP input plugin for ipfixcol
  * \ingroup inputPLugins
  *
- * This is implementation of the input plugin API for UDP network input.
- * Input parameters are passed in xml format
+ * This is implementation of the input plugin API for TCP network input.
+ * Input parameters are passed in xml format.
  *
  * @{
  */
@@ -56,6 +56,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include <commlbr.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
@@ -64,8 +65,10 @@
 
 /* input buffer length */
 #define BUFF_LEN 10000
-/* default port for udp collector */
+/* default port for tcp collector */
 #define DEFAULT_PORT "4739"
+/* backlog for tcp connections */
+#define BACKLOG 20
 
 /**
  * \struct plugin_conf
@@ -76,12 +79,49 @@ struct plugin_conf
     int socket; /**< listening socket */
     struct input_info_network *info; /**< infromation structure passed
                                       * to collector */
+    fd_set master; /**< set of all active sockets */
+    int fd_max; /** max file descriptor number */
 };
+
+pthread_mutex_t mutex;
+pthread_t listen_thread;
+
+/**
+ * \brief Funtion that listens for new connetions
+ *
+ * Runs in a thread and adds new connections to plugin_conf->master set
+ *
+ * \param[in, out] config Plugin configuration structure
+ * \return NULL always
+ */
+void *input_listen(void *config)
+{
+    struct plugin_conf *conf = (struct plugin_conf *) config;
+    int new_sock;
+
+    /* loop ends when conf->socket is closed by input_close function */
+    while (1) {
+        if ((new_sock = accept(conf->socket, NULL, NULL)) == -1) {
+            VERBOSE(CL_VERBOSE_BASIC, "Cannot accept new socket: %s\n", strerror(errno));
+            return NULL;
+        } else {
+            pthread_mutex_lock(&mutex);
+            FD_SET(new_sock, &conf->master);
+
+            if (conf->fd_max > new_sock) {
+                conf->fd_max = new_sock;
+            }
+            pthread_mutex_unlock(&mutex);
+        }
+    }
+    return NULL;
+}
+
 
 /**
  * \brief Input plugin initializtion function
  *
- * \param[in]  params XML with input parameters
+ * \param[in]  params  XML with input parameters
  * \param[out] config  Sets source and destination IP, destination port.
  * \return 0 on success, nonzero else.
  */
@@ -115,6 +155,9 @@ int input_init(char *params, void **config)
         goto out;
     }
 
+    /* empty the master set */
+    FD_ZERO(&conf->master);
+
     /* parse params */
     xmlDoc *doc = NULL;
     xmlNode *root_element = NULL;
@@ -137,8 +180,8 @@ int input_init(char *params, void **config)
     }
 
     /* check that we have the right config xml, BAD_CAST is (xmlChar *) cast defined by libxml */
-    if (!xmlStrEqual(root_element->name, BAD_CAST "udpCollector")) {
-        VERBOSE(CL_VERBOSE_OFF, "Expecting udpCollector root element, got %s", root_element->name);
+    if (!xmlStrEqual(root_element->name, BAD_CAST "tcpCollector")) {
+        VERBOSE(CL_VERBOSE_OFF, "Expecting tcpCollector root element, got %s", root_element->name);
         retval = 1;
         goto out;
     }
@@ -183,8 +226,8 @@ int input_init(char *params, void **config)
 
     /* specify parameters of the connection */
     memset (&hints, 0, sizeof(struct addrinfo));
-    hints.ai_socktype = SOCK_DGRAM; /* UDP */
-    hints.ai_family = ai_family; /* both IPv4 and IPv6*/
+    hints.ai_socktype = SOCK_STREAM; /* TCP */
+    hints.ai_family = ai_family; /* select IPv4 or IPv6*/
     hints.ai_flags = AI_V4MAPPED; /* we want to accept mapped addresses */
     if (address == NULL) {
         hints.ai_flags |= AI_PASSIVE; /* no address given, listen on all local addresses */
@@ -218,6 +261,13 @@ int input_init(char *params, void **config)
         goto out;
     }
 
+    /* this is a listening socket */
+    if (listen(conf->socket, BACKLOG) == -1) {
+        VERBOSE(CL_VERBOSE_OFF, "Cannot listen on socket: %s\n", strerror(errno));
+        retval = 1;
+        goto out;
+    }
+
     /* get binded address -- we listen on all interfaces, so it should be 0.0.0.0*/
     if (getsockname(conf->socket, (struct sockaddr*) saddrp, &saddr_len) != 0) {
         VERBOSE(CL_VERBOSE_BASIC, "Cannot get socket name, input_info might lack destination port and address");
@@ -225,7 +275,7 @@ int input_init(char *params, void **config)
     }
 
     /* fill in general information */
-    conf->info->type = SOURCE_TYPE_UDP;
+    conf->info->type = SOURCE_TYPE_TCP;
     conf->info->dst_port = atoi(port);
     if (addrinfo->ai_family == AF_INET) { /* IPv4 */
         conf->info->l3_proto = 4;
@@ -244,7 +294,11 @@ int input_init(char *params, void **config)
         }
     }
 
-    /* and pass it to the collector */
+    /* start listening thread */
+    /* \todo check whether some signals shall be blocked */
+    pthread_create(&listen_thread, NULL, &input_listen, (void *) conf);
+
+    /* pass general information to the collector */
     *config = (void*) conf;
 
     /* normal exit, all OK */
@@ -310,42 +364,74 @@ out:
  */
 int get_packet(void *config, struct input_info **info, char **packet)
 {
-    /* get socket */
-    int sock = ((struct plugin_conf*) config)->socket;
+    /* temporary socket set */
+    fd_set tmp_set;
     size_t length = 0;
+    struct timeval tv;
     socklen_t addr_length = sizeof(struct sockaddr_storage);
     struct sockaddr_storage address;
     struct plugin_conf *conf = config;
+    int retval = 0, sock;
 
     /* allocate memory for packet, if needed */
     if (*packet == NULL) {
         *packet = malloc(BUFF_LEN*sizeof(char));
     }
 
-    /* receive packet */
-    length = recvfrom(sock, *packet, BUFF_LEN, 0, (struct sockaddr*) &address, &addr_length);
-    if (length == -1) {
-        VERBOSE(CL_VERBOSE_OFF, "Failed to receive packet: %s", strerror(errno));
-        return 1;
+    /* wait until some socket is ready */
+    while (retval <= 0) {
+        /* copy all sockets from master to tmp_set */
+        pthread_mutex_lock(&mutex);
+        tmp_set = ((struct plugin_conf*) config)->master;
+        pthread_mutex_unlock(&mutex);
+        
+        /* wait at most one second - give time to check for new sockets */
+        tv.tv_sec = 1;
+
+        /* select active connections */
+        retval = select(((struct plugin_conf*) config)->fd_max + 1, &tmp_set, NULL, NULL, &tv);
+        if (retval == -1) {
+            VERBOSE(CL_VERBOSE_OFF, "Failed to select active connection: %s\n", strerror(errno));
+            return 1;
+        }
     }
 
-    if (address.ss_family == AF_INET) {
-        /* copy src IPv4 address */
-        conf->info->src_addr.ipv4.s_addr =
-            ((struct sockaddr_in*) &address)->sin_addr.s_addr;
+    /* go through all */
+    for (sock=0; sock <= ((struct plugin_conf*) config)->fd_max; sock++) {
+        /* fetch first active connection */
+        if (FD_ISSET(sock, &tmp_set)) {
+            /* receive packet */
+            length = recvfrom(sock, *packet, BUFF_LEN, 0, (struct sockaddr*) &address, &addr_length);
+            if (length == -1) {
+                VERBOSE(CL_VERBOSE_OFF, "Failed to receive packet: %s", strerror(errno));
+                return 1;
+            } else if (length == 0) { /* socket is closed */
+                close(sock);
+                pthread_mutex_lock(&mutex);
+                FD_CLR(sock, &((struct plugin_conf *) config)->master);
+                pthread_mutex_unlock(&mutex);
+            }
 
-        /* copy port */
-        conf->info->src_port = ntohs(((struct sockaddr_in*)  &address)->sin_port);
-    } else {
-        /* copy src IPv6 address */
-        int i;
-        for (i=0; i<4; i++) {
-            conf->info->src_addr.ipv6.s6_addr32[i] =
-                ((struct sockaddr_in6*) &address)->sin6_addr.s6_addr32[i];
+            if (address.ss_family == AF_INET) {
+                /* copy src IPv4 address */
+                conf->info->src_addr.ipv4.s_addr =
+                    ((struct sockaddr_in*) &address)->sin_addr.s_addr;
+
+                /* copy port */
+                conf->info->src_port = ntohs(((struct sockaddr_in*)  &address)->sin_port);
+            } else {
+                /* copy src IPv6 address */
+                int i;
+                for (i=0; i<4; i++) {
+                    conf->info->src_addr.ipv6.s6_addr32[i] =
+                        ((struct sockaddr_in6*) &address)->sin6_addr.s6_addr32[i];
+                }
+
+                /* copy port */
+                conf->info->src_port = ntohs(((struct sockaddr_in6*)  &address)->sin6_port);
+            }
+            break;
         }
-
-        /* copy port */
-        conf->info->src_port = ntohs(((struct sockaddr_in6*)  &address)->sin6_port);
     }
 
     /* pass info to the collector */
@@ -369,6 +455,8 @@ int input_close(void **config)
     if ((ret = close(sock)) == -1) {
         VERBOSE(CL_VERBOSE_OFF, "Cannot close socket: %s", strerror(errno));
     }
+
+    pthread_join(listen_thread, NULL);
 
     /* free allocated structures */
     free(((struct plugin_conf*) *config)->info);
