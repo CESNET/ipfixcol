@@ -96,7 +96,7 @@ int input_init(char *params, void **config)
     char *port = NULL, *address = NULL;
     int ai_family = AF_INET6; /* IPv6 is default */
     struct sockaddr_storage saddr, *saddrp=NULL;
-    socklen_t saddr_len;
+    socklen_t saddr_len = sizeof (struct sockaddr_storage);
     int ret, ipv6_only = 0, retval = 0;
     /* 1 when using default port - don't free memory */
     int def_port = 0;
