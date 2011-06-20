@@ -39,6 +39,7 @@
 
 #include <stdlib.h>
 #include <pthread.h>
+#include <arpa/inet.h>
 
 #include <commlbr.h>
 
@@ -119,13 +120,13 @@ void parse_ipfix (void* packet, struct input_info* input_info, struct storage* s
     uint8_t *p = packet + IPFIX_HEADER_LENGTH;
     int t_set_count = 0, ot_set_count = 0, d_set_count = 0;
     struct ipfix_set_header *set_header;
-    while (p < (uint8_t*) packet + msg->pkt_header->length) {
+    while (p < (uint8_t*) packet + ntohs(msg->pkt_header->length)) {
         set_header = (struct ipfix_set_header*) p;
-        switch (set_header->flowset_id) {
+        switch (ntohs(set_header->flowset_id)) {
             case IPFIX_TEMPLATE_FLOWSET_ID:
                 msg->templ_set[t_set_count++] = (struct ipfix_template_set *) set_header;
                 break;
-            case IPFIX_OPTION_FLOWSET_ID: 
+            case IPFIX_OPTION_FLOWSET_ID:
                  msg->opt_templ_set[ot_set_count++] = (struct ipfix_options_template_set *) set_header;
                 break;
             default:
