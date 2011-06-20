@@ -130,7 +130,7 @@ int main (int argc, char* argv[])
 	struct storage *storage = NULL, *aux_storage = NULL;
 	void *input_plugin_handler = NULL, *storage_plugin_handler = NULL;
 	struct sigaction action;
-	char *packet;
+	char *packet = NULL;
 	struct input_info* input_info;
 
 	xmlXPathObjectPtr collectors;
@@ -405,7 +405,7 @@ storage_plugin_remove:
 	while (!done) {
 		/* get data to process */
 		/* TODO */
-		if (input.get (aux_storage->config, &input_info, &packet) != 0) {
+		if (input.get (input.config, &input_info, &packet) != 0) {
 			VERBOSE(CL_VERBOSE_OFF, "Getting IPFIX data failed!");
 			continue;
 		}
