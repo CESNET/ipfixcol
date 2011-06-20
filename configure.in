@@ -242,6 +242,38 @@ AC_FUNC_REALLOC
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([alarm atexit gethostbyname gettimeofday isascii localtime_r memset mkdir munmap putenv select setenv socket sqrt strcasecmp strchr strerror strtol strtoul])
 
+########################## Check for plugins ###################################
+# input plugins are located in src/input/
+cd src;
+for dir in input/*; do
+    if test -d "$dir" -a -f "$dir"/Makefile.in; then
+        INPUT_PLUGINS="$INPUT_PLUGINS $dir";
+    fi;
+done;
+
+# storage plugins are located in src/storage
+for dir in storage/*; do
+    if test -d "$dir" -a -f "$dir"/Makefile.in; then
+        STORAGE_PLUGINS="$STORAGE_PLUGINS $dir";
+    fi;
+done;
+
+cd ..;
+
+AC_SUBST(INPUT_PLUGINS)
+AC_SUBST(STORAGE_PLUGINS)
+
+############################# Check for tests ##################################
+# tests are located in devel-tools/tests/
+cd devel-tools/tests/;
+for dir in *; do
+    if test -d "$dir" -a -f "$dir"/Makefile.in; then
+        TESTS="$TESTS $dir";
+    fi;
+done;
+cd ../..;
+
+AC_SUBST(TESTS)
 
 ############################### Set output #####################################
 AC_SUBST(DISTRO)
@@ -266,5 +298,13 @@ fi
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(ipfixcol.spec)
 AC_CONFIG_FILES(ipfixcol.pc)
+# plugins makefiles
+for i in $INPUT_PLUGINS $STORAGE_PLUGINS; do
+    AC_CONFIG_FILES([src/$i/Makefile])
+done;
+# tests makefiles
+for i in $TESTS; do
+    AC_CONFIG_FILES([devel-tools/tests/$i/Makefile])
+done;
 
 AC_OUTPUT

@@ -595,6 +595,9 @@ ac_func_list=
 ac_subst_vars='LTLIBOBJS
 CONFIGURE_PARAMS
 DISTRO
+TESTS
+STORAGE_PLUGINS
+INPUT_PLUGINS
 POW_LIB
 LIBOBJS
 EGREP
@@ -5396,6 +5399,38 @@ fi
 done
 
 
+########################## Check for plugins ###################################
+# input plugins are located in src/input/
+cd src;
+for dir in input/*; do
+    if test -d "$dir" -a -f "$dir"/Makefile.in; then
+        INPUT_PLUGINS="$INPUT_PLUGINS $dir";
+    fi;
+done;
+
+# storage plugins are located in src/storage
+for dir in storage/*; do
+    if test -d "$dir" -a -f "$dir"/Makefile.in; then
+        STORAGE_PLUGINS="$STORAGE_PLUGINS $dir";
+    fi;
+done;
+
+cd ..;
+
+
+
+
+############################# Check for tests ##################################
+# tests are located in devel-tools/tests/
+cd devel-tools/tests/;
+for dir in *; do
+    if test -d "$dir" -a -f "$dir"/Makefile.in; then
+        TESTS="$TESTS $dir";
+    fi;
+done;
+cd ../..;
+
+
 
 ############################### Set output #####################################
 
@@ -5426,6 +5461,16 @@ ac_config_files="$ac_config_files ipfixcol.spec"
 
 ac_config_files="$ac_config_files ipfixcol.pc"
 
+# plugins makefiles
+for i in $INPUT_PLUGINS $STORAGE_PLUGINS; do
+    ac_config_files="$ac_config_files src/$i/Makefile"
+
+done;
+# tests makefiles
+for i in $TESTS; do
+    ac_config_files="$ac_config_files devel-tools/tests/$i/Makefile"
+
+done;
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6130,6 +6175,8 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "ipfixcol.spec") CONFIG_FILES="$CONFIG_FILES ipfixcol.spec" ;;
     "ipfixcol.pc") CONFIG_FILES="$CONFIG_FILES ipfixcol.pc" ;;
+    "src/$i/Makefile") CONFIG_FILES="$CONFIG_FILES src/$i/Makefile" ;;
+    "devel-tools/tests/$i/Makefile") CONFIG_FILES="$CONFIG_FILES devel-tools/tests/$i/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
