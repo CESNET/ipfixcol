@@ -206,6 +206,14 @@ AC_SUBST([LIBCOMMLBR_CFLAGS])
 BUILDREQS="$BUILDREQS libcommlbr-devel >= 2.0.0"
 REQS="$REQS libcommlbr >= 2.0.0"
 
+### pthread ###
+AC_CHECK_LIB([pthread], [pthread_create], 
+        [CFLAGS="$CFLAGS -pthread"],
+    	AC_MSG_ERROR([Required library pthread missing]))
+
+### dynamic linker ###
+AC_CHECK_LIB([dl], [dlopen],,
+        AC_MSG_ERROR([Required library dl missing]))
 
 ###################### Check for configure parameters ##########################
 
