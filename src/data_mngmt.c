@@ -183,20 +183,10 @@ struct data_manager_config* create_data_manager (uint32_t observation_domain_id,
 		return (NULL);
 	}
 
-	/*
-	 * initiate queues for data passing
-	 */
-	/* queue to communicate with IPFIX preprocessor */
+	/* initiate queue to communicate with IPFIX preprocessor */
 	config->in_queue = rbuffer_init(1);
 	if (config->in_queue == NULL) {
 		VERBOSE(CL_VERBOSE_OFF, "Unable to initiate queue for communication with IPFIX preprocessor.");
-		data_manager_config_free (config);
-		return (NULL);
-	}
-	/* queue to communicate with storage plugins' threads */
-	config->store_queue = rbuffer_init(config->plugins_count);
-	if (config->store_queue == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to initiate queue for communication with Storage plugins.");
 		data_manager_config_free (config);
 		return (NULL);
 	}
@@ -207,7 +197,7 @@ struct data_manager_config* create_data_manager (uint32_t observation_domain_id,
 	/* initiate all storage plugins */
 	while (storage_plugins) {
 		/* allocate memory for copy of storage structure for description of storage plugin */
-		aux_storage = (struct storage*) malloc (sizeof(struct storage*));
+		aux_storage = (struct storage*) malloc (sizeof(struct storage));
 		if (aux_storage == NULL) {
 			VERBOSE (CL_VERBOSE_OFF, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			storage_plugins = storage_plugins->next;
@@ -258,6 +248,14 @@ struct data_manager_config* create_data_manager (uint32_t observation_domain_id,
 
 		/* continue on the following storage plugin */
 		storage_plugins = storage_plugins->next;
+	}
+
+	/* initiate queue to communicate with storage plugins' threads */
+	config->store_queue = rbuffer_init(config->plugins_count);
+	if (config->store_queue == NULL) {
+		VERBOSE(CL_VERBOSE_OFF, "Unable to initiate queue for communication with Storage plugins.");
+		data_manager_config_free (config);
+		return (NULL);
 	}
 
 	/* check if at least one storage plugin initiated */
