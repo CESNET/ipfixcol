@@ -77,7 +77,7 @@ void parse_ipfix (void* packet, struct input_info* input_info, struct storage* s
 	struct data_manager_config *config = NULL;
 
 	if (packet == NULL || input_info == NULL || storage_plugins == NULL) {
-		VERBOSE (CL_VERBOSE_OFF, "Invalid parameters in function parse_ipfix().")
+		VERBOSE (CL_VERBOSE_OFF, "Invalid parameters in function parse_ipfix().");
 		return;
 	}
 
@@ -119,5 +119,6 @@ void parse_ipfix (void* packet, struct input_info* input_info, struct storage* s
 
 	if (rbuffer_write (config->in_queue, msg, 1) != 0) {
 		VERBOSE (CL_VERBOSE_BASIC, "Unable to write into Data manager's input queue, skipping data.");
+		free (packet);
 	}
 }
