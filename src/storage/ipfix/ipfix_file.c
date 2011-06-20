@@ -169,6 +169,7 @@ int storage_init(char *params, void **config)
 			conf->xml_file = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
 			break;
 		}
+		cur = cur->next;
 	}
 
 	/* check whether we have found "file" element in configuration file */
