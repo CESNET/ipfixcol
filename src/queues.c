@@ -66,6 +66,7 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 
 	retval->read_offset = 0;
 	retval->write_offset = 0;
+	retval->count = 0;
 	retval->size = size;
 	retval->data = (struct ipfix_message**) malloc (size * sizeof(struct ipfix_message*));
 	if (retval->data == NULL) {
@@ -111,7 +112,7 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, unsigned int refcount)
 {
 	if (rbuffer == NULL || record == NULL || refcount == 0) {
-		VERBOSE (CL_VERBOSE_OFF, "Invalid ring buffer's write parameters.")
+		VERBOSE (CL_VERBOSE_OFF, "Invalid ring buffer's write parameters.");
 		return (EXIT_FAILURE);
 	}
 
