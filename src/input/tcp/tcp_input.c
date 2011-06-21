@@ -58,6 +58,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <commlbr.h>
+#include <signal.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
@@ -68,10 +69,10 @@
 /* default port for tcp collector */
 #define DEFAULT_PORT "4739"
 /* backlog for tcp connections */
-#define BACKLOG 20
+#define BACKLOG SOMAXCONN
 
 /**
- * \struct plugin_conf
+ "* \struct plugin_conf
  * \brief  Plugin configuration structure passed by the collector
  */
 struct plugin_conf
@@ -108,7 +109,7 @@ void *input_listen(void *config)
             pthread_mutex_lock(&mutex);
             FD_SET(new_sock, &conf->master);
 
-            if (conf->fd_max > new_sock) {
+            if (conf->fd_max < new_sock) {
                 conf->fd_max = new_sock;
             }
             pthread_mutex_unlock(&mutex);
@@ -366,7 +367,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
 {
     /* temporary socket set */
     fd_set tmp_set;
-    size_t length = 0;
+    ssize_t length = 0;
     struct timeval tv;
     socklen_t addr_length = sizeof(struct sockaddr_storage);
     struct sockaddr_storage address;
@@ -377,7 +378,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
     if (*packet == NULL) {
         *packet = malloc(BUFF_LEN*sizeof(char));
     }
-
+    
     /* wait until some socket is ready */
     while (retval <= 0) {
         /* copy all sockets from master to tmp_set */
@@ -387,6 +388,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
         
         /* wait at most one second - give time to check for new sockets */
         tv.tv_sec = 1;
+        tv.tv_usec = 0;
 
         /* select active connections */
         retval = select(((struct plugin_conf*) config)->fd_max + 1, &tmp_set, NULL, NULL, &tv);
@@ -401,7 +403,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
         /* fetch first active connection */
         if (FD_ISSET(sock, &tmp_set)) {
             /* receive packet */
-            length = recvfrom(sock, *packet, BUFF_LEN, 0, (struct sockaddr*) &address, &addr_length);
+            length = recv(sock, *packet, BUFF_LEN, 0);
             if (length == -1) {
                 VERBOSE(CL_VERBOSE_OFF, "Failed to receive packet: %s", strerror(errno));
                 return 1;
@@ -410,6 +412,11 @@ int get_packet(void *config, struct input_info **info, char **packet)
                 pthread_mutex_lock(&mutex);
                 FD_CLR(sock, &((struct plugin_conf *) config)->master);
                 pthread_mutex_unlock(&mutex);
+            }
+
+            /* get peer address */
+            if (getpeername(sock, (struct sockaddr*) &address, &addr_length) == -1) {
+                VERBOSE(CL_VERBOSE_BASIC, "Cannot get perr address: %s\n", strerror(errno));
             }
 
             if (address.ss_family == AF_INET) {
@@ -448,22 +455,36 @@ int get_packet(void *config, struct input_info **info, char **packet)
  */
 int input_close(void **config)
 {
-    int ret;
+    int ret, error = 0, sock=0;
+    struct plugin_conf *conf = (struct plugin_conf*) *config;
 
-    /* close socket */
-    int sock = ((struct plugin_conf*) *config)->socket;
-    if ((ret = close(sock)) == -1) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot close socket: %s", strerror(errno));
+    /* kill the listening thread */
+    pthread_cancel(listen_thread);
+    pthread_join(listen_thread, NULL);
+    
+    /* close listening socket */
+    if ((ret = close(conf->socket)) == -1) {
+        error++;
+        VERBOSE(CL_VERBOSE_OFF, "Cannot close listening socket: %s", strerror(errno));
     }
 
-    pthread_join(listen_thread, NULL);
-
+    /* close open sockets */
+    for (sock = 0; sock <= conf->fd_max; sock++) {
+        if (FD_ISSET(sock, &conf->master)) {
+            if ((ret = close(sock)) == -1) {
+                error++;
+                VERBOSE(CL_VERBOSE_OFF, "Cannot close socket: %s", strerror(errno));
+            }
+        }
+    }
+    
     /* free allocated structures */
+    FD_ZERO(&conf->master);
     free(((struct plugin_conf*) *config)->info);
     free(*config);
 
     VERBOSE(CL_VERBOSE_BASIC, "All allocated resources have been freed");
 
-    return 0;
+    return error;
 }
 /**@}*/
