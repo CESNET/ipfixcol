@@ -313,7 +313,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
 {
     /* get socket */
     int sock = ((struct plugin_conf*) config)->socket;
-    size_t length = 0;
+    ssize_t length = 0;
     socklen_t addr_length = sizeof(struct sockaddr_storage);
     //char buffer[BUFF_LEN];
     struct sockaddr_storage address;
