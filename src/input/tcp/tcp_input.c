@@ -74,7 +74,7 @@
 #define ADDR_ARRAY_SIZE 50
 
 /**
- "* \struct plugin_conf
+ * \struct plugin_conf
  * \brief  Plugin configuration structure passed by the collector
  */
 struct plugin_conf
@@ -130,7 +130,6 @@ void *input_listen(void *config)
 
         if ((new_sock = accept(conf->socket, (struct sockaddr*) address, &addr_length)) == -1) {
             VERBOSE(CL_VERBOSE_BASIC, "Cannot accept new socket: %s\n", strerror(errno));
-            printf("Cannot accept new socket: %s\n", strerror(errno));
             /* exit and call cleanup */
             pthread_exit(0);
         } else {
@@ -201,7 +200,6 @@ int input_init(char *params, void **config)
     /* parse xml string */
     doc = xmlParseDoc(BAD_CAST params);
     if (doc == NULL) {
-        printf("%s", params);
         VERBOSE(CL_VERBOSE_OFF, "Cannot parse config xml\n");
         retval = 1;
         goto out;
@@ -406,70 +404,80 @@ int get_packet(void *config, struct input_info **info, char **packet)
     //socklen_t addr_length = sizeof(struct sockaddr_storage);
     struct sockaddr_in6 *address;
     struct plugin_conf *conf = config;
-    int retval = 0, sock;
+    int retval = 0, sock, got_data = 0;
 
     /* allocate memory for packet, if needed */
     if (*packet == NULL) {
         *packet = malloc(BUFF_LEN*sizeof(char));
     }
-    
-    /* wait until some socket is ready */
-    while (retval <= 0) {
-        /* copy all sockets from master to tmp_set */
-        pthread_mutex_lock(&mutex);
-        tmp_set = ((struct plugin_conf*) config)->master;
-        pthread_mutex_unlock(&mutex);
+   
+    /* cycle untill some data is actually read */
+    while(!got_data) {
+        retval = 0;
 
-        /* wait at most one second - give time to check for new sockets */
-        tv.tv_sec = 1;
-        tv.tv_usec = 0;
+        /* wait until some socket is ready */
+        while (retval <= 0) {
+            /* copy all sockets from master to tmp_set */
+            FD_ZERO(&tmp_set);
+            pthread_mutex_lock(&mutex);
+            tmp_set = conf->master;
+            pthread_mutex_unlock(&mutex);
 
-        /* select active connections */
-        retval = select(((struct plugin_conf*) config)->fd_max + 1, &tmp_set, NULL, NULL, &tv);
-        if (retval == -1) {
-            VERBOSE(CL_VERBOSE_OFF, "Failed to select active connection: %s\n", strerror(errno));
-            return 1;
-        }
-    }
+            /* wait at most one second - give time to check for new sockets */
+            tv.tv_sec = 1;
+            tv.tv_usec = 0;
 
-    /* go through all sockets, read from the first ready and close sockets with exceptions on the way */
-    for (sock=0; sock <= ((struct plugin_conf*) config)->fd_max; sock++) {
-        /* fetch first active connection */
-        if (FD_ISSET(sock, &tmp_set)) {
-            /* receive packet */
-            length = recv(sock, *packet, BUFF_LEN, 0);
-            if (length == -1) {
-                VERBOSE(CL_VERBOSE_OFF, "Failed to receive packet: %s", strerror(errno));
+            /* select active connections */
+            retval = select(conf->fd_max + 1, &tmp_set, NULL, NULL, &tv);
+            if (retval == -1) {
+                VERBOSE(CL_VERBOSE_OFF, "Failed to select active connection: %s\n", strerror(errno));
                 return 1;
-            } else if (length == 0) { /* socket is closed */
-                close(sock);
-                pthread_mutex_lock(&mutex);
-                FD_CLR(sock, &((struct plugin_conf *) config)->master);
-                pthread_mutex_unlock(&mutex);
             }
-
-            /* get peer address from configuration */
-            address = conf->sock_addresses[sock];
-
-            if (address->sin6_family == AF_INET) {
-                /* copy src IPv4 address */
-                conf->info->src_addr.ipv4.s_addr =
-                    ((struct sockaddr_in*) address)->sin_addr.s_addr;
-
-                /* copy port */
-                conf->info->src_port = ntohs(((struct sockaddr_in*)  address)->sin_port);
-            } else {
-                /* copy src IPv6 address */
-                int i;
-                for (i=0; i<4; i++) {
-                    conf->info->src_addr.ipv6.s6_addr32[i] = address->sin6_addr.s6_addr32[i];
-                }
-
-                /* copy port */
-                conf->info->src_port = ntohs(address->sin6_port);
-            }
-            break;
         }
+
+        /* go through all sockets, read from the first ready and/or close sockets */
+        for (sock=0; sock <= conf->fd_max; sock++) {
+            /* fetch first active connection */
+            if (FD_ISSET(sock, &tmp_set)) {
+                /* receive packet */
+                length = recv(sock, *packet, BUFF_LEN, 0);
+                if (length == -1) {
+                    VERBOSE(CL_VERBOSE_OFF, "Failed to receive packet: %s", strerror(errno));
+                    return 1;
+                } else if (length == 0) { /* socket is closed */
+                    close(sock);
+                    pthread_mutex_lock(&mutex);
+                    FD_CLR(sock, &conf->master);
+                    pthread_mutex_unlock(&mutex);
+                } else {
+                    /* data received */
+                    got_data = 1;
+
+                    /* get peer address from configuration */
+                    address = conf->sock_addresses[sock];
+
+                    if (address->sin6_family == AF_INET) {
+                        /* copy src IPv4 address */
+                        conf->info->src_addr.ipv4.s_addr =
+                            ((struct sockaddr_in*) address)->sin_addr.s_addr;
+
+                        /* copy port */
+                        conf->info->src_port = ntohs(((struct sockaddr_in*)  address)->sin_port);
+                    } else {
+                        /* copy src IPv6 address */
+                        int i;
+                        for (i=0; i<4; i++) {
+                            conf->info->src_addr.ipv6.s6_addr32[i] = address->sin6_addr.s6_addr32[i];
+                        }
+
+                        /* copy port */
+                        conf->info->src_port = ntohs(address->sin6_port);
+                    }
+                    break;
+                }
+            }
+        }
+        /* check while condition to see if any data was received */
     }
 
     /* pass info to the collector */
