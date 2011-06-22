@@ -79,9 +79,6 @@ typedef int (*func_type)();
 /* configuration passed to each plugin call */
 void *config;
 
-/* port to send test data */
-int udp_port = 0;
-
 /* protocol family, default is IPv4 */
 int af = AF_INET;
 
@@ -192,14 +189,14 @@ int test_get_packet(func_type function, char *udp_port, char *tcp_port)
     if (tcp_port != NULL)
     {
         printf("  Sending TCP data... ");
-        ret = send_data(udp_port, SOCK_STREAM, &error_msg);
+        ret = send_data(tcp_port, SOCK_STREAM, &error_msg);
         if (ret == 0) data_sent = 1;
         if (ret > 1) error++;
         
         if (data_sent != 0) printf("OK\n");
         else printf("FAILED (%s)\n", error_msg);
     }
-
+    
     /* try to call the function */
     ret = function(config, &input_info, &packet);
 
@@ -267,8 +264,8 @@ void usage(char *name)
     printf("  -f input_module  specify input plugin to test\n");
     printf("  -s num           set timeout to num seconds for plugin functions. Default is %ds\n", TIMEOUT);
     printf("  -p plugin_config file with xml plugin configurationpassed to the plugin input_init function\n");
-    printf("  -u udp_port      send test data to UDP port udp_port. Cannot be used with -t\n");
-    printf("  -t tcp_port      send test data to TCP port tcp_port. Cannot be used with -u\n");
+    printf("  -u udp_port      send test data to UDP port udp_port [4739]. Cannot be used with -t\n");
+    printf("  -t tcp_port      send test data to TCP port tcp_port [4739]. Cannot be used with -u\n");
     printf("  -6               use IPv6 to send test data");
     printf("  -4               use IPv4 to send test data (default)");
     printf("  -h               print usage info\n");
