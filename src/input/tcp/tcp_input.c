@@ -70,6 +70,8 @@
 #define DEFAULT_PORT "4739"
 /* backlog for tcp connections */
 #define BACKLOG SOMAXCONN
+/* size of array of socket addresses */
+#define ADDR_ARRAY_SIZE 50
 
 /**
  "* \struct plugin_conf
@@ -81,11 +83,25 @@ struct plugin_conf
     struct input_info_network *info; /**< infromation structure passed
                                       * to collector */
     fd_set master; /**< set of all active sockets */
-    int fd_max; /** max file descriptor number */
+    int fd_max; /**< max file descriptor number */
+    struct sockaddr_in6 *sock_addresses[ADDR_ARRAY_SIZE]; /*< array of addresses indexed by sockets */
 };
 
 pthread_mutex_t mutex;
 pthread_t listen_thread;
+
+/**
+ * \brief Free address variable on input_listen exit
+ *
+ * \param[in] address Address to free on exit
+ * \return void
+ */
+void input_listen_cleanup(void *address)
+{
+    if (address != NULL) {
+        free(address);
+    }
+}
 
 /**
  * \brief Funtion that listens for new connetions
@@ -99,12 +115,24 @@ void *input_listen(void *config)
 {
     struct plugin_conf *conf = (struct plugin_conf *) config;
     int new_sock;
+    /* use IPv6 sockaddr structure to store address information (IPv4 fits easily) */
+    struct sockaddr_in6 *address = NULL;
+    socklen_t addr_length;
 
-    /* loop ends when conf->socket is closed by input_close function */
+    /* loop ends when thread is cancelled by pthread_cancel() function */
     while (1) {
-        if ((new_sock = accept(conf->socket, NULL, NULL)) == -1) {
+        /* allocate space for the address */
+        addr_length = sizeof(struct sockaddr_in6);
+        address = malloc(addr_length);
+
+        /* ensure that address will be freed when thread is canceled */ 
+        pthread_cleanup_push(input_listen_cleanup, (void *) address);
+
+        if ((new_sock = accept(conf->socket, (struct sockaddr*) address, &addr_length)) == -1) {
             VERBOSE(CL_VERBOSE_BASIC, "Cannot accept new socket: %s\n", strerror(errno));
-            return NULL;
+            printf("Cannot accept new socket: %s\n", strerror(errno));
+            /* exit and call cleanup */
+            pthread_exit(0);
         } else {
             pthread_mutex_lock(&mutex);
             FD_SET(new_sock, &conf->master);
@@ -112,8 +140,14 @@ void *input_listen(void *config)
             if (conf->fd_max < new_sock) {
                 conf->fd_max = new_sock;
             }
+
+            /* copy socket address to config structure */
+            conf->sock_addresses[new_sock] = address;
+            /* and unset the address so that we do not free it incidentally */
+            address = NULL;
             pthread_mutex_unlock(&mutex);
         }
+        pthread_cleanup_pop(0);
     }
     return NULL;
 }
@@ -369,8 +403,8 @@ int get_packet(void *config, struct input_info **info, char **packet)
     fd_set tmp_set;
     ssize_t length = 0;
     struct timeval tv;
-    socklen_t addr_length = sizeof(struct sockaddr_storage);
-    struct sockaddr_storage address;
+    //socklen_t addr_length = sizeof(struct sockaddr_storage);
+    struct sockaddr_in6 *address;
     struct plugin_conf *conf = config;
     int retval = 0, sock;
 
@@ -385,7 +419,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
         pthread_mutex_lock(&mutex);
         tmp_set = ((struct plugin_conf*) config)->master;
         pthread_mutex_unlock(&mutex);
-        
+
         /* wait at most one second - give time to check for new sockets */
         tv.tv_sec = 1;
         tv.tv_usec = 0;
@@ -398,7 +432,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
         }
     }
 
-    /* go through all */
+    /* go through all sockets, read from the first ready and close sockets with exceptions on the way */
     for (sock=0; sock <= ((struct plugin_conf*) config)->fd_max; sock++) {
         /* fetch first active connection */
         if (FD_ISSET(sock, &tmp_set)) {
@@ -414,28 +448,25 @@ int get_packet(void *config, struct input_info **info, char **packet)
                 pthread_mutex_unlock(&mutex);
             }
 
-            /* get peer address */
-            if (getpeername(sock, (struct sockaddr*) &address, &addr_length) == -1) {
-                VERBOSE(CL_VERBOSE_BASIC, "Cannot get perr address: %s\n", strerror(errno));
-            }
+            /* get peer address from configuration */
+            address = conf->sock_addresses[sock];
 
-            if (address.ss_family == AF_INET) {
+            if (address->sin6_family == AF_INET) {
                 /* copy src IPv4 address */
                 conf->info->src_addr.ipv4.s_addr =
-                    ((struct sockaddr_in*) &address)->sin_addr.s_addr;
+                    ((struct sockaddr_in*) address)->sin_addr.s_addr;
 
                 /* copy port */
-                conf->info->src_port = ntohs(((struct sockaddr_in*)  &address)->sin_port);
+                conf->info->src_port = ntohs(((struct sockaddr_in*)  address)->sin_port);
             } else {
                 /* copy src IPv6 address */
                 int i;
                 for (i=0; i<4; i++) {
-                    conf->info->src_addr.ipv6.s6_addr32[i] =
-                        ((struct sockaddr_in6*) &address)->sin6_addr.s6_addr32[i];
+                    conf->info->src_addr.ipv6.s6_addr32[i] = address->sin6_addr.s6_addr32[i];
                 }
 
                 /* copy port */
-                conf->info->src_port = ntohs(((struct sockaddr_in6*)  &address)->sin6_port);
+                conf->info->src_port = ntohs(address->sin6_port);
             }
             break;
         }
@@ -459,8 +490,11 @@ int input_close(void **config)
     struct plugin_conf *conf = (struct plugin_conf*) *config;
 
     /* kill the listening thread */
-    pthread_cancel(listen_thread);
-    pthread_join(listen_thread, NULL);
+    if(pthread_cancel(listen_thread) != 0) {
+        VERBOSE(CL_VERBOSE_OFF, "Cannot cancel listening thread\n");
+    } else {
+        pthread_join(listen_thread, NULL);
+    }
     
     /* close listening socket */
     if ((ret = close(conf->socket)) == -1) {
@@ -482,6 +516,7 @@ int input_close(void **config)
     FD_ZERO(&conf->master);
     free(((struct plugin_conf*) *config)->info);
     free(*config);
+    *config = NULL;
 
     VERBOSE(CL_VERBOSE_BASIC, "All allocated resources have been freed");
 
