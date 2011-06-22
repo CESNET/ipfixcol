@@ -118,6 +118,7 @@ void *input_listen(void *config)
     /* use IPv6 sockaddr structure to store address information (IPv4 fits easily) */
     struct sockaddr_in6 *address = NULL;
     socklen_t addr_length;
+    char src_addr[INET6_ADDRSTRLEN];
 
     /* loop ends when thread is cancelled by pthread_cancel() function */
     while (1) {
@@ -142,7 +143,16 @@ void *input_listen(void *config)
 
             /* copy socket address to config structure */
             conf->sock_addresses[new_sock] = address;
-            /* and unset the address so that we do not free it incidentally */
+
+            /* print info */
+            if (conf->info->l3_proto == 4) {
+                inet_ntop(AF_INET, (void *)&((struct sockaddr_in*) address)->sin_addr, src_addr, INET6_ADDRSTRLEN);
+            } else {
+                inet_ntop(AF_INET6, &address->sin6_addr, src_addr, INET6_ADDRSTRLEN);
+            }
+            VERBOSE(CL_VERBOSE_BASIC, "Exporter connected from address %s", src_addr);
+
+            /* unset the address so that we do not free it incidentally */
             address = NULL;
             pthread_mutex_unlock(&mutex);
         }
@@ -401,7 +411,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
     fd_set tmp_set;
     ssize_t length = 0;
     struct timeval tv;
-    //socklen_t addr_length = sizeof(struct sockaddr_storage);
+    char src_addr[INET6_ADDRSTRLEN];
     struct sockaddr_in6 *address;
     struct plugin_conf *conf = config;
     int retval = 0, sock, got_data = 0;
@@ -445,9 +455,19 @@ int get_packet(void *config, struct input_info **info, char **packet)
                     VERBOSE(CL_VERBOSE_OFF, "Failed to receive packet: %s", strerror(errno));
                     return 1;
                 } else if (length == 0) { /* socket is closed */
-                    close(sock);
+                    /* print info */
+                    if (conf->info->l3_proto == 4) {
+                        inet_ntop(AF_INET, (void *)&((struct sockaddr_in*) conf->sock_addresses[sock])->sin_addr, src_addr, INET6_ADDRSTRLEN);
+                    } else {
+                        inet_ntop(AF_INET6, &conf->sock_addresses[sock]->sin6_addr, src_addr, INET6_ADDRSTRLEN);
+                    }
+                    VERBOSE(CL_VERBOSE_BASIC, "Exporter on address %s closed connection", src_addr);
+                   
+                    /* use mutex so that listening thread does not reuse the socket too quickly */
                     pthread_mutex_lock(&mutex);
+                    close(sock);
                     FD_CLR(sock, &conf->master);
+                    free(conf->sock_addresses[sock]);
                     pthread_mutex_unlock(&mutex);
                 } else {
                     /* data received */
