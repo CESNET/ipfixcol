@@ -44,7 +44,7 @@
 
 #include "../ipfixcol.h"
 
-#define QUEUE_SIZE 511
+#define RING_BUFFER_SIZE 128
 
 /* WARNING
  * This implementation works ONLY when there is just ONE writer and ONE reader!
@@ -102,7 +102,7 @@ int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, un
  * to get record from index (if value in index is valid).
  * @return Read data from specified index (or read offset) or NULL on error.
  */
-struct ipfix_message* rbuffer_read (struct ring_buffer* rbuffer, unsigned int index);
+struct ipfix_message* rbuffer_read (struct ring_buffer* rbuffer, unsigned int *index);
 
 /**
  * \brief Decrease reference counter on specified record in ring buffer.

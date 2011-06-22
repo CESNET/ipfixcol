@@ -65,10 +65,11 @@ static void* data_manager_thread (void* cfg)
 {
 	struct data_manager_config* config = (struct data_manager_config*) cfg;
 	struct ipfix_message* msg;
+	unsigned int index = -1;
 
 	while (!done) {
 		/* read new data */
-		msg = rbuffer_read (config->in_queue, (unsigned int)-1);
+		msg = rbuffer_read (config->in_queue, &index);
 		if (msg == NULL) {
 			VERBOSE (CL_VERBOSE_BASIC, "ODID %d: Error on reading data from IPFIX preprocessor.",
 					config->observation_domain_id);
@@ -81,7 +82,7 @@ static void* data_manager_thread (void* cfg)
 		if (rbuffer_write (config->store_queue, msg, config->plugins_count) != 0) {
 			VERBOSE (CL_VERBOSE_BASIC, "ODID %d: Unable to pass data into the Storage plugins' queue.",
 					config->observation_domain_id);
-			rbuffer_remove_reference (config->in_queue, (unsigned int)-1, 1);
+			rbuffer_remove_reference (config->in_queue, index, 1);
 			continue;
 		}
 
@@ -89,7 +90,7 @@ static void* data_manager_thread (void* cfg)
 		 * data are now in store_queue, so we can remove it from in_queue, but
 		 * we cannot deallocate data - it will be done in store_queue
 		 */
-		rbuffer_remove_reference (config->in_queue, (unsigned int)-1, 0);
+		rbuffer_remove_reference (config->in_queue, index, 0);
 	}
 
 	VERBOSE (CL_VERBOSE_ADVANCED, "ODID %d: Closing Data manager's thread.",
@@ -106,7 +107,7 @@ static void* storage_plugin_thread (void* cfg)
 
 	while (!done) {
 		/* get next data */
-		msg = rbuffer_read (config->queue, index);
+		msg = rbuffer_read (config->queue, &index);
 		if (msg == NULL) {
 			VERBOSE (CL_VERBOSE_BASIC, "Error on reading data from Data manager.");
 			continue;
@@ -190,7 +191,15 @@ struct data_manager_config* create_data_manager (uint32_t observation_domain_id,
 		data_manager_config_free (config);
 		return (NULL);
 	}
+	/* initiate queue to communicate with storage plugins' threads */
+	config->store_queue = rbuffer_init(RING_BUFFER_SIZE);
+	if (config->store_queue == NULL) {
+		VERBOSE(CL_VERBOSE_OFF, "Unable to initiate queue for communication with Storage plugins.");
+		data_manager_config_free (config);
+		return (NULL);
+	}
 
+	config->observation_domain_id = observation_domain_id;
 	config->plugins = NULL;
 	config->plugins_count = 0;
 
@@ -248,14 +257,6 @@ struct data_manager_config* create_data_manager (uint32_t observation_domain_id,
 
 		/* continue on the following storage plugin */
 		storage_plugins = storage_plugins->next;
-	}
-
-	/* initiate queue to communicate with storage plugins' threads */
-	config->store_queue = rbuffer_init(config->plugins_count);
-	if (config->store_queue == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to initiate queue for communication with Storage plugins.");
-		data_manager_config_free (config);
-		return (NULL);
 	}
 
 	/* check if at least one storage plugin initiated */
