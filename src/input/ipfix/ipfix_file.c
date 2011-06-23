@@ -102,7 +102,7 @@ int input_init(char *params, void **config)
 	cur = xmlDocGetRootElement(doc);
 	if (cur == NULL) {
 		VERBOSE(CL_VERBOSE_OFF, "empty configuration");
-		goto err_init;
+		goto err_xml;
 	}
 	if (xmlStrcmp(cur->name, (const xmlChar *) "fileReader")) {
 		VERBOSE(CL_VERBOSE_OFF, "root node != fileReader");
@@ -121,14 +121,14 @@ int input_init(char *params, void **config)
 	if (conf->xml_file == NULL) {
 		VERBOSE(CL_VERBOSE_OFF, "\"file\" element is missing. no input, "
 		                        "nothing to do");
-		goto err_init;
+		goto err_xml;
 	}
 
 	/* we only support local files */
 	if (strncmp((char *) conf->xml_file, "file:", 5)) {
 		VERBOSE(CL_VERBOSE_OFF, "element \"file\": invalid URI - "
 		                        "only allowed scheme is \"file:\"");
-		goto err_init;
+		goto err_xml;
 	}
 
 	/* skip "file:" at the beginning of the URI */
@@ -140,14 +140,24 @@ int input_init(char *params, void **config)
 	if (fd == -1) {
 		/* input file doesn't exist or we don't have read permission */
 		VERBOSE(CL_VERBOSE_OFF, "unable to open input file");
-		goto err_init;
+		goto err_file;
 	}
 
 	conf->fd = fd;
 
+	/* we don't need this xml tree any more */
+	xmlFreeDoc(doc);
+
 	*config = conf;
 
 	return 0;
+
+
+err_file:
+	xmlFree(conf->xml_file);
+
+err_xml:
+	xmlFreeDoc(doc);
 
 err_init:
 	/* plugin initialization failed */
