@@ -92,13 +92,10 @@ int input_init(char *params, void **config)
     struct plugin_conf *conf=NULL;
     char *port = NULL, *address = NULL;
     int ai_family = AF_INET6; /* IPv6 is default */
-    struct sockaddr_storage saddr, *saddrp=NULL;
-    socklen_t saddr_len = sizeof (struct sockaddr_storage);
+    char dst_addr[INET6_ADDRSTRLEN];
     int ret, ipv6_only = 0, retval = 0;
     /* 1 when using default port - don't free memory */
     int def_port = 0;
-
-    saddrp = &saddr;
 
     /* allocate plugin_conf structure */
     conf = malloc(sizeof(struct plugin_conf));
@@ -218,12 +215,6 @@ int input_init(char *params, void **config)
         goto out;
     }
 
-    /* get binded address -- we listen on all interfaces, so it should be 0.0.0.0*/
-    if (getsockname(conf->socket, (struct sockaddr*) saddrp, &saddr_len) != 0) {
-        VERBOSE(CL_VERBOSE_BASIC, "Cannot get socket name, input_info might lack destination port and address");
-        saddrp = (struct sockaddr_storage *) addrinfo->ai_addr;
-    }
-
     /* fill in general information */
     conf->info->type = SOURCE_TYPE_UDP;
     conf->info->dst_port = atoi(port);
@@ -232,7 +223,9 @@ int input_init(char *params, void **config)
 
         /* copy dst IPv4 address */
         conf->info->dst_addr.ipv4.s_addr =
-            ((struct sockaddr_in*) saddrp)->sin_addr.s_addr;
+            ((struct sockaddr_in*) addrinfo->ai_addr)->sin_addr.s_addr;
+
+        inet_ntop(AF_INET, &conf->info->dst_addr.ipv4, dst_addr, INET6_ADDRSTRLEN);
     } else { /* IPv6 */
         conf->info->l3_proto = 6;
 
@@ -240,9 +233,13 @@ int input_init(char *params, void **config)
         int i;
         for (i=0; i<4;i++) {
             conf->info->dst_addr.ipv6.s6_addr32[i] =
-                ((struct sockaddr_in6*) saddrp)->sin6_addr.s6_addr32[i];
+                ((struct sockaddr_in6*) addrinfo->ai_addr)->sin6_addr.s6_addr32[i];
         }
+
+        inet_ntop(AF_INET6, &conf->info->dst_addr.ipv6, dst_addr, INET6_ADDRSTRLEN);
     }
+    /* print info */
+    VERBOSE(CL_VERBOSE_BASIC, "UDP input plugin listening on address %s, port %s", dst_addr, port);
 
     /* and pass it to the collector */
     *config = (void*) conf;
@@ -293,7 +290,6 @@ out:
     }
 
     return retval;
-
 }
 
 
