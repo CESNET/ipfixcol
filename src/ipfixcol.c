@@ -412,7 +412,7 @@ storage_plugin_remove:
 	while (!done) {
 		/* get data to process */
 		/* TODO */
-		if (input.get (input.config, &input_info, &packet) != 0) {
+		if (input.get (input.config, &input_info, &packet) > 0) {
 			VERBOSE(CL_VERBOSE_OFF, "Getting IPFIX data failed!");
 			continue;
 		}
