@@ -200,7 +200,7 @@ int test_get_packet(func_type function, char *udp_port, char *tcp_port)
     /* try to call the function */
     ret = function(config, &input_info, &packet);
 
-    if (ret > 0) error++;
+    if (ret < 0) error++;
 
     if (packet == NULL) 
     {
@@ -208,7 +208,7 @@ int test_get_packet(func_type function, char *udp_port, char *tcp_port)
         printf("  %s: plugin did not return any packet data\n", (data_sent!=0)? "ERROR": "INFO");
     } else 
     {
-        printf("  Expecting some data from plugin... OK\n");
+        printf("  Expecting some data from plugin... Got %d bytes... OK\n", ret);
     }
 
     if (input_info == NULL) 
@@ -229,7 +229,17 @@ int test_get_packet(func_type function, char *udp_port, char *tcp_port)
     }
 
     printf("  get_packet function returned %d ... ", ret);
-    printf("%s\n", (ret==0)? "OK":"ERROR");
+    printf("%s\n", (ret>=0)? "OK":"ERROR");
+
+    /* test whether function returns INPUT_CLOSE, TCP only */
+    if (data_sent && tcp_port != NULL) {
+        ret = function(config, &input_info, &packet);
+        if (ret == INPUT_CLOSED) {
+            printf("  INFO: second call to get_packet function correctly reported closed connection\n");
+        } else {
+            printf("  ERROR: second call to get_packet function returned %d, INPUT_CLOSED(%d) expected\n", ret, INPUT_CLOSED);
+        }
+    }
     
     return error;
 }

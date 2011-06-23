@@ -302,7 +302,8 @@ out:
  * \param[in] config  plugin_conf structure
  * \param[out] info   Information structure describing the source of the data.
  * \param[out] packet Flow information data in the form of IPFIX packet.
- * \return 0 on success, nonzero else.
+ * \return the length of packet on success, INPUT_CLOSE when some connection 
+ *  closed, INPUT_ERROR on error.
  */
 int get_packet(void *config, struct input_info **info, char **packet)
 {
@@ -322,7 +323,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
     length = recvfrom(sock, *packet, BUFF_LEN, 0, (struct sockaddr*) &address, &addr_length);
     if (length == -1) {
         VERBOSE(CL_VERBOSE_OFF, "Failed to receive packet: %s", strerror(errno));
-        return 1;
+        return INPUT_ERROR;
     }
 
     if (address.ss_family == AF_INET) {
@@ -347,7 +348,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
     /* pass info to the collector */
     *info = (struct input_info*) conf->info;
 
-    return 0;
+    return length;
 }
 
 /**

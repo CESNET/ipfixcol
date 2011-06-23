@@ -400,7 +400,8 @@ out:
  * \param[in] config  plugin_conf structure
  * \param[out] info   Information structure describing the source of the data.
  * \param[out] packet Flow information data in the form of IPFIX packet.
- * \return 0 on success, nonzero else.
+ * \return the length of packet on success, INPUT_CLOSE when some connection 
+ *  closed, INPUT_ERROR on error.
  */
 int get_packet(void *config, struct input_info **info, char **packet)
 {
@@ -411,96 +412,92 @@ int get_packet(void *config, struct input_info **info, char **packet)
     char src_addr[INET6_ADDRSTRLEN];
     struct sockaddr_in6 *address;
     struct plugin_conf *conf = config;
-    int retval = 0, sock, got_data = 0;
+    int retval = 0, sock;
 
     /* allocate memory for packet, if needed */
     if (*packet == NULL) {
         *packet = malloc(BUFF_LEN*sizeof(char));
     }
    
-    /* cycle untill some data is actually read */
-    while(!got_data) {
-        retval = 0;
+    /* wait until some socket is ready */
+    while (retval <= 0) {
+        /* copy all sockets from master to tmp_set */
+        FD_ZERO(&tmp_set);
+        pthread_mutex_lock(&mutex);
+        tmp_set = conf->master;
+        pthread_mutex_unlock(&mutex);
 
-        /* wait until some socket is ready */
-        while (retval <= 0) {
-            /* copy all sockets from master to tmp_set */
-            FD_ZERO(&tmp_set);
-            pthread_mutex_lock(&mutex);
-            tmp_set = conf->master;
-            pthread_mutex_unlock(&mutex);
+        /* wait at most one second - give time to check for new sockets */
+        tv.tv_sec = 1;
+        tv.tv_usec = 0;
 
-            /* wait at most one second - give time to check for new sockets */
-            tv.tv_sec = 1;
-            tv.tv_usec = 0;
+        /* select active connections */
+        retval = select(conf->fd_max + 1, &tmp_set, NULL, NULL, &tv);
+        if (retval == -1) {
+            VERBOSE(CL_VERBOSE_OFF, "Failed to select active connection: %s\n", strerror(errno));
+            return INPUT_ERROR;
+        }
+    }
 
-            /* select active connections */
-            retval = select(conf->fd_max + 1, &tmp_set, NULL, NULL, &tv);
-            if (retval == -1) {
-                VERBOSE(CL_VERBOSE_OFF, "Failed to select active connection: %s\n", strerror(errno));
-                return 1;
-            }
+    /* find first socket that is ready */
+    for (sock=0; sock <= conf->fd_max; sock++) {
+        /* fetch first active connection */
+        if (FD_ISSET(sock, &tmp_set)) {
+            break;
+        }
+    }
+
+    /* receive packet */
+    length = recv(sock, *packet, BUFF_LEN, 0);
+    if (length == -1) {
+        VERBOSE(CL_VERBOSE_OFF, "Failed to receive packet: %s", strerror(errno));
+        return INPUT_ERROR;
+    }
+
+    /* get peer address from configuration */
+    address = conf->sock_addresses[sock];
+
+    if (address->sin6_family == AF_INET) {
+        /* copy src IPv4 address */
+        conf->info->src_addr.ipv4.s_addr =
+            ((struct sockaddr_in*) address)->sin_addr.s_addr;
+
+        /* copy port */
+        conf->info->src_port = ntohs(((struct sockaddr_in*)  address)->sin_port);
+    } else {
+        /* copy src IPv6 address */
+        int i;
+        for (i=0; i<4; i++) {
+            conf->info->src_addr.ipv6.s6_addr32[i] = address->sin6_addr.s6_addr32[i];
         }
 
-        /* go through all sockets, read from the first ready and/or close sockets */
-        for (sock=0; sock <= conf->fd_max; sock++) {
-            /* fetch first active connection */
-            if (FD_ISSET(sock, &tmp_set)) {
-                /* receive packet */
-                length = recv(sock, *packet, BUFF_LEN, 0);
-                if (length == -1) {
-                    VERBOSE(CL_VERBOSE_OFF, "Failed to receive packet: %s", strerror(errno));
-                    return 1;
-                } else if (length == 0) { /* socket is closed */
-                    /* print info */
-                    if (conf->info->l3_proto == 4) {
-                        inet_ntop(AF_INET, (void *)&((struct sockaddr_in*) conf->sock_addresses[sock])->sin_addr, src_addr, INET6_ADDRSTRLEN);
-                    } else {
-                        inet_ntop(AF_INET6, &conf->sock_addresses[sock]->sin6_addr, src_addr, INET6_ADDRSTRLEN);
-                    }
-                    VERBOSE(CL_VERBOSE_BASIC, "Exporter on address %s closed connection", src_addr);
-                   
-                    /* use mutex so that listening thread does not reuse the socket too quickly */
-                    pthread_mutex_lock(&mutex);
-                    close(sock);
-                    FD_CLR(sock, &conf->master);
-                    free(conf->sock_addresses[sock]);
-                    pthread_mutex_unlock(&mutex);
-                } else {
-                    /* data received */
-                    got_data = 1;
-
-                    /* get peer address from configuration */
-                    address = conf->sock_addresses[sock];
-
-                    if (address->sin6_family == AF_INET) {
-                        /* copy src IPv4 address */
-                        conf->info->src_addr.ipv4.s_addr =
-                            ((struct sockaddr_in*) address)->sin_addr.s_addr;
-
-                        /* copy port */
-                        conf->info->src_port = ntohs(((struct sockaddr_in*)  address)->sin_port);
-                    } else {
-                        /* copy src IPv6 address */
-                        int i;
-                        for (i=0; i<4; i++) {
-                            conf->info->src_addr.ipv6.s6_addr32[i] = address->sin6_addr.s6_addr32[i];
-                        }
-
-                        /* copy port */
-                        conf->info->src_port = ntohs(address->sin6_port);
-                    }
-                    break;
-                }
-            }
-        }
-        /* check while condition to see if any data was received */
+        /* copy port */
+        conf->info->src_port = ntohs(address->sin6_port);
     }
 
     /* pass info to the collector */
     *info = (struct input_info*) conf->info;
 
-    return 0;
+    /* check whether socket closed */
+    if (length == 0) {
+        /* print info */
+        if (conf->info->l3_proto == 4) {
+            inet_ntop(AF_INET, (void *)&((struct sockaddr_in*) conf->sock_addresses[sock])->sin_addr, src_addr, INET6_ADDRSTRLEN);
+        } else {
+            inet_ntop(AF_INET6, &conf->sock_addresses[sock]->sin6_addr, src_addr, INET6_ADDRSTRLEN);
+        }
+        VERBOSE(CL_VERBOSE_BASIC, "Exporter on address %s closed connection", src_addr);
+           
+        /* use mutex so that listening thread does not reuse the socket too quickly */
+        pthread_mutex_lock(&mutex);
+        close(sock);
+        FD_CLR(sock, &conf->master);
+        free(conf->sock_addresses[sock]);
+        pthread_mutex_unlock(&mutex);
+        return INPUT_CLOSED;
+    }
+
+    return length;
 }
 
 /**
