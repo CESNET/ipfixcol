@@ -98,14 +98,14 @@ int input_init(char *params, void **config)
     int def_port = 0;
 
     /* allocate plugin_conf structure */
-    conf = malloc(sizeof(struct plugin_conf));
+    conf = calloc(1, sizeof(struct plugin_conf));
     if (conf == NULL) {
         VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory for config structure: %s", strerror(errno));
         retval = 1;
         goto out;
     }
 
-    conf->info = malloc(sizeof(struct input_info_network));
+    conf->info = calloc(1, sizeof(struct input_info_network));
     if (conf->info == NULL) {
         VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory for input_info structure: %s", strerror(errno));
         retval = 1;
@@ -121,14 +121,14 @@ int input_init(char *params, void **config)
     doc = xmlParseDoc(BAD_CAST params);
     if (doc == NULL) {
         printf("%s", params);
-        VERBOSE(CL_VERBOSE_OFF, "Cannot parse config xml\n");
+        VERBOSE(CL_VERBOSE_OFF, "Cannot parse config xml");
         retval = 1;
         goto out;
     }
     /* get the root element node */
     root_element = xmlDocGetRootElement(doc);
     if (root_element == NULL) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot get document root element\n");
+        VERBOSE(CL_VERBOSE_OFF, "Cannot get document root element");
         retval = 1;
         goto out;
     }
@@ -210,7 +210,7 @@ int input_init(char *params, void **config)
 
     /* bind socket to address */
     if (bind(conf->socket, addrinfo->ai_addr, addrinfo->ai_addrlen) != 0) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot bind socket: %s\n", strerror(errno));
+        VERBOSE(CL_VERBOSE_OFF, "Cannot bind socket: %s", strerror(errno));
         retval = 1;
         goto out;
     }

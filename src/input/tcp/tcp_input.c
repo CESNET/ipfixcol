@@ -130,7 +130,7 @@ void *input_listen(void *config)
         pthread_cleanup_push(input_listen_cleanup, (void *) address);
 
         if ((new_sock = accept(conf->socket, (struct sockaddr*) address, &addr_length)) == -1) {
-            VERBOSE(CL_VERBOSE_BASIC, "Cannot accept new socket: %s\n", strerror(errno));
+            VERBOSE(CL_VERBOSE_BASIC, "Cannot accept new socket: %s", strerror(errno));
             /* exit and call cleanup */
             pthread_exit(0);
         } else {
@@ -182,14 +182,14 @@ int input_init(char *params, void **config)
     int def_port = 0;
 
     /* allocate plugin_conf structure */
-    conf = malloc(sizeof(struct plugin_conf));
+    conf = calloc(1, sizeof(struct plugin_conf));
     if (conf == NULL) {
         VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory for config structure: %s", strerror(errno));
         retval = 1;
         goto out;
     }
 
-    conf->info = malloc(sizeof(struct input_info_network));
+    conf->info = calloc(1, sizeof(struct input_info_network));
     if (conf->info == NULL) {
         VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory for input_info structure: %s", strerror(errno));
         retval = 1;
@@ -207,14 +207,14 @@ int input_init(char *params, void **config)
     /* parse xml string */
     doc = xmlParseDoc(BAD_CAST params);
     if (doc == NULL) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot parse config xml\n");
+        VERBOSE(CL_VERBOSE_OFF, "Cannot parse config xml");
         retval = 1;
         goto out;
     }
     /* get the root element node */
     root_element = xmlDocGetRootElement(doc);
     if (root_element == NULL) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot get document root element\n");
+        VERBOSE(CL_VERBOSE_OFF, "Cannot get document root element");
         retval = 1;
         goto out;
     }
@@ -296,14 +296,14 @@ int input_init(char *params, void **config)
 
     /* bind socket to address */
     if (bind(conf->socket, addrinfo->ai_addr, addrinfo->ai_addrlen) != 0) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot bind socket: %s\n", strerror(errno));
+        VERBOSE(CL_VERBOSE_OFF, "Cannot bind socket: %s", strerror(errno));
         retval = 1;
         goto out;
     }
 
     /* this is a listening socket */
     if (listen(conf->socket, BACKLOG) == -1) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot listen on socket: %s\n", strerror(errno));
+        VERBOSE(CL_VERBOSE_OFF, "Cannot listen on socket: %s", strerror(errno));
         retval = 1;
         goto out;
     }
@@ -434,7 +434,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
         /* select active connections */
         retval = select(conf->fd_max + 1, &tmp_set, NULL, NULL, &tv);
         if (retval == -1) {
-            VERBOSE(CL_VERBOSE_OFF, "Failed to select active connection: %s\n", strerror(errno));
+            VERBOSE(CL_VERBOSE_OFF, "Failed to select active connection: %s", strerror(errno));
             return INPUT_ERROR;
         }
     }
@@ -513,7 +513,7 @@ int input_close(void **config)
 
     /* kill the listening thread */
     if(pthread_cancel(listen_thread) != 0) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot cancel listening thread\n");
+        VERBOSE(CL_VERBOSE_OFF, "Cannot cancel listening thread");
     } else {
         pthread_join(listen_thread, NULL);
     }
