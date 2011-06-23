@@ -192,6 +192,9 @@ int storage_init(char *params, void **config)
 
 	prepare_output_file(conf);
 
+	/* we don't need this xml tree any more */
+	xmlFreeDoc(doc);
+
 	*config = conf;
 
 	return 0;
