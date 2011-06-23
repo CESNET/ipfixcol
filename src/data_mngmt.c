@@ -224,6 +224,7 @@ struct data_manager_config* create_data_manager (uint32_t observation_domain_id,
 			storage_plugins = storage_plugins->next;
 			continue;
 		}
+		storage_plugins->config = aux_storage->config;
 		xmlFree (plugin_params);
 
 		/* check the links in list of plugins available from data manager's config */

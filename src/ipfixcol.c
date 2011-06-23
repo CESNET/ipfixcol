@@ -321,6 +321,13 @@ int main (int argc, char* argv[])
 
 		aux_storage = storage;
 		storage = (struct storage*) malloc (sizeof(struct storage));
+		if (storage == NULL) {
+			VERBOSE (CL_VERBOSE_OFF, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+			storage = aux_storage;
+			goto storage_plugin_remove;
+		}
+		memset(storage, 0, sizeof(struct storage));
+
 		storage->dll_handler = storage_plugin_handler;
 
 		/* prepare Input API routines */
