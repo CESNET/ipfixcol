@@ -1,0 +1,151 @@
+/**
+ * \file storage.h
+ * \author Radek Krejci <rkrejci@cesnet.cz>
+ * \brief IPFIX Collector Storage API.
+ *
+ * Copyright (C) 2011 CESNET, z.s.p.o.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is, and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
+#ifndef IPFIXCOL_STORAGE_H_
+#define IPFIXCOL_STORAGE_H_
+
+#include "../../headers/storage.h"
+
+/**
+ * \defgroup storageAPI Storage Plugins API
+ * \ingroup publicAPIs
+ *
+ * These functions specifies a communication interface between ipficol core,
+ * namely a data manager handling specific Observation Domain ID, and storage
+ * plugins. More precisely, each storage plugin communicates with a separated
+ * thread of the data manager.
+ *
+ * \image html arch_scheme_core_comm.png "ipfixcol internal communication"
+ * \image latex arch_scheme_core_comm.png "ipfixcol internal communication" width=10cm
+ *
+ * @{
+ */
+
+/**
+ * \struct data_template_couple
+ * \brief This structure connects Data set from the IPFIX packet with the
+ * template structure describing the Data set
+ *
+ */
+struct data_template_couple{
+	/**< Address of the Data Set in the packet */
+	struct ipfix_data_set *data_set;
+	/**< Template structure corresponding to this Data set */
+	struct ipfix_template *template;
+};
+
+/**
+ * \struct ipfix_message
+ * \brief Structure covering main parts of the IPFIX packet by pointers into it.
+ */
+struct ipfix_message {
+	/** IPFIX header*/
+	struct ipfix_header               *pkt_header;
+	/** Input source information */
+	struct input_info                 *input_info;
+	/** List of Template Sets in the packet */
+	struct ipfix_template_set         *templ_set[1024];
+	/** List of Options Template Sets in the packet */
+	struct ipfix_options_template_set *opt_templ_set[1024];
+	/** List of Data Sets (with a link to corresponding template) in the packet */
+	struct data_template_couple       data_set[1023];
+};
+
+/**
+ * \brief Storage plugin initialization function.
+ *
+ * The function is called just once before any other storage API's function.
+ *
+ * \param[in]  params  String with specific parameters for the storage plugin.
+ * \param[out] config  Plugin-specific configuration structure. ipfixcol is not
+ * involved in the config's structure, it is just passed to the following calls
+ * of storage API's functions.
+ * \return 0 on success, nonzero else.
+ */
+int storage_init (char *params, void **config);
+
+/**
+ * \brief Pass IPFIX data with supplemental structures from ipfixcol core into
+ * the storage plugin.
+ *
+ * The way of data processing is completely up to the specific storage plugin.
+ * The basic usage is to store all data in a specific format, but also various
+ * processing (statistics, etc.) can be done by storage plugin. In general any
+ * processing with IPFIX data can be done by the storage plugin.
+ *
+ * \param[in] config     Plugin-specific configuration data prepared by init
+ * function.
+ * \param[in] ipfix_msg  Covering structure including IPFIX data as well as
+ * supplementary structures for better/faster parsing of IPFIX data.
+ * \param[in] templates  The list of preprocessed templates for possible
+ * better/faster data processing.
+ * \return 0 on success, nonzero else.
+ */
+int store_packet (void *config, const struct ipfix_message *ipfix_msg,
+        const struct ipfix_template_t *templates);
+
+/**
+ * \brief Announce willing to store currently processing data.
+ *
+ * This way ipfixcol announces willing to store immediately as much data as
+ * possible. The impulse to this action is taken from the user and broadcasted
+ * by ipfixcol to all storage plugins. The real response of the storage plugin
+ * is completely up to the specific plugin.
+ *
+ * \param[in] config  Plugin-specific configuration data prepared by init
+ * function.
+ * \return 0 on success, nonzero else.
+ */
+int store_now (const void *config);
+
+/**
+ * \brief Storage plugin "destructor".
+ *
+ * Clean up all used plugin-specific structures and memory allocations. This
+ * function is used only once as a last function call of the specific storage
+ * plugin.
+ *
+ * \param[in,out] config  Plugin-specific configuration data prepared by init
+ * \return 0 on success and config is changed to NULL, nonzero else.
+ */
+int storage_close (void **config);
+
+/**@}*/
+
+#endif /* IPFIXCOL_STORAGE_H_ */
