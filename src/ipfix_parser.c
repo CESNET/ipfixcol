@@ -72,16 +72,85 @@ static struct data_manager_config *get_data_mngmt_config (uint32_t id)
 	return (aux_cfg);
 }
 
+/**
+ * \brief Search for Data manager handling input specified by 
+ * input_info structure
+ *
+ * @param[in] info Structure input_info specifying data manager
+ * @param[out] prev Data manager configuration preceeding the desired one
+ * @return Desired Data manager's configuration structure if exists, NULL 
+ * otherwise
+ */
+static struct data_manager_config *get_data_mngmt_by_input_info (struct input_info *info, struct data_manager_config **prev)
+{
+    struct data_manager_config *aux_cfg = data_mngmts;
+    struct input_info_network *ii_network1, *ii_network2;
+
+	while (aux_cfg) {
+        /* input types must match */
+        if (aux_cfg->input_info->type == info->type) {
+            /* file names must match for files */
+            if (info->type == SOURCE_TYPE_IPFIX_FILE && 
+                strcmp(((struct input_info_file*) info)->name, ((struct input_info_file*) aux_cfg->input_info)->name) == 0) {
+                break;
+            } else {/* we have struct input_info_network */
+                ii_network1 = (struct input_info_network*) aux_cfg->input_info;
+                ii_network2 = (struct input_info_network*) info;
+                /* ports and protocols must match */
+                if (ii_network1->dst_port == ii_network2->dst_port && 
+                        ii_network1->src_port == ii_network2->src_port &&
+                        ii_network1->l3_proto == ii_network2->l3_proto) {
+                    /* compare addresses, dependent on IP protocol version*/
+                    if (ii_network1->l3_proto == 4) {
+                        if (ii_network1->dst_addr.ipv4.s_addr == ii_network2->dst_addr.ipv4.s_addr) {
+                            break;
+                        }
+                    } else {
+                        if (ii_network1->dst_addr.ipv6.s6_addr32[0] == ii_network2->dst_addr.ipv6.s6_addr32[0] &&
+                            ii_network1->dst_addr.ipv6.s6_addr32[1] == ii_network2->dst_addr.ipv6.s6_addr32[1] &&
+                            ii_network1->dst_addr.ipv6.s6_addr32[2] == ii_network2->dst_addr.ipv6.s6_addr32[2] &&
+                            ii_network1->dst_addr.ipv6.s6_addr32[3] == ii_network2->dst_addr.ipv6.s6_addr32[3]) {
+                            break;
+                        }
+                    }
+                }
+	    	}
+        }
+        /* save previous configuration */
+        *prev = aux_cfg;
+
+		aux_cfg = aux_cfg->next;
+	}
+
+	return (aux_cfg);
+ 
+}
 
 void parse_ipfix (void* packet, struct input_info* input_info, struct storage* storage_plugins)
 {
 	struct ipfix_message* msg;
-	struct data_manager_config *config = NULL;
+	struct data_manager_config *config = NULL, *prev_config = NULL;
 
-	if (packet == NULL || input_info == NULL || storage_plugins == NULL) {
+	if (input_info == NULL || storage_plugins == NULL) {
 		VERBOSE (CL_VERBOSE_OFF, "Invalid parameters in function parse_ipfix().");
 		return;
 	}
+
+    /* connection closed, close data manager */
+    if (packet == NULL) {
+        config = get_data_mngmt_by_input_info (input_info, &prev_config);
+
+        /* remove data manager from the list */
+        if (prev_config == NULL) {
+            data_mngmts = NULL;
+        } else {
+            prev_config->next = config->next;
+        }
+
+        /* close and free data manager */
+        data_manager_close(&config);
+        return;
+    }
 
 	msg = (struct ipfix_message*) malloc (sizeof (struct ipfix_message));
 	msg->pkt_header = (struct ipfix_header*) packet;
@@ -105,7 +174,7 @@ void parse_ipfix (void* packet, struct input_info* input_info, struct storage* s
 		 * we have a new observation domain ID, so create new data manager for
 		 * it
 		 */
-		config = create_data_manager (msg->pkt_header->observation_domain_id, storage_plugins);
+		config = create_data_manager (msg->pkt_header->observation_domain_id, storage_plugins, input_info);
 		if (config == NULL) {
 			VERBOSE (CL_VERBOSE_BASIC, "Unable to create data manager for Observation Domain ID %d, skipping data.",
 					msg->pkt_header->observation_domain_id);
@@ -113,6 +182,13 @@ void parse_ipfix (void* packet, struct input_info* input_info, struct storage* s
 			return;
 		}
 	}
+
+    /* add config to data_mngmts structure */
+    if (data_mngmts == NULL) {
+        data_mngmts = config;
+    } else {
+        data_mngmts->next = config;
+    }
 
 	/**
 	 * \todo process IPFIX and fillup the ipfix_message structure

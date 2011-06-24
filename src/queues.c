@@ -111,7 +111,7 @@ struct ring_buffer* rbuffer_init (unsigned int size)
  */
 int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, unsigned int refcount)
 {
-	if (rbuffer == NULL || record == NULL || refcount == 0) {
+	if (rbuffer == NULL || refcount == 0) {
 		VERBOSE (CL_VERBOSE_OFF, "Invalid ring buffer's write parameters.");
 		return (EXIT_FAILURE);
 	}
@@ -141,7 +141,7 @@ int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, un
 	 */
 	rbuffer->data[rbuffer->write_offset] = record;
 	rbuffer->data_references[rbuffer->write_offset] = refcount;
-	rbuffer->write_offset++;
+	rbuffer->write_offset = (rbuffer->write_offset + 1) % rbuffer->size;
 	__sync_fetch_and_add (&(rbuffer->count), 1); /* atomic rbuffer->count++; */
 
 	/* I did change of rbuffer->count so inform about it other threads (read threads) */

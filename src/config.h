@@ -81,6 +81,16 @@ struct input {
 };
 
 /**
+ * \brief Storage plugin thread config structure
+ *
+ * Should be passed to storage on thread startup
+ */
+struct storage_plugin_thread_cfg {
+	struct ring_buffer *queue;
+	pthread_t thread_id;
+};
+
+/**
  * \brief Storage plugin handler structure.
  */
 struct storage {
@@ -91,6 +101,7 @@ struct storage {
 	int (*close) (void**);
 	void *dll_handler;
 	struct plugin_list* plugin;
+    struct storage_plugin_thread_cfg *thread_config;
 	struct storage *next;
 };
 

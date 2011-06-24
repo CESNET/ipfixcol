@@ -120,7 +120,7 @@ void term_signal_handler(int sig)
 
 int main (int argc, char* argv[])
 {
-	int c, i, fd, retval = 0;
+	int c, i, fd, retval = 0, get_retval;
 	pid_t pid;
 	bool daemonize = false;
 	char *progname, *config_file = NULL;
@@ -274,8 +274,7 @@ int main (int argc, char* argv[])
 	}
 
 	/* prepare input plugin */
-	for (i = 0; i == 0; i++) {
-		input.plugin = input_plugins;
+	for (input.plugin = input_plugins; input.plugin != NULL; input.plugin = input.plugin->next) {
 		VERBOSE(CL_VERBOSE_ADVANCED, "Opening input plugin: %s", input_plugins->file);
 		input_plugin_handler = dlopen (input_plugins->file, RTLD_LAZY);
 		if (input_plugin_handler == NULL) {
@@ -300,6 +299,8 @@ int main (int argc, char* argv[])
 			VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
 			continue;
 		}
+        /* get the first one we can */
+        break;
 	}
 	/* check if we have found any input plugin */
 	if (!input.dll_handler || !input.init || !input.get || !input.close) {
@@ -411,17 +412,23 @@ storage_plugin_remove:
 	/* main loop */
 	while (!done) {
 		/* get data to process */
-		/* TODO */
-		if (input.get (input.config, &input_info, &packet) <= 0) {
+		if ((get_retval = input.get (input.config, &input_info, &packet)) < 0) {
 			VERBOSE(CL_VERBOSE_OFF, "Getting IPFIX data failed!");
 			continue;
-		}
+		} else if (get_retval == INPUT_CLOSED) {
+            /* ensure that parser gets NULL packet => closed connection */
+            if (packet != NULL) {
+                /* free the memory allocated by plugin (if any) right away */
+                free(packet); 
+                packet = NULL;
+            }
+        }
 		/* distribute data to the particular Data Manager for further processing */
 		parse_ipfix (packet, input_info, storage);
 		packet = NULL;
 		input_info = NULL;
 	}
-
+/* TODO: close all data managers on exit! and wait for them... */
 cleanup:
 	/* xml cleanup */
 	if (collectors) {
@@ -462,9 +469,6 @@ cleanup:
 	while (storage) {
 		aux_storage = storage->next;
 		if (storage->dll_handler) {
-			if (storage->config != NULL) {
-				storage->close (&(storage->config));
-			}
 			dlclose (storage->dll_handler);
 		}
 		while (storage->plugin) { /* while is just for sure, it should be always one */
