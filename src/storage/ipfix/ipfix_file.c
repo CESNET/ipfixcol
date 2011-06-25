@@ -83,6 +83,8 @@ static int prepare_output_file(struct ipfix_config *config)
 
 	/* file counter */
 	config->fcounter += 1;
+	/* byte counter */
+	config->bcounter = 0;
 
 	fd = open(config->file, O_WRONLY | O_CREAT | O_TRUNC,
 	          S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
@@ -109,7 +111,6 @@ static int close_output_file(struct ipfix_config *config)
 	}
 
 	config->fd = -1;
-	config->bcounter = 0;
 
 	return 0;
 }
