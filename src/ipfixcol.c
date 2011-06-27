@@ -50,7 +50,7 @@
 #include <commlbr.h>
 #include <signal.h>
 #include <syslog.h>
-
+#include <sys/wait.h>
 #include <pthread.h>
 
 #include <libxml/parser.h>
@@ -120,7 +120,7 @@ void term_signal_handler(int sig)
 
 int main (int argc, char* argv[])
 {
-	int c, i, fd, retval = 0, get_retval;
+	int c, i, fd, retval = 0, get_retval, proc_count = 0, proc_id = 0;
 	pid_t pid;
 	bool daemonize = false;
 	char *progname, *config_file = NULL;
@@ -244,13 +244,15 @@ int main (int argc, char* argv[])
 		if (i > 0) {
 			pid = fork();
 			if (pid > 0) { /* parent process waits for collector 0 */
+                proc_count++;
 				continue;
 			} else if (pid < 0) { /* error occured, fork failed */
 				VERBOSE(CL_VERBOSE_OFF, "Forking collector process failed (%s), skipping collector %d.", strerror(errno), i);
 				continue;
 			}
 			/* else child - just continue to handle plugins */
-			VERBOSE(CL_VERBOSE_BASIC, "New collector process started.");
+            proc_id = i;
+			VERBOSE(CL_VERBOSE_BASIC, "[%d] New collector process started.", proc_id);
 		}
 		collector_node = collectors->nodesetval->nodeTab[i];
 		break;
@@ -275,10 +277,10 @@ int main (int argc, char* argv[])
 
 	/* prepare input plugin */
 	for (input.plugin = input_plugins; input.plugin != NULL; input.plugin = input.plugin->next) {
-		VERBOSE(CL_VERBOSE_ADVANCED, "Opening input plugin: %s", input_plugins->file);
+		VERBOSE(CL_VERBOSE_ADVANCED, "[%d] Opening input plugin: %s", proc_id, input_plugins->file);
 		input_plugin_handler = dlopen (input_plugins->file, RTLD_LAZY);
 		if (input_plugin_handler == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input plugin (%s)", proc_id, dlerror());
 			continue;
 		}
 		input.dll_handler = input_plugin_handler;
@@ -286,17 +288,17 @@ int main (int argc, char* argv[])
 		/* prepare Input API routines */
 		input.init = dlsym (input_plugin_handler, "input_init");
 		if (input.init == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input plugin (%s)", proc_id, dlerror());
 			continue;
 		}
 		input.get = dlsym (input_plugin_handler, "get_packet");
 		if (input.get == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input plugin (%s)", proc_id, dlerror());
 			continue;
 		}
 		input.close = dlsym (input_plugin_handler, "input_close");
 		if (input.close == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "Unable to load input plugin (%s)", dlerror());
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input plugin (%s)", proc_id, dlerror());
 			continue;
 		}
         /* get the first one we can */
@@ -304,7 +306,7 @@ int main (int argc, char* argv[])
 	}
 	/* check if we have found any input plugin */
 	if (!input.dll_handler || !input.init || !input.get || !input.close) {
-		VERBOSE(CL_VERBOSE_OFF, "Loading input plugin failed.");
+		VERBOSE(CL_VERBOSE_OFF, "[%d] Loading input plugin failed.", proc_id);
 		retval = EXIT_FAILURE;
 		goto cleanup;
 	}
@@ -312,18 +314,18 @@ int main (int argc, char* argv[])
 	/* prepare storage plugin(s) */
 	aux_plugins = storage_plugins;
 	while (storage_plugins) {
-		VERBOSE(CL_VERBOSE_ADVANCED, "Opening storage plugin: %s", storage_plugins->file);
+		VERBOSE(CL_VERBOSE_ADVANCED, "[%d] Opening storage plugin: %s", proc_id, storage_plugins->file);
 
 		storage_plugin_handler = dlopen (storage_plugins->file, RTLD_LAZY);
 		if (storage_plugin_handler == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "Unable to load storage plugin (%s)", dlerror());
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage plugin (%s)", proc_id, dlerror());
 			goto storage_plugin_remove;
 		}
 
 		aux_storage = storage;
 		storage = (struct storage*) malloc (sizeof(struct storage));
 		if (storage == NULL) {
-			VERBOSE (CL_VERBOSE_OFF, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+			VERBOSE (CL_VERBOSE_OFF, "[%d] Memory allocation failed (%s:%d)", proc_id, __FILE__, __LINE__);
 			storage = aux_storage;
 			goto storage_plugin_remove;
 		}
@@ -334,7 +336,7 @@ int main (int argc, char* argv[])
 		/* prepare Input API routines */
 		storage->init = dlsym (storage_plugin_handler, "storage_init");
 		if (storage->init == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "Unable to load storage plugin (%s)", dlerror());
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage plugin (%s)", proc_id, dlerror());
 			dlclose (storage_plugin_handler);
 			storage_plugin_handler = NULL;
 			free (storage);
@@ -343,7 +345,7 @@ int main (int argc, char* argv[])
 		}
 		storage->store = dlsym (storage_plugin_handler, "store_packet");
 		if (storage->store == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "Unable to load storage plugin (%s)", dlerror());
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage plugin (%s)", proc_id, dlerror());
 			dlclose (storage_plugin_handler);
 			storage_plugin_handler = NULL;
 			free (storage);
@@ -352,7 +354,7 @@ int main (int argc, char* argv[])
 		}
 		storage->store_now = dlsym (storage_plugin_handler, "store_now");
 		if (storage->store_now == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "Unable to load storage plugin (%s)", dlerror());
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage plugin (%s)", proc_id, dlerror());
 			dlclose (storage_plugin_handler);
 			storage_plugin_handler = NULL;
 			free (storage);
@@ -361,7 +363,7 @@ int main (int argc, char* argv[])
 		}
 		storage->close = dlsym (storage_plugin_handler, "storage_close");
 		if (storage->close == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "Unable to load storage plugin (%s)", dlerror());
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage plugin (%s)", proc_id, dlerror());
 			dlclose (storage_plugin_handler);
 			storage_plugin_handler = NULL;
 			free (storage);
@@ -391,7 +393,7 @@ storage_plugin_remove:
 	}
 	/* check if we have found at least one storage plugin */
 	if (!storage) {
-		VERBOSE(CL_VERBOSE_OFF, "Loading storage plugin(s) failed.");
+		VERBOSE(CL_VERBOSE_OFF, "[%d] Loading storage plugin(s) failed.", proc_id);
 		retval = EXIT_FAILURE;
 		goto cleanup;
 	}
@@ -405,7 +407,7 @@ storage_plugin_remove:
 	retval = input.init ((char*) plugin_params, &(input.config));
 	xmlFree (plugin_params);
 	if (retval != 0) {
-		VERBOSE(CL_VERBOSE_OFF, "Initiating input plugin failed.");
+		VERBOSE(CL_VERBOSE_OFF, "[%d] Initiating input plugin failed.", proc_id);
 		goto cleanup;
 	}
 
@@ -413,7 +415,7 @@ storage_plugin_remove:
 	while (!done) {
 		/* get data to process */
 		if ((get_retval = input.get (input.config, &input_info, &packet)) < 0) {
-			VERBOSE(CL_VERBOSE_OFF, "Getting IPFIX data failed!");
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Getting IPFIX data failed!", proc_id);
 			continue;
 		} else if (get_retval == INPUT_CLOSED) {
             /* ensure that parser gets NULL packet => closed connection */
@@ -485,7 +487,15 @@ cleanup:
 		free (storage);
 		storage = aux_storage;
 	}
-	VERBOSE(CL_VERBOSE_BASIC, "Closing collector.");
+
+    /* wait for child processes */
+    if (pid > 0) {
+        for (i=0; i<proc_count; i++) {
+            pid = wait(NULL);
+            VERBOSE(CL_VERBOSE_BASIC, "[%d] Collector child process %d terminated", proc_id, pid);
+        }
+        VERBOSE(CL_VERBOSE_BASIC, "[%d] Closing collector.", proc_id);
+    }
 
 	return (retval);
 }
