@@ -214,7 +214,7 @@ void parse_ipfix (void* packet, struct input_info* input_info, struct storage* s
                 }
                 break;
         }
-        p += set_header->length;
+        p += ntohs(set_header->length);
     }
 
 
