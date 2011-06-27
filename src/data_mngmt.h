@@ -60,6 +60,8 @@ struct data_manager_config {
 
 void parse_ipfix (void* packet, struct input_info* input_info, struct storage* storage_plugins);
 
+void data_manager_close_all();
+
 struct data_manager_config* create_data_manager (
     uint32_t observation_domain_id,
     struct storage* storage_plugins,

@@ -126,6 +126,27 @@ static struct data_manager_config *get_data_mngmt_by_input_info (struct input_in
  
 }
 
+
+/**
+ * \brief Closes all data managers
+ *
+ * Calls the data_manager_close function on all open managers.
+ *
+ * @return void
+ */
+void data_manager_close_all() 
+{
+	struct data_manager_config *aux_cfg = data_mngmts, *tmp_cfg;
+
+	while (aux_cfg) {
+        tmp_cfg = aux_cfg;
+        aux_cfg = aux_cfg->next;
+        data_manager_close(&tmp_cfg);
+	}
+    data_mngmts = NULL;
+    return;    
+}
+
 void parse_ipfix (void* packet, struct input_info* input_info, struct storage* storage_plugins)
 {
 	struct ipfix_message* msg;

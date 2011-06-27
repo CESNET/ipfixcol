@@ -468,11 +468,13 @@ cleanup:
 		}
 		dlclose (input_plugin_handler);
 	}
+   
+    /* close data managers */
+    data_manager_close_all();
+
+    /* free allocated resources in storages */
 	while (storage) {
 		aux_storage = storage->next;
-		if (storage->dll_handler) {
-			dlclose (storage->dll_handler);
-		}
 		while (storage->plugin) { /* while is just for sure, it should be always one */
 			if (storage->plugin->file) {
 				free (storage->plugin->file);

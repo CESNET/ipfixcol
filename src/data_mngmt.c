@@ -56,18 +56,25 @@ extern volatile int done;
  */
 static inline void data_manager_config_free (struct data_manager_config* config)
 {
-	struct storage* aux_storage;
+	struct storage *aux_storage;
 
 	if (config != NULL) {
+        /* free struct storage  */
 		while (config->plugins) {
 			aux_storage = config->plugins;
 			config->plugins = config->plugins->next;
-			aux_storage->close (&(aux_storage->config));
+            /* close storage plugin */
+			if (aux_storage->dll_handler) {
+                aux_storage->close (&(aux_storage->config));
+            }
+            /* free thread_config (tread should aready exited)*/
             if (aux_storage->thread_config != NULL) {
                 free(aux_storage->thread_config);
             }
-			free (aux_storage);
-		}
+            /* pointer in storage were copied and should be closed elsewhere */
+            free (aux_storage);
+	    }
+
 		if (config->in_queue != NULL) {
 			rbuffer_free(config->in_queue);
 		}
@@ -131,9 +138,6 @@ static void* data_manager_thread (void* cfg)
 	VERBOSE (CL_VERBOSE_ADVANCED, "ODID %d: Closing Data manager's thread.",
 			config->observation_domain_id);
 
-    /* free data manager config structure */
-    data_manager_config_free(config);
-
 	return (NULL);
 }
 
@@ -150,8 +154,7 @@ static void* storage_plugin_thread (void* cfg)
 		/* get next data */
 		msg = rbuffer_read (config->thread_config->queue, &index);
 		if (msg == NULL) {
-			VERBOSE (CL_VERBOSE_BASIC, "Error on reading data from Data manager.");
-			//continue;
+			VERBOSE (CL_VERBOSE_BASIC, "No more data from Data manager.");
             break;
 		}
 
@@ -183,8 +186,10 @@ void data_manager_close (struct data_manager_config **config)
     /* TODO close data manager thread here  */  
     rbuffer_write((*config)->in_queue, NULL, 1);
     pthread_join((*config)->thread_id, NULL);
-    *config = NULL;
     /* deallocate config structure */
+    data_manager_config_free(*config);
+    *config = NULL;
+
     return;
 }
 
