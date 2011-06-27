@@ -554,6 +554,9 @@ int input_close(void **config)
                 error++;
                 VERBOSE(CL_VERBOSE_OFF, "Cannot close socket: %s", strerror(errno));
             }
+            if (conf->sock_addresses[sock] != NULL) {
+                free(conf->sock_addresses[sock]);
+            }
         }
     }
     
