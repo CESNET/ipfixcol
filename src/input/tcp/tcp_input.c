@@ -407,7 +407,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
 {
     /* temporary socket set */
     fd_set tmp_set;
-    ssize_t length = 0;
+    ssize_t length = 0, packet_length;
     struct timeval tv;
     char src_addr[INET6_ADDRSTRLEN];
     struct sockaddr_in6 *address;
@@ -416,7 +416,10 @@ int get_packet(void *config, struct input_info **info, char **packet)
 
     /* allocate memory for packet, if needed */
     if (*packet == NULL) {
-        *packet = malloc(BUFF_LEN*sizeof(char));
+        *packet = malloc(BUFF_LEN * sizeof(char));
+        if (*packet == NULL) {
+            VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory for the packet, malloc failed: %s", strerror(errno));
+        }
     }
    
     /* wait until some socket is ready */
@@ -447,11 +450,31 @@ int get_packet(void *config, struct input_info **info, char **packet)
         }
     }
 
-    /* receive packet */
-    length = recv(sock, *packet, BUFF_LEN, 0);
+    /* receive ipfix packet header */
+    length = recv(sock, *packet, IPFIX_HEADER_LENGTH, MSG_WAITALL);
     if (length == -1) {
-        VERBOSE(CL_VERBOSE_OFF, "Failed to receive packet: %s", strerror(errno));
+        VERBOSE(CL_VERBOSE_OFF, "Failed to receive IPFIX packet header: %s", strerror(errno));
         return INPUT_ERROR;
+    } else if (length > 0) { /* header received */
+        /* get packet total length */
+        packet_length = ntohs(((struct ipfix_header *) *packet)->length);
+        /* check whether buffer is big enough */
+        if (packet_length > BUFF_LEN) {
+            *packet = realloc(*packet, packet_length);
+            if (*packet == NULL) {
+                VERBOSE(CL_VERBOSE_OFF, "Packet too big and realloc failed: %s", strerror(errno));
+                return INPUT_ERROR;
+            }
+        }
+        /* receive the rest of the ipfix packet */
+        length = recv(sock, (*packet) + IPFIX_HEADER_LENGTH, 
+            ntohs(((struct ipfix_header *) *packet)->length) - IPFIX_HEADER_LENGTH, MSG_WAITALL);
+        if (length == -1) {
+            VERBOSE(CL_VERBOSE_OFF, "Failed to receive IPFIX packet: %s", strerror(errno));
+            return INPUT_ERROR;
+        }
+        /* set length to correct value */
+        length += IPFIX_HEADER_LENGTH;
     }
 
     /* get peer address from configuration */
