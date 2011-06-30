@@ -37,8 +37,6 @@
  *
  */
 
-#ifndef IPFIXCOL_STORAGE_H_
-#define IPFIXCOL_STORAGE_H_
 
 #include <commlbr.h>
 #include "../../headers/storage.h"
@@ -157,4 +155,3 @@ int storage_close (void **config){
 
 /**@}*/
 
-#endif /* IPFIXCOL_STORAGE_H_ */
