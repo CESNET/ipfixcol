@@ -59,7 +59,7 @@
 #include "../ipfixcol.h"
 
 #include "config.h"
-#include "data_mngmt.h"
+#include "preprocessor.h"
 
 /**
  * \defgroup internalAPIs ipfixcol's Internal APIs
@@ -429,7 +429,7 @@ storage_plugin_remove:
             }
         }
 		/* distribute data to the particular Data Manager for further processing */
-		parse_ipfix (packet, input_info, storage_list);
+		preprocessor_parse_msg (packet, input_info, storage_list);
 		packet = NULL;
 		input_info = NULL;
 	}
@@ -472,8 +472,8 @@ cleanup:
 		dlclose (input_plugin_handler);
 	}
    
-    /* close data managers */
-    data_manager_close_all();
+    /* close preprocessor (will close all data managers) */
+    preprocessor_close();
 
     /* free allocated resources in storages */
 	while (storage_list) {

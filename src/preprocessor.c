@@ -43,10 +43,14 @@
 
 #include <commlbr.h>
 
+#include "preprocessor.h"
 #include "data_manager.h"
 #include "queues.h"
 #include "../ipfixcol.h"
 
+/**
+ * \brief List of data manager configurations
+ */
 static struct data_manager_config *data_mngmts = NULL;
 
 /**
@@ -134,7 +138,7 @@ static struct data_manager_config *get_data_mngmt_by_input_info (struct input_in
  *
  * @return void
  */
-void data_manager_close_all() 
+void preprocessor_close()
 {
 	struct data_manager_config *aux_cfg = data_mngmts, *tmp_cfg;
 
@@ -147,7 +151,7 @@ void data_manager_close_all()
     return;    
 }
 
-void parse_ipfix (void* packet, struct input_info* input_info, struct storage_list* storage_plugins)
+void preprocessor_parse_msg (void* packet, struct input_info* input_info, struct storage_list* storage_plugins)
 {
 	struct ipfix_message* msg;
 	struct data_manager_config *config = NULL, *prev_config = NULL;
@@ -195,7 +199,7 @@ void parse_ipfix (void* packet, struct input_info* input_info, struct storage_li
 		 * we have a new observation domain ID, so create new data manager for
 		 * it
 		 */
-		config = create_data_manager (msg->pkt_header->observation_domain_id, storage_plugins, input_info);
+		config = data_manager_create (msg->pkt_header->observation_domain_id, storage_plugins, input_info);
 		if (config == NULL) {
 			VERBOSE (CL_VERBOSE_BASIC, "Unable to create data manager for Observation Domain ID %d, skipping data.",
 					msg->pkt_header->observation_domain_id);

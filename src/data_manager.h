@@ -46,7 +46,15 @@
 #include "../ipfixcol.h"
 #include "config.h"
 #include "queues.h"
+#include "preprocessor.h"
 
+/**
+ * \brief Data manager configuration
+ *
+ * Contains all configuration of data manager. Works as list of configurations.
+ * List of data manager configurations is mantained by preprocessor which
+ * decides what data manager should get the message.
+ */
 struct data_manager_config {
 	uint32_t observation_domain_id;
 	pthread_t thread_id;
@@ -58,15 +66,28 @@ struct data_manager_config {
 	struct data_manager_config *next;
 };
 
-void parse_ipfix (void* packet, struct input_info* input_info, struct storage_list* storage_plugins);
-
-void data_manager_close_all();
-
-struct data_manager_config* create_data_manager (
+/**
+ * \brief Creates new data manager
+ *
+ * @param[in] observation_domain_id Observation domain id that should be
+ * handled by this data manager
+ * @param[in] storage_plugins List of storage plugins that should be opened by
+ * this data manager
+ * @param[in] input_info Input information from input plugin
+ * @return data_manager_config Configuration strucutre on success, NULL
+ * otherwise
+ */
+struct data_manager_config* data_manager_create (
     uint32_t observation_domain_id,
     struct storage_list* storage_plugins,
     struct input_info *input_info);
 
+/**
+ * \brief Closes data manager specified by its configuration
+ *
+ * @param[in] config Configuration of the data manager to be closed
+ * @return void
+ */
 void data_manager_close (struct data_manager_config **config);
 
 #endif /* DATA_MANAGER_H_ */

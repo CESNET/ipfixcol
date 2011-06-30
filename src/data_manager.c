@@ -44,10 +44,7 @@
 #include <libxml/tree.h>
 
 #include "../ipfixcol.h"
-#include "config.h"
 #include "data_manager.h"
-
-extern volatile int done;
 
 /**
  * \brief Deallocate Data manager's configuration structure.
@@ -98,7 +95,8 @@ static void* data_manager_thread (void* cfg)
 	struct ipfix_message* msg;
 	unsigned int index = -1;
 
-	while (!done) {
+	/* loop will break upon receiving NULL from buffer */
+	while (1) {
         index = -1;
 
 		/* read new data */
@@ -146,8 +144,7 @@ static void* storage_plugin_thread (void* cfg)
 	struct ipfix_message* msg;
 	unsigned int index = config->thread_config->queue->read_offset;
 
-    /* loop will be ended by pthread_cancel() which should be accepted 
-        at pthread_cond_wait() */
+    /* loop will break upon receiving NULL from buffer */
 	while (1) {
 		/* get next data */
 		msg = rbuffer_read (config->thread_config->queue, &index);
@@ -200,7 +197,7 @@ void data_manager_close (struct data_manager_config **config)
  * @param storage_plugins List of storage plugins for this Data manager.
  * @return Configuration structure of created Data manager.
  */
-struct data_manager_config* create_data_manager (
+struct data_manager_config* data_manager_create (
     uint32_t observation_domain_id,
     struct storage_list* storage_plugins,
     struct input_info *input_info)
@@ -209,7 +206,7 @@ struct data_manager_config* create_data_manager (
 	int retval;
 	struct storage_list* aux_storage;
 	struct data_manager_config *config;
-	struct storage_plugin_thread_cfg* plugin_cfg;
+	struct storage_thread_conf* plugin_cfg;
 
 	/* prepare Data manager's config structure */
 	config = (struct data_manager_config*) calloc (1, sizeof(struct data_manager_config));
@@ -272,7 +269,7 @@ struct data_manager_config* create_data_manager (
 		}
 
 		/* create storage plugin thread */
-		plugin_cfg = (struct storage_plugin_thread_cfg*) malloc (sizeof (struct storage_plugin_thread_cfg));
+		plugin_cfg = (struct storage_thread_conf*) malloc (sizeof (struct storage_thread_conf));
 		if (plugin_cfg == NULL) {
 			VERBOSE (CL_VERBOSE_OFF, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			aux_storage->storage.close (&(aux_storage->storage.config));

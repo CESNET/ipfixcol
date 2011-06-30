@@ -92,7 +92,7 @@ struct input {
  *
  * Should be passed to storage on thread startup
  */
-struct storage_plugin_thread_cfg {
+struct storage_thread_conf {
 	struct ring_buffer *queue;
 	pthread_t thread_id;
 };
@@ -108,7 +108,7 @@ struct storage {
 	int (*close) (void**);
 	void *dll_handler;
 	struct plugin_xml_conf *xml_conf;
-    struct storage_plugin_thread_cfg *thread_config;
+    struct storage_thread_conf *thread_config;
 };
 
 /**
