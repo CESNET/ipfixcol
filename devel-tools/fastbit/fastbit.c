@@ -57,36 +57,6 @@
  */
 
 /**
- * \struct data_template_couple
- * \brief This structure connects Data set from the IPFIX packet with the
- * template structure describing the Data set
- *
- */
-struct data_template_couple{
-	/**< Address of the Data Set in the packet */
-	struct ipfix_data_set *data_set;
-	/**< Template structure corresponding to this Data set */
-	struct ipfix_template *template;
-};
-
-/**
- * \struct ipfix_message
- * \brief Structure covering main parts of the IPFIX packet by pointers into it.
- */
-struct ipfix_message {
-	/** IPFIX header*/
-	struct ipfix_header               *pkt_header;
-	/** Input source information */
-	struct input_info                 *input_info;
-	/** List of Template Sets in the packet */
-	struct ipfix_template_set         *templ_set[1024];
-	/** List of Options Template Sets in the packet */
-	struct ipfix_options_template_set *opt_templ_set[1024];
-	/** List of Data Sets (with a link to corresponding template) in the packet */
-	struct data_template_couple       data_set[1023];
-};
-
-/**
  * \brief Storage plugin initialization function.
  *
  * The function is called just once before any other storage API's function.
