@@ -173,7 +173,7 @@ void parse_ipfix (void* packet, struct input_info* input_info, struct storage* s
         return;
     }
 
-	msg = (struct ipfix_message*) malloc (sizeof (struct ipfix_message));
+	msg = (struct ipfix_message*) calloc (1, sizeof (struct ipfix_message));
 	msg->pkt_header = (struct ipfix_header*) packet;
 	msg->input_info = input_info;
 	MSG (CL_VERBOSE_BASIC, "Processing data for Observation domain ID %d.",
