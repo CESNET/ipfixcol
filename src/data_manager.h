@@ -1,5 +1,5 @@
 /**
- * \file data_mngmt.h
+ * \file data_manager.h
  * \author Radek Krejci <rkrejci@cesnet.cz>
  * \brief Data Manager's functions
  *
@@ -37,8 +37,8 @@
  *
  */
 
-#ifndef DATA_MNGMT_H_
-#define DATA_MNGMT_H_
+#ifndef DATA_MANAGER_H_
+#define DATA_MANAGER_H_
 
 #include <stdint.h>
 #include <pthread.h>
@@ -69,4 +69,4 @@ struct data_manager_config* create_data_manager (
 
 void data_manager_close (struct data_manager_config **config);
 
-#endif /* DATA_MNGMT_H_ */
+#endif /* DATA_MANAGER_H_ */

@@ -1,5 +1,5 @@
 /**
- * \file data_mngmt.c
+ * \file data_manager.c
  * \author Radek Krejci <rkrejci@cesnet.cz>
  * \brief Data manager implementation.
  *
@@ -45,7 +45,7 @@
 
 #include "../ipfixcol.h"
 #include "config.h"
-#include "data_mngmt.h"
+#include "data_manager.h"
 
 extern volatile int done;
 

@@ -1,5 +1,5 @@
 /**
- * \file ipfix_parser.c
+ * \file preprocessor.c
  * \author Radek Krejci <rkrejci@cesnet.cz>
  * \brief Simple parsing of IPFIX packets for Storage plugins.
  *
@@ -43,7 +43,7 @@
 
 #include <commlbr.h>
 
-#include "data_mngmt.h"
+#include "data_manager.h"
 #include "queues.h"
 #include "../ipfixcol.h"
 
