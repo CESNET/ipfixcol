@@ -430,7 +430,7 @@ storage_plugin_remove:
 		packet = NULL;
 		input_info = NULL;
 	}
-/* TODO: close all data managers on exit! and wait for them... */
+
 cleanup:
 	/* xml cleanup */
 	if (collectors) {
