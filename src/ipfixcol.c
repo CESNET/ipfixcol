@@ -124,10 +124,10 @@ int main (int argc, char* argv[])
 	pid_t pid = 0;
 	bool daemonize = false;
 	char *progname, *config_file = NULL;
-	struct plugin_list* input_plugins = NULL, *storage_plugins = NULL,
+	struct plugin_xml_conf_list* input_plugins = NULL, *storage_plugins = NULL,
 	        *aux_plugins = NULL;
 	struct input input;
-	struct storage *storage = NULL, *aux_storage = NULL;
+	struct storage_list *storage_list = NULL, *aux_storage_list = NULL;
 	void *input_plugin_handler = NULL, *storage_plugin_handler = NULL;
 	struct sigaction action;
 	char *packet = NULL;
@@ -276,11 +276,12 @@ int main (int argc, char* argv[])
 	}
 
 	/* prepare input plugin */
-	for (input.plugin = input_plugins; input.plugin != NULL; input.plugin = input.plugin->next) {
-		VERBOSE(CL_VERBOSE_ADVANCED, "[%d] Opening input plugin: %s", proc_id, input_plugins->file);
-		input_plugin_handler = dlopen (input_plugins->file, RTLD_LAZY);
+	for (aux_plugins = input_plugins; aux_plugins != NULL; aux_plugins = aux_plugins->next) {
+		input.xml_conf = &aux_plugins->config;
+		VERBOSE(CL_VERBOSE_ADVANCED, "[%d] Opening input plugin: %s", proc_id, aux_plugins->config.file);
+		input_plugin_handler = dlopen (input_plugins->config.file, RTLD_LAZY);
 		if (input_plugin_handler == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input plugin (%s)", proc_id, dlerror());
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input xml_conf (%s)", proc_id, dlerror());
 			continue;
 		}
 		input.dll_handler = input_plugin_handler;
@@ -288,92 +289,92 @@ int main (int argc, char* argv[])
 		/* prepare Input API routines */
 		input.init = dlsym (input_plugin_handler, "input_init");
 		if (input.init == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input plugin (%s)", proc_id, dlerror());
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input xml_conf (%s)", proc_id, dlerror());
 			continue;
 		}
 		input.get = dlsym (input_plugin_handler, "get_packet");
 		if (input.get == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input plugin (%s)", proc_id, dlerror());
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input xml_conf (%s)", proc_id, dlerror());
 			continue;
 		}
 		input.close = dlsym (input_plugin_handler, "input_close");
 		if (input.close == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input plugin (%s)", proc_id, dlerror());
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input xml_conf (%s)", proc_id, dlerror());
 			continue;
 		}
         /* get the first one we can */
         break;
 	}
-	/* check if we have found any input plugin */
+	/* check if we have found any input xml_conf */
 	if (!input.dll_handler || !input.init || !input.get || !input.close) {
-		VERBOSE(CL_VERBOSE_OFF, "[%d] Loading input plugin failed.", proc_id);
+		VERBOSE(CL_VERBOSE_OFF, "[%d] Loading input xml_conf failed.", proc_id);
 		retval = EXIT_FAILURE;
 		goto cleanup;
 	}
 
-	/* prepare storage plugin(s) */
+	/* prepare storage xml_conf(s) */
 	aux_plugins = storage_plugins;
 	while (storage_plugins) {
-		VERBOSE(CL_VERBOSE_ADVANCED, "[%d] Opening storage plugin: %s", proc_id, storage_plugins->file);
+		VERBOSE(CL_VERBOSE_ADVANCED, "[%d] Opening storage xml_conf: %s", proc_id, storage_plugins->config.file);
 
-		storage_plugin_handler = dlopen (storage_plugins->file, RTLD_LAZY);
+		storage_plugin_handler = dlopen (storage_plugins->config.file, RTLD_LAZY);
 		if (storage_plugin_handler == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage plugin (%s)", proc_id, dlerror());
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage xml_conf (%s)", proc_id, dlerror());
 			goto storage_plugin_remove;
 		}
 
-		aux_storage = storage;
-		storage = (struct storage*) malloc (sizeof(struct storage));
-		if (storage == NULL) {
+		aux_storage_list = storage_list;
+		storage_list = (struct storage_list*) malloc (sizeof(struct storage_list));
+		if (storage_list == NULL) {
 			VERBOSE (CL_VERBOSE_OFF, "[%d] Memory allocation failed (%s:%d)", proc_id, __FILE__, __LINE__);
-			storage = aux_storage;
+			storage_list = aux_storage_list;
 			goto storage_plugin_remove;
 		}
-		memset(storage, 0, sizeof(struct storage));
+		memset(storage_list, 0, sizeof(struct storage_list));
 
-		storage->dll_handler = storage_plugin_handler;
+		storage_list->storage.dll_handler = storage_plugin_handler;
 
 		/* prepare Input API routines */
-		storage->init = dlsym (storage_plugin_handler, "storage_init");
-		if (storage->init == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage plugin (%s)", proc_id, dlerror());
+		storage_list->storage.init = dlsym (storage_plugin_handler, "storage_init");
+		if (storage_list->storage.init == NULL) {
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage xml_conf (%s)", proc_id, dlerror());
 			dlclose (storage_plugin_handler);
 			storage_plugin_handler = NULL;
-			free (storage);
-			storage = aux_storage;
+			free (storage_list);
+			storage_list = aux_storage_list;
 			goto storage_plugin_remove;
 		}
-		storage->store = dlsym (storage_plugin_handler, "store_packet");
-		if (storage->store == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage plugin (%s)", proc_id, dlerror());
+		storage_list->storage.store = dlsym (storage_plugin_handler, "store_packet");
+		if (storage_list->storage.store == NULL) {
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage xml_conf (%s)", proc_id, dlerror());
 			dlclose (storage_plugin_handler);
 			storage_plugin_handler = NULL;
-			free (storage);
-			storage = aux_storage;
+			free (storage_list);
+			storage_list = aux_storage_list;
 			goto storage_plugin_remove;
 		}
-		storage->store_now = dlsym (storage_plugin_handler, "store_now");
-		if (storage->store_now == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage plugin (%s)", proc_id, dlerror());
+		storage_list->storage.store_now = dlsym (storage_plugin_handler, "store_now");
+		if (storage_list->storage.store_now == NULL) {
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage xml_conf (%s)", proc_id, dlerror());
 			dlclose (storage_plugin_handler);
 			storage_plugin_handler = NULL;
-			free (storage);
-			storage = aux_storage;
+			free (storage_list);
+			storage_list = aux_storage_list;
 			goto storage_plugin_remove;
 		}
-		storage->close = dlsym (storage_plugin_handler, "storage_close");
-		if (storage->close == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage plugin (%s)", proc_id, dlerror());
+		storage_list->storage.close = dlsym (storage_plugin_handler, "storage_close");
+		if (storage_list->storage.close == NULL) {
+			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage xml_conf (%s)", proc_id, dlerror());
 			dlclose (storage_plugin_handler);
 			storage_plugin_handler = NULL;
-			free (storage);
-			storage = aux_storage;
+			free (storage_list);
+			storage_list = aux_storage_list;
 			goto storage_plugin_remove;
 		}
-		storage->plugin = storage_plugins;
+		storage_list->storage.xml_conf = &storage_plugins->config;
 		storage_plugins = storage_plugins->next;
-		storage->plugin->next = NULL;
-		storage->next = aux_storage;
+		storage_list->next = NULL;
+		storage_list->next = aux_storage_list;
 		aux_plugins = storage_plugins;
 		continue;
 
@@ -381,19 +382,19 @@ storage_plugin_remove:
 		/* if something went wrong, remove the storage_plugin structure */
 		storage_plugins = storage_plugins->next;
 			if (aux_plugins) {
-			if (aux_plugins->file) {
-				free (aux_plugins->file);
+			if (aux_plugins->config.file) {
+				free (aux_plugins->config.file);
 			}
-			if (aux_plugins->xmldata) {
-				xmlFreeDoc (aux_plugins->xmldata);
+			if (aux_plugins->config.xmldata) {
+				xmlFreeDoc (aux_plugins->config.xmldata);
 			}
 			free (aux_plugins);
 		}
 		aux_plugins = storage_plugins;
 	}
 	/* check if we have found at least one storage plugin */
-	if (!storage) {
-		VERBOSE(CL_VERBOSE_OFF, "[%d] Loading storage plugin(s) failed.", proc_id);
+	if (!storage_list) {
+		VERBOSE(CL_VERBOSE_OFF, "[%d] Loading storage xml_conf(s) failed.", proc_id);
 		retval = EXIT_FAILURE;
 		goto cleanup;
 	}
@@ -402,12 +403,12 @@ storage_plugin_remove:
 	 * CAPTURE DATA
 	 */
 
-	/* init input plugin */
-	xmlDocDumpMemory (input.plugin->xmldata, &plugin_params, NULL);
+	/* init input xml_conf */
+	xmlDocDumpMemory (input.xml_conf->xmldata, &plugin_params, NULL);
 	retval = input.init ((char*) plugin_params, &(input.config));
 	xmlFree (plugin_params);
 	if (retval != 0) {
-		VERBOSE(CL_VERBOSE_OFF, "[%d] Initiating input plugin failed.", proc_id);
+		VERBOSE(CL_VERBOSE_OFF, "[%d] Initiating input xml_conf failed.", proc_id);
 		goto cleanup;
 	}
 
@@ -422,13 +423,13 @@ storage_plugin_remove:
 		} else if (get_retval == INPUT_CLOSED) {
             /* ensure that parser gets NULL packet => closed connection */
             if (packet != NULL) {
-                /* free the memory allocated by plugin (if any) right away */
+                /* free the memory allocated by xml_conf (if any) right away */
                 free(packet); 
                 packet = NULL;
             }
         }
 		/* distribute data to the particular Data Manager for further processing */
-		parse_ipfix (packet, input_info, storage);
+		parse_ipfix (packet, input_info, storage_list);
 		packet = NULL;
 		input_info = NULL;
 	}
@@ -439,11 +440,11 @@ cleanup:
 		xmlXPathFreeObject (collectors);
 	}
 	if (input_plugins) {
-		if (input_plugins->file) {
-			free (input_plugins->file);
+		if (input_plugins->config.file) {
+			free (input_plugins->config.file);
 		}
-		if (input_plugins->xmldata) {
-			xmlFreeDoc (input_plugins->xmldata);
+		if (input_plugins->config.xmldata) {
+			xmlFreeDoc (input_plugins->config.xmldata);
 		}
 		free (input_plugins);
 	}
@@ -452,11 +453,11 @@ cleanup:
 	}
 	xmlCleanupParser ();
 	while (storage_plugins) { /* while is just for sure, it should be always one */
-		if (storage_plugins->file) {
-			free (storage_plugins->file);
+		if (storage_plugins->config.file) {
+			free (storage_plugins->config.file);
 		}
-		if (storage_plugins->xmldata) {
-			xmlFreeDoc (storage_plugins->xmldata);
+		if (storage_plugins->config.xmldata) {
+			xmlFreeDoc (storage_plugins->config.xmldata);
 		}
 		aux_plugins = storage_plugins->next;
 		free (storage_plugins);
@@ -475,21 +476,17 @@ cleanup:
     data_manager_close_all();
 
     /* free allocated resources in storages */
-	while (storage) {
-		aux_storage = storage->next;
-		while (storage->plugin) { /* while is just for sure, it should be always one */
-			if (storage->plugin->file) {
-				free (storage->plugin->file);
-			}
-			if (storage->plugin->xmldata) {
-				xmlFreeDoc (storage->plugin->xmldata);
-			}
-			aux_plugins = storage->plugin->next;
-			free (storage->plugin);
-			storage->plugin = aux_plugins;
+	while (storage_list) {
+		aux_storage_list = storage_list->next;
+		if (storage_list->storage.xml_conf->file) {
+			free (storage_list->storage.xml_conf->file);
 		}
-		free (storage);
-		storage = aux_storage;
+		if (storage_list->storage.xml_conf->xmldata) {
+			xmlFreeDoc (storage_list->storage.xml_conf->xmldata);
+		}
+		free (storage_list->storage.xml_conf);
+		free (storage_list);
+		storage_list = aux_storage_list;
 	}
 
     /* wait for child processes */

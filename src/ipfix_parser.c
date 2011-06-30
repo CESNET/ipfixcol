@@ -147,7 +147,7 @@ void data_manager_close_all()
     return;    
 }
 
-void parse_ipfix (void* packet, struct input_info* input_info, struct storage* storage_plugins)
+void parse_ipfix (void* packet, struct input_info* input_info, struct storage_list* storage_plugins)
 {
 	struct ipfix_message* msg;
 	struct data_manager_config *config = NULL, *prev_config = NULL;

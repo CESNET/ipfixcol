@@ -44,7 +44,7 @@
 #include <pthread.h>
 
 #include "../ipfixcol.h"
-
+#include "config.h"
 #include "queues.h"
 
 struct data_manager_config {
@@ -53,18 +53,18 @@ struct data_manager_config {
 	unsigned int plugins_count;
 	struct ring_buffer *in_queue;
 	struct ring_buffer *store_queue;
-	struct storage* plugins;
+	struct storage_list* storage_plugins;
     struct input_info *input_info;
 	struct data_manager_config *next;
 };
 
-void parse_ipfix (void* packet, struct input_info* input_info, struct storage* storage_plugins);
+void parse_ipfix (void* packet, struct input_info* input_info, struct storage_list* storage_plugins);
 
 void data_manager_close_all();
 
 struct data_manager_config* create_data_manager (
     uint32_t observation_domain_id,
-    struct storage* storage_plugins,
+    struct storage_list* storage_plugins,
     struct input_info *input_info);
 
 void data_manager_close (struct data_manager_config **config);
