@@ -202,14 +202,14 @@ void parse_ipfix (void* packet, struct input_info* input_info, struct storage* s
 			free (msg);
 			return;
 		}
+	    /* add config to data_mngmts structure */
+	    if (data_mngmts == NULL) {
+	        data_mngmts = config;
+	    } else {
+	        data_mngmts->next = config;
+	    }
 	}
 
-    /* add config to data_mngmts structure */
-    if (data_mngmts == NULL) {
-        data_mngmts = config;
-    } else {
-        data_mngmts->next = config;
-    }
 
 	/**
 	 * \todo process IPFIX and fillup the ipfix_message structure
