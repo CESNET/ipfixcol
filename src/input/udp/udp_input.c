@@ -322,6 +322,9 @@ int get_packet(void *config, struct input_info **info, char **packet)
     /* receive packet */
     length = recvfrom(sock, *packet, BUFF_LEN, 0, (struct sockaddr*) &address, &addr_length);
     if (length == -1) {
+    	if (errno == EINTR) {
+    		return INPUT_INTR;
+    	}
         VERBOSE(CL_VERBOSE_OFF, "Failed to receive packet: %s", strerror(errno));
         return INPUT_ERROR;
     }

@@ -401,7 +401,7 @@ out:
  * \param[out] info   Information structure describing the source of the data.
  * \param[out] packet Flow information data in the form of IPFIX packet.
  * \return the length of packet on success, INPUT_CLOSE when some connection 
- *  closed, INPUT_ERROR on error.
+ *  closed, INPUT_ERROR on error or INPUT_SIGINT when interrupted.
  */
 int get_packet(void *config, struct input_info **info, char **packet)
 {
@@ -437,6 +437,9 @@ int get_packet(void *config, struct input_info **info, char **packet)
         /* select active connections */
         retval = select(conf->fd_max + 1, &tmp_set, NULL, NULL, &tv);
         if (retval == -1) {
+        	if (errno == EINTR) {
+        		return INPUT_INTR;
+        	}
             VERBOSE(CL_VERBOSE_OFF, "Failed to select active connection: %s", strerror(errno));
             return INPUT_ERROR;
         }
@@ -453,6 +456,9 @@ int get_packet(void *config, struct input_info **info, char **packet)
     /* receive ipfix packet header */
     length = recv(sock, *packet, IPFIX_HEADER_LENGTH, MSG_WAITALL);
     if (length == -1) {
+    	if (errno == EINTR) {
+    		return INPUT_INTR;
+    	}
         VERBOSE(CL_VERBOSE_OFF, "Failed to receive IPFIX packet header: %s", strerror(errno));
         return INPUT_ERROR;
     } else if (length > 0) { /* header received */
@@ -470,6 +476,9 @@ int get_packet(void *config, struct input_info **info, char **packet)
         length = recv(sock, (*packet) + IPFIX_HEADER_LENGTH, 
             ntohs(((struct ipfix_header *) *packet)->length) - IPFIX_HEADER_LENGTH, MSG_WAITALL);
         if (length == -1) {
+        	if (errno == EINTR) {
+        		return INPUT_INTR;
+        	}
             VERBOSE(CL_VERBOSE_OFF, "Failed to receive IPFIX packet: %s", strerror(errno));
             return INPUT_ERROR;
         }

@@ -121,7 +121,7 @@ void term_signal_handler(int sig)
 int main (int argc, char* argv[])
 {
 	int c, i, fd, retval = 0, get_retval, proc_count = 0, proc_id = 0;
-	pid_t pid;
+	pid_t pid = 0;
 	bool daemonize = false;
 	char *progname, *config_file = NULL;
 	struct plugin_list* input_plugins = NULL, *storage_plugins = NULL,
@@ -415,7 +415,9 @@ storage_plugin_remove:
 	while (!done) {
 		/* get data to process */
 		if ((get_retval = input.get (input.config, &input_info, &packet)) < 0) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Getting IPFIX data failed!", proc_id);
+			if (!done || get_retval != INPUT_INTR) { /* if interrupted and closing, it's ok */
+				VERBOSE(CL_VERBOSE_OFF, "[%d] Getting IPFIX data failed!", proc_id);
+			}
 			continue;
 		} else if (get_retval == INPUT_CLOSED) {
             /* ensure that parser gets NULL packet => closed connection */

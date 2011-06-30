@@ -66,6 +66,12 @@
  * An error occured in get_packet function
  */
 #define INPUT_ERROR -1
+/**
+ * \def INPUT_INTR
+ * Function interupted by SIGINT
+ */
+#define INPUT_INTR -2
+
 
 /**
  * \enum SOURCE_TYPE
