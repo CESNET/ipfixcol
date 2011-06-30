@@ -125,3 +125,14 @@ int storage_close (void **config){
 
 /**@}*/
 
+int main() {
+        void *conf;
+        verbose = CL_VERBOSE_ADVANCED;
+
+        storage_init (NULL, &conf);
+        store_packet (conf, NULL, NULL);
+        store_now (conf);
+        storage_close (&conf);
+
+}
+
