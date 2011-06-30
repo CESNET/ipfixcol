@@ -40,6 +40,7 @@
 #ifndef IPFIXCOL_STORAGE_H_
 #define IPFIXCOL_STORAGE_H_
 
+#include <commlbr.h>
 #include "../../headers/storage.h"
 
 /**
@@ -98,7 +99,9 @@ struct ipfix_message {
  * of storage API's functions.
  * \return 0 on success, nonzero else.
  */
-int storage_init (char *params, void **config);
+int storage_init (char *params, void **config){
+        VERBOSE(CL_VERBOSE_ADVANCED,"Fastbit config init");
+}
 
 /**
  * \brief Pass IPFIX data with supplemental structures from ipfixcol core into
@@ -118,8 +121,10 @@ int storage_init (char *params, void **config);
  * \return 0 on success, nonzero else.
  */
 int store_packet (void *config, const struct ipfix_message *ipfix_msg,
-        const struct ipfix_template_t *templates);
+        const struct ipfix_template_t *templates){
+        VERBOSE(CL_VERBOSE_ADVANCED,"Fastbit stpre_packet");
 
+}
 /**
  * \brief Announce willing to store currently processing data.
  *
@@ -132,7 +137,9 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
  * function.
  * \return 0 on success, nonzero else.
  */
-int store_now (const void *config);
+int store_now (const void *config){
+        VERBOSE(CL_VERBOSE_ADVANCED,"Fastbit stpre_packet");
+}
 
 /**
  * \brief Storage plugin "destructor".
@@ -144,7 +151,9 @@ int store_now (const void *config);
  * \param[in,out] config  Plugin-specific configuration data prepared by init
  * \return 0 on success and config is changed to NULL, nonzero else.
  */
-int storage_close (void **config);
+int storage_close (void **config){
+        VERBOSE(CL_VERBOSE_ADVANCED,"Fastbit config close");
+}
 
 /**@}*/
 
