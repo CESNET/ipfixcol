@@ -51,7 +51,7 @@
  *
  * @param config Configuration structure to destroy.
  */
-static inline void data_manager_config_free (struct data_manager_config* config)
+static inline void data_manager_free (struct data_manager_config* config)
 {
 	struct storage_list *aux_storage;
 
@@ -68,7 +68,7 @@ static inline void data_manager_config_free (struct data_manager_config* config)
             if (aux_storage->storage.thread_config != NULL) {
                 free(aux_storage->storage.thread_config);
             }
-            /* pointer in storage were copied and should be closed elsewhere */
+            /* pointers in storage were copied and should be closed elsewhere */
             free (aux_storage);
 	    }
 
@@ -182,7 +182,7 @@ void data_manager_close (struct data_manager_config **config)
     rbuffer_write((*config)->in_queue, NULL, 1);
     pthread_join((*config)->thread_id, NULL);
     /* deallocate config structure */
-    data_manager_config_free(*config);
+    data_manager_free(*config);
     *config = NULL;
 
     return;
@@ -219,14 +219,14 @@ struct data_manager_config* data_manager_create (
 	config->in_queue = rbuffer_init(RING_BUFFER_SIZE);
 	if (config->in_queue == NULL) {
 		VERBOSE(CL_VERBOSE_OFF, "Unable to initiate queue for communication with IPFIX preprocessor.");
-		data_manager_config_free (config);
+		data_manager_free (config);
 		return (NULL);
 	}
 	/* initiate queue to communicate with storage plugins' threads */
 	config->store_queue = rbuffer_init(RING_BUFFER_SIZE);
 	if (config->store_queue == NULL) {
 		VERBOSE(CL_VERBOSE_OFF, "Unable to initiate queue for communication with Storage plugins.");
-		data_manager_config_free (config);
+		data_manager_free (config);
 		return (NULL);
 	}
 
@@ -258,7 +258,6 @@ struct data_manager_config* data_manager_create (
 			storage_plugins = storage_plugins->next;
 			continue;
 		}
-		storage_plugins->storage.config = aux_storage->storage.config;
 		xmlFree (plugin_params);
 
 		/* check the links in list of plugins available from data manager's config */
@@ -298,14 +297,14 @@ struct data_manager_config* data_manager_create (
 	/* check if at least one storage plugin initiated */
 	if (config->plugins_count == 0) {
 		VERBOSE(CL_VERBOSE_OFF, "No storage plugin for the Data manager initiated.");
-		data_manager_config_free (config);
+		data_manager_free (config);
 		return (NULL);
 	}
 
 	/* create new thread of data manager */
 	if (pthread_create(&(config->thread_id), NULL, &data_manager_thread, (void*)config) != 0) {
 		VERBOSE(CL_VERBOSE_OFF, "Unable to create data manager thread.");
-		data_manager_config_free (config);
+		data_manager_free (config);
 		return (NULL);
 	}
 

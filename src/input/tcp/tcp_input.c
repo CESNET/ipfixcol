@@ -568,7 +568,7 @@ int input_close(void **config)
             }
         }
     }
-    
+
     /* free allocated structures */
     FD_ZERO(&conf->master);
     free(((struct plugin_conf*) *config)->info);

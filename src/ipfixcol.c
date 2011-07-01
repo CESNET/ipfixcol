@@ -290,16 +290,19 @@ int main (int argc, char* argv[])
 		input.init = dlsym (input_plugin_handler, "input_init");
 		if (input.init == NULL) {
 			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input xml_conf (%s)", proc_id, dlerror());
+			dlclose(input.dll_handler);
 			continue;
 		}
 		input.get = dlsym (input_plugin_handler, "get_packet");
 		if (input.get == NULL) {
 			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input xml_conf (%s)", proc_id, dlerror());
+			dlclose(input.dll_handler);
 			continue;
 		}
 		input.close = dlsym (input_plugin_handler, "input_close");
 		if (input.close == NULL) {
 			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input xml_conf (%s)", proc_id, dlerror());
+			dlclose(input.dll_handler);
 			continue;
 		}
         /* get the first one we can */
@@ -313,14 +316,15 @@ int main (int argc, char* argv[])
 	}
 
 	/* prepare storage xml_conf(s) */
-	aux_plugins = storage_plugins;
-	while (storage_plugins) {
+	//while (storage_plugins) {
+	for (aux_plugins = storage_plugins; aux_plugins != NULL; aux_plugins = aux_plugins->next) {
+		//aux_plugins = storage_plugins;
 		VERBOSE(CL_VERBOSE_ADVANCED, "[%d] Opening storage xml_conf: %s", proc_id, storage_plugins->config.file);
 
-		storage_plugin_handler = dlopen (storage_plugins->config.file, RTLD_LAZY);
+		storage_plugin_handler = dlopen (aux_plugins->config.file, RTLD_LAZY);
 		if (storage_plugin_handler == NULL) {
 			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage xml_conf (%s)", proc_id, dlerror());
-			goto storage_plugin_remove;
+			continue;
 		}
 
 		aux_storage_list = storage_list;
@@ -328,7 +332,8 @@ int main (int argc, char* argv[])
 		if (storage_list == NULL) {
 			VERBOSE (CL_VERBOSE_OFF, "[%d] Memory allocation failed (%s:%d)", proc_id, __FILE__, __LINE__);
 			storage_list = aux_storage_list;
-			goto storage_plugin_remove;
+			dlclose(storage_plugin_handler);
+			continue;
 		}
 		memset(storage_list, 0, sizeof(struct storage_list));
 
@@ -342,7 +347,8 @@ int main (int argc, char* argv[])
 			storage_plugin_handler = NULL;
 			free (storage_list);
 			storage_list = aux_storage_list;
-			goto storage_plugin_remove;
+			dlclose(storage_plugin_handler);
+			continue;
 		}
 		storage_list->storage.store = dlsym (storage_plugin_handler, "store_packet");
 		if (storage_list->storage.store == NULL) {
@@ -351,7 +357,8 @@ int main (int argc, char* argv[])
 			storage_plugin_handler = NULL;
 			free (storage_list);
 			storage_list = aux_storage_list;
-			goto storage_plugin_remove;
+			dlclose(storage_plugin_handler);
+			continue;
 		}
 		storage_list->storage.store_now = dlsym (storage_plugin_handler, "store_now");
 		if (storage_list->storage.store_now == NULL) {
@@ -360,7 +367,8 @@ int main (int argc, char* argv[])
 			storage_plugin_handler = NULL;
 			free (storage_list);
 			storage_list = aux_storage_list;
-			goto storage_plugin_remove;
+			dlclose(storage_plugin_handler);
+			continue;
 		}
 		storage_list->storage.close = dlsym (storage_plugin_handler, "storage_close");
 		if (storage_list->storage.close == NULL) {
@@ -369,28 +377,12 @@ int main (int argc, char* argv[])
 			storage_plugin_handler = NULL;
 			free (storage_list);
 			storage_list = aux_storage_list;
-			goto storage_plugin_remove;
+			dlclose(storage_plugin_handler);
+			continue;
 		}
-		storage_list->storage.xml_conf = &storage_plugins->config;
-		storage_plugins = storage_plugins->next;
-		storage_list->next = NULL;
+		storage_list->storage.xml_conf = &aux_plugins->config;
 		storage_list->next = aux_storage_list;
-		aux_plugins = storage_plugins;
 		continue;
-
-storage_plugin_remove:
-		/* if something went wrong, remove the storage_plugin structure */
-		storage_plugins = storage_plugins->next;
-			if (aux_plugins) {
-			if (aux_plugins->config.file) {
-				free (aux_plugins->config.file);
-			}
-			if (aux_plugins->config.xmldata) {
-				xmlFreeDoc (aux_plugins->config.xmldata);
-			}
-			free (aux_plugins);
-		}
-		aux_plugins = storage_plugins;
 	}
 	/* check if we have found at least one storage plugin */
 	if (!storage_list) {
@@ -475,16 +467,12 @@ cleanup:
     /* close preprocessor (will close all data managers) */
     preprocessor_close();
 
-    /* free allocated resources in storages */
+    /* free allocated resources in storages ( xml configuration closed above ) */
 	while (storage_list) {
 		aux_storage_list = storage_list->next;
-		if (storage_list->storage.xml_conf->file) {
-			free (storage_list->storage.xml_conf->file);
+		if (storage_list->storage.dll_handler) {
+			dlclose(storage_list->storage.dll_handler);
 		}
-		if (storage_list->storage.xml_conf->xmldata) {
-			xmlFreeDoc (storage_list->storage.xml_conf->xmldata);
-		}
-		free (storage_list->storage.xml_conf);
 		free (storage_list);
 		storage_list = aux_storage_list;
 	}
