@@ -56,7 +56,7 @@ static struct data_manager_config *data_mngmts = NULL;
 /**
  * \brief Search for Data manager handling specified Observation Domain ID
  *
- * \todo: improve search e.g. by some kind of sorting data_mngmts
+ * \todo: improve search e.g. by some kind of sorting data_managers
  *
  * @param[in] id Observation domain ID of wanted Data manager.
  * @return Desired Data manager's configuration structure if exists, NULL if
@@ -101,19 +101,20 @@ static struct data_manager_config *get_data_mngmt_by_input_info (struct input_in
                 ii_network1 = (struct input_info_network*) aux_cfg->input_info;
                 ii_network2 = (struct input_info_network*) info;
                 /* ports and protocols must match */
+
                 if (ii_network1->dst_port == ii_network2->dst_port && 
                         ii_network1->src_port == ii_network2->src_port &&
                         ii_network1->l3_proto == ii_network2->l3_proto) {
                     /* compare addresses, dependent on IP protocol version*/
                     if (ii_network1->l3_proto == 4) {
-                        if (ii_network1->dst_addr.ipv4.s_addr == ii_network2->dst_addr.ipv4.s_addr) {
+                        if (ii_network1->src_addr.ipv4.s_addr == ii_network2->src_addr.ipv4.s_addr) {
                             break;
                         }
                     } else {
-                        if (ii_network1->dst_addr.ipv6.s6_addr32[0] == ii_network2->dst_addr.ipv6.s6_addr32[0] &&
-                            ii_network1->dst_addr.ipv6.s6_addr32[1] == ii_network2->dst_addr.ipv6.s6_addr32[1] &&
-                            ii_network1->dst_addr.ipv6.s6_addr32[2] == ii_network2->dst_addr.ipv6.s6_addr32[2] &&
-                            ii_network1->dst_addr.ipv6.s6_addr32[3] == ii_network2->dst_addr.ipv6.s6_addr32[3]) {
+                        if (ii_network1->src_addr.ipv6.s6_addr32[0] == ii_network2->src_addr.ipv6.s6_addr32[0] &&
+                            ii_network1->src_addr.ipv6.s6_addr32[1] == ii_network2->src_addr.ipv6.s6_addr32[1] &&
+                            ii_network1->src_addr.ipv6.s6_addr32[2] == ii_network2->src_addr.ipv6.s6_addr32[2] &&
+                            ii_network1->src_addr.ipv6.s6_addr32[3] == ii_network2->src_addr.ipv6.s6_addr32[3]) {
                             break;
                         }
                     }
@@ -157,14 +158,18 @@ void preprocessor_parse_msg (void* packet, struct input_info* input_info, struct
 	struct data_manager_config *config = NULL, *prev_config = NULL;
 
 	if (input_info == NULL || storage_plugins == NULL) {
-		VERBOSE (CL_VERBOSE_OFF, "Invalid parameters in function parse_ipfix().");
+		VERBOSE (CL_VERBOSE_OFF, "Invalid parameters in function preprocessor_parse_msgx().");
 		return;
 	}
 
-    /* connection closed, close data manager */
+	/* connection closed, close data manager */
     if (packet == NULL) {
         config = get_data_mngmt_by_input_info (input_info, &prev_config);
 
+        if (!config) {
+        	VERBOSE(CL_VERBOSE_BASIC, "Data manager NOT found, probably more exporters with same OID.");
+        	return;
+        }
         /* remove data manager from the list */
         if (prev_config == NULL) {
             data_mngmts = NULL;
@@ -215,9 +220,7 @@ void preprocessor_parse_msg (void* packet, struct input_info* input_info, struct
 	}
 
 
-	/**
-	 * \todo process IPFIX and fillup the ipfix_message structure
-	 */
+	/* process IPFIX packet and fillup the ipfix_message structure */
     uint8_t *p = packet + IPFIX_HEADER_LENGTH;
     int t_set_count = 0, ot_set_count = 0, d_set_count = 0;
     struct ipfix_set_header *set_header;
@@ -235,7 +238,6 @@ void preprocessor_parse_msg (void* packet, struct input_info* input_info, struct
                     VERBOSE (CL_VERBOSE_BASIC, "Unknown Set ID %d", set_header->flowset_id);
                 } else {
                     msg->data_set[d_set_count++].data_set = (struct ipfix_data_set*) set_header;
-                    /* \todo: add ipfix_template, careful with d_set_count++ */;
                 }
                 break;
         }

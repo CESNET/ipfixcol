@@ -48,7 +48,6 @@
  * #ipfix_template_mgr_t ipfix_template_mgr_t structure\endlink. Its job
  * is to manage (Options) Templates.
  *
- * \todo ipfix_template_t
  *
  * @{
  */

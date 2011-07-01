@@ -178,7 +178,7 @@ static void* storage_plugin_thread (void* cfg)
  */
 void data_manager_close (struct data_manager_config **config)
 {
-    /* TODO close data manager thread here  */  
+    /* close data manager thread - write NULL  */
     rbuffer_write((*config)->in_queue, NULL, 1);
     pthread_join((*config)->thread_id, NULL);
     /* deallocate config structure */
