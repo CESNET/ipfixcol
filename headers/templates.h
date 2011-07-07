@@ -57,6 +57,8 @@
 /**
  * \struct ipfix_template_t
  * \brief Structure for storing Template Record/Options Template Record
+ *
+ * All data in this structure are in host byte order
  */
 struct ipfix_template {
 	uint8_t template_type;       /**Type of Template - 0 = Template,
@@ -66,6 +68,7 @@ struct ipfix_template {
 	uint16_t template_id;        /**Template ID */
 	uint16_t field_count;        /**Number of fields in Template Record */
 	uint16_t scope_field_count;  /**Number of scope fields */
+	uint16_t template_length;    /**Length of the template */
 	template_ie fields[1];       /**Template fields */
 };
 
@@ -86,10 +89,10 @@ struct ipfix_template_mgr {
  * \param[in]  template Pointer where new Template Record starts.
  * \param[in]  type Type of the Template Record. 0 = Template, 1 = Options
  * Template.
- * \return 0 on success, negative value if error occurs.
+ * \return Pointer to new ipfix_template on success, NULL otherwise
  */
-int tm_add_template(struct ipfix_template_mgr *tm, void *template,
-                    int type);
+struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm,
+										void *template, int type);
 
 /**
  * \brief Function for updating an existing templates.

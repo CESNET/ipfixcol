@@ -120,7 +120,7 @@ int storage_init (char *params, void **config);
  * \return 0 on success, nonzero else.
  */
 int store_packet (void *config, const struct ipfix_message *ipfix_msg,
-        const struct ipfix_template *templates);
+        const struct ipfix_template_mgr *template_mgr);
 
 /**
  * \brief Announce willing to store currently processing data.
