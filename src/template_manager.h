@@ -1,7 +1,8 @@
 /**
- * \file data_manager.h
- * \author Radek Krejci <rkrejci@cesnet.cz>
- * \brief Data Manager's functions
+ * \file template_manager.h
+ * \author Petr Velan <petr.velan@cesnet.cz>
+ * \brief Public structures and functions (API) of the ipfixcol's Template
+ * Manager
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,59 +38,23 @@
  *
  */
 
-#ifndef DATA_MANAGER_H_
-#define DATA_MANAGER_H_
-
-#include <stdint.h>
-#include <pthread.h>
+#ifndef TEMPLATE_MANAGER_H_
+#define TEMPLATE_MANAGER_H_
 
 #include "../ipfixcol.h"
-#include "config.h"
-#include "queues.h"
-#include "preprocessor.h"
-#include "template_manager.h"
 
 /**
- * \brief Data manager configuration
+ * \brief Create new template manager and set default values
  *
- * Contains all configuration of data manager. Works as list of configurations.
- * List of data manager configurations is mantained by preprocessor which
- * decides what data manager should get the message.
+ * @return struct ipfix_template_manager New template manager
  */
-struct data_manager_config {
-	uint32_t observation_domain_id;
-	pthread_t thread_id;
-	unsigned int plugins_count;
-	struct ring_buffer *in_queue;
-	struct ring_buffer *store_queue;
-	struct storage_list* storage_plugins;
-    struct input_info *input_info;
-    struct ipfix_template_mgr *template_mgr;
-	struct data_manager_config *next;
-};
+struct ipfix_template_mgr *tm_create();
 
 /**
- * \brief Creates new data manager
+ * \brief Destroys and frees specified template manager
  *
- * @param[in] observation_domain_id Observation domain id that should be
- * handled by this data manager
- * @param[in] storage_plugins List of storage plugins that should be opened by
- * this data manager
- * @param[in] input_info Input information from input plugin
- * @return data_manager_config Configuration strucutre on success, NULL
- * otherwise
- */
-struct data_manager_config* data_manager_create (
-    uint32_t observation_domain_id,
-    struct storage_list* storage_plugins,
-    struct input_info *input_info);
-
-/**
- * \brief Closes data manager specified by its configuration
- *
- * @param[in] config Configuration of the data manager to be closed
  * @return void
  */
-void data_manager_close (struct data_manager_config **config);
+void tm_destroy(struct ipfix_template_mgr *tm);
 
-#endif /* DATA_MANAGER_H_ */
+#endif /* TEMPLATE_MANAGER_H_ */

@@ -78,8 +78,65 @@ static inline void data_manager_free (struct data_manager_config* config)
 		if (config->store_queue != NULL) {
 			rbuffer_free(config->store_queue);
 		}
+
+
+		if (config->template_mgr != NULL) {
+			tm_destroy(config->template_mgr);
+		}
 		free (config);
 	}
+}
+
+/**
+ * \brief Process templates
+ */
+static void data_manager_process_templates(struct ipfix_template_mgr *template_mgr, struct ipfix_message *msg)
+{
+	struct ipfix_template *template;
+	uint8_t *ptr;
+	int i;
+
+	/** \todo do templates management */
+	/* check for new templates */
+	for (i=0; msg->templ_set[i] != NULL && i<1024; i++) {
+		ptr = (uint8_t*) &msg->templ_set[i]->first_record;
+		while (ptr < (uint8_t*) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) {
+			if ((template = tm_get_template(template_mgr, ntohs(((struct ipfix_template_record*) ptr)->template_id))) == NULL) {
+				VERBOSE(DEBUG, "New template (ID %i)", ntohs(((struct ipfix_template_record*) ptr)->template_id));
+				template = tm_add_template(template_mgr, ptr, 0);
+			}
+			if (template == NULL) {
+				VERBOSE(CL_VERBOSE_BASIC, "Cannot parse template set, skipping to next set");
+				break;
+			}
+			ptr += template->template_length - sizeof(struct ipfix_template) + sizeof(struct ipfix_template_record);
+		}
+	}
+
+	/* check for new option templates */
+	for (i=0; msg->opt_templ_set[i] != NULL && i<1024; i++) {
+		ptr = (uint8_t*) &msg->opt_templ_set[i]->first_record;
+		while (ptr < (uint8_t*) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) {
+			if ((template = tm_get_template(template_mgr, ntohs(((struct ipfix_options_template_record*) ptr)->template_id))) == NULL) {
+				VERBOSE(DEBUG, "New options template (ID %i)", ntohs(((struct ipfix_options_template_record*) ptr)->template_id));
+				template = tm_add_template(template_mgr, ptr, 0);
+			}
+			if (template == NULL) {
+				VERBOSE(CL_VERBOSE_BASIC, "Cannot parse options template set, skipping to next set");
+				break;
+			}
+			ptr += template->template_length - sizeof(struct ipfix_template) + sizeof(struct ipfix_options_template_record);
+		}
+	}
+
+	/* add template to message data_couples */
+	for (i=0; msg->data_set[i].data_set != NULL && i<1023; i++) {
+		msg->data_set[i].template = tm_get_template(template_mgr, ntohs(msg->data_set[i].data_set->header.flowset_id));
+		if (msg->data_set[i].template == NULL) {
+			VERBOSE(CL_VERBOSE_OFF, "Data template with ID %i not found!", ntohs(msg->data_set[i].data_set->header.flowset_id));
+		}
+	}
+	return;
 }
 
 /**
@@ -90,10 +147,10 @@ static inline void data_manager_free (struct data_manager_config* config)
  */
 static void* data_manager_thread (void* cfg)
 {
-	struct data_manager_config* config = (struct data_manager_config*) cfg;
+	struct data_manager_config *config = (struct data_manager_config*) cfg;
     struct storage_list *aux_storage = config->storage_plugins;
-	struct ipfix_message* msg;
-	unsigned int index = -1;
+	struct ipfix_message *msg;
+	unsigned int index;
 
 	/* loop will break upon receiving NULL from buffer */
 	while (1) {
@@ -102,7 +159,11 @@ static void* data_manager_thread (void* cfg)
 		/* read new data */
 		msg = rbuffer_read (config->in_queue, &index);
 
-		/** \todo do templates management */
+		/* process templates */
+		if (msg != NULL) {
+			data_manager_process_templates(config->template_mgr, msg);
+		}
+
 		/* pass data into the storage plugins */
 		if (rbuffer_write (config->store_queue, msg, config->plugins_count) != 0) {
 			VERBOSE (CL_VERBOSE_BASIC, "ODID %d: Unable to pass data into the Storage plugins' queue.",
@@ -119,7 +180,7 @@ static void* data_manager_thread (void* cfg)
 
         /* passing NULL message means closing */
         if (msg == NULL) {
-			VERBOSE (CL_VERBOSE_ADVANCED, "ODID %d: No more data from IPFIX preprocessor.",
+			VERBOSE (CL_VERBOSE_ADVANCED, "ODID %d: No more data from IPFIX preprocessor.exit(1);",
 					config->observation_domain_id);
 			break;
 		}
@@ -154,11 +215,7 @@ static void* storage_plugin_thread (void* cfg)
 		}
 
 		/* do the job */
-		/**
-		 *  \todo Last parameter is supposed to be ipfix_template_t* but I
-		 * thing that it is not enough - we need to pass ipfix_template_mgr_t*
-		 */
-		config->store (config->config, msg, NULL);
+		config->store (config->config, msg, config->thread_config->template_mgr);
 
 		/* all done, mark data as processed */
 		rbuffer_remove_reference(config->thread_config->queue, index, 1);
@@ -234,7 +291,7 @@ struct data_manager_config* data_manager_create (
 	config->storage_plugins = NULL;
 	config->plugins_count = 0;
     config->input_info = input_info;
-
+    config->template_mgr = tm_create();
 
 	/* initiate all storage plugins */
 	while (storage_plugins) {
@@ -276,6 +333,7 @@ struct data_manager_config* data_manager_create (
 			continue;
 		}
 		plugin_cfg->queue = config->store_queue;
+		plugin_cfg->template_mgr = config->template_mgr;
         aux_storage->storage.thread_config = plugin_cfg;
 		if (pthread_create(&(plugin_cfg->thread_id), NULL, &storage_plugin_thread, (void*) &aux_storage->storage) != 0) {
 			VERBOSE(CL_VERBOSE_OFF, "Unable to create storage plugin thread.");

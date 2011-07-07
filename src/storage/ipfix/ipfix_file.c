@@ -218,7 +218,7 @@ err_init:
  * \return 0 on success, negative value otherwise
  */
 int store_packet(void *config, const struct ipfix_message *ipfix_msg,
-                 const struct ipfix_template_t *templates)
+                 const struct ipfix_template_mgr *template_mgr)
 {
 	ssize_t count = 0;
 	uint16_t wbytes = 0;
