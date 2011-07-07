@@ -128,12 +128,14 @@ int tm_remove_template(struct ipfix_template_mgr *tm,
                        uint16_t template_id);
 
 /**
- * \brief Function for removing all Temaplates.
+ * \brief Function for removing all Temaplates of specific type.
  *
  * \param[in]  tm Data Manager specific structure for storing Templates.
+ * \param[in]  type type of the template to withdraw. 0 = Template, 1 = Options
+ * Template.
  * \return 0 on success, negative value otherwise.
  */
-int tm_remove_all_templates(struct ipfix_template_mgr *tm);
+int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type);
 
 #endif /* IPFIXCOL_TEMPLATES_H_ */
 

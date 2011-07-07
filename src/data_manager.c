@@ -102,7 +102,7 @@ static void data_manager_process_templates(struct ipfix_template_mgr *template_m
 		ptr = (uint8_t*) &msg->templ_set[i]->first_record;
 		while (ptr < (uint8_t*) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) {
 			if ((template = tm_get_template(template_mgr, ntohs(((struct ipfix_template_record*) ptr)->template_id))) == NULL) {
-				VERBOSE(DEBUG, "New template (ID %i)", ntohs(((struct ipfix_template_record*) ptr)->template_id));
+				//VERBOSE(DEBUG, "New template (ID %i)", ntohs(((struct ipfix_template_record*) ptr)->template_id));
 				template = tm_add_template(template_mgr, ptr, 0);
 			}
 			if (template == NULL) {
@@ -118,7 +118,7 @@ static void data_manager_process_templates(struct ipfix_template_mgr *template_m
 		ptr = (uint8_t*) &msg->opt_templ_set[i]->first_record;
 		while (ptr < (uint8_t*) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) {
 			if ((template = tm_get_template(template_mgr, ntohs(((struct ipfix_options_template_record*) ptr)->template_id))) == NULL) {
-				VERBOSE(DEBUG, "New options template (ID %i)", ntohs(((struct ipfix_options_template_record*) ptr)->template_id));
+				//VERBOSE(DEBUG, "New options template (ID %i)", ntohs(((struct ipfix_options_template_record*) ptr)->template_id));
 				template = tm_add_template(template_mgr, ptr, 0);
 			}
 			if (template == NULL) {

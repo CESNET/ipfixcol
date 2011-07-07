@@ -66,7 +66,8 @@ struct ipfix_template_mgr *tm_create() {
 
 void tm_destroy(struct ipfix_template_mgr *tm)
 {
-	tm_remove_all_templates(tm);
+	tm_remove_all_templates(tm, 0);  /* Templates */
+	tm_remove_all_templates(tm, 1);  /* Options Templates */
 	free(tm->templates);
 	free(tm);
 	return;
@@ -241,12 +242,12 @@ int tm_remove_template(struct ipfix_template_mgr *tm, uint16_t template_id)
 	return 1;
 }
 
-int tm_remove_all_templates(struct ipfix_template_mgr *tm)
+int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type)
 {
 	int i;
 
 	for (i=0; i < tm->max_length; i++) {
-		if (tm->templates[i] != NULL) {
+		if ((tm->templates[i] != NULL) && (tm->templates[i]->template_type == type)) {
 			free(tm->templates[i]);
 			tm->templates[i] = NULL;
 		}
