@@ -50,13 +50,13 @@
 #define TEMPLATE_MANAGER_DEFAULT_SIZE 100
 
 
-int tm_get_template_index(struct ipfix_template_mgr_t *tm, uint16_t template_id);
+int tm_get_template_index(struct ipfix_template_mgr *tm, uint16_t template_id);
 
 int tm_init(void **config)
 {
-	struct ipfix_template_mgr_t *conf;
+	struct ipfix_template_mgr *conf;
 
-	conf = (struct ipfix_template_mgr_t *) malloc(sizeof(*conf));
+	conf = (struct ipfix_template_mgr *) malloc(sizeof(*conf));
 	if (!conf) {
 		fprintf(stderr, "Out of memory... (%s:%d)\n", __FILE__, __LINE__);
 		exit(EXIT_FAILURE);
@@ -66,7 +66,7 @@ int tm_init(void **config)
 	/* initial length of the array for templates */
 	conf->max_length = TEMPLATE_MANAGER_DEFAULT_SIZE;	
 
-	conf->templates = (struct ipfix_template_t **) malloc(sizeof(struct ipfix_template_t *) * conf->max_length);
+	conf->templates = (struct ipfix_template **) malloc(sizeof(struct ipfix_template *) * conf->max_length);
 	if (!conf->templates) {
 		fprintf(stderr, "Out of memory... (%s:%d)\n", __FILE__, __LINE__);
 		exit(EXIT_FAILURE);
@@ -80,8 +80,8 @@ int tm_init(void **config)
 
 int tm_exit(void *config)
 {
-	struct ipfix_template_mgr_t *conf;
-	conf = (struct ipfix_template_mgr_t *) config;
+	struct ipfix_template_mgr *conf;
+	conf = (struct ipfix_template_mgr *) config;
 
 	free(config);
 
@@ -90,11 +90,11 @@ int tm_exit(void *config)
 
 
 
-struct ipfix_template_t *tm_add_template(struct ipfix_template_mgr_t *tm, void *template,
+struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *template,
                     int type)
 {
-	struct ipfix_template_t *templ;
-	struct ipfix_template_t *old_templ;
+	struct ipfix_template *templ;
+	struct ipfix_template *old_templ;
 	struct ipfix_template_record *rec;
 	struct ipfix_options_template_record *opt_rec;
 	uint16_t count = 0;
@@ -127,8 +127,8 @@ struct ipfix_template_t *tm_add_template(struct ipfix_template_mgr_t *tm, void *
 	/* variable 'offset' now contains exact length of the template */
 
 	/* copy out template */
-	fields_offset = offsetof(struct ipfix_template_t, fields);
-	templ = (struct ipfix_template_t *) malloc(fields_offset + offset);
+	fields_offset = offsetof(struct ipfix_template, fields);
+	templ = (struct ipfix_template *) malloc(fields_offset + offset);
 	if (!templ) {
 		fprintf(stderr, "Out of memory... (%s:%d)\n", __FILE__, __LINE__);
 		exit(EXIT_FAILURE);
@@ -136,7 +136,7 @@ struct ipfix_template_t *tm_add_template(struct ipfix_template_mgr_t *tm, void *
 	memset(templ, 0, fields_offset + offset);
 	memcpy(((uint8_t *)templ)+fields_offset, ((uint8_t *) template)+((type == 2) ? 4 : 6), offset);
 
-	templ->fields_length = offset; 
+	templ->template_length = offset; 
 
 	templ->template_type = type;
 	templ->template_id = rec->template_id;
@@ -184,12 +184,12 @@ struct ipfix_template_t *tm_add_template(struct ipfix_template_mgr_t *tm, void *
 }
 
 
-struct ipfix_template_t *tm_get_template(struct ipfix_template_mgr_t *tm,
+struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm,
                                          uint16_t template_id)
 {
 	int i;
 
-	struct ipfix_template_t *curr_template;
+	struct ipfix_template *curr_template;
 
 	if (tm->counter == 0) {
 		/* there are no templates... */
@@ -208,12 +208,12 @@ struct ipfix_template_t *tm_get_template(struct ipfix_template_mgr_t *tm,
 }
 
 /* get array index of the template */
-int tm_get_template_index(struct ipfix_template_mgr_t *tm, uint16_t template_id)
+int tm_get_template_index(struct ipfix_template_mgr *tm, uint16_t template_id)
 {
 	int middle;
 	int i;
 
-	struct ipfix_template_t *curr_template;
+	struct ipfix_template *curr_template;
 
 	if (tm->counter == 0) {
 		/* there are no templates... */
@@ -234,7 +234,7 @@ int tm_get_template_index(struct ipfix_template_mgr_t *tm, uint16_t template_id)
 
 
 
-int tm_remove_template(struct ipfix_template_mgr_t *tm,
+int tm_remove_template(struct ipfix_template_mgr *tm,
                        uint16_t template_id)
 {
 	int index;
@@ -254,7 +254,7 @@ int tm_remove_template(struct ipfix_template_mgr_t *tm,
 }
 
 
-int tm_remove_all_templates(struct ipfix_template_mgr_t *tm, int type)
+int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type)
 {
 	int i;
 	

@@ -259,7 +259,7 @@ static uint16_t print_options_template_record(struct ipfix_options_template_reco
 static uint16_t print_data_record(void *tm, struct ipfix_data_set *records, 
                                   uint16_t template_id, unsigned int counter)
 {
-	struct ipfix_template_t *rec;
+	struct ipfix_template *rec;
 	int i;
 
 	printf("Data Record (#%u):\t(network byte order)\n", counter);
@@ -348,10 +348,10 @@ static uint8_t *process_sets(uint8_t *message, void *tm, uint8_t print)
 	struct ipfix_data_set *data_set;
 	struct ipfix_template_record *template_record;
 	struct ipfix_options_template_record *opt_template_record;
-	struct ipfix_template_t *template;
+	struct ipfix_template *template;
 
 	uint8_t *ptr;          /* current position in the message */
-	struct ipfix_template_t *templ;
+	struct ipfix_template *templ;
 	uint16_t padding;
 	uint16_t set_length;
 
@@ -400,7 +400,7 @@ static uint8_t *process_sets(uint8_t *message, void *tm, uint8_t print)
 					/* it's withdrawal message */
 					if (template_record->template_id == TEMPLATE_SET_TYPE) {
 						/* withdraw all Templates */
-						tm_remove_all_templates(tm, TEMPLATE_SET_TYPE);
+						tm_remove_all_templates(tm, 0);
 					} else {
 						/* withdraw specific template */
 						tm_remove_template(tm, template_record->template_id);
@@ -410,7 +410,7 @@ static uint8_t *process_sets(uint8_t *message, void *tm, uint8_t print)
 				} else {
 					/* add new template */
 					templ = tm_add_template(tm, template_record, TEMPLATE_SET_TYPE);
-					ptr += templ->fields_length+4;
+					ptr += templ->template_length+4;
 				}
 			}
 
@@ -446,7 +446,7 @@ static uint8_t *process_sets(uint8_t *message, void *tm, uint8_t print)
 					/* it's withdrawal message */
 					if (opt_template_record->template_id == OPTIONS_TEMPLATE_SET_TYPE) {
 						/* withdraw all Templates */
-						tm_remove_all_templates(tm, OPTIONS_TEMPLATE_SET_TYPE);
+						tm_remove_all_templates(tm, 1);
 					} else {
 						/* withdraw specific template */
 						tm_remove_template(tm, opt_template_record->template_id);
@@ -456,7 +456,7 @@ static uint8_t *process_sets(uint8_t *message, void *tm, uint8_t print)
 				} else {
 					/* add new template */
 					templ = tm_add_template(tm, template_record, OPTIONS_TEMPLATE_SET_TYPE);
-					ptr += templ->fields_length+6;
+					ptr += templ->template_length+6;
 				}
 			}
 
@@ -596,7 +596,7 @@ static int32_t get_message(int fd, void *buf, size_t size)
  * to process it (get templates).
  * \return 0 on success, negative value otherwise
  */
-int process_message(uint8_t *message, struct ipfix_template_mgr_t *tm, int print)
+int process_message(uint8_t *message, struct ipfix_template_mgr *tm, int print)
 {
 	struct ipfix_header *header;
 
@@ -619,7 +619,7 @@ int main(int argc, char **argv)
 
 
 	int opt;
-	struct ipfix_template_mgr_t *tm;/* template manager */
+	struct ipfix_template_mgr *tm;/* template manager */
 	int fd;                         /* input file */
 	uint8_t *message;               /* start of the message */
 	uint16_t msg_length;            /* message length */
