@@ -103,7 +103,7 @@ struct storage_thread_conf {
 struct storage {
 	void* config;
 	int (*init) (char*, void**);
-	int (*store) (void*, const struct ipfix_message*, const struct ipfix_template_t*);
+	int (*store) (void*, const struct ipfix_message*, const struct ipfix_template*);
 	int (*store_now) (const void*);
 	int (*close) (void**);
 	void *dll_handler;

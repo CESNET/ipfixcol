@@ -47,6 +47,7 @@
 #include "config.h"
 #include "queues.h"
 #include "preprocessor.h"
+#include "template_manager.h"
 
 /**
  * \brief Data manager configuration
