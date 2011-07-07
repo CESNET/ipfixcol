@@ -121,9 +121,6 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 		++index;
 		++count;
 	}
-
-	/* size of the header: Template Record Header = 4, Opt. = 6*/
-	offset -= (type == IPFIX_TEMPLATE_FLOWSET_ID) ? 4 : 6;
 	/* variable 'offset' now contains exact length of the template */
 
 	/* copy out template */

@@ -410,7 +410,7 @@ static uint8_t *process_sets(uint8_t *message, void *tm, uint8_t print)
 				} else {
 					/* add new template */
 					templ = tm_add_template(tm, template_record, TEMPLATE_SET_TYPE);
-					ptr += templ->template_length+4;
+					ptr += templ->template_length;
 				}
 			}
 
@@ -456,7 +456,7 @@ static uint8_t *process_sets(uint8_t *message, void *tm, uint8_t print)
 				} else {
 					/* add new template */
 					templ = tm_add_template(tm, template_record, OPTIONS_TEMPLATE_SET_TYPE);
-					ptr += templ->template_length+6;
+					ptr += templ->template_length;
 				}
 			}
 
