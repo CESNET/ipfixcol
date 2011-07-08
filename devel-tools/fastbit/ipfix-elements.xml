@@ -1,0 +1,1998 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ipfix-elements>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 1 </id>
+		<name> octetDeltaCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> deltaCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 2 </id>
+		<name> packetDeltaCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> deltaCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 4 </id>
+		<name> protocolIdentifier </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 5 </id>
+		<name> ipClassOfService </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 6 </id>
+		<name> tcpControlBits </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> flags <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 7 </id>
+		<name> sourceTransportPort </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 8 </id>
+		<name> sourceIPv4Address </name>
+		<dataType> ipv4Address </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 9 </id>
+		<name> sourceIPv4PrefixLength </name>
+		<dataType> unsigned8 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 10 </id>
+		<name> ingressInterface </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 11 </id>
+		<name> destinationTransportPort </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 12 </id>
+		<name> destinationIPv4Address </name>
+		<dataType> ipv4Address </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 13 </id>
+		<name> destinationIPv4PrefixLength </name>
+		<dataType> unsigned8 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 14 </id>
+		<name> egressInterface </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 15 </id>
+		<name> ipNextHopIPv4Address </name>
+		<dataType> ipv4Address </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 16 </id>
+		<name> bgpSourceAsNumber </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 17 </id>
+		<name> bgpDestinationAsNumber </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 18 </id>
+		<name> bgpNextHopIPv4Address </name>
+		<dataType> ipv4Address </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 19 </id>
+		<name> postMCastPacketDeltaCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> deltaCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 20 </id>
+		<name> postMCastOctetDeltaCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> deltaCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 21 </id>
+		<name> flowEndSysUpTime </name>
+		<dataType> unsigned32 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 22 </id>
+		<name> flowStartSysUpTime </name>
+		<dataType> unsigned32 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 23 </id>
+		<name> postOctetDeltaCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> deltaCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 24 </id>
+		<name> postPacketDeltaCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> deltaCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 25 </id>
+		<name> minimumIpTotalLength </name>
+		<dataType> unsigned64 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 26 </id>
+		<name> maximumIpTotalLength </name>
+		<dataType> unsigned64 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 27 </id>
+		<name> sourceIPv6Address </name>
+		<dataType> ipv6Address </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 28 </id>
+		<name> destinationIPv6Address </name>
+		<dataType> ipv6Address </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 29 </id>
+		<name> sourceIPv6PrefixLength </name>
+		<dataType> unsigned8 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 30 </id>
+		<name> destinationIPv6PrefixLength </name>
+		<dataType> unsigned8 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 31 </id>
+		<name> flowLabelIPv6 </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 32 </id>
+		<name> icmpTypeCodeIPv4 </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 33 </id>
+		<name> igmpType </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 36 </id>
+		<name> flowActiveTimeout </name>
+		<dataType> unsigned16 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 37 </id>
+		<name> flowIdleTimeout </name>
+		<dataType> unsigned16 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 40 </id>
+		<name> exportedOctetTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 41 </id>
+		<name> exportedMessageTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 42 </id>
+		<name> exportedFlowRecordTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 44 </id>
+		<name> sourceIPv4Prefix </name>
+		<dataType> ipv4Address </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 45 </id>
+		<name> destinationIPv4Prefix </name>
+		<dataType> ipv4Address </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 46 </id>
+		<name> mplsTopLabelType </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 47 </id>
+		<name> mplsTopLabelIPv4Address </name>
+		<dataType> ipv4Address </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 52 </id>
+		<name> minimumTTL </name>
+		<dataType> unsigned8 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 53 </id>
+		<name> maximumTTL </name>
+		<dataType> unsigned8 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 54 </id>
+		<name> fragmentIdentification </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 55 </id>
+		<name> postIpClassOfService </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 56 </id>
+		<name> sourceMacAddress </name>
+		<dataType> macAddress </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 57 </id>
+		<name> postDestinationMacAddress </name>
+		<dataType> macAddress </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 58 </id>
+		<name> vlanId </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 59 </id>
+		<name> postVlanId </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 60 </id>
+		<name> ipVersion </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 61 </id>
+		<name> flowDirection </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 62 </id>
+		<name> ipNextHopIPv6Address </name>
+		<dataType> ipv6Address </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 63 </id>
+		<name> bgpNextHopIPv6Address </name>
+		<dataType> ipv6Address </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 64 </id>
+		<name> ipv6ExtensionHeaders </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> flags <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 70 </id>
+		<name> mplsTopLabelStackSection </name>
+		<dataType> octetArray </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 71 </id>
+		<name> mplsLabelStackSection2 </name>
+		<dataType> octetArray </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 72 </id>
+		<name> mplsLabelStackSection3 </name>
+		<dataType> octetArray </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 73 </id>
+		<name> mplsLabelStackSection4 </name>
+		<dataType> octetArray </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 74 </id>
+		<name> mplsLabelStackSection5 </name>
+		<dataType> octetArray </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 75 </id>
+		<name> mplsLabelStackSection6 </name>
+		<dataType> octetArray </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 76 </id>
+		<name> mplsLabelStackSection7 </name>
+		<dataType> octetArray </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 77 </id>
+		<name> mplsLabelStackSection8 </name>
+		<dataType> octetArray </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 78 </id>
+		<name> mplsLabelStackSection9 </name>
+		<dataType> octetArray </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 79 </id>
+		<name> mplsLabelStackSection10 </name>
+		<dataType> octetArray </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 80 </id>
+		<name> destinationMacAddress </name>
+		<dataType> macAddress </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 81 </id>
+		<name> postSourceMacAddress </name>
+		<dataType> macAddress </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 82 </id>
+		<name> interfaceName </name>
+		<dataType> string </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 83 </id>
+		<name> interfaceDescription </name>
+		<dataType> string </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 85 </id>
+		<name> octetTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 86 </id>
+		<name> packetTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 88 </id>
+		<name> fragmentOffset </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 90 </id>
+		<name> mplsVpnRouteDistinguisher </name>
+		<dataType> octetArray </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 91 </id>
+		<name> mplsTopLabelPrefixLength </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 98 </id>
+		<name> postIpDiffServCodePoint </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 99 </id>
+		<name> multicastReplicationFactor </name>
+		<dataType>  </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 128 </id>
+		<name> bgpNextAdjacentAsNumber </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 129 </id>
+		<name> bgpPrevAdjacentAsNumber </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 130 </id>
+		<name> exporterIPv4Address </name>
+		<dataType> ipv4Address </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 131 </id>
+		<name> exporterIPv6Address </name>
+		<dataType> ipv6Address </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 132 </id>
+		<name> droppedOctetDeltaCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> deltaCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 133 </id>
+		<name> droppedPacketDeltaCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> deltaCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 134 </id>
+		<name> droppedOctetTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 135 </id>
+		<name> droppedPacketTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 136 </id>
+		<name> flowEndReason </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 137 </id>
+		<name> commonPropertiesId </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 138 </id>
+		<name> observationPointId </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 139 </id>
+		<name> icmpTypeCodeIPv6 </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 140 </id>
+		<name> mplsTopLabelIPv6Address </name>
+		<dataType> ipv6Address </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 141 </id>
+		<name> lineCardId </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 142 </id>
+		<name> portId </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 143 </id>
+		<name> meteringProcessId </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 144 </id>
+		<name> exportingProcessId </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 145 </id>
+		<name> templateId </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 146 </id>
+		<name> wlanChannelId </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 147 </id>
+		<name> wlanSSID </name>
+		<dataType> string </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 148 </id>
+		<name> flowId </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 149 </id>
+		<name> observationDomainId </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 150 </id>
+		<name> flowStartSeconds </name>
+		<dataType> dateTimeSeconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 151 </id>
+		<name> flowEndSeconds </name>
+		<dataType> dateTimeSeconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 152 </id>
+		<name> flowStartMilliseconds </name>
+		<dataType> dateTimeMilliseconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 153 </id>
+		<name> flowEndMilliseconds </name>
+		<dataType> dateTimeMilliseconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 154 </id>
+		<name> flowStartMicroseconds </name>
+		<dataType> dateTimeMicroseconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 155 </id>
+		<name> flowEndMicroseconds </name>
+		<dataType> dateTimeMicroseconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 156 </id>
+		<name> flowStartNanoseconds </name>
+		<dataType> dateTimeNanoseconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 157 </id>
+		<name> flowEndNanoseconds </name>
+		<dataType> dateTimeNanoseconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 158 </id>
+		<name> flowStartDeltaMicroseconds </name>
+		<dataType> unsigned32 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 159 </id>
+		<name> flowEndDeltaMicroseconds </name>
+		<dataType> unsigned32 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 160 </id>
+		<name> systemInitTimeMilliseconds </name>
+		<dataType> dateTimeMilliseconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 161 </id>
+		<name> flowDurationMilliseconds </name>
+		<dataType> unsigned32 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 162 </id>
+		<name> flowDurationMicroseconds </name>
+		<dataType> unsigned32 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 163 </id>
+		<name> observedFlowTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 164 </id>
+		<name> ignoredPacketTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 165 </id>
+		<name> ignoredOctetTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 166 </id>
+		<name> notSentFlowTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 167 </id>
+		<name> notSentPacketTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 168 </id>
+		<name> notSentOctetTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 169 </id>
+		<name> destinationIPv6Prefix </name>
+		<dataType> ipv6Address </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 170 </id>
+		<name> sourceIPv6Prefix </name>
+		<dataType> ipv6Address </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 171 </id>
+		<name> postOctetTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 172 </id>
+		<name> postPacketTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 173 </id>
+		<name> flowKeyIndicator </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> flags <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 174 </id>
+		<name> postMCastPacketTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 175 </id>
+		<name> postMCastOctetTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 176 </id>
+		<name> icmpTypeIPv4 </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 177 </id>
+		<name> icmpCodeIPv4 </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 178 </id>
+		<name> icmpTypeIPv6 </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 179 </id>
+		<name> icmpCodeIPv6 </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 180 </id>
+		<name> udpSourcePort </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 181 </id>
+		<name> udpDestinationPort </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 182 </id>
+		<name> tcpSourcePort </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 183 </id>
+		<name> tcpDestinationPort </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 184 </id>
+		<name> tcpSequenceNumber </name>
+		<dataType> unsigned32 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 185 </id>
+		<name> tcpAcknowledgementNumber </name>
+		<dataType> unsigned32 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 186 </id>
+		<name> tcpWindowSize </name>
+		<dataType> unsigned16 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 187 </id>
+		<name> tcpUrgentPointer </name>
+		<dataType> unsigned16 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 188 </id>
+		<name> tcpHeaderLength </name>
+		<dataType> unsigned8 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 189 </id>
+		<name> ipHeaderLength </name>
+		<dataType> unsigned8 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 190 </id>
+		<name> totalLengthIPv4 </name>
+		<dataType> unsigned16 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 191 </id>
+		<name> payloadLengthIPv6 </name>
+		<dataType> unsigned16 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 192 </id>
+		<name> ipTTL </name>
+		<dataType> unsigned8 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 193 </id>
+		<name> nextHeaderIPv6 </name>
+		<dataType> unsigned8 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 194 </id>
+		<name> mplsPayloadLength </name>
+		<dataType> unsigned32 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 195 </id>
+		<name> ipDiffServCodePoint </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 196 </id>
+		<name> ipPrecedence </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 197 </id>
+		<name> fragmentFlags </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> flags <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 198 </id>
+		<name> octetDeltaSumOfSquares </name>
+		<dataType> unsigned64 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 199 </id>
+		<name> octetTotalSumOfSquares </name>
+		<dataType> unsigned64 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 200 </id>
+		<name> mplsTopLabelTTL </name>
+		<dataType> unsigned8 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 201 </id>
+		<name> mplsLabelStackLength </name>
+		<dataType> unsigned32 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 202 </id>
+		<name> mplsLabelStackDepth </name>
+		<dataType> unsigned32 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 203 </id>
+		<name> mplsTopLabelExp </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> flags <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 204 </id>
+		<name> ipPayloadLength </name>
+		<dataType> unsigned32 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 205 </id>
+		<name> udpMessageLength </name>
+		<dataType> unsigned16 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 206 </id>
+		<name> isMulticast </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> flags <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 207 </id>
+		<name> ipv4IHL </name>
+		<dataType> unsigned8 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 208 </id>
+		<name> ipv4Options </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> flags <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 209 </id>
+		<name> tcpOptions </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> flags <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 210 </id>
+		<name> paddingOctets </name>
+		<dataType> octetArray </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 211 </id>
+		<name> collectorIPv4Address </name>
+		<dataType> ipv4Address </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 212 </id>
+		<name> collectorIPv6Address </name>
+		<dataType> ipv6Address </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 213 </id>
+		<name> exportInterface </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 214 </id>
+		<name> exportProtocolVersion </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 215 </id>
+		<name> exportTransportProtocol </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 216 </id>
+		<name> collectorTransportPort </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 217 </id>
+		<name> exporterTransportPort </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 218 </id>
+		<name> tcpSynTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 219 </id>
+		<name> tcpFinTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 220 </id>
+		<name> tcpRstTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 221 </id>
+		<name> tcpPshTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 222 </id>
+		<name> tcpAckTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 223 </id>
+		<name> tcpUrgTotalCount </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 224 </id>
+		<name> ipTotalLength </name>
+		<dataType> unsigned64 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 225 </id>
+		<name> postNATSourceIPv4Address </name>
+		<dataType> ipv4Address </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 226 </id>
+		<name> postNATDestinationIPv4Address </name>
+		<dataType> ipv4Address </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 227 </id>
+		<name> postNAPTSourceTransportPort </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 228 </id>
+		<name> postNAPTDestinationTransportPort </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 229 </id>
+		<name> natOriginatingAddressRealm </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> flags <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 230 </id>
+		<name> natEvent </name>
+		<dataType> unsigned8 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 231 </id>
+		<name> initiatorOctets </name>
+		<dataType> unsigned64 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 232 </id>
+		<name> responderOctets </name>
+		<dataType> unsigned64 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 233 </id>
+		<name> firewallEvent </name>
+		<dataType> unsigned8 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 234 </id>
+		<name> ingressVRFID </name>
+		<dataType> unsigned32 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 235 </id>
+		<name> egressVRFID </name>
+		<dataType> unsigned32 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 236 </id>
+		<name> VRFname </name>
+		<dataType> string </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 237 </id>
+		<name> postMplsTopLabelExp </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> flags <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 238 </id>
+		<name> tcpWindowScale </name>
+		<dataType> unsigned16 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 239 </id>
+		<name> biflowDirection </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 240 </id>
+		<name> ethernetHeaderLength </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 241 </id>
+		<name> ethernetPayloadLength </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 242 </id>
+		<name> ethernetTotalLength </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 243 </id>
+		<name> dot1qVlanId </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 244 </id>
+		<name> dot1qPriority </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 245 </id>
+		<name> dot1qCustomerVlanId </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 246 </id>
+		<name> dot1qCustomerPriority </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 247 </id>
+		<name> metroEvcId </name>
+		<dataType> string </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 248 </id>
+		<name> metroEvcType </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 249 </id>
+		<name> pseudoWireId </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 250 </id>
+		<name> pseudoWireType </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 251 </id>
+		<name> pseudoWireControlWord </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 252 </id>
+		<name> ingressPhysicalInterface </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 253 </id>
+		<name> egressPhysicalInterface </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 254 </id>
+		<name> postDot1qVlanId </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 255 </id>
+		<name> postDot1qCustomerVlanId </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 256 </id>
+		<name> ethernetType </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 257 </id>
+		<name> postIpPrecedence </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 258 </id>
+		<name> collectionTimeMilliseconds </name>
+		<dataType> dateTimeMilliseconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 259 </id>
+		<name> exportSctpStreamId </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 260 </id>
+		<name> maxExportSeconds </name>
+		<dataType> dateTimeSeconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 261 </id>
+		<name> maxFlowEndSeconds </name>
+		<dataType> dateTimeSeconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 262 </id>
+		<name> messageMD5Checksum </name>
+		<dataType> octetArray </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 263 </id>
+		<name> messageScope </name>
+		<dataType> unsigned8 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 264 </id>
+		<name> minExportSeconds </name>
+		<dataType> dateTimeSeconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 265 </id>
+		<name> minFlowStartSeconds </name>
+		<dataType> dateTimeSeconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 266 </id>
+		<name> opaqueOctets </name>
+		<dataType> octetArray </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 267 </id>
+		<name> sessionScope </name>
+		<dataType> unsigned8 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 268 </id>
+		<name> maxFlowEndMicroseconds </name>
+		<dataType> dateTimeMicroseconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 269 </id>
+		<name> maxFlowEndMilliseconds </name>
+		<dataType> dateTimeMilliseconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 270 </id>
+		<name> maxFlowEndNanoseconds </name>
+		<dataType> dateTimeNanoseconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 271 </id>
+		<name> minFlowStartMicroseconds </name>
+		<dataType> dateTimeMicroseconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 272 </id>
+		<name> minFlowStartMilliseconds </name>
+		<dataType> dateTimeMilliseconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 273 </id>
+		<name> minFlowStartNanoseconds </name>
+		<dataType> dateTimeNanoseconds </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 274 </id>
+		<name> collectorCertificate </name>
+		<dataType> octetArray </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 275 </id>
+		<name> exporterCertificate </name>
+		<dataType> octetArray </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 276 </id>
+		<name> dataRecordsReliability </name>
+		<dataType> boolean </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 277 </id>
+		<name> observationPointType </name>
+		<dataType> unsigned8 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 278 </id>
+		<name> connectionCountNew </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> deltaCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 279 </id>
+		<name> connectionSumDuration </name>
+		<dataType> unsigned64 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 280 </id>
+		<name> connectionTransactionId </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 281 </id>
+		<name> postNATSourceIPv6Address </name>
+		<dataType> ipv6Address </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 282 </id>
+		<name> postNATDestinationIPv6Address </name>
+		<dataType> ipv6Address </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 283 </id>
+		<name> natPoolID </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 284 </id>
+		<name> natPoolName </name>
+		<dataType> string </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 285 </id>
+		<name> anonymizationFlags </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> flags <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 286 </id>
+		<name> anonymizationTechnique </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 287 </id>
+		<name> informationElementIndex </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 288 </id>
+		<name> p2pTechnology </name>
+		<dataType> string </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 289 </id>
+		<name> tunnelTechnology </name>
+		<dataType> string </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 290 </id>
+		<name> encryptedTechnology </name>
+		<dataType> string </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 291 </id>
+		<name> basicList </name>
+		<dataType> basicList </dataType>
+		<semantic> list <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 292 </id>
+		<name> subTemplateList </name>
+		<dataType> subTemplateList </dataType>
+		<semantic> list <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 293 </id>
+		<name> subTemplateMultiList </name>
+		<dataType> subTemplateMultiList </dataType>
+		<semantic> list <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 301 </id>
+		<name> selectionSequenceId </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 302 </id>
+		<name> selectorId </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 303 </id>
+		<name> informationElementId </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 304 </id>
+		<name> selectorAlgorithm </name>
+		<dataType> unsigned16 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 305 </id>
+		<name> samplingPacketInterval </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 306 </id>
+		<name> samplingPacketSpace </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 307 </id>
+		<name> samplingTimeInterval </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 308 </id>
+		<name> samplingTimeSpace </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 309 </id>
+		<name> samplingSize </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 310 </id>
+		<name> samplingPopulation </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 311 </id>
+		<name> samplingProbability </name>
+		<dataType> float64 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 313 </id>
+		<name> ipHeaderPacketSection </name>
+		<dataType> octetArray </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 314 </id>
+		<name> ipPayloadPacketSection </name>
+		<dataType> octetArray </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 316 </id>
+		<name> mplsLabelStackSection </name>
+		<dataType> octetArray </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 317 </id>
+		<name> mplsPayloadPacketSection </name>
+		<dataType> octetArray </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 318 </id>
+		<name> selectorIdTotalPktsObserved </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 319 </id>
+		<name> selectorIdTotalPktsSelected </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> totalCounter <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 320 </id>
+		<name> absoluteError </name>
+		<dataType> float64 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 321 </id>
+		<name> relativeError </name>
+		<dataType> float64 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 322 </id>
+		<name> observationTimeSeconds </name>
+		<dataType> dateTimeSeconds </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 323 </id>
+		<name> observationTimeMilliseconds </name>
+		<dataType> dateTimeMilliseconds </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 324 </id>
+		<name> observationTimeMicroseconds </name>
+		<dataType> dateTimeMicroseconds </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 325 </id>
+		<name> observationTimeNanoseconds </name>
+		<dataType> dateTimeNanoseconds </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 326 </id>
+		<name> digestHashValue </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 327 </id>
+		<name> hashIPPayloadOffset </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 328 </id>
+		<name> hashIPPayloadSize </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 329 </id>
+		<name> hashOutputRangeMin </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 330 </id>
+		<name> hashOutputRangeMax </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 331 </id>
+		<name> hashSelectedRangeMin </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 332 </id>
+		<name> hashSelectedRangeMax </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 333 </id>
+		<name> hashDigestOutput </name>
+		<dataType> boolean </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 334 </id>
+		<name> hashInitialiserValue </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 335 </id>
+		<name> selectorName </name>
+		<dataType> string </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 336 </id>
+		<name> upperCILimit </name>
+		<dataType> float64 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 337 </id>
+		<name> lowerCILimit </name>
+		<dataType> float64 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 338 </id>
+		<name> confidenceLevel </name>
+		<dataType> float64 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 339 </id>
+		<name> informationElementDataType </name>
+		<dataType> unsigned8 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 340 </id>
+		<name> informationElementDescription </name>
+		<dataType> string </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 341 </id>
+		<name> informationElementName </name>
+		<dataType> string </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 342 </id>
+		<name> informationElementRangeBegin </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 343 </id>
+		<name> informationElementRangeEnd </name>
+		<dataType> unsigned64 </dataType>
+		<semantic> quantity <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 344 </id>
+		<name> informationElementSemantics </name>
+		<dataType> unsigned8 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 345 </id>
+		<name> informationElementUnits </name>
+		<dataType> unsigned16 </dataType>
+		<semantic>  <semantic>
+	</element>
+	<element>
+		<enterprise> 0 <enterptrise>
+		<id> 346 </id>
+		<name> privateEnterpriseNumber </name>
+		<dataType> unsigned32 </dataType>
+		<semantic> identifier <semantic>
+	</element>
+</ipfix-elements>
