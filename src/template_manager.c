@@ -44,7 +44,6 @@
 #include <libxml/tree.h>
 
 #include "../ipfixcol.h"
-#include "template_manager.h"
 
 /**TEMPLATE_FIELD_LEN length of standard template field */
 #define TEMPLATE_FIELD_LEN 4
