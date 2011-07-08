@@ -297,7 +297,7 @@ static uint16_t print_data_record(void *tm, struct ipfix_data_set *records,
 			offset += 8;
 			break;
 		default:
-			printf("0x");
+			printf("Value: 0x");
 
 			for (i = 0; i < length; i++) {
     			printf("%02x", records->records[i]);
@@ -391,11 +391,11 @@ static uint8_t *process_sets(uint8_t *message, void *tm, uint8_t print)
 				if (print) {
 					print_template_record(template_record);
 				}
-				if (template_record->count == 0) {
+				if (ntohs(template_record->count) == 0) {
 					/* it's withdrawal message */
-					if (template_record->template_id == TEMPLATE_SET_TYPE) {
+					if (ntohs(template_record->template_id) == TEMPLATE_SET_TYPE) {
 						/* withdraw all Templates */
-						tm_remove_all_templates(tm, 0);
+						tm_remove_all_templates(tm, TM_TEMPLATE);
 					} else {
 						/* withdraw specific template */
 						tm_remove_template(tm, template_record->template_id);
@@ -404,7 +404,7 @@ static uint8_t *process_sets(uint8_t *message, void *tm, uint8_t print)
 					ptr += 4; /* 4=size of template record header */
 				} else {
 					/* add new template */
-					templ = tm_add_template(tm, template_record, TEMPLATE_SET_TYPE);
+					templ = tm_add_template(tm, template_record, TM_TEMPLATE);
 					ptr += templ->template_length;
 				}
 			}
@@ -437,11 +437,11 @@ static uint8_t *process_sets(uint8_t *message, void *tm, uint8_t print)
 				if (print) {
 					print_options_template_record(opt_template_record);
 				}
-				if (opt_template_record->count == 0) {
+				if (ntohs(opt_template_record->count) == 0) {
 					/* it's withdrawal message */
-					if (opt_template_record->template_id == OPTIONS_TEMPLATE_SET_TYPE) {
+					if (ntohs(opt_template_record->template_id) == OPTIONS_TEMPLATE_SET_TYPE) {
 						/* withdraw all Templates */
-						tm_remove_all_templates(tm, 1);
+						tm_remove_all_templates(tm, TM_OPTIONS_TEMPLATE);
 					} else {
 						/* withdraw specific template */
 						tm_remove_template(tm, opt_template_record->template_id);
@@ -449,8 +449,8 @@ static uint8_t *process_sets(uint8_t *message, void *tm, uint8_t print)
 
 					ptr += 6; /* 4=size of opt. template record header */
 				} else {
-					/* add new template */
-					templ = tm_add_template(tm, template_record, OPTIONS_TEMPLATE_SET_TYPE);
+					/* add new opt. template */
+					templ = tm_add_template(tm, template_record, TM_OPTIONS_TEMPLATE);
 					ptr += templ->template_length;
 				}
 			}

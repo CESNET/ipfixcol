@@ -81,6 +81,7 @@ void tm_destroy(struct ipfix_template_mgr *tm)
 	tm_remove_all_templates(tm, TM_TEMPLATE);
 	tm_remove_all_templates(tm, TM_OPTIONS_TEMPLATE);
 
+	free(tm->templates);
 	free(tm);
 }
 
@@ -127,7 +128,7 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 		exit(EXIT_FAILURE);
 	}
 	memset(templ, 0, fields_offset + offset);
-	memcpy(((uint8_t *)templ)+fields_offset, ((uint8_t *) template)+((type == 2) ? 4 : 6), offset);
+	memcpy(((uint8_t *)templ)+fields_offset, ((uint8_t *) template)+((type == TM_TEMPLATE) ? 4 : 6), offset);
 
 	templ->template_length = offset; 
 
