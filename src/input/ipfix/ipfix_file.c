@@ -69,6 +69,7 @@ struct ipfix_config {
 	xmlChar *xml_file;       /* input file URI from XML configuration 
 	                          * file */
 	char *file;              /* actual path where to store messages */
+	struct input_info_file *in_info; /* some info about input */
 };
 
 
@@ -146,6 +147,17 @@ int input_init(char *params, void **config)
 
 	conf->fd = fd;
 
+	/* input info */
+	conf->in_info = (struct input_info_file *) malloc(sizeof(*(conf->in_info)));
+	if (!conf->in_info) {
+		/* out of memory */
+		VERBOSE(CL_VERBOSE_OFF, "Not enough memory");
+		goto err_file;
+	}
+
+	conf->in_info->type = SOURCE_TYPE_IPFIX_FILE;
+	conf->in_info->name = conf->file;
+
 	/* we don't need this xml tree any more */
 	xmlFreeDoc(doc);
 
@@ -176,10 +188,11 @@ int get_packet(void *config, struct input_info** info, char **packet)
 	struct ipfix_header *header;
 	uint16_t packet_len;
 	struct ipfix_config *conf;
-	struct input_info *in_info;
 
 
 	conf = (struct ipfix_config *) config;
+
+	*info = (struct input_info *) conf->in_info;
 
 	header = (struct ipfix_header *) malloc(sizeof(*header));
 	if (!header) {
@@ -246,17 +259,6 @@ int get_packet(void *config, struct input_info** info, char **packet)
 		goto err_info;
 	}
 	counter += ret;
-
-	/* input info */
-	in_info = (struct input_info *) malloc(sizeof(*in_info));
-	if (!info) {
-		/* out of memory */
-		VERBOSE(CL_VERBOSE_OFF, "not enough memory");
-		goto err_info;
-	}
-
-	in_info->type = SOURCE_TYPE_IPFIX_FILE;
-	*info = in_info;
 
 	free(header);
 
