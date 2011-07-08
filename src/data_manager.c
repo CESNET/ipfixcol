@@ -115,17 +115,17 @@ static void data_manager_process_templates(struct ipfix_template_mgr *template_m
 			template_record = (struct ipfix_template_record*) ptr;
 			/* check for withdraw all templates message */
 			if (ntohs(template_record->template_id) == IPFIX_TEMPLATE_FLOWSET_ID &&
-				ntohs(template_record->count) == 0) {
+					ntohs(template_record->count) == 0) {
 				tm_remove_all_templates(template_mgr, TM_TEMPLATE);
-			/* check for withdraw template message */
+				/* check for withdraw template message */
 			} else if (ntohs(template_record->count) == 0) {
 				tm_remove_template(template_mgr, ntohs(template_record->template_id));
-			/* check whether template exists */
+				/* check whether template exists */
 			} else if ((template = tm_get_template(template_mgr, ntohs(template_record->template_id))) == NULL) {
 				/* add template */
 				MSG(0, "New template ID %i", ntohs(template_record->template_id));
 				template = tm_add_template(template_mgr, ptr, TM_TEMPLATE);
-			/* template already exits */
+				/* template already exits */
 			} else {
 				VERBOSE(CL_VERBOSE_BASIC, "Template ID %i already exists. Rewriting.", template->template_id);
 				template = tm_update_template(template_mgr, ptr, TM_TEMPLATE);
@@ -141,38 +141,38 @@ static void data_manager_process_templates(struct ipfix_template_mgr *template_m
 	/* check for new option templates */
 	for (i=0; msg->opt_templ_set[i] != NULL && i<1024; i++) {
 		ptr = (uint8_t*) &msg->opt_templ_set[i]->first_record;
-			while (ptr < (uint8_t*) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) {
-				options_template_record = (struct ipfix_template_record*) ptr;
-				/* check for withdraw all option templates message */
-				if (ntohs(options_template_record->template_id) == IPFIX_OPTION_FLOWSET_ID &&
+		while (ptr < (uint8_t*) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) {
+			options_template_record = (struct ipfix_template_record*) ptr;
+			/* check for withdraw all option templates message */
+			if (ntohs(options_template_record->template_id) == IPFIX_OPTION_FLOWSET_ID &&
 					ntohs(options_template_record->count) == 0) {
-					tm_remove_all_templates(template_mgr, TM_OPTIONS_TEMPLATE);
+				tm_remove_all_templates(template_mgr, TM_OPTIONS_TEMPLATE);
 				/* check for withdraw option template message */
-				} else if (ntohs(options_template_record->count) == 0) {
-					tm_remove_template(template_mgr, ntohs(options_template_record->template_id));
+			} else if (ntohs(options_template_record->count) == 0) {
+				tm_remove_template(template_mgr, ntohs(options_template_record->template_id));
 				/* check whether option template exists */
-				} else if ((template = tm_get_template(template_mgr, ntohs(options_template_record->template_id))) == NULL) {
-					/* add template */
-					MSG(0, "New option template ID %i", ntohs(options_template_record->template_id));
-					template = tm_add_template(template_mgr, ptr, TM_OPTIONS_TEMPLATE);
+			} else if ((template = tm_get_template(template_mgr, ntohs(options_template_record->template_id))) == NULL) {
+				/* add template */
+				MSG(0, "New option template ID %i", ntohs(options_template_record->template_id));
+				template = tm_add_template(template_mgr, ptr, TM_OPTIONS_TEMPLATE);
 				/* option template already exits */
-				} else {
-					VERBOSE(CL_VERBOSE_BASIC, "Option template ID %i already exists. Rewriting.", template->template_id);
-					template = tm_update_template(template_mgr, ptr, TM_OPTIONS_TEMPLATE);
-				}
-				if (template == NULL) {
-					VERBOSE(CL_VERBOSE_BASIC, "Cannot parse option template set, skipping to next set");
-					break;
-				}
-				ptr += template->template_length - sizeof(struct ipfix_template) + sizeof(struct ipfix_options_template_record);
+			} else {
+				VERBOSE(CL_VERBOSE_BASIC, "Option template ID %i already exists. Rewriting.", template->template_id);
+				template = tm_update_template(template_mgr, ptr, TM_OPTIONS_TEMPLATE);
 			}
+			if (template == NULL) {
+				VERBOSE(CL_VERBOSE_BASIC, "Cannot parse option template set, skipping to next set");
+				break;
+			}
+			ptr += template->template_length - sizeof(struct ipfix_template) + sizeof(struct ipfix_options_template_record);
 		}
+	}
 
 
 	/* add template to message data_couples */
 	for (i=0; msg->data_set[i].data_set != NULL && i<1023; i++) {
 		msg->data_set[i].template = tm_get_template(template_mgr, ntohs(msg->data_set[i].data_set->header.flowset_id));
-		/* check UDP template timeout \todo  chould be configurable */
+		/* check UDP template timeout \todo  should be configurable */
 		if ((msg->input_info->type == SOURCE_TYPE_UDP) && (time(NULL) - msg->data_set[i].template->last_transmission > 300)) {
 			VERBOSE(CL_VERBOSE_BASIC, "Data template ID %i expired! Using old template.", msg->data_set[i].template->template_id);
 		}
