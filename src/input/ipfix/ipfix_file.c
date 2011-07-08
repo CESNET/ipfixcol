@@ -136,7 +136,7 @@ int input_init(char *params, void **config)
 
 
 	/* open IPFIX file */
-	fd = open(params, O_RDONLY);
+	fd = open(conf->file, O_RDONLY);
 	if (fd == -1) {
 		/* input file doesn't exist or we don't have read permission */
 		VERBOSE(CL_VERBOSE_OFF, "unable to open input file");
