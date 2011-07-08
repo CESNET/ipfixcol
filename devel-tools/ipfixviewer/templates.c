@@ -52,7 +52,7 @@
 
 int tm_get_template_index(struct ipfix_template_mgr *tm, uint16_t template_id);
 
-int tm_init(void **config)
+struct ipfix_template_mgr *tm_create()
 {
 	struct ipfix_template_mgr *conf;
 
@@ -64,7 +64,7 @@ int tm_init(void **config)
 	memset(conf, 0, sizeof(*conf));
 
 	/* initial length of the array for templates */
-	conf->max_length = TEMPLATE_MANAGER_DEFAULT_SIZE;	
+	conf->max_length = TEMPLATE_MANAGER_DEFAULT_SIZE;
 
 	conf->templates = (struct ipfix_template **) malloc(sizeof(struct ipfix_template *) * conf->max_length);
 	if (!conf->templates) {
@@ -72,20 +72,16 @@ int tm_init(void **config)
 		exit(EXIT_FAILURE);
 	}
 
-	*config = conf;
-	
-	return 0;
+	return conf;
 }
 
 
-int tm_exit(void *config)
+void tm_destroy(struct ipfix_template_mgr *tm)
 {
-	struct ipfix_template_mgr *conf;
-	conf = (struct ipfix_template_mgr *) config;
+	tm_remove_all_templates(tm, TM_TEMPLATE);
+	tm_remove_all_templates(tm, TM_OPTIONS_TEMPLATE);
 
-	free(config);
-
-	return 0;
+	free(tm);
 }
 
 
@@ -139,7 +135,7 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 	templ->template_id = rec->template_id;
 	templ->field_count = rec->count;
 	
-	if (type == IPFIX_OPTION_FLOWSET_ID) {
+	if (type == TM_OPTIONS_TEMPLATE) {
 		opt_rec = (struct ipfix_options_template_record *) rec;
 		templ->scope_field_count = opt_rec->scope_field_count;
 	}

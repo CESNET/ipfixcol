@@ -93,11 +93,6 @@ struct input_options {
 };
 
 
-// FIXME - these should be in templates.h
-int tm_init(void **config);
-int tm_exit(void *config);
-
-
 /* help */
 static void usage(char *appname)
 {
@@ -678,7 +673,11 @@ int main(int argc, char **argv)
 
 
 	/* initialize template manager */
-	tm_init((void **) &tm);
+	tm = tm_create();
+	if (tm == NULL) {
+		fprintf(stderr, "Initialization of Template Manager failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	/* open input file */
 	fd = open(input_file, O_RDONLY);
@@ -727,7 +726,7 @@ int main(int argc, char **argv)
 	close(fd);
 
 	free(message);
-	tm_exit(tm);
+	tm_destroy(tm);
 
 	return 0;
 }
