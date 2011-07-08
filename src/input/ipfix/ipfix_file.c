@@ -285,6 +285,7 @@ int input_close(void **config)
 	}
 
 	xmlFree(conf->xml_file);
+	free(conf->in_info);
 	free(conf);
 
 	return ret;
