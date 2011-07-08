@@ -55,6 +55,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <stdio.h>
+#include <errno.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
 #include <commlbr.h>
@@ -188,9 +189,18 @@ int get_packet(void *config, struct input_info** info, char **packet)
 
 	/* read IPFIX header only */
 	ret = read(conf->fd, header, sizeof(*header));
-	if ((ret == -1) || (ret == 0)) {
-		/* error during reading */
-		VERBOSE(CL_VERBOSE_OFF, "error while reading from input file");
+	if (ret == -1) {
+		if (errno == EINTR) {
+			ret = INPUT_INTR;
+			goto err_header;
+		}
+	    VERBOSE(CL_VERBOSE_OFF, "Failed to receive IPFIX packet header: %s", strerror(errno));
+	    ret = INPUT_ERROR;
+		goto err_header;
+	}
+	if (ret == 0) {
+		/* EOF */
+		ret = INPUT_CLOSED;
 		goto err_header;
 	}
 
@@ -219,11 +229,21 @@ int get_packet(void *config, struct input_info** info, char **packet)
 	memcpy(*packet, header, sizeof(*header));
 	counter += sizeof(*header);
 
+	/* get rest of the packet */
 	ret = read(conf->fd, (*packet)+counter, packet_len-counter);
 	if (ret == -1) {
-		/* error during reading */
-		VERBOSE(CL_VERBOSE_OFF, "error while reading from input file");
-		goto err_header;
+		if (errno == EINTR) {
+			ret = INPUT_INTR;
+			goto err_info;
+		}
+	    VERBOSE(CL_VERBOSE_OFF, "Error while reading from input file: %s", strerror(errno));
+	    ret = INPUT_ERROR;
+		goto err_info;
+	}
+	if (ret == 0) {
+		/* EOF */
+		ret = INPUT_CLOSED;
+		goto err_info;
 	}
 	counter += ret;
 
@@ -244,10 +264,11 @@ int get_packet(void *config, struct input_info** info, char **packet)
 
 err_info:
 	free(*packet);
+	*packet = NULL;
 
 err_header:
 	free(header);
-	return -1;
+	return ret;
 }
 
 
