@@ -316,9 +316,7 @@ int main (int argc, char* argv[])
 	}
 
 	/* prepare storage xml_conf(s) */
-	//while (storage_plugins) {
 	for (aux_plugins = storage_plugins; aux_plugins != NULL; aux_plugins = aux_plugins->next) {
-		//aux_plugins = storage_plugins;
 		VERBOSE(CL_VERBOSE_ADVANCED, "[%d] Opening storage xml_conf: %s", proc_id, storage_plugins->config.file);
 
 		storage_plugin_handler = dlopen (aux_plugins->config.file, RTLD_LAZY);
@@ -418,6 +416,10 @@ int main (int argc, char* argv[])
                 /* free the memory allocated by xml_conf (if any) right away */
                 free(packet); 
                 packet = NULL;
+            }
+            /* if input plugin is file reader, end collector */
+            if (input_info->type == SOURCE_TYPE_IPFIX_FILE) {
+            	done = 1;
             }
         }
 		/* distribute data to the particular Data Manager for further processing */

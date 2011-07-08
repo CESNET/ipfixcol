@@ -158,7 +158,7 @@ void preprocessor_parse_msg (void* packet, struct input_info* input_info, struct
 	struct data_manager_config *config = NULL, *prev_config = NULL;
 
 	if (input_info == NULL || storage_plugins == NULL) {
-		VERBOSE (CL_VERBOSE_OFF, "Invalid parameters in function preprocessor_parse_msgx().");
+		VERBOSE (CL_VERBOSE_OFF, "Invalid parameters in function preprocessor_parse_msg().");
 		return;
 	}
 
