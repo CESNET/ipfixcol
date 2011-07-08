@@ -44,7 +44,6 @@
 #include <libxml/tree.h>
 
 #include "../ipfixcol.h"
-#include "template_manager.h"
 
 /**TEMPLATE_FIELD_LEN length of standard template field */
 #define TEMPLATE_FIELD_LEN 4
@@ -66,8 +65,8 @@ struct ipfix_template_mgr *tm_create() {
 
 void tm_destroy(struct ipfix_template_mgr *tm)
 {
-	tm_remove_all_templates(tm, 0);  /* Templates */
-	tm_remove_all_templates(tm, 1);  /* Options Templates */
+	tm_remove_all_templates(tm, TM_TEMPLATE);  /* Templates */
+	tm_remove_all_templates(tm, TM_OPTIONS_TEMPLATE);  /* Options Templates */
 	free(tm->templates);
 	free(tm);
 	return;
@@ -114,7 +113,7 @@ static int tm_fill_template(struct ipfix_template *template, void *template_reco
 	template->template_length = template_length;
 
 	/* set type specific attributes */
-	if (type == 0) { /* template */
+	if (type == TM_TEMPLATE) { /* template */
 		template->scope_field_count = 0;
 		/* copy fields and convert to host byte order */
 		tm_copy_fields((uint8_t*)template->fields,
@@ -143,7 +142,7 @@ static uint16_t tm_template_length(struct ipfix_template_record *template, int t
 	uint16_t fields_length=0;
 	uint16_t tmpl_length = sizeof(struct ipfix_template) - sizeof(template_ie);
 
-	if (type == 0) { /* template */
+	if (type == TM_TEMPLATE) { /* template */
 		fields = (uint8_t *) template->fields;
 	} else { /* options template */
 		fields = (uint8_t *) ((struct ipfix_options_template_record*) template)->fields;
@@ -204,22 +203,29 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 }
 
 
-int tm_update_template(struct ipfix_template_mgr *tm, void *template, int type)
+struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *template, int type)
 {
 	struct ipfix_template *tmpl;
 
-	tmpl = tm_get_template(tm, ((struct ipfix_template_record*) template)->template_id);
-	return tm_fill_template(tmpl, template, tmpl->template_length, type);
+	tmpl = tm_get_template(tm, ntohs(((struct ipfix_template_record*) template)->template_id));
+	if (tm_fill_template(tmpl, template, tmpl->template_length, type) != 0) {
+		return NULL;
+	}
+	return tmpl;
 }
 
 
 struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, uint16_t template_id)
 {
-	int i;
+	int i, count=0;
 
-	for (i=0; i < tm->max_length; i++) {
-		if (tm->templates[i] != NULL && tm->templates[i]->template_id == template_id) {
-			return tm->templates[i];
+	/* the array may have holes, thus the counter */
+	for (i=0; i < tm->max_length && count < tm->counter; i++) {
+		if (tm->templates[i] != NULL) {
+			if (tm->templates[i]->template_id == template_id) {
+				return tm->templates[i];
+			}
+			count++;
 		}
 	}
 	/* template not found */

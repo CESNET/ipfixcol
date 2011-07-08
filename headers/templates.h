@@ -55,14 +55,26 @@
 #define IPFIXCOL_TEMPLATES_H_
 
 /**
+ * \def TM_OPTIONS_TEMPLATE
+ * \brief Template manager's options template number
+ */
+#define TM_OPTIONS_TEMPLATE 1
+
+/**
+ * \def TM_TEMPLATE
+ * \brief Template manager's template number
+ */
+#define TM_TEMPLATE 0
+
+/**
  * \struct ipfix_template_t
  * \brief Structure for storing Template Record/Options Template Record
  *
  * All data in this structure are in host byte order
  */
 struct ipfix_template {
-	uint8_t template_type;       /**Type of Template - 0 = Template,
-	                              * 1 = Options Template */
+	uint8_t template_type;       /**Type of Template - TM_TEMPLATE = Template,
+	                              * TM_OPTIONS_TEMPLATE = Options Template */
 	time_t last_transmission;    /**Time of last transmission of Template,
 	                              * UDP only */
 	uint16_t template_id;        /**Template ID */
@@ -87,8 +99,8 @@ struct ipfix_template_mgr {
  *
  * \param[in]  tm Data Manager specific structure for storing Templates.
  * \param[in]  template Pointer where new Template Record starts.
- * \param[in]  type Type of the Template Record. 0 = Template, 1 = Options
- * Template.
+ * \param[in]  type Type of the Template Record. TM_TEMPLATE = Template,
+ * TM_OPTIONS_TEMPLATE = Options Template.
  * \return Pointer to new ipfix_template on success, NULL otherwise
  */
 struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm,
@@ -99,12 +111,12 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm,
  *
  * \param[in]  tm Data Manager specific structure for storing Templates.
  * \param[in]  template Pointer where new Template Record starts.
- * \param[in]  type Type of the Template Record. 0 = Template, 1 = Options
- * Template.
- * \return 0 on success, negative value if error occurs.
+ * \param[in]  type Type of the Template Record. TM_TEMPLATE = Template,
+ * TM_OPTIONS_TEMPLATE = Options Template.
+ * \return updated ipfix_template on success, NULL if error occurs.
  */
-int tm_update_template(struct ipfix_template_mgr *tm, void *template,
-                       int type);
+struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm,
+											void *template, int type);
 
 /**
  * \brief Function for specific Template lookup.
@@ -112,7 +124,7 @@ int tm_update_template(struct ipfix_template_mgr *tm, void *template,
  * \param[in]  tm Data Manager specific structure for storing Templates.
  * \param[in]  template_id ID of the Template that we are interested in.
  * \return pointer on the Temaplate on success, NULL if there is no such
- * Temaplate.
+ * Template.
  */
 struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm,
                                          uint16_t template_id);
@@ -131,11 +143,29 @@ int tm_remove_template(struct ipfix_template_mgr *tm,
  * \brief Function for removing all Temaplates of specific type.
  *
  * \param[in]  tm Data Manager specific structure for storing Templates.
- * \param[in]  type type of the template to withdraw. 0 = Template, 1 = Options
- * Template.
+ * \param[in]  type type of the template to withdraw. TM_TEMPLATE = Template,
+ * TM_OPTIONS_TEMPLATE = Options Template.
  * \return 0 on success, negative value otherwise.
  */
 int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type);
+
+
+/**
+ * \brief Create new template manager and set default values
+ *
+ * @return struct ipfix_template_manager New template manager
+ */
+struct ipfix_template_mgr *tm_create();
+
+
+/**
+ * \brief Destroys and frees specified template manager
+ *
+ * @param[in] ipfix_template_mgr Template manager to be destroyed
+ * @return void
+ */
+void tm_destroy(struct ipfix_template_mgr *tm);
+
 
 #endif /* IPFIXCOL_TEMPLATES_H_ */
 
