@@ -55,6 +55,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <stdio.h>
+#include <errno.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
 #include <commlbr.h>
@@ -68,6 +69,7 @@ struct ipfix_config {
 	xmlChar *xml_file;       /* input file URI from XML configuration 
 	                          * file */
 	char *file;              /* actual path where to store messages */
+	struct input_info_file *in_info; /* some info about input */
 };
 
 
@@ -136,7 +138,7 @@ int input_init(char *params, void **config)
 
 
 	/* open IPFIX file */
-	fd = open(params, O_RDONLY);
+	fd = open(conf->file, O_RDONLY);
 	if (fd == -1) {
 		/* input file doesn't exist or we don't have read permission */
 		VERBOSE(CL_VERBOSE_OFF, "unable to open input file");
@@ -144,6 +146,17 @@ int input_init(char *params, void **config)
 	}
 
 	conf->fd = fd;
+
+	/* input info */
+	conf->in_info = (struct input_info_file *) malloc(sizeof(*(conf->in_info)));
+	if (!conf->in_info) {
+		/* out of memory */
+		VERBOSE(CL_VERBOSE_OFF, "Not enough memory");
+		goto err_file;
+	}
+
+	conf->in_info->type = SOURCE_TYPE_IPFIX_FILE;
+	conf->in_info->name = conf->file;
 
 	/* we don't need this xml tree any more */
 	xmlFreeDoc(doc);
@@ -175,10 +188,11 @@ int get_packet(void *config, struct input_info** info, char **packet)
 	struct ipfix_header *header;
 	uint16_t packet_len;
 	struct ipfix_config *conf;
-	struct input_info *in_info;
 
 
 	conf = (struct ipfix_config *) config;
+
+	*info = (struct input_info *) conf->in_info;
 
 	header = (struct ipfix_header *) malloc(sizeof(*header));
 	if (!header) {
@@ -188,9 +202,18 @@ int get_packet(void *config, struct input_info** info, char **packet)
 
 	/* read IPFIX header only */
 	ret = read(conf->fd, header, sizeof(*header));
-	if ((ret == -1) || (ret == 0)) {
-		/* error during reading */
-		VERBOSE(CL_VERBOSE_OFF, "error while reading from input file");
+	if (ret == -1) {
+		if (errno == EINTR) {
+			ret = INPUT_INTR;
+			goto err_header;
+		}
+	    VERBOSE(CL_VERBOSE_OFF, "Failed to receive IPFIX packet header: %s", strerror(errno));
+	    ret = INPUT_ERROR;
+		goto err_header;
+	}
+	if (ret == 0) {
+		/* EOF */
+		ret = INPUT_CLOSED;
 		goto err_header;
 	}
 
@@ -219,24 +242,23 @@ int get_packet(void *config, struct input_info** info, char **packet)
 	memcpy(*packet, header, sizeof(*header));
 	counter += sizeof(*header);
 
+	/* get rest of the packet */
 	ret = read(conf->fd, (*packet)+counter, packet_len-counter);
 	if (ret == -1) {
-		/* error during reading */
-		VERBOSE(CL_VERBOSE_OFF, "error while reading from input file");
-		goto err_header;
-	}
-	counter += ret;
-
-	/* input info */
-	in_info = (struct input_info *) malloc(sizeof(*in_info));
-	if (!info) {
-		/* out of memory */
-		VERBOSE(CL_VERBOSE_OFF, "not enough memory");
+		if (errno == EINTR) {
+			ret = INPUT_INTR;
+			goto err_info;
+		}
+	    VERBOSE(CL_VERBOSE_OFF, "Error while reading from input file: %s", strerror(errno));
+	    ret = INPUT_ERROR;
 		goto err_info;
 	}
-
-	in_info->type = SOURCE_TYPE_IPFIX_FILE;
-	*info = in_info;
+	if (ret == 0) {
+		/* EOF */
+		ret = INPUT_CLOSED;
+		goto err_info;
+	}
+	counter += ret;
 
 	free(header);
 
@@ -244,10 +266,11 @@ int get_packet(void *config, struct input_info** info, char **packet)
 
 err_info:
 	free(*packet);
+	*packet = NULL;
 
 err_header:
 	free(header);
-	return -1;
+	return ret;
 }
 
 
@@ -262,6 +285,7 @@ int input_close(void **config)
 	}
 
 	xmlFree(conf->xml_file);
+	free(conf->in_info);
 	free(conf);
 
 	return ret;
