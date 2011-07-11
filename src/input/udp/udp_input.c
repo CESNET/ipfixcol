@@ -407,6 +407,18 @@ int input_close(void **config)
     /* free input_info list */
     while (conf->info_list) {
     	info_list = conf->info_list->next;
+    	if (conf->info_list->info.template_life_time != NULL) {
+    		free(conf->info_list->info.template_life_time);
+    	}
+    	if (conf->info_list->info.template_life_packet != NULL) {
+    		free(conf->info_list->info.template_life_packet);
+    	}
+    	if (conf->info_list->info.options_template_life_time != NULL) {
+    		free(conf->info_list->info.options_template_life_time);
+    	}
+    	if (conf->info_list->info.options_template_life_packet != NULL) {
+    		free(conf->info_list->info.options_template_life_packet);
+    	}
     	free(conf->info_list);
     	conf->info_list = info_list;
     }

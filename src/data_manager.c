@@ -172,13 +172,14 @@ static void data_manager_process_templates(struct ipfix_template_mgr *template_m
 	/* add template to message data_couples */
 	for (i=0; msg->data_set[i].data_set != NULL && i<1023; i++) {
 		msg->data_set[i].template = tm_get_template(template_mgr, ntohs(msg->data_set[i].data_set->header.flowset_id));
-		/* check UDP template timeout \todo  should be configurable */
-		if ((msg->input_info->type == SOURCE_TYPE_UDP) && (time(NULL) - msg->data_set[i].template->last_transmission > 300)) {
-			VERBOSE(CL_VERBOSE_BASIC, "Data template ID %i expired! Using old template.", msg->data_set[i].template->template_id);
-		}
 		if (msg->data_set[i].template == NULL) {
 			VERBOSE(CL_VERBOSE_OFF, "Data template with ID %i not found!", ntohs(msg->data_set[i].data_set->header.flowset_id));
 			msg->data_set[i].data_set = NULL;
+		} else {
+			/* check UDP template timeout \todo  should be configurable */
+			if ((msg->input_info->type == SOURCE_TYPE_UDP) && (time(NULL) - msg->data_set[i].template->last_transmission > 300)) {
+				VERBOSE(CL_VERBOSE_BASIC, "Data template ID %i expired! Using old template.", msg->data_set[i].template->template_id);
+			}
 		}
 	}
 	return;
