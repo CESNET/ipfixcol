@@ -88,7 +88,7 @@ static void tm_copy_fields(uint8_t *to, uint8_t *from, uint16_t length)
 			*((uint16_t*)(template_ptr+offset+i*2)) = ntohs(*((uint16_t*)(tmpl_ptr+offset+i*2)));
 		}
 		offset += TEMPLATE_FIELD_LEN;
-		if (*(template_ptr+offset) & 0x8000) { /* enterprise element has first bit set to 1*/
+		if (*(template_ptr+offset-TEMPLATE_FIELD_LEN) & 0x8000) { /* enterprise element has first bit set to 1*/
 			for (i=0; i < TEMPLATE_ENT_NUM_LEN / 4; i++) {
 				*((uint32_t*)(template_ptr+offset)) = ntohl(*((uint32_t*)(tmpl_ptr+offset)));
 			}
@@ -107,7 +107,6 @@ static int tm_fill_template(struct ipfix_template *template, void *template_reco
 
 	/* set attributes common to both template types */
 	template->template_type = type;
-	template->last_transmission = time(NULL);
 	template->field_count = ntohs(tmpl->count);
 	template->template_id = ntohs(tmpl->template_id);
 	template->template_length = template_length;

@@ -67,6 +67,12 @@
 #define TM_TEMPLATE 0
 
 /**
+ * \def TM_UDP_TIMEOUT
+ * \brief Specifies Defaulttemplate timeout for UDP
+ */
+#define TM_UDP_TIMEOUT 1800
+
+/**
  * \struct ipfix_template_t
  * \brief Structure for storing Template Record/Options Template Record
  *
@@ -77,6 +83,8 @@ struct ipfix_template {
 	                              * TM_OPTIONS_TEMPLATE = Options Template */
 	time_t last_transmission;    /**Time of last transmission of Template,
 	                              * UDP only */
+	uint32_t last_message;		 /** Message number of last update,
+	 	 	 	 	 	 	 	  * UDP only */
 	uint16_t template_id;        /**Template ID */
 	uint16_t field_count;        /**Number of fields in Template Record */
 	uint16_t scope_field_count;  /**Number of scope fields */

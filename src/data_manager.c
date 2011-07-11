@@ -47,6 +47,18 @@
 #include "data_manager.h"
 
 /**
+ * \brief
+ *
+ * Structure holding UDP specific template configuration
+ */
+struct udp_conf {
+	uint16_t template_life_time;
+	uint16_t template_life_packet;
+	uint16_t options_template_life_time;
+	uint16_t options_template_life_packet;
+};
+
+/**
  * \brief Deallocate Data manager's configuration structure.
  *
  * @param config Configuration structure to destroy.
@@ -97,16 +109,21 @@ static inline void data_manager_free (struct data_manager_config* config)
  *   but is passed in msg to storage plugin
  * - When template is malformed and cannot be added to template manager,
  *   rest of the template set is discarded
+ * - Options templates UDP lifetimes not checked
+ *
+ * @param[in,out] template_mgr	Template manager
+ * @param[in] msg IPFIX			message
+ * @param[in] udp_conf			UDP template configuration
+ * @return uint32_t Number of received data reccords
  */
-static void data_manager_process_templates(struct ipfix_template_mgr *template_mgr, struct ipfix_message *msg)
+static uint32_t data_manager_process_templates(struct ipfix_template_mgr *template_mgr, struct ipfix_message *msg,
+												struct udp_conf *udp_conf, uint32_t msg_counter)
 {
 	struct ipfix_template *template;
 	struct ipfix_template_record *template_record;
 	struct ipfix_template_record *options_template_record;
 	uint8_t *ptr;
 	int i;
-
-	/** \todo do templates management */
 
 	/* check for new templates */
 	for (i=0; msg->templ_set[i] != NULL && i<1024; i++) {
@@ -125,7 +142,7 @@ static void data_manager_process_templates(struct ipfix_template_mgr *template_m
 				/* add template */
 				MSG(0, "New template ID %i", ntohs(template_record->template_id));
 				template = tm_add_template(template_mgr, ptr, TM_TEMPLATE);
-				/* template already exits */
+				/* template already exists */
 			} else {
 				VERBOSE(CL_VERBOSE_BASIC, "Template ID %i already exists. Rewriting.", template->template_id);
 				template = tm_update_template(template_mgr, ptr, TM_TEMPLATE);
@@ -133,6 +150,10 @@ static void data_manager_process_templates(struct ipfix_template_mgr *template_m
 			if (template == NULL) {
 				VERBOSE(CL_VERBOSE_BASIC, "Cannot parse template set, skipping to next set");
 				break;
+				/* update UDP timeouts */
+			} else if (msg->input_info->type == SOURCE_TYPE_UDP) {
+					template->last_message = msg_counter;
+					template->last_transmission = time(NULL);
 			}
 			ptr += template->template_length - sizeof(struct ipfix_template) + sizeof(struct ipfix_template_record);
 		}
@@ -153,7 +174,7 @@ static void data_manager_process_templates(struct ipfix_template_mgr *template_m
 				/* check whether option template exists */
 			} else if ((template = tm_get_template(template_mgr, ntohs(options_template_record->template_id))) == NULL) {
 				/* add template */
-				MSG(0, "New option template ID %i", ntohs(options_template_record->template_id));
+				MSG(4, "New option template ID %i", ntohs(options_template_record->template_id));
 				template = tm_add_template(template_mgr, ptr, TM_OPTIONS_TEMPLATE);
 				/* option template already exits */
 			} else {
@@ -163,11 +184,14 @@ static void data_manager_process_templates(struct ipfix_template_mgr *template_m
 			if (template == NULL) {
 				VERBOSE(CL_VERBOSE_BASIC, "Cannot parse option template set, skipping to next set");
 				break;
+				/* update UDP timeouts */
+			} else if (msg->input_info->type == SOURCE_TYPE_UDP) {
+				template->last_message = msg_counter;
+				template->last_transmission = time(NULL);
 			}
 			ptr += template->template_length - sizeof(struct ipfix_template) + sizeof(struct ipfix_options_template_record);
 		}
 	}
-
 
 	/* add template to message data_couples */
 	for (i=0; msg->data_set[i].data_set != NULL && i<1023; i++) {
@@ -176,13 +200,47 @@ static void data_manager_process_templates(struct ipfix_template_mgr *template_m
 			VERBOSE(CL_VERBOSE_OFF, "Data template with ID %i not found!", ntohs(msg->data_set[i].data_set->header.flowset_id));
 			msg->data_set[i].data_set = NULL;
 		} else {
-			/* check UDP template timeout \todo  should be configurable */
-			if ((msg->input_info->type == SOURCE_TYPE_UDP) && (time(NULL) - msg->data_set[i].template->last_transmission > 300)) {
+			if ((msg->input_info->type == SOURCE_TYPE_UDP) && /* source UDP */
+					((time(NULL) - msg->data_set[i].template->last_transmission > udp_conf->template_life_time) || /* lifetime expired */
+					(udp_conf->template_life_packet > 0 && /* life packet should be checked */
+					(uint32_t) (msg_counter - msg->data_set[i].template->last_message) > udp_conf->template_life_packet))) {
 				VERBOSE(CL_VERBOSE_BASIC, "Data template ID %i expired! Using old template.", msg->data_set[i].template->template_id);
 			}
 		}
 	}
-	return;
+	return i;
+}
+
+/**
+ * \brief Fill in udp_info structure when managing UDP input
+ *
+ * @param[in] input_info 	Input information from input plugin
+ * @param[in,out] udp_conf 	UDP template configuration structure to be filled in
+ * @return void
+ */
+static void data_manager_udp_init (struct input_info_network *input_info, struct udp_conf *udp_conf) {
+	if (input_info->type == SOURCE_TYPE_UDP) {
+		if (((struct input_info_network*) input_info)->template_life_time != NULL) {
+			udp_conf->template_life_time = atoi(((struct input_info_network*) input_info)->template_life_time);
+		} else {
+			udp_conf->template_life_time = TM_UDP_TIMEOUT;
+		}
+		if (input_info->template_life_packet != NULL) {
+			udp_conf->template_life_packet = atoi(input_info->template_life_packet);
+		} else {
+			udp_conf->template_life_packet = 0;
+		}
+		if (input_info->options_template_life_time != NULL) {
+			udp_conf->options_template_life_time = atoi(((struct input_info_network*) input_info)->options_template_life_time);
+		} else {
+			udp_conf->options_template_life_time = TM_UDP_TIMEOUT;
+		}
+		if (input_info->options_template_life_packet != NULL) {
+			udp_conf->options_template_life_packet = atoi(input_info->options_template_life_packet);
+		} else {
+			udp_conf->options_template_life_packet = 0;
+		}
+	}
 }
 
 /**
@@ -196,7 +254,12 @@ static void* data_manager_thread (void* cfg)
 	struct data_manager_config *config = (struct data_manager_config*) cfg;
     struct storage_list *aux_storage = config->storage_plugins;
 	struct ipfix_message *msg;
+	struct udp_conf udp_conf;
 	unsigned int index;
+	uint32_t sequence_number = 0, msg_counter = 0;
+
+	/* initialise UDP timeouts */
+	data_manager_udp_init((struct input_info_network*) config->input_info, &udp_conf);
 
 	/* loop will break upon receiving NULL from buffer */
 	while (1) {
@@ -204,10 +267,19 @@ static void* data_manager_thread (void* cfg)
 
 		/* read new data */
 		msg = rbuffer_read (config->in_queue, &index);
-
-		/* process templates */
 		if (msg != NULL) {
-			data_manager_process_templates(config->template_mgr, msg);
+			msg_counter++;
+
+			/* check sequence number */
+			/* \todo handle out of order messages */
+			if (sequence_number != ntohl(msg->pkt_header->sequence_number)) {
+				VERBOSE(CL_VERBOSE_ADVANCED, "Sequence number does not match: expected %u, got %u",
+						sequence_number, ntohl(msg->pkt_header->sequence_number));
+				sequence_number = ntohl(msg->pkt_header->sequence_number);
+			}
+
+			/* process templates */
+			sequence_number += data_manager_process_templates(config->template_mgr, msg, &udp_conf, msg_counter);
 		}
 
 		/* pass data into the storage plugins */
@@ -226,7 +298,7 @@ static void* data_manager_thread (void* cfg)
 
         /* passing NULL message means closing */
         if (msg == NULL) {
-			VERBOSE (CL_VERBOSE_ADVANCED, "ODID %d: No more data from IPFIX preprocessor.exit(1);",
+			VERBOSE (CL_VERBOSE_ADVANCED, "ODID %d: No more data from IPFIX preprocessor.",
 					config->observation_domain_id);
 			break;
 		}
