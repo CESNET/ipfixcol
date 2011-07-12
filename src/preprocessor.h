@@ -1,6 +1,6 @@
 /**
- * \file data_mngmt.h
- * \author Radek Krejci <rkrejci@cesnet.cz>
+ * \file preprocessor.h
+ * \author Petr Velan <petr.velan@cesnet.cz>
  * \brief Data Manager's functions
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
@@ -37,29 +37,34 @@
  *
  */
 
-#ifndef DATA_MNGMT_H_
-#define DATA_MNGMT_H_
+#ifndef PREPROCESSOR_H_
+#define PREPROCESSOR_H_
 
 #include <stdint.h>
 #include <pthread.h>
 
 #include "../ipfixcol.h"
-
+#include "config.h"
 #include "queues.h"
 
-struct data_manager_config {
-	uint32_t observation_domain_id;
-	pthread_t thread_id;
-	unsigned int plugins_count;
-	struct ring_buffer *in_queue;
-	struct ring_buffer *store_queue;
-	struct storage* plugins;
-	struct data_manager_config *next;
-};
+/**
+ * \brief Does first basic parsing of raw ipfix message
+ *
+ * Creates pointers to data and template sets, creates data manager for
+ * observation id if it does not exist.
+ *
+ * @param[in] packet Raw packet from input plugin
+ * @param[in] input_info Input information from input plugin
+ * @param[in] storage_plugins List of storage plugins that should be passed to data manager
+ * @return void
+ */
+void preprocessor_parse_msg (void* packet, struct input_info* input_info, struct storage_list* storage_plugins);
 
-void parse_ipfix (void* packet, struct input_info* input_info, struct storage* storage_plugins);
+/**
+ * \brief Close all data managers and their storage plugins
+ *
+ * @return void
+ */
+void preprocessor_close ();
 
-struct data_manager_config* create_data_manager (uint32_t observation_domain_id, struct storage* storage_plugins);
-
-
-#endif /* DATA_MNGMT_H_ */
+#endif /* PREPROCESSOR_H_ */

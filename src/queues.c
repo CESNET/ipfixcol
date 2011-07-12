@@ -111,7 +111,7 @@ struct ring_buffer* rbuffer_init (unsigned int size)
  */
 int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, unsigned int refcount)
 {
-	if (rbuffer == NULL || record == NULL || refcount == 0) {
+	if (rbuffer == NULL || refcount == 0) {
 		VERBOSE (CL_VERBOSE_OFF, "Invalid ring buffer's write parameters.");
 		return (EXIT_FAILURE);
 	}
@@ -141,7 +141,7 @@ int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, un
 	 */
 	rbuffer->data[rbuffer->write_offset] = record;
 	rbuffer->data_references[rbuffer->write_offset] = refcount;
-	rbuffer->write_offset++;
+	rbuffer->write_offset = (rbuffer->write_offset + 1) % rbuffer->size;
 	__sync_fetch_and_add (&(rbuffer->count), 1); /* atomic rbuffer->count++; */
 
 	/* I did change of rbuffer->count so inform about it other threads (read threads) */
@@ -162,16 +162,17 @@ int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, un
  * to get record from index (if value in index is valid).
  * @return Read data from specified index (or read offset) or NULL on error.
  */
-struct ipfix_message* rbuffer_read (struct ring_buffer* rbuffer, unsigned int index)
+struct ipfix_message* rbuffer_read (struct ring_buffer* rbuffer, unsigned int *index)
 {
 	unsigned int req_count;
 
-	if (index == (unsigned int) -1) {
+	if (*index == (unsigned int) -1) {
 		/* if no index specified -> read from read_offset, so just 1 record in ring buffer required */
+		*index = rbuffer->read_offset;
 		req_count = 1;
 	} else {
 		/* we will read from specified index so get required ring buffer's count for the index */
-		req_count = 1 + ((rbuffer->read_offset > index) ? rbuffer->size + index - rbuffer->read_offset : index - rbuffer->read_offset);
+		req_count = 1 + ((rbuffer->read_offset > *index) ? rbuffer->size + *index - rbuffer->read_offset : *index - rbuffer->read_offset);
 	}
 
 	/* check if the ring buffer is full enough, if not wait (and block) for it */
@@ -191,12 +192,7 @@ struct ipfix_message* rbuffer_read (struct ring_buffer* rbuffer, unsigned int in
 	}
 
 	/* get data */
-	if (index == (unsigned int) -1) {
-		/* if no index specified -> read from read_offset */
-		return (rbuffer->data[rbuffer->read_offset]);
-	} else {
-		return (rbuffer->data[index]);
-	}
+	return (rbuffer->data[*index]);
 
 	return (NULL);
 }

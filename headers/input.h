@@ -57,6 +57,23 @@
 #include <arpa/inet.h>
 
 /**
+ * \def INPUT_CLOSED
+ * Some input handled by plugin closed
+ */
+#define INPUT_CLOSED 0
+/**
+ * \def INPUT_ERROR
+ * An error occured in get_packet function
+ */
+#define INPUT_ERROR -1
+/**
+ * \def INPUT_INTR
+ * Function interupted by SIGINT
+ */
+#define INPUT_INTR -2
+
+
+/**
  * \enum SOURCE_TYPE
  * \brief Type of the source of the input data.
  *
@@ -158,7 +175,8 @@ int input_init(char *params, void **config);
  * function.
  * \param[out] info   Information structure describing the source of the data.
  * \param[out] packet Flow information data in the form of IPFIX packet.
- * \return 0 on success, nonzero else.
+ * \return the length of packet on success, INPUT_CLOSE when some connection 
+ *  closed, INPUT_ERROR on error.
  */
 int get_packet(void *config, struct input_info** info, char **packet);
 

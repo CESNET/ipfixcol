@@ -1,0 +1,22 @@
+################################################
+# Makefile for the ipfixcol tcp input plugin   #
+################################################
+
+CC      = @CC@
+CFLAGS  = @CFLAGS@
+LIBS    = @LIBS@
+INCLUDE = "-I../../../"
+
+all: tcp_input.so
+
+# udp_input.so
+tcp_input.so: tcp_input.o
+	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,tcp_input.so.1 -o $@ $< -lc
+	rm tcp_input.o
+	
+tcp_input.o: tcp_input.c
+	$(CC) $(CFLAGS) $(INCLUDE) -fPIC -c $<
+
+clean:
+	rm -f tcp_input.so
+

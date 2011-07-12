@@ -65,24 +65,35 @@
 #include "ipfixcol.h"
 
 
-/* IPFIX storage plugin specific "config" structure */
+/**
+ * \struct ipfix_config
+ *
+ * \brief IPFIX storage plugin specific "config" structure
+ */
 struct ipfix_config {
-	int fd;                     /* file descriptor of an output file */
-	uint32_t fcounter;          /* number of created files */
-	uint64_t bcounter;          /* bytes written into a current output
+	int fd;                     /**< file descriptor of an output file */
+	uint32_t fcounter;          /**< number of created files */
+	uint64_t bcounter;          /**< bytes written into a current output
 	                             * file */
-	xmlChar *xml_file;          /* URI from XML configuration file */
-	char *file;                 /* actual path where to store messages */
+	xmlChar *xml_file;          /**< URI from XML configuration file */
+	char *file;                 /**< actual path where to store messages */
 };
 
 
-/* prepare (open, create) output file  */
+/**
+ * \brief Open/create output file
+ *
+ * \param[in] conf  output plugin config structure
+ * \return  0 on success, negative value otherwise.
+ */
 static int prepare_output_file(struct ipfix_config *config)
 {
 	int fd;
 
 	/* file counter */
 	config->fcounter += 1;
+	/* byte counter */
+	config->bcounter = 0;
 
 	fd = open(config->file, O_WRONLY | O_CREAT | O_TRUNC,
 	          S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
@@ -97,7 +108,12 @@ static int prepare_output_file(struct ipfix_config *config)
 	return 0;
 }
 
-/* close output file */
+/**
+ * \brief Close output file
+ *
+ * \param[in] conf  output plugin config structure
+ * \return  0 on success, negative value otherwise
+ */
 static int close_output_file(struct ipfix_config *config)
 {
 	int ret;
@@ -109,16 +125,13 @@ static int close_output_file(struct ipfix_config *config)
 	}
 
 	config->fd = -1;
-	config->bcounter = 0;
 
 	return 0;
 }
 
 
-
-
 /*
- * Storage Plugin API implementation
+ * * * * * Storage Plugin API implementation
 */
 
 
@@ -192,6 +205,9 @@ int storage_init(char *params, void **config)
 
 	prepare_output_file(conf);
 
+	/* we don't need this xml tree any more */
+	xmlFreeDoc(doc);
+
 	*config = conf;
 
 	return 0;
@@ -214,7 +230,7 @@ err_init:
  * \return 0 on success, negative value otherwise
  */
 int store_packet(void *config, const struct ipfix_message *ipfix_msg,
-                 const struct ipfix_template_t *templates)
+                 const struct ipfix_template_mgr *template_mgr)
 {
 	ssize_t count = 0;
 	uint16_t wbytes = 0;

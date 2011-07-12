@@ -182,7 +182,7 @@ static xmlXPathContextPtr ic_init (xmlChar* ns_name)
  * @return List of information about storage plugin for the specified collector,
  * NULL in case of error.
  */
-struct plugin_list* get_storage_plugins (xmlNodePtr collector_node, xmlDocPtr config)
+struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xmlDocPtr config)
 {
 	int i, j, k, l;
 	xmlDocPtr collector_doc = NULL, exporter_doc = NULL;
@@ -192,7 +192,7 @@ struct plugin_list* get_storage_plugins (xmlNodePtr collector_node, xmlDocPtr co
 	xmlXPathObjectPtr xpath_obj_expprocnames = NULL, xpath_obj_expproc = NULL,
 	        xpath_obj_filewriters = NULL, xpath_obj_plugin_desc = NULL;
 	xmlChar *file_format, *file_format_inter, *plugin_file;
-	struct plugin_list* plugins = NULL, *aux_plugin = NULL;
+	struct plugin_xml_conf_list* plugins = NULL, *aux_plugin = NULL;
 
 	/* initiate internal config - open xml file, get xmlDoc and prepare xpath context for it */
 	if ((internal_ctxt = ic_init (BAD_CAST "cesnet-ipfixcol-int")) == NULL) {
@@ -321,11 +321,11 @@ struct plugin_list* get_storage_plugins (xmlNodePtr collector_node, xmlDocPtr co
 										break;
 									}
 									/* prepare plugin info structure for return list */
-									aux_plugin = (struct plugin_list*) malloc (sizeof(struct plugin_list));
-									aux_plugin->file = (char*) malloc (sizeof(char) * (xmlStrlen (plugin_file) + 1));
-									strncpy (aux_plugin->file, (char*) plugin_file, xmlStrlen (plugin_file) + 1);
-									aux_plugin->xmldata = xmlNewDoc (BAD_CAST "1.0");
-									xmlDocSetRootElement (aux_plugin->xmldata, xmlCopyNode (xpath_obj_filewriters->nodesetval->nodeTab[k], 1));
+									aux_plugin = (struct plugin_xml_conf_list*) malloc (sizeof(struct plugin_xml_conf_list));
+									aux_plugin->config.file = (char*) malloc (sizeof(char) * (xmlStrlen (plugin_file) + 1));
+									strncpy (aux_plugin->config.file, (char*) plugin_file, xmlStrlen (plugin_file) + 1);
+									aux_plugin->config.xmldata = xmlNewDoc (BAD_CAST "1.0");
+									xmlDocSetRootElement (aux_plugin->config.xmldata, xmlCopyNode (xpath_obj_filewriters->nodesetval->nodeTab[k], 1));
 									/* link new plugin item into the return list */
 									aux_plugin->next = plugins;
 									plugins = aux_plugin;
@@ -394,24 +394,24 @@ struct plugin_list* get_storage_plugins (xmlNodePtr collector_node, xmlDocPtr co
  * @return Information about first input plugin for the specified collector,
  * NULL in case of error.
  */
-struct plugin_list* get_input_plugins (xmlNodePtr collector_node)
+struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node)
 {
 	int i, j;
 	xmlChar *collector_name;
 	xmlNodePtr auxNode = NULL, children1 = NULL, children2 = NULL;
 	xmlXPathContextPtr internal_ctxt = NULL;
 	xmlXPathObjectPtr xpath_obj_suppcolls = NULL, xpath_obj_file = NULL;
-	struct plugin_list *retval = NULL;
+	struct plugin_xml_conf_list *retval = NULL;
 
 	/* prepare return structure */
-	retval = (struct plugin_list*) malloc (sizeof(struct plugin_list));
+	retval = (struct plugin_xml_conf_list*) malloc (sizeof(struct plugin_xml_conf_list));
 	if (retval == NULL) {
 		VERBOSE(CL_VERBOSE_OFF, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return (NULL);
 	}
 	retval->next = NULL;
-	retval->xmldata = NULL;
-	retval->file = NULL;
+	retval->config.xmldata = NULL;
+	retval->config.file = NULL;
 
 	/* initiate internal config - open xml file, get xmlDoc and prepare xpath context for it */
 	internal_ctxt = ic_init (BAD_CAST "cesnet-ipfixcol-int");
@@ -452,8 +452,8 @@ struct plugin_list* get_input_plugins (xmlNodePtr collector_node)
 	}
 
 	/* remember node with input plugin parameters */
-	retval->xmldata = xmlNewDoc (BAD_CAST "1.0");
-	xmlDocSetRootElement (retval->xmldata, xmlCopyNode (auxNode, 1));
+	retval->config.xmldata = xmlNewDoc (BAD_CAST "1.0");
+	xmlDocSetRootElement (retval->config.xmldata, xmlCopyNode (auxNode, 1));
 
 	/*
 	 * remember filename of input plugin implementation
@@ -479,8 +479,8 @@ struct plugin_list* get_input_plugins (xmlNodePtr collector_node)
 			        && (!xmlStrncmp (children1->children->content, collector_name, xmlStrlen (collector_name) + 1))) {
 				while (children2) {
 					if (!xmlStrncmp (children2->name, BAD_CAST "file", strlen ("file") + 1)) {
-						retval->file = (char*) malloc (sizeof(char) * (strlen ((char*) children2->children->content) + 1));
-						strncpy (retval->file, (char*) children2->children->content, strlen ((char*) children2->children->content) + 1);
+						retval->config.file = (char*) malloc (sizeof(char) * (strlen ((char*) children2->children->content) + 1));
+						strncpy (retval->config.file, (char*) children2->children->content, strlen ((char*) children2->children->content) + 1);
 						goto found_input_plugin_file;
 					}
 					children2 = children2->next;
@@ -491,7 +491,7 @@ struct plugin_list* get_input_plugins (xmlNodePtr collector_node)
 	}
 
 found_input_plugin_file:
-	if (retval->file == NULL) {
+	if (retval->config.file == NULL) {
 		VERBOSE(CL_VERBOSE_OFF, "No definition for collector found.")
 		free (retval);
 		retval = NULL;

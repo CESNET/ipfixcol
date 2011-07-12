@@ -60,12 +60,19 @@
 #define DEFAULT_CONFIG_FILE "/etc/ipfixcol/startup.xml"
 
 /**
- * \brief Item in list of ipfixcol's plugins (both input and storage).
+ * \brief Storage and Input plugin xml configuration
  */
-struct plugin_list {
-	char* file;
+struct plugin_xml_conf {
+	char *file;
 	xmlDocPtr xmldata;
-	struct plugin_list *next;
+};
+
+/**
+ * \brief List of plugin_xml_conf structures
+ */
+struct plugin_xml_conf_list {
+	struct plugin_xml_conf config;
+	struct plugin_xml_conf_list *next;
 };
 
 /**
@@ -77,7 +84,18 @@ struct input {
 	int (*get) (void*, struct input_info**, char**);
 	int (*close) (void**);
 	void *dll_handler;
-	struct plugin_list* plugin;
+	struct plugin_xml_conf *xml_conf;
+};
+
+/**
+ * \brief Storage plugin thread config structure
+ *
+ * Should be passed to storage on thread startup
+ */
+struct storage_thread_conf {
+	struct ring_buffer *queue;
+	struct ipfix_template_mgr *template_mgr;
+	pthread_t thread_id;
 };
 
 /**
@@ -86,12 +104,20 @@ struct input {
 struct storage {
 	void* config;
 	int (*init) (char*, void**);
-	int (*store) (void*, const struct ipfix_message*, const struct ipfix_template_t*);
+	int (*store) (void*, const struct ipfix_message*, const struct ipfix_template_mgr*);
 	int (*store_now) (const void*);
 	int (*close) (void**);
 	void *dll_handler;
-	struct plugin_list* plugin;
-	struct storage *next;
+	struct plugin_xml_conf *xml_conf;
+    struct storage_thread_conf *thread_config;
+};
+
+/**
+ * \brief Storage plugin handler structure list
+ */
+struct storage_list {
+	struct storage storage;
+	struct storage_list *next;
 };
 
 /**
@@ -113,7 +139,7 @@ xmlXPathObjectPtr get_collectors(xmlDocPtr doc);
  * @return Information about first input plugin for the specified collector,
  * NULL in case of error.
  */
-struct plugin_list* get_input_plugins(xmlNodePtr collectorNode);
+struct plugin_xml_conf_list* get_input_plugins(xmlNodePtr collectorNode);
 
 /**
  * \brief Prepare basic information needed to dynamically load storage plugins
@@ -127,7 +153,7 @@ struct plugin_list* get_input_plugins(xmlNodePtr collectorNode);
  * @return List of information about storage plugin for the specified collector,
  * NULL in case of error.
  */
-struct plugin_list* get_storage_plugins(xmlNodePtr collectorNode, xmlDocPtr config);
+struct plugin_xml_conf_list* get_storage_plugins(xmlNodePtr collectorNode, xmlDocPtr config);
 
 /**@}*/
 

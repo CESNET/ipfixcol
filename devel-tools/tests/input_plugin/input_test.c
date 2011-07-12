@@ -79,9 +79,6 @@ typedef int (*func_type)();
 /* configuration passed to each plugin call */
 void *config;
 
-/* port to send test data */
-int udp_port = 0;
-
 /* protocol family, default is IPv4 */
 int af = AF_INET;
 
@@ -192,18 +189,18 @@ int test_get_packet(func_type function, char *udp_port, char *tcp_port)
     if (tcp_port != NULL)
     {
         printf("  Sending TCP data... ");
-        ret = send_data(udp_port, SOCK_STREAM, &error_msg);
+        ret = send_data(tcp_port, SOCK_STREAM, &error_msg);
         if (ret == 0) data_sent = 1;
         if (ret > 1) error++;
         
         if (data_sent != 0) printf("OK\n");
         else printf("FAILED (%s)\n", error_msg);
     }
-
+    
     /* try to call the function */
     ret = function(config, &input_info, &packet);
 
-    if (ret > 0) error++;
+    if (ret < 0) error++;
 
     if (packet == NULL) 
     {
@@ -211,7 +208,7 @@ int test_get_packet(func_type function, char *udp_port, char *tcp_port)
         printf("  %s: plugin did not return any packet data\n", (data_sent!=0)? "ERROR": "INFO");
     } else 
     {
-        printf("  Expecting some data from plugin... OK\n");
+        printf("  Expecting some data from plugin... Got %d bytes... OK\n", ret);
     }
 
     if (input_info == NULL) 
@@ -232,7 +229,17 @@ int test_get_packet(func_type function, char *udp_port, char *tcp_port)
     }
 
     printf("  get_packet function returned %d ... ", ret);
-    printf("%s\n", (ret==0)? "OK":"ERROR");
+    printf("%s\n", (ret>=0)? "OK":"ERROR");
+
+    /* test whether function returns INPUT_CLOSE, TCP only */
+    if (data_sent && tcp_port != NULL) {
+        ret = function(config, &input_info, &packet);
+        if (ret == INPUT_CLOSED) {
+            printf("  INFO: second call to get_packet function correctly reported closed connection\n");
+        } else {
+            printf("  ERROR: second call to get_packet function returned %d, INPUT_CLOSED(%d) expected\n", ret, INPUT_CLOSED);
+        }
+    }
     
     return error;
 }
@@ -267,8 +274,8 @@ void usage(char *name)
     printf("  -f input_module  specify input plugin to test\n");
     printf("  -s num           set timeout to num seconds for plugin functions. Default is %ds\n", TIMEOUT);
     printf("  -p plugin_config file with xml plugin configurationpassed to the plugin input_init function\n");
-    printf("  -u udp_port      send test data to UDP port udp_port. Cannot be used with -t\n");
-    printf("  -t tcp_port      send test data to TCP port tcp_port. Cannot be used with -u\n");
+    printf("  -u udp_port      send test data to UDP port udp_port [4739]. Cannot be used with -t\n");
+    printf("  -t tcp_port      send test data to TCP port tcp_port [4739]. Cannot be used with -u\n");
     printf("  -6               use IPv6 to send test data");
     printf("  -4               use IPv4 to send test data (default)");
     printf("  -h               print usage info\n");
