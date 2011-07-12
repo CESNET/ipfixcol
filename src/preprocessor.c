@@ -186,7 +186,7 @@ void preprocessor_parse_msg (void* packet, struct input_info* input_info, struct
 	msg->pkt_header = (struct ipfix_header*) packet;
 	msg->input_info = input_info;
 	MSG (CL_VERBOSE_BASIC, "Processing data for Observation domain ID %d.",
-			msg->pkt_header->observation_domain_id);
+			ntohl(msg->pkt_header->observation_domain_id));
 
 	/* check IPFIX version */
 	if (msg->pkt_header->version != htons(IPFIX_VERSION)) {
@@ -207,7 +207,7 @@ void preprocessor_parse_msg (void* packet, struct input_info* input_info, struct
 		config = data_manager_create (msg->pkt_header->observation_domain_id, storage_plugins, input_info);
 		if (config == NULL) {
 			VERBOSE (CL_VERBOSE_BASIC, "Unable to create data manager for Observation Domain ID %d, skipping data.",
-					msg->pkt_header->observation_domain_id);
+					ntohl(msg->pkt_header->observation_domain_id));
 			free (msg);
 			return;
 		}
@@ -235,7 +235,7 @@ void preprocessor_parse_msg (void* packet, struct input_info* input_info, struct
                 break;
             default:
                 if (set_header->flowset_id < IPFIX_MIN_RECORD_FLOWSET_ID) {
-                    VERBOSE (CL_VERBOSE_BASIC, "Unknown Set ID %d", set_header->flowset_id);
+                    VERBOSE (CL_VERBOSE_BASIC, "Unknown Set ID %d", ntohs(set_header->flowset_id));
                 } else {
                     msg->data_set[d_set_count++].data_set = (struct ipfix_data_set*) set_header;
                 }

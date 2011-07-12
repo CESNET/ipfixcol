@@ -198,7 +198,6 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 		msg->data_set[i].template = tm_get_template(template_mgr, ntohs(msg->data_set[i].data_set->header.flowset_id));
 		if (msg->data_set[i].template == NULL) {
 			VERBOSE(CL_VERBOSE_OFF, "Data template with ID %i not found!", ntohs(msg->data_set[i].data_set->header.flowset_id));
-			msg->data_set[i].data_set = NULL;
 		} else {
 			if ((msg->input_info->type == SOURCE_TYPE_UDP) && /* source UDP */
 					((time(NULL) - msg->data_set[i].template->last_transmission > udp_conf->template_life_time) || /* lifetime expired */
@@ -208,6 +207,7 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 			}
 		}
 	}
+	/* return number of data records */
 	return i;
 }
 
