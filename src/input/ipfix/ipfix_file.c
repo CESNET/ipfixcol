@@ -69,28 +69,32 @@
 #define NUMBER_OF_INPUT_FILES 100
 #define NO_INPUT_FILE         (-2)
 
-
-/* IPFIX input plugin specific "config" structure */
+/**
+ * \struct ipfix_config
+ * \brief  IPFIX input plugin specific "config" structure 
+ */
 struct ipfix_config {
-	int fd;                  /* file descriptor */
-	xmlChar *xml_file;       /* input file URI from XML configuration 
+	int fd;                  /**< file descriptor */
+	xmlChar *xml_file;       /**< input file URI from XML configuration 
 	                          * file. (e.g.: "file://tmp/ipfix.dump") */
-	char *file;              /* path where to look for IPFIX files. same as
+	char *file;              /**< path where to look for IPFIX files. same as
 	                          * xml_file, but without 'file:' */
-	char *dir;               /* directory where to look for ipfix files.
+	char *dir;               /**< directory where to look for ipfix files.
 	                          * basically it is dirname(file) */
-	char *filename;          /* name of the input file. it may contain asterisk
+	char *filename;          /**< name of the input file. it may contain asterisk
 	                          * (e.g.: "ipfix-2011-03-*.dump) */
-	char *file_copy;         /* auxiliary variable, copy of the "file" for purpose 
+	char *file_copy;         /**< auxiliary variable, copy of the "file" for purpose 
 	                          * of basename() */
-	char **input_files;      /* list of all input files */
-	int findex;              /* index to the current file in the list of files */
-	struct input_info_file *in_info; /* info structure about current input file */
+	char **input_files;      /**< list of all input files */
+	int findex;              /**< index to the current file in the list of files */
+	struct input_info_file *in_info; /**< info structure about current input file */
 };
 
 
-/* check whether string matches regexp or not 
- * return 1 if string matches, 0 otherwise */
+/**
+ * \brief determine whether string matches regexp or not 
+ * 
+ * \return 1 if string matches regexp, 0 otherwise */
 static int regexp_asterisk(char *regexp, char *string)
 {
 	static int asterisk = '*';
@@ -173,6 +177,16 @@ static int regexp_asterisk(char *regexp, char *string)
 }
 
 
+/**
+ * \brief Open input file
+ *
+ * Open next input file from list of available input files.
+ *
+ * \param[in] conf  input plugin config structure
+ * \return  0 on success, negative value otherwise. In case
+ * that there is no more input files to process conf->fd is 
+ * set to NO_INPUT_FILE
+ */
 static int prepare_input_file(struct ipfix_config *conf)
 {
 	int fd;
@@ -197,6 +211,13 @@ static int prepare_input_file(struct ipfix_config *conf)
 	return ret;
 }
 
+
+/**
+ * \brief Close input file
+ *
+ * \param[in] conf  input plugin config structure
+ * \return  0 on success, negative value otherwise
+ */
 static int close_input_file(struct ipfix_config *conf)
 {
 	int ret;
@@ -213,7 +234,16 @@ static int close_input_file(struct ipfix_config *conf)
 }
 
 
-/* close current input file (if any), and open new one */
+/**
+ * \brief Prepare new input file
+ *
+ * Close current input file (if any), and open new one
+ *
+ * \param[in] conf  input plugin config structure
+ * \return file descriptor of the new input file on success.
+ * NO_INPUT_FILE in case there is no more input files.
+ * negative value otherwise.
+ */
 static int next_file(struct ipfix_config *conf)
 {
 	if (conf->fd <= 0) {
@@ -230,9 +260,16 @@ static int next_file(struct ipfix_config *conf)
 
 
 /*
- * Input plugin API implementation
+ * * * * Input plugin API implementation
 */
 
+/**
+ * \brief Plugin initialization
+ *
+ * \param[in] params  XML based configuration for this input plugin
+ * \param[out] config  input plugin config structure
+ * \return 0 on success, negative value otherwise
+ */
 int input_init(char *params, void **config)
 {
 	struct ipfix_config *conf;
@@ -421,7 +458,17 @@ err_init:
 	return -1;
 }
 
-
+/**
+ * \brief Read IPFIX message from file
+ *
+ * \param[in] config  input plugin config structure
+ * \param[out] info  information about source of the IPFIX data 
+ * \param[out] packet  IPFIX message in memory
+ * \return length of the message on success. otherwise:
+ * INPUT_INTR - on signal interrupt,
+ * INPUT_CLOSED - if there are no more input files,
+ * negative value on other possible errors
+ */ 
 int get_packet(void *config, struct input_info **info, char **packet)
 {
 	int ret;
@@ -527,7 +574,12 @@ err_header:
 	return ret;
 }
 
-
+/**
+ * \brief Clean up
+ *
+ * \param[in] config  configuration structure
+ * \return 0 on success, negative value otherwise
+ */
 int input_close(void **config)
 {
 	struct ipfix_config *conf = *config;
