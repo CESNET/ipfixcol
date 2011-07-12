@@ -65,18 +65,27 @@
 #include "ipfixcol.h"
 
 
-/* IPFIX storage plugin specific "config" structure */
+/**
+ * \struct ipfix_config
+ *
+ * \brief IPFIX storage plugin specific "config" structure
+ */
 struct ipfix_config {
-	int fd;                     /* file descriptor of an output file */
-	uint32_t fcounter;          /* number of created files */
-	uint64_t bcounter;          /* bytes written into a current output
+	int fd;                     /**< file descriptor of an output file */
+	uint32_t fcounter;          /**< number of created files */
+	uint64_t bcounter;          /**< bytes written into a current output
 	                             * file */
-	xmlChar *xml_file;          /* URI from XML configuration file */
-	char *file;                 /* actual path where to store messages */
+	xmlChar *xml_file;          /**< URI from XML configuration file */
+	char *file;                 /**< actual path where to store messages */
 };
 
 
-/* prepare (open, create) output file  */
+/**
+ * \brief Open/create output file
+ *
+ * \param[in] conf  output plugin config structure
+ * \return  0 on success, negative value otherwise.
+ */
 static int prepare_output_file(struct ipfix_config *config)
 {
 	int fd;
@@ -99,7 +108,12 @@ static int prepare_output_file(struct ipfix_config *config)
 	return 0;
 }
 
-/* close output file */
+/**
+ * \brief Close output file
+ *
+ * \param[in] conf  output plugin config structure
+ * \return  0 on success, negative value otherwise
+ */
 static int close_output_file(struct ipfix_config *config)
 {
 	int ret;
@@ -116,10 +130,8 @@ static int close_output_file(struct ipfix_config *config)
 }
 
 
-
-
 /*
- * Storage Plugin API implementation
+ * * * * * Storage Plugin API implementation
 */
 
 
