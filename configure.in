@@ -64,10 +64,23 @@ if test "x$PKG_CONFIG" = "xno"; then
 	AC_MSG_ERROR(['pkgconfig' not found.])
 fi
 
+# redhat is THE default distribution
+DISTRO=redhat 
+
+# Check for current distribution
+AC_CHECK_PROG([LSB_RELEASE], [lsb_release], [yes], [no])
+if test "x$LSB_RELEASE" = "xyes"; then
+	DISTRO_RAW="`lsb_release -i | sed 's/.*ID:\s*\(.*\)/\1/'`"
+	if test "$DISTRO_RAW" = "SUSE LINUX"; then
+		DISTRO=suse
+	fi
+fi
+
+# Check if distribution was specified manually
 AC_ARG_WITH([distro],
 	AC_HELP_STRING([--with-distro=DISTRO],[Compile for specific Linux distribution]),
 	DISTRO=$withval,
-	DISTRO=redhat
+	AC_MSG_NOTICE([Detected distribution: $DISTRO. Run with --with-distro=DISTRO to override])
 )
 
 # Add --with-libxml2-path parameter
