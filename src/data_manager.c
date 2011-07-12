@@ -109,7 +109,6 @@ static inline void data_manager_free (struct data_manager_config* config)
  *   but is passed in msg to storage plugin
  * - When template is malformed and cannot be added to template manager,
  *   rest of the template set is discarded
- * - Options templates UDP lifetimes not checked
  *
  * @param[in,out] template_mgr	Template manager
  * @param[in] msg IPFIX			message
@@ -378,7 +377,7 @@ struct data_manager_config* data_manager_create (
     struct input_info *input_info)
 {
 	xmlChar *plugin_params;
-	int retval;
+	int retval, oid_specific_plugins = 0;
 	struct storage_list* aux_storage;
 	struct data_manager_config *config;
 	struct storage_thread_conf* plugin_cfg;
@@ -411,8 +410,26 @@ struct data_manager_config* data_manager_create (
     config->input_info = input_info;
     config->template_mgr = tm_create();
 
+    /* check whether there is OID specific plugin for this OID */
+    for (aux_storage = storage_plugins; aux_storage != NULL; aux_storage = aux_storage->next) {
+    	if (atol(storage_plugins->storage.xml_conf->observation_domain_id) == config->observation_domain_id) {
+    		oid_specific_plugins++;
+    	}
+    }
+
 	/* initiate all storage plugins */
 	while (storage_plugins) {
+
+		/* check whether storage plugin is ment for this OID */
+		if ((storage_plugins->storage.xml_conf->observation_domain_id != NULL && /* OID set and does not match */
+			atol(storage_plugins->storage.xml_conf->observation_domain_id) != config->observation_domain_id) ||
+			(storage_plugins->storage.xml_conf->observation_domain_id == NULL && /* OID not set, but specific plugin(s) found*/
+			oid_specific_plugins > 0)) {
+			/* skip to next storage plugin */
+			storage_plugins = storage_plugins->next;
+			continue;
+		}
+
 		/* allocate memory for copy of storage structure for description of storage plugin */
 		aux_storage = (struct storage_list*) malloc (sizeof(struct storage_list));
 		if (aux_storage == NULL) {

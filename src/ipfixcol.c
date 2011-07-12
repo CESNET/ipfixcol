@@ -450,6 +450,9 @@ cleanup:
 		if (storage_plugins->config.file) {
 			free (storage_plugins->config.file);
 		}
+		if (storage_plugins->config.observation_domain_id) {
+			free (storage_plugins->config.observation_domain_id);
+		}
 		if (storage_plugins->config.xmldata) {
 			xmlFreeDoc (storage_plugins->config.xmldata);
 		}
@@ -468,6 +471,11 @@ cleanup:
    
     /* close preprocessor (will close all data managers) */
     preprocessor_close();
+
+    /* all storage plugins should be closed now -> free packet */
+    if (packet != NULL) {
+    	free(packet);
+    }
 
     /* free allocated resources in storages ( xml configuration closed above ) */
 	while (storage_list) {

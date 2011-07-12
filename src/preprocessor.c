@@ -197,18 +197,20 @@ void preprocessor_parse_msg (void* packet, struct input_info* input_info, struct
 	}
 
 	/* get appropriate data manager's config according to Observation domain ID */
-	config = get_data_mngmt_config (msg->pkt_header->observation_domain_id);
+	config = get_data_mngmt_config (ntohl(msg->pkt_header->observation_domain_id));
 	if (config == NULL) {
 		/*
 		 * no data manager config for this observation domain ID found -
 		 * we have a new observation domain ID, so create new data manager for
 		 * it
 		 */
-		config = data_manager_create (msg->pkt_header->observation_domain_id, storage_plugins, input_info);
+		config = data_manager_create (ntohl(msg->pkt_header->observation_domain_id), storage_plugins, input_info);
 		if (config == NULL) {
 			VERBOSE (CL_VERBOSE_BASIC, "Unable to create data manager for Observation Domain ID %d, skipping data.",
 					ntohl(msg->pkt_header->observation_domain_id));
 			free (msg);
+			/* free packet here, it was not passed anywhere */
+			free (packet);
 			return;
 		}
 	    /* add config to data_mngmts structure */
