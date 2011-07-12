@@ -390,7 +390,6 @@ int input_init(char *params, void **config)
 			}
 			sprintf(input_files[inputf_index], "%s/%s", conf->dir, entry->d_name);
 			inputf_index += 1;
-			fprintf(stderr, "--- DEBUG: file to process: %s\n", input_files[inputf_index-1]);
 		}
 	} while (result);
 
