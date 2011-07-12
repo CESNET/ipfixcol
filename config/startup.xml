@@ -24,6 +24,7 @@
 		<name>File writer UDP</name>
 		<destination>
 			<name>Write to /tmp folder</name>
+			<observationDomainId>0</observationDomainId>
 			<fileWriter>
 				<fileFormat>ipfix</fileFormat>
 				<file>file://tmp/collected-records-udp.ipfix</file>
@@ -31,6 +32,7 @@
 		</destination>
 		<destination>
 			<name>lksdfkdsjhgsld</name>
+			<observationDomainId>0</observationDomainId>
 			<fileWriter>
 				<fileFormat>ipfixcol</fileFormat>
 				<file>test.udp.data</file>
@@ -42,6 +44,7 @@
 		<name>File writer SCTP</name>
 		<destination>
 			<name>Write to /tmp folder</name>
+			<observationDomainId>0</observationDomainId>
 			<fileWriter>
 				<fileFormat>ipfix</fileFormat>
 				<file>file://tmp/collected-records-sctp.ipfix</file>
@@ -49,6 +52,7 @@
 		</destination>
 		<destination>
 			<name>kdsjhgsld</name>
+			<observationDomainId>0</observationDomainId>
 			<fileWriter>
 				<fileFormat>ipfixcol</fileFormat>
 				<file>test.sctp.data</file>

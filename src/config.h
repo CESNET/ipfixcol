@@ -63,6 +63,7 @@
  * \brief Storage and Input plugin xml configuration
  */
 struct plugin_xml_conf {
+	char *observation_domain_id;
 	char *file;
 	xmlDocPtr xmldata;
 };

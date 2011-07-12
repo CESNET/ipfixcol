@@ -186,12 +186,12 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 {
 	int i, j, k, l;
 	xmlDocPtr collector_doc = NULL, exporter_doc = NULL;
-	xmlNodePtr aux_node = NULL;
+	xmlNodePtr aux_node = NULL, node_filewriter = NULL;
 	xmlXPathContextPtr internal_ctxt = NULL, collector_ctxt = NULL,
 	        config_ctxt = NULL, exporter_ctxt = NULL;
 	xmlXPathObjectPtr xpath_obj_expprocnames = NULL, xpath_obj_expproc = NULL,
-	        xpath_obj_filewriters = NULL, xpath_obj_plugin_desc = NULL;
-	xmlChar *file_format, *file_format_inter, *plugin_file;
+	        xpath_obj_destinations = NULL, xpath_obj_plugin_desc = NULL;
+	xmlChar *file_format, *file_format_inter, *plugin_file, *oid;
 	struct plugin_xml_conf_list* plugins = NULL, *aux_plugin = NULL;
 
 	/* initiate internal config - open xml file, get xmlDoc and prepare xpath context for it */
@@ -281,13 +281,14 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 							VERBOSE(CL_VERBOSE_OFF, "Unable to register namespace for exportingProcess (%s:%d).", __FILE__, __LINE__);
 							goto cleanup;
 						}
-						/* search for <destination>/<fileWriter> nodes defining ipfixcol's storage plugins */
-						xpath_obj_filewriters = xmlXPathEvalExpression (BAD_CAST "/ietf-ipfix:exportingProcess/ietf-ipfix:destination/ietf-ipfix:fileWriter", exporter_ctxt);
-						if (xpath_obj_filewriters != NULL) {
-							if (xmlXPathNodeSetIsEmpty (xpath_obj_filewriters->nodesetval)) {
+
+						/* search for <destination> nodes defining ipfixcol's storage plugins */
+						xpath_obj_destinations = xmlXPathEvalExpression (BAD_CAST "/ietf-ipfix:exportingProcess/ietf-ipfix:destination", exporter_ctxt);
+						if (xpath_obj_destinations != NULL) {
+							if (xmlXPathNodeSetIsEmpty (xpath_obj_destinations->nodesetval)) {
 								/* no fileWriter found */
-								xmlXPathFreeObject (xpath_obj_filewriters);
-								xpath_obj_filewriters = NULL;
+								xmlXPathFreeObject (xpath_obj_destinations);
+								xpath_obj_destinations = NULL;
 								xmlXPathFreeContext (exporter_ctxt);
 								exporter_ctxt = NULL;
 								xmlFreeDoc (exporter_doc);
@@ -296,9 +297,15 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 								break;
 							}
 						}
+
 						/* now we have a <fileWriter> node with description of storage plugin */
 						/* but first we have to check that we support this storage plugin type (according to fileFormat) */
-						for (k = 0; k < xpath_obj_filewriters->nodesetval->nodeNr; k++) {
+						for (k = 0; k < xpath_obj_destinations->nodesetval->nodeNr; k++) {
+							node_filewriter = get_children(xpath_obj_destinations->nodesetval->nodeTab[k], BAD_CAST "fileWriter");
+							if (node_filewriter == NULL) {
+								/* try next <destination> node */
+								continue;
+							}
 							for (l = 0; l < xpath_obj_plugin_desc->nodesetval->nodeNr; l++) {
 								file_format_inter = get_children_content (xpath_obj_plugin_desc->nodesetval->nodeTab[l], BAD_CAST "fileFormat");
 								if (file_format_inter == NULL) {
@@ -306,7 +313,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 									VERBOSE(CL_VERBOSE_BASIC, "storagePlugin with missing fileFormat detected!");
 									continue;
 								}
-								file_format = get_children_content (xpath_obj_filewriters->nodesetval->nodeTab[k], BAD_CAST "fileFormat");
+								file_format = get_children_content (node_filewriter, BAD_CAST "fileFormat");
 								if (file_format == NULL) {
 									/* this fileWriter has no fileFormat element - use default format */
 									VERBOSE(CL_VERBOSE_BASIC, "User configuration contain fileWriter without specified format - using %s.", DEFAULT_STORAGE_PLUGIN);
@@ -320,12 +327,17 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 										VERBOSE(CL_VERBOSE_BASIC, "Unable to detect path to storage plugin file for %s format in the internal configuration!", file_format_inter);
 										break;
 									}
+									oid = get_children_content (xpath_obj_destinations->nodesetval->nodeTab[k], BAD_CAST "observationDomainId");
 									/* prepare plugin info structure for return list */
-									aux_plugin = (struct plugin_xml_conf_list*) malloc (sizeof(struct plugin_xml_conf_list));
+									aux_plugin = (struct plugin_xml_conf_list*) calloc (1, sizeof(struct plugin_xml_conf_list));
+									if (oid != NULL) {
+										aux_plugin->config.observation_domain_id = (char*) malloc (sizeof(char) * (xmlStrlen (oid) + 1));
+										strncpy (aux_plugin->config.observation_domain_id, (char*) oid, xmlStrlen (oid) + 1);
+									}
 									aux_plugin->config.file = (char*) malloc (sizeof(char) * (xmlStrlen (plugin_file) + 1));
 									strncpy (aux_plugin->config.file, (char*) plugin_file, xmlStrlen (plugin_file) + 1);
 									aux_plugin->config.xmldata = xmlNewDoc (BAD_CAST "1.0");
-									xmlDocSetRootElement (aux_plugin->config.xmldata, xmlCopyNode (xpath_obj_filewriters->nodesetval->nodeTab[k], 1));
+									xmlDocSetRootElement (aux_plugin->config.xmldata, xmlCopyNode (node_filewriter, 1));
 									/* link new plugin item into the return list */
 									aux_plugin->next = plugins;
 									plugins = aux_plugin;
@@ -354,8 +366,8 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	if (xpath_obj_expprocnames) {
 		xmlXPathFreeObject (xpath_obj_expprocnames);
 	}
-	if (xpath_obj_filewriters) {
-		xmlXPathFreeObject (xpath_obj_filewriters);
+	if (xpath_obj_destinations) {
+		xmlXPathFreeObject (xpath_obj_destinations);
 	}
 	if (xpath_obj_plugin_desc) {
 		xmlXPathFreeObject (xpath_obj_plugin_desc);
