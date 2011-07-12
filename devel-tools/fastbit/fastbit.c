@@ -40,6 +40,13 @@
 
 #include <commlbr.h>
 #include "../../headers/storage.h"
+#include <netinet/in.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+
+#include <libxml/parser.h>
+#include <libxml/tree.h>
 
 /**
  * \defgroup storageAPI Storage Plugins API
@@ -56,6 +63,122 @@
  * @{
  */
 
+
+struct fastbit_conf {
+	int cache_size;
+	struct element_cache *ie_cache;
+
+};
+
+struct element_cache {
+	uint16_t id;
+	uint16_t type;
+	uint32_t en;
+};
+
+
+#define TYPES_COUNT 23
+char types[TYPES_COUNT][2][21] = {
+	{"octetArray", "text"},
+	{"unsigned8" , "ubyte"},
+	{"unsigned16", "ushort"},
+	{"unsigned32", "uint"},
+	{"unsigned64", "ulong"},
+	{"signed8"   , "byte"},
+	{"signed16"  , "short"},
+	{"signed32"  , "int"},
+	{"signed64"  , "long"},
+	{"float32"   , "float"},
+	{"float64"   , "double"},
+	{"boolean"   , "byte"},
+	{"macAddress", "text"},
+	{"string"    , "text"},
+	{"dateTimeSeconds" 	, "uint"},
+	{"dateTimeMilliseconds" , "ulong"},
+	{"dateTimeMicroseconds" , "ulong"},
+	{"dateTimeNanoseconds"  , "ulong"},
+	{"ipv4Address"		, "uint"},
+	{"ipv6Address"		, "text"},
+	{"basicList"		, "text"}, //? what is this??  TODO
+	{"subTemplateList"	, "text"}, //?
+	{"subTemplateMultiList"	, "text"} //?
+};
+
+
+int
+element_count(xmlNode * node)
+{
+	xmlNode *cnode = NULL;
+	int count = 0;
+
+	for (cnode = node; cnode; cnode = cnode->next){
+		if(xmlStrEqual(cnode->name,"element")){
+			count++;
+		}
+		count += element_count(cnode->children);
+	}
+	return count;
+}
+
+char *trim(char *str){
+	int i,j,len;
+	len = strlen(str);
+	for(i=0;i<len;i++){
+		if(str[i]!=' '){
+			break;
+		}
+	}
+	for(j=i;j<len;j++){
+		if(str[j]==' '){
+			break;
+		}
+	}
+	if( i!=0 || j!=len){
+		memcpy(str,&(str[i]),len);
+		str[j-i]=0;
+	}
+	return str;
+}
+
+fill_element_cache(struct element_cache *cache, xmlNode *node){
+	xmlNode *cnode = NULL;
+	xmlNode *enode = NULL;
+	int i = 0;
+	int j = 0;
+
+	for (cnode = node; cnode; cnode = cnode->next){
+		cache[i].type=0;
+		if(xmlStrEqual(cnode->name,"element")){
+			VERBOSE(CL_VERBOSE_ADVANCED,"Element:");
+			for (enode = cnode->children; enode; enode = enode->next){
+				if(xmlStrEqual(enode->name,"enterprise")){
+					cache[i].en = atoi(xmlNodeGetContent(enode));
+					VERBOSE(CL_VERBOSE_ADVANCED,"\tenterprise:%d",cache[i].en);
+				}else if (xmlStrEqual(enode->name,"id")){
+					cache[i].id = atoi(xmlNodeGetContent(enode));
+					VERBOSE(CL_VERBOSE_ADVANCED,"\tid:%d",cache[i].id);
+
+				}else if (xmlStrEqual(enode->name,"name")){
+
+				}else if (xmlStrEqual(enode->name,"dataType")){
+					for(j=0;j<TYPES_COUNT;j++){
+						if(xmlStrEqual(trim(xmlNodeGetContent(enode)),types[j][0])){
+							cache[i].type = j;
+							VERBOSE(CL_VERBOSE_ADVANCED,"\ttype:%d - (%s, %s)",cache[i].type,types[j][0],types[j][1]);
+						}
+					}
+
+				}else if (xmlStrEqual(enode->name,"semantic")){
+					//TODO
+				}else if (xmlStrEqual(enode->name,"alias")){
+					//TODO
+				}
+			}
+		}
+	fill_element_cache(cache,cnode->children);
+	}
+}
+
 /**
  * \brief Storage plugin initialization function.
  *
@@ -68,7 +191,37 @@
  * \return 0 on success, nonzero else.
  */
 int storage_init (char *params, void **config){
-        VERBOSE(CL_VERBOSE_ADVANCED,"Fastbit config init");
+	VERBOSE(CL_VERBOSE_ADVANCED,"Fastbit config init");
+	int i=0;
+	int j=0;
+	int l=0;
+	uint32_t en = 0;
+	uint16_t id =0;
+	char elements_xml[] = "ipfix-elements.xml";
+
+	struct fastbit_conf * conf;
+	struct element_cache *cache;
+	char buf[30] = "huhuhu";
+
+	xmlDocPtr doc;
+	xmlNode *root_element = NULL;
+
+	doc = xmlReadFile(elements_xml, NULL, 0);
+	if(doc==NULL){
+		VERBOSE(CL_VERBOSE_ADVANCED,"Unable to parse xml file: %s",elements_xml);
+	}
+	root_element = xmlDocGetRootElement(doc);
+
+	VERBOSE(CL_VERBOSE_ADVANCED,"Element count: %i\n",element_count(root_element));
+
+	*config = (struct fastbit_conf *) malloc(sizeof(struct fastbit_conf)); //TODO return value
+	conf = *config;
+	conf->ie_cache = (struct element_cache *) malloc(sizeof(struct element_cache) * i); //TODO return value
+	conf->cache_size = i;
+	cache = conf->ie_cache;
+
+	fill_element_cache(cache, root_element);
+
 }
 
 /**
@@ -89,8 +242,8 @@ int storage_init (char *params, void **config){
  * \return 0 on success, nonzero else.
  */
 int store_packet (void *config, const struct ipfix_message *ipfix_msg,
-        const struct ipfix_template_t *templates){
-        VERBOSE(CL_VERBOSE_ADVANCED,"Fastbit stpre_packet");
+	const struct ipfix_template_t *templates){
+	VERBOSE(CL_VERBOSE_ADVANCED,"Fastbit store_packet");
 
 }
 /**
@@ -106,8 +259,9 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
  * \return 0 on success, nonzero else.
  */
 int store_now (const void *config){
-        VERBOSE(CL_VERBOSE_ADVANCED,"Fastbit stpre_packet");
+	VERBOSE(CL_VERBOSE_ADVANCED,"Fastbit store_packet");
 }
+
 
 /**
  * \brief Storage plugin "destructor".
@@ -120,19 +274,23 @@ int store_now (const void *config){
  * \return 0 on success and config is changed to NULL, nonzero else.
  */
 int storage_close (void **config){
-        VERBOSE(CL_VERBOSE_ADVANCED,"Fastbit config close");
+	VERBOSE(CL_VERBOSE_ADVANCED,"Fastbit config close");
+	free(((struct fastbit_conf *) *config)->ie_cache);
+	free(*config);
 }
 
 /**@}*/
 
+//mlock = PTHREAD_MUTEX_INITIALIZER;
 int main() {
-        void *conf;
-        verbose = CL_VERBOSE_ADVANCED;
+	void *conf;
+	verbose = CL_VERBOSE_ADVANCED;
 
-        storage_init (NULL, &conf);
-        store_packet (conf, NULL, NULL);
-        store_now (conf);
-        storage_close (&conf);
 
+	storage_init (NULL, &conf);
+	store_packet (conf, NULL, NULL);
+
+	store_now (conf);
+	storage_close (&conf);
 }
 
