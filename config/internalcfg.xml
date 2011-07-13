@@ -9,11 +9,11 @@
 	
 	<inputPlugin>
 		<name>sctpCollector</name>
-		<file>/home/svn/liberoutergit/ipfixcol/src/input/test.so</file>
+		<file>src/input/test.so</file>
 	</inputPlugin>
 	<inputPlugin>
 		<name>udpCollector</name>
-		<file>/home/svn/liberoutergit/ipfixcol/src/input/udp/udp_input.so</file>
+		<file>src/input/udp/udp_input.so</file>
 	</inputPlugin>
 	<inputPlugin>
 		<name>tcpCollector</name>
@@ -26,7 +26,7 @@
 
 	<storagePlugin>
 		<fileFormat>ipfix</fileFormat>
-		<file>/home/svn/liberoutergit/ipfixcol/src/storage/ipfix/ipfix_file.so</file>
+		<file>src/storage/ipfix/ipfix_file.so</file>
 	</storagePlugin>
 	<storagePlugin>
 		<fileFormat>ipfixcol</fileFormat>
