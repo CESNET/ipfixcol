@@ -240,19 +240,21 @@ static int close_input_file(struct ipfix_config *conf)
  * Close current input file (if any), and open new one
  *
  * \param[in] conf  input plugin config structure
- * \return file descriptor of the new input file on success.
+ * \return  0 on success.
  * NO_INPUT_FILE in case there is no more input files.
  * negative value otherwise.
  */
 static int next_file(struct ipfix_config *conf)
 {
+	int ret;
+
 	if (conf->fd <= 0) {
 		close_input_file(conf);
 	}
-	prepare_input_file(conf);
+	ret = prepare_input_file(conf);
 
 	if (conf->fd != NO_INPUT_FILE) {
-		
+		return ret;
 	}
 
 	return conf->fd;
@@ -476,15 +478,18 @@ int get_packet(void *config, struct input_info **info, char **packet)
 	struct ipfix_header *header;
 	uint16_t packet_len;
 	struct ipfix_config *conf;
+	char *packet_orig;	
 
 	conf = (struct ipfix_config *) config;
 
 	*info = (struct input_info *) conf->in_info;
 
+	packet_orig = *packet;
+
 	header = (struct ipfix_header *) malloc(sizeof(*header));
 	if (!header) {
 		VERBOSE(CL_VERBOSE_OFF, "Not enough memory");
-		return -1;
+		return INPUT_ERROR;
 	}
 
 	/* read IPFIX header only */
@@ -526,11 +531,13 @@ read_header:
 		goto err_header;
 	}
 
-	/* allocate memory for whole IPFIX message */
-	*packet = (char *) malloc(packet_len);
 	if (*packet == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Not enough memory");
-		goto err_header;
+		/* allocate memory for whole IPFIX message */
+		*packet = (char *) malloc(packet_len);
+		if (*packet == NULL) {
+			VERBOSE(CL_VERBOSE_OFF, "Not enough memory");
+			goto err_header;
+		}
 	}
 
 	memcpy(*packet, header, sizeof(*header));
@@ -555,8 +562,12 @@ read_header:
 			ret = INPUT_CLOSED;
 			goto err_info;
 		}
+		if (packet_orig != *packet) {
+			/* this plugin allocated this memory */
+			free(*packet);
+			*packet = NULL;
+		}
 
-		/* TODO fix possible memory leaks */
 		goto read_header;
 	}
 	counter += ret;
@@ -566,8 +577,11 @@ read_header:
 	return packet_len;
 
 err_info:
-	free(*packet);
-	*packet = NULL;
+	if (packet_orig != *packet) {
+		/* this plugin allocated this memory */
+		free(*packet);
+		*packet = NULL;
+	}
 
 err_header:
 	free(header);

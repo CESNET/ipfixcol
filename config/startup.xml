@@ -14,6 +14,7 @@
 		<name>File writer UDP</name>
 		<destination>
 			<name>Write to /tmp folder</name>
+			<observationDomainId>0</observationDomainId>
 			<fileWriter>
 				<fileFormat>ipfix</fileFormat>
 				<file>file://tmp/collected-records-udp.ipfix</file>

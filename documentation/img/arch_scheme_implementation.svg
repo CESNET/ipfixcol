@@ -40,8 +40,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="0.98994949"
-     inkscape:cx="436.17268"
-     inkscape:cy="1050.3908"
+     inkscape:cx="816.2216"
+     inkscape:cy="262.44089"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="true"
@@ -1753,7 +1753,7 @@
       </g>
     </g>
     <g
-       id="g5407">
+       id="g4640">
       <g
          transform="translate(5e-7,85.20305)"
          id="g10439">
@@ -2578,85 +2578,6 @@
              x="339.60809"
              y="687.99762">(config.h)</tspan></text>
       </g>
-      <g
-         transform="translate(-14.999941,-119.79695)"
-         id="g12354">
-        <rect
-           ry="20"
-           style="fill:#d1d605;fill-opacity:0.39449547;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
-           id="rect9830-6-9-7"
-           width="135.00002"
-           height="90"
-           x="469.60809"
-           y="657.99762"
-           rx="20" />
-        <text
-           xml:space="preserve"
-           style="font-size:10px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
-           x="479.60809"
-           y="672.99762"
-           id="text9842-2-3-4"
-           sodipodi:linespacing="125%"><tspan
-             sodipodi:role="line"
-             id="tspan9844-8-9-9"
-             x="479.60809"
-             y="672.99762">struct plugin_xml_conf</tspan></text>
-        <g
-           id="g9864-4-2-9"
-           transform="translate(399.99998,375)">
-          <rect
-             y="322.99762"
-             x="79.608101"
-             height="15.000003"
-             width="114.99998"
-             id="rect4019-94-5-7-8-4"
-             style="fill:#0ef41d;fill-opacity:0.51834866;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
-          <text
-             sodipodi:linespacing="125%"
-             id="text9832-2-3-5"
-             y="332.99762"
-             x="84.608101"
-             style="font-size:8px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
-             xml:space="preserve"><tspan
-               id="tspan9838-0-1-9"
-               y="332.99762"
-               x="84.608101"
-               sodipodi:role="line">char *file;</tspan></text>
-        </g>
-        <g
-           id="g9944-7-3"
-           transform="translate(255.00001,310)">
-          <rect
-             y="412.99762"
-             x="224.60809"
-             height="15.000003"
-             width="114.99998"
-             id="rect4019-94-5-7-9-8-5"
-             style="fill:#0ef41d;fill-opacity:0.51834866;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
-          <text
-             sodipodi:linespacing="125%"
-             id="text9922-9-7"
-             y="422.99762"
-             x="229.60811"
-             style="font-size:8px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
-             xml:space="preserve"><tspan
-               y="422.99762"
-               x="229.60811"
-               id="tspan9924-1-0"
-               sodipodi:role="line">xmlDocPtr xmldata;</tspan></text>
-        </g>
-        <text
-           xml:space="preserve"
-           style="font-size:10px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
-           x="514.60809"
-           y="687.99762"
-           id="text12259-8"
-           sodipodi:linespacing="125%"><tspan
-             sodipodi:role="line"
-             id="tspan12261-1"
-             x="514.60809"
-             y="687.99762">(config.h)</tspan></text>
-      </g>
       <path
          inkscape:connector-curvature="0"
          inkscape:connector-type="polyline"
@@ -2685,10 +2606,10 @@
          inkscape:connector-curvature="0"
          inkscape:connector-type="polyline"
          id="path13858"
-         d="m 619.60804,727.99762 -50,0"
+         d="m 619.6081,742.99762 -50,0"
          style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow2Lend)" />
       <g
-         transform="translate(-60.000044,125.20305)"
+         transform="translate(-60.000002,140)"
          id="g4719">
         <rect
            rx="20"
@@ -3142,14 +3063,111 @@
          d="m 1134.103,538.20067 0,40"
          style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow2Lend)" />
       <g
-         id="g5367">
+         transform="translate(-14.999931,3.7109373e-7)"
+         id="g4616">
+        <rect
+           ry="20"
+           style="fill:#d1d605;fill-opacity:0.39449547;stroke:#000000;stroke-width:0.99999994;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+           id="rect9830-6-9-7"
+           width="149.99992"
+           height="114.79696"
+           x="454.60815"
+           y="538.20068"
+           rx="20" />
+        <text
+           xml:space="preserve"
+           style="font-size:10px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+           x="474.60809"
+           y="552.99762"
+           id="text9842-2-3-4"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             id="tspan9844-8-9-9"
+             x="474.60809"
+             y="552.99762">struct plugin_xml_conf</tspan></text>
+        <g
+           id="g9864-4-2-9"
+           transform="translate(385.00002,280)">
+          <rect
+             y="322.99762"
+             x="79.608101"
+             height="15.000003"
+             width="129.99997"
+             id="rect4019-94-5-7-8-4"
+             style="fill:#0ef41d;fill-opacity:0.51834866;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
+          <text
+             sodipodi:linespacing="125%"
+             id="text9832-2-3-5"
+             y="332.99762"
+             x="84.608101"
+             style="font-size:8px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+             xml:space="preserve"><tspan
+               id="tspan9838-0-1-9"
+               y="332.99762"
+               x="84.608101"
+               sodipodi:role="line">char *file;</tspan></text>
+        </g>
+        <g
+           id="g9944-7-3"
+           transform="translate(240.00004,215)">
+          <rect
+             y="412.99762"
+             x="224.60809"
+             height="15.000003"
+             width="129.99997"
+             id="rect4019-94-5-7-9-8-5"
+             style="fill:#0ef41d;fill-opacity:0.51834866;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
+          <text
+             sodipodi:linespacing="125%"
+             id="text9922-9-7"
+             y="422.99762"
+             x="229.60811"
+             style="font-size:8px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+             xml:space="preserve"><tspan
+               y="422.99762"
+               x="229.60811"
+               id="tspan9924-1-0"
+               sodipodi:role="line">xmlDocPtr xmldata;</tspan></text>
+        </g>
+        <text
+           xml:space="preserve"
+           style="font-size:10px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+           x="499.60809"
+           y="567.99762"
+           id="text12259-8"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             id="tspan12261-1"
+             x="499.60809"
+             y="567.99762">(config.h)</tspan></text>
+        <rect
+           style="fill:#0ef41d;fill-opacity:0.51834866;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+           id="rect4019-94-5-7-9-8-5-2"
+           width="129.99997"
+           height="15.000003"
+           x="464.60809"
+           y="577.99762" />
+        <text
+           xml:space="preserve"
+           style="font-size:8px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+           x="469.60809"
+           y="587.99762"
+           id="text4612"
+           sodipodi:linespacing="125%"><tspan
+             sodipodi:role="line"
+             id="tspan4614"
+             x="469.60809"
+             y="587.99762">char *observation_domain_id;</tspan></text>
+      </g>
+      <g
+         id="g4596">
         <rect
            rx="20"
            ry="20"
            style="fill:#d1d605;fill-opacity:0.39449547;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
            id="rect9830-0-9-3-1"
            width="195.00003"
-           height="239.79701"
+           height="264.797"
            x="1044.6082"
            y="578.20062" />
         <g
@@ -3312,7 +3330,7 @@
              y="608.20068">(templates.h)</tspan></text>
         <g
            id="g10208-4-9-7-3"
-           transform="translate(989.99998,240)">
+           transform="translate(990.00001,265)">
           <rect
              style="fill:#0ef41d;fill-opacity:0.51834866;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
              id="rect4019-94-5-1-64-8-0-5-0"
@@ -3353,6 +3371,28 @@
                x="69.608101"
                id="tspan10176-0-5-6-9"
                sodipodi:role="line">uint32_t last_message;</tspan></text>
+        </g>
+        <g
+           id="g10208-4-9-7-3-3"
+           transform="translate(990,240)">
+          <rect
+             style="fill:#0ef41d;fill-opacity:0.51834866;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+             id="rect4019-94-5-1-64-8-0-5-0-7"
+             width="174.99998"
+             height="15.000003"
+             x="64.608101"
+             y="552.99762" />
+          <text
+             sodipodi:linespacing="125%"
+             id="text10190-0-6-9-9-5"
+             y="562.99762"
+             x="69.608101"
+             style="font-size:8px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+             xml:space="preserve"><tspan
+               y="562.99762"
+               x="69.608101"
+               id="tspan10192-4-8-2-2-9"
+               sodipodi:role="line">uint16_t data_length;</tspan></text>
         </g>
       </g>
     </g>
