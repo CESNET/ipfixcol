@@ -198,10 +198,12 @@ static int prepare_input_file(struct ipfix_config *conf)
 		return -1;
 	}
 
+	VERBOSE(CL_VERBOSE_BASIC, "Opening input file: %s", conf->input_files[conf->findex]);
+
 	fd = open(conf->input_files[conf->findex], O_RDONLY);
 	if (fd == -1) {
 		/* input file doesn't exist or we don't have read permission */
-		VERBOSE(CL_VERBOSE_OFF, "Unable to open input file \"%s\"", conf->file);
+		VERBOSE(CL_VERBOSE_OFF, "Unable to open input file: %s", conf->input_files[conf->findex]);
 		ret = -1;
 	}
 
@@ -228,6 +230,8 @@ static int close_input_file(struct ipfix_config *conf)
 		return -1;
 	}
 
+	VERBOSE(CL_VERBOSE_BASIC, "Input file closed");
+
 	conf->fd = -1;
 
 	return 0;
@@ -251,13 +255,21 @@ static int next_file(struct ipfix_config *conf)
 	if (conf->fd <= 0) {
 		close_input_file(conf);
 	}
-	ret = prepare_input_file(conf);
 
-	if (conf->fd != NO_INPUT_FILE) {
-		return ret;
+	ret = 1;
+	while (ret) {
+		ret = prepare_input_file(conf);
+	
+		if (conf->fd == NO_INPUT_FILE) {
+			/* no more input files */
+			return NO_INPUT_FILE;
+		} else if (!ret) {
+			/* ok, new input file ready */
+			return ret;
+		}
 	}
 
-	return conf->fd;
+	return NO_INPUT_FILE;
 }
 
 
@@ -286,6 +298,7 @@ int input_init(char *params, void **config)
 	int len;
 	DIR *dir;
 	struct stat st;
+	int i;
 
 
 	/* allocate memory for config structure */
@@ -447,8 +460,15 @@ int input_init(char *params, void **config)
 
 	conf->input_files = input_files;
 
+	/* print all input files */
+	if (inputf_index) {
+		VERBOSE(CL_VERBOSE_BASIC, "List of input files:");
+		for (i = 0; input_files[i] != NULL; i++) {
+			VERBOSE(CL_VERBOSE_BASIC, "\t%s", input_files[i]);
+		}
+	}
 
-	ret = prepare_input_file(conf);
+	ret = next_file(conf);
 	if (ret == -1) {
 		/* no input files */
 		VERBOSE(CL_VERBOSE_BASIC, "No input files, nothing to do");
