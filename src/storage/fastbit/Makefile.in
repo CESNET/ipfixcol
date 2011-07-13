@@ -1,0 +1,16 @@
+CC      = @CC@
+CFLAGS  = @CFLAGS@
+LIBS    = @LIBS@
+INCLUDE = "-I../../../"
+
+all: fastbit_output.so
+
+fastbit_output.so: fastbit.o
+	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,fastbit_output.so.1 fastbit_output.o -o $@ -lc
+	
+fastbit.o: fastbit.c
+	$(CC) $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
+
+clean:
+	-rm fastbit_output.so fastbit.o
+
