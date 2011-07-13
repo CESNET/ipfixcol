@@ -1,39 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ipfixcol xmlns="urn:cesnet:params:xml:ns:yang:ipfixcol-internals">
+
+	<!--## List of supported collectors
+		## One of these elements is expected in <collectingProcess>
+		##   element in startup.xml 
+	 -->
 	<supportedCollectors>
-		<name>sctpCollector</name>
+<!--	<name>sctpCollector</name> -->
 		<name>udpCollector</name>
 		<name>tcpCollector</name>
 		<name>fileReader</name>
 	</supportedCollectors>
-	
+
+	<!--## Input plugin internal configuration -->
 	<inputPlugin>
-		<name>sctpCollector</name>
-		<file>/home/svn/liberoutergit/ipfixcol/src/input/test.so</file>
-	</inputPlugin>
-	<inputPlugin>
+		<!--## Name must match one of the <supportedCollectors> -->
 		<name>udpCollector</name>
-		<file>/home/svn/liberoutergit/ipfixcol/src/input/udp/udp_input.so</file>
+		<!--## Path of the plugin module -->
+		<file>src/input/udp/udp_input.so</file>
 	</inputPlugin>
 	<inputPlugin>
 		<name>tcpCollector</name>
-		<file>implementace3.so</file>
+		<file>src/input/tcp/tcp_input.so</file>
 	</inputPlugin>
 	<inputPlugin>
 		<name>fileReader</name>
-		<file>implementace4.so</file>
+		<file>src/input/ipfix/ipfix_input.so</file>
 	</inputPlugin>
-
+<!--
+	<inputPlugin>
+		<name>sctpCollector</name>
+		<file>src/input/sctp/sctp_input.so</file>
+	</inputPlugin>
+-->
+	<!--## Storage plugin internal configuration -->
 	<storagePlugin>
+		<!--## Definition of file format
+		    ## The element <fileFormat> in startup.xml must
+		    ##   match this element -->
 		<fileFormat>ipfix</fileFormat>
-		<file>/home/svn/liberoutergit/ipfixcol/src/storage/ipfix/ipfix_file.so</file>
-	</storagePlugin>
-	<storagePlugin>
-		<fileFormat>ipfixcol</fileFormat>
-		<file>implementace_ipfixcol.so</file>
-	</storagePlugin>
-	<storagePlugin>
-		<fileFormat>ipfixcol-statistics</fileFormat>
-		<file>implementace_ipfixcol_statistics.so</file>
+		<!--## Path of the storage module  -->
+		<file>src/storage/ipfix/ipfix_output.so</file>
 	</storagePlugin>
 </ipfixcol>

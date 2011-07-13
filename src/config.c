@@ -191,8 +191,9 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	        config_ctxt = NULL, exporter_ctxt = NULL;
 	xmlXPathObjectPtr xpath_obj_expprocnames = NULL, xpath_obj_expproc = NULL,
 	        xpath_obj_destinations = NULL, xpath_obj_plugin_desc = NULL;
-	xmlChar *file_format, *file_format_inter, *plugin_file, *oid;
+	xmlChar *file_format, *file_format_inter, *plugin_file, *odid;
 	struct plugin_xml_conf_list* plugins = NULL, *aux_plugin = NULL;
+	char *odidptr;
 
 	/* initiate internal config - open xml file, get xmlDoc and prepare xpath context for it */
 	if ((internal_ctxt = ic_init (BAD_CAST "cesnet-ipfixcol-int")) == NULL) {
@@ -327,12 +328,17 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 										VERBOSE(CL_VERBOSE_BASIC, "Unable to detect path to storage plugin file for %s format in the internal configuration!", file_format_inter);
 										break;
 									}
-									oid = get_children_content (xpath_obj_destinations->nodesetval->nodeTab[k], BAD_CAST "observationDomainId");
+									odid = get_children_content (xpath_obj_destinations->nodesetval->nodeTab[k], BAD_CAST "observationDomainId");
 									/* prepare plugin info structure for return list */
 									aux_plugin = (struct plugin_xml_conf_list*) calloc (1, sizeof(struct plugin_xml_conf_list));
-									if (oid != NULL) {
-										aux_plugin->config.observation_domain_id = (char*) malloc (sizeof(char) * (xmlStrlen (oid) + 1));
-										strncpy (aux_plugin->config.observation_domain_id, (char*) oid, xmlStrlen (oid) + 1);
+									if (odid != NULL) {
+										strtol((char*) odid, &odidptr, 10);
+										if (*odidptr == '\0') {
+											aux_plugin->config.observation_domain_id = (char*) malloc (sizeof(char) * (xmlStrlen (odid) + 1));
+											strncpy (aux_plugin->config.observation_domain_id, (char*) odid, xmlStrlen (odid) + 1);
+										} else {
+											VERBOSE(CL_VERBOSE_BASIC, "observationDomainId element '%s' not valid. Ignoring...", (char*) odid);
+										}
 									}
 									aux_plugin->config.file = (char*) malloc (sizeof(char) * (xmlStrlen (plugin_file) + 1));
 									strncpy (aux_plugin->config.file, (char*) plugin_file, xmlStrlen (plugin_file) + 1);

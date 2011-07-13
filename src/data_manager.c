@@ -130,6 +130,7 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 		ptr = (uint8_t*) &msg->templ_set[i]->first_record;
 		while (ptr < (uint8_t*) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) {
 			template_record = (struct ipfix_template_record*) ptr;
+			/* \todo wait for data... a timeout z rfc */
 			/* check for withdraw all templates message */
 			if (ntohs(template_record->template_id) == IPFIX_TEMPLATE_FLOWSET_ID &&
 					ntohs(template_record->count) == 0) {
@@ -274,11 +275,11 @@ static void* data_manager_thread (void* cfg)
 
 			/* check sequence number */
 			/* \todo handle out of order messages */
-			//if (sequence_number != ntohl(msg->pkt_header->sequence_number)) {
+			if (sequence_number != ntohl(msg->pkt_header->sequence_number)) {
 				VERBOSE(CL_VERBOSE_ADVANCED, "Sequence number does not match: expected %u, got %u",
 						sequence_number, ntohl(msg->pkt_header->sequence_number));
 				sequence_number = ntohl(msg->pkt_header->sequence_number);
-			//}
+			}
 
 			/* process templates */
 			sequence_number += data_manager_process_templates(config->template_mgr, msg, &udp_conf, msg_counter);

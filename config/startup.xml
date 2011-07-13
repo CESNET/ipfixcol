@@ -1,15 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
+
+	<!--## Every collecting process will be started as new process -->
 	<collectingProcess>
+		<!--## Arbitrary collecting process name  -->
 		<name>UDP collector</name>
+		<!--## Type of the collector. Supported types are defined in internalcfg.xml -->
 		<udpCollector>
+			<!--## Arbitrary udp collector name -->
 			<name>Listening port 4739</name>
+			<!--## Local listening port -->
 			<localPort>4739</localPort>
+			<!--## Template lifetime in seconds -->
+			<templateLifeTime>1800</templateLifeTime>
+			<!--## Options template lifetime in seconds -->
+			<optionsTemplateLifeTime>1800</optionsTemplateLifeTime>
+			<!--## Template lifetime in packets (for how many packets is template valid) -->
+<!--		<templateLifePacket>5</templateLifePacket> -->
+			<!--## Options template lifetime in packets -->
+<!--		<optionsTemplateLifePacket>100</optionsTemplateLifePacket> -->
+			<!--## Local address to listen on. If empty, bind to all interfaces -->
 			<localIPAddress>127.0.0.1</localIPAddress>
 		</udpCollector>
+		<!--## Name of the exporting process. Must match exporting process name -->
 		<exportingProcess>File writer UDP</exportingProcess>
 	</collectingProcess>
 
+    <collectingProcess>
+		<name>TCP collector</name>
+		<tcpCollector>
+			<name>Listening port 4739</name>
+			<localPort>4739</localPort>
+			<localIPAddress>127.0.0.1</localIPAddress>
+		</tcpCollector>
+		<exportingProcess>File writer TCP</exportingProcess>
+	</collectingProcess>
+
+<!--
 	<collectingProcess>
 		<name>SCTP collector</name>
 		<sctpCollector>
@@ -19,44 +46,62 @@
 		</sctpCollector>
 		<exportingProcess>File writer SCTP</exportingProcess>
 	</collectingProcess>
+-->
 
+	<!--## Exporting process configuration -->
 	<exportingProcess>
+		<!--## Name of the exporting process, must match <exportingProcess> element
+			   in <collectingProcess>
+		-->
 		<name>File writer UDP</name>
+		<!--## Specification of storage plugin -->
+		<destination>
+			<!--## Arbitrary name -->
+			<name>Write to /tmp folder</name>
+			<!--## Observation domain ID valid for this storage plugin 
+			       Only packets with this ODID will be passed to the plugin
+			       If unspecified, plugin is used for unknown ODIDs 
+			         (and not for any of specified)
+			-->
+			<observationDomainId>1</observationDomainId>
+			<!--## This element is passed to storage plugin -->
+			<fileWriter>
+				<!--## fileFormat must be configured in internalcfg.xml -->
+				<fileFormat>ipfix</fileFormat>
+				<!--## Storage plugin specific element -->
+				<file>file://tmp/collected-records-udp_1.ipfix</file>
+			</fileWriter>
+		</destination>
 		<destination>
 			<name>Write to /tmp folder</name>
-			<observationDomainId>0</observationDomainId>
 			<fileWriter>
 				<fileFormat>ipfix</fileFormat>
 				<file>file://tmp/collected-records-udp.ipfix</file>
 			</fileWriter>
 		</destination>
+	</exportingProcess>
+	
+	<exportingProcess>
+		<name>File writer TCP</name>
 		<destination>
-			<name>lksdfkdsjhgsld</name>
-			<observationDomainId>0</observationDomainId>
+			<name>Write to /tmp folder</name>
 			<fileWriter>
-				<fileFormat>ipfixcol</fileFormat>
-				<file>test.udp.data</file>
+				<fileFormat>ipfix</fileFormat>
+				<file>file://tmp/collected-records-tcp.ipfix</file>
 			</fileWriter>
 		</destination>
 	</exportingProcess>
 
+<!--
 	<exportingProcess>
 		<name>File writer SCTP</name>
 		<destination>
 			<name>Write to /tmp folder</name>
-			<observationDomainId>0</observationDomainId>
 			<fileWriter>
 				<fileFormat>ipfix</fileFormat>
 				<file>file://tmp/collected-records-sctp.ipfix</file>
 			</fileWriter>
 		</destination>
-		<destination>
-			<name>kdsjhgsld</name>
-			<observationDomainId>0</observationDomainId>
-			<fileWriter>
-				<fileFormat>ipfixcol</fileFormat>
-				<file>test.sctp.data</file>
-			</fileWriter>
-		</destination>
 	</exportingProcess>
+-->
 </ipfix>
