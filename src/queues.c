@@ -127,26 +127,20 @@ int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, un
 			return (EXIT_FAILURE);
 		}
 	}
-	if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
-		VERBOSE (CL_VERBOSE_OFF, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
-		return (EXIT_FAILURE);
-	}
 
-	/*
-	 * I don't need mutex since there is always only one write thread to change
-	 * write_offset and count is changed atomically. Now I also know that there
-	 * is at least one place to store data and if someone will change the count,
-	 * it will be decreased, because I'm the only write thread that increases
-	 * the count.
-	 */
 	rbuffer->data[rbuffer->write_offset] = record;
 	rbuffer->data_references[rbuffer->write_offset] = refcount;
 	rbuffer->write_offset = (rbuffer->write_offset + 1) % rbuffer->size;
-	__sync_fetch_and_add (&(rbuffer->count), 1); /* atomic rbuffer->count++; */
+	rbuffer->count++;
 
 	/* I did change of rbuffer->count so inform about it other threads (read threads) */
 	if (pthread_cond_signal (&(rbuffer->cond)) != 0) {
 		VERBOSE (CL_VERBOSE_OFF, "Condition signal failed (%s:%d)", __FILE__, __LINE__);
+		return (EXIT_FAILURE);
+	}
+
+	if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
+		VERBOSE (CL_VERBOSE_OFF, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
 		return (EXIT_FAILURE);
 	}
 
@@ -217,10 +211,8 @@ struct ipfix_message* rbuffer_read (struct ring_buffer* rbuffer, unsigned int *i
  */
 int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, int dofree)
 {
-	if (rbuffer->data_references[index] > 0) {
-		/* atomic rbuffer->data_references[index]--; */
-		__sync_fetch_and_sub (&(rbuffer->data_references[index]), 1);
-	} else {
+	/* atomic rbuffer->data_references[index]--; and check <= 0 */
+	if (__sync_fetch_and_sub (&(rbuffer->data_references[index]), 1) <= 0) {
 		return (EXIT_FAILURE);
 	}
 
@@ -242,7 +234,7 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
 			}
 			/* move offset pointer in ring buffer */
 			rbuffer->read_offset = (rbuffer->read_offset + 1) % rbuffer->size;
-			__sync_fetch_and_sub (&(rbuffer->count), 1); /* atomic rbuffer->count--; */
+			rbuffer->count--;
 		}
 		if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
 			VERBOSE (CL_VERBOSE_OFF, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);

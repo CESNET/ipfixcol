@@ -68,9 +68,15 @@
 
 /**
  * \def TM_UDP_TIMEOUT
- * \brief Specifies Defaulttemplate timeout for UDP
+ * \brief Specifies Default template timeout for UDP
  */
 #define TM_UDP_TIMEOUT 1800
+
+/**
+ * \def TM_TEMPLATE_WITHDRAW_LEN
+ * \brief Length of withdraw template in octets
+ */
+#define TM_TEMPLATE_WITHDRAW_LEN 4
 
 /**
  * \struct ipfix_template_t

@@ -120,24 +120,34 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 {
 	struct ipfix_template *template;
 	struct ipfix_template_record *template_record;
-	struct ipfix_template_record *options_template_record;
+	struct ipfix_options_template_record *options_template_record;
 	uint8_t *ptr;
 	uint32_t records_count = 0;
-	int i;
+	int i, ret;
 
 	/* check for new templates */
 	for (i=0; msg->templ_set[i] != NULL && i<1024; i++) {
 		ptr = (uint8_t*) &msg->templ_set[i]->first_record;
 		while (ptr < (uint8_t*) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) {
 			template_record = (struct ipfix_template_record*) ptr;
-			/* \todo wait for data... a timeout z rfc */
 			/* check for withdraw all templates message */
+			/* templates are no longer used (checked in data_manager_withdraw_templates()) */
 			if (ntohs(template_record->template_id) == IPFIX_TEMPLATE_FLOWSET_ID &&
 					ntohs(template_record->count) == 0) {
 				tm_remove_all_templates(template_mgr, TM_TEMPLATE);
+				/* don't try to parse the withdraw template */
+				ptr += TM_TEMPLATE_WITHDRAW_LEN;
+				continue;
 				/* check for withdraw template message */
 			} else if (ntohs(template_record->count) == 0) {
-				tm_remove_template(template_mgr, ntohs(template_record->template_id));
+				ret = tm_remove_template(template_mgr, ntohs(template_record->template_id));
+				/* Log error when removing unknown template */
+				if (ret == 1) {
+					VERBOSE(CL_VERBOSE_BASIC, "Template withdraw message received for unknown Template ID: %u",
+							ntohs(template_record->template_id));
+				}
+				ptr += TM_TEMPLATE_WITHDRAW_LEN;
+				continue;
 				/* check whether template exists */
 			} else if ((template = tm_get_template(template_mgr, ntohs(template_record->template_id))) == NULL) {
 				/* add template */
@@ -164,14 +174,24 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 	for (i=0; msg->opt_templ_set[i] != NULL && i<1024; i++) {
 		ptr = (uint8_t*) &msg->opt_templ_set[i]->first_record;
 		while (ptr < (uint8_t*) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) {
-			options_template_record = (struct ipfix_template_record*) ptr;
+			options_template_record = (struct ipfix_options_template_record*) ptr;
 			/* check for withdraw all option templates message */
 			if (ntohs(options_template_record->template_id) == IPFIX_OPTION_FLOWSET_ID &&
 					ntohs(options_template_record->count) == 0) {
 				tm_remove_all_templates(template_mgr, TM_OPTIONS_TEMPLATE);
+				/* option templates are no longer used (checked in data_manager_withdraw_templates()) */
+				ptr += TM_TEMPLATE_WITHDRAW_LEN;
+				continue;
 				/* check for withdraw option template message */
 			} else if (ntohs(options_template_record->count) == 0) {
-				tm_remove_template(template_mgr, ntohs(options_template_record->template_id));
+				ret = tm_remove_template(template_mgr, ntohs(options_template_record->template_id));
+				/* Log error when removing unknown options template */
+				if (ret == 1) {
+					VERBOSE(CL_VERBOSE_BASIC, "Options template withdraw message received for unknown Template ID: %u",
+							ntohs(options_template_record->template_id));
+				}
+				ptr += TM_TEMPLATE_WITHDRAW_LEN;
+				continue;
 				/* check whether option template exists */
 			} else if ((template = tm_get_template(template_mgr, ntohs(options_template_record->template_id))) == NULL) {
 				/* add template */
@@ -212,6 +232,46 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 	}
 	/* return number of data records */
 	return records_count;
+}
+
+
+/**
+ * \brief Check whether there is at least one template withdraw
+ *
+ * @param[in] msg IPFIX message
+ * @return int Return 1 when template withdraw message found,  0 otherwise
+ */
+static int data_manager_withdraw_templates(struct ipfix_message *msg) {
+	struct ipfix_template_record *template_record;
+	struct ipfix_options_template_record *options_template_record;
+	int i;
+
+	/* check for template withdraw messagess */
+	for (i=0; msg->templ_set[i] != NULL && i<1024; i++) {
+		template_record = &msg->templ_set[i]->first_record;
+		/* check for withdraw all templates message */
+		if (ntohs(template_record->template_id) == IPFIX_TEMPLATE_FLOWSET_ID &&
+				ntohs(template_record->count) == 0) {
+			return 1;
+			/* check for withdraw template message */
+		} else if (ntohs(template_record->count) == 0) {
+			return 1;
+		}
+	}
+
+	/* check for options template withdraw messagess */
+	for (i=0; msg->opt_templ_set[i] != NULL && i<1024; i++) {
+			options_template_record = &msg->opt_templ_set[i]->first_record;
+			/* check for withdraw all option templates message */
+			if (ntohs(options_template_record->template_id) == IPFIX_OPTION_FLOWSET_ID &&
+					ntohs(options_template_record->count) == 0) {
+				return 1;
+				/* check for withdraw option template message */
+			} else if (ntohs(options_template_record->count) == 0) {
+				return 1;
+			}
+	}
+	return 0;
 }
 
 /**
@@ -279,6 +339,13 @@ static void* data_manager_thread (void* cfg)
 				VERBOSE(CL_VERBOSE_ADVANCED, "Sequence number does not match: expected %u, got %u",
 						sequence_number, ntohl(msg->pkt_header->sequence_number));
 				sequence_number = ntohl(msg->pkt_header->sequence_number);
+			}
+
+			/* Check whether there are withdraw templates */
+			if (data_manager_withdraw_templates(msg)) {
+				/* wait for storage plugins to consume all pending messages */
+				/* \todo add condition wait */
+				while (config->in_queue->count > 0);
 			}
 
 			/* process templates */
