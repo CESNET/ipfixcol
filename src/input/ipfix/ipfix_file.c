@@ -285,6 +285,7 @@ int input_init(char *params, void **config)
 	int inputf_index = 0;
 	int len;
 	DIR *dir;
+	struct stat st;
 
 
 	/* allocate memory for config structure */
@@ -427,7 +428,19 @@ int input_init(char *params, void **config)
 				VERBOSE(CL_VERBOSE_OFF, "Not enough memory");
 				goto err_file;
 			}
+			/* create path+filename string */
 			sprintf(input_files[inputf_index], "%s/%s", conf->dir, entry->d_name);
+
+			/* check whether input file is a directory */
+			stat(input_files[inputf_index], &st);
+			if (S_ISDIR(st.st_mode)) {
+				/* well, it is... damn */
+				free(input_files[inputf_index]);
+				input_files[inputf_index] = NULL;
+				VERBOSE(CL_VERBOSE_BASIC, "Input file %s is a directory. Skipping.", entry->d_name);
+				continue;
+			}
+
 			inputf_index += 1;
 		}
 	} while (result);
@@ -438,6 +451,7 @@ int input_init(char *params, void **config)
 	ret = prepare_input_file(conf);
 	if (ret == -1) {
 		/* no input files */
+		VERBOSE(CL_VERBOSE_BASIC, "No input files, nothing to do");
 		goto err_file;
 	}
 
@@ -500,7 +514,7 @@ read_header:
 			ret = INPUT_INTR;
 			goto err_header;
 		}
-	    VERBOSE(CL_VERBOSE_OFF, "Failed to receive IPFIX packet header: %s", strerror(errno));
+	    VERBOSE(CL_VERBOSE_OFF, "Failed to read IPFIX packet header: %s", strerror(errno));
 	    ret = INPUT_ERROR;
 		goto err_header;
 	}
@@ -519,8 +533,20 @@ read_header:
 	/* check magic number */
 	if (ntohs(header->version) != IPFIX_VERSION) {
 		/* not an IPFIX file */
-		VERBOSE(CL_VERBOSE_OFF, "Input file is not an IPFIX file");
-		goto err_header;
+		VERBOSE(CL_VERBOSE_OFF, "Bad magic number. Expected %x, got %x", IPFIX_VERSION, ntohs(header->version));
+		/* we don't know how big is this message. It's not IPFIX message or
+		 * header is corrupted. skip whole file */
+		VERBOSE(CL_VERBOSE_OFF, "Input file may be corrupted. Skipping");
+
+		/* try to open next input file */
+		ret = next_file(conf);
+		if (ret == NO_INPUT_FILE) {
+			/* all files processed */
+			ret = INPUT_CLOSED;
+			goto err_info;
+		}
+
+		goto read_header;
 	}
 
 	/* get packet length */
