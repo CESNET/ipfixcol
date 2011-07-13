@@ -240,19 +240,21 @@ static int close_input_file(struct ipfix_config *conf)
  * Close current input file (if any), and open new one
  *
  * \param[in] conf  input plugin config structure
- * \return file descriptor of the new input file on success.
+ * \return  0 on success.
  * NO_INPUT_FILE in case there is no more input files.
  * negative value otherwise.
  */
 static int next_file(struct ipfix_config *conf)
 {
+	int ret;
+
 	if (conf->fd <= 0) {
 		close_input_file(conf);
 	}
-	prepare_input_file(conf);
+	ret = prepare_input_file(conf);
 
 	if (conf->fd != NO_INPUT_FILE) {
-		
+		return ret;
 	}
 
 	return conf->fd;
