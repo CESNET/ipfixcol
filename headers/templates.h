@@ -89,6 +89,8 @@ struct ipfix_template {
 	uint16_t field_count;        /**Number of fields in Template Record */
 	uint16_t scope_field_count;  /**Number of scope fields */
 	uint16_t template_length;    /**Length of the template */
+	uint16_t data_length;        /**Length of the data record specified
+								  * by this template */
 	template_ie fields[1];       /**Template fields */
 };
 

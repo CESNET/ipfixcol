@@ -101,7 +101,8 @@ static void tm_copy_fields(uint8_t *to, uint8_t *from, uint16_t length)
 /**
  * \brief Fills up ipfix_template structure with data from (options_)template_record
  */
-static int tm_fill_template(struct ipfix_template *template, void *template_record, uint16_t template_length, int type)
+static int tm_fill_template(struct ipfix_template *template, void *template_record, uint16_t template_length,
+							uint16_t data_length, int type)
 {
 	struct ipfix_template_record *tmpl = (struct ipfix_template_record*) template_record;
 
@@ -110,6 +111,7 @@ static int tm_fill_template(struct ipfix_template *template, void *template_reco
 	template->field_count = ntohs(tmpl->count);
 	template->template_id = ntohs(tmpl->template_id);
 	template->template_length = template_length;
+	template->data_length = data_length;
 
 	/* set type specific attributes */
 	if (type == TM_TEMPLATE) { /* template */
@@ -133,13 +135,17 @@ static int tm_fill_template(struct ipfix_template *template, void *template_reco
 
 /**
  * \brief Calculates ipfix_template length based on (options_)template_record
+ *
+ * Also fills up data_length - length of data record specified by given template
+ *
  */
-static uint16_t tm_template_length(struct ipfix_template_record *template, int type)
+static uint16_t tm_template_length(struct ipfix_template_record *template, int type, uint16_t *data_length)
 {
 	uint8_t *fields;
 	int count;
 	uint16_t fields_length=0;
 	uint16_t tmpl_length = sizeof(struct ipfix_template) - sizeof(template_ie);
+	uint16_t data_record_length = 0;
 
 	if (type == TM_TEMPLATE) { /* template */
 		fields = (uint8_t *) template->fields;
@@ -148,13 +154,18 @@ static uint16_t tm_template_length(struct ipfix_template_record *template, int t
 	}
 
 	for (count=0; count < ntohs(template->count); count++) {
-		fields_length += TEMPLATE_FIELD_LEN;
-		if (ntohs(fields[fields_length]) & 0x80) { /* enterprise element has first bit set to 1*/
+		/* count data record length */
+		data_record_length += ntohs(((uint16_t*)fields)[(fields_length + 2)/2]);
+		/* enterprise element has first bit set to 1*/
+		if (ntohs(fields[fields_length]) & 0x80) {
 			fields_length += TEMPLATE_ENT_NUM_LEN;
 		}
+		fields_length += TEMPLATE_FIELD_LEN;
 	}
 
-	/* length is in octets, fields_length is 16bit */
+	if (data_length != NULL) {
+		*data_length = data_record_length;
+	}
 	tmpl_length += fields_length;
 	return tmpl_length;
 }
@@ -163,7 +174,8 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 {
 	struct ipfix_template *new_tmpl = NULL;
 	struct ipfix_template **new_templates = NULL;
-	uint32_t tmpl_length =  tm_template_length(template, type);
+	uint16_t data_length = 0;
+	uint32_t tmpl_length =  tm_template_length(template, type, &data_length);
 	int i;
 
 	/* allocate memory for new template */
@@ -171,7 +183,7 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 		VERBOSE (CL_VERBOSE_OFF, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 	}
 
-	if (tm_fill_template(new_tmpl, template, tmpl_length, type) == 1) {
+	if (tm_fill_template(new_tmpl, template, tmpl_length, data_length, type) == 1) {
 		free(new_tmpl);
 		return NULL;
 	}
@@ -207,7 +219,7 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *t
 	struct ipfix_template *tmpl;
 
 	tmpl = tm_get_template(tm, ntohs(((struct ipfix_template_record*) template)->template_id));
-	if (tm_fill_template(tmpl, template, tmpl->template_length, type) != 0) {
+	if (tm_fill_template(tmpl, template, tmpl->template_length, tmpl->data_length,type) != 0) {
 		return NULL;
 	}
 	return tmpl;

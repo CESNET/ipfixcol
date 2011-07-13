@@ -113,7 +113,7 @@ static inline void data_manager_free (struct data_manager_config* config)
  * @param[in,out] template_mgr	Template manager
  * @param[in] msg IPFIX			message
  * @param[in] udp_conf			UDP template configuration
- * @return uint32_t Number of received data reccords
+ * @return uint32_t Number of received data records
  */
 static uint32_t data_manager_process_templates(struct ipfix_template_mgr *template_mgr, struct ipfix_message *msg,
 												struct udp_conf *udp_conf, uint32_t msg_counter)
@@ -122,6 +122,7 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 	struct ipfix_template_record *template_record;
 	struct ipfix_template_record *options_template_record;
 	uint8_t *ptr;
+	uint32_t records_count = 0;
 	int i;
 
 	/* check for new templates */
@@ -204,10 +205,12 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 					(uint32_t) (msg_counter - msg->data_set[i].template->last_message) > udp_conf->template_life_packet))) {
 				VERBOSE(CL_VERBOSE_BASIC, "Data template ID %i expired! Using old template.", msg->data_set[i].template->template_id);
 			}
+			/* add data set records (flows) count */
+			records_count += ntohs(msg->data_set[i].data_set->header.length) / msg->data_set[i].template->data_length;
 		}
 	}
 	/* return number of data records */
-	return i;
+	return records_count;
 }
 
 /**
@@ -271,11 +274,11 @@ static void* data_manager_thread (void* cfg)
 
 			/* check sequence number */
 			/* \todo handle out of order messages */
-			if (sequence_number != ntohl(msg->pkt_header->sequence_number)) {
+			//if (sequence_number != ntohl(msg->pkt_header->sequence_number)) {
 				VERBOSE(CL_VERBOSE_ADVANCED, "Sequence number does not match: expected %u, got %u",
 						sequence_number, ntohl(msg->pkt_header->sequence_number));
 				sequence_number = ntohl(msg->pkt_header->sequence_number);
-			}
+			//}
 
 			/* process templates */
 			sequence_number += data_manager_process_templates(config->template_mgr, msg, &udp_conf, msg_counter);
@@ -412,7 +415,8 @@ struct data_manager_config* data_manager_create (
 
     /* check whether there is OID specific plugin for this OID */
     for (aux_storage = storage_plugins; aux_storage != NULL; aux_storage = aux_storage->next) {
-    	if (atol(storage_plugins->storage.xml_conf->observation_domain_id) == config->observation_domain_id) {
+    	if (storage_plugins->storage.xml_conf->observation_domain_id != NULL &&
+    			atol(storage_plugins->storage.xml_conf->observation_domain_id) == config->observation_domain_id) {
     		oid_specific_plugins++;
     	}
     }
