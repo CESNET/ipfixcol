@@ -240,6 +240,47 @@ int storage_init (char *params, void **config){
 int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	const struct ipfix_template_mgr *template_mgr){
 	VERBOSE(CL_VERBOSE_ADVANCED,"Fastbit store_packet");
+
+        int i,j;
+        const struct data_template_couple *dtc = NULL;
+        struct ipfix_data_set * data = NULL;
+        struct ipfix_template * template = NULL;
+
+        template_ie *field;
+        int32_t enterprise = 0; // enterprise 0 - is reserved by IANA (NOT used)
+
+        for(i=0;i<1023;i++ ){ //TODO magic number!
+                dtc = &(ipfix_msg->data_set[i]);
+                if(dtc->data_set==NULL){
+                        VERBOSE(CL_VERBOSE_ADVANCED,"Read %i data_sets!", i);
+                        break;
+                }
+
+                VERBOSE(CL_VERBOSE_ADVANCED,"Data_set: %i", i);
+                data = dtc->data_set;
+                template = dtc->template;
+
+                if(template->template_type != 0){ //its NOT "data" template (skip it)
+                        VERBOSE(CL_VERBOSE_ADVANCED,"\tData record %i is not paired with \"common\" template (skiped)", i);
+                        continue;
+                }
+
+
+                VERBOSE(CL_VERBOSE_ADVANCED,"\tTemplate id: %i",template->template_id);
+                VERBOSE(CL_VERBOSE_ADVANCED,"\tFlowSet id: %i",ntohs(data->header.flowset_id));
+
+                for(j=0;j<dtc->template->field_count;j++){
+                        //TODO record size check!!
+                        field = &(template->fields[j]);
+                        if(field->ie.id & 0x8000){ //its ENTERPRISE element
+                                j++;
+                                enterprise = template->fields[j].enterprise_number;
+                        }
+                        VERBOSE(CL_VERBOSE_ADVANCED,"\t\tField id: %i length: %i enum: %i",field->ie.id & 0x7FFF,field->ie.length, enterprise);
+                        //check_element(field->id & 0x7FFF, enterprise); //check if its known element -> it have description in config file.
+                }
+        }
+
 	return 0;  
 }
 /**
