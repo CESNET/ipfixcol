@@ -71,6 +71,7 @@ struct ring_buffer {
 	unsigned int count;
 	pthread_mutex_t mutex;
 	pthread_cond_t cond;
+	pthread_cond_t cond_empty;
 	struct ipfix_message** data;
 	unsigned int* data_references;
 };
@@ -123,6 +124,14 @@ struct ipfix_message* rbuffer_read (struct ring_buffer* rbuffer, unsigned int *i
  * @return 0 on success, nonzero on error - no reference on item
  */
 int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, int dofree);
+
+/**
+ * \brief Wait for queue to became empty
+ *
+ * @param[in] rbuffer Ring buffer.
+ * @return 0 on success, nonzero on error
+ */
+int rbuffer_wait_empty(struct ring_buffer* rbuffer);
 
 /**
  * \brief Destroy ring buffer structures.

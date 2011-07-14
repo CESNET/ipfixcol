@@ -490,7 +490,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
     	}
         VERBOSE(CL_VERBOSE_OFF, "Failed to receive IPFIX packet header: %s", strerror(errno));
         return INPUT_ERROR;
-    } else if (length > 0) { /* header received */
+    } else if (length >= IPFIX_HEADER_LENGTH) { /* header received */
         /* get packet total length */
         packet_length = ntohs(((struct ipfix_header *) *packet)->length);
         /* check whether buffer is big enough */
@@ -500,6 +500,9 @@ int get_packet(void *config, struct input_info **info, char **packet)
                 VERBOSE(CL_VERBOSE_OFF, "Packet too big and realloc failed: %s", strerror(errno));
                 return INPUT_ERROR;
             }
+        } else if (packet_length < IPFIX_HEADER_LENGTH) {
+        	VERBOSE(CL_VERBOSE_OFF, "Packet length too short. Malformed IPFIX packet.");
+        	return INPUT_ERROR;
         }
         /* receive the rest of the ipfix packet */
         length = recv(sock, (*packet) + IPFIX_HEADER_LENGTH, 
@@ -513,6 +516,11 @@ int get_packet(void *config, struct input_info **info, char **packet)
         }
         /* set length to correct value */
         length += IPFIX_HEADER_LENGTH;
+    } else if (length != 0) {
+    	VERBOSE(CL_VERBOSE_OFF, "Failed to receive IPFIX packet: packet too short: %zi. Closing connection...",
+    				length);
+    	/* this will close the connection */
+    	length = 0;
     }
 
     /* get peer address from configuration */
