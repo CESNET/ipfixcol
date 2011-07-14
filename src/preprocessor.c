@@ -243,6 +243,12 @@ void preprocessor_parse_msg (void* packet, struct input_info* input_info, struct
                 }
                 break;
         }
+
+        /* if length is wrong and pointer does not move, stop processing the message */
+        if (ntohs(set_header->length) == 0) {
+        	break;
+        }
+
         p += ntohs(set_header->length);
     }
 
