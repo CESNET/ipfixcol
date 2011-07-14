@@ -98,6 +98,15 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 		return (NULL);
 	}
 
+	if (pthread_cond_init (&(retval->cond_empty), NULL) != 0) {
+		VERBOSE (CL_VERBOSE_OFF, "Condition variable init failed (%s:%d)", __FILE__, __LINE__);
+		pthread_mutex_destroy (&(retval->mutex));
+		free (retval->data_references);
+		free (retval->data);
+		free (retval);
+		return (NULL);
+	}
+
 	return (retval);
 }
 
@@ -235,6 +244,14 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
 			/* move offset pointer in ring buffer */
 			rbuffer->read_offset = (rbuffer->read_offset + 1) % rbuffer->size;
 			rbuffer->count--;
+
+			/* signal to write thread waiting for empty queue */
+			if (rbuffer->count == 0) {
+				if (pthread_cond_signal (&(rbuffer->cond_empty)) != 0) {
+					VERBOSE (CL_VERBOSE_OFF, "Condition signal failed (%s:%d)", __FILE__, __LINE__);
+					return (EXIT_FAILURE);
+				}
+			}
 		}
 		if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
 			VERBOSE (CL_VERBOSE_OFF, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
@@ -259,6 +276,32 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
 }
 
 /**
+ * \brief Wait for queue to became empty
+ *
+ * @param[in] rbuffer Ring buffer.
+ * @return 0 on success, nonzero on error
+ */
+int rbuffer_wait_empty(struct ring_buffer* rbuffer) {
+	if (pthread_mutex_lock (&(rbuffer->mutex)) != 0) {
+		VERBOSE (CL_VERBOSE_OFF, "Mutex lock failed (%s:%d)", __FILE__, __LINE__);
+		return (EXIT_FAILURE);
+	}
+
+	while (rbuffer->count > 0) {
+		if (pthread_cond_wait (&(rbuffer->cond_empty), &(rbuffer->mutex)) != 0) {
+			VERBOSE (CL_VERBOSE_OFF, "Condition wait failed (%s:%d)", __FILE__, __LINE__);
+			return (EXIT_FAILURE);
+		}
+	}
+
+	if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
+		VERBOSE (CL_VERBOSE_OFF, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
+		return (EXIT_FAILURE);
+	}
+	return (EXIT_SUCCESS);
+}
+
+/**
  * \brief Destroy ring buffer structures.
  *
  * @param[in] rbuffer Ring buffer to destroy.
@@ -275,6 +318,7 @@ int rbuffer_free (struct ring_buffer* rbuffer)
 		}
 
 		pthread_cond_destroy (&(rbuffer->cond));
+		pthread_cond_destroy (&(rbuffer->cond_empty));
 		pthread_mutex_destroy (&(rbuffer->mutex));
 
 		free (rbuffer);

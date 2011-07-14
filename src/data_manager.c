@@ -100,15 +100,88 @@ static inline void data_manager_free (struct data_manager_config* config)
 }
 
 /**
+ * \brief Process new template (only one)
+ *
+ * This function process templates as well as options templates. It takes
+ * advantage of the fact that the structures are similar and elements
+ * template_id and count are at the same position in memory.
+ *
+ * @param[in] template_mgr Template manager
+ * @param[in] set ipfix template or options template set
+ * @param[in] type Type of templates to process (TM_TEMPLATE, TM_OPTIONS_TEMPLATE)
+ * @param[in] msg_counter counter of ipfix messages for UDP templates
+ * @param[in] input_info input info structure from ipfix message
+ * @return int size of processed template in bytes on success, 0 otherwise
+ */
+static int data_manager_process_one_template(struct ipfix_template_mgr *template_mgr, void *tmpl,
+										int type, uint32_t msg_counter, struct input_info *input_info) {
+	struct ipfix_template_record *template_record;
+	struct ipfix_template *template;
+	int ret;
+
+	template_record = (struct ipfix_template_record*) tmpl;
+
+	/* check for withdraw all templates message */
+	/* these templates are no longer used (checked in data_manager_withdraw_templates()) */
+	if (input_info->type == SOURCE_TYPE_UDP && ntohs(template_record->count) == 0) {
+		/* got withdrawal message with UDP -> this is wrong */
+		VERBOSE(CL_VERBOSE_BASIC, "Got template withdraw message on UDP. Ignoring.");
+		return TM_TEMPLATE_WITHDRAW_LEN;
+	} else if (ntohs(template_record->template_id) == IPFIX_TEMPLATE_FLOWSET_ID &&
+			ntohs(template_record->count) == 0) {
+		tm_remove_all_templates(template_mgr, type);
+		/* don't try to parse the withdraw template */
+		return TM_TEMPLATE_WITHDRAW_LEN;
+		/* check for withdraw template message */
+	} else if (ntohs(template_record->count) == 0) {
+		ret = tm_remove_template(template_mgr, ntohs(template_record->template_id));
+		/* Log error when removing unknown template */
+		if (ret == 1) {
+			VERBOSE(CL_VERBOSE_BASIC, "%s withdraw message received for unknown Template ID: %u",
+					(type==TM_TEMPLATE)?"Template":"Options template", ntohs(template_record->template_id));
+		}
+		return TM_TEMPLATE_WITHDRAW_LEN;
+		/* check whether template exists */
+	} else if ((template = tm_get_template(template_mgr, ntohs(template_record->template_id))) == NULL) {
+		/* add template */
+		MSG(0, "New %s ID %i", (type==TM_TEMPLATE)?"template":"options template", ntohs(template_record->template_id));
+		template = tm_add_template(template_mgr, tmpl, type);
+		/* template already exists */
+	} else {
+		VERBOSE(CL_VERBOSE_BASIC, "%s ID %i already exists. Rewriting.",
+				(type==TM_TEMPLATE)?"template":"options template", template->template_id);
+		template = tm_update_template(template_mgr, tmpl, type);
+	}
+	if (template == NULL) {
+		VERBOSE(CL_VERBOSE_BASIC, "Cannot parse %s set, skipping to next set",
+				(type==TM_TEMPLATE)?"template":"options template");
+		return 0;
+		/* update UDP timeouts */
+	} else if (input_info->type == SOURCE_TYPE_UDP) {
+		template->last_message = msg_counter;
+		template->last_transmission = time(NULL);
+	}
+
+	/* return the length of the original template:
+	 * = template length - template header length + template record header length */
+	if (type == TM_TEMPLATE) {
+		return template->template_length - sizeof(struct ipfix_template) + sizeof(struct ipfix_template_record);
+	}
+	return template->template_length - sizeof(struct ipfix_template) + sizeof(struct ipfix_options_template_record);
+}
+
+/**
  * \brief Process templates
  *
  * Currently template management does not conform to RFC 5101 in following:
  * - If template is reused without prewious withdrawal or timeout (UDP),
- *   only warning is logged and template is updated
- * - If template is not found, data is removed from preprocessed array,
- *   but is passed in msg to storage plugin
+ *   only warning is logged and template is updated (template MUST be of
+ *   the same length).
+ * - If template is not found, data is not coupled with template,
+ *   i.e. data_set[x]->template == NULL
  * - When template is malformed and cannot be added to template manager,
- *   rest of the template set is discarded
+ *   rest of the template set is discarded (template length cannot be
+ *   determined)
  *
  * @param[in,out] template_mgr	Template manager
  * @param[in] msg IPFIX			message
@@ -118,9 +191,6 @@ static inline void data_manager_free (struct data_manager_config* config)
 static uint32_t data_manager_process_templates(struct ipfix_template_mgr *template_mgr, struct ipfix_message *msg,
 												struct udp_conf *udp_conf, uint32_t msg_counter)
 {
-	struct ipfix_template *template;
-	struct ipfix_template_record *template_record;
-	struct ipfix_options_template_record *options_template_record;
 	uint8_t *ptr;
 	uint32_t records_count = 0;
 	int i, ret;
@@ -129,44 +199,12 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 	for (i=0; msg->templ_set[i] != NULL && i<1024; i++) {
 		ptr = (uint8_t*) &msg->templ_set[i]->first_record;
 		while (ptr < (uint8_t*) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) {
-			template_record = (struct ipfix_template_record*) ptr;
-			/* check for withdraw all templates message */
-			/* templates are no longer used (checked in data_manager_withdraw_templates()) */
-			if (ntohs(template_record->template_id) == IPFIX_TEMPLATE_FLOWSET_ID &&
-					ntohs(template_record->count) == 0) {
-				tm_remove_all_templates(template_mgr, TM_TEMPLATE);
-				/* don't try to parse the withdraw template */
-				ptr += TM_TEMPLATE_WITHDRAW_LEN;
-				continue;
-				/* check for withdraw template message */
-			} else if (ntohs(template_record->count) == 0) {
-				ret = tm_remove_template(template_mgr, ntohs(template_record->template_id));
-				/* Log error when removing unknown template */
-				if (ret == 1) {
-					VERBOSE(CL_VERBOSE_BASIC, "Template withdraw message received for unknown Template ID: %u",
-							ntohs(template_record->template_id));
-				}
-				ptr += TM_TEMPLATE_WITHDRAW_LEN;
-				continue;
-				/* check whether template exists */
-			} else if ((template = tm_get_template(template_mgr, ntohs(template_record->template_id))) == NULL) {
-				/* add template */
-				MSG(0, "New template ID %i", ntohs(template_record->template_id));
-				template = tm_add_template(template_mgr, ptr, TM_TEMPLATE);
-				/* template already exists */
-			} else {
-				VERBOSE(CL_VERBOSE_BASIC, "Template ID %i already exists. Rewriting.", template->template_id);
-				template = tm_update_template(template_mgr, ptr, TM_TEMPLATE);
-			}
-			if (template == NULL) {
-				VERBOSE(CL_VERBOSE_BASIC, "Cannot parse template set, skipping to next set");
+			ret = data_manager_process_one_template(template_mgr, ptr, TM_TEMPLATE, msg_counter, msg->input_info);
+			if (ret == 0) {
 				break;
-				/* update UDP timeouts */
-			} else if (msg->input_info->type == SOURCE_TYPE_UDP) {
-					template->last_message = msg_counter;
-					template->last_transmission = time(NULL);
+			} else {
+				ptr += ret;
 			}
-			ptr += template->template_length - sizeof(struct ipfix_template) + sizeof(struct ipfix_template_record);
 		}
 	}
 
@@ -174,43 +212,12 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 	for (i=0; msg->opt_templ_set[i] != NULL && i<1024; i++) {
 		ptr = (uint8_t*) &msg->opt_templ_set[i]->first_record;
 		while (ptr < (uint8_t*) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) {
-			options_template_record = (struct ipfix_options_template_record*) ptr;
-			/* check for withdraw all option templates message */
-			if (ntohs(options_template_record->template_id) == IPFIX_OPTION_FLOWSET_ID &&
-					ntohs(options_template_record->count) == 0) {
-				tm_remove_all_templates(template_mgr, TM_OPTIONS_TEMPLATE);
-				/* option templates are no longer used (checked in data_manager_withdraw_templates()) */
-				ptr += TM_TEMPLATE_WITHDRAW_LEN;
-				continue;
-				/* check for withdraw option template message */
-			} else if (ntohs(options_template_record->count) == 0) {
-				ret = tm_remove_template(template_mgr, ntohs(options_template_record->template_id));
-				/* Log error when removing unknown options template */
-				if (ret == 1) {
-					VERBOSE(CL_VERBOSE_BASIC, "Options template withdraw message received for unknown Template ID: %u",
-							ntohs(options_template_record->template_id));
-				}
-				ptr += TM_TEMPLATE_WITHDRAW_LEN;
-				continue;
-				/* check whether option template exists */
-			} else if ((template = tm_get_template(template_mgr, ntohs(options_template_record->template_id))) == NULL) {
-				/* add template */
-				MSG(4, "New option template ID %i", ntohs(options_template_record->template_id));
-				template = tm_add_template(template_mgr, ptr, TM_OPTIONS_TEMPLATE);
-				/* option template already exits */
-			} else {
-				VERBOSE(CL_VERBOSE_BASIC, "Option template ID %i already exists. Rewriting.", template->template_id);
-				template = tm_update_template(template_mgr, ptr, TM_OPTIONS_TEMPLATE);
-			}
-			if (template == NULL) {
-				VERBOSE(CL_VERBOSE_BASIC, "Cannot parse option template set, skipping to next set");
+			ret = data_manager_process_one_template(template_mgr, ptr, TM_OPTIONS_TEMPLATE, msg_counter, msg->input_info);
+			if (ret == 0) {
 				break;
-				/* update UDP timeouts */
-			} else if (msg->input_info->type == SOURCE_TYPE_UDP) {
-				template->last_message = msg_counter;
-				template->last_transmission = time(NULL);
+			} else {
+				ptr += ret;
 			}
-			ptr += template->template_length - sizeof(struct ipfix_template) + sizeof(struct ipfix_options_template_record);
 		}
 	}
 
@@ -246,15 +253,10 @@ static int data_manager_withdraw_templates(struct ipfix_message *msg) {
 	struct ipfix_options_template_record *options_template_record;
 	int i;
 
-	/* check for template withdraw messagess */
+	/* check for template withdraw messagess (no other templates should be in the set) */
 	for (i=0; msg->templ_set[i] != NULL && i<1024; i++) {
 		template_record = &msg->templ_set[i]->first_record;
-		/* check for withdraw all templates message */
-		if (ntohs(template_record->template_id) == IPFIX_TEMPLATE_FLOWSET_ID &&
-				ntohs(template_record->count) == 0) {
-			return 1;
-			/* check for withdraw template message */
-		} else if (ntohs(template_record->count) == 0) {
+		if (ntohs(template_record->count) == 0) {
 			return 1;
 		}
 	}
@@ -262,12 +264,7 @@ static int data_manager_withdraw_templates(struct ipfix_message *msg) {
 	/* check for options template withdraw messagess */
 	for (i=0; msg->opt_templ_set[i] != NULL && i<1024; i++) {
 			options_template_record = &msg->opt_templ_set[i]->first_record;
-			/* check for withdraw all option templates message */
-			if (ntohs(options_template_record->template_id) == IPFIX_OPTION_FLOWSET_ID &&
-					ntohs(options_template_record->count) == 0) {
-				return 1;
-				/* check for withdraw option template message */
-			} else if (ntohs(options_template_record->count) == 0) {
+			if (ntohs(options_template_record->count) == 0) {
 				return 1;
 			}
 	}
@@ -341,11 +338,11 @@ static void* data_manager_thread (void* cfg)
 				sequence_number = ntohl(msg->pkt_header->sequence_number);
 			}
 
-			/* Check whether there are withdraw templates */
-			if (data_manager_withdraw_templates(msg)) {
+			/* Check whether there are withdraw templates (not for UDP) */
+			if (config->input_info->type != SOURCE_TYPE_UDP &&  data_manager_withdraw_templates(msg)) {
+				VERBOSE(CL_VERBOSE_ADVANCED, "Got template withdrawal message. Waiting for storage packets.");
 				/* wait for storage plugins to consume all pending messages */
-				/* \todo add condition wait */
-				while (config->in_queue->count > 0);
+				while (rbuffer_wait_empty(config->store_queue));
 			}
 
 			/* process templates */
