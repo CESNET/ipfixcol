@@ -198,10 +198,12 @@ static int prepare_input_file(struct ipfix_config *conf)
 		return -1;
 	}
 
+	VERBOSE(CL_VERBOSE_BASIC, "Opening input file: %s", conf->input_files[conf->findex]);
+
 	fd = open(conf->input_files[conf->findex], O_RDONLY);
 	if (fd == -1) {
 		/* input file doesn't exist or we don't have read permission */
-		VERBOSE(CL_VERBOSE_OFF, "Unable to open input file \"%s\"", conf->file);
+		VERBOSE(CL_VERBOSE_OFF, "Unable to open input file: %s", conf->input_files[conf->findex]);
 		ret = -1;
 	}
 
@@ -228,6 +230,8 @@ static int close_input_file(struct ipfix_config *conf)
 		return -1;
 	}
 
+	VERBOSE(CL_VERBOSE_BASIC, "Input file closed");
+
 	conf->fd = -1;
 
 	return 0;
@@ -251,13 +255,21 @@ static int next_file(struct ipfix_config *conf)
 	if (conf->fd <= 0) {
 		close_input_file(conf);
 	}
-	ret = prepare_input_file(conf);
 
-	if (conf->fd != NO_INPUT_FILE) {
-		return ret;
+	ret = 1;
+	while (ret) {
+		ret = prepare_input_file(conf);
+	
+		if (conf->fd == NO_INPUT_FILE) {
+			/* no more input files */
+			return NO_INPUT_FILE;
+		} else if (!ret) {
+			/* ok, new input file ready */
+			return ret;
+		}
 	}
 
-	return conf->fd;
+	return NO_INPUT_FILE;
 }
 
 
@@ -285,6 +297,8 @@ int input_init(char *params, void **config)
 	int inputf_index = 0;
 	int len;
 	DIR *dir;
+	struct stat st;
+	int i;
 
 
 	/* allocate memory for config structure */
@@ -427,17 +441,37 @@ int input_init(char *params, void **config)
 				VERBOSE(CL_VERBOSE_OFF, "Not enough memory");
 				goto err_file;
 			}
+			/* create path+filename string */
 			sprintf(input_files[inputf_index], "%s/%s", conf->dir, entry->d_name);
+
+			/* check whether input file is a directory */
+			stat(input_files[inputf_index], &st);
+			if (S_ISDIR(st.st_mode)) {
+				/* well, it is... damn */
+				free(input_files[inputf_index]);
+				input_files[inputf_index] = NULL;
+				VERBOSE(CL_VERBOSE_BASIC, "Input file %s is a directory. Skipping.", entry->d_name);
+				continue;
+			}
+
 			inputf_index += 1;
 		}
 	} while (result);
 
 	conf->input_files = input_files;
 
+	/* print all input files */
+	if (inputf_index) {
+		VERBOSE(CL_VERBOSE_BASIC, "List of input files:");
+		for (i = 0; input_files[i] != NULL; i++) {
+			VERBOSE(CL_VERBOSE_BASIC, "\t%s", input_files[i]);
+		}
+	}
 
-	ret = prepare_input_file(conf);
+	ret = next_file(conf);
 	if (ret == -1) {
 		/* no input files */
+		VERBOSE(CL_VERBOSE_BASIC, "No input files, nothing to do");
 		goto err_file;
 	}
 
@@ -500,7 +534,7 @@ read_header:
 			ret = INPUT_INTR;
 			goto err_header;
 		}
-	    VERBOSE(CL_VERBOSE_OFF, "Failed to receive IPFIX packet header: %s", strerror(errno));
+	    VERBOSE(CL_VERBOSE_OFF, "Failed to read IPFIX packet header: %s", strerror(errno));
 	    ret = INPUT_ERROR;
 		goto err_header;
 	}
@@ -519,8 +553,20 @@ read_header:
 	/* check magic number */
 	if (ntohs(header->version) != IPFIX_VERSION) {
 		/* not an IPFIX file */
-		VERBOSE(CL_VERBOSE_OFF, "Input file is not an IPFIX file");
-		goto err_header;
+		VERBOSE(CL_VERBOSE_OFF, "Bad magic number. Expected %x, got %x", IPFIX_VERSION, ntohs(header->version));
+		/* we don't know how big is this message. It's not IPFIX message or
+		 * header is corrupted. skip whole file */
+		VERBOSE(CL_VERBOSE_OFF, "Input file may be corrupted. Skipping");
+
+		/* try to open next input file */
+		ret = next_file(conf);
+		if (ret == NO_INPUT_FILE) {
+			/* all files processed */
+			ret = INPUT_CLOSED;
+			goto err_info;
+		}
+
+		goto read_header;
 	}
 
 	/* get packet length */
