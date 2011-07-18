@@ -43,10 +43,12 @@
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <endian.h>
+#include <capi.h>
 
 #include <libxml/parser.h>
 #include <libxml/tree.h>
+
 
 /**
  * \defgroup storageAPI Storage Plugins API
@@ -64,6 +66,8 @@
  */
 
 
+//TODO CHECK RECORD LENGTH IF IS ZERO?!!!!!!!!!!!!!!!!!!!
+
 struct fastbit_conf {
 	int cache_size;
 	struct element_cache *ie_cache;
@@ -74,10 +78,56 @@ struct element_cache {
 	uint16_t id;
 	uint16_t type;
 	uint32_t en;
+	char name[16];
 };
+
+struct data_type{
+	char ipfix[25];
+	char fastbit[10];
+	int (*store)(uint8_t * data, uint16_t length, struct element_cache * cache);
+};
+
+int store_ubyte(uint8_t *data, uint16_t length, struct element_cache * cache);
+int store_ushort(uint8_t *data, uint16_t length, struct element_cache * cache);
+int store_uint(uint8_t *data, uint16_t length, struct element_cache * cache);
+int store_ulong(uint8_t *data, uint16_t length, struct element_cache * cache);
+int store_byte(uint8_t *data, uint16_t length, struct element_cache * cache);
+int store_short(uint8_t *data, uint16_t length, struct element_cache * cache);
+int store_int(uint8_t *data, uint16_t length, struct element_cache * cache);
+int store_long(uint8_t *data, uint16_t length, struct element_cache * cache);
+int store_text(uint8_t *data, uint16_t length, struct element_cache * cache);
+int store_float(uint8_t *data, uint16_t length, struct element_cache * cache);
+int store_double(uint8_t *data, uint16_t length, struct element_cache * cache);
 
 
 #define TYPES_COUNT 23
+struct data_type mtypes[TYPES_COUNT] = {
+	{"octetArray", "text", store_text},
+	{"unsigned8" , "ubyte", store_ubyte},
+	{"unsigned16", "ushort", store_ushort},
+	{"unsigned32", "uint", store_uint},
+	{"unsigned64", "ulong", store_ulong},
+	{"signed8"   , "byte", store_byte},
+	{"signed16"  , "short", store_short},
+	{"signed32"  , "int", store_int},
+	{"signed64"  , "long", store_long},
+	{"float32"   , "float", store_float},
+	{"float64"   , "double", store_double},
+	{"boolean"   , "byte", store_byte},
+	{"macAddress", "text", store_text},
+	{"string"    , "text", store_text},
+	{"dateTimeSeconds" 	, "uint", store_uint},
+	{"dateTimeMilliseconds" , "ulong", store_ulong},
+	{"dateTimeMicroseconds" , "ulong", store_ulong},
+	{"dateTimeNanoseconds"  , "ulong", store_ulong},
+	{"ipv4Address"		, "uint", store_uint},
+	{"ipv6Address"		, "text", store_text},
+	{"basicList"		, "text", store_text}, //? what is this??  TODO
+	{"subTemplateList"	, "text", store_text}, //?
+	{"subTemplateMultiList"	, "text", store_text} //?
+};
+
+
 char types[TYPES_COUNT][2][21] = {
 	{"octetArray", "text"},
 	{"unsigned8" , "ubyte"},
@@ -104,6 +154,170 @@ char types[TYPES_COUNT][2][21] = {
 	{"subTemplateMultiList"	, "text"} //?
 };
 
+int store_ubyte(uint8_t *data, uint16_t length, struct element_cache * cache){
+	VERBOSE(CL_VERBOSE_ADVANCED,"ubyte: %u", (int) *data);
+	fastbit_add_values(cache->name, mtypes[cache->type].fastbit, data,1,0);
+	return 1;
+}
+
+int store_ushort(uint8_t *data, uint16_t length, struct element_cache * cache){
+#define SIZE 2
+	char buf[SIZE];
+	if(length==SIZE){
+		*((uint16_t *) buf) = ntohs(*((uint16_t *) data));
+	}else if (length<SIZE){
+		memset(&buf,0,SIZE);
+		memcpy(&buf[SIZE-length],data,length);
+		*((uint16_t *) buf) = ntohs(*((uint16_t *) buf));
+	} else {
+		VERBOSE(CL_WARNING,"wrong data typ length");
+		return 1;
+	}
+	VERBOSE(CL_VERBOSE_ADVANCED,"ushort: %u",*((uint16_t *) buf));
+	fastbit_add_values(cache->name, mtypes[cache->type].fastbit, (uint16_t *) buf,1,0);
+	return 0;
+#undef SIZE
+}
+
+int store_uint(uint8_t *data, uint16_t length, struct element_cache * cache){
+#define SIZE 4
+	char buf[SIZE];
+	if(length==SIZE){
+		*((uint32_t*) buf) = ntohl(*((uint32_t *) data));
+	}else if (length<SIZE){
+		memset(&buf,0,SIZE);
+		memcpy(&buf[SIZE-length],data,length);
+		*((uint32_t*) buf) = ntohl(*((uint32_t *) buf));
+
+	} else {
+		VERBOSE(CL_WARNING,"wrong data typ length");
+		return 1;
+	}
+	VERBOSE(CL_VERBOSE_ADVANCED,"uint: %u",*((uint32_t *) buf));
+	fastbit_add_values(cache->name, mtypes[cache->type].fastbit, (uint32_t *) buf,1,0);
+	return 0;
+#undef SIZE
+}
+
+
+int store_ulong(uint8_t *data, uint16_t length, struct element_cache * cache){
+#define SIZE 8
+	char buf[SIZE];
+	if(length==SIZE){
+		*((uint64_t*) buf) = be64toh(*((uint64_t *) data));
+	}else if (length<SIZE){
+		memset(&buf,0,SIZE);
+		memcpy(&buf[SIZE-length],data,length);
+		VERBOSE(CL_WARNING,"BUFFER - %lu", *((uint64_t *)&buf));
+		*((uint64_t*) buf) = be64toh(*((uint64_t *) buf));
+	} else {
+		VERBOSE(CL_WARNING,"wrong data typ length");
+		return 1;
+	}
+	VERBOSE(CL_VERBOSE_ADVANCED,"ulong: %lu",*((uint64_t *)&buf));
+	fastbit_add_values(cache->name, mtypes[cache->type].fastbit, (uint64_t *) buf,1,0);
+	return 0;
+#undef SIZE
+}
+
+int store_byte(uint8_t *data, uint16_t length, struct element_cache * cache){
+	VERBOSE(CL_VERBOSE_ADVANCED,"byte: %i", (int) *data);
+	fastbit_add_values(cache->name, mtypes[cache->type].fastbit, data,1,0);
+	return 1;
+}
+
+int store_short(uint8_t *data, uint16_t length, struct element_cache * cache){
+#define SIZE 2
+	char buf[SIZE];
+	if(length==SIZE){
+		*((int16_t*) buf) = ntohs(*((int16_t *) data));
+	}else if (length<SIZE){
+		memset(&buf,0,SIZE);
+		memcpy(&buf[SIZE-length],data,length);
+		*((int16_t*) buf) = ntohs(*((int16_t *) buf));
+
+	} else {
+		VERBOSE(CL_WARNING,"wrong data typ length");
+		return 1;
+	}
+	VERBOSE(CL_VERBOSE_ADVANCED,"uint: %i",*((int16_t *) buf));
+	fastbit_add_values(cache->name, mtypes[cache->type].fastbit, (int16_t *) buf,1,0);
+	return 0;
+#undef SIZE
+}
+
+int store_int(uint8_t *data, uint16_t length, struct element_cache * cache){
+#define SIZE 4
+	char buf[SIZE];
+	if(length==SIZE){
+		*((int32_t*) buf) = ntohl(*((int32_t *) data));
+	}else if (length<SIZE){
+		memset(&buf,0,SIZE);
+		memcpy(&buf[SIZE-length],data,length);
+		*((int32_t*) buf) = ntohl(*((int32_t *) buf));
+
+	} else {
+		VERBOSE(CL_WARNING,"wrong data typ length");
+		return 1;
+	}
+	VERBOSE(CL_VERBOSE_ADVANCED,"uint: %i",*((uint32_t *) buf));
+	fastbit_add_values(cache->name, mtypes[cache->type].fastbit, (uint32_t *) buf,1,0);
+	return 0;
+#undef SIZE
+}
+
+
+int store_long(uint8_t *data, uint16_t length, struct element_cache * cache){
+#define SIZE 8
+	char buf[SIZE];
+	if(length==SIZE){
+		*((int64_t*) buf) = be64toh(*((int64_t *) data));
+	}else if (length<SIZE){
+		memset(&buf,0,SIZE);
+		memcpy(&buf[SIZE-length],data,length);
+		*((int64_t*) buf) = be64toh(*((int64_t *) buf));
+	} else {
+		VERBOSE(CL_WARNING,"wrong data typ length");
+		return 1;
+	}
+	VERBOSE(CL_VERBOSE_ADVANCED,"ulong: %li", *((uint64_t *) buf));
+	fastbit_add_values(cache->name, mtypes[cache->type].fastbit, ((uint64_t *)buf),1,0);
+	return 0;
+#undef SIZE
+}
+
+
+int store_text(uint8_t *data, uint16_t length, struct element_cache * cache){
+	VERBOSE(CL_VERBOSE_ADVANCED,"text: %s", data);
+	//fastbit_add_values(cache->name, mtypes[cache->type].fastbit, data,1,0);
+	return 8;
+}
+
+
+int store_float(uint8_t *data, uint16_t length, struct element_cache * cache){
+	VERBOSE(CL_VERBOSE_ADVANCED,"float: %f",*((float *) data));
+	fastbit_add_values(cache->name, mtypes[cache->type].fastbit, ((float *) data),1,0);
+	return 4;
+}
+
+int store_double(uint8_t *data, uint16_t length, struct element_cache * cache){
+	VERBOSE(CL_VERBOSE_ADVANCED,"double: %lf",*((double *) data));
+	fastbit_add_values(cache->name, mtypes[cache->type].fastbit, ((double *) data),1,0);
+	return 8;
+}
+struct element_cache *
+cached_element(struct fastbit_conf * conf, uint16_t id, uint16_t enterprise){
+	int i;	
+	struct element_cache *cache = conf->ie_cache;
+	for(i=0;i<conf->cache_size;i++){
+		if( cache[i].id == id ){
+			if(cache[i].en == enterprise){
+				return &(cache[i]);
+			}
+		}
+	}
+	return NULL;
+}
 
 int
 element_count(xmlNode * node)
@@ -141,31 +355,31 @@ char *trim(char *str){
 }
 
 void
-fill_element_cache(struct element_cache *cache, xmlNode *node){
+fill_element_cache(struct element_cache **cache, xmlNode *node){
 	xmlNode *cnode = NULL;
 	xmlNode *enode = NULL;
 	int i = 0;
 	int j = 0;
 
 	for (cnode = node; cnode; cnode = cnode->next){
-		cache[i].type=0;
 		if(xmlStrEqual(cnode->name,(xmlChar *)"element")){
+			(*cache)[i].type=0;
 			VERBOSE(CL_VERBOSE_ADVANCED,"Element:");
 			for (enode = cnode->children; enode; enode = enode->next){
 				if(xmlStrEqual(enode->name,(xmlChar *)"enterprise")){
-					cache[i].en = atoi((char *)xmlNodeGetContent(enode));
-					VERBOSE(CL_VERBOSE_ADVANCED,"\tenterprise:%d",cache[i].en);
+					(*cache)[i].en = atoi((char *)xmlNodeGetContent(enode));
+					VERBOSE(CL_VERBOSE_ADVANCED,"\tenterprise:%d",(*cache)[i].en);
 				}else if (xmlStrEqual(enode->name,(xmlChar *)"id")){
-					cache[i].id = atoi((char *)xmlNodeGetContent(enode));
-					VERBOSE(CL_VERBOSE_ADVANCED,"\tid:%d",cache[i].id);
+					(*cache)[i].id = atoi((char *)xmlNodeGetContent(enode));
+					VERBOSE(CL_VERBOSE_ADVANCED,"\tid:%d",(*cache)[i].id);
 
 				}else if (xmlStrEqual(enode->name,(xmlChar *)"name")){
 
 				}else if (xmlStrEqual(enode->name,(xmlChar *)"dataType")){
 					for(j=0;j<TYPES_COUNT;j++){
-						if(xmlStrEqual((xmlChar *)trim((char *)xmlNodeGetContent(enode)),(xmlChar *)types[j][0])){
-							cache[i].type = j;
-							VERBOSE(CL_VERBOSE_ADVANCED,"\ttype:%d - (%s, %s)",cache[i].type,types[j][0],types[j][1]);
+						if(xmlStrEqual((xmlChar *)trim((char *)xmlNodeGetContent(enode)),(xmlChar *)mtypes[j].ipfix)){
+							(*cache)[i].type = j;
+							VERBOSE(CL_VERBOSE_ADVANCED,"\ttype:%d - (%s, %s)",(*cache)[i].type,mtypes[j].ipfix,mtypes[j].fastbit);
 						}
 					}
 
@@ -175,6 +389,10 @@ fill_element_cache(struct element_cache *cache, xmlNode *node){
 					//TODO
 				}
 			}
+			
+			sprintf((*cache)[i].name,"e%iid%hi", (*cache)[i].en, (*cache)[i].id);
+			VERBOSE(CL_VERBOSE_ADVANCED,"\tNAME: (%s)",(*cache)[i].name);
+			i++;
 		}
 	fill_element_cache(cache,cnode->children);
 	}
@@ -199,6 +417,9 @@ int storage_init (char *params, void **config){
 	struct fastbit_conf * conf;
 	struct element_cache *cache;
 
+	fastbit_init(NULL);
+
+
 	xmlDocPtr doc;
 	xmlNode *root_element = NULL;
 
@@ -208,7 +429,8 @@ int storage_init (char *params, void **config){
 	}
 	root_element = xmlDocGetRootElement(doc);
 
-	VERBOSE(CL_VERBOSE_ADVANCED,"Element count: %i\n",element_count(root_element));
+	i = element_count(root_element);
+	VERBOSE(CL_VERBOSE_ADVANCED,"Element count: %i\n",i);
 
 	*config = (struct fastbit_conf *) malloc(sizeof(struct fastbit_conf)); //TODO return value
 	conf = *config;
@@ -216,7 +438,7 @@ int storage_init (char *params, void **config){
 	conf->cache_size = i;
 	cache = conf->ie_cache;
 
-	fill_element_cache(cache, root_element);
+	fill_element_cache(&cache, root_element);
 	return 0;
 }
 
@@ -242,12 +464,17 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	VERBOSE(CL_VERBOSE_ADVANCED,"Fastbit store_packet");
 
         int i,j;
+	int ri; //record index
+	int record_count;
+	int record_offset=0;
+	char dir[5];
         const struct data_template_couple *dtc = NULL;
         struct ipfix_data_set * data = NULL;
         struct ipfix_template * template = NULL;
 
         template_ie *field;
         int32_t enterprise = 0; // enterprise 0 - is reserved by IANA (NOT used)
+	struct element_cache *cache_e=NULL;
 
         for(i=0;i<1023;i++ ){ //TODO magic number!
                 dtc = &(ipfix_msg->data_set[i]);
@@ -259,6 +486,10 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
                 VERBOSE(CL_VERBOSE_ADVANCED,"Data_set: %i", i);
                 data = dtc->data_set;
                 template = dtc->template;
+                if(template==NULL){
+                        VERBOSE(CL_VERBOSE_ADVANCED,"template for data set si missing!");
+                        break;
+                }
 
                 if(template->template_type != 0){ //its NOT "data" template (skip it)
                         VERBOSE(CL_VERBOSE_ADVANCED,"\tData record %i is not paired with \"common\" template (skiped)", i);
@@ -268,17 +499,34 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 
                 VERBOSE(CL_VERBOSE_ADVANCED,"\tTemplate id: %i",template->template_id);
                 VERBOSE(CL_VERBOSE_ADVANCED,"\tFlowSet id: %i",ntohs(data->header.flowset_id));
+		record_count = ntohs(data->header.length)/template->data_length;
+                VERBOSE(CL_VERBOSE_ADVANCED,"\tRecord count id: %i - (%i/%i)",record_count,ntohs(data->header.length),template->data_length);
 
-                for(j=0;j<dtc->template->field_count;j++){
-                        //TODO record size check!!
-                        field = &(template->fields[j]);
-                        if(field->ie.id & 0x8000){ //its ENTERPRISE element
-                                j++;
-                                enterprise = template->fields[j].enterprise_number;
-                        }
-                        VERBOSE(CL_VERBOSE_ADVANCED,"\t\tField id: %i length: %i enum: %i",field->ie.id & 0x7FFF,field->ie.length, enterprise);
-                        //check_element(field->id & 0x7FFF, enterprise); //check if its known element -> it have description in config file.
-                }
+		for(ri=0;ri<record_count;ri++){
+                	VERBOSE(CL_VERBOSE_ADVANCED,"\t\tFlow record: %i",ri);
+	                for(j=0;j<dtc->template->field_count;j++){
+        	                //TODO record size check!!
+                	        field = &(template->fields[j]);
+                        	if(field->ie.id & 0x8000){ //its ENTERPRISE element
+                                	j++;
+	                                enterprise = template->fields[j].enterprise_number;
+        	                }
+                	        VERBOSE(CL_VERBOSE_ADVANCED,"\t\t\tField id: %i length: %i enum: %i",field->ie.id & 0x7FFF,field->ie.length, enterprise);
+                        	//check_element(field->id & 0x7FFF, enterprise); //check if its known element -> it have description in config file.
+
+				cache_e = cached_element(config, field->ie.id & 0x7FFF, enterprise);
+				if(cache_e != NULL){
+                	        	VERBOSE(CL_VERBOSE_ADVANCED,"\t\t\t\tType: %s - %s - offset:%i", mtypes[cache_e->type].ipfix, mtypes[cache_e->type].fastbit,record_offset);
+					mtypes[cache_e->type].store(&(data->records[record_offset]),field->ie.length, cache_e);
+					record_offset+=field->ie.length;
+				} else {
+                	        	VERBOSE(CL_VERBOSE_ADVANCED,"\t\t\t\tType: UNKNOWN!");
+				}
+
+                	}
+		}
+		sprintf(dir,"%i",ntohs(data->header.flowset_id));
+		fastbit_flush_buffer(dir);
         }
 
 	return 0;  
