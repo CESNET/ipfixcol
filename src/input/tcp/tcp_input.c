@@ -64,6 +64,18 @@
 
 #include <ipfixcol.h>
 
+#ifdef TLS_SUPPORT
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
+/* use these if not specified otherwise */
+#define DEFAULT_SERVER_CERT_FILE "~/.ssl/certs/server.crt"
+#define DEFAULT_SERVER_PKEY_FILE "~/.ssl/private/server.key"
+#define DEFAULT_CA_FILE          "~/.ssl/private/ca.crt"
+
+#define DEFAULT_SIZE_SSL_LIST 100
+#endif
+
 /* input buffer length */
 #define BUFF_LEN 10000
 /* default port for tcp collector */
@@ -72,6 +84,7 @@
 #define BACKLOG SOMAXCONN
 /* size of array of socket addresses */
 #define ADDR_ARRAY_SIZE 50
+
 
 /**
  * \struct input_info_list
@@ -95,7 +108,25 @@ struct plugin_conf
     struct sockaddr_in6 *sock_addresses[ADDR_ARRAY_SIZE]; /*< array of addresses indexed by sockets */
     struct input_info_list *info_list; /**< list of infromation structures
      	 	 	 	 	 	 	 	 	* passed to collector */
+#ifdef TLS_SUPPORT
+	uint8_t tls;                  /**< TLS enabled? 0 = no, 1 = yes */
+	SSL_CTX *ctx;                 /**< CTX structure */
+	SSL **ssl_list;               /**< list of all SSL structures */
+	uint16_t ssl_list_size;       /**< number of SSL structures in the list */
+	char *ca_cert_file;           /**< CA certificate in PEM format */
+	char *server_cert_file;       /**< server's certifikate in PEM format */
+	char *server_pkey_file;       /**< server's private key */
+#endif
 };
+
+#ifdef TLS_SUPPORT
+/* auxiliarry structure for error handling */
+struct cleanup {
+	struct sockaddr_in6 *address;
+	SSL *ssl;
+	X509 *peer_cert;
+} maid;
+#endif
 
 pthread_mutex_t mutex;
 pthread_t listen_thread;
@@ -112,6 +143,47 @@ void input_listen_cleanup(void *address)
         free(address);
     }
 }
+
+#ifdef TLS_SUPPORT
+/**
+ * \brief Free TLS related things when TLS connection fails from some reason
+ *
+ * \param[in] config  plugin configuration structure
+ * \param[in] maid  structure containing all pointers to free
+ * \return  nothing
+ */
+void input_listen_tls_cleanup(void *config, struct cleanup *maid)
+{
+    struct plugin_conf *conf;
+	int fd;
+	int ret;
+	
+	conf = (struct plugin_conf *) config;
+
+	/* TLS enabled? */
+	if (conf->tls) {
+		if (maid->address != NULL) {
+			free(maid->address);
+		}
+
+		if (maid->ssl != NULL) {
+			fd = SSL_get_fd(maid->ssl);
+			if (fd >=0) {
+				/* TLS shutdown */
+				ret = SSL_shutdown(maid->ssl);
+				if (ret == -1) {
+            		VERBOSE(CL_VERBOSE_OFF, "Error during shutting down TLS connection");
+				}
+			}
+			SSL_free(maid->ssl);
+		}
+
+		if (maid->peer_cert != NULL) {
+			X509_free(maid->peer_cert);
+		}
+	}
+}
+#endif
 
 /**
  * \brief Funtion that listens for new connetions
@@ -130,6 +202,14 @@ void *input_listen(void *config)
     socklen_t addr_length;
     char src_addr[INET6_ADDRSTRLEN];
     struct input_info_list *input_info;
+#ifdef TLS_SUPPORT
+	int ret;
+	int i;
+	SSL *ssl = NULL;           /* structure for TLS connection */
+	X509 *peer_cert = NULL;    /* peer's certificate */
+	struct cleanup maid;       /* auxiliarry struct for TLS error handling */
+#endif
+
 
     /* loop ends when thread is cancelled by pthread_cancel() function */
     while (1) {
@@ -144,57 +224,134 @@ void *input_listen(void *config)
             VERBOSE(CL_VERBOSE_BASIC, "Cannot accept new socket: %s", strerror(errno));
             /* exit and call cleanup */
             pthread_exit(0);
-        } else {
-            pthread_mutex_lock(&mutex);
-            FD_SET(new_sock, &conf->master);
-
-            if (conf->fd_max < new_sock) {
-                conf->fd_max = new_sock;
-            }
-
-            /* copy socket address to config structure */
-            conf->sock_addresses[new_sock] = address;
-
-            /* print info */
-            if (conf->info.l3_proto == 4) {
-                inet_ntop(AF_INET, (void *)&((struct sockaddr_in*) address)->sin_addr, src_addr, INET6_ADDRSTRLEN);
-            } else {
-                inet_ntop(AF_INET6, &address->sin6_addr, src_addr, INET6_ADDRSTRLEN);
-            }
-            VERBOSE(CL_VERBOSE_BASIC, "Exporter connected from address %s", src_addr);
-
-            pthread_mutex_unlock(&mutex);
-
-            /* create new input_info for this connection */
-            input_info = malloc(sizeof(struct input_info_list));
-            memcpy(&input_info->info, &conf->info, sizeof(struct input_info_list));
-
-            /* copy address and port */
-            if (address->sin6_family == AF_INET) {
-            	/* copy src IPv4 address */
-            	input_info->info.src_addr.ipv4.s_addr =
-            			((struct sockaddr_in*) address)->sin_addr.s_addr;
-
-            	/* copy port */
-            	input_info->info.src_port = ntohs(((struct sockaddr_in*)  address)->sin_port);
-            } else {
-            	/* copy src IPv6 address */
-            	int i;
-            	for (i=0; i<4; i++) {
-            		input_info->info.src_addr.ipv6.s6_addr32[i] = address->sin6_addr.s6_addr32[i];
-            	}
-
-            	/* copy port */
-            	input_info->info.src_port = ntohs(address->sin6_port);
-            }
-
-            /* add to list */
-            input_info->next = conf->info_list;
-            conf->info_list = input_info;
-
-            /* unset the address so that we do not free it incidentally */
-            address = NULL;
         }
+#ifdef TLS_SUPPORT
+		/* preparation for TLS error handling */
+		maid.address = address;
+		maid.ssl = NULL;
+		maid.peer_cert = NULL;
+
+		if (conf->tls) {
+			/* create a new SSL structure for the connection */
+			ssl = SSL_new(conf->ctx);
+			if (!ssl) {
+		        VERBOSE(CL_VERBOSE_OFF, "Unable to create SSL structure");
+				ERR_print_errors_fp(stderr);
+            	/* cleanup */
+				input_listen_tls_cleanup(conf, &maid);
+				continue;
+			}
+			maid.ssl = ssl;
+
+			/* connect the SSL object with the socket */
+			ret = SSL_set_fd(ssl, new_sock);
+			if (ret != 1) {
+            	VERBOSE(CL_VERBOSE_OFF , "Unable to connect the SSL object with the socket");
+				ERR_print_errors_fp(stderr);
+            	/* cleanup */
+				input_listen_tls_cleanup(conf, &maid);
+				continue;
+			}
+
+			/* TLS handshake */
+			ret = SSL_accept(ssl);
+			if (ret != 1) {
+				/* handshake wasn't successful */
+    	        VERBOSE(CL_VERBOSE_OFF, "TLS handshake wasn't successful");
+				ERR_print_errors_fp(stderr);
+            	/* cleanup */
+				input_listen_tls_cleanup(conf, &maid);
+				continue;
+			}
+
+			/* obtain peer's certificate */
+			peer_cert = SSL_get_peer_certificate(ssl);
+			if (!peer_cert) {
+    	        VERBOSE(CL_VERBOSE_OFF, "No certificate was presented by the peer");
+            	/* cleanup */
+				input_listen_tls_cleanup(conf, &maid);
+				continue;
+			}
+			maid.peer_cert = peer_cert;
+
+			/* verify peer's certificate */
+			if (SSL_get_verify_result(ssl) != X509_V_OK) {
+    	        VERBOSE(CL_VERBOSE_OFF, "Client sent bad certificate. Verification failed");
+            	/* cleanup */
+				input_listen_tls_cleanup(conf, &maid);
+				continue;
+			}
+
+			/* we don't need peer's certificate anymore */
+			X509_free(peer_cert);
+			maid.peer_cert = NULL;
+
+			/* put new SSL structure into the conf->ssl_list */
+			for (i = 0; i < conf->ssl_list_size; i++) {
+				if (conf->ssl_list[i] == NULL) {
+					conf->ssl_list[i] = ssl;
+				}
+			}
+
+			if (conf->ssl_list[i] != ssl) {
+				/* limit reached. no space for new SSL structure */
+    	        VERBOSE(CL_VERBOSE_BASIC, "Limit on TLS connections reached. Shutting down this connection.");
+            	/* cleanup */
+				input_listen_tls_cleanup(conf, &maid);
+				continue;
+			}
+		}
+#endif
+        pthread_mutex_lock(&mutex);
+        FD_SET(new_sock, &conf->master);
+
+        if (conf->fd_max < new_sock) {
+            conf->fd_max = new_sock;
+        }
+
+        /* copy socket address to config structure */
+        conf->sock_addresses[new_sock] = address;
+
+        /* print info */
+        if (conf->info.l3_proto == 4) {
+            inet_ntop(AF_INET, (void *)&((struct sockaddr_in*) address)->sin_addr, src_addr, INET6_ADDRSTRLEN);
+        } else {
+            inet_ntop(AF_INET6, &address->sin6_addr, src_addr, INET6_ADDRSTRLEN);
+        }
+        VERBOSE(CL_VERBOSE_BASIC, "Exporter connected from address %s", src_addr);
+
+        pthread_mutex_unlock(&mutex);
+
+        /* create new input_info for this connection */
+        input_info = malloc(sizeof(struct input_info_list));
+        memcpy(&input_info->info, &conf->info, sizeof(struct input_info_list));
+
+        /* copy address and port */
+        if (address->sin6_family == AF_INET) {
+        	/* copy src IPv4 address */
+        	input_info->info.src_addr.ipv4.s_addr =
+        			((struct sockaddr_in*) address)->sin_addr.s_addr;
+
+        	/* copy port */
+        	input_info->info.src_port = ntohs(((struct sockaddr_in*)  address)->sin_port);
+        } else {
+        	/* copy src IPv6 address */
+        	int i;
+        	for (i=0; i<4; i++) {
+        		input_info->info.src_addr.ipv6.s6_addr32[i] = address->sin6_addr.s6_addr32[i];
+        	}
+
+        	/* copy port */
+        	input_info->info.src_port = ntohs(address->sin6_port);
+        }
+
+        /* add to list */
+        input_info->next = conf->info_list;
+        conf->info_list = input_info;
+
+        /* unset the address so that we do not free it incidentally */
+        address = NULL;
+
         pthread_cleanup_pop(0);
     }
     return NULL;
@@ -219,6 +376,11 @@ int input_init(char *params, void **config)
     int ret, ipv6_only = 0, retval = 0;
     /* 1 when using default port - don't free memory */
     int def_port = 0;
+#ifdef TLS_SUPPORT
+	SSL_CTX *ctx = NULL;       /* SSL context structure */
+	SSL **ssl_list = NULL;     /* list of SSL connection structures */
+    xmlNode *cur_node_parent;
+#endif
 
     /* allocate plugin_conf structure */
     conf = calloc(1, sizeof(struct plugin_conf));
@@ -260,6 +422,52 @@ int input_init(char *params, void **config)
 
     /* go over all elements */
     for (cur_node = root_element->children; cur_node; cur_node = cur_node->next) {
+#ifdef TLS_SUPPORT
+        /* check whether we want to enable transport layer security */
+        if (xmlStrEqual(cur_node->name, BAD_CAST "transportLayerSecurity")) {
+            VERBOSE(CL_VERBOSE_OFF, "TLS enabled");
+            conf->tls = 1;   /* TLS enabled */
+			cur_node_parent = cur_node;	
+
+			/* TLS configuration options */
+	    	for (cur_node = cur_node->xmlChildrenNode; cur_node; cur_node = cur_node->next) {
+        		if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
+					char *tmp_val = malloc(sizeof(char)*strlen((char *)cur_node->children->content)+1);
+					if (!tmp_val) {
+					    VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory: %s", strerror(errno));
+					    retval = 1;
+					    goto out;
+					}
+					strcpy(tmp_val, (char *)cur_node->children->content);
+					
+					if (xmlStrEqual(cur_node->name, BAD_CAST "localCAfile")) {
+						/* location of the CA certificate */
+					    conf->ca_cert_file = tmp_val;
+					} else if (xmlStrEqual(cur_node->name, BAD_CAST "localServerCert")) {
+						/* server's certificate */
+		    			conf->server_cert_file = tmp_val;
+					} else if (xmlStrEqual(cur_node->name, BAD_CAST "localServerCertKey")) {
+						/* server's private key */
+		    			conf->server_pkey_file = tmp_val;
+					} else {
+						/* unknown option */
+		    			VERBOSE(CL_VERBOSE_BASIC, "Unknown configuration option: %s", cur_node->name);
+						free(tmp_val);
+					}
+				}
+			}
+
+			cur_node = cur_node_parent;
+
+			continue;
+		}
+#else   /* user wants TLS, but collector was compiled without it */
+        if (xmlStrEqual(cur_node->name, BAD_CAST "transportLayerSecurity")) {
+			/* user wants to enable TLS, but collector was compiled without it */
+    		VERBOSE(CL_VERBOSE_BASIC, "Collector was compiled without TLS support");
+			continue;
+		}
+#endif
         if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
             /* copy value to memory - don't forget the terminating zero */
             char *tmp_val = malloc(sizeof(char)*strlen((char *)cur_node->children->content)+1);
@@ -295,6 +503,23 @@ int input_init(char *params, void **config)
         port = DEFAULT_PORT;
         def_port = 1;
     }
+
+#ifdef TLS_SUPPORT
+	if (conf->tls) {
+		/* use default options if not specified in configuration file */
+		if (conf->ca_cert_file == NULL) {
+			conf->ca_cert_file = DEFAULT_CA_FILE;
+		}
+	
+		if (conf->server_cert_file == NULL) {
+			conf->server_cert_file = DEFAULT_SERVER_CERT_FILE;
+		}
+	
+		if (conf->server_pkey_file == NULL) {
+			conf->server_pkey_file = DEFAULT_SERVER_PKEY_FILE;
+		}
+	}
+#endif
 
     /* specify parameters of the connection */
     memset (&hints, 0, sizeof(struct addrinfo));
@@ -339,6 +564,58 @@ int input_init(char *params, void **config)
         retval = 1;
         goto out;
     }
+
+#ifdef TLS_SUPPORT
+	if (conf->tls) {
+		/* configure TLS */
+	
+		/* initialize library */
+	 	SSL_load_error_strings();
+		SSL_library_init();
+	
+		/* create CTX structure for TLS */
+		ctx = SSL_CTX_new(TLSv1_server_method());
+		if (!ctx) {
+	        VERBOSE(CL_VERBOSE_OFF, "Cannot create CTX structure");
+			ERR_print_errors_fp(stderr);
+			retval = 1;
+			goto out;
+		}
+	
+		/* load server certificate into the CTX structure */
+		ret = SSL_CTX_use_certificate_file(ctx, conf->server_cert_file, SSL_FILETYPE_PEM);
+		if (ret != 1) {
+	        VERBOSE(CL_VERBOSE_OFF, "Unable to load server's certificate from %s", conf->server_cert_file);
+			ERR_print_errors_fp(stderr);
+			retval = 1;
+			goto out;
+		}
+	
+		/* load private keys into the CTX structure */
+		SSL_CTX_use_PrivateKey_file(ctx, conf->server_pkey_file, SSL_FILETYPE_PEM);
+		if (ret <= 0) {
+	        VERBOSE(CL_VERBOSE_OFF, "Unable to load server's private key from %s", conf->server_pkey_file);
+			ERR_print_errors_fp(stderr);
+			retval = 1;
+			goto out;
+		}
+
+		/* set peer certificate verification parameters */
+		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE, NULL);
+		
+		ssl_list = (SSL **) malloc(sizeof(SSL *) * DEFAULT_SIZE_SSL_LIST);
+		if (ssl_list == NULL) {
+	        VERBOSE(CL_VERBOSE_OFF, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			retval = 1;
+			goto out;
+		}
+		memset(ssl_list, 0, DEFAULT_SIZE_SSL_LIST * sizeof(SSL *));
+
+		conf->ssl_list_size = DEFAULT_SIZE_SSL_LIST;
+		conf->ctx = ctx;
+		conf->ssl_list = ssl_list;
+	}
+#endif  /* TLS */
 
     /* fill in general information */
     conf->info.type = SOURCE_TYPE_TCP;
@@ -415,6 +692,19 @@ out:
 
     }
 
+#ifdef TLS_SUPPORT
+	/* error occurs, clean up */
+    if ((retval != 0) && (conf != NULL)) {
+		if (ssl_list) {
+			free(ssl_list);
+		}
+
+		if (ctx) {
+			SSL_CTX_free(ctx);
+		}
+	}
+#endif
+
     return retval;
 }
 
@@ -442,6 +732,10 @@ int get_packet(void *config, struct input_info **info, char **packet)
     struct plugin_conf *conf = config;
     int retval = 0, sock;
     struct input_info_list *info_list;
+#ifdef TLS_SUPPORT
+	int i;
+	SSL *ssl;        /* SSL structure for active socket */
+#endif
 
     /* allocate memory for packet, if needed */
     if (*packet == NULL) {
@@ -483,14 +777,44 @@ int get_packet(void *config, struct input_info **info, char **packet)
     }
 
     /* receive ipfix packet header */
-    length = recv(sock, *packet, IPFIX_HEADER_LENGTH, MSG_WAITALL);
-    if (length == -1) {
-    	if (errno == EINTR) {
-    		return INPUT_INTR;
-    	}
-        VERBOSE(CL_VERBOSE_OFF, "Failed to receive IPFIX packet header: %s", strerror(errno));
-        return INPUT_ERROR;
-    } else if (length > 0) { /* header received */
+#ifdef TLS_SUPPORT
+	if (conf->tls) {
+		/* TLS enabled */
+		/* TODO - ugly piece of code... use epoll() instead of select()
+		 * find corresponding SSL structure for socket */
+		for (i = 0; ; i++) {
+			if (conf->ssl_list[i] && (SSL_get_fd(conf->ssl_list[i]) == sock)) {
+				ssl = conf->ssl_list[i];
+				break;
+			}
+		}
+		length = SSL_read(ssl, *packet, IPFIX_HEADER_LENGTH);
+		if (length < 0) {
+			/* read operation was not successful */
+			if (SSL_get_error(ssl, length) == SSL_ERROR_SYSCALL) {
+				if (errno == EINTR) {
+					return INPUT_INTR;
+				}
+	        	VERBOSE(CL_VERBOSE_OFF, "Failed to receive IPFIX packet header: %s", strerror(errno));
+	        	return INPUT_ERROR;
+			}
+		}
+	} else {
+#else   /* TLS disabled */
+	    length = recv(sock, *packet, IPFIX_HEADER_LENGTH, MSG_WAITALL);
+	    if (length == -1) {
+	    	if (errno == EINTR) {
+	    		return INPUT_INTR;
+	    	}
+	        VERBOSE(CL_VERBOSE_OFF, "Failed to receive IPFIX packet header: %s", strerror(errno));
+	        return INPUT_ERROR;
+		}
+#endif
+#ifdef TLS_SUPPORT
+    }
+#endif
+	
+	if (length > 0) { /* header received */
         /* get packet total length */
         packet_length = ntohs(((struct ipfix_header *) *packet)->length);
         /* check whether buffer is big enough */
@@ -547,6 +871,19 @@ int get_packet(void *config, struct input_info **info, char **packet)
 
     /* check whether socket closed */
     if (length == 0) {
+#ifdef TLS_SUPPORT
+		if (conf->tls) {
+			if (SSL_get_shutdown(ssl) != SSL_RECEIVED_SHUTDOWN) {
+	        	VERBOSE(CL_VERBOSE_OFF, "SSL shutdown is incomplete");
+			}
+
+			/* send "close notify" shutdown alert back to the peer */
+			retval = SSL_shutdown(ssl);
+			if (retval == -1) {
+	        	VERBOSE(CL_VERBOSE_OFF, "Fatal error occured during TLS close notify");
+			}
+		}
+#endif
         /* print info */
         if (conf->info.l3_proto == 4) {
             inet_ntop(AF_INET, (void *)&((struct sockaddr_in*) conf->sock_addresses[sock])->sin_addr, src_addr, INET6_ADDRSTRLEN);
@@ -586,6 +923,30 @@ int input_close(void **config)
     } else {
         pthread_join(listen_thread, NULL);
     }
+
+#ifdef TLS_SUPPORT
+	if (conf->tls) {
+		/* close TLS connection, if any */
+		for (sock = 0; sock < conf->ssl_list_size; sock++) {
+			if (conf->ssl_list[sock] == NULL) {
+				continue;
+			}
+			ret = SSL_get_fd(conf->ssl_list[sock]);
+			if (ret >= 0) {
+				/* send close notify */
+				ret = SSL_shutdown(conf->ssl_list[sock]);
+				if (ret == -1) {
+					VERBOSE(CL_VERBOSE_OFF, "Fatal error occured during TLS close notify");
+				}
+			}
+
+			SSL_free(conf->ssl_list[sock]);
+		}
+	
+		/* we are done here */
+		SSL_CTX_free(conf->ctx);
+	}
+#endif
     
     /* close listening socket */
     if ((ret = close(conf->socket)) == -1) {
