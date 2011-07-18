@@ -472,12 +472,12 @@ int input_init(char *params, void **config)
             /* copy value to memory - don't forget the terminating zero */
             char *tmp_val = malloc(sizeof(char)*strlen((char *)cur_node->children->content)+1);
             /* this is not a preferred cast, but we really want to use plain chars here */
-            strcpy(tmp_val, (char *)cur_node->children->content);
             if (tmp_val == NULL) {
                 VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory: %s", strerror(errno));
                 retval = 1;
                 goto out;
             }
+            strcpy(tmp_val, (char *)cur_node->children->content);
 
             if (xmlStrEqual(cur_node->name, BAD_CAST "localPort")) { /* set local port */
                 port = tmp_val;
