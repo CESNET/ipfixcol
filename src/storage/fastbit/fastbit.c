@@ -87,10 +87,12 @@ struct data_type{
 	int (*store)(uint8_t * data, uint16_t length, struct element_cache * cache);
 };
 
+int store_array(uint8_t *data, uint16_t length, struct element_cache * cache);
 int store_ubyte(uint8_t *data, uint16_t length, struct element_cache * cache);
 int store_ushort(uint8_t *data, uint16_t length, struct element_cache * cache);
 int store_uint(uint8_t *data, uint16_t length, struct element_cache * cache);
 int store_ulong(uint8_t *data, uint16_t length, struct element_cache * cache);
+int store_ipv6(uint8_t *data, uint16_t length, struct element_cache * cache);
 int store_byte(uint8_t *data, uint16_t length, struct element_cache * cache);
 int store_short(uint8_t *data, uint16_t length, struct element_cache * cache);
 int store_int(uint8_t *data, uint16_t length, struct element_cache * cache);
@@ -100,9 +102,10 @@ int store_float(uint8_t *data, uint16_t length, struct element_cache * cache);
 int store_double(uint8_t *data, uint16_t length, struct element_cache * cache);
 
 
+// INTEGER, STRING, FLOAT, OCTETARRAYS can be shirked!
 #define TYPES_COUNT 23
 struct data_type mtypes[TYPES_COUNT] = {
-	{"octetArray", "text", store_text},
+	{"octetArray", "ubyte", store_array},
 	{"unsigned8" , "ubyte", store_ubyte},
 	{"unsigned16", "ushort", store_ushort},
 	{"unsigned32", "uint", store_uint},
@@ -114,50 +117,45 @@ struct data_type mtypes[TYPES_COUNT] = {
 	{"float32"   , "float", store_float},
 	{"float64"   , "double", store_double},
 	{"boolean"   , "byte", store_byte},
-	{"macAddress", "text", store_text},
+	{"macAddress", "ulong", store_ulong},
 	{"string"    , "text", store_text},
 	{"dateTimeSeconds" 	, "uint", store_uint},
 	{"dateTimeMilliseconds" , "ulong", store_ulong},
 	{"dateTimeMicroseconds" , "ulong", store_ulong},
 	{"dateTimeNanoseconds"  , "ulong", store_ulong},
 	{"ipv4Address"		, "uint", store_uint},
-	{"ipv6Address"		, "text", store_text},
-	{"basicList"		, "text", store_text}, //? what is this??  TODO
-	{"subTemplateList"	, "text", store_text}, //?
-	{"subTemplateMultiList"	, "text", store_text} //?
+	{"ipv6Address"		, "ulong", store_ipv6}, // 2x ulong 
+	{"basicList"		, "ubyte", store_array}, //? what is this??  TODO
+	{"subTemplateList"	, "ubyte", store_array}, //?
+	{"subTemplateMultiList"	, "ubyte", store_array} //?
 };
 
-
-char types[TYPES_COUNT][2][21] = {
-	{"octetArray", "text"},
-	{"unsigned8" , "ubyte"},
-	{"unsigned16", "ushort"},
-	{"unsigned32", "uint"},
-	{"unsigned64", "ulong"},
-	{"signed8"   , "byte"},
-	{"signed16"  , "short"},
-	{"signed32"  , "int"},
-	{"signed64"  , "long"},
-	{"float32"   , "float"},
-	{"float64"   , "double"},
-	{"boolean"   , "byte"},
-	{"macAddress", "text"},
-	{"string"    , "text"},
-	{"dateTimeSeconds" 	, "uint"},
-	{"dateTimeMilliseconds" , "ulong"},
-	{"dateTimeMicroseconds" , "ulong"},
-	{"dateTimeNanoseconds"  , "ulong"},
-	{"ipv4Address"		, "uint"},
-	{"ipv6Address"		, "text"},
-	{"basicList"		, "text"}, //? what is this??  TODO
-	{"subTemplateList"	, "text"}, //?
-	{"subTemplateMultiList"	, "text"} //?
-};
+//TODO fix this terrible idea
+int store_array(uint8_t *data, uint16_t length, struct element_cache * cache){
+	char name[25];
+	int i;
+	int size;
+	int offset = 0;
+	if(length==65535){ //this is Variable-Length Information Element!
+		size = (int) *data;
+		offset = 1;
+		if( size == 255){ // Size extended!
+			size = ntohs(*((uint16_t *) &data[1]));
+			offset = 3;
+		}
+	}
+	for(i=0;i<length;i++){
+		VERBOSE(CL_VERBOSE_ADVANCED,"ubyte: %u", (int) data[i+offset]); // <-this will spam!
+		sprintf(name,"%sp%i", cache->name,i);
+		fastbit_add_values(name, mtypes[cache->type].fastbit, &data[i+offset],1,0);
+	}
+	return 0;
+}
 
 int store_ubyte(uint8_t *data, uint16_t length, struct element_cache * cache){
 	VERBOSE(CL_VERBOSE_ADVANCED,"ubyte: %u", (int) *data);
 	fastbit_add_values(cache->name, mtypes[cache->type].fastbit, data,1,0);
-	return 1;
+	return 0;
 }
 
 int store_ushort(uint8_t *data, uint16_t length, struct element_cache * cache){
@@ -217,6 +215,28 @@ int store_ulong(uint8_t *data, uint16_t length, struct element_cache * cache){
 	VERBOSE(CL_VERBOSE_ADVANCED,"ulong: %lu",*((uint64_t *)&buf));
 	fastbit_add_values(cache->name, mtypes[cache->type].fastbit, (uint64_t *) buf,1,0);
 	return 0;
+#undef SIZE
+}
+
+
+int store_ipv6(uint8_t *data, uint16_t length, struct element_cache * cache){
+#define SIZE 16
+	char buf[SIZE];
+	char name[20];
+	if(length==SIZE){
+		*((uint64_t*) buf) = be64toh(*((uint64_t *) data));
+		VERBOSE(CL_VERBOSE_ADVANCED,"IPv6-p0 ulong: %lu",*((uint64_t *)&buf));
+		sprintf(name,"%sp0", cache->name);
+		fastbit_add_values(name, mtypes[cache->type].fastbit, (uint64_t *) buf,1,0);
+
+		*((uint64_t*) buf) = be64toh(*((uint64_t *) &data[8]));
+		VERBOSE(CL_VERBOSE_ADVANCED,"IPv6-p1 ulong: %lu",*((uint64_t *)&buf));
+		sprintf(name,"%sp1", cache->name);
+		fastbit_add_values(name, mtypes[cache->type].fastbit, (uint64_t *) buf,1,0);
+		return 0;
+	}
+	VERBOSE(CL_WARNING,"IPv6 address have wrong size!");
+	return 1;
 #undef SIZE
 }
 
@@ -289,21 +309,22 @@ int store_long(uint8_t *data, uint16_t length, struct element_cache * cache){
 
 int store_text(uint8_t *data, uint16_t length, struct element_cache * cache){
 	VERBOSE(CL_VERBOSE_ADVANCED,"text: %s", data);
-	//fastbit_add_values(cache->name, mtypes[cache->type].fastbit, data,1,0);
-	return 8;
+	fastbit_add_values(cache->name, mtypes[cache->type].fastbit, data,1,0);
+	return 0;
 }
 
 
 int store_float(uint8_t *data, uint16_t length, struct element_cache * cache){
 	VERBOSE(CL_VERBOSE_ADVANCED,"float: %f",*((float *) data));
 	fastbit_add_values(cache->name, mtypes[cache->type].fastbit, ((float *) data),1,0);
-	return 4;
+	return 0;
 }
 
 int store_double(uint8_t *data, uint16_t length, struct element_cache * cache){
+	//TODO can be shrinked
 	VERBOSE(CL_VERBOSE_ADVANCED,"double: %lf",*((double *) data));
 	fastbit_add_values(cache->name, mtypes[cache->type].fastbit, ((double *) data),1,0);
-	return 8;
+	return 0;
 }
 struct element_cache *
 cached_element(struct fastbit_conf * conf, uint16_t id, uint16_t enterprise){
@@ -442,6 +463,54 @@ int storage_init (char *params, void **config){
 	return 0;
 }
 
+
+void hex(void *ptr, int size){
+	int i,space = 0;
+	for(i=1;i<size+1;i++){
+		if(!((i-1)%16)){
+			fprintf(stderr,"%p  ", &((char *)ptr)[i-1]);
+		}
+		fprintf(stderr,"%02hhx",((char *)ptr)[i-1]);
+                if(!(i%8)){
+                        if(space){
+                                fprintf(stderr,"\n");
+                                space = 0;
+                                continue;
+                        }
+                        fprintf(stderr," ");
+                        space = 1; 
+		}
+                fprintf(stderr," ");
+	}
+}
+
+void hex_dump(const struct ipfix_message *ipfix_msg){
+	fprintf(stderr,"-------------hex-PACKET------------\n");
+		hex(ipfix_msg->pkt_header,ntohs(ipfix_msg->pkt_header->length));
+	fprintf(stderr,"\n------------/hex/-PACKET-----------\n");
+}
+
+
+void hex_dump_adv(const struct ipfix_message *ipfix_msg){
+        const struct data_template_couple *dtc = NULL;
+        struct ipfix_data_set * data = NULL;
+	int i;
+        
+	for(i=0;i<1023;i++ ){ //TODO magic number!
+                dtc = &(ipfix_msg->data_set[i]);
+                data = dtc->data_set;
+                if(data != NULL){
+			fprintf(stderr,"-------------hex-data-set-%i----------\n",i);
+			hex(data->records,ntohs(data->header.length)-4); // 4 = set_header size
+			fprintf(stderr,"\n------------|hex-data-set-%i|---------\n",i);
+			continue;
+		} 
+		break;
+	}	
+}
+
+
+
 /**
  * \brief Pass IPFIX data with supplemental structures from ipfixcol core into
  * the storage plugin.
@@ -476,7 +545,12 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
         int32_t enterprise = 0; // enterprise 0 - is reserved by IANA (NOT used)
 	struct element_cache *cache_e=NULL;
 
+	hex_dump(ipfix_msg);
+	hex_dump_adv(ipfix_msg);
+
+
         for(i=0;i<1023;i++ ){ //TODO magic number!
+		record_offset=0;
                 dtc = &(ipfix_msg->data_set[i]);
                 if(dtc->data_set==NULL){
                         VERBOSE(CL_VERBOSE_ADVANCED,"Read %i data_sets!", i);
@@ -499,7 +573,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 
                 VERBOSE(CL_VERBOSE_ADVANCED,"\tTemplate id: %i",template->template_id);
                 VERBOSE(CL_VERBOSE_ADVANCED,"\tFlowSet id: %i",ntohs(data->header.flowset_id));
-		record_count = ntohs(data->header.length)/template->data_length;
+		record_count = (ntohs(data->header.length)-4)/template->data_length; // set_header size
                 VERBOSE(CL_VERBOSE_ADVANCED,"\tRecord count id: %i - (%i/%i)",record_count,ntohs(data->header.length),template->data_length);
 
 		for(ri=0;ri<record_count;ri++){
@@ -516,7 +590,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 
 				cache_e = cached_element(config, field->ie.id & 0x7FFF, enterprise);
 				if(cache_e != NULL){
-                	        	VERBOSE(CL_VERBOSE_ADVANCED,"\t\t\t\tType: %s - %s - offset:%i", mtypes[cache_e->type].ipfix, mtypes[cache_e->type].fastbit,record_offset);
+                	        	VERBOSE(CL_VERBOSE_ADVANCED,"\t\t\t\tType: %s - %s - offset:%i - %p", mtypes[cache_e->type].ipfix, mtypes[cache_e->type].fastbit,record_offset,&(data->records[record_offset]));
 					mtypes[cache_e->type].store(&(data->records[record_offset]),field->ie.length, cache_e);
 					record_offset+=field->ie.length;
 				} else {
