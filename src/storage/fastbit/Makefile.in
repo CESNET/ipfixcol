@@ -3,14 +3,18 @@ CFLAGS  = @CFLAGS@
 LIBS    = @LIBS@
 INCLUDE = "-I../../../"
 
-all: fastbit_output.so
+all: fastbit_output.so nffile2fastbit
 
-fastbit_output.so: fastbit.o
+fastbit_output.so: fastbit_output.o
 	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,fastbit_output.so.1 fastbit_output.o -o $@ -lc
 	
-fastbit.o: fastbit.c
+fastbit_output.o: fastbit.c
 	$(CC) $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
 
+nffile2fastbit: nffile2fastbit.c
+	$(CC) $(CFLAGS) $(LIBS) -o $@ $<
+
+
 clean:
-	-rm fastbit_output.so fastbit.o
+	-rm fastbit_output.so fastbit_output.o nffile2fastbit
 
