@@ -27,6 +27,7 @@ void hex(void *ptr, int size){
                 }
                 fprintf(stderr," ");
         }
+        fprintf(stderr,"\n");
 }
 
 struct extension{
@@ -54,11 +55,11 @@ void ext0_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
 void ext1_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
 	if(TestFlag(flags, FLAG_IPV6_ADDR)){
 		VERBOSE(CL_VERBOSE_ADVANCED,"\tIPv6-SRC: hight:%lu low:%lu",*((uint64_t *) &data[*offset]), \
-			*((uint64_t *) &data[(*offset)+8]));
+			*((uint64_t *) &data[(*offset)+2]));
 			*offset+=4;
 
 		VERBOSE(CL_VERBOSE_ADVANCED,"\tIPv6-DST: hight:%lu low:%lu",*((uint64_t *) &data[*offset]), \
-			*((uint64_t *) &data[(*offset)+8]));
+			*((uint64_t *) &data[(*offset)+2]));
 			*offset+=4;
 	} else {
 		VERBOSE(CL_VERBOSE_ADVANCED,"\tIPv4-SRC: %u", *((uint32_t *) &data[*offset]));
@@ -78,6 +79,8 @@ void ext2_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
 		(*offset)++;
 	}
 }
+
+//EXTENSION 3
 void ext3_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
 	if(TestFlag(flags, FLAG_BYTES_64)){
 		VERBOSE(CL_VERBOSE_ADVANCED,"\tBYTE COUNTER: %lu", *((uint64_t *) &data[*offset]));
@@ -88,35 +91,217 @@ void ext3_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
 	}
 }
 
+//OPTIONAL EXTENSIONS
+//EXTENSION 4 - interface record (16b ints)
+void ext4_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tINTERFACE RECORD INPUT: %hu (16b)", *((uint16_t *) &data[*offset]));
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tINTERFACE RECORD OUTPUT: %hu (16b)", *(((uint16_t *) &data[*offset])+1));
+	(*offset)++;
+	
+}
+
+//EXTENSION 5 - interface record (32b ints)
+void ext5_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tINTERFACE RECORD INPUT: %u (32b)", *((uint32_t *) &data[*offset]));
+	(*offset)++;
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tINTERFACE RECORD OUTPUT: %u (32b)", *((uint32_t *) &data[*offset]));
+	(*offset)++;
+	
+}
+
+//OPTIONAL EXTENSIONS
+//EXTENSION 6 - AS record (16b ints)
+void ext6_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tAS-SRC: %hu (16b)", *((uint16_t *) &data[*offset]));
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tAS-DST: %hu (16b)", *(((uint16_t *) &data[*offset])+1));
+	(*offset)++;
+	
+}
+
+//EXTENSION 7 - AS record (32b ints)
+void ext7_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tAS-SRC: %u (32b)", *((uint32_t *) &data[*offset]));
+	(*offset)++;
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tAS-DST: %u (32b)", *((uint32_t *) &data[*offset]));
+	(*offset)++;
+	
+}
+
+//EXTENSION 8 - dst tos, dir, srcmask, dstmask in one32b int
+void ext8_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tDST-TOS: %hhu (8b)", *((uint8_t *) &data[*offset]));
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tDIR: %hhu (8b)", *(((uint8_t *) &data[*offset])+1));
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tSRC-MASK: %hhu (8b)", *(((uint8_t *) &data[*offset])+2));
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tDST-MASK: %hhu (8b)", *(((uint8_t *) &data[*offset])+3));
+	(*offset)++;
+	
+}
+
+//EXTENSION 9 - next hop ipv4
+void ext9_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tNEXT-HOP: %u (ipv4)", *((uint32_t *) &data[*offset]));
+	(*offset)++;
+	
+}
+
+
+//EXTENSION 10 - next hop ipv6
+void ext10_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+	
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tNEXT-HOP: hight:%lu low:%lu (ipv6)",*((uint64_t *) &data[*offset]), \
+		*((uint64_t *) &data[(*offset)+8]));
+	(*offset)+=4;
+}
+
+
+//EXTENSION 11 - BGP next hop ipv4
+void ext11_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tBGP-NEXT-HOP: %u (ipv4)", *((uint32_t *) &data[*offset]));
+	(*offset)++;
+	
+}
+
+
+//EXTENSION 12 - BGP next hop ipv6
+void ext12_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tBGP-NEXT-HOP: hight:%lu low:%lu (ipv6)",*((uint64_t *) &data[*offset]), \
+		*((uint64_t *) &data[(*offset)+8]));
+	(*offset)+=4;
+}
+
+//EXTENSION 13 - VLAN record (16b ints)
+void ext13_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tVLAN-SRC: %hu (16b)", *((uint16_t *) &data[*offset]));
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tVLAN-DST: %hu (16b)", *(((uint16_t *) &data[*offset])+1));
+	(*offset)++;
+	
+}
+
+//EXTENSION 14 - Out packet count (32b int)
+void ext14_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tOUT-PACKETS: %u (32b)", *((uint32_t *) &data[*offset]));
+	(*offset)++;
+	
+}
+
+//EXTENSION 15 - Out packet count (64b int)
+void ext15_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tOUT-PACKETS: %lu (64b)", *((uint64_t *) &data[*offset]));
+	(*offset)+=2;
+	
+}
+
+//EXTENSION 16 - Out bytes count (32b int)
+void ext16_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tOUT-BYTES: %u (32b)", *((uint32_t *) &data[*offset]));
+	(*offset)++;
+	
+}
+
+//EXTENSION 17 - Out bytes count (64b int)
+void ext17_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tOUT-BYTES: %lu (64b)", *((uint64_t *) &data[*offset]));
+	(*offset)+=2;
+	
+}
+
+//EXTENSION 18 - Aggr flows (32b int)
+void ext18_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tAGGR-FLOWS: %u (32b)", *((uint32_t *) &data[*offset]));
+	(*offset)++;
+	
+}
+
+//EXTENSION 19 - Aggr flows (64b int)
+void ext19_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tAGGR-FLOWS: %lu (64b)", *((uint64_t *) &data[*offset]));
+	(*offset)+=2;
+	
+}
+
+//EXTENSION 20 - in src mac, out dst mac (64b int)
+void ext20_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tIN-SRC-MAC: %lu (48b - 64 aling)", *((uint64_t *) &data[*offset]));
+	(*offset)+=2;
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tOUT-DST-MAC: %lu (48b - 64 aling)", *((uint64_t *) &data[*offset]));
+	(*offset)+=2;
+	
+}
+
+//EXTENSION 21 - in dst mac, out src mac (64b int)
+void ext21_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tIN-DST-MAC: %lu (48b - 64 aling)", *((uint64_t *) &data[*offset]));
+	(*offset)+=2;
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tOUT-SRC-MAC: %lu (48b - 64 aling)", *((uint64_t *) &data[*offset]));
+	(*offset)+=2;
+	
+}
+
+//EXTENSION 22 - MPLS (32b ints)
+void ext22_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+	int i=0;
+	for(i=0;i<10;i++){
+		VERBOSE(CL_VERBOSE_ADVANCED,"\tMPLS-LABEL-%i: %u (32b)",i, *((uint32_t *) &data[*offset+1]));
+		VERBOSE(CL_VERBOSE_ADVANCED,"\tMPLS-LABEL-%i: %u (32b)",(i++), *((uint32_t *) &data[*offset]));
+		(*offset)+=2;
+	}
+}
+
+//EXTENSION 23 - Router ipv4
+void ext23_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tROUTER-IP: %u (ipv4)", *((uint32_t *) &data[*offset]));
+	(*offset)++;
+	
+}
+
+
+//EXTENSION 24 - Router ipv6
+void ext24_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tROUTER-IP: hight:%lu low:%lu (ipv6)",*((uint64_t *) &data[*offset]), \
+		*((uint64_t *) &data[(*offset)+8]));
+	(*offset)+=4;
+}
+
+//EXTENSION 25 - Router source id
+void ext25_parse(uint32_t *data, int *offset, uint8_t flags, struct storage *s){
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tROUTER-ID-FILL: %hu ", *((uint16_t *) &data[*offset]));
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tROUTER-ID-ENGINE-TYPE: %hhu ", *(((uint8_t *) &data[*offset])+2));
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tROUTER-ID-ENGINE-ID: %hhu ", *(((uint8_t *) &data[*offset])+3));
+	(*offset)++;
+	
+}
+
 void (*ext_parse[26]) (uint32_t *data, int *offset, uint8_t flags, struct storage *s) = {
 	ext0_parse,
 	ext1_parse,
 	ext2_parse,
 	ext3_parse,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
+	ext4_parse,
+	ext5_parse,
+	ext6_parse,
+	ext7_parse,
+	ext8_parse,
+	ext9_parse,
+	ext10_parse,
+	ext11_parse,
+	ext12_parse,
+	ext13_parse,
+	ext14_parse,
+	ext15_parse,
+	ext16_parse,
+	ext17_parse,
+	ext18_parse,
+	ext19_parse,
+	ext20_parse,
+	ext21_parse,
+	ext22_parse,
+	ext23_parse,
+	ext24_parse,
+	ext25_parse
 };
 
 
@@ -256,7 +441,7 @@ int main(){
 					VERBOSE(CL_VERBOSE_ADVANCED,"\tSRC-PORT: %hu", record->srcport);
 					VERBOSE(CL_VERBOSE_ADVANCED,"\tDST-PORT: %hu", record->dstport);
 
-					hex(record->data,record->size - sizeof(struct common_record_s)-4);
+					hex(record->data,record->size - sizeof(struct common_record_s));
 					int data_offset = 0; // record->data = uint32_t
 					int id;
 					int j,eid;
@@ -274,13 +459,13 @@ int main(){
 						}
 					}
 		
-					ext_parse[0](record->data, &data_offset, record->flags, NULL); 
 					ext_parse[1](record->data, &data_offset, record->flags, NULL); 
 					ext_parse[2](record->data, &data_offset, record->flags, NULL); 
+					ext_parse[3](record->data, &data_offset, record->flags, NULL); 
 					
 					for(eid=0;eid<ext.map[id].values_count;eid++){
 						VERBOSE(CL_VERBOSE_ADVANCED,"\tMAP: %hu EXT-ID %hu",id ,ext.map[id].value[eid]);
-						//ext_parse[ext.map[id].value[eid]](record->data, &data_offset, record->flags, NULL); 
+						ext_parse[ext.map[id].value[eid]](record->data, &data_offset, record->flags, NULL); 
 					}
 
 				} else if(record->type == ExtensionMapType){
