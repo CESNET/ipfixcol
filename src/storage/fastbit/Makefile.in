@@ -6,10 +6,10 @@ INCLUDE = "-I../../../"
 all: fastbit_output.so nffile2fastbit
 
 fastbit_output.so: fastbit_output.o
-	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,fastbit_output.so.1 fastbit_output.o -o $@ -lc
+	$(CC) $(CFLAGS) $(LIBS) -lfastbit -L/usr/local/lib -shared -Wl,-soname,fastbit_output.so.1 fastbit_output.o -o $@ -lc
 	
 fastbit_output.o: fastbit.c
-	$(CC) $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
+	$(CC) $(CFLAGS) $(INCLUDE) /usr/local/lib/libfastbit.la -fPIC -c -o $@ $<
 
 nffile2fastbit: nffile2fastbit.c
 	$(CC) $(CFLAGS) $(LIBS) -o $@ $<
