@@ -174,7 +174,7 @@ static int data_manager_process_one_template(struct ipfix_template_mgr *template
  * \brief Process templates
  *
  * Currently template management does not conform to RFC 5101 in following:
- * - If template is reused without prewious withdrawal or timeout (UDP),
+ * - If template is reused without previous withdrawal or timeout (UDP),
  *   only warning is logged and template is updated (template MUST be of
  *   the same length).
  * - If template is not found, data is not coupled with template,
