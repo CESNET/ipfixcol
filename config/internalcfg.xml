@@ -6,7 +6,7 @@
 		##   element in startup.xml 
 	 -->
 	<supportedCollectors>
-<!--	<name>sctpCollector</name> -->
+		<name>sctpCollector</name>
 		<name>udpCollector</name>
 		<name>tcpCollector</name>
 		<name>fileReader</name>
@@ -27,12 +27,11 @@
 		<name>fileReader</name>
 		<file>src/input/ipfix/ipfix_input.so</file>
 	</inputPlugin>
-<!--
 	<inputPlugin>
 		<name>sctpCollector</name>
 		<file>src/input/sctp/sctp_input.so</file>
 	</inputPlugin>
--->
+
 	<!--## Storage plugin internal configuration -->
 	<storagePlugin>
 		<!--## Definition of file format
