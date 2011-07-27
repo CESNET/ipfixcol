@@ -36,17 +36,17 @@
 		<exportingProcess>File writer TCP</exportingProcess>
 	</collectingProcess>
 
-<!--
 	<collectingProcess>
 		<name>SCTP collector</name>
 		<sctpCollector>
 			<name>Listening port 4739</name>
 			<localPort>4739</localPort>
+			<!--## Collector will listen on all addresses specified below -->
 			<localIPAddress>127.0.0.1</localIPAddress>
+			<localIPAddress>::1</localIPAddress>
 		</sctpCollector>
 		<exportingProcess>File writer SCTP</exportingProcess>
 	</collectingProcess>
--->
 
 	<!--## Exporting process configuration -->
 	<exportingProcess>
@@ -92,7 +92,6 @@
 		</destination>
 	</exportingProcess>
 
-<!--
 	<exportingProcess>
 		<name>File writer SCTP</name>
 		<destination>
@@ -103,5 +102,4 @@
 			</fileWriter>
 		</destination>
 	</exportingProcess>
--->
 </ipfix>
