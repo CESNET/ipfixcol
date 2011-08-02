@@ -618,7 +618,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
  * \return 0 on success, nonzero else.
  */
 int store_now (const void *config){
-	VERBOSE(CL_VERBOSE_ADVANCED,"Fastbit store_packet");
+	VERBOSE(CL_VERBOSE_ADVANCED,"Fastbit store_packet NOW");
 	return 0;
 }
 

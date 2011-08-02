@@ -6,28 +6,31 @@
 #include <commlbr.h>
 //#include <sys/types.h>
 #include <unistd.h>
+#include <dlfcn.h>
+#include <time.h>
 
 #include "nffile.h"
+#include "../../../headers/storage.h"
 
 void hex(void *ptr, int size){
-        int i,space = 0;
-        for(i=1;i<size+1;i++){
-                if(!((i-1)%16)){
-                        fprintf(stderr,"%p  ", &((char *)ptr)[i-1]);
-                }
-                fprintf(stderr,"%02hhx",((char *)ptr)[i-1]);
-                if(!(i%8)){
-                        if(space){
-                                fprintf(stderr,"\n");
-                                space = 0;
-                                continue;
-                        }
-                        fprintf(stderr," ");
-                        space = 1;
-                }
-                fprintf(stderr," ");
-        }
-        fprintf(stderr,"\n");
+	int i,space = 0;
+	for(i=1;i<size+1;i++){
+	        if(!((i-1)%16)){
+	                fprintf(stderr,"%p  ", &((char *)ptr)[i-1]);
+	        }
+	        fprintf(stderr,"%02hhx",((char *)ptr)[i-1]);
+	        if(!(i%8)){
+	                if(space){
+	                        fprintf(stderr,"\n");
+	                        space = 0;
+	                        continue;
+	                }
+	                fprintf(stderr," ");
+	                space = 1;
+	        }
+	        fprintf(stderr," ");
+	}
+	fprintf(stderr,"\n");
 }
 
 struct extension{
@@ -305,6 +308,411 @@ void (*ext_parse[26]) (uint32_t *data, int *offset, uint8_t flags, struct storag
 };
 
 
+//EXTENSION 0 -- not a real extension its just pading ect
+void ext0_fill_tm(uint8_t flags, struct ipfix_template * template){
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tZERO EXTENSION");
+}
+
+//EXTENSION 1	
+void ext1_fill_tm(uint8_t flags, struct ipfix_template * template){
+	if(TestFlag(flags, FLAG_IPV6_ADDR)){
+		//sourceIPv6Address
+		template->fields[template->field_count].ie.id = 27;
+		template->fields[template->field_count].ie.length = 16;
+		template->field_count++;
+		template->data_length += 16;  
+		//destinationIPv6Address	
+		template->fields[template->field_count].ie.id = 28;
+		template->fields[template->field_count].ie.length = 16;
+		template->field_count++;
+		template->data_length += 16;  
+	} else {
+		//sourceIPv4Address
+		template->fields[template->field_count].ie.id = 8;
+		template->fields[template->field_count].ie.length = 4;
+		template->field_count++;
+		template->data_length += 4;  
+		//destinationIPv4Address	
+		template->fields[template->field_count].ie.id = 8;
+		template->fields[template->field_count].ie.length = 4;
+		template->field_count++;
+		template->data_length += 4;  
+	}
+	template->template_length += 8;
+}
+
+//EXTENSION 2
+void ext2_fill_tm(uint8_t flags, struct ipfix_template * template){
+	//packetDeltaCount
+	template->fields[template->field_count].ie.id = 2;
+	template->fields[template->field_count].ie.length = 8;
+	template->data_length += 8;
+	template->template_length += 4;
+}
+
+//EXTENSION 3
+void ext3_fill_tm(uint8_t flags, struct ipfix_template * template){
+	//byteDeltaCount
+	template->fields[template->field_count].ie.id = 1;
+	template->fields[template->field_count].ie.length = 8;
+	template->data_length += 8;
+	template->template_length += 4;
+}
+
+//OPTIONAL EXTENSIONS
+//EXTENSION 4 - interface record (16b ints)
+void ext4_fill_tm(uint8_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 10;
+	template->fields[template->field_count].ie.length = 2;
+	template->data_length += 2;
+	template->fields[template->field_count].ie.id = 14;
+	template->fields[template->field_count].ie.length = 2;
+	template->data_length += 2;
+	template->template_length += 8;
+}
+
+//EXTENSION 5 - interface record (32b ints)
+void ext5_fill_tm(uint8_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 10;
+	template->fields[template->field_count].ie.length = 4;
+	template->data_length += 4;
+	template->fields[template->field_count].ie.id = 14;
+	template->fields[template->field_count].ie.length = 4;
+	template->data_length += 4;
+	template->template_length += 8;
+}
+
+//OPTIONAL EXTENSIONS
+//EXTENSION 6 - AS record (16b ints)
+void ext6_fill_tm(uint8_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 16;
+	template->fields[template->field_count].ie.length = 2;
+	template->data_length += 2;
+	template->fields[template->field_count].ie.id = 17;
+	template->fields[template->field_count].ie.length = 2;
+	template->data_length += 2;
+	template->template_length += 8;
+	
+}
+
+//EXTENSION 7 - AS record (32b ints)
+void ext7_fill_tm(uint8_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 16;
+	template->fields[template->field_count].ie.length = 4;
+	template->data_length += 4;
+	template->fields[template->field_count].ie.id = 17;
+	template->fields[template->field_count].ie.length = 4;
+	template->data_length += 4;
+	template->template_length += 8;
+	
+}
+
+//EXTENSION 8 - dst tos, dir, srcmask, dstmask in one 32b int
+void ext8_fill_tm(uint8_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 55;
+	template->fields[template->field_count].ie.length = 1;
+	template->data_length += 1;
+	template->fields[template->field_count].ie.id = 61;
+	template->fields[template->field_count].ie.length = 1;
+	template->data_length += 1;
+	
+	if(TestFlag(flags, FLAG_IPV6_ADDR)){
+		template->fields[template->field_count].ie.id = 29;
+		template->fields[template->field_count].ie.length = 1;
+		template->data_length += 1;
+		template->fields[template->field_count].ie.id = 30;
+		template->fields[template->field_count].ie.length = 1;
+		template->data_length += 1;
+	} else {
+		template->fields[template->field_count].ie.id = 9;
+		template->fields[template->field_count].ie.length = 1;
+		template->data_length += 1;
+		template->fields[template->field_count].ie.id = 13;
+		template->fields[template->field_count].ie.length = 1;
+		template->data_length += 1;
+	}
+	template->template_length += 16;
+}
+
+//EXTENSION 9 - next hop ipv4
+void ext9_fill_tm(uint8_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 15;
+	template->fields[template->field_count].ie.length = 4;
+	template->data_length += 4;
+	template->template_length += 4;
+}
+
+
+//EXTENSION 10 - next hop ipv6
+void ext10_fill_tm(uint8_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 62;
+	template->fields[template->field_count].ie.length = 16;
+	template->data_length += 16;
+	template->template_length += 4;
+}
+
+
+//EXTENSION 11 - BGP next hop ipv4
+void ext11_fill_tm(uint8_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 18;
+	template->fields[template->field_count].ie.length = 4;
+	template->data_length += 4;
+	template->template_length += 4;
+	
+}
+
+
+//EXTENSION 12 - BGP next hop ipv6
+void ext12_fill_tm(uint8_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 63;
+	template->fields[template->field_count].ie.length = 16;
+	template->data_length += 16;
+	template->template_length += 4;
+}
+
+//EXTENSION 13 - VLAN record (16b ints)
+void ext13_fill_tm(uint8_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 58;
+	template->fields[template->field_count].ie.length = 2;
+	template->data_length += 2;
+	template->fields[template->field_count].ie.id = 59;
+	template->fields[template->field_count].ie.length = 2;
+	template->data_length += 2;
+	template->template_length += 8;
+}
+
+//EXTENSION 14 - Out packet count (32b int)
+void ext14_fill_tm(uint8_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 24;
+	template->fields[template->field_count].ie.length = 4;
+	template->data_length += 4;
+	template->template_length += 4;
+}
+
+//EXTENSION 15 - Out packet count (64b int)
+void ext15_fill_tm(uint8_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 24;
+	template->fields[template->field_count].ie.length = 8;
+	template->data_length += 8;
+	template->template_length += 4;
+}
+
+//EXTENSION 16 - Out bytes count (32b int)
+void ext16_fill_tm(uint8_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 23;
+	template->fields[template->field_count].ie.length = 4;
+	template->data_length += 4;
+	template->template_length += 4;
+}
+
+//EXTENSION 17 - Out bytes count (64b int)
+void ext17_fill_tm(uint8_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 23;
+	template->fields[template->field_count].ie.length = 8;
+	template->data_length += 8;
+	template->template_length += 4;
+	
+}
+
+//EXTENSION 18 - Aggr flows (32b int)
+void ext18_fill_tm(uint8_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 3;
+	template->fields[template->field_count].ie.length = 4;
+	template->data_length += 4;
+	template->template_length += 4;
+	
+}
+
+//EXTENSION 19 - Aggr flows (64b int)
+void ext19_fill_tm(uint8_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 3;
+	template->fields[template->field_count].ie.length = 8;
+	template->data_length += 8;
+	template->template_length += 4;
+	
+}
+
+//EXTENSION 20 - in src mac, out dst mac (64b int)
+void ext20_fill_tm(uint8_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 56;
+	template->fields[template->field_count].ie.length = 6;
+	template->data_length += 6;
+	template->fields[template->field_count].ie.id = 57;
+	template->fields[template->field_count].ie.length = 6;
+	template->data_length += 6;
+	template->template_length += 8;
+	
+}
+
+//EXTENSION 21 - in dst mac, out src mac (64b int)
+void ext21_fill_tm(uint8_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 80;
+	template->fields[template->field_count].ie.length = 6;
+	template->data_length += 6;
+	template->fields[template->field_count].ie.id = 81;
+	template->fields[template->field_count].ie.length = 6;
+	template->data_length += 6;	
+	template->template_length += 8;
+}
+
+//EXTENSION 22 - MPLS (32b ints)
+void ext22_fill_tm(uint8_t flags, struct ipfix_template * template){
+	int i=0;
+	for(i=0;i<10;i++){
+		template->fields[template->field_count].ie.id = 70 + i;
+		template->fields[template->field_count].ie.length = 3;
+		template->data_length += 3;
+	}
+	template->template_length += 40;
+}
+
+//EXTENSION 23 - Router ipv4
+void ext23_fill_tm(uint8_t flags, struct ipfix_template * template){
+	VERBOSE(CL_WARNING,"There is no element for router ip (this extension is ignored)");
+}
+
+
+//EXTENSION 24 - Router ipv6
+void ext24_fill_tm(uint8_t flags, struct ipfix_template * template){
+	VERBOSE(CL_WARNING,"There is no element for router ip (this extension is ignored)");
+}
+
+//EXTENSION 25 - Router source id
+void ext25_fill_tm(uint8_t flags, struct ipfix_template * template){	
+	VERBOSE(CL_VERBOSE_ADVANCED,"There is no element for router sourc id (filled as reserved 38 and 39 elements)");
+	template->fields[template->field_count].ie.id = 38;
+	template->fields[template->field_count].ie.length = 1;
+	template->data_length += 1;
+	template->fields[template->field_count].ie.id = 39;
+	template->fields[template->field_count].ie.length = 1;
+	template->data_length += 1;	
+	template->template_length += 8;
+}
+
+void (*ext_fill_tm[26]) (uint8_t flags, struct ipfix_template * template) = {
+	ext0_fill_tm,
+	ext1_fill_tm,
+	ext2_fill_tm,
+	ext3_fill_tm,
+	ext4_fill_tm,
+	ext5_fill_tm,
+	ext6_fill_tm,
+	ext7_fill_tm,
+	ext8_fill_tm,
+	ext9_fill_tm,
+	ext10_fill_tm,
+	ext11_fill_tm,
+	ext12_fill_tm,
+	ext13_fill_tm,
+	ext14_fill_tm,
+	ext15_fill_tm,
+	ext16_fill_tm,
+	ext17_fill_tm,
+	ext18_fill_tm,
+	ext19_fill_tm,
+	ext20_fill_tm,
+	ext21_fill_tm,
+	ext22_fill_tm,
+	ext23_fill_tm,
+	ext24_fill_tm,
+	ext25_fill_tm
+};
+
+#define HEADER_ELEMENTS 7
+int header_elements[][2] = {
+	//id,size
+	{21,4}, //flowEndSysUpTime MILLISECONDS !
+	{22,4}, //flowStartSysUpTime MILLISECONDS !
+	{6,1},  //tcpControlBits flags
+	{4,1},  //protocolIdentifier
+	{5,1},  //ipClassOfService
+	{7,2},  //sourceTransportPort
+	{11,2} //destinationTransportPort
+};
+
+#define ALLOC_FIELDS_SIZE 60
+
+int fill_basic_template(uint8_t flags, struct ipfix_template **template){
+	static int template_id_counter = 0;
+
+	(*template) = (struct ipfix_template *) malloc(sizeof(struct ipfix_template) + \
+		ALLOC_FIELDS_SIZE * sizeof(template_ie));
+
+	(*template)->template_type = TM_TEMPLATE;
+	(*template)->last_transmission = time(NULL);
+	(*template)->last_message = 0;
+	(*template)->template_id = template_id_counter;
+	template_id_counter++;
+
+	(*template)->field_count = 0;
+	(*template)->scope_field_count = 0;
+	(*template)->template_length = 0; //TODO    /**Length of the template */
+	(*template)->data_length = 0;   //TODO     /**Length of the data record specified
+
+	//(*template)->fields = (template_ie *) calloc(ALLOC_FIELDS_SIZE,sizeof(template_ie));
+
+	// add header elements into template
+	int i;
+	for(i=0;i<HEADER_ELEMENTS;i++){	
+		(*template)->fields[(*template)->field_count].ie.id = header_elements[i][0];
+		(*template)->fields[(*template)->field_count].ie.length = header_elements[i][1];
+		(*template)->field_count++;
+		(*template)->data_length += header_elements[i][1];  
+		(*template)->template_length += 4;
+	}
+
+	//add mandatory extensions elements 
+	//Extension 1
+	ext_fill_tm[1] (flags, *template);
+	//Extension 2
+	ext_fill_tm[2] (flags, *template);
+	//Extension 3
+	ext_fill_tm[3] (flags, *template);
+	VERBOSE(CL_VERBOSE_ADVANCED,"BASIC TEMPLATE: 'field count - %i' template_length - %i" \
+		,(*template)->field_count, (*template)->template_length);
+	return 0;
+
+}
+
+void init_ipfix_msg(struct ipfix_message *ipfix_msg){
+	ipfix_msg->pkt_header = (struct ipfix_header *) malloc(sizeof(struct ipfix_header));
+	ipfix_msg->pkt_header->version = 0x000a;
+	ipfix_msg->pkt_header->length = 16; //header size 
+	ipfix_msg->pkt_header->export_time = 0;
+	ipfix_msg->pkt_header->sequence_number = 0;
+	ipfix_msg->pkt_header->observation_domain_id = 0; 
+
+	ipfix_msg->input_info = NULL;
+        memset(ipfix_msg->templ_set,0,sizeof(struct ipfix_template_set *) *1024);
+        memset(ipfix_msg->opt_templ_set,0,sizeof(struct ipfix_optional_template_set *) *1024);
+        memset(ipfix_msg->data_set,0,sizeof(struct data_template_couple) *1023);
+}
+
+void chagne_endianity(struct ipfix_message *ipfix_msg){
+	ipfix_msg->pkt_header->version = htons(ipfix_msg->pkt_header->version);
+	ipfix_msg->pkt_header->length = htons(ipfix_msg->pkt_header->length); 
+	ipfix_msg->pkt_header->export_time = htonl(ipfix_msg->pkt_header->export_time);
+	ipfix_msg->pkt_header->sequence_number = htonl(ipfix_msg->pkt_header->sequence_number);
+	ipfix_msg->pkt_header->observation_domain_id = htonl(ipfix_msg->pkt_header->observation_domain_id); 
+}
+
+void add_template(struct ipfix_message *ipfix_msg, struct ipfix_template * template){
+	int i;
+	for(i=0;i<1024;i++){
+		if(ipfix_msg->templ_set[i] == NULL){
+			ipfix_msg->templ_set[i] = (struct ipfix_template_set *) \
+				malloc(sizeof(struct ipfix_options_template_set)+template->data_length);
+			ipfix_msg->templ_set[i]->header.flowset_id = 2;
+			ipfix_msg->templ_set[i]->header.length = 8 + template->template_length;
+			ipfix_msg->templ_set[i]->first_record.template_id = template->template_id;
+			ipfix_msg->templ_set[i]->first_record.count = template->field_count;
+			memcpy ( ipfix_msg->templ_set[i]->first_record.fields, template->fields, template->data_length);
+			ipfix_msg->pkt_header->length += ipfix_msg->templ_set[i]->header.length;
+			break;
+		}
+	}
+}
+
 int main(){
 	char file[] = "/home/kramolis/nffile/nfcapd.201107200815";
 	FILE *f;
@@ -318,16 +726,49 @@ int main(){
 	struct extension_map_s *extension_map;
 	struct extensions ext = {0,20,NULL};
 	int read_size;
-	
+	void *config;
+	void *dlhandle;
+	int (*plugin_init) (char *, void **);
+	int (*plugin_store) (void *, const struct ipfix_message *, const struct ipfix_template_mgr *);
+	char *error;
+	struct ipfix_message ipfix_msg;
+	struct ipfix_template_mgr template_mgr;
 
+
+	verbose = CL_VERBOSE_ADVANCED;
+	dlhandle = dlopen ("/home/kramolis/git/ipfixcol/src/storage/fastbit/fastbit_output.so", RTLD_LAZY);
+	if (!dlhandle) {
+	    fputs (dlerror(), stderr);
+	    exit(1);
+	}
+
+	//storage_init(NULL, &config);
+	plugin_init = dlsym(dlhandle, "storage_init");
+	if ((error = dlerror()) != NULL)  {
+	    fputs(error, stderr);
+	    exit(1);
+	}
+
+	plugin_store = dlsym(dlhandle, "store_packet");
+	if ((error = dlerror()) != NULL)  {
+	    fputs(error, stderr);
+	    exit(1);
+	}
+	plugin_init(NULL, &config); //TODO add arguments
 	//inital space for extension map
 	ext.map = (struct extension *) calloc(sizeof(struct extension),ext.size);
 	if(ext.map == NULL){
 		VERBOSE(CL_ERROR,"Can't read allocate memory for extension map");
 		return 1;
-        }
+	}
+	
+	template_mgr.templates = (struct ipfix_template **) calloc(sizeof(struct ipfix_template *),ext.size);
+	if(ext.map == NULL){
+		VERBOSE(CL_ERROR,"Can't read allocate memory for templates");
+		return 1;
+	}
+	template_mgr.max_length = ext.size;
 
-	verbose = CL_VERBOSE_ADVANCED;
 	f = fopen(file,"r");
 
 	if(f != NULL){
@@ -485,6 +926,23 @@ int main(){
 					ext.map[ext.filled].values_count = 0;
 					ext.map[ext.filled].id = extension_map->map_id;
 
+					if(template_mgr.counter == template_mgr.max_length){
+						//double the size of extension map array
+						if(realloc(*(template_mgr.templates),template_mgr.max_length*2)==NULL){
+							VERBOSE(CL_ERROR,"Can't realloc extension map array");
+							fclose(f);
+							return 1;
+						}
+						template_mgr.max_length*=2;
+					}
+					template_mgr.counter++;
+					struct ipfix_template *template1;
+					fill_basic_template(0, &(template_mgr.templates[template_mgr.counter])); //template for this record with ipv4
+					template1 = template_mgr.templates[template_mgr.counter];
+
+					struct ipfix_template *template2;
+					fill_basic_template(1, &(template_mgr.templates[template_mgr.counter])); //template for this record with ipv6
+					template2 = template_mgr.templates[template_mgr.counter];
 
 					VERBOSE(CL_VERBOSE_ADVANCED,"RECORD = EXTENSION MAP");
 					VERBOSE(CL_VERBOSE_ADVANCED,"\tTYPE: %hu", extension_map->type);
@@ -497,7 +955,15 @@ int main(){
 						VERBOSE(CL_VERBOSE_ADVANCED,"\tEXTENSION_ID: %hu - %p", extension_map->ex_id[eid],&extension_map->ex_id[eid]);
 						ext.map[ext.filled].value[eid] = extension_map->ex_id[eid]; 
 						ext.map[ext.filled].values_count++;
+						ext_fill_tm[eid] (0, template1);
+						ext_fill_tm[eid] (1, template2);
 					}
+					
+					init_ipfix_msg(&ipfix_msg);
+					add_template(&ipfix_msg,template1);
+					add_template(&ipfix_msg,template2);
+					chagne_endianity(&ipfix_msg);
+					plugin_store (&config, &ipfix_msg, &template_mgr);
 
 				} else if(record->type == ExporterType){
 					VERBOSE(CL_VERBOSE_ADVANCED,"RECORD = EXPORTER TYPE");
@@ -518,12 +984,12 @@ int main(){
 			}
 		}	
 
-		//TERE IS SOMETHING REALY BAD HERE SIGSEV ON FREE OR FCLOSE
+		//TERE IS SOMETHING REALY BAD HERE SIGSEV ON FREE
 		//VERBOSE(CL_VERBOSE_ADVANCED,"---------===========-----------");
 		//if(buffer!=NULL){
  		//	free(buffer);
 		//}
-		//fclose(f);
+		fclose(f);
 	} else {
 		VERBOSE(CL_ERROR,"Can't open file: %s",file);
 	}
