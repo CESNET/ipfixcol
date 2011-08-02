@@ -574,7 +574,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
                 VERBOSE(CL_VERBOSE_ADVANCED,"\tTemplate id: %i",template->template_id);
                 VERBOSE(CL_VERBOSE_ADVANCED,"\tFlowSet id: %i",ntohs(data->header.flowset_id));
 		record_count = (ntohs(data->header.length)-4)/template->data_length; // set_header size
-                VERBOSE(CL_VERBOSE_ADVANCED,"\tRecord count id: %i - (%i/%i)",record_count,ntohs(data->header.length),template->data_length);
+                VERBOSE(CL_VERBOSE_ADVANCED,"\tRecord count id: %i - (%i/%i)",record_count,ntohs(data->header.length)-4,template->data_length);
 
 		for(ri=0;ri<record_count;ri++){
                 	VERBOSE(CL_VERBOSE_ADVANCED,"\t\tFlow record: %i",ri);
@@ -600,6 +600,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
                 	}
 		}
 		sprintf(dir,"%i",ntohs(data->header.flowset_id));
+                VERBOSE(CL_VERBOSE_ADVANCED,"FASTBIT FLUSH");
 		fastbit_flush_buffer(dir);
         }
 
