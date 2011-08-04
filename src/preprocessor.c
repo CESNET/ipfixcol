@@ -193,6 +193,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		VERBOSE (CL_VERBOSE_BASIC, "Unexpected IPFIX version detected (%X), skipping packet.",
 				msg->pkt_header->version);
 		free (msg);
+		free (packet);
 		return;
 	}
 
@@ -200,6 +201,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 	if ((uint16_t) len < ntohs(msg->pkt_header->length)) {
 		VERBOSE (CL_VERBOSE_BASIC, "Malformed IPFIX message detected (bad length), skipping packet.");
 		free (msg);
+		free (packet);
 		return;
 	}
 
