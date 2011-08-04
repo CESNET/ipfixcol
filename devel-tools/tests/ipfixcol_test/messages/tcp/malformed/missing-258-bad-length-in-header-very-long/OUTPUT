@@ -1,2 +1,1 @@
-VERBOSE: Unknown Set ID 0
-NOTICE: Data template with ID 258 not found!
+VERBOSE: Malformed IPFIX message detected (bad length), skipping packet.

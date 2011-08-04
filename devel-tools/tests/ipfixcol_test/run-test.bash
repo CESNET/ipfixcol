@@ -180,14 +180,6 @@ else
 	echo "collector exited with status $?"
 fi
 
-# check output file
-OUTPUT_FILE_HASH=`md5sum $OUTPUT_FILE | awk '{ print $1 }'`
-
-#if [ $BIG_MESSAGE_HASH == $OUTPUT_FILE_HASH ]; then
-#	echo "Output file is OK"
-#else
-#	echo "Output file is NOT correct"
-#fi
 
 # analyze output log
 
@@ -273,8 +265,19 @@ if [ -f "${TEST_MSGS_DIR}/HASH" ]; then
 	DESIRED_OUTPUT_HASH=`echo -n "$DESIRED_OUTPUT_HASH" | awk '{ print $1; }'`
 	echo "should be: $DESIRED_OUTPUT_HASH"
 
-	ACTUAL_OUTPUT_HASH=`md5sum $OUTPUT_FILE | awk '{ print $1; }'`
-	echo "is:        $ACTUAL_OUTPUT_HASH"
+	ACTUAL_OUTPUT_HASH=`md5sum $OUTPUT_FILE 2> /dev/null | awk '{ print $1; }'`
+	if [ $? -ne 1 ]; then
+		# looks like output file doesn't exist
+		if [ "$DESIRED_OUTPUT_HASH" == "X" ]; then
+			# this is what we wanted, there is no output file and it is
+			# correct
+			ACTUAL_OUTPUT_HASH="X"
+			echo "is:        $ACTUAL_OUTPUT_HASH"
+			
+		fi
+	else
+		echo "is:        $ACTUAL_OUTPUT_HASH"
+	fi
 
 	if [ "$DESIRED_OUTPUT_HASH" == "$ACTUAL_OUTPUT_HASH" ]; then
 		echo "test PASSED"
