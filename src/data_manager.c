@@ -114,7 +114,7 @@ static inline void data_manager_free (struct data_manager_config* config)
  * @return int size of processed template in bytes on success, 0 otherwise
  */
 static int data_manager_process_one_template(struct ipfix_template_mgr *template_mgr, void *tmpl,
-										int type, uint32_t msg_counter, struct input_info *input_info) {
+						int max_len, int type, uint32_t msg_counter, struct input_info *input_info) {
 	struct ipfix_template_record *template_record;
 	struct ipfix_template *template;
 	int ret;
@@ -145,9 +145,9 @@ static int data_manager_process_one_template(struct ipfix_template_mgr *template
 	} else if ((template = tm_get_template(template_mgr, ntohs(template_record->template_id))) == NULL) {
 		/* add template */
 		MSG(0, "New %s ID %i", (type==TM_TEMPLATE)?"template":"options template", ntohs(template_record->template_id));
-		template = tm_add_template(template_mgr, tmpl, type);
-		/* template already exists */
+		template = tm_add_template(template_mgr, tmpl, max_len, type);
 	} else {
+		/* template already exists */
 		VERBOSE(CL_VERBOSE_BASIC, "%s ID %i already exists. Rewriting.",
 				(type==TM_TEMPLATE)?"template":"options template", template->template_id);
 		template = tm_update_template(template_mgr, tmpl, type);
@@ -194,12 +194,14 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 	uint8_t *ptr;
 	uint32_t records_count = 0;
 	int i, ret;
+	int max_len;     /* length to the end of the set = max length of the template */
 
 	/* check for new templates */
 	for (i=0; msg->templ_set[i] != NULL && i<1024; i++) {
 		ptr = (uint8_t*) &msg->templ_set[i]->first_record;
 		while (ptr < (uint8_t*) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) {
-			ret = data_manager_process_one_template(template_mgr, ptr, TM_TEMPLATE, msg_counter, msg->input_info);
+			max_len = ((uint8_t *) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) - ptr;
+			ret = data_manager_process_one_template(template_mgr, ptr, max_len, TM_TEMPLATE, msg_counter, msg->input_info);
 			if (ret == 0) {
 				break;
 			} else {
@@ -211,8 +213,9 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 	/* check for new option templates */
 	for (i=0; msg->opt_templ_set[i] != NULL && i<1024; i++) {
 		ptr = (uint8_t*) &msg->opt_templ_set[i]->first_record;
+		max_len = ((uint8_t *) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) - ptr;
 		while (ptr < (uint8_t*) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) {
-			ret = data_manager_process_one_template(template_mgr, ptr, TM_OPTIONS_TEMPLATE, msg_counter, msg->input_info);
+			ret = data_manager_process_one_template(template_mgr, ptr, max_len, TM_OPTIONS_TEMPLATE, msg_counter, msg->input_info);
 			if (ret == 0) {
 				break;
 			} else {

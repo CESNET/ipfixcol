@@ -115,12 +115,14 @@ struct ipfix_template_mgr {
  *
  * \param[in]  tm Data Manager specific structure for storing Templates.
  * \param[in]  template Pointer where new Template Record starts.
+ * \param[in]  max_len Maximum length of the template. Typically length
+ * to the end of the Template Set.
  * \param[in]  type Type of the Template Record. TM_TEMPLATE = Template,
  * TM_OPTIONS_TEMPLATE = Options Template.
  * \return Pointer to new ipfix_template on success, NULL otherwise
  */
 struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm,
-										void *template, int type);
+								void *template, int max_len, int type);
 
 /**
  * \brief Function for updating an existing templates.

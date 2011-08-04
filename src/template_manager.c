@@ -139,11 +139,11 @@ static int tm_fill_template(struct ipfix_template *template, void *template_reco
  * Also fills up data_length - length of data record specified by given template
  *
  */
-static uint16_t tm_template_length(struct ipfix_template_record *template, int type, uint16_t *data_length)
+static uint16_t tm_template_length(struct ipfix_template_record *template, int max_len, int type, uint16_t *data_length)
 {
 	uint8_t *fields;
 	int count;
-	uint16_t fields_length=0;
+	uint16_t fields_length = 0;
 	uint16_t tmpl_length = sizeof(struct ipfix_template) - sizeof(template_ie);
 	uint16_t data_record_length = 0;
 
@@ -161,22 +161,37 @@ static uint16_t tm_template_length(struct ipfix_template_record *template, int t
 			fields_length += TEMPLATE_ENT_NUM_LEN;
 		}
 		fields_length += TEMPLATE_FIELD_LEN;
+
+		if (fields_length > max_len) {
+			/* oops, no more template fields... we reached end of message.
+			 * what can we do, this message is obviously malformed, skip it */
+			return 0;
+		}
 	}
 
 	if (data_length != NULL) {
 		*data_length = data_record_length;
 	}
 	tmpl_length += fields_length;
+
 	return tmpl_length;
 }
 
-struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *template, int type)
+struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *template, int max_len, int type)
 {
 	struct ipfix_template *new_tmpl = NULL;
 	struct ipfix_template **new_templates = NULL;
 	uint16_t data_length = 0;
-	uint32_t tmpl_length =  tm_template_length(template, type, &data_length);
+	uint32_t tmpl_length ;
 	int i;
+
+	tmpl_length = tm_template_length(template, max_len, type, &data_length);
+	if (tmpl_length == 0) {
+		/* template->count probably points beyond current set area */
+		VERBOSE (CL_VERBOSE_BASIC, "Malformed template detected (bad template count), "
+		                           "skipping.");
+		return NULL;
+	}
 
 	/* allocate memory for new template */
 	if ((new_tmpl = malloc(tmpl_length)) == NULL) {
