@@ -65,15 +65,15 @@
 #include <ipfixcol.h>
 
 #ifdef TLS_SUPPORT
-#include <openssl/ssl.h>
-#include <openssl/err.h>
+#	include <openssl/ssl.h>
+#	include <openssl/err.h>
 
 /* use these if not specified otherwise */
-#define DEFAULT_SERVER_CERT_FILE "~/.ssl/certs/server.crt"
-#define DEFAULT_SERVER_PKEY_FILE "~/.ssl/private/server.key"
-#define DEFAULT_CA_FILE          "~/.ssl/private/ca.crt"
+#	define DEFAULT_SERVER_CERT_FILE "/etc/ssl/certs/collector.crt"
+#	define DEFAULT_SERVER_PKEY_FILE "/etc/ssl/private/collector.key"
+#	define DEFAULT_CA_FILE          "/etc/ssl/private/ca.crt"
 
-#define DEFAULT_SIZE_SSL_LIST 100
+#	define DEFAULT_SIZE_SSL_LIST 100
 #endif
 
 /* input buffer length */
@@ -282,10 +282,6 @@ void *input_listen(void *config)
 				continue;
 			}
 
-			/* we don't need peer's certificate anymore */
-			X509_free(peer_cert);
-			maid.peer_cert = NULL;
-
 			/* put new SSL structure into the conf->ssl_list */
 			for (i = 0; i < conf->ssl_list_size; i++) {
 				if (conf->ssl_list[i] == NULL) {
@@ -344,6 +340,12 @@ void *input_listen(void *config)
         	/* copy port */
         	input_info->info.src_port = ntohs(address->sin6_port);
         }
+
+#ifdef TLS_SUPPORT
+		/* fill in certificates */
+		input_info->collector_cert = conf->server_cert_file;
+		input_info->exporter_cert = peer_cert;
+#endif
 
         /* add to list */
         input_info->next = conf->info_list;
@@ -978,6 +980,9 @@ int input_close(void **config)
     /* free input_info list */
     while (conf->info_list) {
     	info_list = conf->info_list->next;
+#ifdef TLS_SUPPORT
+		X509_free(conf->info_list->exporter_cert);
+#endif
     	free(conf->info_list);
     	conf->info_list = info_list;
     }
