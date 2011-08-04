@@ -423,7 +423,7 @@ int main (int argc, char* argv[])
             }
         }
 		/* distribute data to the particular Data Manager for further processing */
-		preprocessor_parse_msg (packet, input_info, storage_list);
+		preprocessor_parse_msg (packet, get_retval, input_info, storage_list);
 		packet = NULL;
 		input_info = NULL;
 	}

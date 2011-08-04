@@ -54,11 +54,12 @@
  * observation id if it does not exist.
  *
  * @param[in] packet Raw packet from input plugin
+ * @param[in] len Length of the packet
  * @param[in] input_info Input information from input plugin
  * @param[in] storage_plugins List of storage plugins that should be passed to data manager
  * @return void
  */
-void preprocessor_parse_msg (void* packet, struct input_info* input_info, struct storage_list* storage_plugins);
+void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins);
 
 /**
  * \brief Close all data managers and their storage plugins

@@ -152,7 +152,7 @@ void preprocessor_close()
     return;    
 }
 
-void preprocessor_parse_msg (void* packet, struct input_info* input_info, struct storage_list* storage_plugins)
+void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins)
 {
 	struct ipfix_message* msg;
 	struct data_manager_config *config = NULL, *prev_config = NULL;
@@ -192,6 +192,13 @@ void preprocessor_parse_msg (void* packet, struct input_info* input_info, struct
 	if (msg->pkt_header->version != htons(IPFIX_VERSION)) {
 		VERBOSE (CL_VERBOSE_BASIC, "Unexpected IPFIX version detected (%X), skipping packet.",
 				msg->pkt_header->version);
+		free (msg);
+		return;
+	}
+
+	/* check whether message is not shorter than header says */
+	if ((uint16_t) len < ntohs(msg->pkt_header->length)) {
+		VERBOSE (CL_VERBOSE_BASIC, "Malformed IPFIX message detected (bad length), skipping packet.");
 		free (msg);
 		return;
 	}
