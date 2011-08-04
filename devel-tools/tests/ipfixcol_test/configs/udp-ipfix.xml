@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
+
+	<collectingProcess>
+		<name>UDP collector</name>
+		<udpCollector>
+			<name>Listening port 4739</name>
+			<localPort>4739</localPort>
+			<templateLifeTime>1800</templateLifeTime>
+			<optionsTemplateLifeTime>1800</optionsTemplateLifeTime>
+<!--		<templateLifePacket>5</templateLifePacket> -->
+<!--		<optionsTemplateLifePacket>100</optionsTemplateLifePacket> -->
+			<localIPAddress>127.0.0.1</localIPAddress>
+		</udpCollector>
+		<exportingProcess>File writer UDP</exportingProcess>
+	</collectingProcess>
+
+
+	<!--## Exporting process configuration -->
+	<exportingProcess>
+		<name>File writer UDP</name>
+		<!--## Specification of storage plugin -->
+		<destination>
+			<!--## Arbitrary name -->
+			<name>Write to /tmp folder</name>
+			<!--## Observation domain ID valid for this storage plugin 
+			       Only packets with this ODID will be passed to the plugin
+			       If unspecified, plugin is used for unknown ODIDs 
+			         (and not for any of specified)
+			-->
+			<observationDomainId>1</observationDomainId>
+			<!--## This element is passed to storage plugin -->
+			<fileWriter>
+				<!--## fileFormat must be configured in internalcfg.xml -->
+				<fileFormat>ipfix</fileFormat>
+				<!--## Storage plugin specific element -->
+				<file>file://tmp/test-udp-output.ipfix</file>
+			</fileWriter>
+		</destination>
+	</exportingProcess>
+
+</ipfix>

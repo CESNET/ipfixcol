@@ -1,0 +1,4 @@
+1. templates and data
+2. withdrawal message for template 256
+3. withdrawal message for template 258 + bad sequence number
+4. data (template 258 missing)

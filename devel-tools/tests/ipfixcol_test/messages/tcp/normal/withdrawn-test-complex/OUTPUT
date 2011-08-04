@@ -1,0 +1,5 @@
+ADVANCED VERBOSE: Got template withdrawal message. Waiting for storage packets.
+ADVANCED VERBOSE: Sequence number does not match: expected 5, got 0
+ADVANCED VERBOSE: Got template withdrawal message. Waiting for storage packets.
+ADVANCED VERBOSE: Sequence number does not match: expected 0, got 5
+NOTICE: Data template with ID 258 not found!

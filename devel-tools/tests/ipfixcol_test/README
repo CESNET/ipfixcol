@@ -1,0 +1,30 @@
+How to use ipfixcol Test Tool
+
+
+./run-test.bash PROTOCOL PATH/to/the/message(s)
+
+PROTOCOL has to be either "tcp" or "udp". The script will then start 
+collector with corresponding config file. Configuration files are 
+stored in configs/ subdirectory.
+PATH is path to the directory, which contains IPFIX messages. These
+messages will be sent to the collector (sorted in alphabetical order).
+
+Given directory should also contain these files:
+OUTPUT - expected output lines from collector (e.g. error/warning 
+         messages)
+HASH - expected hash of the output file. 
+
+Standard output of the collector is redirected to the collector_output.log file.
+
+
+Example:
+./run-test.bash tcp messages/tcp/malformed/no-templates/
+
+
+Alternatively you can run all tests in some directory:
+
+./run-all PROTOCOL PATH/tests
+
+Note test directory has to contain HASH file (but it may be empty).
+Test logs are stored in test.log file.
+

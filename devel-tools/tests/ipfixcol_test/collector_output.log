@@ -1,0 +1,14 @@
+ADVANCED VERBOSE: [0] Opening input plugin: src/input/tcp/tcp_input.so
+ADVANCED VERBOSE: [0] Opening storage xml_conf: /home/m4jkl/cesnet/ipfixcol/src/storage/ipfix/ipfix_output.so
+VERBOSE: TCP input plugin listening on address ::ffff:127.0.0.1, port 4739
+VERBOSE: Plugin initialization completed successfully
+VERBOSE: Exporter connected from address ::ffff:127.0.0.1
+VERBOSE: Unknown Set ID 0
+VERBOSE: Exporter on address ::ffff:127.0.0.1 closed connection
+NOTICE: Data template with ID 258 not found!
+ADVANCED VERBOSE: ODID 0: No more data from IPFIX preprocessor.
+VERBOSE: No more data from Data manager.
+ADVANCED VERBOSE: Closing storage plugin's thread.
+ADVANCED VERBOSE: ODID 0: Closing Data manager's thread.
+NOTICE: Signal: 2 detected, will exit as soon as possible
+VERBOSE: All allocated resources have been freed

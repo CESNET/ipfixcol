@@ -1,0 +1,4 @@
+VERBOSE: No more data from Data manager.
+ADVANCED VERBOSE: Closing storage plugin's thread.
+ADVANCED VERBOSE: ODID 0: No more data from IPFIX preprocessor.
+ADVANCED VERBOSE: ODID 0: Closing Data manager's thread.
