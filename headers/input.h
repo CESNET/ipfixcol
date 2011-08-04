@@ -176,7 +176,7 @@ int input_init(char *params, void **config);
  * \param[out] info   Information structure describing the source of the data.
  * \param[out] packet Flow information data in the form of IPFIX packet.
  * \return the length of packet on success, INPUT_CLOSE when some connection 
- *  closed, INPUT_ERROR on error.
+ *  closed, INPUT_INTR when interrupted by SIGINT signal, INPUT_ERROR on error.
  */
 int get_packet(void *config, struct input_info** info, char **packet);
 
