@@ -266,7 +266,7 @@ if [ -f "${TEST_MSGS_DIR}/HASH" ]; then
 	echo "should be: $DESIRED_OUTPUT_HASH"
 
 	ACTUAL_OUTPUT_HASH=`md5sum $OUTPUT_FILE 2> /dev/null | awk '{ print $1; }'`
-	if [ $? -ne 0 ]; then
+	if [ ! -f "$OUTPUT_FILE" ]; then
 		# looks like output file doesn't exist
 		if [ "$DESIRED_OUTPUT_HASH" == "X" ]; then
 			# this is what we wanted, there is no output file and it is
