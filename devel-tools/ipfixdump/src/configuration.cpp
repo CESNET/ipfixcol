@@ -113,8 +113,8 @@ int configuration::init(int argc, char *argv[]) {
 		case 'R':
 			NOT_SUPPORTED
 			break;
-		case 'o':
-			NOT_SUPPORTED
+		case 'o': /* output format */
+			format = optarg;
 			break;
 		case 'v':
 			NOT_SUPPORTED
@@ -140,13 +140,29 @@ int configuration::init(int argc, char *argv[]) {
 		filter = "1=1";
 	}
 
-	/* set default select clause */
+	/* set default select clause - for statistics and aggregation TODO*/
 	/* e0id8, e0id12 ipv4 addresses */
 	/* e0id27[p0,p1], e0id28[p0,p1] ipv6 addresses */
 	select = "e0id152, e0id153, e0id4, e0id7, e0id11, e0id2";
 
 	/* set default order (by timestamp) */
 	order.push_back("e0id152");
+
+	/* set format according to input */
+	/* TODO add other options and custom format*/
+	if (format == "all") {
+		format.clear();
+	} else if (format.length() == 0 || format == "line") {
+		format = "e0id152  e0id153 e0id4 (e0id8 e0id27p0e0id27p1):e0id7l -> (e0id12 e0id28p0e0id28p1):(e0id11 e0id32 e0id139 e0id33)l e0id2 e0id1";
+	} else if (format == "long") {
+		format = "e0id152  e0id153 e0id4 (e0id8 e0id27p0e0id27p1):e0id7l -> (e0id12 e0id28p0e0id28p1):(e0id11 e0id32 e0id139 e0id33)l e0id6 e0id5 e0id2 e0id1";
+	} else if (format == "extended") {
+		format = "e0id152  e0id153 e0id4 (e0id8 e0id27p0e0id27p1):e0id7l -> (e0id12 e0id28p0e0id28p1):e0id11l e0id32 e0id139 e0id33 e0id6 e0id5 e0id2 e0id1";
+	} else if (format == "pipe") {
+		format = "e0id152|e0id153|e0id4|(e0id8 e0id27p0e0id27p1)|e0id7|(e0id12 e0id28p0e0id28p1)|(e0id11 e0id32 e0id139 e0id33)|e0id2|e0id1";
+	} else if (format == "csv") {
+		format = "e0id152,e0id153,e0id4,(e0id8 e0id27p0e0id27p1),e0id7,(e0id12 e0id28p0e0id28p1),(e0id11 e0id32 e0id139 e0id33),e0id2,e0id1";
+	}
 
 	/* check validity of given values */
 	if (tables.size() < 1) {
@@ -186,7 +202,7 @@ void configuration::help() {
 	<< "                or subnet aggregation: srcip4/24, srcip6/64." << std::endl
 	//<< "-b              Aggregate netflow records as bidirectional flows." << std::endl
 	//<< "-B              Aggregate netflow records as bidirectional flows - Guess direction." << std::endl
-	<< "-r <file>       read input tables from directory" << std::endl
+	<< "-r <dir>        read input tables from directory" << std::endl
 	//<< "-w <file>       write output to file" << std::endl
 	<< "-f              read netflow filter from file" << std::endl
 	<< "-n              Define number of top N. " << std::endl

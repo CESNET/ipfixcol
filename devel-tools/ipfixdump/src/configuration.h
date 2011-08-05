@@ -81,6 +81,7 @@ public:
 	std::string filter;
 	std::string select;
 	stringVector order;
+	std::string format;
 	uint64_t maxRecords;
 
 	/**
