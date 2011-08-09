@@ -155,16 +155,17 @@ static uint16_t tm_template_length(struct ipfix_template_record *template, int m
 
 	for (count=0; count < ntohs(template->count); count++) {
 		/* count data record length */
-		data_record_length += ntohs(((uint16_t*)fields)[(fields_length + 2)/2]);
-		/* enterprise element has first bit set to 1*/
-		if (ntohs(fields[fields_length]) & 0x80) {
+		data_record_length += ntohs(*((uint16_t *) (fields + fields_length + 2)));
+		/* enterprise element has first bit set to 1 */
+		if ((*((uint16_t *) (fields+fields_length))) & 0x80) {
 			fields_length += TEMPLATE_ENT_NUM_LEN;
 		}
 		fields_length += TEMPLATE_FIELD_LEN;
 
 		if (fields_length > max_len) {
-			/* oops, no more template fields... we reached end of message.
-			 * what can we do, this message is obviously malformed, skip it */
+			/* oops, no more template fields... we reached end of message
+			 * or end of the set. what can we do, this message is obviously
+			 * malformed, skip it */
 			return 0;
 		}
 	}
@@ -173,6 +174,7 @@ static uint16_t tm_template_length(struct ipfix_template_record *template, int m
 		*data_length = data_record_length;
 	}
 	tmpl_length += fields_length;
+
 
 	return tmpl_length;
 }
