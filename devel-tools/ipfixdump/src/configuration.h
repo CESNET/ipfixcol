@@ -48,11 +48,12 @@
 #include <cstdlib>
 #include <cstring>
 #include <stdint.h>
-#include "dirent.h"
+#include <dirent.h>
+#include <ibis.h>
 
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "hVaAr:f:n:c:D:N:s:qIM:mR:o:v:Z:t:"
+#define OPTSTRING "hVaA:r:f:n:c:D:Ns:qIM:mR:o:v:Z:t:"
 
 /** ipfixdump version */
 #define VERSION "0.1"
@@ -63,7 +64,7 @@
 namespace ipfixdump {
 
 typedef std::vector<std::string> stringVector;
-
+typedef std::vector<ibis::table*> tableVector;
 typedef std::set<std::string> stringSet;
 
 /**
@@ -83,6 +84,9 @@ public:
 	stringVector order;
 	std::string format;
 	uint64_t maxRecords;
+	bool plainNumbers;
+	std::string aggregateColumns;
+	bool aggregate;
 
 	/**
 	 * \brief Configuration class destructor

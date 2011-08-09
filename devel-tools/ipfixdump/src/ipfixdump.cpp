@@ -55,26 +55,30 @@ int main(int argc, char *argv[])
 	configuration conf;
 	data data;
 
+	tableVector tables;
+
 	/* process configuration and check whether end program */
 	ret = conf.init(argc, argv);
 	if (ret != 0) return ret;
 
 	/* initialise printer */
-	printer print(std::cout, conf.format);
+	printer print(std::cout, conf);
 
 	/* initialise tables */
 	data.init(conf);
 
 	/* do some work */
-	ibis::table *tbl = NULL;
-	for (ibis::partList::iterator it = data.parts.begin(); it != data.parts.end(); it++) {
-		tbl = ibis::table::create(*(*it));
-		print.addTable(tbl);
+	if (conf.aggregate) {
+		tables = data.aggregate(conf.aggregateColumns.c_str(), conf.filter.c_str());
+	} else {
+		tables = data.filter(conf.filter.c_str());
 	}
 
+	/* print tables */
+	print.addTables(tables);
 	print.print(conf.maxRecords);
-	tableVector tables = print.clearTables();
 
+	/* free used tables */
 	for (tableVector::iterator it = tables.begin(); it != tables.end(); it++) {
 		delete *it;
 	}

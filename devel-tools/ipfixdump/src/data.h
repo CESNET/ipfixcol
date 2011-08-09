@@ -107,6 +107,31 @@ public:
 	 */
 	ibis::table* select(const char* sel, const char* cond, stringVector &order);
 
+	/**
+	 * \brief Aggregate data specified by cond according to select statement
+	 *
+	 * This function basically runs select query on all tables. It should
+	 * manage grouped columns (ipv4 and ipv6) and process them separately.
+	 *
+	 * The format of columns should be the same as for regular output, but
+	 * columns must be sumarized.
+	 *
+	 * @param sel select statement
+	 * @param cond condition
+	 * @return vector of aggregated tables
+	 */
+	tableVector aggregate(const char *sel, const char *cond);
+
+	/**
+	 * \brief Filter all table part by specified condition
+	 *
+	 * returns only tables that have specified columns
+	 *
+	 * @param cond Filter condition
+	 * @return vector of filtered tables
+	 */
+	tableVector filter(const char* cond);
+
 };
 
 }  // namespace ipfixdump

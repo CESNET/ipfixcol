@@ -111,6 +111,7 @@ ibis::table* data::select(const char *sel, const char *cond) {
 	return select(sel, cond, defaultOrder);
 }
 
+/* this function won't be probably used at all */
 /* TODO add management of aggreation functions */
 /* TODO add aliases */
 /* TODO add support for multiple parts of one column (ipv6 addr) */
@@ -162,13 +163,66 @@ ibis::table* data::select(const char *sel, const char *cond, stringVector &order
 	resultTable = table->select(sel, cond);
 	delete table;
 
-	/* order table */
+	/* check for empty result */
+	if (resultTable == NULL) {
+		return NULL;
+	}
+
+	/* order table TODO predelat na string*/
 	for (stringVector::iterator it = order.begin(); it != order.end(); it++) {
 		resultTable->orderby((*it).c_str());
 	}
 
 	/* return table with result */
 	return resultTable;
+}
+
+/* add ordering? */
+/* TODO add aliases */
+/* TODO add support for multiple parts of one column (ipv6 addr) */
+tableVector data::aggregate(const char *sel, const char *cond) {
+	ibis::table *table = NULL, *resultTable = NULL;
+	tableVector tblv;
+
+	/* create table of selected parts */
+	table = ibis::table::create(parts);
+
+	/* run select on created table */
+	resultTable = table->select(sel, cond);
+	delete table;
+
+	/* check for empty result */
+	if (resultTable != NULL) {
+		tblv.push_back(resultTable);
+	}
+
+	/* return table with result */
+	return tblv;
+}
+
+/* todo maybe a version with order by? or put order somewhere else? */
+tableVector data::filter(const char* cond) {
+	tableVector tables;
+	ibis::table *table;
+	std::string colNames;
+
+
+	for (ibis::partList::iterator it = parts.begin(); it != parts.end(); it++) {
+		table = ibis::table::create(**it);
+
+		for (size_t i = 0; i < table->columnNames().size(); i++) {
+			colNames += table->columnNames()[i];
+			if (i != table->columnNames().size() - 1) {
+				colNames += ",";
+			}
+		}
+
+		tables.push_back(table->select(colNames.c_str(), cond));
+		delete table;
+		colNames.clear();
+	}
+
+	return tables;
 }
 
 }

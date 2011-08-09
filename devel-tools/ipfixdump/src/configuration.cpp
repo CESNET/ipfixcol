@@ -72,10 +72,11 @@ int configuration::init(int argc, char *argv[]) {
 			return 1;
 			break;
 		case 'a': /* aggregate */
-			NOT_SUPPORTED
+				aggregate = true;
 			break;
-		case 'A': /* aggregate on scpecific columns */
-			NOT_SUPPORTED
+		case 'A': /* aggregate on specific columns */
+				aggregate = true;
+				aggregateColumns = optarg;
 			break;
 		case 'r': /* file to open */
 				tables.push_back(std::string(optarg));
@@ -92,8 +93,8 @@ int configuration::init(int argc, char *argv[]) {
 		case 'D':
 			NOT_SUPPORTED
 			break;
-		case 'N':
-			NOT_SUPPORTED
+		case 'N': /* print plain numbers */
+				plainNumbers = true;
 			break;
 		case 's':
 			NOT_SUPPORTED
@@ -140,10 +141,10 @@ int configuration::init(int argc, char *argv[]) {
 		filter = "1=1";
 	}
 
-	/* set default select clause - for statistics and aggregation TODO*/
+	/* set default select clause - for statistics TODO*/
 	/* e0id8, e0id12 ipv4 addresses */
 	/* e0id27[p0,p1], e0id28[p0,p1] ipv6 addresses */
-	select = "e0id152, e0id153, e0id4, e0id7, e0id11, e0id2";
+	select = "e0id152, e0id153, e0id4, e0id7, e0id11, e0id2, e0id8, e0id12";
 
 	/* set default order (by timestamp) */
 	order.push_back("e0id152");
@@ -157,7 +158,7 @@ int configuration::init(int argc, char *argv[]) {
 	} else if (format == "long") {
 		format = "e0id152  e0id153 e0id4 (e0id8 e0id27p0e0id27p1):e0id7l -> (e0id12 e0id28p0e0id28p1):(e0id11 e0id32 e0id139 e0id33)l e0id6 e0id5 e0id2 e0id1";
 	} else if (format == "extended") {
-		format = "e0id152  e0id153 e0id4 (e0id8 e0id27p0e0id27p1):e0id7l -> (e0id12 e0id28p0e0id28p1):e0id11l e0id32 e0id139 e0id33 e0id6 e0id5 e0id2 e0id1";
+		format = "e0id152  e0id153 e0id4 (e0id8 e0id27p0e0id27p1):e0id7l -> (e0id12 e0id28p0e0id28p1):(e0id11 e0id32 e0id139 e0id33)l e0id6 e0id5 e0id2 e0id1";
 	} else if (format == "pipe") {
 		format = "e0id152|e0id153|e0id4|(e0id8 e0id27p0e0id27p1)|e0id7|(e0id12 e0id28p0e0id28p1)|(e0id11 e0id32 e0id139 e0id33)|e0id2|e0id1";
 	} else if (format == "csv") {
@@ -256,6 +257,6 @@ configuration::~configuration() {
 	}
 }
 
-configuration::configuration(): maxRecords(0) {}
+configuration::configuration(): maxRecords(0), plainNumbers(false), aggregate(false) {}
 
 }

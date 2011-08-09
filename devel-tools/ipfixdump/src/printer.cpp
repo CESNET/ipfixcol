@@ -43,10 +43,21 @@ namespace ipfixdump
 {
 
 void printer::addTable(ibis::table *table) {
+	/* check input */
+	if (table == NULL) {
+		return;
+	}
+
 	tables.push_back(table);
 	/* save names and types to associative array*/
 	for (size_t i = 0; i < table->columnNames().size(); i++) {
 		namesTypes[table->columnNames()[i]] = table->columnTypes()[i];
+	}
+}
+
+void printer::addTables(tableVector &tables) {
+	for (tableVector::iterator it = tables.begin(); it != tables.end(); it++) {
+		addTable(*it);
 	}
 }
 
@@ -60,6 +71,7 @@ tableVector printer::clearTables() {
 
 int printer::print(uint64_t limit) {
 	int ierr = 0;
+	uint64_t maxRows, nRows, printedRows = 0;
 
 	/* process format -- fills this->colInfo */
 	parseFormat();
@@ -81,18 +93,23 @@ int printer::print(uint64_t limit) {
 		if (cur == 0) return -1;
 
 		/* get number of rows */
-		uint64_t nRows = (*tableIt)->nRows();
+		nRows = (*tableIt)->nRows();
 
 		/* set limit */
-		if (limit == 0 || limit > nRows) {
-			limit = nRows;
+		maxRows = limit - printedRows;
+		if (limit == 0 || maxRows > nRows) {
+			maxRows = nRows;
+		} else if (maxRows == 0) { /* we want no more rows */
+			delete cur;
+			break;
 		}
 
 		/* print rows */
-		for (size_t i = 0; i < limit; i++) {
-			ierr = cur->fetch(); // make the next row ready
+		for (size_t i = 0; i < maxRows; i++) {
+			ierr = cur->fetch(); /* make the next row ready */
 			if (ierr == 0) {
 				printRow(cur);
+				printedRows++;
 			} else {
 				std::cerr << "print() failed to fetch row " << i << std::endl;
 				ierr = -2;
@@ -101,7 +118,7 @@ int printer::print(uint64_t limit) {
 			}
 		}
 		/* free cursor */
-			delete cur;
+		delete cur;
 	}
 
 	/* free class information about current table */
@@ -180,7 +197,7 @@ void printer::printRow(ibis::table::cursor *cur) {
 					printed = true;
 				}
 				colInfoIt++;
-			} else if ((*colInfoIt)->name == "e0id4") { /* Protocol type */
+			} else if ((*colInfoIt)->name == "e0id4" && !conf.plainNumbers) { /* Protocol type */
 				unsigned char buf;
 				if (cur->getColumnAsUByte((*colInfoIt)->name.c_str(), buf) == 0) {
 					out << protocols[buf];
@@ -414,7 +431,7 @@ void printer::parseFormat() {
 	regex_t reg;
 	int err;
 	regmatch_t matches[4];
-	std::string tmpformat = format, name, semantics;
+	std::string tmpformat = conf.format, name, semantics;
 	columnInfo *cInfo;
 	columnInfoVector group;
 	ibis::table::namesTypes::iterator typeIt;
@@ -538,8 +555,8 @@ void printer::parseFormat() {
 	/* free regex */
 	regfree(&reg);
 
-	/* set column info by current table, if format is not set */
-	if (format.length() == 0) {
+	/* set column info by current tables, if format is not set */
+	if (conf.format.length() == 0) {
 		stringSet existingColumns;
 
 		for (tableVector::iterator tableIt = tables.begin(); tableIt != tables.end(); tableIt++) {
@@ -609,8 +626,8 @@ std::string printer::getSemantics(std::string name) {
 }
 
 /* copy output stream and format */
-printer::printer(std::ostream &out, std::string format):
-		out(out), format(format)
+printer::printer(std::ostream &out, configuration &conf):
+		out(out), conf(conf)
 {}
 
 }

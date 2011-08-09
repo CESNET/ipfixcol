@@ -80,7 +80,6 @@ typedef struct {
 	std::string semantics;
 } columnInfo;
 
-typedef std::vector<ibis::table*> tableVector;
 typedef std::vector<columnInfo*> columnInfoVector;
 
 /**
@@ -170,7 +169,7 @@ private:
 	printer();
 
 	std::ostream &out; /**< Stream to write to */
-	std::string format; /**< Print format */
+	configuration &conf; /**< program configuration */
 
 	tableVector tables; /**< tables to print */
 	std::vector<columnInfoVector> colInfos; /**< Printed table col info*/
@@ -182,10 +181,9 @@ public:
 	 * \brief Constructor
 	 *
 	 * @param out ostream to print to
-	 * @param format output format
+	 * @param conf configuration class
 	 */
-	printer(std::ostream &out, std::string format);
-
+	printer(std::ostream &out, configuration &conf);
 
 	/**
 	 * \brief Prints output in specified format
@@ -204,6 +202,13 @@ public:
 	 * @param table table to be added
 	 */
 	void addTable(ibis::table *table);
+
+	/**
+	 * \brief Add tables to list of tables to print
+	 *
+	 * @param tables vector of tables to be added
+	 */
+	void addTables(tableVector &tables);
 
 	/**
 	 * \brief clear list of tables to print
