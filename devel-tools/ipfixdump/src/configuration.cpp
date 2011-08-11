@@ -146,24 +146,36 @@ int configuration::init(int argc, char *argv[]) {
 	/* e0id27[p0,p1], e0id28[p0,p1] ipv6 addresses */
 	select = "e0id152, e0id153, e0id4, e0id7, e0id11, e0id2, e0id8, e0id12";
 
+	/* set default aggregation columns */
+	if (aggregate && aggregateColumns.empty()) {
+		aggregateColumns = "count(*), min(e0id152), max(e0id153), e0id8, e0id12, e0id7, e0id11, e0id4";
+	}
+
 	/* set default order (by timestamp) */
 	order.push_back("e0id152");
 
 	/* set format according to input */
 	/* TODO add other options and custom format*/
-	if (format == "all") {
-		format.clear();
-	} else if (format.length() == 0 || format == "line") {
-		format = "e0id152  e0id153 e0id4 (e0id8 e0id27p0e0id27p1):e0id7l -> (e0id12 e0id28p0e0id28p1):(e0id11 e0id32 e0id139 e0id33)l e0id2 e0id1";
+	/* add format to print everything */
+	if (format.length() == 0 || format == "line") {
+		format = "%ts %td %pr %sa:%sap -> %da:%dap %pkt %byt %fl";
 	} else if (format == "long") {
-		format = "e0id152  e0id153 e0id4 (e0id8 e0id27p0e0id27p1):e0id7l -> (e0id12 e0id28p0e0id28p1):(e0id11 e0id32 e0id139 e0id33)l e0id6 e0id5 e0id2 e0id1";
+		format = "%ts %td %pr %sa:%sap -> %da:%dap %flg %tos %pkt %byt %fl";
 	} else if (format == "extended") {
-		format = "e0id152  e0id153 e0id4 (e0id8 e0id27p0e0id27p1):e0id7l -> (e0id12 e0id28p0e0id28p1):(e0id11 e0id32 e0id139 e0id33)l e0id6 e0id5 e0id2 e0id1";
+		format = "%ts %td %pr %sa:%sap -> %da:%dap %flg %tos %pkt %byt %bps %pps %bpp %fl";
 	} else if (format == "pipe") {
-		format = "e0id152|e0id153|e0id4|(e0id8 e0id27p0e0id27p1)|e0id7|(e0id12 e0id28p0e0id28p1)|(e0id11 e0id32 e0id139 e0id33)|e0id2|e0id1";
+		format = "%ts|%td|%pr|%sa|%sap|%da|%dap|%pkt|%byt|%fl";
 	} else if (format == "csv") {
-		format = "e0id152,e0id153,e0id4,(e0id8 e0id27p0e0id27p1),e0id7,(e0id12 e0id28p0e0id28p1),(e0id11 e0id32 e0id139 e0id33),e0id2,e0id1";
+		format = "%ts,%td,%pr,%sa,%sap,%da,%dap,%pkt,%byt,%fl";
+	} else if (format.substr(0,4) == "fmt:") {
+		format = format.substr(4);
+	} else {
+		std::cerr << "Unknown ouput mode: '" << format << "'" << std::endl;
+		return -1;
 	}
+
+	/* parse output format string */
+	parseFormat(format);
 
 	/* check validity of given values */
 	if (tables.size() < 1) {
@@ -255,8 +267,164 @@ configuration::~configuration() {
 		/* free allocated vectors */
 		delete *it;
 	}
+
+	/* go over all columnFormats */
+	for (std::vector<columnFormat*>::iterator it = columnsFormat.begin(); it != columnsFormat.end(); it++) {
+		/* free allocated vectors */
+		delete *it;
+	}
 }
 
 configuration::configuration(): maxRecords(0), plainNumbers(false), aggregate(false) {}
+
+void configuration::parseFormat(std::string format) {
+	std::string alias;
+	columnFormat *cf;
+	regex_t reg;
+	int err;
+	regmatch_t matches[1];
+
+	/* Open XML configuration file */
+	pugi::xml_document doc;
+	if (!doc.load_file(COLUMNS_XML)) {
+		std::cerr << "XML '"<< COLUMNS_XML << "' with columns configuration cannot be loaded!" << std::endl;
+	}
+
+	/* prepare regular expresion */
+	regcomp(&reg, "%[a-zA-Z]+", REG_EXTENDED);
+
+	/* go over whole format string */
+	while (format.length() > 0) {
+		/* run regular expression match */
+		if ((err = regexec(&reg, format.c_str(), 1, matches, 0)) == 0) {
+			/* check for columns separator */
+			if (matches[0].rm_so != 0 ) {
+				cf = new columnFormat();
+				cf->name = format.substr(0, matches[0].rm_so);
+				columnsFormat.push_back(cf);
+			}
+
+			/* set alias of column */
+			alias = format.substr(matches[0].rm_so, matches[0].rm_eo - matches[0].rm_so);
+
+			/* search xml for an alias */
+			pugi::xpath_node column = doc.select_single_node(("/columns/column[alias='"+alias+"']").c_str());
+			/* check what we found */
+			if (column != NULL) {
+				/* create new column */
+				cf = new columnFormat();
+				cf->name = column.node().child_value("name");
+#ifdef DEBUG
+				std::cerr << "Creating column '" << cf->name << "'" << std::endl;
+#endif
+				/* set alignment */
+				if (column.node().child("alignLeft") != NULL) {
+					cf->alignLeft = true;
+				}
+
+				/* set width */
+				if (column.node().child("width") != NULL) {
+					cf->width = atoi(column.node().child_value("width"));
+				}
+
+				/* set value according to type */
+				if (column.node().child("value").attribute("type").value() == std::string("plain")) {
+					/* simple element */
+					cf->groups.push_back(createValueElement(column.node().child("value").child("element"), doc));
+				} else if (column.node().child("value").attribute("type").value() == std::string("group")) {
+					/* group of elements */
+					pugi::xpath_node_set elements = column.node().child("value").select_nodes("group/element");
+					for (pugi::xpath_node_set::const_iterator it = elements.begin(); it != elements.end(); ++it)
+					{
+						cf->groups.push_back(createValueElement((*it).node(), doc));
+					}
+				} else if (column.node().child("value").attribute("type").value() == std::string("operation")) {
+					/* operation */
+					cf->groups.push_back(createOperationElement(column.node().child("value").child("operation"), doc));
+				}
+
+				columnsFormat.push_back(cf);
+			} else {
+				std::cerr << "Column '" << alias << "' not defined" << std::endl;
+			}
+
+			/* discard processed part of the format string */
+			format = format.substr(matches[0].rm_eo);
+		} else if ( err != REG_NOMATCH ) {
+			std::cerr << "Bad output format string" << std::endl;
+			break;
+		} else { /* rest is column separator */
+			cf = new columnFormat();
+			cf->name = format.substr(0, matches[0].rm_so);
+			columnsFormat.push_back(cf);
+		}
+	}
+
+	regfree(&reg);
+}
+
+AST* configuration::createValueElement(pugi::xml_node element, pugi::xml_document &doc) {
+
+	/* when we have alias, go down one level */
+	if (element.child_value()[0] == '%') {
+		pugi::xpath_node el = doc.select_single_node(
+				("/columns/column[alias='"
+						+ std::string(element.child_value())
+						+ "']/value/element").c_str());
+		return createValueElement(el.node(), doc);
+	}
+
+	/* create the element */
+	AST *ast = new AST;
+
+	ast->type = ipfixdump::value;
+	ast->value = element.child_value();
+	ast->semantics = element.attribute("semantics").value();
+	if (element.attribute("parts")) {
+		ast->parts = atoi(element.attribute("parts").value());
+	}
+
+	return ast;
+}
+
+AST* configuration::createOperationElement(pugi::xml_node operation, pugi::xml_document &doc) {
+
+	AST *ast = new AST;
+	pugi::xpath_node arg1, arg2;
+	std::string type;
+
+	/* set type and operation */
+	ast->type = ipfixdump::operation;
+	ast->operation = operation.attribute("name").value()[0];
+
+	/* get argument nodes */
+	arg1 = doc.select_single_node(("/columns/column[alias='"+ std::string(operation.child_value("arg1"))+ "']").c_str());
+	arg2 = doc.select_single_node(("/columns/column[alias='"+ std::string(operation.child_value("arg2"))+ "']").c_str());
+
+	/* get argument type */
+	type = arg1.node().child("value").attribute("type").value();
+
+	/* add argument to AST */
+	if (type == "operation") {
+		ast->left = createOperationElement(arg1.node().child("value").child("operation"), doc);
+	} else if (type == "plain"){
+		ast->left = createValueElement(arg1.node().child("value").child("element"), doc);
+	} else {
+		std::cerr << "Value of type operation contains node of type " << type << std::endl;
+	}
+
+	/* same for the second argument */
+	type = arg2.node().child("value").attribute("type").value();
+
+	if (type == "operation") {
+		ast->right = createOperationElement(arg2.node().child("value").child("operation"), doc);
+	} else if (type == "plain"){
+		ast->right = createValueElement(arg2.node().child("value").child("element"), doc);
+	} else {
+		std::cerr << "Value of type operation contains node of type '" << type << "'" << std::endl;
+	}
+
+	return ast;
+}
 
 }

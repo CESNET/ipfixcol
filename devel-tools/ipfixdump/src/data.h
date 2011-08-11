@@ -46,6 +46,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ibis.h>
+#include "typedefs.h"
 #include "configuration.h"
 
 /**

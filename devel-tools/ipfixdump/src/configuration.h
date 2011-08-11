@@ -49,7 +49,11 @@
 #include <cstring>
 #include <stdint.h>
 #include <dirent.h>
+#include <regex.h>
 #include <ibis.h>
+#include "../3rdparty/pugixml.hpp"
+#include "typedefs.h"
+#include "columnFormat.h"
 
 
 /** Acceptable command-line parameters */
@@ -58,14 +62,12 @@
 /** ipfixdump version */
 #define VERSION "0.1"
 
+#define COLUMNS_XML "ipfixdump.xml"
+
 /**
  * \brief Namespace of the ipfixdump utility
  */
 namespace ipfixdump {
-
-typedef std::vector<std::string> stringVector;
-typedef std::vector<ibis::table*> tableVector;
-typedef std::set<std::string> stringSet;
 
 /**
  * \brief Class managing program configuration
@@ -75,6 +77,30 @@ typedef std::set<std::string> stringSet;
 class configuration {
 private:
 	char *progname; /**< Name of the program parsed from argv[0]*/
+
+	/**
+	 * \brief Parse output format string
+	 * @param format output format string
+	 */
+	void parseFormat(std::string format);
+
+	/**
+	 * \brief Create element of type value from XMLnode element
+	 *
+	 * @param element XML node element
+	 * @param doc XML document with configuration
+	 * @return AST structure of created element
+	 */
+	AST* createValueElement(pugi::xml_node element, pugi::xml_document &doc);
+
+	/**
+	 * \brief Create element of type operation from XMLnode element
+	 *
+	 * @param operation XML node element
+	 * @param doc XML document with configuration
+	 * @return AST structure of created operation
+	 */
+	AST* createOperationElement(pugi::xml_node operation, pugi::xml_document &doc);
 
 public:
 	stringVector tables; /**< fastbit tables to be used*/
@@ -87,6 +113,7 @@ public:
 	bool plainNumbers;
 	std::string aggregateColumns;
 	bool aggregate;
+	std::vector<columnFormat*> columnsFormat;
 
 	/**
 	 * \brief Configuration class destructor

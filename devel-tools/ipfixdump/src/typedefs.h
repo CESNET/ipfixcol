@@ -1,7 +1,7 @@
 /**
- * \file ipfixdump.cpp
+ * \file typedefs.h
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Tool for ipfix fastbit format querying
+ * \brief Header containing typedefs for ipfixdump utility
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,52 +37,25 @@
  *
  */
 
-#include <ibis.h>
-#include <sstream>
+#ifndef TYPEDEFS_H_
+#define TYPEDEFS_H_
+
+#include <cstdio>
+#include <vector>
 #include <set>
-#include <string>
 
-#include "configuration.h"
-#include "data.h"
-#include "printer.h"
 
-using namespace ipfixdump;
 
-int main(int argc, char *argv[])
-{
-	int ret;
-	/* create configuration to work with */
-	configuration conf;
-	data data;
+/**
+ * \brief Namespace of the ipfixdump utility
+ */
+namespace ipfixdump {
 
-	tableVector tables;
+typedef std::vector<std::string> stringVector;
+typedef std::vector<ibis::table*> tableVector;
+typedef std::set<std::string> stringSet;
 
-	/* process configuration and check whether end program */
-	ret = conf.init(argc, argv);
-	if (ret != 0) return ret;
+}  // namespace ipfixdump
 
-	/* initialise printer */
-	printer print(std::cout, conf);
 
-	/* initialise tables */
-	data.init(conf);
-
-	/* do some work */
-	if (conf.aggregate) {
-		tables = data.aggregate(conf.aggregateColumns.c_str(), conf.filter.c_str());
-	} else {
-		tables = data.filter(conf.filter.c_str());
-	}
-
-	/* print tables */
-	print.addTables(tables);
-	print.print(conf.maxRecords);
-
-	/* free used tables */
-	print.clearTables();
-	for (tableVector::iterator it = tables.begin(); it != tables.end(); it++) {
-		delete *it;
-	}
-
-	return 0;
-}
+#endif /* CONFIGURATION_H_ */
