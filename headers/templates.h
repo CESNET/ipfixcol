@@ -94,9 +94,19 @@ struct ipfix_template {
 	uint16_t template_id;        /**Template ID */
 	uint16_t field_count;        /**Number of fields in Template Record */
 	uint16_t scope_field_count;  /**Number of scope fields */
-	uint16_t template_length;    /**Length of the template */
-	uint16_t data_length;        /**Length of the data record specified
-								  * by this template */
+	uint16_t template_length;    /**Length of the template. This is size
+	                              * of the template structure and actual template
+	                              * fields.
+	                              * sizeof(struct ipfix_template) - sizeof(template_ie)
+	                              * + length of the template fields */
+	uint32_t data_length;        /**Length of the data record specified
+	                              * by this template. If the most significant
+	                              * bit is set to 1, then there is at least
+	                              * one Information Element with variable length.
+	                              * In such case this value is invalid and true
+	                              * length of the Data Record has to be
+	                              * calculated somehow else. For more information,
+	                              * see section 7 in RFC 5101. */
 	template_ie fields[1];       /**Template fields */
 };
 

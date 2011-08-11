@@ -195,6 +195,13 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 	uint32_t records_count = 0;
 	int i, ret;
 	int max_len;     /* length to the end of the set = max length of the template */
+	uint16_t count;
+	uint16_t length = 0;
+	uint16_t offset = 0;
+	uint8_t var_len = 0;
+	struct ipfix_template *template;
+	uint16_t min_data_length;
+	uint16_t data_length;
 
 	/* check for new templates */
 	for (i=0; msg->templ_set[i] != NULL && i<1024; i++) {
@@ -234,12 +241,62 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 					((time(NULL) - msg->data_set[i].template->last_transmission > udp_conf->template_life_time) || /* lifetime expired */
 					(udp_conf->template_life_packet > 0 && /* life packet should be checked */
 					(uint32_t) (msg_counter - msg->data_set[i].template->last_message) > udp_conf->template_life_packet))) {
-				VERBOSE(CL_VERBOSE_BASIC, "Data template ID %i expired! Using old template.", msg->data_set[i].template->template_id);
+				VERBOSE(CL_VERBOSE_BASIC, "Data template ID %i expired! Using old template.",
+				                                               msg->data_set[i].template->template_id);
 			}
-			/* add data set records (flows) count */
-			records_count += ntohs(msg->data_set[i].data_set->header.length) / msg->data_set[i].template->data_length;
+
+			/* compute sequence number */
+			if (msg->data_set[i].template->data_length & 0x80000000) {
+				/* damn... there is a Information Element with variable length. we have to
+				 * compute number of the Data Records in current Set by hand */
+
+				/* template for current Data Set */
+				template = msg->data_set[i].template;
+				/* every Data Record has to be at least this long */
+				min_data_length = (uint16_t) msg->data_set[i].template->data_length;
+
+				data_length = ntohs(msg->data_set[i].data_set->header.length) - sizeof(struct ipfix_set_header);
+
+
+				length = 0;   /* position in Data Record */
+				while (data_length - length >= min_data_length) {
+					offset = 0;
+					for (count = 0; count < template->field_count; count++) {
+						if (template->fields[offset].ie.length == 0xffff) {
+							/* this element has variable length. read first byte from actual data record to determine
+							 * real length of the field */
+							var_len = msg->data_set[i].data_set->records[length];
+							if (var_len < 255) {
+								/* field length is var_len */
+								length += var_len;
+								length += 1; /* first 1 byte contains information about field length */
+							} else {
+								/* field length is more than 255, actual length is stored in next two bytes */
+								length += ntohs(*((uint16_t *) (msg->data_set[i].data_set->records + length + 1)));
+								length += 3; /* first 3 bytes contain information about field length */
+							}
+						} else {
+							/* length from template */
+							length += template->fields[offset].ie.length;
+						}
+
+						if (template->fields[offset].ie.id & 0x8000) {
+							/* do not forget on Enterprise Number */
+							offset += 1;
+						}
+						offset += 1;
+					}
+
+					/* data record found */
+					records_count += 1;
+				}
+			} else {
+				/* no elements with variable length */
+				records_count += ntohs(msg->data_set[i].data_set->header.length) / msg->data_set[i].template->data_length;
+			}
 		}
 	}
+
 	/* return number of data records */
 	return records_count;
 }
@@ -249,7 +306,7 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
  * \brief Check whether there is at least one template withdraw
  *
  * @param[in] msg IPFIX message
- * @return int Return 1 when template withdraw message found,  0 otherwise
+ * @return int Return 1 when template withdraw message found, 0 otherwise
  */
 static int data_manager_withdraw_templates(struct ipfix_message *msg) {
 	struct ipfix_template_record *template_record;

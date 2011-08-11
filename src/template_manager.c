@@ -73,7 +73,7 @@ void tm_destroy(struct ipfix_template_mgr *tm)
 }
 
 /**
- * \brief Copy ipfix_template fields and convert then to host byte order
+ * \brief Copy ipfix_template fields and convert them to host byte order
  */
 static void tm_copy_fields(uint8_t *to, uint8_t *from, uint16_t length)
 {
@@ -102,7 +102,7 @@ static void tm_copy_fields(uint8_t *to, uint8_t *from, uint16_t length)
  * \brief Fills up ipfix_template structure with data from (options_)template_record
  */
 static int tm_fill_template(struct ipfix_template *template, void *template_record, uint16_t template_length,
-							uint16_t data_length, int type)
+							uint32_t data_length, int type)
 {
 	struct ipfix_template_record *tmpl = (struct ipfix_template_record*) template_record;
 
@@ -139,13 +139,16 @@ static int tm_fill_template(struct ipfix_template *template, void *template_reco
  * Also fills up data_length - length of data record specified by given template
  *
  */
-static uint16_t tm_template_length(struct ipfix_template_record *template, int max_len, int type, uint16_t *data_length)
+static uint16_t tm_template_length(struct ipfix_template_record *template, int max_len, int type, uint32_t *data_length)
 {
 	uint8_t *fields;
 	int count;
 	uint16_t fields_length = 0;
-	uint16_t tmpl_length = sizeof(struct ipfix_template) - sizeof(template_ie);
-	uint16_t data_record_length = 0;
+	uint16_t tmpl_length;
+	uint32_t data_record_length = 0;
+	uint16_t tmp_data_length;
+
+	tmpl_length = sizeof(struct ipfix_template) - sizeof(template_ie);
 
 	if (type == TM_TEMPLATE) { /* template */
 		fields = (uint8_t *) template->fields;
@@ -155,9 +158,20 @@ static uint16_t tm_template_length(struct ipfix_template_record *template, int m
 
 	for (count=0; count < ntohs(template->count); count++) {
 		/* count data record length */
-		data_record_length += ntohs(*((uint16_t *) (fields + fields_length + 2)));
+		tmp_data_length = ntohs(*((uint16_t *) (fields + fields_length + 2)));
+
+		if (tmp_data_length == 0xffff) {
+			/* this Information Element has variable length */
+			data_record_length |= 0x80000000;  /* taint this variable. we can't count on it anymore,
+			                                    * but it can tell us what is the smallest length
+			                                    * of the Data Record possible */
+			data_record_length += 1;           /* every field is at least 1 byte long */
+		} else {
+			/* actual length is stored in the template */
+			data_record_length += tmp_data_length;
+		}
 		/* enterprise element has first bit set to 1 */
-		if ((*((uint16_t *) (fields+fields_length))) & 0x80) {
+		if (ntohs((*((uint16_t *) (fields+fields_length)))) & 0x8000) {
 			fields_length += TEMPLATE_ENT_NUM_LEN;
 		}
 		fields_length += TEMPLATE_FIELD_LEN;
@@ -175,7 +189,6 @@ static uint16_t tm_template_length(struct ipfix_template_record *template, int m
 	}
 	tmpl_length += fields_length;
 
-
 	return tmpl_length;
 }
 
@@ -183,8 +196,8 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 {
 	struct ipfix_template *new_tmpl = NULL;
 	struct ipfix_template **new_templates = NULL;
-	uint16_t data_length = 0;
-	uint32_t tmpl_length ;
+	uint32_t data_length = 0;
+	uint32_t tmpl_length;
 	int i;
 
 	tmpl_length = tm_template_length(template, max_len, type, &data_length);
