@@ -245,7 +245,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
                  msg->opt_templ_set[ot_set_count++] = (struct ipfix_options_template_set *) set_header;
                 break;
             default:
-                if (set_header->flowset_id < IPFIX_MIN_RECORD_FLOWSET_ID) {
+                if (ntohs(set_header->flowset_id) < IPFIX_MIN_RECORD_FLOWSET_ID) {
                     VERBOSE (CL_VERBOSE_BASIC, "Unknown Set ID %d", ntohs(set_header->flowset_id));
                 } else {
                     msg->data_set[d_set_count++].data_set = (struct ipfix_data_set*) set_header;

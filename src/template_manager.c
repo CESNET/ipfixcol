@@ -269,6 +269,7 @@ struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, uint16_t t
 			count++;
 		}
 	}
+
 	/* template not found */
 	return NULL;
 }
