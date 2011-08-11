@@ -142,7 +142,7 @@ int main (int argc, char* argv[])
 	input.dll_handler = NULL;
 	input.config = NULL;
 
-	/* get program name withou execute path */
+	/* get program name without execute path */
 	progname = ((progname = strrchr (argv[0], '/')) != NULL) ? (progname + 1) : argv[0];
 
 	/* parse command line parameters */
