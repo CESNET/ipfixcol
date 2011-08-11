@@ -131,6 +131,7 @@ void *listen_worker(void *data) {
 	char printable_ip[INET6_ADDRSTRLEN];
 	struct sockaddr_in6 *src_addr6;
 	struct input_info_node *node;
+	struct input_info_node *temp_node;
 	struct epoll_event ev;
 	int on = 1;                 /* ioctl() "turn on" flag */
 	
@@ -154,17 +155,8 @@ void *listen_worker(void *data) {
 			continue;
 		}
 
+		/* make new socket non-blocking */
 		ioctl(conn_socket, FIONBIO, (char *)&on);
-
-		/* new association, add to the event poll */
-		memset(&ev, 0, sizeof(ev));
-		ev.events = EPOLLIN;
-		ev.data.fd = conn_socket;
-		ret = epoll_ctl(conf->epollfd, EPOLL_CTL_ADD, conn_socket, &ev);
-		if (ret == -1) {
-			VERBOSE(CL_VERBOSE_OFF, "epoll_ctl() error");
-			goto err_assoc;
-		}
 
 		/* input_info - fill out information about input */
 		node = (struct input_info_node *) malloc(sizeof(*node));
@@ -192,6 +184,16 @@ void *listen_worker(void *data) {
 		conf->input_info_list = node;
 		pthread_mutex_unlock(&(conf->input_info_list_mutex));
 
+		/* add new association to the event poll */
+		memset(&ev, 0, sizeof(ev));
+		ev.events = EPOLLIN;
+		ev.data.fd = conn_socket;
+		ret = epoll_ctl(conf->epollfd, EPOLL_CTL_ADD, conn_socket, &ev);
+		if (ret == -1) {
+			VERBOSE(CL_VERBOSE_OFF, "epoll_ctl() error");
+			goto err_assoc;
+		}
+
 		inet_ntop(AF_INET6, &(src_addr6->sin6_addr), printable_ip, 
 		                             INET6_ADDRSTRLEN);
 		VERBOSE(CL_VERBOSE_BASIC, "New SCTP association from %s", 
@@ -202,6 +204,15 @@ void *listen_worker(void *data) {
 		/* error occurs, handle it and continue listening */
 err_assoc:
 		close(conn_socket);
+
+		/* remove input_info from the list */
+		pthread_mutex_lock(&(conf->input_info_list_mutex));
+
+		temp_node = conf->input_info_list->next;
+		free(conf->input_info_list);
+		conf->input_info_list = temp_node;
+
+		pthread_mutex_unlock(&(conf->input_info_list_mutex));
 
 		continue;
 	}
@@ -692,8 +703,8 @@ wait_for_data:
 		/* no such input_info (!?) */
 		VERBOSE(CL_VERBOSE_BASIC, "Something is horribly wrong. "
 		                          "Missing input_info for SCTP "
-					  "association. This should never "
-					  "happen");
+		                          "association. This should never "
+		                          "happen");
 		ret = INPUT_ERROR;
 		goto out;
 	}
