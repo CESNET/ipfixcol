@@ -763,30 +763,9 @@ wait_for_data:
 				__LINE__);
 			}
 
-			/* remove corresponding input_info structure */
-			struct input_info_node *node;
-			struct input_info_node *node_prev;
-			node = conf->input_info_list;
-			node_prev = NULL;
-			while (node) {
-				if (node->socket == socket) {
-					/* shutdown association */
-					close(node->socket);
-
-					pthread_mutex_lock(&(conf->input_info_list_mutex));
-					if (node_prev) {
-						node_prev->next = node->next;
-					} else {
-						conf->input_info_list = node->next;
-					}
-					pthread_mutex_unlock(&(conf->input_info_list_mutex));
-
-					free(node);
-					break;
-				}
-				node_prev = node;
-				node = node->next;
-			}
+			/* no more data from this exporter */
+			/* \todo free input info structure now (in near future) */
+			return INPUT_CLOSED;
 		} else {
 			VERBOSE(CL_VERBOSE_BASIC, "Unsupported SCTP event "
 			                          "occured");
