@@ -497,7 +497,7 @@ void hex_dump_adv(const struct ipfix_message *ipfix_msg){
 	int i;
         
 	for(i=0;i<1023;i++ ){ //TODO magic number!
-                dtc = &(ipfix_msg->data_set[i]);
+                dtc = &(ipfix_msg->data_couple[i]);
                 data = dtc->data_set;
                 if(data != NULL){
 			fprintf(stderr,"-------------hex-data-set-%i----------\n",i);
@@ -551,7 +551,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 
         for(i=0;i<1023;i++ ){ //TODO magic number!
 		record_offset=0;
-                dtc = &(ipfix_msg->data_set[i]);
+                dtc = &(ipfix_msg->data_couple[i]);
                 if(dtc->data_set==NULL){
                         VERBOSE(CL_VERBOSE_ADVANCED,"Read %i data_sets!", i);
                         break;
@@ -559,7 +559,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 
                 VERBOSE(CL_VERBOSE_ADVANCED,"Data_set: %i", i);
                 data = dtc->data_set;
-                template = dtc->template;
+                template = dtc->data_template;
                 if(template==NULL){
                         VERBOSE(CL_VERBOSE_ADVANCED,"template for data set si missing!");
                         break;
@@ -578,7 +578,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 
 		for(ri=0;ri<record_count;ri++){
                 	VERBOSE(CL_VERBOSE_ADVANCED,"\t\tFlow record: %i",ri);
-	                for(j=0;j<dtc->template->field_count;j++){
+	                for(j=0;j<dtc->data_template->field_count;j++){
         	                //TODO record size check!!
                 	        field = &(template->fields[j]);
                         	if(field->ie.id & 0x8000){ //its ENTERPRISE element

@@ -239,7 +239,7 @@ void preprocessor_parse_msg (void* packet, struct input_info* input_info, struct
                 if (set_header->flowset_id < IPFIX_MIN_RECORD_FLOWSET_ID) {
                     VERBOSE (CL_VERBOSE_BASIC, "Unknown Set ID %d", ntohs(set_header->flowset_id));
                 } else {
-                    msg->data_set[d_set_count++].data_set = (struct ipfix_data_set*) set_header;
+                    msg->data_couple[d_set_count++].data_set = (struct ipfix_data_set*) set_header;
                 }
                 break;
         }

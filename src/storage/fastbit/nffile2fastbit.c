@@ -685,7 +685,7 @@ void init_ipfix_msg(struct ipfix_message *ipfix_msg){
 	ipfix_msg->input_info = NULL;
         memset(ipfix_msg->templ_set,0,sizeof(struct ipfix_template_set *) *1024);
         memset(ipfix_msg->opt_templ_set,0,sizeof(struct ipfix_optional_template_set *) *1024);
-        memset(ipfix_msg->data_set,0,sizeof(struct data_template_couple) *1023);
+        memset(ipfix_msg->data_couple,0,sizeof(struct data_template_couple) *1023);
 }
 
 void chagne_endianity(struct ipfix_message *ipfix_msg){
