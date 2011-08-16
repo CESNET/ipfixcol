@@ -69,7 +69,8 @@ int main(int argc, char *argv[])
 
 	/* do some work */
 	if (conf.aggregate) {
-		tables = data.aggregate(conf.aggregateColumns.c_str(), conf.filter.c_str());
+		tables = data.aggregate(conf.aggregateColumnsDb, conf.filter.c_str());
+//		tables = data.select(conf.aggregateColumnsDb, conf.filter.c_str());
 	} else {
 		tables = data.filter(conf.filter.c_str());
 	}

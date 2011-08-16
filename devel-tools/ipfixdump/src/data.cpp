@@ -107,104 +107,189 @@ std::string data::trim(std::string str) {
 	return str;
 }
 
-ibis::table* data::select(const char *sel, const char *cond) {
+tableVector data::select(std::map<int, stringSet> sel, const char *cond) {
 	return select(sel, cond, defaultOrder);
 }
 
-/* this function won't be probably used at all */
+
+
 /* TODO add management of aggreation functions */
-/* TODO add aliases */
 /* TODO add support for multiple parts of one column (ipv6 addr) */
-ibis::table* data::select(const char *sel, const char *cond, stringVector &order) {
+tableVector data::select(std::map<int, stringSet> sel, const char *cond, stringVector &order) {
 	ibis::table *table = NULL, *resultTable = NULL;
-	stringSet selColumns;
-	size_t begin = 0, end = 0;
-	std::string select(sel), tmp;
-	ibis::partList selectedParts;
-	int numErased = 0;
-
-	/* parse sel and get list of columns */
-	while(end != std::string::npos) {
-		end = select.find(',', begin);
-		tmp = trim(select.substr(begin, end-begin));
-		selColumns.insert(std::string(tmp));
-		begin = end + 1;
-	}
-
-	/* select only parts that have matching columns */
-	/* copy pointers to parts to temporary vector */
-	selectedParts.assign(parts.begin(), parts.end());
-	/* go over all columns of parts */
-	for (size_t i=0; i < columns.size(); i++) {
-		/* go over all columns in select clause */
-		for (stringSet::iterator it = selColumns.begin(); it != selColumns.end(); it ++) {
-			/* if part does not contain specified columns, don't use it in query*/
-			if (columns[i]->find(*it) == columns[i]->end()) {
-#ifdef DEBUG
-				std::cerr << "Part " << parts[i]->name() << " ommited (does not have column " << *it << ")" << std::endl;
-#endif
-				selectedParts.erase(selectedParts.begin() + i - numErased);
-				numErased++;
-				break;
-			}
-		}
-	}
-#ifdef DEBUG
-	std::cerr << "Using " << selectedParts.size() << " of " << parts.size() << " parts" << std::endl;
-#endif
-
-	/* nothing to work with */
-	if (selectedParts.size() == 0) return NULL;
-
-	/* create table of selected parts */
-	table = ibis::table::create(selectedParts);
-
-	/* run select on created table */
-	resultTable = table->select(sel, cond);
-	delete table;
-
-	/* check for empty result */
-	if (resultTable == NULL) {
-		return NULL;
-	}
-
-	/* order table TODO predelat na string*/
-	for (stringVector::iterator it = order.begin(); it != order.end(); it++) {
-		resultTable->orderby((*it).c_str());
-	}
-
-	/* return table with result */
-	return resultTable;
-}
-
-/* add ordering? */
-/* TODO add aliases */
-/* TODO add support for multiple parts of one column (ipv6 addr) */
-tableVector data::aggregate(const char *sel, const char *cond) {
-	ibis::table *table = NULL, *resultTable = NULL;
+	std::string select;
+	size_t pos;
 	tableVector tblv;
+	tableContainer *tc = NULL;
+	namesColumnsMap nc;
 
-	/* create table of selected parts */
-	table = ibis::table::create(parts);
+	/* go over all groups */
+	for (std::map<int, stringSet>::iterator selIt = sel.begin(); selIt != sel.end(); selIt++) {
+		for (size_t partIdx = 0; partIdx < parts.size(); partIdx++) {
 
-	/* run select on created table */
-	resultTable = table->select(sel, cond);
-	delete table;
+			/* create select statement and map of columns */
+			pos = 0;
+			for (stringSet::iterator it = selIt->second.begin(); it != selIt->second.end(); it++) {
 
-	/* check for empty result */
-	if (resultTable != NULL) {
-		tblv.push_back(resultTable);
+				/* add only columns that are in the table */
+				if (columns[partIdx]->find(*it) != columns[partIdx]->end()) {
+
+					/* add column to select statement */
+					select += *it;
+					/* save mapping of column name to its position */
+					nc[*it] = pos;
+					if (pos + 1 < selIt->second.size()) {
+						select += ", ";
+					}
+					pos++;
+				} else {
+#ifdef DEBUG
+					std::cerr << "Part " << parts[partIdx]->name() << " does not have column " << *it << std::endl;
+#endif
+				}
+			}
+
+			/* create table from part */
+			table = ibis::table::create(*parts[partIdx]);
+
+			/* run select on created table */
+			resultTable = table->select(select.c_str(), cond);
+			delete table;
+
+			/* check for empty result */
+			if (resultTable != NULL) {
+				/* order table TODO predelat na string*/
+				for (stringVector::iterator it = order.begin(); it != order.end(); it++) {
+					resultTable->orderby((*it).c_str());
+				}
+
+				tc = new tableContainer();
+				tc->table = resultTable;
+				tc->namesColumns = nc;
+				tblv.push_back(tc);
+			}
+
+			/* clear selected columns */
+			select.clear();
+			nc.clear();
+		}
 	}
 
 	/* return table with result */
 	return tblv;
 }
 
-/* todo maybe a version with order by? or put order somewhere else? */
+/* add ordering? */
+/* TODO add support for multiple parts of one column (ipv6 addr) */
+tableVector data::aggregate(std::map<int, stringSet> sel, const char *cond) {
+	ibis::table *table = NULL, *resultTable = NULL;
+		std::string select;
+		ibis::partList selectedParts;
+		int numErased;
+		size_t pos;
+		tableVector tblv;
+		tableContainer *tc = NULL;
+		namesColumnsMap nc;
+
+		for (std::map<int, stringSet>::iterator setIt = sel.begin(); setIt != sel.end(); setIt++) {
+
+
+#ifdef DEBUG
+		std::cerr << "Used columns: " << std::endl;
+#endif
+			/* create select statement and map of columns */
+			pos = 0;
+			for (stringSet::iterator it = setIt->second.begin(); it != setIt->second.end(); it++, pos++) {
+				/* add column to select statement */
+				select += *it;
+				/* save mapping of column name to its position */
+				std::string col;
+				int begin, end;
+				if ((begin = (*it).find('(')) != std::string::npos) {
+					end = (*it).find(')');
+					col = (*it).substr(begin+1, end-begin-1);
+				} else {
+					col = *it;
+				}
+				nc[col] = pos;
+				if (pos + 1 < setIt->second.size()) {
+					select += ", ";
+				}
+#ifdef DEBUG
+				std::cerr << "  '" << *it << "' -> " << pos << std::endl;
+#endif
+			}
+
+			/* select only parts that have matching columns */
+			/* copy pointers to parts to temporary vector */
+			selectedParts.assign(parts.begin(), parts.end());
+			numErased = 0;
+			/* go over all columns of parts */
+			for (size_t i=0; i < columns.size(); i++) {
+				/* go over all columns in select clause */
+				for (stringSet::iterator it = setIt->second.begin(); it != setIt->second.end(); it ++) {
+					/* if part does not contain specified columns, don't use it in query*/
+					std::string col;
+					int begin, end;
+					if ((begin = (*it).find('(')) != std::string::npos) {
+						end = (*it).find(')');
+						col = (*it).substr(begin+1, end-begin-1);
+					} else {
+						col = *it;
+					}
+
+					/* allow count(*) for flows column */
+					if (col == "*") continue;
+
+					if (columns[i]->find(col) == columns[i]->end()) {
+#ifdef DEBUG
+						std::cerr << "Part " << parts[i]->name() << " ommited (does not have column " << col << ")" << std::endl;
+#endif
+						selectedParts.erase(selectedParts.begin() + i - numErased);
+						numErased++;
+						break;
+					}
+				}
+			}
+#ifdef DEBUG
+			std::cerr << "Using " << selectedParts.size() << " of " << parts.size() << " parts" << std::endl;
+#endif
+
+			/* nothing to work with */
+			if (selectedParts.size() == 0) continue;
+
+			/* create table of selected parts */
+			table = ibis::table::create(selectedParts);
+
+			/* run select on created table */
+			resultTable = table->select(select.c_str(), cond);
+			delete table;
+
+			/* check for empty result */
+			if (resultTable != NULL) {
+				tc = new tableContainer();
+				tc->table = resultTable;
+				tc->namesColumns = nc;
+				tblv.push_back(tc);
+			}
+
+			/* clear selected columns */
+			select.clear();
+			nc.clear();
+			selectedParts.clear();
+		}
+
+		/* return table with result */
+		return tblv;
+}
+
+/* TODO maybe a version with order by? or put order somewhere else? or maybe use select for plain filtering?*/
 tableVector data::filter(const char* cond) {
 	tableVector tables;
 	ibis::table *table;
 	std::string colNames;
+	tableContainer *tc;
+	namesColumnsMap nc;
 
 
 	for (ibis::partList::iterator it = parts.begin(); it != parts.end(); it++) {
@@ -212,14 +297,24 @@ tableVector data::filter(const char* cond) {
 
 		for (size_t i = 0; i < table->columnNames().size(); i++) {
 			colNames += table->columnNames()[i];
+			nc.insert(std::pair<std::string, int>(table->columnNames()[i], i));
 			if (i != table->columnNames().size() - 1) {
 				colNames += ",";
 			}
 		}
 
-		tables.push_back(table->select(colNames.c_str(), cond));
+		tc = new tableContainer;
+		tc->namesColumns = nc;
+		tc->table = table->select(colNames.c_str(), cond);
+
+		/* use only if something was returned */
+		if (tc->table != NULL) {
+			tables.push_back(tc);
+		}
+
 		delete table;
 		colNames.clear();
+		nc.clear();
 	}
 
 	return tables;

@@ -46,7 +46,8 @@ std::string columnFormat::getName() {
 	return name;
 }
 
-std::string columnFormat::getValue(ibis::table::cursor &cur, ibis::table::namesTypes namesTypes, bool plainNumbers) {
+std::string columnFormat::getValue(ibis::table::cursor &cur, bool plainNumbers,
+		namesColumnsMap &namesColumns) {
 	std::string value;
 	std::stringstream ss;
 	values *val = NULL;
@@ -57,34 +58,36 @@ std::string columnFormat::getValue(ibis::table::cursor &cur, ibis::table::namesT
 	}
 
 	/* check all groups until value is found */
-	for (std::vector<AST*>::iterator it = groups.begin(); it != groups.end(); it++) {
+	for (std::map<int, AST*>::iterator it = groups.begin(); it != groups.end(); it++) {
 		/* handle special columns first */
-		if (!(*it)->semantics.empty() && (*it)->semantics == "flows") {
+		if (!it->second->semantics.empty() && it->second->semantics == "flows" && it->second->value.empty()) {
 			value = "1";
 			break;
 		}
 
-		val = evaluate(*it, cur, namesTypes);
+		/* try to compute column value */
+		val = evaluate(it->second, cur, namesColumns);
+		/* if value cannot be computed (wrong group), try next */
 		if (val == NULL) {
 			continue;
 		}
 
 		/* print by semantics */
-		if (!(*it)->semantics.empty()) {
-			if ((*it)->semantics == "ipv4") {
+		if (!it->second->semantics.empty() && it->second->semantics != "flows") {
+			if (it->second->semantics == "ipv4") {
 				value = printIPv4(val->value[0].uint32);
-			} else if ((*it)->semantics == "timestamp") {
+			} else if (it->second->semantics == "timestamp") {
 				value = printTimestamp(val->value[0].uint64);
-			} else if ((*it)->semantics == "ipv6") {
+			} else if (it->second->semantics == "ipv6") {
 				value = printIPv6(val->value[0].uint64, val->value[1].uint64);
-			} else if ((*it)->semantics == "protocol") {
+			} else if (it->second->semantics == "protocol") {
 				if (!plainNumbers) {
 					value = protocols[val->value[0].uint8];
 				} else {
 					ss << (uint16_t) val->value[0].uint8;
 					value = ss.str();
 				}
-			} else if ((*it)->semantics == "tcpflags") {
+			} else if (it->second->semantics == "tcpflags") {
 				value = printTCPFlags(val->value[0].uint8);
 			}
 
@@ -160,7 +163,8 @@ std::string columnFormat::getValue(ibis::table::cursor &cur, ibis::table::namesT
 	return value;
 }
 
-values *columnFormat::evaluate(AST *ast, ibis::table::cursor &cur, ibis::table::namesTypes &namesTypes) {
+values *columnFormat::evaluate(AST *ast, ibis::table::cursor &cur,
+		namesColumnsMap &namesColumns) {
 	values *retVal = NULL;
 
 	/* check input AST */
@@ -171,12 +175,12 @@ values *columnFormat::evaluate(AST *ast, ibis::table::cursor &cur, ibis::table::
 	/* evaluate AST */
 	switch (ast->type) {
 		case ipfixdump::value:
-			retVal = getValueByType(ast, cur, namesTypes);
+			retVal = getValueByType(ast, cur, namesColumns);
 			break;
 		case ipfixdump::operation:
 			values *left, *right;
-			left = evaluate(ast->left, cur, namesTypes);
-			right = evaluate(ast->right, cur, namesTypes);
+			left = evaluate(ast->left, cur,  namesColumns);
+			right = evaluate(ast->right, cur,  namesColumns);
 
 			if (left != NULL && right != NULL) {
 				retVal = performOperation(left, right, ast->operation);
@@ -194,72 +198,84 @@ values *columnFormat::evaluate(AST *ast, ibis::table::cursor &cur, ibis::table::
 	return retVal;
 }
 
-values *columnFormat::getValueByType(AST *ast, ibis::table::cursor &cur, ibis::table::namesTypes &namesTypes) {
+values *columnFormat::getValueByType(AST *ast, ibis::table::cursor &cur, namesColumnsMap &namesColumns) {
 	values *retVal = new values();
-	int ret = 0;
+	int ret = 0, colNum = 0;
 	ibis::TYPE_T type;
 	ibis::table::namesTypes::iterator it;
+	namesColumnsMap::iterator cit;
 
 	for (int i=0; i < ast->parts && i < MAX_PARTS; i++) {
 
 		/* create column name */
 		std::stringstream columnName;
 		columnName << ast->value;
+		/* add part number when there are more parts */
 		if (ast->parts > 1) {
 			columnName << "p" << i;
 		}
 
-		/* find column's type */
-		if ((it = namesTypes.find(columnName.str().c_str())) != namesTypes.end()) {
-			type = it->second;
+		/* get location of the column */
+		if ((cit = namesColumns.find(columnName.str().c_str())) != namesColumns.end()) {
+			colNum = cit->second;
 		} else {
-			type = ibis::UNKNOWN_TYPE;
+			/* column not found */
+			ret = 1;
+			break;
 		}
+
+		/* find column's type */
+//		if ((it = namesTypes.find(columnName.str().c_str())) != namesTypes.end()) {
+//			type = it->second;
+//		} else {
+//			type = ibis::UNKNOWN_TYPE;
+//		}
+		type = cur.columnTypes()[colNum];
 
 		switch (type) {
 		case ibis::BYTE:
-			ret = cur.getColumnAsByte(columnName.str().c_str(), retVal->value[i].int8);
+			ret = cur.getColumnAsByte(colNum, retVal->value[i].int8);
 			retVal->type = ibis::BYTE;
 			break;
 		case ibis::UBYTE:
-			ret = cur.getColumnAsUByte(columnName.str().c_str(), retVal->value[i].uint8);
+			ret = cur.getColumnAsUByte(colNum, retVal->value[i].uint8);
 			retVal->type = ibis::UBYTE;
 			break;
 		case ibis::SHORT:
-			ret = cur.getColumnAsShort(columnName.str().c_str(), retVal->value[i].int16);
+			ret = cur.getColumnAsShort(colNum, retVal->value[i].int16);
 			retVal->type = ibis::SHORT;
 			break;
 		case ibis::USHORT:
-			ret = cur.getColumnAsUShort(columnName.str().c_str(), retVal->value[i].uint16);
+			ret = cur.getColumnAsUShort(colNum, retVal->value[i].uint16);
 			retVal->type = ibis::USHORT;
 			break;
 		case ibis::INT:
-			ret = cur.getColumnAsInt(columnName.str().c_str(), retVal->value[i].int32);
+			ret = cur.getColumnAsInt(colNum, retVal->value[i].int32);
 			retVal->type = ibis::INT;
 			break;
 		case ibis::UINT:
-			ret = cur.getColumnAsUInt(columnName.str().c_str(), retVal->value[i].uint32);
+			ret = cur.getColumnAsUInt(colNum, retVal->value[i].uint32);
 			retVal->type = ibis::UINT;
 			break;
 		case ibis::LONG:
-			ret = cur.getColumnAsLong(columnName.str().c_str(), retVal->value[i].int64);
+			ret = cur.getColumnAsLong(colNum, retVal->value[i].int64);
 			retVal->type = ibis::LONG;
 			break;
 		case ibis::ULONG:
-			ret = cur.getColumnAsULong(columnName.str().c_str(), retVal->value[i].uint64);
+			ret = cur.getColumnAsULong(colNum, retVal->value[i].uint64);
 			retVal->type = ibis::ULONG;
 			break;
 		case ibis::FLOAT:
-			ret = cur.getColumnAsFloat(columnName.str().c_str(), retVal->value[i].flt);
+			ret = cur.getColumnAsFloat(colNum, retVal->value[i].flt);
 			retVal->type = ibis::FLOAT;
 			break;
 		case ibis::DOUBLE:
-			ret = cur.getColumnAsDouble(columnName.str().c_str(), retVal->value[i].dbl);
+			ret = cur.getColumnAsDouble(colNum, retVal->value[i].dbl);
 			retVal->type = ibis::DOUBLE;
 			break;
 		case ibis::TEXT:
 		case ibis::CATEGORY: {
-			ret = cur.getColumnAsString(columnName.str().c_str(), retVal->string);
+			ret = cur.getColumnAsString(colNum, retVal->string);
 			retVal->type = ibis::TEXT;
 			break; }
 		case ibis::OID:
@@ -387,9 +403,51 @@ values* columnFormat::performOperation(values *left, values *right, unsigned cha
 }
 
 columnFormat::~columnFormat() {
-	for (std::vector<AST*>::iterator it = groups.begin(); it != groups.end(); it++) {
-		delete *it;
+	for (std::map<int, AST*>::iterator it = groups.begin(); it != groups.end(); it++) {
+		delete it->second;
 	}
+}
+
+stringSet columnFormat::getColumns(AST* ast) {
+	stringSet ss, ls, rs;
+	if (ast->type == ipfixdump::value) {
+		if (ast->semantics != "flows") {
+			if (ast->parts > 1) {
+				/* TODO: how to aggregate parts? */
+				for (int i = 0; i < ast->parts; i++) {
+					std::stringstream strStrm;
+					strStrm << ast->value << "p" << i;
+					ss.insert(strStrm.str());
+				}
+			} else {
+				if (!ast->aggregation.empty()) {
+					ss.insert(ast->aggregation + "(" + ast->value + ")");
+				} else {
+					ss.insert(ast->value);
+				}
+			}
+		} else { /* flows need this (on aggregation value must be set to count) */
+			ss.insert("count(*)");
+			ast->value = "*";
+		}
+	} else { /* operation */
+		ls = getColumns(ast->left);
+		rs = getColumns(ast->right);
+		ss.insert(ls.begin(), ls.end());
+		ss.insert(rs.begin(), rs.end());
+	}
+
+	return ss;
+}
+
+std::map<int, stringSet> columnFormat::getColumns() {
+	std::map<int, stringSet> columns;
+
+	for (std::map<int, AST*>::iterator it = groups.begin();it != groups.end(); it++) {
+		columns[it->first] = getColumns(it->second);
+	}
+
+	return columns;
 }
 
 columnFormat::columnFormat(): width(0), alignLeft(false) {}

@@ -42,7 +42,7 @@
 namespace ipfixdump
 {
 
-void printer::addTable(ibis::table *table) {
+void printer::addTable(tableContainer *table) {
 	/* check input */
 	if (table == NULL) {
 		return;
@@ -50,8 +50,8 @@ void printer::addTable(ibis::table *table) {
 
 	tables.push_back(table);
 	/* save names and types to associative array*/
-	for (size_t i = 0; i < table->columnNames().size(); i++) {
-		namesTypes[table->columnNames()[i]] = table->columnTypes()[i];
+	for (size_t i = 0; i < table->table->columnNames().size(); i++) {
+		namesTypes[table->table->columnNames()[i]] = table->table->columnTypes()[i];
 	}
 }
 
@@ -87,11 +87,11 @@ int printer::print(uint64_t limit) {
 	for (tableVector::iterator tableIt = tables.begin(); tableIt != tables.end(); tableIt++) {
 
 		/* create cursor */
-		ibis::table::cursor *cur = (*tableIt)->createCursor();
+		ibis::table::cursor *cur = (*tableIt)->table->createCursor();
 		if (cur == 0) return -1;
 
 		/* get number of rows */
-		nRows = (*tableIt)->nRows();
+		nRows = (*tableIt)->table->nRows();
 
 		/* set limit */
 		maxRows = limit - printedRows;
@@ -106,7 +106,7 @@ int printer::print(uint64_t limit) {
 		for (size_t i = 0; i < maxRows; i++) {
 			ierr = cur->fetch(); /* make the next row ready */
 			if (ierr == 0) {
-				printRow(cur);
+				printRow(cur, (*tableIt)->namesColumns);
 				printedRows++;
 			} else {
 				std::cerr << "print() failed to fetch row " << i << std::endl;
@@ -142,8 +142,7 @@ void printer::printHeader() {
 
 }
 
-/* TODO it might be faster to remember column positions for each name and table */
-void printer::printRow(ibis::table::cursor *cur) {
+void printer::printRow(ibis::table::cursor *cur, namesColumnsMap &namesColumns) {
 
 	/* go over all defined columns */
 	for (size_t i = 0; i < conf.columnsFormat.size(); i++) {
@@ -156,7 +155,7 @@ void printer::printRow(ibis::table::cursor *cur) {
 		} else {
 			out.setf(std::ios_base::right, std::ios_base::adjustfield);
 		}
-		out << conf.columnsFormat[i]->getValue(*cur, namesTypes, conf.plainNumbers);
+		out << conf.columnsFormat[i]->getValue(*cur, conf.plainNumbers, namesColumns);
 	}
 	out << std::endl;
 }

@@ -51,8 +51,28 @@
  */
 namespace ipfixdump {
 
+typedef std::map<std::string, int> namesColumnsMap;
+
+/**
+ * \brief Structure holding fastbit table and map of column names and column
+ * numbers
+ *
+ * This is used when table contains aggregated columns of names like "max4",
+ * so that columnFormat can still access appropriate columns by its index.
+ */
+struct tableContainer {
+	ibis::table* table;
+	namesColumnsMap namesColumns;
+
+	tableContainer(): table(NULL){};
+
+	~tableContainer() {
+		delete table;
+	}
+};
+
 typedef std::vector<std::string> stringVector;
-typedef std::vector<ibis::table*> tableVector;
+typedef std::vector<tableContainer*> tableVector;
 typedef std::set<std::string> stringSet;
 
 }  // namespace ipfixdump

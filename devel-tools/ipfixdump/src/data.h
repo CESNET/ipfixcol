@@ -92,21 +92,21 @@ public:
 	/**
 	 * \brief Runs select command on all loaded tables having specified columns
 	 *
-	 * @param sel  selection passed to ibis::table::select
+	 * @param sel  groups of selected columns
 	 * @param cond condition passed to ibis::table::select
 	 * @return pointer to new ibis::table (must be freed separately!)
 	 */
-	ibis::table* select(const char* sel, const char* cond);
+	tableVector select(std::map<int, stringSet> sel, const char* cond);
 
 	/**
 	 * \brief Runs select command on all loaded tables having specified columns
 	 *
-	 * @param sel  selection passed to ibis::table::select
+	 * @param sel groups of selected columns
 	 * @param cond condition passed to ibis::table::select
 	 * @param order sets orderby clausule
 	 * @return pointer to new ibis::table (must be freed separately!)
 	 */
-	ibis::table* select(const char* sel, const char* cond, stringVector &order);
+	tableVector select(std::map<int, stringSet> sel, const char *cond, stringVector &order);
 
 	/**
 	 * \brief Aggregate data specified by cond according to select statement
@@ -117,11 +117,11 @@ public:
 	 * The format of columns should be the same as for regular output, but
 	 * columns must be sumarized.
 	 *
-	 * @param sel select statement
+	 * @param sel roups of selected columns
 	 * @param cond condition
 	 * @return vector of aggregated tables
 	 */
-	tableVector aggregate(const char *sel, const char *cond);
+	tableVector aggregate(std::map<int, stringSet> sel, const char *cond);
 
 	/**
 	 * \brief Filter all table part by specified condition

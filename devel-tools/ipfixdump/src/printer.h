@@ -68,8 +68,9 @@ private:
 	 * \brief print one row
 	 *
 	 * @param cur cursor poiting to the row
+	 * @param namesColumns map of names to column numbers for current table
 	 */
-	void printRow(ibis::table::cursor *cur);
+	void printRow(ibis::table::cursor *cur, namesColumnsMap &namesColumns);
 
 	/**
 	 * \brief Print table header
@@ -111,9 +112,9 @@ public:
 	/**
 	 * \brief Adds table to list of tables to print
 	 *
-	 * @param table table to be added
+	 * @param table table_container to be added
 	 */
-	void addTable(ibis::table *table);
+	void addTable(tableContainer *table);
 
 	/**
 	 * \brief Add tables to list of tables to print

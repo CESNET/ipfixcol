@@ -141,23 +141,17 @@ int configuration::init(int argc, char *argv[]) {
 		filter = "1=1";
 	}
 
-	/* set default select clause - for statistics TODO*/
-	/* e0id8, e0id12 ipv4 addresses */
-	/* e0id27[p0,p1], e0id28[p0,p1] ipv6 addresses */
-	select = "e0id152, e0id153, e0id4, e0id7, e0id11, e0id2, e0id8, e0id12";
-
-	/* set default aggregation columns */
-	if (aggregate && aggregateColumns.empty()) {
-		aggregateColumns = "count(*), min(e0id152), max(e0id153), e0id8, e0id12, e0id7, e0id11, e0id4";
-	}
+	/* set default aggregation columns
+	 * TODO aliases should be used here*/
+//	if (aggregate && aggregateColumns.empty()) {
+//		aggregateColumns = "count(*), min(e0id152), max(e0id153), e0id8, e0id12, e0id7, e0id11, e0id4";
+//	}
 
 	/* set default order (by timestamp) */
 	order.push_back("e0id152");
 
-	/* set format according to input */
-	/* TODO add other options and custom format*/
-	/* add format to print everything */
-	if (format.length() == 0 || format == "line") {
+	/* TODO add format to print everything */
+	if (format.empty() || format == "line") {
 		format = "%ts %td %pr %sa:%sap -> %da:%dap %pkt %byt %fl";
 	} else if (format == "long") {
 		format = "%ts %td %pr %sa:%sap -> %da:%dap %flg %tos %pkt %byt %fl";
@@ -281,7 +275,7 @@ void configuration::parseFormat(std::string format) {
 	std::string alias;
 	columnFormat *cf;
 	regex_t reg;
-	int err;
+	int err, groupId;
 	regmatch_t matches[1];
 
 	/* Open XML configuration file */
@@ -330,17 +324,21 @@ void configuration::parseFormat(std::string format) {
 				/* set value according to type */
 				if (column.node().child("value").attribute("type").value() == std::string("plain")) {
 					/* simple element */
-					cf->groups.push_back(createValueElement(column.node().child("value").child("element"), doc));
+					cf->groups[0] = createValueElement(column.node().child("value").child("element"), doc);
 				} else if (column.node().child("value").attribute("type").value() == std::string("group")) {
 					/* group of elements */
-					pugi::xpath_node_set elements = column.node().child("value").select_nodes("group/element");
-					for (pugi::xpath_node_set::const_iterator it = elements.begin(); it != elements.end(); ++it)
+					pugi::xpath_node_set groups = column.node().child("value").select_nodes("group");
+					for (pugi::xpath_node_set::const_iterator it = groups.begin(); it != groups.end(); ++it)
 					{
-						cf->groups.push_back(createValueElement((*it).node(), doc));
+						/* create entry in columns map */
+						groupId = atoi((*it).node().attribute("id").value());
+						aggregateColumnsDb[groupId] = stringSet();
+						/* add element */
+						cf->groups[groupId] = createValueElement((*it).node().child("element"), doc);
 					}
 				} else if (column.node().child("value").attribute("type").value() == std::string("operation")) {
 					/* operation */
-					cf->groups.push_back(createOperationElement(column.node().child("value").child("operation"), doc));
+					cf->groups[0] = createOperationElement(column.node().child("value").child("operation"), doc);
 				}
 
 				columnsFormat.push_back(cf);
@@ -359,8 +357,41 @@ void configuration::parseFormat(std::string format) {
 			columnsFormat.push_back(cf);
 		}
 	}
-
+	/* free created regular expression */
 	regfree(&reg);
+
+	if (aggregate) {
+		/* check whether we have any aggregation groups */
+		if (aggregateColumnsDb.size() == 0) {
+			/* create one */
+			aggregateColumnsDb[0] = stringSet();
+		}
+
+		/* create lists of aggregation columns */
+		/* go over all columns */
+		for (std::vector<columnFormat*>::iterator it = columnsFormat.begin(); it != columnsFormat.end(); it++) {
+			/* get DB columns from columnsFormat by group */
+			std::map<int, stringSet> colMap;
+
+			colMap = (*it)->getColumns();
+			if (colMap.size() == 0) continue;
+
+			/* for each aggregation group */
+			for (std::map<int, stringSet>::iterator i = aggregateColumnsDb.begin(); i != aggregateColumnsDb.end(); i++) {
+				/* if there is specific group, add it */
+				if (colMap.find(i->first) != colMap.end()) {
+					i->second.insert(colMap[i->first].begin(), colMap[i->first].end());
+				} else { /* else add group 0 */
+					i->second.insert(colMap[0].begin(), colMap[0].end());
+				}
+			}
+		}
+
+		/* TODO TODO TODO:
+		 * Work with user input:
+		 * 	columns that are not aggregated (don't have '(' in name) must be used only if specified by user (or -a switch)
+		 * 	now it uses all format columns*/
+	}
 }
 
 AST* configuration::createValueElement(pugi::xml_node element, pugi::xml_document &doc) {
@@ -382,6 +413,9 @@ AST* configuration::createValueElement(pugi::xml_node element, pugi::xml_documen
 	ast->semantics = element.attribute("semantics").value();
 	if (element.attribute("parts")) {
 		ast->parts = atoi(element.attribute("parts").value());
+	}
+	if (element.attribute("aggregation")) {
+		ast->aggregation = element.attribute("aggregation").value();
 	}
 
 	return ast;

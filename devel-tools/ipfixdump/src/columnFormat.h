@@ -141,6 +141,7 @@ struct AST {
 	unsigned char operation; /**< one of '/', '*', '-', '+' */
 	std::string semantics; /**< semantics of the column */
 	std::string value; /**< value (column name) */
+	std::string aggregation; /**< how to aggregate this column */
 	int parts; /**< number of parts of column (ipv6 => e0id27p0 and e0id27p1)*/
 	AST *left; /**< left subtree */
 	AST *right; /**< right subtree */
@@ -164,10 +165,10 @@ class columnFormat {
 private:
 
 	values *evaluate(AST *ast, ibis::table::cursor &cur,
-				ibis::table::namesTypes &namesTypes);
+				namesColumnsMap &namesColumns);
 
 	values *getValueByType(AST *ast, ibis::table::cursor &cur,
-				ibis::table::namesTypes &namesTypes);
+				namesColumnsMap &namesColumns);
 
 	/**
 	 * \brief Print formatted IPv4 address
@@ -201,6 +202,15 @@ private:
 	 */
 	values* performOperation(values *left, values *right, unsigned char op);
 
+
+	/**
+	 * \brief Return column names used in this AST
+	 *
+	 * @param ast to go through
+	 * @return Set of column names
+	 */
+	stringSet getColumns(AST* ast);
+
 public:
 	std::string name; /**< column name */
 	stringVector aliases; /**< vector of column aliases */
@@ -209,8 +219,10 @@ public:
 	/**
 	 * Groups of columns, first one that can evaluate will be used
 	 * When empty, column is separator and name will be printed
+	 *
+	 * When more that one group exists, keys are group IDs from XML
 	 */
-	std::vector<AST*> groups;
+	std::map<int, AST*> groups;
 
 	/**
 	 * \brief columnFormat class destructor
@@ -228,10 +240,11 @@ public:
 	 * @param cur cursor pointing to current row
 	 * @param namesTypes mapping of names to types
 	 * @param plainNumbers print plain numbers
+	 * @param namesColumns map of column names to column numbers
 	 * @return string containing the value to print
 	 */
-	std::string getValue(ibis::table::cursor &cur, ibis::table::namesTypes namesTypes,
-			bool plainNumbers=false);
+	std::string getValue(ibis::table::cursor &cur,
+			bool plainNumbers, namesColumnsMap &namesColumns);
 
 	/**
 	 * \brief Returns the name of the column
@@ -239,6 +252,15 @@ public:
 	 * @return string containing the name to print
 	 */
 	std::string getName();
+
+	/**
+	 * \brief Retursn map of group ids to column names
+	 * Every Column names set creates one group of columns that will be checked
+	 * when evaluating a query
+	 *
+	 * @return map of Column names sets
+	 */
+	std::map<int, stringSet> getColumns();
 };
 
 }  // namespace ipfixdump

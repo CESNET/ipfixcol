@@ -17,6 +17,7 @@
 				group: contains multiple 'group' elements, each of which contains one 'element'. This is used to combine multiple
 					   columns together, i.e. IPv4 and IPv6 address.
 					   Elements of type group can be only aliases to plain types (or column names).
+					   Groups have attribute id, which determins which columns should be tried together in aggregation
 			elements under <value type="plain"> or "<group>" have attribute 'parts'. This specifies to how many columns in database
 				is this element splitted.  
 			elements under <value type="plain"> or "<group>" have attribute 'semantics'. There are several pre-defined
@@ -26,6 +27,9 @@
 				'timestamp': expects uint64 column and prints it as timestamp
 				'tcpflags' : expects uint8 column and print it as TCP flags
 				'flows'    : this is special column with no relation to the database. It is always computed as number of flows
+			elements under <value type="plain"> or "<group>" have attribute 'aggregation'. This determines how the columns is
+				aggregated. If attribute is empty, column is not aggregated. Supported values are: 'min', 'max', 'sum', 'avg'
+				
 				
 	Examples are shown below
  -->
@@ -35,7 +39,7 @@
     	<width>23</width>
     	<alias>%ts</alias>
     	<value type="plain">
-    		<element semantics="timestamp">e0id152</element>
+    		<element semantics="timestamp" aggregation="min">e0id152</element>
     	</value>
     </column>
     <column>
@@ -43,7 +47,7 @@
     	<width>23</width>
     	<alias>%te</alias>
     	<value type="plain">
-    		<element semantics="timestamp">e0id153</element>
+    		<element semantics="timestamp" aggregation="max">e0id153</element>
     	</value>
     </column>
     <column>
@@ -73,10 +77,10 @@
     	<alias>%sa</alias>
     	<alias>%srcip</alias>
     	<value type="group">
-    		<group>
+    		<group id="0">
     			<element semantics="ipv4">e0id8</element>
     		</group>
-    		<group>
+    		<group id="1">
     			<element semantics="ipv6" parts="2">e0id27</element>
     		</group>
     	</value>
@@ -87,10 +91,10 @@
     	<alias>%da</alias>
     	<alias>%dstip</alias>
     	<value type="group">
-    		<group>
+    		<group id="0">
     			<element semantics="ipv4">e0id12</element>
     		</group>
-    		<group>
+    		<group id="1">
     			<element semantics="ipv6" parts="2">e0id28</element>
     		</group>
     	</value>
@@ -136,7 +140,7 @@
     	<width>7</width>
     	<alias>%pkt</alias>
     	<value type="plain">
-    		<element>e0id2</element>
+    		<element aggregation="sum">e0id2</element>
     	</value>
     </column>
     <column>
@@ -144,7 +148,7 @@
     	<width>8</width>
     	<alias>%byt</alias>
     	<value type="plain">
-    		<element>e0id1</element>
+    		<element aggregation="sum">e0id1</element>
     	</value>
     </column>
     <column>

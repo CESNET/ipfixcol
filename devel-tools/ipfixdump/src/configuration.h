@@ -106,12 +106,12 @@ public:
 	stringVector tables; /**< fastbit tables to be used*/
 	std::vector<stringVector*> parts; /**< table templates to be used*/
 	std::string filter;
-	std::string select;
 	stringVector order;
 	std::string format;
 	uint64_t maxRecords;
 	bool plainNumbers;
 	std::string aggregateColumns;
+	std::map<int, stringSet> aggregateColumnsDb; /**< Sets of database columns for select */
 	bool aggregate;
 	std::vector<columnFormat*> columnsFormat;
 
