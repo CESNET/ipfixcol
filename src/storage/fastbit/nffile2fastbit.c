@@ -798,12 +798,12 @@ void clean_ipfix_msg(struct ipfix_message *ipfix_msg){
 	free(ipfix_msg->pkt_header);
 	ipfix_msg->pkt_header = NULL;
 	for(i=0;i<1023;i++){
-		if(ipfix_msg->data_set[i].data_set == NULL){
+		if(ipfix_msg->data_couple[i].data_set == NULL){
 			break;
 		} else {
-			free(ipfix_msg->data_set[i].data_set);
-			ipfix_msg->data_set[i].data_set = NULL;
-			ipfix_msg->data_set[i].template = NULL;
+			free(ipfix_msg->data_couple[i].data_set);
+			ipfix_msg->data_couple[i].data_set = NULL;
+			ipfix_msg->data_couple[i].data_template = NULL;
 		}
 	}
 	for(i=0;i<1024;i++){
@@ -827,11 +827,11 @@ void chagne_endianity(struct ipfix_message *ipfix_msg){
 void add_data_set(struct ipfix_message *ipfix_msg, struct ipfix_data_set *data_set, struct ipfix_template *template){
 	int i;
 	for(i=0;i<1023;i++){
-		if(ipfix_msg->data_set[i].data_set == NULL){
+		if(ipfix_msg->data_couple[i].data_set == NULL){
 			ipfix_msg->pkt_header->length += data_set->header.length;
 			data_set->header.length = htons(data_set->header.length);
-			ipfix_msg->data_set[i].data_set = data_set;
-			ipfix_msg->data_set[i].template = template;
+			ipfix_msg->data_couple[i].data_set = data_set;
+			ipfix_msg->data_couple[i].data_template = template;
 			break;
 		}
 	}
