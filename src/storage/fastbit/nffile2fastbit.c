@@ -870,8 +870,9 @@ void clean_tmp_manager(struct ipfix_template_mgr *manager){
 
 int main(){
 	//char file[] = "/home/kramolis/NFDATA/nfcapd.20100301_anon";
-	//char file[] = "/home/kramolis/NFDATA/log";
-	char file[] = "/home/kramolis/nffile/nfcapd.201107200815";
+	char file[] = "/home/kramolis/NFDATA/log";
+	//char file[] = "/home/kramolis/NFDATA/c10";
+//	char file[] = "/home/kramolis/nffile/nfcapd.201107200815";
 	FILE *f;
 	int i;
 	char *buffer = NULL;
@@ -887,14 +888,16 @@ int main(){
 	void *dlhandle;
 	int (*plugin_init) (char *, void **);
 	int (*plugin_store) (void *, const struct ipfix_message *, const struct ipfix_template_mgr *);
+	int (*plugin_close) (void **);
 	char *error;
 	struct ipfix_message ipfix_msg;
 	struct ipfix_template_mgr template_mgr;
 
 
-	verbose = CL_VERBOSE_ADVANCED;
-	dlhandle = dlopen ("/home/kramolis/git/ipfixcol/src/storage/fastbit/fastbit_output.so", RTLD_LAZY);
+	//verbose = CL_VERBOSE_ADVANCED;
+	//dlhandle = dlopen ("/home/kramolis/git/ipfixcol/src/storage/fastbit/fastbit_output.so", RTLD_LAZY);
 	//dlhandle = dlopen ("/home/kramolis/git/ipfixcol/src/storage/ipfix/ipfix_output.so", RTLD_LAZY);
+	dlhandle = dlopen ("/home/kramolis/git/ipfixcol/src/storage/fastbit/fcpp_output.so", RTLD_LAZY);
 	if (!dlhandle) {
 	    fputs (dlerror(), stderr);
 	    exit(1);
@@ -911,7 +914,15 @@ int main(){
 	    fputs(error, stderr);
 	    exit(1);
 	}
+
+	plugin_close = dlsym(dlhandle, "storage_close");
+	if ((error = dlerror()) != NULL)  {
+	    fputs(error, stderr);
+	    exit(1);
+	}
+	printf("calling plugin init\n");
 	plugin_init(NULL, &config); //TODO add arguments
+	printf("plugin init ended\n");
 	//inital space for extension map
 	ext.map = (struct extension *) calloc(ext.size,sizeof(struct extension));
 	if(ext.map == NULL){
@@ -1014,7 +1025,6 @@ int main(){
 
 			if(buffer_start == NULL){
 				buffer_start = (char *) malloc(block_header.size);
-				VERBOSE(CL_VERBOSE_ADVANCED,"Buffer malloc");
 				if(buffer_start == NULL){
 					VERBOSE(CL_ERROR,"Can't alocate memory for record data");
 					return 1;
@@ -1024,9 +1034,10 @@ int main(){
 			}
 			VERBOSE(CL_VERBOSE_ADVANCED,"RECORDS OFFSET in file: %lu",ftell(f));
 
-			
+			buffer = buffer_start;
 			read_size = fread(buffer, block_header.size, 1,f);
 			if (read_size != 1){
+				perror("file read:");
 				VERBOSE(CL_ERROR,"Can't read record data: %s",file);
 				fclose(f);
 				return 1;
@@ -1229,9 +1240,9 @@ int main(){
 		clean_tmp_manager(&template_mgr);
 		free(template_mgr.templates);
 		fclose(f);
+		plugin_close(&config);
 	} else {
 		VERBOSE(CL_ERROR,"Can't open file: %s",file);
 	}
-	
 	return 0;
 }
