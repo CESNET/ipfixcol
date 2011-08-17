@@ -42,273 +42,128 @@
 namespace ipfixdump
 {
 
-int printer::print(ibis::table *table, uint64_t limit) {
-	int ierr = 0;
-
-	/* set internal variables */
-	this->table = table;
-	colNames.clear();
-	for (size_t i = 0; i < table->columnNames().size(); i++) {
-		colNames.push_back(table->columnNames()[i]);
+void printer::addTable(tableContainer *table) {
+	/* check input */
+	if (table == NULL) {
+		return;
 	}
-	colTypes.clear();
-	colTypes = table->columnTypes();
+
+	tables.push_back(table);
+	/* save names and types to associative array*/
+	for (size_t i = 0; i < table->table->columnNames().size(); i++) {
+		namesTypes[table->table->columnNames()[i]] = table->table->columnTypes()[i];
+	}
+}
+
+void printer::addTables(tableVector &tables) {
+	for (tableVector::iterator it = tables.begin(); it != tables.end(); it++) {
+		addTable(*it);
+	}
+}
+
+tableVector printer::clearTables() {
+	tableVector tmp = tables;
+	tables.clear();
+	namesTypes.clear();
+
+	return tmp;
+}
+
+int printer::print(uint64_t limit) {
+	int ierr = 0;
+	uint64_t maxRows, nRows, printedRows = 0;
+
 
 	/* if there is nothing to print, return */
-	if (colNames.size() == 0) {
+	if (conf.columnsFormat.size() == 0) {
 		return ierr;
 	}
 
-	/* create cursor */
-	ibis::table::cursor *cur = table->createCursor();
-	if (cur == 0) return -1;
-
-	/* get number of rows */
-	uint64_t nRows = table->nRows();
-
-	/* set limit */
-	if (limit == 0 || limit > nRows) {
-		limit = nRows;
-	}
 
 	/* print table header */
 	printHeader();
 
-	/* print rows */
-	for (size_t i = 0; i < limit; i++) {
-		ierr = cur->fetch(); // make the next row ready
-		if (ierr == 0) {
-			printRow(cur);
-		} else {
-			std::cerr << "print() failed to fetch row " << i << std::endl;
-			ierr = -2;
-			/* stop printing */
+	/* go over all tables to print */
+	for (tableVector::iterator tableIt = tables.begin(); tableIt != tables.end(); tableIt++) {
+
+		/* create cursor */
+		ibis::table::cursor *cur = (*tableIt)->table->createCursor();
+		if (cur == 0) return -1;
+
+		/* get number of rows */
+		nRows = (*tableIt)->table->nRows();
+
+		/* set limit */
+		maxRows = limit - printedRows;
+		if (limit == 0 || maxRows > nRows) {
+			maxRows = nRows;
+		} else if (maxRows == 0) { /* we want no more rows */
+			delete cur;
 			break;
 		}
-	}
 
-	/* free cursor */
-	delete cur;
+		/* print rows */
+		for (size_t i = 0; i < maxRows; i++) {
+			ierr = cur->fetch(); /* make the next row ready */
+			if (ierr == 0) {
+				printRow(cur, (*tableIt)->namesColumns);
+				printedRows++;
+			} else {
+				std::cerr << "print() failed to fetch row " << i << std::endl;
+				ierr = -2;
+				/* stop printing */
+				break;
+			}
+		}
+		/* free cursor */
+		delete cur;
+	}
 
 	return ierr;
 }
 
 void printer::printHeader() {
-	for (size_t i = 0; i < colNames.size(); i++) {
-		if (colNames[i] == "e0id8" || colNames[i] == "e0id12") {
-			out.width(INET_ADDRSTRLEN);
-		} else if (colNames[i] == "e0id152" || colNames[i] == "e0id153") {
-			/* length of timestamp */
-			out.width(23);
-		} else if (colNames[i] == "e0id27p0" || colNames[i] == "e0id28p0") {
-			out.width(IPV6_STRLEN);
-			i++;
+	/* print column names */
+	for (size_t i = 0; i < conf.columnsFormat.size(); i++) {
+		/* set defined column width */
+		out.width(conf.columnsFormat[i]->width);
+
+		/* set defined column alignment */
+		if (conf.columnsFormat[i]->alignLeft) {
+			out.setf(std::ios_base::left, std::ios_base::adjustfield);
 		} else {
-			out.width(getStrLength(colTypes[i]));
+			out.setf(std::ios_base::right, std::ios_base::adjustfield);
 		}
-		out << colNames[i] << COLUMN_SEPARATOR;
+
+		out << conf.columnsFormat[i]->getName();
+	}
+	/* new line */
+	out << std::endl;
+
+}
+
+void printer::printRow(ibis::table::cursor *cur, namesColumnsMap &namesColumns) {
+
+	/* go over all defined columns */
+	for (size_t i = 0; i < conf.columnsFormat.size(); i++) {
+		/* set defined column width */
+		out.width(conf.columnsFormat[i]->width);
+
+		/* set defined column alignment */
+		if (conf.columnsFormat[i]->alignLeft) {
+			out.setf(std::ios_base::left, std::ios_base::adjustfield);
+		} else {
+			out.setf(std::ios_base::right, std::ios_base::adjustfield);
+		}
+		out << conf.columnsFormat[i]->getValue(*cur, conf.plainNumbers, namesColumns);
 	}
 	out << std::endl;
 }
 
-void printer::printRow(ibis::table::cursor *cur) {
 
-	for (size_t i = 0; i < colNames.size(); i++) {
-		if (colNames[i] == "e0id8" || colNames[i] == "e0id12") {
-			uint32_t buf;
-			cur->getColumnAsUInt(i, buf);
-			printIPv4(buf);
-		} else if (colNames[i] == "e0id152" || colNames[i] == "e0id153") {
-			uint64_t buf;
-			cur->getColumnAsULong(i, buf);
-			printTimestamp(buf);
-		} else if (colNames[i] == "e0id27p0" || colNames[i] == "e0id28p0") {
-			uint64_t buf1, buf2;
-			cur->getColumnAsULong(i, buf1);
-			cur->getColumnAsULong(i+1, buf2);
-			printIPv6(buf1, buf2);
-			i++;
-		} else {
-			printByType(cur, i);
-		}
-		out << COLUMN_SEPARATOR;
-	}
-	out << std::endl;
-}
-
-void printer::printIPv4(uint32_t address) {
-	char buf[INET_ADDRSTRLEN];
-	struct in_addr in_addr;
-	std::ios_base::fmtflags flags = out.flags();
-
-	/* convert address */
-	in_addr.s_addr = htonl(address);
-	inet_ntop(AF_INET, &in_addr, buf, INET_ADDRSTRLEN);
-
-	out.width(INET_ADDRSTRLEN);
-	out << buf;
-	out.flags(flags);
-}
-
-void printer::printIPv6(uint64_t part1, uint64_t part2) {
-	char buf[INET6_ADDRSTRLEN];
-	struct in6_addr in6_addr;
-	std::ios_base::fmtflags flags = out.flags();
-
-	/* convert address */
-	*((uint64_t*) &in6_addr.s6_addr) = htobe64(part1);
-	*(((uint64_t*) &in6_addr.s6_addr)+1) = htobe64(part2);
-	inet_ntop(AF_INET6, &in6_addr, buf, INET6_ADDRSTRLEN);
-
-	out.width(IPV6_STRLEN);
-	out << buf;
-	out.flags(flags);
-}
-
-void printer::printTimestamp(uint64_t timestamp) {
-	std::ios_base::fmtflags flags = out.flags();
-	time_t timesec = timestamp/1000;
-	uint64_t msec = timestamp % 1000;
-	struct tm *tm = gmtime(&timesec);
-
-	out.setf(std::ios_base::right, std::ios_base::adjustfield);
-	out.fill('0');
-
-	out << (1900 + tm->tm_year) << "-";
-	out.width(2);
-	out << (1 + tm->tm_mon) << "-";
-	out.width(2);
-	out << tm->tm_mday << " ";
-	out.width(2);
-	out << tm->tm_hour << ":";
-	out.width(2);
-	out << tm->tm_min << ":";
-	out.width(2);
-	out << tm->tm_sec << ".";
-	out.width(3);
-	out << msec;
-
-	out.fill(' ');
-	out.flags(flags);
-}
-
-void printer::printByType(ibis::table::cursor *cur, size_t i) {
-	switch (colTypes[i]) {
-	case ibis::BYTE:
-		char tmpbyte;
-		cur->getColumnAsByte(i, tmpbyte);
-		out.width(BYTE_STRLEN);
-		out << (int16_t) tmpbyte;
-		break;
-	case ibis::UBYTE:
-		unsigned char tmpubyte;
-		cur->getColumnAsUByte(i, tmpubyte);
-		out.width(BYTE_STRLEN);
-		out << ((uint16_t) tmpubyte);
-		break;
-	case ibis::SHORT:
-		int16_t tmpshort;
-		cur->getColumnAsShort(i, tmpshort);
-		out.width(SHORT_STRLEN);
-		out << tmpshort;
-		break;
-	case ibis::USHORT:
-		uint16_t tmpushort;
-		cur->getColumnAsUShort(i, tmpushort);
-		out.width(SHORT_STRLEN);
-		out << tmpushort;
-		break;
-	case ibis::INT:
-		int32_t tmpint;
-		cur->getColumnAsInt(i, tmpint);
-		out.width(INT_STRLEN);
-		out << tmpint;
-		break;
-	case ibis::UINT:
-		uint32_t tmpuint;
-		cur->getColumnAsUInt(i, tmpuint);
-		out.width(INT_STRLEN);
-		out << tmpuint;
-		break;
-	case ibis::LONG:
-		int64_t tmplong;
-		cur->getColumnAsLong(i, tmplong);
-		out.width(LONG_STRLEN);
-		out << tmplong;
-		break;
-	case ibis::ULONG:
-		uint64_t tmpulong;
-		cur->getColumnAsULong(i, tmpulong);
-		out.width(LONG_STRLEN);
-		out << tmpulong;
-		break;
-	case ibis::FLOAT:
-		float tmpfloat;
-		cur->getColumnAsFloat(i, tmpfloat);
-		out.width(FLOAT_STRLEN);
-		out << tmpfloat;
-		break;
-	case ibis::DOUBLE:
-		double tmpdouble;
-		cur->getColumnAsDouble(i, tmpdouble);
-		out.width(DOUBLE_STRLEN);
-		out << tmpdouble;
-		break;
-	case ibis::TEXT:
-	case ibis::CATEGORY: {
-		std::string tmpstring;
-		cur->getColumnAsString(i, tmpstring);
-		out << tmpstring;
-		break; }
-	case ibis::OID:
-	case ibis::BLOB:
-	case ibis::UNKNOWN_TYPE:
-		out << "\\TODO";
-		break;
-	default:
-		break;
-	}
-}
-
-int printer::getStrLength(ibis::TYPE_T type) {
-	switch (type) {
-		case ibis::BYTE:
-		case ibis::UBYTE:
-			return BYTE_STRLEN;
-			break;
-		case ibis::SHORT:
-		case ibis::USHORT:
-			return SHORT_STRLEN;
-			break;
-		case ibis::INT:
-		case ibis::UINT:
-			return INT_STRLEN;
-			break;
-		case ibis::LONG:
-		case ibis::ULONG:
-			return LONG_STRLEN;
-			break;
-		case ibis::FLOAT:
-			return FLOAT_STRLEN;
-			break;
-		case ibis::DOUBLE:
-			return DOUBLE_STRLEN;
-			break;
-		case ibis::TEXT:
-		case ibis::CATEGORY:
-		case ibis::OID:
-		case ibis::BLOB:
-		case ibis::UNKNOWN_TYPE:
-		default:
-			return 0;
-			break;
-	}
-
-	return 0;
-}
-
-printer::printer(std::ostream &out, std::string format):
-		out(out), format(format)
+/* copy output stream and format */
+printer::printer(std::ostream &out, configuration &conf):
+		out(out), conf(conf)
 {}
 
 }

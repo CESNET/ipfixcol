@@ -54,35 +54,36 @@ int main(int argc, char *argv[])
 	/* create configuration to work with */
 	configuration conf;
 	data data;
-	printer print(std::cout, "format");
+
+	tableVector tables;
 
 	/* process configuration and check whether end program */
 	ret = conf.init(argc, argv);
 	if (ret != 0) return ret;
 
+	/* initialise printer */
+	printer print(std::cout, conf);
+
 	/* initialise tables */
 	data.init(conf);
 
 	/* do some work */
-	ibis::table *tbl = NULL;
-	for (ibis::partList::iterator it = data.parts.begin(); it != data.parts.end(); it++) {
-		tbl = ibis::table::create(*(*it));
-		print.print(tbl, conf.maxRecords);
-		std::cout << std::endl << std::endl;
+	if (conf.aggregate) {
+		tables = data.aggregate(conf.aggregateColumnsDb, conf.filter.c_str());
+//		tables = data.select(conf.aggregateColumnsDb, conf.filter.c_str());
+	} else {
+		tables = data.filter(conf.filter.c_str());
 	}
 
-//	ibis::table *tableIPv4 = NULL, *tableIPv6 = NULL;
-//
-//	tableIPv4 = data.select("e0id152, e0id153, e0id4, e0id8, e0id12, e0id7, e0id11, e0id2", conf.filter.c_str(), conf.order);
-//	if (tableIPv4 != NULL) {
-//		print.print(tableIPv4, conf.maxRecords);
-//		delete tableIPv4;
-//	}
-//	tableIPv6 = data.select("e0id152, e0id153, e0id4, e0id27p0, e0id27p1, e0id28p0, e0id28p1, e0id7, e0id11, e0id2", conf.filter.c_str(), conf.order);
-//	if (tableIPv6 != NULL) {
-//		print.print(tableIPv6, conf.maxRecords);
-//		delete tableIPv6;
-//	}
+	/* print tables */
+	print.addTables(tables);
+	print.print(conf.maxRecords);
+
+	/* free used tables */
+	print.clearTables();
+	for (tableVector::iterator it = tables.begin(); it != tables.end(); it++) {
+		delete *it;
+	}
 
 	return 0;
 }

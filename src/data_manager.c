@@ -194,19 +194,19 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 	}
 
 	/* add template to message data_couples */
-	for (i=0; msg->data_set[i].data_set != NULL && i<1023; i++) {
-		msg->data_set[i].template = tm_get_template(template_mgr, ntohs(msg->data_set[i].data_set->header.flowset_id));
-		if (msg->data_set[i].template == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "Data template with ID %i not found!", ntohs(msg->data_set[i].data_set->header.flowset_id));
+	for (i=0; msg->data_couple[i].data_set != NULL && i<1023; i++) {
+		msg->data_couple[i].data_template = tm_get_template(template_mgr, ntohs(msg->data_couple[i].data_set->header.flowset_id));
+		if (msg->data_couple[i].data_template == NULL) {
+			VERBOSE(CL_VERBOSE_OFF, "Data template with ID %i not found!", ntohs(msg->data_couple[i].data_set->header.flowset_id));
 		} else {
 			if ((msg->input_info->type == SOURCE_TYPE_UDP) && /* source UDP */
-					((time(NULL) - msg->data_set[i].template->last_transmission > udp_conf->template_life_time) || /* lifetime expired */
+					((time(NULL) - msg->data_couple[i].data_template->last_transmission > udp_conf->template_life_time) || /* lifetime expired */
 					(udp_conf->template_life_packet > 0 && /* life packet should be checked */
-					(uint32_t) (msg_counter - msg->data_set[i].template->last_message) > udp_conf->template_life_packet))) {
-				VERBOSE(CL_VERBOSE_BASIC, "Data template ID %i expired! Using old template.", msg->data_set[i].template->template_id);
+					(uint32_t) (msg_counter - msg->data_couple[i].data_template->last_message) > udp_conf->template_life_packet))) {
+				VERBOSE(CL_VERBOSE_BASIC, "Data template ID %i expired! Using old template.", msg->data_couple[i].data_template->template_id);
 			}
 			/* add data set records (flows) count */
-			records_count += ntohs(msg->data_set[i].data_set->header.length) / msg->data_set[i].template->data_length;
+			records_count += ntohs(msg->data_couple[i].data_set->header.length) / msg->data_couple[i].data_template->data_length;
 		}
 	}
 	/* return number of data records */

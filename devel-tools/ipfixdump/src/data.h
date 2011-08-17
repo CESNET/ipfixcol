@@ -46,6 +46,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ibis.h>
+#include "typedefs.h"
 #include "configuration.h"
 
 /**
@@ -91,21 +92,46 @@ public:
 	/**
 	 * \brief Runs select command on all loaded tables having specified columns
 	 *
-	 * @param sel  selection passed to ibis::table::select
+	 * @param sel  groups of selected columns
 	 * @param cond condition passed to ibis::table::select
 	 * @return pointer to new ibis::table (must be freed separately!)
 	 */
-	ibis::table* select(const char* sel, const char* cond);
+	tableVector select(std::map<int, stringSet> sel, const char* cond);
 
 	/**
 	 * \brief Runs select command on all loaded tables having specified columns
 	 *
-	 * @param sel  selection passed to ibis::table::select
+	 * @param sel groups of selected columns
 	 * @param cond condition passed to ibis::table::select
 	 * @param order sets orderby clausule
 	 * @return pointer to new ibis::table (must be freed separately!)
 	 */
-	ibis::table* select(const char* sel, const char* cond, stringVector &order);
+	tableVector select(std::map<int, stringSet> sel, const char *cond, stringVector &order);
+
+	/**
+	 * \brief Aggregate data specified by cond according to select statement
+	 *
+	 * This function basically runs select query on all tables. It should
+	 * manage grouped columns (ipv4 and ipv6) and process them separately.
+	 *
+	 * The format of columns should be the same as for regular output, but
+	 * columns must be sumarized.
+	 *
+	 * @param sel roups of selected columns
+	 * @param cond condition
+	 * @return vector of aggregated tables
+	 */
+	tableVector aggregate(std::map<int, stringSet> sel, const char *cond);
+
+	/**
+	 * \brief Filter all table part by specified condition
+	 *
+	 * returns only tables that have specified columns
+	 *
+	 * @param cond Filter condition
+	 * @return vector of filtered tables
+	 */
+	tableVector filter(const char* cond);
 
 };
 
