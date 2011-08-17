@@ -49,6 +49,7 @@
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
+int countx = 0;
 
 /**
  * \defgroup storageAPI Storage Plugins API
@@ -224,12 +225,12 @@ int store_ipv6(uint8_t *data, uint16_t length, struct element_cache * cache){
 	char buf[SIZE];
 	char name[20];
 	if(length==SIZE){
-		*((uint64_t*) buf) = be64toh(*((uint64_t *) data));
+		*((uint64_t*) buf) = be64toh(*((uint64_t *) &data[8]));
 		VERBOSE(CL_VERBOSE_ADVANCED,"IPv6-p0 ulong: %lu",*((uint64_t *)&buf));
 		sprintf(name,"%sp0", cache->name);
 		fastbit_add_values(name, mtypes[cache->type].fastbit, (uint64_t *) buf,1,0);
 
-		*((uint64_t*) buf) = be64toh(*((uint64_t *) &data[8]));
+		*((uint64_t*) buf) = be64toh(*((uint64_t *) data));
 		VERBOSE(CL_VERBOSE_ADVANCED,"IPv6-p1 ulong: %lu",*((uint64_t *)&buf));
 		sprintf(name,"%sp1", cache->name);
 		fastbit_add_values(name, mtypes[cache->type].fastbit, (uint64_t *) buf,1,0);
@@ -355,30 +356,11 @@ element_count(xmlNode * node)
 	return count;
 }
 
-char *trim(char *str){
-	int i,j,len;
-	len = strlen(str);
-	for(i=0;i<len;i++){
-		if(str[i]!=' '){
-			break;
-		}
-	}
-	for(j=i;j<len;j++){
-		if(str[j]==' '){
-			break;
-		}
-	}
-	if( i!=0 || j!=len){
-		memcpy(str,&(str[i]),len);
-		str[j-i]=0;
-	}
-	return str;
-}
-
 void
 fill_element_cache(struct element_cache **cache, xmlNode *node){
 	xmlNode *cnode = NULL;
 	xmlNode *enode = NULL;
+	xmlChar *content;
 	int i = 0;
 	int j = 0;
 
@@ -388,20 +370,26 @@ fill_element_cache(struct element_cache **cache, xmlNode *node){
 			VERBOSE(CL_VERBOSE_ADVANCED,"Element:");
 			for (enode = cnode->children; enode; enode = enode->next){
 				if(xmlStrEqual(enode->name,(xmlChar *)"enterprise")){
-					(*cache)[i].en = atoi((char *)xmlNodeGetContent(enode));
+					content = xmlNodeGetContent(enode);
+					(*cache)[i].en = atoi((char *)content);
+					xmlFree(content);
 					VERBOSE(CL_VERBOSE_ADVANCED,"\tenterprise:%d",(*cache)[i].en);
 				}else if (xmlStrEqual(enode->name,(xmlChar *)"id")){
-					(*cache)[i].id = atoi((char *)xmlNodeGetContent(enode));
+					content = xmlNodeGetContent(enode);
+					(*cache)[i].id = atoi((char *)content);
+					xmlFree(content);
 					VERBOSE(CL_VERBOSE_ADVANCED,"\tid:%d",(*cache)[i].id);
 
 				}else if (xmlStrEqual(enode->name,(xmlChar *)"name")){
 
 				}else if (xmlStrEqual(enode->name,(xmlChar *)"dataType")){
 					for(j=0;j<TYPES_COUNT;j++){
-						if(xmlStrEqual((xmlChar *)trim((char *)xmlNodeGetContent(enode)),(xmlChar *)mtypes[j].ipfix)){
+						content = xmlNodeGetContent(enode);
+						if(xmlStrEqual(content,(xmlChar *)mtypes[j].ipfix)){
 							(*cache)[i].type = j;
 							VERBOSE(CL_VERBOSE_ADVANCED,"\ttype:%d - (%s, %s)",(*cache)[i].type,mtypes[j].ipfix,mtypes[j].fastbit);
 						}
+						xmlFree(content);
 					}
 
 				}else if (xmlStrEqual(enode->name,(xmlChar *)"semantic")){
@@ -440,7 +428,6 @@ int storage_init (char *params, void **config){
 
 	fastbit_init(NULL);
 
-
 	xmlDocPtr doc;
 	xmlNode *root_element = NULL;
 
@@ -460,6 +447,8 @@ int storage_init (char *params, void **config){
 	cache = conf->ie_cache;
 
 	fill_element_cache(&cache, root_element);
+	xmlFreeDoc(doc);
+	xmlCleanupParser();
 	return 0;
 }
 
@@ -470,7 +459,7 @@ void hex(void *ptr, int size){
 		if(!((i-1)%16)){
 			fprintf(stderr,"%p  ", &((char *)ptr)[i-1]);
 		}
-		fprintf(stderr,"%02hhx",((char *)ptr)[i-1]);
+		fprintf(stderr,"%02hhx i: %i\n",((char *)ptr)[i-1],i);
                 if(!(i%8)){
                         if(space){
                                 fprintf(stderr,"\n");
@@ -483,33 +472,6 @@ void hex(void *ptr, int size){
                 fprintf(stderr," ");
 	}
 }
-
-void hex_dump(const struct ipfix_message *ipfix_msg){
-	fprintf(stderr,"-------------hex-PACKET------------\n");
-		hex(ipfix_msg->pkt_header,ntohs(ipfix_msg->pkt_header->length));
-	fprintf(stderr,"\n------------/hex/-PACKET-----------\n");
-}
-
-
-void hex_dump_adv(const struct ipfix_message *ipfix_msg){
-        const struct data_template_couple *dtc = NULL;
-        struct ipfix_data_set * data = NULL;
-	int i;
-        
-	for(i=0;i<1023;i++ ){ //TODO magic number!
-                dtc = &(ipfix_msg->data_set[i]);
-                data = dtc->data_set;
-                if(data != NULL){
-			fprintf(stderr,"-------------hex-data-set-%i----------\n",i);
-			hex(data->records,ntohs(data->header.length)-4); // 4 = set_header size
-			fprintf(stderr,"\n------------|hex-data-set-%i|---------\n",i);
-			continue;
-		} 
-		break;
-	}	
-}
-
-
 
 /**
  * \brief Pass IPFIX data with supplemental structures from ipfixcol core into
@@ -531,7 +493,12 @@ void hex_dump_adv(const struct ipfix_message *ipfix_msg){
 int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	const struct ipfix_template_mgr *template_mgr){
 	VERBOSE(CL_VERBOSE_ADVANCED,"Fastbit store_packet");
-
+	static int i =0;
+	uint64_t x = 50;
+	fastbit_add_values("xfile", "ulong", &x,1,i);
+	i++;
+	//fastbit_flush_buffer("Yummy");
+/*
         int i,j;
 	int ri; //record index
 	int record_count;
@@ -545,8 +512,6 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
         int32_t enterprise = 0; // enterprise 0 - is reserved by IANA (NOT used)
 	struct element_cache *cache_e=NULL;
 
-	hex_dump(ipfix_msg);
-	hex_dump_adv(ipfix_msg);
 
 
         for(i=0;i<1023;i++ ){ //TODO magic number!
@@ -592,6 +557,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 				if(cache_e != NULL){
                 	        	VERBOSE(CL_VERBOSE_ADVANCED,"\t\t\t\tType: %s - %s - offset:%i - %p", mtypes[cache_e->type].ipfix, mtypes[cache_e->type].fastbit,record_offset,&(data->records[record_offset]));
 					mtypes[cache_e->type].store(&(data->records[record_offset]),field->ie.length, cache_e);
+					countx ++;
 					record_offset+=field->ie.length;
 				} else {
                 	        	VERBOSE(CL_VERBOSE_ADVANCED,"\t\t\t\tType: UNKNOWN!");
@@ -599,11 +565,12 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 
                 	}
 		}
-		sprintf(dir,"%i",ntohs(data->header.flowset_id));
-                VERBOSE(CL_VERBOSE_ADVANCED,"FASTBIT FLUSH");
-		fastbit_flush_buffer(dir);
+		//sprintf(dir,"%i",ntohs(data->header.flowset_id));
+                VERBOSE(CL_VERBOSE_ADVANCED,"FASTBIT FLUSH : %s",dir);
+		//fastbit_flush_buffer(dir);
+                VERBOSE(CL_VERBOSE_ADVANCED,"FASTBIT FLUSHED");
         }
-
+*/
 	return 0;  
 }
 /**
@@ -636,6 +603,9 @@ int store_now (const void *config){
  */
 int storage_close (void **config){
 	VERBOSE(CL_VERBOSE_ADVANCED,"Fastbit config close");
+	fastbit_flush_buffer("Yummy");
+	printf("Elements count: %i\n",countx);
+	fastbit_cleanup();
 	free(((struct fastbit_conf *) *config)->ie_cache);
 	free(*config);
 	return 0;
