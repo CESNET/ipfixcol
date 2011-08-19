@@ -108,25 +108,25 @@ struct ipfix_template_mgr {
  * \brief Function for adding new templates.
  *
  * \param[in]  tm Data Manager specific structure for storing Templates.
- * \param[in]  template Pointer where new Template Record starts.
+ * \param[in]  tmp Pointer where new Template Record starts.
  * \param[in]  type Type of the Template Record. TM_TEMPLATE = Template,
  * TM_OPTIONS_TEMPLATE = Options Template.
  * \return Pointer to new ipfix_template on success, NULL otherwise
  */
 struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm,
-										void *template, int type);
+										void *tmp, int type);
 
 /**
  * \brief Function for updating an existing templates.
  *
  * \param[in]  tm Data Manager specific structure for storing Templates.
- * \param[in]  template Pointer where new Template Record starts.
+ * \param[in]  tmp Pointer where new Template Record starts.
  * \param[in]  type Type of the Template Record. TM_TEMPLATE = Template,
  * TM_OPTIONS_TEMPLATE = Options Template.
  * \return updated ipfix_template on success, NULL if error occurs.
  */
 struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm,
-											void *template, int type);
+											void *tmp, int type);
 
 /**
  * \brief Function for specific Template lookup.
