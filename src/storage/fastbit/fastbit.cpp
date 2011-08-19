@@ -40,7 +40,9 @@
 
 
 #include <commlbr.h>
-#include "storage.h"
+extern "C" {
+	#include "../../../headers/storage.h"
+}
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -549,25 +551,25 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	int flush=0;
 
 	for(i = 0 ; i < 1023; i++){ //TODO magic number! add constant to storage.h 
-		if(ipfix_msg->data_set[i].data_set == NULL){
+		if(ipfix_msg->data_couple[i].data_set == NULL){
 			//there are no more filled data_sets	
 			return 0;
 		}
 
 	
-		if(ipfix_msg->data_set[i].tmplate == NULL){
+		if(ipfix_msg->data_couple[i].data_template == NULL){
 			//skip data without tamplate!
 			continue;
 		}
 
-		uint16_t template_id = ipfix_msg->data_set[i].tmplate->template_id;
+		uint16_t template_id = ipfix_msg->data_couple[i].data_template->template_id;
 
 
 		if((table = templates->find(template_id)) == templates->end()){
 			//NEW TEMPLATE!		
 			std::cout << "NEW TEMPLATE: " << template_id << std::endl;
 			template_table *table_tmp = new template_table(template_id); // TODO adr prefix!
-			table_tmp->parse_template(ipfix_msg->data_set[i].tmplate);
+			table_tmp->parse_template(ipfix_msg->data_couple[i].data_template);
 			templates->insert(std::pair<uint16_t,template_table*>(template_id,table_tmp));
 			table = templates->find(template_id);
 		} else {
@@ -575,7 +577,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 			//std::cout << "TEMPLATE IS KNOWN: "<< template_id << std::endl;
 		}
 
-		rcnt += (*table).second->store(ipfix_msg->data_set[i].data_set, conf->sys_dir + conf->window_dir);
+		rcnt += (*table).second->store(ipfix_msg->data_couple[i].data_set, conf->sys_dir + conf->window_dir);
 
 		//TODO check elapsed time!
 		
