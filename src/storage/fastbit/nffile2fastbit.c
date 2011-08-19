@@ -871,7 +871,7 @@ void clean_tmp_manager(struct ipfix_template_mgr *manager){
 int main(){
 	//char file[] = "/home/kramolis/NFDATA/nfcapd.20100301_anon";
 	char file[] = "/home/kramolis/NFDATA/log";
-	//char file[] = "/home/kramolis/NFDATA/c10";
+//	char file[] = "/home/kramolis/NFDATA/c10";
 //	char file[] = "/home/kramolis/nffile/nfcapd.201107200815";
 	FILE *f;
 	int i;
@@ -895,9 +895,9 @@ int main(){
 
 
 	//verbose = CL_VERBOSE_ADVANCED;
-	//dlhandle = dlopen ("/home/kramolis/git/ipfixcol/src/storage/fastbit/fastbit_output.so", RTLD_LAZY);
+	dlhandle = dlopen ("/home/kramolis/git/ipfixcol/src/storage/fastbit/fastbit_output.so", RTLD_LAZY);
 	//dlhandle = dlopen ("/home/kramolis/git/ipfixcol/src/storage/ipfix/ipfix_output.so", RTLD_LAZY);
-	dlhandle = dlopen ("/home/kramolis/git/ipfixcol/src/storage/fastbit/fcpp_output.so", RTLD_LAZY);
+//	dlhandle = dlopen ("/home/kramolis/git/ipfixcol/src/storage/fastbit/fcpp_output.so", RTLD_LAZY);
 	if (!dlhandle) {
 	    fputs (dlerror(), stderr);
 	    exit(1);
