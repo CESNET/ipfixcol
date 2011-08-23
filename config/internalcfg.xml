@@ -26,7 +26,11 @@
 
 	<storagePlugin>
 		<fileFormat>ipfix</fileFormat>
-		<file>src/storage/ipfix/ipfix_file.so</file>
+		<file>src/storage/ipfix/ipfix_output.so</file>
+	</storagePlugin>
+	<storagePlugin>
+		<fileFormat>fastbit</fileFormat>
+		<file>src/storage/fastbit/fastbit_output.so</file>
 	</storagePlugin>
 	<storagePlugin>
 		<fileFormat>ipfixcol</fileFormat>
