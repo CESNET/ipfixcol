@@ -1,6 +1,6 @@
 /**
- * \file storage.h
- * \author Radek Krejci <rkrejci@cesnet.cz>
+ * \file fastbit.c
+ * \author Petr Kramolis <kramolis@cesnet.cz>
  * \brief IPFIX Collector Storage API.
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
@@ -39,8 +39,8 @@
 
 
 
-#include <commlbr.h>
 extern "C" {
+	#include <commlbr.h>
 	#include "../../../headers/storage.h"
 }
 #include <netinet/in.h>
@@ -493,7 +493,7 @@ int template_table::parse_template(struct ipfix_template * tmp){
 	return 0;
 }
 
-enum name_type{TIME,RECORDS};
+enum name_type{TIME,INCREMENTAL};
 
 struct fastbit_config{
 	std::map<uint16_t,template_table*> *templates;
@@ -502,34 +502,78 @@ struct fastbit_config{
 	enum name_type dump_name;
 	std::string sys_dir;
 	std::string window_dir;
+	std::string prefix;
 	time_t last_flush;
+	int indexes;
 };
 
 extern "C"
 int storage_init (char *params, void **config){
-	std::cerr <<"INIT" << std::endl;
+	VERBOSE(CL_VERBOSE_BASIC,"Fastbit plugin: initialization");
+
 	struct tm * timeinfo;
 	char formated_time[15];
+
+	//create config structure!
 	(*config) = (struct fastbit_config *)malloc(sizeof( struct fastbit_config));
 	(*config) = new  struct fastbit_config;
+
 	((struct fastbit_config*)(*config))->templates = new std::map<uint16_t,template_table*>;
-	((struct fastbit_config*)(*config))->time_window = 300;
-	((struct fastbit_config*)(*config))->records_window = 1000000;
 
-	//struct fastbit_config*)(*config))->dump_name = RECORDS;
-	((struct fastbit_config*)(*config))->dump_name = TIME;
+	struct fastbit_config* c = (struct fastbit_config*)(*config);
 
-	((struct fastbit_config*)(*config))->sys_dir = "sys_dir/";
+	//pugi
+	pugi::xml_document doc;
+	doc.load(params);
+	std::string path,timeWindow,recordLimit,nameType,namePrefix,indexes,test,timeAligment;
 
-	if(((struct fastbit_config*)(*config))->dump_name != TIME){
-		((struct fastbit_config*)(*config))->window_dir = "0/";
+	if(doc){
+	        pugi::xpath_node ie = doc.select_single_node("fileWriter");
+        	path=ie.node().child_value("path");
+		c->sys_dir = path + "/";
+
+        	indexes=ie.node().child_value("onTheFlightIndexes");
+		if(indexes == "yes"){
+			c->indexes = 1;
+		} else {
+			c->indexes = 0;
+		}
+
+	        ie = doc.select_single_node("fileWriter/dumpInterval");
+        	timeWindow=ie.node().child_value("timeWindow");
+		c->time_window = atoi(timeWindow.c_str());
+
+        	recordLimit=ie.node().child_value("recordLimit");
+		if(indexes == "yes"){
+			c->indexes = 1000000;
+		} else {
+			c->indexes = 0;
+		}
+
+        	timeAligment=ie.node().child_value("timeAlignment");
+
+	        ie = doc.select_single_node("fileWriter/namingStrategy");
+        	namePrefix=ie.node().child_value("prefix");
+		c->prefix = namePrefix;
+
+        	nameType=ie.node().child_value("type");
+		if(nameType == "time"){
+			c->dump_name = TIME;
+			time ( &(c->last_flush));
+			if(timeAligment == "yes"){
+				c->last_flush = ((c->last_flush/c->time_window) * c->time_window) + c->time_window;
+			}
+			timeinfo = localtime ( &(c->last_flush));
+			strftime(formated_time,15,"%Y%m%d%H%M",timeinfo);
+			c->window_dir = c->prefix + std::string(formated_time) + "/";
+		} else if (nameType == "incremental") {
+			c->dump_name = INCREMENTAL;
+			c->window_dir = c->prefix + "000000000001/";
+		}
 	} else {
-		time ( &(((struct fastbit_config*)(*config))->last_flush));
-		timeinfo = localtime ( &(((struct fastbit_config*)(*config))->last_flush) );
-
-		strftime(formated_time,15,"%Y%m%d%H%M",timeinfo);
-		((struct fastbit_config*)(*config))->window_dir = std::string(formated_time) + "/";
+		VERBOSE(CL_ERROR,"Fastbit plugin: ERROR Unable to parse configuration xml!");
 	}
+
 	return 0;
 }
 
@@ -541,11 +585,12 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	struct fastbit_config *conf = (struct fastbit_config *) config;
 	std::map<uint16_t,template_table*> *templates = conf->templates;
 	static int rcnt = 0;
-	static int flushed = 0;
+	static int flushed = 1;
 	std::stringstream ss;
 	time_t rawtime;
 	struct tm * timeinfo;
 	char formated_time[15];
+	ibis::table *index_table;
 
 	int i;
 	int flush=0;
@@ -600,16 +645,21 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 			//flush all templates!
 			for(table = templates->begin(); table!=templates->end();table++){
 				(*table).second->flush(conf->sys_dir + conf->window_dir);
+				if(conf->indexes){
+					index_table = ibis::table::create((conf->sys_dir + conf->window_dir).c_str());
+					index_table->buildIndexes();
+					delete index_table;
+				}
 			}
 			//change window directory name!
-			if (conf->dump_name == RECORDS){
-				ss << flushed;
-				conf->window_dir = ss.str() + "/";
+			if (conf->dump_name == INCREMENTAL){
+				ss << std::setw(12) << std::setfill('0') << flushed;
+				conf->window_dir = conf->prefix + ss.str() + "/";
 			}else{
 				timeinfo = localtime ( &(conf->last_flush));
 
 				strftime(formated_time,15,"%Y%m%d%H%M",timeinfo);
-				conf->window_dir = std::string(formated_time) + "/";
+				conf->window_dir = conf->prefix + std::string(formated_time) + "/";
 			}
 			rcnt = 0;
 		}
