@@ -544,10 +544,10 @@ int storage_init (char *params, void **config){
 		c->time_window = atoi(timeWindow.c_str());
 
         	recordLimit=ie.node().child_value("recordLimit");
-		if(indexes == "yes"){
-			c->indexes = 1000000;
+		if(recordLimit == "yes"){
+			c->records_window = 2000000;
 		} else {
-			c->indexes = 0;
+			c->records_window = 0;
 		}
 
         	timeAligment=ie.node().child_value("timeAlignment");
@@ -679,9 +679,15 @@ int storage_close (void **config){
 	std::map<uint16_t,template_table*>::iterator table;
 	struct fastbit_config *conf = (struct fastbit_config *) (*config);
 	std::map<uint16_t,template_table*> *templates = conf->templates;
+	ibis::table *index_table;
 
 	for(table = templates->begin(); table!=templates->end();table++){
 		(*table).second->flush(conf->sys_dir + conf->window_dir);
+		if(conf->indexes){
+			index_table = ibis::table::create((conf->sys_dir + conf->window_dir).c_str());
+			index_table->buildIndexes();
+			delete index_table;
+		}
 		delete (*table).second;
 	}
 	
