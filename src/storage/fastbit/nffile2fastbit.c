@@ -728,7 +728,7 @@ int fbt = 0;
 int s =0;
 int iim =0;
 void fill_basic_template(uint8_t flags, struct ipfix_template **template){
-	static int template_id_counter = 0;
+	static int template_id_counter = 1;
 
 	VERBOSE(CL_VERBOSE_ADVANCED,"TEMPLATE pointer  temp:%p", template);
 	(*template) = (struct ipfix_template *) malloc(sizeof(struct ipfix_template) + \
@@ -921,7 +921,26 @@ int main(){
 	    exit(1);
 	}
 	printf("calling plugin init\n");
-	plugin_init(NULL, &config); //TODO add arguments
+
+	char params[] = 
+        	"<?xml version=\"1.0\"?> \
+                 <fileWriter xmlns=\"urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp\"> \
+			<fileFormat>fastbit</fileFormat> \
+			<path>storagePath</path> \
+			<dumpInterval> \
+				<timeWindow>0</timeWindow> \
+				<timeAlignment>yes</timeAlignment> \
+				<recordLimit>no</recordLimit> \
+			</dumpInterval> \
+			<namingStrategy> \
+				<type>incremental</type> \
+				<prefix>ic</prefix> \
+			</namingStrategy> \
+			<onTheFlightIndexes>yes</onTheFlightIndexes> \
+		</fileWriter>";
+
+
+	plugin_init(params, &config); //TODO add arguments
 	printf("plugin init ended\n");
 	//inital space for extension map
 	ext.map = (struct extension *) calloc(ext.size,sizeof(struct extension));
