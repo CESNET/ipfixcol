@@ -14,10 +14,19 @@
 		<name>File writer UDP</name>
 		<destination>
 			<name>Write to /tmp folder</name>
-			<observationDomainId>0</observationDomainId>
 			<fileWriter>
-				<fileFormat>ipfix</fileFormat>
-				<file>file://tmp/collected-records-udp.ipfix</file>
+				<fileFormat>fastbit</fileFormat>
+				<path>storagePath</path>
+				<dumpInterval>
+					<timeWindow>300</timeWindow>
+					<timeAlignment>yes</timeAlignment>
+					<recordLimit>no</recordLimit>
+				</dumpInterval>
+				<namingStrategy>
+					<type>time</type>
+					<prefix>ic</prefix>
+				</namingStrategy>
+				<onTheFlightIndexes>yes</onTheFlightIndexes>
 			</fileWriter>
 		</destination>
 	</exportingProcess>
