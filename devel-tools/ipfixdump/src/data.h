@@ -115,9 +115,9 @@ public:
 	 * manage grouped columns (ipv4 and ipv6) and process them separately.
 	 *
 	 * The format of columns should be the same as for regular output, but
-	 * columns must be sumarized.
+	 * columns must be summarized.
 	 *
-	 * @param sel roups of selected columns
+	 * @param sel groups of selected columns
 	 * @param cond condition
 	 * @return vector of aggregated tables
 	 */

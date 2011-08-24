@@ -102,6 +102,8 @@ private:
 	 */
 	AST* createOperationElement(pugi::xml_node operation, pugi::xml_document &doc);
 
+        int searchForTableParts();
+
 public:
 	stringVector tables; /**< fastbit tables to be used*/
 	std::vector<stringVector*> parts; /**< table templates to be used*/

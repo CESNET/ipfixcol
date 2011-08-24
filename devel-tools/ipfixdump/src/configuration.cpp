@@ -46,10 +46,40 @@ namespace ipfixdump
 {
 
 
+int configuration::searchForTableParts()
+{
+        DIR *d;
+        struct dirent *dent;
+
+	/* do we have any tables (directories) specified? */
+	if (this->tables.size() < 1) {
+		std::cerr << "Input file(s) must be specified" << std::endl;
+		return -1;
+	}
+
+	/* read tables subdirectories(templates) */
+	for (size_t i = 0; i < tables.size(); i++) {
+		d = opendir(tables[i].c_str());
+		if (d == NULL) {
+			std::cerr << "Cannot open directory \"" << tables[i] << "\"" << std::endl;
+			return -1;
+		}
+
+		parts.push_back(new stringVector);
+		while((dent = readdir(d)) != NULL) {
+			if (dent->d_type == DT_DIR && atoi(dent->d_name) != 0) {
+				parts[i]->push_back(std::string(dent->d_name));
+			}
+		}
+
+		closedir(d);
+	}
+
+        return 0;
+}
+
 int configuration::init(int argc, char *argv[]) {
 	char c;
-	DIR *d;
-	struct dirent *dent;
 
 	/* get program name without execute path */
 	progname = ((progname = strrchr (argv[0], '/')) != NULL) ? (progname + 1) : argv[0];
@@ -79,6 +109,7 @@ int configuration::init(int argc, char *argv[]) {
 				aggregateColumns = optarg;
 			break;
 		case 'r': /* file to open */
+                                std::cout << "DEBUG: adding table " << optarg << std::endl;
 				tables.push_back(std::string(optarg));
 			break;
 		case 'f':
@@ -111,9 +142,32 @@ int configuration::init(int argc, char *argv[]) {
 		case 'm':
 			NOT_SUPPORTED
 			break;
-		case 'R':
-			NOT_SUPPORTED
-			break;
+		case 'R': {
+                                std::string dirpath;
+                                dirpath = optarg;
+
+                                DIR *dir;
+                                struct dirent *dent;
+
+                                dir = opendir(dirpath.c_str());
+                                if (dir == NULL) {
+                                        std::cerr << "Cannot open directory \"" << dirpath << "\"" << std::endl;
+                                        break;
+                                }
+
+                                while((dent = readdir(dir)) != NULL) {
+                                        if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
+                                          && strcmp(dent->d_name, "..")) {
+                                                std::string tableDir(dirpath);
+                                                tableDir += dent->d_name;
+                                                std::cout << "DEBUG: adding table " << tableDir << std::endl;
+                                                this->tables.push_back(std::string(tableDir));
+                                        }
+                                }
+
+                                closedir(dir);
+                                break;
+                        }
 		case 'o': /* output format */
 			format = optarg;
 			break;
@@ -171,30 +225,8 @@ int configuration::init(int argc, char *argv[]) {
 	/* parse output format string */
 	parseFormat(format);
 
-	/* check validity of given values */
-	if (tables.size() < 1) {
-		/* TODO read from stdin */
-		std::cerr << "Input file(s) must be specified" << std::endl;
-		return -1;
-	}
-
-	/* read tables subdirectories(templates) */
-	for (size_t i = 0; i < tables.size(); i++) {
-		d = opendir(tables[i].c_str());
-		if (d == NULL) {
-			std::cerr << "Cannot open directory \"" << tables[i] << "\"" << std::endl;
-			return -1;
-		}
-
-		parts.push_back(new stringVector);
-		while((dent = readdir(d)) != NULL) {
-			if (dent->d_type == DT_DIR && atoi(dent->d_name) != 0) {
-				parts[i]->push_back(std::string(dent->d_name));
-			}
-		}
-
-		closedir(d);
-	}
+        /* search for table parts in specified directories */
+        this->searchForTableParts();
 
 	return 0;
 }
@@ -205,7 +237,7 @@ void configuration::help() {
 	<< "-h              this text you see right here" << std::endl
 	<< "-V              Print version and exit." << std::endl
 	<< "-a              Aggregate netflow data." << std::endl
-	<< "-A <expr>[/net] How to aggregate: ',' sep list of tags see nfdump(1)" << std::endl
+	<< "-A <expr>[/net] How to aggregate: ',' sep list of tags see ipfixdump(1)" << std::endl
 	<< "                or subnet aggregation: srcip4/24, srcip6/64." << std::endl
 	//<< "-b              Aggregate netflow records as bidirectional flows." << std::endl
 	//<< "-B              Aggregate netflow records as bidirectional flows - Guess direction." << std::endl
