@@ -5,10 +5,16 @@ INCLUDE = "-I../../../"
 
 all: fastbit_output.so nffile2fastbit
 
-fastbit_output.so: fastbit_output.o pugixml.o
-	g++ $(CFLAGS) $(LIBS) -lfastbit -L/usr/local/lib -shared -Wl,-soname,fastbit_output.so.1 fastbit_output.o pugixml.o -o $@ -lc
-	
+fastbit_output.so: fastbit_output.o fastbit_element.o fastbit_table.o pugixml.o
+	g++ $(CFLAGS) $(LIBS) -lfastbit -L/usr/local/lib -shared -Wl,-soname,fastbit_output.so.1 fastbit_output.o fastbit_element.o fastbit_table.o pugixml.o -o $@ -lc
+
 fastbit_output.o: fastbit.cpp
+	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
+
+fastbit_element.o: fastbit_element.cpp
+	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
+
+fastbit_table.o: fastbit_table.cpp
 	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
 
 pugixml.o: pugixml/pugixml.cpp
