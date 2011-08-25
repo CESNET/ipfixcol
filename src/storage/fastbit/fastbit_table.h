@@ -83,7 +83,7 @@ public:
 	template_table(int template_id): _rows_count(0) 
 	{
 		_template_id = template_id;
-		sprintf(_name,"t%u",template_id);
+		sprintf(_name,"%u",template_id);
 		_tablex = ibis::tablex::create();
 		_index=0;
 	}
