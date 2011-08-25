@@ -8,9 +8,27 @@
 #include <unistd.h>
 #include <dlfcn.h>
 #include <time.h>
+#include <signal.h>
 
 #include "nffile.h"
 #include "../../../headers/storage.h"
+
+
+volatile int stop = 0;
+static int ctrl_c = 0;
+void signal_handler(int signal_id){
+	if(ctrl_c){
+		VERBOSE(CL_WARNING,"Forced quit");
+		exit(1);
+	} else {
+		VERBOSE(CL_WARNING,"I'll end as soon as possible");
+		stop = 1;
+		ctrl_c++;
+	}
+    	signal(SIGINT,&signal_handler);
+}
+
+
 
 void hex(void *ptr, int size){
 	int i,space = 0;
@@ -894,6 +912,8 @@ int main(){
 	struct ipfix_template_mgr template_mgr;
 
 
+	signal(SIGINT,&signal_handler);
+
 	//verbose = CL_VERBOSE_ADVANCED;
 	dlhandle = dlopen ("/home/kramolis/git/ipfixcol/src/storage/fastbit/fastbit_output.so", RTLD_LAZY);
 	//dlhandle = dlopen ("/home/kramolis/git/ipfixcol/src/storage/ipfix/ipfix_output.so", RTLD_LAZY);
@@ -930,7 +950,7 @@ int main(){
 			<dumpInterval> \
 				<timeWindow>0</timeWindow> \
 				<timeAlignment>yes</timeAlignment> \
-				<recordLimit>no</recordLimit> \
+				<recordLimit>yes</recordLimit> \
 			</dumpInterval> \
 			<namingStrategy> \
 				<type>incremental</type> \
@@ -1064,8 +1084,8 @@ int main(){
 			//VERBOSE(CL_VERBOSE_ADVANCED,"---------BLOCK---------");
 			//hex(buffer, block_header.size);
 		
-			int size=0;
-			while (size < block_header.size){
+			int size = 0;
+			while (size < block_header.size && !stop){
 				VERBOSE(CL_VERBOSE_ADVANCED,"OFFSET: %u - %p",size,buffer);
 				record = (struct common_record_s *) buffer;
 
