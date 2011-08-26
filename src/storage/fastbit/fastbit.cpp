@@ -206,7 +206,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 			time ( &rawtime );
 			if(difftime(rawtime,conf->last_flush) > conf->time_window){
 				flush=1;
-				conf->last_flush =+ conf->time_window;
+				conf->last_flush += conf->time_window;
 			}
 		}
 
