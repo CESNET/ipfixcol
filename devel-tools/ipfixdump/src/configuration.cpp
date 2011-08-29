@@ -109,7 +109,9 @@ int configuration::init(int argc, char *argv[]) {
 				aggregateColumns = optarg;
 			break;
 		case 'r': /* file to open */
-                                std::cout << "DEBUG: adding table " << optarg << std::endl;
+#ifdef DEBUG
+                std::cerr << "DEBUG: adding table " << optarg << std::endl;
+#endif
 				tables.push_back(std::string(optarg));
 			break;
 		case 'f':
@@ -160,7 +162,9 @@ int configuration::init(int argc, char *argv[]) {
                                           && strcmp(dent->d_name, "..")) {
                                                 std::string tableDir(dirpath);
                                                 tableDir += dent->d_name;
-                                                std::cout << "DEBUG: adding table " << tableDir << std::endl;
+#ifdef DEBUG
+                                                std::cerr << "DEBUG: adding table " << tableDir << std::endl;
+#endif
                                                 this->tables.push_back(std::string(tableDir));
                                         }
                                 }
