@@ -48,8 +48,8 @@ namespace ipfixdump
 
 int configuration::searchForTableParts()
 {
-        DIR *d;
-        struct dirent *dent;
+	DIR *d;
+	struct dirent *dent;
 
 	/* do we have any tables (directories) specified? */
 	if (this->tables.size() < 1) {
@@ -75,7 +75,7 @@ int configuration::searchForTableParts()
 		closedir(d);
 	}
 
-        return 0;
+	return 0;
 }
 
 int configuration::init(int argc, char *argv[]) {
@@ -145,33 +145,33 @@ int configuration::init(int argc, char *argv[]) {
 			NOT_SUPPORTED
 			break;
 		case 'R': {
-                                std::string dirpath;
-                                dirpath = optarg;
+			std::string dirpath;
+			dirpath = optarg;
 
-                                DIR *dir;
-                                struct dirent *dent;
+			DIR *dir;
+			struct dirent *dent;
 
-                                dir = opendir(dirpath.c_str());
-                                if (dir == NULL) {
-                                        std::cerr << "Cannot open directory \"" << dirpath << "\"" << std::endl;
-                                        break;
-                                }
+			dir = opendir(dirpath.c_str());
+			if (dir == NULL) {
+				std::cerr << "Cannot open directory \"" << dirpath << "\"" << std::endl;
+				break;
+			}
 
-                                while((dent = readdir(dir)) != NULL) {
-                                        if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
-                                          && strcmp(dent->d_name, "..")) {
-                                                std::string tableDir(dirpath);
-                                                tableDir += dent->d_name;
+			while((dent = readdir(dir)) != NULL) {
+				if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
+				&& strcmp(dent->d_name, "..")) {
+					std::string tableDir(dirpath);
+					tableDir += dent->d_name;
 #ifdef DEBUG
-                                                std::cerr << "DEBUG: adding table " << tableDir << std::endl;
+					std::cerr << "DEBUG: adding table " << tableDir << std::endl;
 #endif
-                                                this->tables.push_back(std::string(tableDir));
-                                        }
-                                }
+					this->tables.push_back(std::string(tableDir));
+				}
+			}
 
-                                closedir(dir);
-                                break;
-                        }
+			closedir(dir);
+			break;
+		}
 		case 'o': /* output format */
 			format = optarg;
 			break;
@@ -229,8 +229,8 @@ int configuration::init(int argc, char *argv[]) {
 	/* parse output format string */
 	parseFormat(format);
 
-        /* search for table parts in specified directories */
-        this->searchForTableParts();
+	/* search for table parts in specified directories */
+	this->searchForTableParts();
 
 	return 0;
 }
