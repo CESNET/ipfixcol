@@ -81,7 +81,9 @@ int printer::print(uint64_t limit) {
 
 
 	/* print table header */
-	printHeader();
+	if (!conf.quiet) {
+		printHeader();
+	}
 
 	/* go over all tables to print */
 	for (tableVector::iterator tableIt = tables.begin(); tableIt != tables.end(); tableIt++) {
@@ -118,6 +120,8 @@ int printer::print(uint64_t limit) {
 		/* free cursor */
 		delete cur;
 	}
+
+	/* TODO print nfdump-like statistics */
 
 	return ierr;
 }

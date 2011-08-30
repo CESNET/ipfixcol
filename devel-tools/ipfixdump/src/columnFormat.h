@@ -211,9 +211,17 @@ private:
 	 */
 	stringSet getColumns(AST* ast);
 
+	/**
+	 * \brief Is AST aggregable?
+	 *
+	 * @param ast AST to check
+	 * @return true when AST is aggregable
+	 */
+	bool canAggregate(AST* ast);
+
 public:
 	std::string name; /**< column name */
-	stringVector aliases; /**< vector of column aliases */
+	stringSet aliases; /**< set of column aliases */
 	int width; /**< width of the column */
 	bool alignLeft; /**< align column to left */
 	/**
@@ -261,6 +269,12 @@ public:
 	 * @return map of Column names sets
 	 */
 	std::map<int, stringSet> getColumns();
+
+	/**
+	 * \brief Can this column be used in aggregation?
+	 * @return true when column is aggregable
+	 */
+	bool canAggregate();
 };
 
 }  // namespace ipfixdump

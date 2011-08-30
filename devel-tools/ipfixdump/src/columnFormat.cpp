@@ -450,6 +450,35 @@ std::map<int, stringSet> columnFormat::getColumns() {
 	return columns;
 }
 
+bool columnFormat::canAggregate() {
+	bool ret = true;
+
+	/* all groups must be aggregable */
+	for (std::map<int, AST*>::iterator it = groups.begin();it != groups.end(); it++) {
+		if (!canAggregate(it->second)) {
+			ret = false;
+		}
+	}
+
+	return ret;
+}
+
+bool columnFormat::canAggregate(AST* ast) {
+
+	/* AST type must be 'value' and aggregation string must not be empty */
+	if (ast->type == ipfixdump::value) {
+		if (!ast->aggregation.empty()) {
+			return true;
+		}
+	/* or both sides of operation must be aggregable */
+	} else if (ast->type == ipfixdump::operation) {
+		return canAggregate(ast->left) && canAggregate(ast->right);
+	}
+
+	/* all other cases */
+	return false;
+}
+
 columnFormat::columnFormat(): width(0), alignLeft(false) {}
 
 }

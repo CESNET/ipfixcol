@@ -47,6 +47,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstring>
+#include <algorithm>
 #include <stdint.h>
 #include <dirent.h>
 #include <regex.h>
@@ -102,6 +103,8 @@ private:
 	 */
 	AST* createOperationElement(pugi::xml_node operation, pugi::xml_document &doc);
 
+	int searchForTableParts();
+
 public:
 	stringVector tables; /**< fastbit tables to be used*/
 	std::vector<stringVector*> parts; /**< table templates to be used*/
@@ -110,10 +113,11 @@ public:
 	std::string format;
 	uint64_t maxRecords;
 	bool plainNumbers;
-	std::string aggregateColumns;
+	stringSet aggregateColumns; /**< aggregate columns set */
 	std::map<int, stringSet> aggregateColumnsDb; /**< Sets of database columns for select */
 	bool aggregate;
 	std::vector<columnFormat*> columnsFormat;
+	bool quiet; /**< Don't print header and statistics */
 
 	/**
 	 * \brief Configuration class destructor
