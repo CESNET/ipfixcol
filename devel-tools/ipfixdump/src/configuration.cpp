@@ -102,13 +102,38 @@ int configuration::init(int argc, char *argv[]) {
 			return 1;
 			break;
 		case 'a': /* aggregate */
-				aggregate = true;
+			aggregate = true;
+			/* set default aggregation columns */
+			if (aggregateColumns.size() == 0) {
+				aggregateColumns.insert("%sa");
+				aggregateColumns.insert("%da");
+				aggregateColumns.insert("%sp");
+				aggregateColumns.insert("%dp");
+				aggregateColumns.insert("%pr");
+			}
 			break;
 		case 'A': /* aggregate on specific columns */
-				aggregate = true;
-				aggregateColumns = optarg;
+			char *token;
+			aggregate = true;
+			/* add aggregate columns to set */
+			aggregateColumns.clear();
+			token = strtok(optarg, ",");
+			if (token == NULL) {
+				help();
+				return -2;
+			} else {
+				aggregateColumns.insert(token);
+				while ((token = strtok(NULL, ",")) != NULL) {
+					aggregateColumns.insert(token);
+				}
+			}
 			break;
 		case 'r': /* file to open */
+
+                if (optarg == std::string("")) {
+                	help();
+                	return -2;
+                }
 #ifdef DEBUG
                 std::cerr << "DEBUG: adding table " << optarg << std::endl;
 #endif
@@ -133,7 +158,7 @@ int configuration::init(int argc, char *argv[]) {
 			NOT_SUPPORTED
 			break;
 		case 'q':
-			NOT_SUPPORTED
+				quiet = true;
 			break;
 		case 'I':
 			NOT_SUPPORTED
@@ -199,26 +224,20 @@ int configuration::init(int argc, char *argv[]) {
 		filter = "1=1";
 	}
 
-	/* set default aggregation columns
-	 * TODO aliases should be used here*/
-//	if (aggregate && aggregateColumns.empty()) {
-//		aggregateColumns = "count(*), min(e0id152), max(e0id153), e0id8, e0id12, e0id7, e0id11, e0id4";
-//	}
-
 	/* set default order (by timestamp) */
 	order.push_back("e0id152");
 
 	/* TODO add format to print everything */
 	if (format.empty() || format == "line") {
-		format = "%ts %td %pr %sa:%sap -> %da:%dap %pkt %byt %fl";
+		format = "%ts %td %pr %sa:%sp -> %da:%dp %pkt %byt %fl";
 	} else if (format == "long") {
-		format = "%ts %td %pr %sa:%sap -> %da:%dap %flg %tos %pkt %byt %fl";
+		format = "%ts %td %pr %sa:%sp -> %da:%dp %flg %tos %pkt %byt %fl";
 	} else if (format == "extended") {
-		format = "%ts %td %pr %sa:%sap -> %da:%dap %flg %tos %pkt %byt %bps %pps %bpp %fl";
+		format = "%ts %td %pr %sa:%sp -> %da:%dp %flg %tos %pkt %byt %bps %pps %bpp %fl";
 	} else if (format == "pipe") {
-		format = "%ts|%td|%pr|%sa|%sap|%da|%dap|%pkt|%byt|%fl";
+		format = "%ts|%td|%pr|%sa|%sp|%da|%dp|%pkt|%byt|%fl";
 	} else if (format == "csv") {
-		format = "%ts,%td,%pr,%sa,%sap,%da,%dap,%pkt,%byt,%fl";
+		format = "%ts,%td,%pr,%sa,%sp,%da,%dp,%pkt,%byt,%fl";
 	} else if (format.substr(0,4) == "fmt:") {
 		format = format.substr(4);
 	} else {
@@ -305,7 +324,7 @@ configuration::~configuration() {
 	}
 }
 
-configuration::configuration(): maxRecords(0), plainNumbers(false), aggregate(false) {}
+configuration::configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false) {}
 
 void configuration::parseFormat(std::string format) {
 	std::string alias;
@@ -341,8 +360,14 @@ void configuration::parseFormat(std::string format) {
 			pugi::xpath_node column = doc.select_single_node(("/columns/column[alias='"+alias+"']").c_str());
 			/* check what we found */
 			if (column != NULL) {
+
 				/* create new column */
-				cf = new columnFormat();
+				if (column.node().child("default-value") != NULL) {
+					cf = new columnFormat(column.node().child_value("default-value"));
+				} else {
+					cf = new columnFormat();
+				}
+
 				cf->name = column.node().child_value("name");
 #ifdef DEBUG
 				std::cerr << "Creating column '" << cf->name << "'" << std::endl;
@@ -377,6 +402,12 @@ void configuration::parseFormat(std::string format) {
 					cf->groups[0] = createOperationElement(column.node().child("value").child("operation"), doc);
 				}
 
+				/* add aliases from XML to column (with starting %) */
+				pugi::xpath_node_set aliases = column.node().select_nodes("alias");
+				for (pugi::xpath_node_set::const_iterator it = aliases.begin(); it != aliases.end(); ++it) {
+					cf->aliases.insert(it->node().child_value());
+				}
+
 				columnsFormat.push_back(cf);
 			} else {
 				std::cerr << "Column '" << alias << "' not defined" << std::endl;
@@ -396,6 +427,8 @@ void configuration::parseFormat(std::string format) {
 	/* free created regular expression */
 	regfree(&reg);
 
+	/* handle aggregation:
+	 * create map of colum names to column positions (for names like 'sum(e0id1)')*/
 	if (aggregate) {
 		/* check whether we have any aggregation groups */
 		if (aggregateColumnsDb.size() == 0) {
@@ -408,25 +441,66 @@ void configuration::parseFormat(std::string format) {
 		for (std::vector<columnFormat*>::iterator it = columnsFormat.begin(); it != columnsFormat.end(); it++) {
 			/* get DB columns from columnsFormat by group */
 			std::map<int, stringSet> colMap;
+			stringSet intersection;
 
 			colMap = (*it)->getColumns();
-			if (colMap.size() == 0) continue;
+			if (colMap.size() == 0) continue; /* column separator */
+
+			/* check whether to use this column */
+			std::set_intersection((*it)->aliases.begin(), (*it)->aliases.end(), aggregateColumns.begin(),
+					aggregateColumns.end(), std::inserter( intersection, intersection.begin()));
+
+			if (!(*it)->canAggregate() && intersection.empty()) {
+				/* remove columns that cannot be aggregated */
+#ifdef DEBUG
+				std::cerr << "Removing non-aggregable column '" << (*it)->name << "'" << std::endl;
+#endif
+				columnsFormat.erase(it);
+
+				/* erase following separator */
+				if ((*it)->groups.empty()) {
+					columnsFormat.erase(it);
+				}
+
+				/* set iterator back to previous element */
+				it--;
+				continue;
+			}
 
 			/* for each aggregation group */
 			for (std::map<int, stringSet>::iterator i = aggregateColumnsDb.begin(); i != aggregateColumnsDb.end(); i++) {
 				/* if there is specific group, add it */
 				if (colMap.find(i->first) != colMap.end()) {
 					i->second.insert(colMap[i->first].begin(), colMap[i->first].end());
-				} else { /* else add group 0 */
+				} else if ((*it)->groups.size() == 1) { /* else add group 0 (non grouped element (only one group)) */
 					i->second.insert(colMap[0].begin(), colMap[0].end());
 				}
 			}
 		}
 
-		/* TODO TODO TODO:
-		 * Work with user input:
-		 * 	columns that are not aggregated (don't have '(' in name) must be used only if specified by user (or -a switch)
-		 * 	now it uses all format columns*/
+		/* check that groups are different (elements that differ could have been removed) */
+		if (aggregateColumnsDb.size() > 1) {
+			/* go over all groups */
+			for (std::map<int, stringSet>::iterator outer = aggregateColumnsDb.begin(); outer != aggregateColumnsDb.end(); outer++) {
+				/* start inner loop one element further */
+				std::map<int, stringSet>::iterator it = outer;
+				it++;
+				/* go over rest of the elements */
+				for (std::map<int, stringSet>::iterator inner = it; inner != aggregateColumnsDb.end(); inner++) {
+					/* compute set difference */
+					stringSet difference;
+					std::set_difference(outer->second.begin(), outer->second.end(), inner->second.begin(),
+										inner->second.end(), std::inserter( difference, difference.begin()));
+
+					/* When sets are equal, difference is empty */
+					if (difference.empty()) {
+						/* delete duplicated group */
+						aggregateColumnsDb.erase(inner);
+						inner--; /* go to previous element, loop will handle increment */
+					}
+				}
+			}
+		}
 	}
 }
 

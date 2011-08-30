@@ -57,7 +57,6 @@
  */
 namespace ipfixdump {
 
-#define NULL_STR "NULL"
 #define MAX_PARTS 2
 
 /**
@@ -211,9 +210,25 @@ private:
 	 */
 	stringSet getColumns(AST* ast);
 
+	/**
+	 * \brief Is AST aggregable?
+	 *
+	 * @param ast AST to check
+	 * @return true when AST is aggregable
+	 */
+	bool canAggregate(AST* ast);
+
+	/**
+	 * \brief Initialization function called from constructors
+	 * @param null_string
+	 */
+	void init(std::string nullStr);
+
+	std::string nullStr; /**< String used when table doesn`t have the column*/
+
 public:
 	std::string name; /**< column name */
-	stringVector aliases; /**< vector of column aliases */
+	stringSet aliases; /**< set of column aliases */
 	int width; /**< width of the column */
 	bool alignLeft; /**< align column to left */
 	/**
@@ -231,6 +246,13 @@ public:
 
 	/**
 	 * \brief columnFormat class constructor
+	 */
+	columnFormat(std::string null_str);
+
+	/**
+	 * \brief columnFormat class constructor
+	 *
+	 * Sets NULL string to 'NULL'
 	 */
 	columnFormat();
 
@@ -261,6 +283,12 @@ public:
 	 * @return map of Column names sets
 	 */
 	std::map<int, stringSet> getColumns();
+
+	/**
+	 * \brief Can this column be used in aggregation?
+	 * @return true when column is aggregable
+	 */
+	bool canAggregate();
 };
 
 }  // namespace ipfixdump

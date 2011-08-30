@@ -6,6 +6,7 @@
 		name: Name of the column
 		width: Width of the column, default is 0
 		alias: Alias(es) of the columns, used for operations and custom formatting
+        default-value: Defines what to show when table does not have this column
 		value: Defines where to get actual value
 			value can be of several types:
 				plain: just take specified element value for input. Value can be entered as fastbit 
@@ -83,6 +84,18 @@
     		<group id="1">
     			<element semantics="ipv6" parts="2">e0id27</element>
     		</group>
+            <group id="2">
+    			<element semantics="ipv4">e0id8</element>
+    		</group>
+    		<group id="3">
+    			<element semantics="ipv6" parts="2">e0id27</element>
+    		</group>
+<!--            <group id="4">
+    			<element semantics="ipv4">e0id8</element>
+    		</group>
+    		<group id="5">
+    			<element semantics="ipv6" parts="2">e0id27</element>
+    		</group>-->
     	</value>
     </column>
     <column>
@@ -97,32 +110,64 @@
     		<group id="1">
     			<element semantics="ipv6" parts="2">e0id28</element>
     		</group>
+            <group id="2">
+    			<element semantics="ipv4">e0id12</element>
+    		</group>
+    		<group id="3">
+    			<element semantics="ipv6" parts="2">e0id28</element>
+    		</group>
+<!--            <group id="4">
+    			<element semantics="ipv4">e0id12</element>
+    		</group>
+    		<group id="5">
+    			<element semantics="ipv6" parts="2">e0id28</element>
+    		</group>-->
     	</value>
     </column>
     <column>
     	<name>Port</name>
     	<width>5</width>
     	<alignLeft/>
-    	<alias>%sap</alias>
+    	<alias>%sp</alias>
     	<alias>%srcport</alias>
-    	<value type="plain">
-    		<element>e0id7</element>
+    	<default-value>0</default-value>
+    	<value type="group">
+            <group id="0">
+        		<element>e0id7</element>
+            </group>
+            <group id="1">
+                <element>e0id7</element>
+            </group>
     	</value>
     </column>
     <column>
     	<name>Port</name>
     	<width>5</width>
     	<alignLeft/>
-    	<alias>%dap</alias>
+    	<alias>%dp</alias>
     	<alias>%dstport</alias>
-    	<value type="plain">
-    		<element>e0id11</element>
+    	<default-value>0</default-value>
+    	<value type="group">
+            <group id="0">
+        		<element>e0id11</element>
+            </group>
+            <group id="1">
+        		<element>e0id11</element>
+            </group>
+            <group id="2">
+                <element>e0id32</element>
+            </group>
+            <group id="3">
+                <element>e0id32</element>
+            </group>
+
     	</value>
     </column>
     <column>
     	<name>Flags</name>
     	<width>6</width>
     	<alias>%flg</alias>
+    	<default-value>......</default-value>
     	<value type="plain">
     		<element semantics="tcpflags">e0id6</element>
     	</value>
@@ -131,6 +176,7 @@
     	<name>Tos</name>
     	<width>4</width>
     	<alias>%tos</alias>
+    	<default-value>0</default-value>
     	<value type="plain">
     		<element>e0id5</element>
     	</value>
@@ -189,7 +235,7 @@
     	<width>5</width>
     	<alias>%fl</alias>
     	<value type="plain">
-    		<element semantics="flows"></element>
+    		<element semantics="flows" aggregation="count"></element>
     	</value>
     </column>
 </columns>

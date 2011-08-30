@@ -3,12 +3,23 @@ CFLAGS  = @CFLAGS@
 LIBS    = @LIBS@
 INCLUDE = "-I../../../"
 
+XSLTPROC = @XSLTPROC@
+XSLTMANSTYLE = @XSLTMANSTYLE@
+
 all: fastbit_output.so nffile2fastbit
 
-fastbit_output.so: fastbit_output.o pugixml.o
-	g++ $(CFLAGS) $(LIBS) -lfastbit -L/usr/local/lib -shared -Wl,-soname,fastbit_output.so.1 fastbit_output.o pugixml.o -o $@ -lc
-	
+doc: fastbit.1
+
+fastbit_output.so: fastbit_output.o fastbit_element.o fastbit_table.o pugixml.o
+	g++ $(CFLAGS) $(LIBS) -lfastbit -L/usr/local/lib -shared -Wl,-soname,fastbit_output.so.1 fastbit_output.o fastbit_element.o fastbit_table.o pugixml.o -o $@ -lc
+
 fastbit_output.o: fastbit.cpp
+	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
+
+fastbit_element.o: fastbit_element.cpp
+	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
+
+fastbit_table.o: fastbit_table.cpp
 	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
 
 pugixml.o: pugixml/pugixml.cpp
@@ -16,6 +27,20 @@ pugixml.o: pugixml/pugixml.cpp
 
 nffile2fastbit: nffile2fastbit.c
 	$(CC) $(CFLAGS) $(LIBS) -o $@ $<
+
+%.1 %.2 %.3 %.4 %.5 %.6 %.7 %.8 %.9: %.dbk
+	@if [ -n "$(XSLTPROC)" ]; then \
+		if [ -f "$(XSLTMANSTYLE)" ]; then \
+			echo $(XSLTPROC) $(XSLTMANSTYLE) $<; \
+			$(XSLTPROC) $(XSLTMANSTYLE) $<; \
+		else \
+			echo "Missing $(XSLTMANSTYLE)!"; \
+			exit 1; \
+		fi \
+	else \
+		echo "Missing xsltproc"; \
+	fi
+
 
 clean:
 	-rm fastbit_output.so *.o nffile2fastbit
