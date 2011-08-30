@@ -255,22 +255,23 @@ tableVector data::aggregate(std::map<int, stringSet> sel, const char *cond) {
 			std::cerr << "Using " << selectedParts.size() << " of " << parts.size() << " parts" << std::endl;
 #endif
 
-			/* nothing to work with */
-			if (selectedParts.size() == 0) continue;
+			/* check that we have something to work with */
+			if (selectedParts.size() != 0) {
 
-			/* create table of selected parts */
-			table = ibis::table::create(selectedParts);
+				/* create table of selected parts */
+				table = ibis::table::create(selectedParts);
 
-			/* run select on created table */
-			resultTable = table->select(select.c_str(), cond);
-			delete table;
+				/* run select on created table */
+				resultTable = table->select(select.c_str(), cond);
+				delete table;
 
-			/* check for empty result */
-			if (resultTable != NULL) {
-				tc = new tableContainer();
-				tc->table = resultTable;
-				tc->namesColumns = nc;
-				tblv.push_back(tc);
+				/* check for empty result */
+				if (resultTable != NULL) {
+					tc = new tableContainer();
+					tc->table = resultTable;
+					tc->namesColumns = nc;
+					tblv.push_back(tc);
+				}
 			}
 
 			/* clear selected columns */

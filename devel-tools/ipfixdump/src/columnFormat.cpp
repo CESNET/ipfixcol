@@ -157,7 +157,7 @@ std::string columnFormat::getValue(ibis::table::cursor &cur, bool plainNumbers,
 	}
 	/* default empty value */
 	if (value.empty()) {
-		value = NULL_STR;
+		value = nullStr;
 	}
 
 	return value;
@@ -479,6 +479,19 @@ bool columnFormat::canAggregate(AST* ast) {
 	return false;
 }
 
-columnFormat::columnFormat(): width(0), alignLeft(false) {}
+columnFormat::columnFormat(std::string nullStr)
+{
+	init(nullStr);
+}
+
+columnFormat::columnFormat() {
+	init("NULL");
+}
+
+void columnFormat::init(std::string nullStr) {
+	this->nullStr = nullStr;
+	this->width = 0;
+	this->alignLeft = false;
+}
 
 }

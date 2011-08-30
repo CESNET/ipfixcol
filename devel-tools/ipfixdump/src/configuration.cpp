@@ -104,16 +104,19 @@ int configuration::init(int argc, char *argv[]) {
 		case 'a': /* aggregate */
 			aggregate = true;
 			/* set default aggregation columns */
-			aggregateColumns.insert("%sa");
-			aggregateColumns.insert("%da");
-			aggregateColumns.insert("%sp");
-			aggregateColumns.insert("%dp");
-			aggregateColumns.insert("%pr");
+			if (aggregateColumns.size() == 0) {
+				aggregateColumns.insert("%sa");
+				aggregateColumns.insert("%da");
+				aggregateColumns.insert("%sp");
+				aggregateColumns.insert("%dp");
+				aggregateColumns.insert("%pr");
+			}
 			break;
 		case 'A': /* aggregate on specific columns */
 			char *token;
 			aggregate = true;
 			/* add aggregate columns to set */
+			aggregateColumns.clear();
 			token = strtok(optarg, ",");
 			if (token == NULL) {
 				help();
@@ -356,8 +359,14 @@ void configuration::parseFormat(std::string format) {
 			pugi::xpath_node column = doc.select_single_node(("/columns/column[alias='"+alias+"']").c_str());
 			/* check what we found */
 			if (column != NULL) {
+
 				/* create new column */
-				cf = new columnFormat();
+				if (column.node().child("default-value") != NULL) {
+					cf = new columnFormat(column.node().child_value("default-value"));
+				} else {
+					cf = new columnFormat();
+				}
+
 				cf->name = column.node().child_value("name");
 #ifdef DEBUG
 				std::cerr << "Creating column '" << cf->name << "'" << std::endl;
@@ -462,7 +471,7 @@ void configuration::parseFormat(std::string format) {
 				/* if there is specific group, add it */
 				if (colMap.find(i->first) != colMap.end()) {
 					i->second.insert(colMap[i->first].begin(), colMap[i->first].end());
-				} else { /* else add group 0 */
+				} else if ((*it)->groups.size() == 1) { /* else add group 0 (non grouped element (only one group)) */
 					i->second.insert(colMap[0].begin(), colMap[0].end());
 				}
 			}

@@ -57,7 +57,6 @@
  */
 namespace ipfixdump {
 
-#define NULL_STR "NULL"
 #define MAX_PARTS 2
 
 /**
@@ -219,6 +218,14 @@ private:
 	 */
 	bool canAggregate(AST* ast);
 
+	/**
+	 * \brief Initialization function called from constructors
+	 * @param null_string
+	 */
+	void init(std::string nullStr);
+
+	std::string nullStr; /**< String used when table doesn`t have the column*/
+
 public:
 	std::string name; /**< column name */
 	stringSet aliases; /**< set of column aliases */
@@ -239,6 +246,13 @@ public:
 
 	/**
 	 * \brief columnFormat class constructor
+	 */
+	columnFormat(std::string null_str);
+
+	/**
+	 * \brief columnFormat class constructor
+	 *
+	 * Sets NULL string to 'NULL'
 	 */
 	columnFormat();
 
