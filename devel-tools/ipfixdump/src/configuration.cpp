@@ -37,6 +37,15 @@
  *
  */
 
+#include <getopt.h>
+#include <iostream>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+#include <stdint.h>
+#include <dirent.h>
+#include <regex.h>
+#include <ibis.h>
 #include "configuration.h"
 
 /* temporary macro that should be removed in full implementation */

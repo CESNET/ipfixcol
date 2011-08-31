@@ -37,6 +37,12 @@
  *
  */
 
+#include <getopt.h>
+#include <iostream>
+#include <cstdlib>
+#include <cstring>
+#include <arpa/inet.h>
+#include "protocols.h"
 #include "columnFormat.h"
 
 namespace ipfixdump

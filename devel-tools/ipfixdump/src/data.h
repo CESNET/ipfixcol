@@ -40,12 +40,6 @@
 #ifndef DATA_H_
 #define DATA_H_
 
-#include <cstdio>
-#include <vector>
-#include <iostream>
-#include <cstdlib>
-#include <cstring>
-#include <ibis.h>
 #include "typedefs.h"
 #include "configuration.h"
 

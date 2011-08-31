@@ -40,17 +40,8 @@
 #ifndef COLUMN_FORMAT_H_
 #define COLUMN_FORMAT_H_
 
-#include <cstdio>
-#include <vector>
-#include <set>
-#include <getopt.h>
-#include <iostream>
-#include <cstdlib>
-#include <cstring>
 #include <ibis.h>
-#include <arpa/inet.h>
 #include "typedefs.h"
-#include "protocols.h"
 
 /**
  * \brief Namespace of the ipfixdump utility

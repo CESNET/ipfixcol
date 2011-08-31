@@ -40,22 +40,9 @@
 #ifndef CONFIGURATION_H_
 #define CONFIGURATION_H_
 
-#include <cstdio>
-#include <vector>
-#include <set>
-#include <getopt.h>
-#include <iostream>
-#include <cstdlib>
-#include <cstring>
-#include <algorithm>
-#include <stdint.h>
-#include <dirent.h>
-#include <regex.h>
-#include <ibis.h>
-#include "../3rdparty/pugixml.hpp"
 #include "typedefs.h"
 #include "columnFormat.h"
-
+#include "../3rdparty/pugixml.hpp"
 
 /** Acceptable command-line parameters */
 #define OPTSTRING "hVaA:r:f:n:c:D:Ns:qIM:mR:o:v:Z:t:"
