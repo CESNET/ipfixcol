@@ -129,7 +129,6 @@ int configuration::init(int argc, char *argv[]) {
 			}
 			break;
 		case 'r': /* file to open */
-
                 if (optarg == std::string("")) {
                 	help();
                 	return -2;
@@ -240,6 +239,8 @@ int configuration::init(int argc, char *argv[]) {
 		format = "%ts,%td,%pr,%sa,%sp,%da,%dp,%pkt,%byt,%fl";
 	} else if (format.substr(0,4) == "fmt:") {
 		format = format.substr(4);
+	} else if (format == "extra") {
+		format = "%ts %td %pr %sa:%sp -> %da:%dp %flg %tos %pkt %byt %bps %pps %bpp %sas %das %in %out %fl";
 	} else {
 		std::cerr << "Unknown ouput mode: '" << format << "'" << std::endl;
 		return -1;
@@ -295,6 +296,7 @@ void configuration::help() {
 	<< "                 line     Standard output line format." << std::endl
 	<< "                 long     Standard output line format with additional fields." << std::endl
 	<< "                 extended Even more information." << std::endl
+	<< "                 extra    More than you want to know..." << std::endl
 	<< "                 csv      ',' separated, machine parseable output format." << std::endl
 	<< "                 pipe     '|' separated legacy machine parseable output format." << std::endl
 	<< "                        mode may be extended by '6' for full IPv6 listing. e.g.long6, extended6." << std::endl

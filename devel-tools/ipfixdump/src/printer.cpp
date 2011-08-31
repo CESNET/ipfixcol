@@ -121,7 +121,7 @@ int printer::print(uint64_t limit) {
 		delete cur;
 	}
 
-	/* TODO print nfdump-like statistics */
+	/* TODO print nfdump-like statistics, maybe in main program */
 
 	return ierr;
 }
