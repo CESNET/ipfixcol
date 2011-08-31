@@ -41,4 +41,8 @@
 		<!--## Path of the storage module  -->
 		<file>src/storage/ipfix/ipfix_output.so</file>
 	</storagePlugin>
+
+	<storagePlugin>
+		<file>src/storage/postgres/postgres_output.so</file>
+	</storagePlugin>
 </ipfixcol>

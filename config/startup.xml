@@ -93,6 +93,25 @@
 	</exportingProcess>
 
 	<exportingProcess>
+		<name>Postgres</name>
+		<destination>
+			<name>store data records in PostgreSQL database</name>
+			<postgres>
+				<!--## Name of host to connect to -->
+				<host>localhost</host>
+				<!--## Port number to connect to at the server host -->
+				<port>5432</port>
+				<!--## Name of the database -->
+				<dbname>test</dbname>
+				<!--## PostgreSQL user name to connect as -->
+				<user>IPFIXuser</user>
+				<!--## Password to be used if the server demands password authentication -->
+				<pass>password</pass>
+			</postgres>
+		</destination>
+	</exportingProcess>
+
+	<exportingProcess>
 		<name>File writer SCTP</name>
 		<destination>
 			<name>Write to /tmp folder</name>
