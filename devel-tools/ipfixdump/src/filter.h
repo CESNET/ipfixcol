@@ -1,7 +1,7 @@
 /**
- * \file typedefs.h
+ * \file filter.h
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Header containing typedefs for ipfixdump utility
+ * \brief Header of class for filtering
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,58 +37,45 @@
  *
  */
 
-#ifndef TYPEDEFS_H_
-#define TYPEDEFS_H_
+#ifndef FILTER_H_
+#define FILTER_H_
 
-#include <cstdio>
-#include <vector>
-#include <set>
-#include <map>
-#include "ibis.h"
-
-/* this is needed for the lexer: new yylex function prototype */
-#define YY_DECL int yylex(std::string &arg)
-
-enum yytokentype {
-	COLUMN = 258,
-	NUMBER = 259,
-	CMP = 260,
-	RAWCOLUMN = 261,
-	OPERATOR = 262,
-	OTHER = 300
-};
-
+#include "typedefs.h"
+#include "configuration.h"
 
 /**
  * \brief Namespace of the ipfixdump utility
  */
 namespace ipfixdump {
 
-typedef std::map<std::string, int> namesColumnsMap;
-
 /**
- * \brief Structure holding fastbit table and map of column names and column
- * numbers
+ * \brief Class managing filter
  *
- * This is used when table contains aggregated columns of names like "max4",
- * so that columnFormat can still access appropriate columns by its index.
+ * Parses and builds filter
  */
-struct tableContainer {
-	ibis::table* table;
-	namesColumnsMap namesColumns;
+class filter {
+private:
 
-	tableContainer(): table(NULL){};
+	configuration &conf; /**< program configuration */
 
-	~tableContainer() {
-		delete table;
-	}
+public:
+
+	/**
+	 * \brief Constructor
+	 *
+	 * @param conf Configuration class
+	 */
+	filter(configuration &conf);
+
+	/**
+	 * \brief Build and return filter string
+	 * @return Filter string
+	 */
+	std::string run();
+
 };
-
-typedef std::vector<std::string> stringVector;
-typedef std::vector<tableContainer*> tableVector;
-typedef std::set<std::string> stringSet;
 
 }  // namespace ipfixdump
 
 
-#endif /* CONFIGURATION_H_ */
+#endif /* FILTER_H_ */

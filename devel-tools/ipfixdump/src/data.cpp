@@ -38,9 +38,6 @@
  */
 
 #include <iostream>
-#include <cstdlib>
-#include <cstring>
-#include <ibis.h>
 #include "data.h"
 
 namespace ipfixdump

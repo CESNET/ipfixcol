@@ -1,7 +1,7 @@
 /**
- * \file typedefs.h
+ * \file scanner.l
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Header containing typedefs for ipfixdump utility
+ * \brief Flex ipfixdump filter scanner
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -36,59 +36,23 @@
  * if advised of the possibility of such damage.
  *
  */
+%{
+#include "typedefs.h"
+%}
+ 
+%option noyywrap nounput
+/*nodefault*/
 
-#ifndef TYPEDEFS_H_
-#define TYPEDEFS_H_
+%%
 
-#include <cstdio>
-#include <vector>
-#include <set>
-#include <map>
-#include "ibis.h"
+%[a-zA-Z]+			{ arg = yytext; return COLUMN; }
+e[0-9]+id[0-9]+		{ arg = yytext; return RAWCOLUMN; }
+" "+|\t+|\n+		{/* ignore spaces and newlines */}
+[0-9]+				{ arg = yytext; return NUMBER; }
+">"|"<"|"="|"==" |
+"=>"|"<="|">="|"=>"	{ arg = yytext; return CMP; }
+AND|OR|and|or		{ arg = yytext; return OPERATOR; }
+.					{ arg = yytext; return OTHER; }
 
-/* this is needed for the lexer: new yylex function prototype */
-#define YY_DECL int yylex(std::string &arg)
-
-enum yytokentype {
-	COLUMN = 258,
-	NUMBER = 259,
-	CMP = 260,
-	RAWCOLUMN = 261,
-	OPERATOR = 262,
-	OTHER = 300
-};
-
-
-/**
- * \brief Namespace of the ipfixdump utility
- */
-namespace ipfixdump {
-
-typedef std::map<std::string, int> namesColumnsMap;
-
-/**
- * \brief Structure holding fastbit table and map of column names and column
- * numbers
- *
- * This is used when table contains aggregated columns of names like "max4",
- * so that columnFormat can still access appropriate columns by its index.
- */
-struct tableContainer {
-	ibis::table* table;
-	namesColumnsMap namesColumns;
-
-	tableContainer(): table(NULL){};
-
-	~tableContainer() {
-		delete table;
-	}
-};
-
-typedef std::vector<std::string> stringVector;
-typedef std::vector<tableContainer*> tableVector;
-typedef std::set<std::string> stringSet;
-
-}  // namespace ipfixdump
-
-
-#endif /* CONFIGURATION_H_ */
+%%
+ 

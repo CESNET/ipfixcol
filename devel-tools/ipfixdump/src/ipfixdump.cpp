@@ -37,14 +37,10 @@
  *
  */
 
-#include <ibis.h>
-#include <sstream>
-#include <set>
-#include <string>
-
 #include "configuration.h"
 #include "data.h"
 #include "printer.h"
+#include "filter.h"
 
 using namespace ipfixdump;
 
@@ -61,6 +57,9 @@ int main(int argc, char *argv[])
 	ret = conf.init(argc, argv);
 	if (ret != 0) return ret;
 
+	/* initialise filter */
+	filter filter(conf);
+
 	/* initialise printer */
 	printer print(std::cout, conf);
 
@@ -69,9 +68,9 @@ int main(int argc, char *argv[])
 
 	/* do some work */
 	if (conf.aggregate) {
-		tables = data.aggregate(conf.aggregateColumnsDb, conf.filter.c_str());
+		tables = data.aggregate(conf.aggregateColumnsDb, filter.run().c_str());
 	} else {
-		tables = data.filter(conf.filter.c_str());
+		tables = data.filter(filter.run().c_str());
 	}
 
 	/* print tables */
