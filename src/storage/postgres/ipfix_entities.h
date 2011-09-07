@@ -48,9 +48,9 @@ struct ipfix_entity {
 	char *type;
 };
 
-struct ipfix_entity ipfix_entities[] = {
+const struct ipfix_entity ipfix_entities[] = {
 	{ 0, "reserved", "reserved" },
-	{ 1, "octetDeltaCount", "unsigned64"},
+	{ 1, "octetDeltaCount", "unsigned64" },
 	{ 2, "packetDeltaCount", "unsigned64" },
 	{ 3, "reserved", "reserved" },
 	{ 4, "protocolIdentifier", "unsigned8" },

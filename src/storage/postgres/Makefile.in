@@ -1,5 +1,5 @@
 CC      = gcc
-CFLAGS  = -Wall -I/usr/include/libxml2 -pthread
+CFLAGS  = -Wall -I/usr/include/libxml2 -pthread -g
 LIBS    = -ldl  -lxml2 -lcommlbr -lpq
 INCLUDE = "-I../../../"
 

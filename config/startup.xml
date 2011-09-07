@@ -96,18 +96,20 @@
 		<name>Postgres</name>
 		<destination>
 			<name>store data records in PostgreSQL database</name>
-			<postgres>
+			<fileWriter>
 				<!--## Name of host to connect to -->
 				<host>localhost</host>
+				<!--## IP address of host to connect to -->
+				<hostaddr>localhost</hostaddr>
 				<!--## Port number to connect to at the server host -->
 				<port>5432</port>
 				<!--## Name of the database -->
 				<dbname>test</dbname>
 				<!--## PostgreSQL user name to connect as -->
-				<user>IPFIXuser</user>
+				<user>username</user>
 				<!--## Password to be used if the server demands password authentication -->
 				<pass>password</pass>
-			</postgres>
+			</fileWriter>
 		</destination>
 	</exportingProcess>
 
