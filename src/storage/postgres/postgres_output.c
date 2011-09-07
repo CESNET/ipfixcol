@@ -214,7 +214,6 @@ static int create_table(struct postgres_config *config, struct ipfix_template *t
 	/* create SQL command */
 	snprintf(sql_command, sql_command_len, "%s%u%s", "CREATE TABLE \"Template", template->template_id, "\" (");
 
-	fprintf(stderr, "DEBUG: new template (%u) to process\n", template->template_id);
 	/* get columns from template */
 	index = 0;
 	fields = (uint8_t *) template->fields;
@@ -225,7 +224,6 @@ static int create_table(struct postgres_config *config, struct ipfix_template *t
 		if (*((uint16_t *) template->fields+index) >> 15) {
 			/* this is Enterprise ID, we will store such data in column
 			 * of type "bytea" (array of bytes without specific meaning) */
-			fprintf(stderr, "DEBUG: !enterprise number!\n");
 			postgres_type = "bytea";
 			index += 8; /* IE ID (2) + length (2) + Enterprise Number (4) */
 		} else {
