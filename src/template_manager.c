@@ -88,7 +88,7 @@ static void tm_copy_fields(uint8_t *to, uint8_t *from, uint16_t length)
 			*((uint16_t*)(template_ptr+offset+i*2)) = ntohs(*((uint16_t*)(tmpl_ptr+offset+i*2)));
 		}
 		offset += TEMPLATE_FIELD_LEN;
-		if (*(template_ptr+offset-TEMPLATE_FIELD_LEN) & 0x8000) { /* enterprise element has first bit set to 1*/
+		if (*((uint16_t *) (template_ptr+offset-TEMPLATE_FIELD_LEN)) & 0x8000) { /* enterprise element has first bit set to 1*/
 			for (i=0; i < TEMPLATE_ENT_NUM_LEN / 4; i++) {
 				*((uint32_t*)(template_ptr+offset)) = ntohl(*((uint32_t*)(tmpl_ptr+offset)));
 			}
