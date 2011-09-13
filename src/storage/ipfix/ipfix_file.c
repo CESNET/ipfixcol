@@ -60,6 +60,7 @@
 #include <arpa/inet.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
+#include <time.h>
 
 #include "commlbr.h"
 #include "ipfixcol.h"
@@ -95,11 +96,12 @@ static int prepare_output_file(struct ipfix_config *config)
 	/* byte counter */
 	config->bcounter = 0;
 
+
 	fd = open(config->file, O_WRONLY | O_CREAT | O_TRUNC,
 	          S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (fd == -1) {
 		config->fcounter -= 1;
-		VERBOSE(CL_VERBOSE_OFF, "unable to open output file");
+		VERBOSE(CL_VERBOSE_OFF, "Unable to open output file");
 		return -1;
 	}
 
@@ -120,7 +122,7 @@ static int close_output_file(struct ipfix_config *config)
 
 	ret = close(config->fd);
 	if (ret == -1) {
-		VERBOSE(CL_VERBOSE_OFF, "error when closing output file");
+		VERBOSE(CL_VERBOSE_OFF, "Error when closing output file");
 		return -1;
 	}
 
@@ -152,10 +154,13 @@ int storage_init(char *params, void **config)
 	xmlDocPtr doc;
 	xmlNodePtr cur;
 
+	time_t t;
+	struct tm tm;
+
  	/* allocate space for config structure */
 	conf = (struct ipfix_config *) malloc(sizeof(*conf));
 	if (conf == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "not enough memory");
+		VERBOSE(CL_VERBOSE_OFF, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
 	memset(conf, '\0', sizeof(*conf));
@@ -163,16 +168,16 @@ int storage_init(char *params, void **config)
 	/* try to parse configuration file */
 	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
 	if (doc == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "plugin configuration not parsed successfully");
+		VERBOSE(CL_VERBOSE_OFF, "Plugin configuration not parsed successfully");
 		goto err_init;
 	}
 	cur = xmlDocGetRootElement(doc);
 	if (cur == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "empty configuration");
+		VERBOSE(CL_VERBOSE_OFF, "Empty configuration");
 		goto err_init;
 	}
 	if (xmlStrcmp(cur->name, (const xmlChar *) "fileWriter")) {
-		VERBOSE(CL_VERBOSE_OFF, "root node != fileWriter");
+		VERBOSE(CL_VERBOSE_OFF, "Root node != fileWriter");
 		goto err_init;
 	}
 	cur = cur->xmlChildrenNode;
@@ -187,7 +192,7 @@ int storage_init(char *params, void **config)
 
 	/* check whether we have found "file" element in configuration file */
 	if (conf->xml_file == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "configuration file doesn't specify where "
+		VERBOSE(CL_VERBOSE_OFF, "Configuration file doesn't specify where "
 		                        "to store output files (\"file\" element "
 								"is missing)");
 		goto err_init;
@@ -195,17 +200,34 @@ int storage_init(char *params, void **config)
 
 	/* we only support local files */
 	if (strncmp((char *) conf->xml_file, "file:", 5)) {
-		VERBOSE(CL_VERBOSE_OFF, "element \"file\": invalid URI - "
+		VERBOSE(CL_VERBOSE_OFF, "Element \"file\": invalid URI - "
 		                        "only allowed scheme is \"file:\"");
 		goto err_init;
 	}
 
-	/* skip "file:" at the beginning of the URI */
-	conf->file = (char *) conf->xml_file + 5;
+	/* output file path + timestamp */
+	conf->file = (char *) malloc(strlen((char *) conf->xml_file)+12);
+	if (conf->file == NULL) {
+		VERBOSE(CL_VERBOSE_OFF, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		goto err_init;
+	}
+	memset(conf->file, 0, strlen((char *) conf->xml_file)+14);
+
+	/* copy file path, skip "file:" at the beginning of the URI */
+	strcpy(conf->file, (char *) conf->xml_file + 5);
+
+	/* add timestamp at the end of the file name */
+	memset(&tm, 0, sizeof(tm));
+	t = time(NULL);
+
+	localtime_r(&t, &tm);
+
+	strftime(conf->file+strlen((char *) conf->file), 14, ".%y%m%d%H%M%S", &tm);
+	/* conf->file now looks like: "/path/to/file.1109131509" */
 
 	prepare_output_file(conf);
 
-	/* we don't need this xml tree any more */
+	/* we don't need this xml tree anymore */
 	xmlFreeDoc(doc);
 
 	*config = conf;
@@ -248,7 +270,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 				break;
 			} else {
 				/* serious error occurs */
-				VERBOSE(CL_VERBOSE_OFF, "error while writing into the "
+				VERBOSE(CL_VERBOSE_OFF, "Error while writing into the "
 				                        "output file");
 				return -1;
 			}
@@ -272,7 +294,6 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
  */
 int store_now(const void *config)
 {
-	/* FIXME - is this enough? */
 	struct ipfix_config *conf;
 	conf = (struct ipfix_config *) config;
 
@@ -304,6 +325,7 @@ int storage_close(void **config)
 	}
 
 	xmlFree(conf->xml_file);
+	free(conf->file);
 	free(conf);
 
 	*config = NULL;
