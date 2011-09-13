@@ -1,7 +1,7 @@
 /**
- * \file ipfix_postgres_data_types.h
+ * \file ipfix_postgres_types.h
  * \author Michal Srb <michal.srb@cesnet.cz>
- * \brief List of IPFIX entities
+ * \brief Auxiliary structure for translating IPFIX data types to PostgreSQL data types
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *

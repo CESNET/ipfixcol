@@ -1,5 +1,5 @@
 /**
- * \file ipfix_entities.c
+ * \file ipfix_entities.h
  * \author Michal Srb <michal.srb@cesnet.cz>
  * \brief List of IPFIX entities
  *
