@@ -259,7 +259,8 @@ static int create_table(struct postgres_config *config, struct ipfix_template *t
 
 	sql_len += snprintf(sql_command+sql_len, sql_command_len-sql_len, ")");
 
-	fprintf(stderr, "DEBUG: %s\n", sql_command);
+	/* DEBUG */
+	/* fprintf(stderr, "DEBUG: %s\n", sql_command); */
 
 	/* execute the command */
 	res = PQexec(config->conn, sql_command);
@@ -729,7 +730,9 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 
 		sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
 		                    "%s", ")");
-		fprintf(stderr, "\nDEBUG: SQL command to execute:\n %s\n", sql_command);
+
+		/* DEBUG */
+		/* fprintf(stderr, "\nDEBUG: SQL command to execute:\n %s\n", sql_command); */
 
 		res = PQexec(conf->conn, sql_command);
 		if (PQresultStatus(res) != PGRES_COMMAND_OK) {
