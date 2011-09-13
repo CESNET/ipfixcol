@@ -41,8 +41,6 @@
  * \defgroup postgresOutput Plugin for storing IPFIX data in PostgreSQL database.
  * \ingroup storagePlugins
  *
- * \todo
- *
  * @{
  */
 
@@ -66,8 +64,10 @@
 #define DEFAULT_CONFIG_DBNAME "ipfix_data"
 /* prefix for every table that will be created in database */
 #define TABLE_NAME_PREFIX     "Template"
+/* table name length */
+#define TABLE_NAME_LEN 128
 /* default length of the SQL commands */
-#define SQL_COMMAND_LENGTH 1024;
+#define SQL_COMMAND_LENGTH 2048;
 
 
 /**
@@ -78,16 +78,16 @@
 struct postgres_config {
 	PGconn *conn;                   /** database connection */
 	uint16_t *table_names;          /** list of tables in database, every table corresponds to a template */
-	uint16_t table_counter;
-	uint16_t table_size;
+	uint16_t table_counter;         /** number of known tables in database */
+	uint16_t table_size;            /** size of the table_names member */
 };
 
 
 /**
- * \brief TODO
+ * \brief get corresponding PostgreSQL data type for IPFIX data type
  *
- * \param[in] ipfix_type
- * \return
+ * \param[in] ipfix_type IPFIX data type
+ * \return NULL if IPFX data type is invalid or unknown, corresponding PostgreSQL data type otherwise
  */
 static char *get_postgres_data_type(const char *ipfix_type)
 {
@@ -111,10 +111,12 @@ static char *get_postgres_data_type(const char *ipfix_type)
 
 
 /**
- * \brief TODO
+ * \brief Translate IPFIX data type specified as string to its numerical equivalent
  *
- * \param[in] ipfix_type
- * \return
+ * For internal usage in switch statement
+ *
+ * \param[in] ipfix_type IPFIX data type
+ * \return -1 on invalid IPFIX type, positive value otherwise
  */
 static int ipfix_type_to_internal(const char *ipfix_type)
 {
@@ -138,10 +140,10 @@ static int ipfix_type_to_internal(const char *ipfix_type)
 
 
 /**
- * \brief TODO
+ * \brief Get IPFIX data type from Information Element ID
  *
- * \param[in] ie_id
- * \return
+ * \param[in] ie_id Information Element ID
+ * \return IPFIX data type of the Element, NULL otherwise.
  */
 static char *get_ie_type(uint16_t ie_id)
 {
@@ -150,17 +152,15 @@ static char *get_ie_type(uint16_t ie_id)
 		return NULL;
 	}
 
-	assert((ie_id == ipfix_entities[ie_id].id) ? 1 : 0);
-
 	return ipfix_entities[ie_id].type;
 }
 
 
 /**
- * \brief TODO
+ * \brief Translate Information Element ID to its IPFIX name.
  *
- * \param[in] ie_id
- * \return
+ * \param[in] ie_id Information Element ID
+ * \return string containing name of the Information Element
  */
 static char *get_ie_name(uint16_t ie_id)
 {
@@ -169,8 +169,6 @@ static char *get_ie_name(uint16_t ie_id)
 		return NULL;
 	}
 
-	assert((ie_id == ipfix_entities[ie_id].id) ? 1 : 0);
-
 	return ipfix_entities[ie_id].name;
 }
 
@@ -178,8 +176,8 @@ static char *get_ie_name(uint16_t ie_id)
 /**
  * \brief Create new table in DB
  *
- * \param[in] config TODO
- * \param[in] template
+ * \param[in] config config structure
+ * \param[in] template IPFIX template to create table for
  * \return 0 on success
  */
 static int create_table(struct postgres_config *config, struct ipfix_template *template)
@@ -187,15 +185,21 @@ static int create_table(struct postgres_config *config, struct ipfix_template *t
 	PGresult *res;
 	char *sql_command;
 	uint16_t sql_command_len = SQL_COMMAND_LENGTH;
-	char *tmp_sql_command;
 	uint16_t u;
 	int index;
-	uint16_t length;
 	char *postgres_type;
 	char *ipfix_type;
 	char *column_name;
+	uint16_t ie_id;           /* enterprise element */
+	uint32_t pen;
+	char ie_id_str[15];
 	uint8_t *fields;
+	uint16_t unknown_column_name_num = 0;
+	char unknown_column_name_str[20];
+	int sql_len;
 
+	memset(ie_id_str, 0, sizeof(ie_id_str));
+	memset(unknown_column_name_str, 0, sizeof(unknown_column_name_str));
 
 	sql_command = (char *) malloc(sql_command_len);
 	if (!sql_command) {
@@ -204,50 +208,58 @@ static int create_table(struct postgres_config *config, struct ipfix_template *t
 	}
 	memset(sql_command, 0, sql_command_len);
 
-	tmp_sql_command = (char *) malloc(sql_command_len);
-	if (!tmp_sql_command) {
-		VERBOSE(CL_VERBOSE_OFF, "Out of memory (%s:%d)", __FILE__, __LINE__);
-		goto err_sql_command;
-	}
-	memset(tmp_sql_command, 0, sql_command_len);
-
+	sql_len = 0;
 	/* create SQL command */
-	snprintf(sql_command, sql_command_len, "%s%u%s", "CREATE TABLE \"Template", template->template_id, "\" (");
+	sql_len += snprintf(sql_command, sql_command_len, "%s%u%s", "CREATE TABLE \"Template", template->template_id, "\" (");
 
 	/* get columns from template */
 	index = 0;
 	fields = (uint8_t *) template->fields;
 	for (u = 0; u < template->field_count; u++) {
 
-		length = *((uint16_t *) (fields+index+2)); // TODO - variable length
+		ie_id = 0;
 		column_name = get_ie_name(*((uint16_t *) (fields+index)));
-		if (*((uint16_t *) template->fields+index) >> 15) {
+
+		if (*((uint16_t *) (fields+index)) >> 15) {
 			/* this is Enterprise ID, we will store such data in column
 			 * of type "bytea" (array of bytes without specific meaning) */
 			postgres_type = "bytea";
+			ie_id = *((uint16_t *) (fields+index));
+			ie_id &= 0x7fff;       /* drop most significant bit */
+			pen = *((uint32_t *) (fields+index+4));
+
+			sprintf(ie_id_str, "ie%hupen%u", ie_id, pen);
+			column_name = ie_id_str;
 			index += 8; /* IE ID (2) + length (2) + Enterprise Number (4) */
 		} else {
-			/* regular element */
+			/* regular information element */
 			ipfix_type = get_ie_type(*((uint16_t *) (fields+index)));
+			if (!ipfix_type) {
+				/* unknown data type, we will pretend it's byte array */
+				postgres_type = "bytea";
+				sprintf(unknown_column_name_str, "unknown_%u", unknown_column_name_num);
+				++unknown_column_name_num;
+				column_name = unknown_column_name_str;
+
+			} else {
+				/* get corresponding postgres data type */
+				postgres_type = get_postgres_data_type(ipfix_type);
+			}
 			index += 4;
-			postgres_type = get_postgres_data_type(ipfix_type);
 		}
 
 
-		snprintf(tmp_sql_command, sql_command_len, "%s \"%s\" %s,", sql_command,
-				                                 column_name, postgres_type);
-		snprintf(sql_command, sql_command_len, "%s", tmp_sql_command);  /* TODO - memcpy? */
+		sql_len += snprintf(sql_command+sql_len, sql_command_len-sql_len,
+				"\"%s\" %s,", column_name, postgres_type);
 	}
 
 	/* get rid of comma on the end of the command */
 	sql_command[strlen(sql_command)-1] = '\0';
+	sql_len -= 1;
 
-	snprintf(tmp_sql_command, sql_command_len, "%s)", sql_command);
+	sql_len += snprintf(sql_command+sql_len, sql_command_len-sql_len, ")");
 
-	free(sql_command);
-	sql_command = tmp_sql_command;
-
-	// fprintf(stderr, "DEBUG: %s\n", sql_command);
+	fprintf(stderr, "DEBUG: %s\n", sql_command);
 
 	/* execute the command */
 	res = PQexec(config->conn, sql_command);
@@ -257,6 +269,8 @@ static int create_table(struct postgres_config *config, struct ipfix_template *t
 		goto err_sql_command;
 	}
 	PQclear(res);
+
+	free(sql_command);
 
 	return 0; /* table successfully created */
 
@@ -268,11 +282,11 @@ err_sql_command:
 
 
 /**
- * \brief TODO
+ * \brief INSERT INTO
  *
- * \param[in] config
- * \param[in] table_name
- * \param[in] couple
+ * \param[in] config config structure
+ * \param[in] table_name name of the table
+ * \param[in] couple template+data couple
  * \return 0 on success
  */
 static int insert_into(struct postgres_config *conf, const char *table_name, const struct data_template_couple *couple)
@@ -281,9 +295,10 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 	uint16_t data_index;
 	uint16_t template_index;
 	uint16_t u;
-	uint16_t u2;
 	uint16_t ie_id;
 	uint16_t length;
+	size_t to_length;
+
 	struct ipfix_data_set *data_set = couple->data_set;
 	struct ipfix_template *template = couple->template;
 	char *ipfix_type;
@@ -321,41 +336,28 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 	fields = (uint8_t *) template->fields;
 
 
-
 	data_index = 0;
 	template_index = 0;
 
-	while (data_index < (ntohs(data_set->header.length) - template->data_length-1)) {
+	while (data_index < (ntohs(data_set->header.length) - (template->data_length & 0x7fffffff)-1)) {
 		sql_len = 0;
 		sql_len += snprintf(sql_command, sql_command_max_len,
 		                 "INSERT INTO \"%s\" VALUES (", table_name);
-	for (u = 0; u < template->field_count; u++) {
+		for (u = 0; u < template->field_count; u++) {
 
-		ie_id = *((uint16_t *) (fields+template_index));
-		length = *((uint16_t *) (fields+template_index+2));
+			ie_id = *((uint16_t *) (fields+template_index));
+			length = *((uint16_t *) (fields+template_index+2));
 
-		if (ie_id >> 15) {
-			/* there is an Enterprise Number */
-			bytea_str = (char *) malloc(length * 2);  /* will contain hexadecimal presentation of data */
-			if (!bytea_str) {
-				VERBOSE(CL_VERBOSE_OFF, "Out of memory (%s:%d)", __FILE__, __LINE__);
-				goto err_sql_command;
+			/* check whether this element has variable length */
+			if (length == 65535) {
+				/* this element's length is in data, not in template */
+				length = *((uint8_t *) (data_set->records+data_index));
+				data_index += 1;
+				if (length == 255) {
+					length = ntohs(*((uint16_t *) (data_set->records+data_index)));
+					data_index += 2;
+				}
 			}
-			memset(bytea_str, 0, length * 2);
-
-			for (u2 = 0; u2 < length; u2++) {
-				/* FIXME soooo sloooow */
-				uint8 = *((uint8_t *) data_set->records+data_index);
-				sql_len = snprintf(sql_command+sql_len,
-				        sql_command_max_len-sql_len, "%x", uint8);
-			}
-			data_index += length;
-
-		} else {
-			/* no Enterprise number */
-
-			ipfix_type = get_ie_type(ie_id);
-			template_index += 4;
 
 			/* next column value -> put comma in SQL command */
 			if (u > 0) {
@@ -363,341 +365,382 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 				                    "%c", ',');
 			}
 
-			switch(ipfix_type_to_internal(ipfix_type)) {
-			case (UINT8):
-				uint8 = *((uint8_t *) (data_set->records+data_index));
-				data_index += 1;
+			if (ie_id >> 15) {
+				/* it is Enterprise Element */
 				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-				                    "%u", uint8);
-				break;
+				                    "E'");
 
-			case (UINT16):
-				uint16 = *((uint16_t *) (data_set->records+data_index));
-
-				if ((extra_bytes = sizeof(uint16_t) - length) != 0) {
-					/* exporter used fewer bytes to encode information element */
-					uint16 = (uint16 << (extra_bytes * 8)) >> (extra_bytes * 8);
-
-					/* now we need to convert given value to host byte order */
-					switch (length) {
-					case sizeof(uint8_t):
-						/* no need for byte order conversion */
-						break;
-					}
-				} else {
-					/* length in template corresponds to length in RFC */
-					uint16 = ntohs(uint16);
-				}
-
-				data_index += length;
-
-				sql_len += snprintf(sql_command+sql_len,
-				        sql_command_max_len-sql_len, "%u", uint16);
-				break;
-
-			case (UINT32):
-				uint32 = *((uint32_t *) (data_set->records+data_index));
-
-				if ((extra_bytes = sizeof(uint32_t) - length) != 0) {
-					/* exporter used fewer bytes to encode information element */
-					uint32 = (uint32 << (extra_bytes * 8)) >> (extra_bytes * 8);
-
-					/* now we need to convert given value to host byte order */
-					switch (length) {
-					case sizeof(uint8_t):
-						/* no need for byte order conversion */
-						break;
-					case sizeof(uint16_t):
-							uint32 = (uint32_t) ntohs((uint16_t) uint32);
-						break;
-					}
-				} else {
-					/* length in template corresponds to length in RFC */
-					uint32 = ntohl(uint32);
-				}
-
-				data_index += length;
-				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-				                    "%u", uint32);
-				break;
-
-			case (UINT64):
-				uint64 = *((uint64_t *) (data_set->records+data_index));
-
-				if ((extra_bytes = sizeof(uint64_t) - length) != 0) {
-					/* exporter used fewer bytes to encode information element */
-					uint64 = (uint64 << (extra_bytes * 8)) >> (extra_bytes * 8);
-
-					/* now we need to convert given value to host byte order */
-					switch (length) {
-					case sizeof(uint8_t):
-						/* no need for byte order conversion */
-						break;
-					case sizeof(uint16_t):
-						uint64 = (uint64_t) ntohs((uint16_t) uint64);
-						break;
-					case sizeof(uint32_t):
-						uint64 = (uint64_t) ntohl((uint32_t) uint64);
-						break;
-					}
-				} else {
-					/* length in template corresponds to length in RFC */
-					uint64 = be64toh(uint64);
-				}
-
-				data_index += length;
+				/* escape binary data for use within an SQL command */
+				bytea_str = (char *) PQescapeByteaConn(conf->conn,
+				        (unsigned char *) (data_set->records+data_index), length, &to_length);
+				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "%s", bytea_str);
 
 				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-				                    "%"PRIu64, uint64);
-				break;
+				                    "'");
 
-			case (INT8):
-				int8 = (int8_t) *((uint8_t *) (data_set->records+data_index));
-				data_index += length;
-				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-				                    "%d", int8);
-				break;
+				PQfreemem(bytea_str);
 
-			case (INT16):
-				int16 = (int16_t) *((uint16_t *) (data_set->records+data_index));
-
-				if ((extra_bytes = sizeof(int16_t) - length) != 0) {
-					/* exporter used fewer bytes to encode information element */
-					int16 = (int16 << (extra_bytes * 8)) >> (extra_bytes * 8);
-
-					/* now we need to convert given value to host byte order */
-					switch (length) {
-					case sizeof(int8_t):
-						/* no need for byte order conversion */
-						break;
-					}
-				} else {
-					/* length in template corresponds to length in RFC */
-					int16 = ntohs((uint16_t) int16);
-				}
-
-				data_index += length;
-				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-				                    "%d", int16);
-				break;
-
-			case (INT32):
-				int32 = (int32_t) *((uint32_t *) (data_set->records+data_index));
-
-				if ((extra_bytes = sizeof(int32_t) - length) != 0) {
-					/* exporter used fewer bytes to encode information element */
-					uint32 = (uint32 << (extra_bytes * 8)) >> (extra_bytes * 8);
-
-					/* now we need to convert given value to host byte order */
-					switch (length) {
-					case sizeof(int8_t):
-						/* no need for byte order conversion */
-						break;
-					case sizeof(int16_t):
-						int32 = (int32_t) ntohs((uint16_t) int32);
-						break;
-					}
-				} else {
-					/* length in template corresponds to length in RFC */
-					int32 = ntohl((uint32_t) int32);
-				}
-
-				data_index += length;
-				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-				                    "%d", int32);
-				break;
-
-			case (INT64):
-				int64 = (int64_t) *((uint64_t *) (data_set->records+data_index));
-
-				if ((extra_bytes = sizeof(int64_t) - length) != 0) {
-					/* exporter used fewer bytes to encode information element */
-					int64 = (int64 << (extra_bytes * 8)) >> (extra_bytes * 8);
-
-					/* now we need to convert given value to host byte order */
-					switch (length) {
-					case sizeof(int8_t):
-						/* no need for byte order conversion */
-						break;
-					case sizeof(int16_t):
-						int64 = (int64_t) ntohs((uint16_t) int64);
-						break;
-					case sizeof(int32_t):
-						int64 = (int64_t) ntohl((uint32_t) int64);
-						break;
-					}
-				} else {
-					/* length in template corresponds to length in RFC */
-					int64 = be64toh((uint64_t) int64);
-				}
-
-				data_index += length;
-				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-				                    "%"PRId64, int64);
-				break;
-
-			case (STRING):
-				string = (char *) malloc(length + 1);
-				if (!string) {
-					VERBOSE(CL_VERBOSE_OFF, "Out of memory (%s:%d)", __FILE__, __LINE__);
-					goto err_sql_command;
-				}
-				memset(string, 0, length + 1);
-
+				template_index += 8;
 				data_index += length;
 
-				memcpy(string, data_set->records+data_index, length);
+			} else {
+				/* no Enterprise Element */
 
-				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-				                    "%s", string);
-				free(string);
-				string = NULL;
-				break;
+				ipfix_type = get_ie_type(ie_id);
+				template_index += 4;
 
-			case (BOOLEAN):
-				uint8 = *((uint8_t *) data_set->records+data_index);
+				switch(ipfix_type_to_internal(ipfix_type)) {
+				case (UINT8):
+					uint8 = *((uint8_t *) (data_set->records+data_index));
 
-				/* in IPFIX, boolean is encoded in single octet
-				 * 1 means TRUE, 2 means FALSE */
-				switch (uint8) {
-				case (1):
-					string = "true";
+
+					data_index += length;
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+					                    "%u", uint8);
 					break;
-				case (2):
-					string = "false";
+
+				case (UINT16):
+					uint16 = *((uint16_t *) (data_set->records+data_index));
+
+					if ((extra_bytes = sizeof(uint16_t) - length) != 0) {
+						/* exporter used fewer bytes to encode information element */
+						uint16 = (uint16 << (extra_bytes * 8)) >> (extra_bytes * 8);
+
+						/* now we need to convert given value to host byte order */
+						switch (length) {
+						case sizeof(uint8_t):
+							/* no need for byte order conversion */
+							break;
+						}
+					} else {
+						/* length in template corresponds to length in RFC */
+						uint16 = ntohs(uint16);
+					}
+
+					data_index += length;
+
+					sql_len += snprintf(sql_command+sql_len,
+					        sql_command_max_len-sql_len, "%u", uint16);
 					break;
-				}
 
-				data_index += length;
+				case (UINT32):
+					uint32 = *((uint32_t *) (data_set->records+data_index));
 
-				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-				                    "%s", string);
-				break;
+					if ((extra_bytes = sizeof(uint32_t) - length) != 0) {
+						/* exporter used fewer bytes to encode information element */
+						uint32 = (uint32 << (extra_bytes * 8)) >> (extra_bytes * 8);
 
-			case (IPV4ADDR):
-				uint32 = *((uint32_t *) (data_set->records+data_index));
+						/* now we need to convert given value to host byte order */
+						switch (length) {
+						case sizeof(uint8_t):
+							/* no need for byte order conversion */
+							break;
+						case sizeof(uint16_t):
+								uint32 = (uint32_t) ntohs((uint16_t) uint32);
+							break;
+						}
+					} else {
+						/* length in template corresponds to length in RFC */
+						uint32 = ntohl(uint32);
+					}
 
-				inet_ntop(AF_INET, data_set->records+data_index, ip_addr, INET6_ADDRSTRLEN);
+					data_index += length;
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+					                    "%u", uint32);
+					break;
 
-				data_index += length;
-				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-				                    "'%s'", ip_addr);
-				break;
+				case (UINT64):
+					uint64 = *((uint64_t *) (data_set->records+data_index));
 
-			case (IPV6ADDR):
-				inet_ntop(AF_INET6, data_set->records+data_index, ip_addr, INET6_ADDRSTRLEN);
-				data_index += length;
-				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-				                    "'%s'", ip_addr);
-				break;
+					if ((extra_bytes = sizeof(uint64_t) - length) != 0) {
+						/* exporter used fewer bytes to encode information element */
+						uint64 = (uint64 << (extra_bytes * 8)) >> (extra_bytes * 8);
 
-			case (MACADDR):
-				mac_addr[5] = *((uint8_t *) (data_set->records+data_index));
-				mac_addr[4] = *((uint8_t *) (data_set->records+data_index+1));
-				mac_addr[3] = *((uint8_t *) (data_set->records+data_index+2));
-				mac_addr[2] = *((uint8_t *) (data_set->records+data_index+3));
-				mac_addr[1] = *((uint8_t *) (data_set->records+data_index+4));
-				mac_addr[0] = *((uint8_t *) (data_set->records+data_index+5));
+						/* now we need to convert given value to host byte order */
+						switch (length) {
+						case sizeof(uint8_t):
+							/* no need for byte order conversion */
+							break;
+						case sizeof(uint16_t):
+							uint64 = (uint64_t) ntohs((uint16_t) uint64);
+							break;
+						case sizeof(uint32_t):
+							uint64 = (uint64_t) ntohl((uint32_t) uint64);
+							break;
+						}
+					} else {
+						/* length in template corresponds to length in RFC */
+						uint64 = be64toh(uint64);
+					}
 
-				data_index += 6;
-				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-				              "'%x:%x:%x:%x:%x:%x'", mac_addr[0], mac_addr[1],
-				              mac_addr[2], mac_addr[3], mac_addr[4],
-				              mac_addr[5]);
+					data_index += length;
 
-				break;
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+					                    "%"PRIu64, uint64);
+					break;
 
-			case (OCTETARRAY):
-				bytea_str = (char *) malloc(length * 2);  /* will contain hexadecimal presentation of data */
-				if (!bytea_str) {
-					VERBOSE(CL_VERBOSE_OFF, "Out of memory (%s:%d)", __FILE__, __LINE__);
-					goto err_sql_command;
-				}
-				memset(bytea_str, 0, length * 2);
+				case (INT8):
+					int8 = (int8_t) *((uint8_t *) (data_set->records+data_index));
+					data_index += length;
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+					                    "%d", int8);
+					break;
 
-				for (u2 = 0; u2 < length; u2++) {
-					/* FIXME soooo sloooow */
+				case (INT16):
+					int16 = (int16_t) *((uint16_t *) (data_set->records+data_index));
+
+					if ((extra_bytes = sizeof(int16_t) - length) != 0) {
+						/* exporter used fewer bytes to encode information element */
+						int16 = (int16 << (extra_bytes * 8)) >> (extra_bytes * 8);
+
+						/* now we need to convert given value to host byte order */
+						switch (length) {
+						case sizeof(int8_t):
+							/* no need for byte order conversion */
+							break;
+						}
+					} else {
+						/* length in template corresponds to length in RFC */
+						int16 = ntohs((uint16_t) int16);
+					}
+
+					data_index += length;
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+					                    "%d", int16);
+					break;
+
+				case (INT32):
+					int32 = (int32_t) *((uint32_t *) (data_set->records+data_index));
+
+					if ((extra_bytes = sizeof(int32_t) - length) != 0) {
+						/* exporter used fewer bytes to encode information element */
+						uint32 = (uint32 << (extra_bytes * 8)) >> (extra_bytes * 8);
+
+						/* now we need to convert given value to host byte order */
+						switch (length) {
+						case sizeof(int8_t):
+							/* no need for byte order conversion */
+							break;
+						case sizeof(int16_t):
+							int32 = (int32_t) ntohs((uint16_t) int32);
+							break;
+						}
+					} else {
+						/* length in template corresponds to length in RFC */
+						int32 = ntohl((uint32_t) int32);
+					}
+
+					data_index += length;
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+					                    "%d", int32);
+					break;
+
+				case (INT64):
+					int64 = (int64_t) *((uint64_t *) (data_set->records+data_index));
+
+					if ((extra_bytes = sizeof(int64_t) - length) != 0) {
+						/* exporter used fewer bytes to encode information element */
+						int64 = (int64 << (extra_bytes * 8)) >> (extra_bytes * 8);
+
+						/* now we need to convert given value to host byte order */
+						switch (length) {
+						case sizeof(int8_t):
+							/* no need for byte order conversion */
+							break;
+						case sizeof(int16_t):
+							int64 = (int64_t) ntohs((uint16_t) int64);
+							break;
+						case sizeof(int32_t):
+							int64 = (int64_t) ntohl((uint32_t) int64);
+							break;
+						}
+					} else {
+						/* length in template corresponds to length in RFC */
+						int64 = be64toh((uint64_t) int64);
+					}
+
+					data_index += length;
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+					                    "%"PRId64, int64);
+					break;
+
+				case (STRING):
+					string = (char *) malloc(length + 1);
+					if (!string) {
+						VERBOSE(CL_VERBOSE_OFF, "Out of memory (%s:%d)", __FILE__, __LINE__);
+						goto err_sql_command;
+					}
+					memset(string, 0, length + 1);
+
+					data_index += length;
+
+					memcpy(string, data_set->records+data_index, length);
+
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+					                    "%s", string);
+					free(string);
+					string = NULL;
+					break;
+
+				case (BOOLEAN):
 					uint8 = *((uint8_t *) data_set->records+data_index);
-					sql_len = snprintf(sql_command+sql_len,
-					        sql_command_max_len-sql_len, "%x", uint8);
-				}
-				data_index += length;
 
-				break;
+					/* in IPFIX, boolean is encoded in single octet
+					 * 1 means TRUE, 2 means FALSE */
+					switch (uint8) {
+					case (1):
+						string = "true";
+						break;
+					case (2):
+						string = "false";
+						break;
+					}
 
-			case (DATETIMESECONDS):
-				uint32 = ntohl(*((uint32_t *) data_set->records+data_index));
+					data_index += length;
 
-				data_index += length;
-				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-						"to_timestamp(%u)", uint32);
-				break;
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+					                    "%s", string);
+					break;
 
-			case (DATETIMEMILLISECONDS):
-			case (DATETIMEMICROSECONDS):
-			case (DATETIMENANOSECONDS):
-				/* according to RFC 5101, it is encoded as 64-bit integer */
-				uint64 = be64toh(*((uint64_t *) (data_set->records+data_index)));
-				data_index += length;
+				case (IPV4ADDR):
+					uint32 = *((uint32_t *) (data_set->records+data_index));
 
-				/* PostgreSQL expects microseconds */
-				switch (ipfix_type_to_internal(ipfix_type)) {
+					inet_ntop(AF_INET, data_set->records+data_index, ip_addr, INET6_ADDRSTRLEN);
+
+					data_index += length;
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+					                    "'%s'", ip_addr);
+					break;
+
+				case (IPV6ADDR):
+					inet_ntop(AF_INET6, data_set->records+data_index, ip_addr, INET6_ADDRSTRLEN);
+					data_index += length;
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+					                    "'%s'", ip_addr);
+					break;
+
+				case (MACADDR):
+					mac_addr[5] = *((uint8_t *) (data_set->records+data_index));
+					mac_addr[4] = *((uint8_t *) (data_set->records+data_index+1));
+					mac_addr[3] = *((uint8_t *) (data_set->records+data_index+2));
+					mac_addr[2] = *((uint8_t *) (data_set->records+data_index+3));
+					mac_addr[1] = *((uint8_t *) (data_set->records+data_index+4));
+					mac_addr[0] = *((uint8_t *) (data_set->records+data_index+5));
+
+					data_index += 6;
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+					              "'%x:%x:%x:%x:%x:%x'", mac_addr[0], mac_addr[1],
+					              mac_addr[2], mac_addr[3], mac_addr[4],
+					              mac_addr[5]);
+
+					break;
+
+				case (OCTETARRAY):
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+					                    "E'");
+
+					/* escape binary data for use within an SQL command */
+					bytea_str = (char *) PQescapeByteaConn(conf->conn,
+					        (unsigned char *) (data_set->records+data_index), length, &to_length);
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "%s", bytea_str);
+
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+					                    "'");
+
+					PQfreemem(bytea_str);
+
+					data_index += length;
+
+					break;
+
+				case (DATETIMESECONDS):
+					uint32 = ntohl(*((uint32_t *) data_set->records+data_index));
+
+					data_index += length;
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+							"to_timestamp(%u)", uint32);
+					break;
+
 				case (DATETIMEMILLISECONDS):
-					float64 = uint64 / 1000;
-					break;
 				case (DATETIMEMICROSECONDS):
-					float64 = uint64 / 1000000;
-					break;
 				case (DATETIMENANOSECONDS):
-					float64 = uint64 / 1000000000;
+					/* according to RFC 5101, it is encoded as 64-bit integer */
+					uint64 = be64toh(*((uint64_t *) (data_set->records+data_index)));
+					data_index += length;
+
+					/* PostgreSQL expects microseconds */
+					switch (ipfix_type_to_internal(ipfix_type)) {
+					case (DATETIMEMILLISECONDS):
+						float64 = uint64 / 1000;
+						break;
+					case (DATETIMEMICROSECONDS):
+						float64 = uint64 / 1000000;
+						break;
+					case (DATETIMENANOSECONDS):
+						float64 = uint64 / 1000000000;
+						break;
+					}
+
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+							"to_timestamp(%f)", float64);
+					break;
+
+				case (FLOAT32):
+					float32 = *((float *) (data_set->records+data_index));
+					data_index += length;
+
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+					                    "%f", float32);
+
+					break;
+
+				case (FLOAT64):
+					float64 = *((double *) (data_set->records+data_index));
+					data_index += length;
+
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+							"%f", float64);
+
+					break;
+
+				default:
+					/* we don't know nothing about this data type, so we just store the data in hex format */
+
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+					                    "E'");
+
+					/* escape binary data for use within an SQL command */
+					bytea_str = (char *) PQescapeByteaConn(conf->conn,
+					        (unsigned char *) (data_set->records+data_index), length, &to_length);
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "%s", bytea_str);
+
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+					                    "'");
+
+					PQfreemem(bytea_str);
+
+					data_index += length;
 					break;
 				}
-
-				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-						"to_timestamp(%f)", float64);
-				break;
-
-			case (FLOAT32):
-				float32 = *((float *) (data_set->records+data_index));
-				data_index += length;
-
-				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-				                    "%f", float32);
-
-				break;
-
-			case (FLOAT64):
-				float64 = *((double *) (data_set->records+data_index));
-				data_index += length;
-
-				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-						"%f", float64);
-
-				break;
-
-			default:
-				fprintf(stderr, "PostgreSQL storage plugin: unknown data type\n");
-				break;
 			}
 		}
-	}
 
 
 
-	sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-	                    "%s", ")");
-	// fprintf(stderr, "\nDEBUG: SQL command to execute:\n %s\n", sql_command);
+		sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
+		                    "%s", ")");
+		fprintf(stderr, "\nDEBUG: SQL command to execute:\n %s\n", sql_command);
 
-	res = PQexec(conf->conn, sql_command);
-	if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-		VERBOSE(CL_VERBOSE_OFF, "PostgreSQL: %s", PQerrorMessage(conf->conn));
+		res = PQexec(conf->conn, sql_command);
+		if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+			VERBOSE(CL_VERBOSE_OFF, "PostgreSQL: %s", PQerrorMessage(conf->conn));
+			PQclear(res);
+			goto err_sql_command;
+		}
 		PQclear(res);
-		goto err_sql_command;
-	}
-	PQclear(res);
 
-	template_index = 0;
-	sql_len = 0;
+		template_index = 0;
+		sql_len = 0;
 	}
 
 	free(sql_command);
@@ -717,8 +760,8 @@ err_sql_command:
  *
  * New template means new table in DB.
  *
- * \param[in] conf TODO
- * \param[in] ipfix_msg
+ * \param[in] conf config structure
+ * \param[in] ipfix_msg IPFIX message
  * \return 0 on success
  */
 static int process_new_templates(struct postgres_config *conf, const struct ipfix_message *ipfix_msg)
@@ -726,7 +769,6 @@ static int process_new_templates(struct postgres_config *conf, const struct ipfi
 	uint16_t template_index = 0;
 	struct ipfix_template *template;
 	uint16_t u;
-	int ret;
 	uint8_t flag = 0;
 
 	if (conf == NULL || ipfix_msg == NULL) {
@@ -747,11 +789,16 @@ static int process_new_templates(struct postgres_config *conf, const struct ipfi
 
 		if (flag) {
 			/* create new table */
-			ret = create_table(conf, template);
-			if (ret < 0) {
-				VERBOSE(CL_VERBOSE_OFF, "Table wasn't created");
-			}
+			create_table(conf, template);
 
+			if (conf->table_counter >= conf->table_size) {
+				/* we have to reallocate array of table names */
+				if (realloc(conf->table_names, conf->table_size * 2) == NULL) {
+					VERBOSE(CL_VERBOSE_OFF, "Out of memory (%s:%d)", __FILE__, __LINE__);
+				} else {
+					conf->table_size *= 2;
+				}
+			}
 			conf->table_names[conf->table_counter] = template->template_id;
 			conf->table_counter += 1;
 
@@ -775,19 +822,19 @@ static int process_new_templates(struct postgres_config *conf, const struct ipfi
 static int process_data_records(struct postgres_config *conf, const struct ipfix_message *ipfix_msg)
 {
 	uint16_t set_index = 0;
-	//struct ipfix_template *template;
 	struct ipfix_data_set *data_set;
-	//uint16_t u;
-	//int ret;
-	//uint8_t hit = 0;
-	char table_name[64];
+	char table_name[TABLE_NAME_LEN];
 
 	if (conf == NULL || ipfix_msg == NULL) {
 		return -1;
 	}
 
 	while ((data_set = ipfix_msg->data_set[set_index].data_set) != NULL) {
-		snprintf(table_name, 64, TABLE_NAME_PREFIX "%u", ipfix_msg->data_set[set_index].template->template_id);
+		if (ipfix_msg->data_set[set_index].template == NULL) {
+			/* no template for data record, skip */
+			continue;
+		}
+		snprintf(table_name, TABLE_NAME_LEN, TABLE_NAME_PREFIX "%u", ipfix_msg->data_set[set_index].template->template_id);
 		insert_into(conf, table_name, &(ipfix_msg->data_set[set_index]));
 
 		set_index++;
@@ -1010,7 +1057,6 @@ int storage_init(char *params, void **config)
 
 	free(tmp_connection_string);
 
-	// fprintf(stderr, "DEBUG: connection string: \"%s\"\n", connection_string);
 
 	/* try to connect to the database */
 	conn = PQconnectdb(connection_string);
@@ -1022,7 +1068,7 @@ int storage_init(char *params, void **config)
 	/* we don't need this XML configuration anymore */
 	xmlFreeDoc(doc);
 
-	conf->table_size = 128; /* TODO - macro */
+	conf->table_size = 128;       /* default value, just guess */
 	conf->table_names = (uint16_t *) malloc(conf->table_size * sizeof(uint16_t));
 
 	conf->conn = conn;
@@ -1075,7 +1121,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 
 
 /**
- * \brief Store everything we have immediately and close output file.
+ * \brief This function does nothing in PostgreSQL storage plugin
  *
  * Just flush all buffers.
  *
@@ -1121,7 +1167,7 @@ int storage_close(void **config)
 
 char *xml_configuration =
 		"<postgres>"
-		"<user>m4jkl</user>"
+		"<user>username</user>"
 		"<dbname>test</dbname>"
 		"</postgres>";
 
