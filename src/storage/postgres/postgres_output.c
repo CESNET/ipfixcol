@@ -873,7 +873,7 @@ int storage_init(char *params, void **config)
 	char *user = NULL;
 	char *pass = NULL;
 	size_t connection_string_len;
-	char *tmp_connection_string;
+	size_t str_len;
 
 	conf = (struct postgres_config *) malloc(sizeof(*conf));
 	if (!conf) {
@@ -997,43 +997,33 @@ int storage_init(char *params, void **config)
 	}
 	memset(connection_string, 0, connection_string_len);
 
-	/* because strings in sprintf() can't overlap, we need temporary buffer (FIXME - we don't need temp buffer) */
-	tmp_connection_string = (char *) malloc(connection_string_len);
-	if (tmp_connection_string == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Out of memory (%s:%d)", __FILE__, __LINE__);
-		goto err_connection_string;
-	}
-	memset(tmp_connection_string, 0, connection_string_len);
 
+	str_len = 0;
 	/* host specified */
 	if (host) {
-		sprintf(tmp_connection_string, "%s %s=%s", connection_string,
-				                                   "host", host);
-		sprintf(connection_string, "%s", tmp_connection_string);
+		str_len += snprintf(connection_string+str_len, connection_string_len-str_len,
+		                    " %s=%s", "host", host);
 		free(host);
 	}
 
 	/* hostaddr specified */
 	if (hostaddr) {
-		sprintf(tmp_connection_string, "%s %s=%s", connection_string,
-				                                   "hostaddr", hostaddr);
-		sprintf(connection_string, "%s", tmp_connection_string);
+		str_len += snprintf(connection_string+str_len, connection_string_len-str_len,
+		                    " %s=%s", "hostaddr", hostaddr);
 		free(hostaddr);
 	}
 
 	/* port specified */
 	if (port) {
-		sprintf(tmp_connection_string, "%s %s=%s", connection_string,
-				                                   "port", port);
-		sprintf(connection_string, "%s", tmp_connection_string);
+		str_len += snprintf(connection_string+str_len, connection_string_len-str_len,
+		                    " %s=%s", "port", port);
 		free(port);
 	}
 
 	/* dbname specified */
 	if (dbname) {
-		sprintf(tmp_connection_string, "%s %s=%s", connection_string,
-				                                   "dbname", dbname);
-		sprintf(connection_string, "%s", tmp_connection_string);
+		str_len += snprintf(connection_string+str_len, connection_string_len-str_len,
+		                    " %s=%s", "dbname", dbname);
 
 		/* do not try to free statically allocated memory */
 		if (dbname_allocated) {
@@ -1044,29 +1034,28 @@ int storage_init(char *params, void **config)
 
 	/* user specified */
 	if (user) {
-		sprintf(tmp_connection_string, "%s %s=%s", connection_string,
-				                                   "user", user);
-		sprintf(connection_string, "%s", tmp_connection_string);
+		str_len += snprintf(connection_string+str_len, connection_string_len-str_len,
+		                   " %s=%s", "user", user);
 		free(user);
 	}
 
 	/* pass specified */
 	if (pass) {
-		sprintf(tmp_connection_string, "%s %s=%s", connection_string,
-				                                   "pass", pass);
-		sprintf(connection_string, "%s", tmp_connection_string);
+		str_len += snprintf(connection_string+str_len, connection_string_len-str_len,
+		                    " %s=%s", "pass", pass);
 		free(pass);
 	}
 
-	free(tmp_connection_string);
-
+	/* DEBUG */
+	/* fprintf(stderr, "DEBUG: connection string: %s\n", connection_string+1); */
 
 	/* try to connect to the database */
-	conn = PQconnectdb(connection_string);
+	conn = PQconnectdb(connection_string+1);
 	if (PQstatus(conn) != CONNECTION_OK) {
 		VERBOSE(CL_VERBOSE_OFF, "Unable to create connection to the database: %s", PQerrorMessage(conn));
 		goto err_connection_string;
 	}
+
 
 	/* we don't need this XML configuration anymore */
 	xmlFreeDoc(doc);
