@@ -888,7 +888,10 @@ void clean_tmp_manager(struct ipfix_template_mgr *manager){
 }
 
 int usage(){
-	printf("HAHAHA\n");
+	printf("Usage: %s -i input_file -w output_dir [-h]\n",getprogname());
+	printf(" -i input_file	path to nfdump file for conversion\n");
+	printf(" -w output_dir	output direcotry for fastbit files\n");
+	printf(" -h 		prints this help\n");
 	return 0;
 }
 
