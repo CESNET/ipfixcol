@@ -1082,7 +1082,6 @@ int main(int argc, char *argv[]){
 		char * buffer_start = NULL;
 		
 		for(i = 0; i < header.NumBlocks && !stop ; i++){
-			VERBOSE(CL_VERBOSE_ADVANCED,"---------?C--------");
 			read_size = fread(&block_header, sizeof(struct data_block_header_s), 1,f);
 			if (read_size != 1){
 				VERBOSE(CL_ERROR,"Can't read block header: %s",input_file);
