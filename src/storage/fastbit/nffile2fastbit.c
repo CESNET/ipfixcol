@@ -13,6 +13,7 @@
 #include "nffile.h"
 #include "../../../headers/storage.h"
 
+#define ARGUMENTS "hi:w:"
 
 volatile int stop = 0;
 static int ctrl_c = 0;
@@ -886,7 +887,12 @@ void clean_tmp_manager(struct ipfix_template_mgr *manager){
 	manager->counter = 0;
 }
 
-int main(){
+int usage(){
+	printf("HAHAHA\n");
+	return 0;
+}
+
+int main(int argc, char *argv[]){
 	//char file[] = "/home/kramolis/NFDATA/nfcapd.20100301_anon";
 	char file[] = "/home/kramolis/NFDATA/log";
 //	char file[] = "/home/kramolis/NFDATA/c10";
@@ -910,7 +916,41 @@ int main(){
 	char *error;
 	struct ipfix_message ipfix_msg;
 	struct ipfix_template_mgr template_mgr;
+	char *input_file = 0;
+	char *output_dir = 0;
+	char c;
 
+
+	while((c = getopt(argc, argv, ARGUMENTS)) != -1) {
+		switch (c) {
+
+		case 'i':
+			input_file = optarg;
+			break;
+
+		case 'w':
+			output_dir = optarg;
+			break;
+		case 'h':
+			usage();
+			return 1;
+			break;
+		default:
+			VERBOSE(CL_ERROR,"unknown option!\n\n");
+			usage();
+			return 1;
+			break;
+		}
+	}
+
+	if(input_file == 0){
+		VERBOSE(CL_ERROR,"no input file specified (option '-i')")
+		return 1;
+	}
+	if(output_dir == 0){
+		VERBOSE(CL_ERROR,"no ouput direcotry specified (option '-w')")
+		return 1;
+	}
 
 	signal(SIGINT,&signal_handler);
 
@@ -942,11 +982,12 @@ int main(){
 	}
 	printf("calling plugin init\n");
 
-	char params[] = 
+	//plugin configuration xml
+	char params_template[] = 
         	"<?xml version=\"1.0\"?> \
                  <fileWriter xmlns=\"urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp\"> \
 			<fileFormat>fastbit</fileFormat> \
-			<path>storagePath</path> \
+			<path>%s</path> \
 			<dumpInterval> \
 				<timeWindow>0</timeWindow> \
 				<timeAlignment>yes</timeAlignment> \
@@ -958,6 +999,11 @@ int main(){
 			</namingStrategy> \
 			<onTheFlightIndexes>yes</onTheFlightIndexes> \
 		</fileWriter>";
+
+	char *params;
+	params = (char *) malloc(strlen(params_template)+strlen(output_dir));
+
+	sprintf(params, params_template, output_dir);
 
 
 	plugin_init(params, &config); //TODO add arguments
@@ -978,7 +1024,7 @@ int main(){
 	template_mgr.max_length = ext.size;
 	template_mgr.counter = 0;
 
-	f = fopen(file,"r");
+	f = fopen(input_file,"r");
 
 	if(f != NULL){
 		//read header of nffile
@@ -1281,7 +1327,7 @@ int main(){
 		fclose(f);
 		plugin_close(&config);
 	} else {
-		VERBOSE(CL_ERROR,"Can't open file: %s",file);
+		VERBOSE(CL_ERROR,"Can't open file: %s",input_file);
 	}
 	return 0;
 }
