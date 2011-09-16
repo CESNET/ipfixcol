@@ -896,10 +896,6 @@ int usage(){
 }
 
 int main(int argc, char *argv[]){
-	//char file[] = "/home/kramolis/NFDATA/nfcapd.20100301_anon";
-	char file[] = "/home/kramolis/NFDATA/log";
-//	char file[] = "/home/kramolis/NFDATA/c10";
-//	char file[] = "/home/kramolis/nffile/nfcapd.201107200815";
 	FILE *f;
 	int i;
 	char *buffer = NULL;
@@ -957,10 +953,7 @@ int main(int argc, char *argv[]){
 
 	signal(SIGINT,&signal_handler);
 
-	//verbose = CL_VERBOSE_ADVANCED;
-	dlhandle = dlopen ("/home/kramolis/git/ipfixcol/src/storage/fastbit/fastbit_output.so", RTLD_LAZY);
-	//dlhandle = dlopen ("/home/kramolis/git/ipfixcol/src/storage/ipfix/ipfix_output.so", RTLD_LAZY);
-//	dlhandle = dlopen ("/home/kramolis/git/ipfixcol/src/storage/fastbit/fcpp_output.so", RTLD_LAZY);
+	dlhandle = dlopen ("/home/kramolis/git/ipfixcol/src/storage/fastbit/fastbit_output.so", RTLD_LAZY); //TODO!!
 	if (!dlhandle) {
 	    fputs (dlerror(), stderr);
 	    exit(1);
@@ -1033,11 +1026,11 @@ int main(int argc, char *argv[]){
 		//read header of nffile
 		read_size = fread(&header, sizeof(struct file_header_s), 1,f);
 		if (read_size != 1){
-			VERBOSE(CL_ERROR,"Can't read file header: %s",file);
+			VERBOSE(CL_ERROR,"Can't read file header: %s",input_file);
 			fclose(f);
 			return 1;
 		}
-		VERBOSE(CL_VERBOSE_ADVANCED,"Parsed header from: '%s'",file);
+		VERBOSE(CL_VERBOSE_ADVANCED,"Parsed header from: '%s'",input_file);
 		VERBOSE(CL_VERBOSE_ADVANCED,"\tMAGIC: %x", header.magic);
 		VERBOSE(CL_VERBOSE_ADVANCED,"\tVERSION: %i", header.version);
 		VERBOSE(CL_VERBOSE_ADVANCED,"\tFLAGS: %i", header.flags);
@@ -1047,12 +1040,12 @@ int main(int argc, char *argv[]){
 
 		read_size = fread(&stats, sizeof(struct stat_record_s), 1,f);
 		if (read_size != 1){
-			VERBOSE(CL_ERROR,"Can't read file statistics: %s",file);
+			VERBOSE(CL_ERROR,"Can't read file statistics: %s",input_file);
 			fclose(f);
 			return 1;
 		}
 		
-		VERBOSE(CL_VERBOSE_ADVANCED,"Parsed statistics from: '%s'",file);
+		VERBOSE(CL_VERBOSE_ADVANCED,"Parsed statistics from: '%s'",input_file);
 		VERBOSE(CL_VERBOSE_ADVANCED,"\tFLOWS: %lu", stats.numflows);
 		VERBOSE(CL_VERBOSE_ADVANCED,"\tBYTES: %lu", stats.numbytes);
 		VERBOSE(CL_VERBOSE_ADVANCED,"\tPACKTES: %lu", stats.numpackets);
@@ -1092,7 +1085,7 @@ int main(int argc, char *argv[]){
 			VERBOSE(CL_VERBOSE_ADVANCED,"---------?C--------");
 			read_size = fread(&block_header, sizeof(struct data_block_header_s), 1,f);
 			if (read_size != 1){
-				VERBOSE(CL_ERROR,"Can't read block header: %s",file);
+				VERBOSE(CL_ERROR,"Can't read block header: %s",input_file);
 				fclose(f);
 				return 1;
 			}
@@ -1126,7 +1119,7 @@ int main(int argc, char *argv[]){
 			read_size = fread(buffer, block_header.size, 1,f);
 			if (read_size != 1){
 				perror("file read:");
-				VERBOSE(CL_ERROR,"Can't read record data: %s",file);
+				VERBOSE(CL_ERROR,"Can't read record data: %s",input_file);
 				fclose(f);
 				return 1;
 			}
