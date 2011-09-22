@@ -223,7 +223,7 @@ int el_uint::fill(uint8_t * data){
 		offset++;
 	case 8:
 		//ulong
-		byte_reorder((uint8_t *) &(uint_value.uint),data,_size, offset);
+		byte_reorder((uint8_t *) &(uint_value.ulong),data,_size, offset);
 		value = &(uint_value.ubyte);
 		break;
 	default:
