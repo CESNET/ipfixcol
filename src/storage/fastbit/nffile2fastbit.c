@@ -422,6 +422,7 @@ void ext2_fill_tm(uint8_t flags, struct ipfix_template * template){
 	//packetDeltaCount
 	template->fields[template->field_count].ie.id = 2;
 	template->fields[template->field_count].ie.length = 8;
+	template->field_count++;
 	template->data_length += 8;
 	template->template_length += 4;
 }
@@ -431,6 +432,7 @@ void ext3_fill_tm(uint8_t flags, struct ipfix_template * template){
 	//byteDeltaCount
 	template->fields[template->field_count].ie.id = 1;
 	template->fields[template->field_count].ie.length = 8;
+	template->field_count++;
 	template->data_length += 8;
 	template->template_length += 4;
 }
@@ -440,9 +442,11 @@ void ext3_fill_tm(uint8_t flags, struct ipfix_template * template){
 void ext4_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 10;
 	template->fields[template->field_count].ie.length = 2;
+	template->field_count++;
 	template->data_length += 2;
 	template->fields[template->field_count].ie.id = 14;
 	template->fields[template->field_count].ie.length = 2;
+	template->field_count++;
 	template->data_length += 2;
 	template->template_length += 8;
 }
@@ -451,9 +455,11 @@ void ext4_fill_tm(uint8_t flags, struct ipfix_template * template){
 void ext5_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 10;
 	template->fields[template->field_count].ie.length = 4;
+	template->field_count++;
 	template->data_length += 4;
 	template->fields[template->field_count].ie.id = 14;
 	template->fields[template->field_count].ie.length = 4;
+	template->field_count++;
 	template->data_length += 4;
 	template->template_length += 8;
 }
@@ -463,9 +469,11 @@ void ext5_fill_tm(uint8_t flags, struct ipfix_template * template){
 void ext6_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 16;
 	template->fields[template->field_count].ie.length = 2;
+	template->field_count++;
 	template->data_length += 2;
 	template->fields[template->field_count].ie.id = 17;
 	template->fields[template->field_count].ie.length = 2;
+	template->field_count++;
 	template->data_length += 2;
 	template->template_length += 8;
 	
@@ -475,9 +483,11 @@ void ext6_fill_tm(uint8_t flags, struct ipfix_template * template){
 void ext7_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 16;
 	template->fields[template->field_count].ie.length = 4;
+	template->field_count++;
 	template->data_length += 4;
 	template->fields[template->field_count].ie.id = 17;
 	template->fields[template->field_count].ie.length = 4;
+	template->field_count++;
 	template->data_length += 4;
 	template->template_length += 8;
 	
@@ -487,24 +497,30 @@ void ext7_fill_tm(uint8_t flags, struct ipfix_template * template){
 void ext8_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 55;
 	template->fields[template->field_count].ie.length = 1;
+	template->field_count++;
 	template->data_length += 1;
 	template->fields[template->field_count].ie.id = 61;
 	template->fields[template->field_count].ie.length = 1;
+	template->field_count++;
 	template->data_length += 1;
 	
 	if(TestFlag(flags, FLAG_IPV6_ADDR)){
 		template->fields[template->field_count].ie.id = 29;
 		template->fields[template->field_count].ie.length = 1;
+		template->field_count++;
 		template->data_length += 1;
 		template->fields[template->field_count].ie.id = 30;
 		template->fields[template->field_count].ie.length = 1;
+		template->field_count++;
 		template->data_length += 1;
 	} else {
 		template->fields[template->field_count].ie.id = 9;
 		template->fields[template->field_count].ie.length = 1;
+		template->field_count++;
 		template->data_length += 1;
 		template->fields[template->field_count].ie.id = 13;
 		template->fields[template->field_count].ie.length = 1;
+		template->field_count++;
 		template->data_length += 1;
 	}
 	template->template_length += 16;
@@ -514,6 +530,7 @@ void ext8_fill_tm(uint8_t flags, struct ipfix_template * template){
 void ext9_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 15;
 	template->fields[template->field_count].ie.length = 4;
+	template->field_count++;
 	template->data_length += 4;
 	template->template_length += 4;
 }
@@ -523,6 +540,7 @@ void ext9_fill_tm(uint8_t flags, struct ipfix_template * template){
 void ext10_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 62;
 	template->fields[template->field_count].ie.length = 16;
+	template->field_count++;
 	template->data_length += 16;
 	template->template_length += 4;
 }
@@ -532,6 +550,7 @@ void ext10_fill_tm(uint8_t flags, struct ipfix_template * template){
 void ext11_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 18;
 	template->fields[template->field_count].ie.length = 4;
+	template->field_count++;
 	template->data_length += 4;
 	template->template_length += 4;
 	
@@ -542,6 +561,7 @@ void ext11_fill_tm(uint8_t flags, struct ipfix_template * template){
 void ext12_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 63;
 	template->fields[template->field_count].ie.length = 16;
+	template->field_count++;
 	template->data_length += 16;
 	template->template_length += 4;
 }
@@ -550,9 +570,11 @@ void ext12_fill_tm(uint8_t flags, struct ipfix_template * template){
 void ext13_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 58;
 	template->fields[template->field_count].ie.length = 2;
+	template->field_count++;
 	template->data_length += 2;
 	template->fields[template->field_count].ie.id = 59;
 	template->fields[template->field_count].ie.length = 2;
+	template->field_count++;
 	template->data_length += 2;
 	template->template_length += 8;
 }
@@ -561,6 +583,7 @@ void ext13_fill_tm(uint8_t flags, struct ipfix_template * template){
 void ext14_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 24;
 	template->fields[template->field_count].ie.length = 4;
+	template->field_count++;
 	template->data_length += 4;
 	template->template_length += 4;
 }
@@ -569,6 +592,7 @@ void ext14_fill_tm(uint8_t flags, struct ipfix_template * template){
 void ext15_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 24;
 	template->fields[template->field_count].ie.length = 8;
+	template->field_count++;
 	template->data_length += 8;
 	template->template_length += 4;
 }
@@ -577,6 +601,7 @@ void ext15_fill_tm(uint8_t flags, struct ipfix_template * template){
 void ext16_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 23;
 	template->fields[template->field_count].ie.length = 4;
+	template->field_count++;
 	template->data_length += 4;
 	template->template_length += 4;
 }
@@ -585,6 +610,7 @@ void ext16_fill_tm(uint8_t flags, struct ipfix_template * template){
 void ext17_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 23;
 	template->fields[template->field_count].ie.length = 8;
+	template->field_count++;
 	template->data_length += 8;
 	template->template_length += 4;
 	
@@ -594,6 +620,7 @@ void ext17_fill_tm(uint8_t flags, struct ipfix_template * template){
 void ext18_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 3;
 	template->fields[template->field_count].ie.length = 4;
+	template->field_count++;
 	template->data_length += 4;
 	template->template_length += 4;
 	
@@ -603,6 +630,7 @@ void ext18_fill_tm(uint8_t flags, struct ipfix_template * template){
 void ext19_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 3;
 	template->fields[template->field_count].ie.length = 8;
+	template->field_count++;
 	template->data_length += 8;
 	template->template_length += 4;
 	
@@ -612,9 +640,11 @@ void ext19_fill_tm(uint8_t flags, struct ipfix_template * template){
 void ext20_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 56;
 	template->fields[template->field_count].ie.length = 6;
+	template->field_count++;
 	template->data_length += 6;
 	template->fields[template->field_count].ie.id = 57;
 	template->fields[template->field_count].ie.length = 6;
+	template->field_count++;
 	template->data_length += 6;
 	template->template_length += 8;
 	
@@ -624,9 +654,11 @@ void ext20_fill_tm(uint8_t flags, struct ipfix_template * template){
 void ext21_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 80;
 	template->fields[template->field_count].ie.length = 6;
+	template->field_count++;
 	template->data_length += 6;
 	template->fields[template->field_count].ie.id = 81;
 	template->fields[template->field_count].ie.length = 6;
+	template->field_count++;
 	template->data_length += 6;	
 	template->template_length += 8;
 }
@@ -637,6 +669,7 @@ void ext22_fill_tm(uint8_t flags, struct ipfix_template * template){
 	for(i=0;i<10;i++){
 		template->fields[template->field_count].ie.id = 70 + i;
 		template->fields[template->field_count].ie.length = 3;
+		template->field_count++;
 		template->data_length += 3;
 	}
 	template->template_length += 40;
@@ -658,9 +691,11 @@ void ext25_fill_tm(uint8_t flags, struct ipfix_template * template){
 	VERBOSE(CL_VERBOSE_ADVANCED,"There is no element for router sourc id (filled as reserved 38 and 39 elements)");
 	template->fields[template->field_count].ie.id = 38;
 	template->fields[template->field_count].ie.length = 1;
+	template->field_count++;
 	template->data_length += 1;
 	template->fields[template->field_count].ie.id = 39;
 	template->fields[template->field_count].ie.length = 1;
+	template->field_count++;
 	template->data_length += 1;	
 	template->template_length += 8;
 }
