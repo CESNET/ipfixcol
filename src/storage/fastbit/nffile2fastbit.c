@@ -132,7 +132,7 @@ void ext2_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 	} else {
 		VERBOSE(CL_VERBOSE_ADVANCED,"\tPACKET COUNTER: %u", *((uint32_t *) &data[*offset]));
 		//32b to 64b!
-		*((uint64_t *) &(data_set->records[data_set->header.length])) = htonl(*((uint32_t *) &data[*offset]));
+		*((uint64_t *) &(data_set->records[data_set->header.length])) =  htobe64((uint64_t) *((uint32_t *) &data[*offset]));
 		data_set->header.length += 8;
 		(*offset)+=1;
 	}
@@ -146,7 +146,7 @@ void ext3_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 	} else {
 		VERBOSE(CL_VERBOSE_ADVANCED,"\tBYTE COUNTER: %u", *((uint32_t *) &data[*offset]));
 		//32b to 64b!
-		*((uint64_t *) &(data_set->records[data_set->header.length])) = htonl(*((uint32_t *) &data[*offset]));
+		*((uint64_t *) &(data_set->records[data_set->header.length])) =  htobe64((uint64_t)*((uint32_t *) &data[*offset]));
 		data_set->header.length += 8;
 		(*offset)+=1;
 	}
