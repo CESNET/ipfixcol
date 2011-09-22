@@ -207,18 +207,19 @@ private:
 	 */
 	AST* createOperationElement(pugi::xml_node operation, pugi::xml_document &doc);
 
-    stringVector parts; /**< Fastbit parts paths to be used*/
-    char *appName; /**< Application name, parsed from command line args*/
+    stringVector parts;                /**< Fastbit parts paths to be used*/
+    char *appName;                     /**< Application name, parsed from command line args*/
     stringSet aggregateColumnsAliases; /**< Aggregate columns aliases set */
-	uint64_t maxRecords; /**< Limit number of printed records */
-	bool plainNumbers; /**< Don't convert protocol numbers to strings*/
-    bool aggregate; /**< Are we in aggreagate mode? */
-	bool quiet; /**< Don't print header and statistics */
-	std::string filter; /**< User specified filter string */
-	stringVector order; /**< Ordering columns aliases */
-	std::string format; /**< Output format*/
-	columnVector columns; /**< Vector of columns to print */
-
+	uint64_t maxRecords;               /**< Limit number of printed records */
+	bool plainNumbers;                 /**< Don't convert protocol numbers to strings*/
+	bool aggregate;                    /**< Are we in aggreagate mode? */
+	bool quiet;                        /**< Don't print header and statistics */
+	std::string filter;                /**< User specified filter string */
+	stringVector order;                /**< Ordering columns aliases */
+	std::string format;                /**< Output format*/
+	columnVector columns;              /**< Vector of columns to print */
+	std::string firstdir;              /**< start with this table (directory) user wants to work with */
+	std::string lastdir;               /**< last table (directory) user wants to work with */
 }; /* end of Configuration class */
 
 } /* end of ipfixdump namespace */

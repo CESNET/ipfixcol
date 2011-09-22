@@ -41,6 +41,7 @@
 #include <getopt.h>
 #include <regex.h>
 #include <dirent.h>
+#include <cstring>
 
 namespace ipfixdump {
 
@@ -142,26 +143,75 @@ int Configuration::init(int argc, char *argv[])
 			break;
 		case 'R': {
 			std::string dirpath;
+			std::string path;
+			char *dirname;
+			size_t dirname_len;
+
 			dirpath = optarg;
+
+			/* find dirname */
+			dirname = strstr(optarg, "/");
+			if (dirname == NULL) {
+				dirname_len = 0;
+			} else {
+				dirname_len = dirname - optarg + 1; /* path + '/' */
+			}
+			if (dirname_len > 0) {
+				path = dirpath.substr(0, dirname_len);
+			} else {
+				path = "./";
+			}
 
 			DIR *dir;
 			struct dirent *dent;
 
-			dir = opendir(dirpath.c_str());
-			if (dir == NULL) {
-				std::cerr << "Cannot open directory \"" << dirpath << "\"" << std::endl;
-				break;
-			}
+			/* check whether user specified single directory or multiple directories
+			 * in format firstdir:lastdir
+			 * NOTE: this will not work correctly if directory name contains colon */
+			if (strstr(dirpath.c_str(), ":") != NULL) {
+				/* path/firstdir:lastdir - separate these directories */
 
-			while((dent = readdir(dir)) != NULL) {
-				if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
-				&& strcmp(dent->d_name, "..")) {
-					std::string tableDir(dirpath);
-					tableDir += dent->d_name;
+				this->firstdir = strtok(optarg, ":");
+				this->lastdir = strtok(NULL, ":");
+
+				if (this->firstdir.empty()) {
+					std::cerr << "Invalid firstdir" << std::endl;
+					break;
+				}
+				if (this->lastdir.empty()) {
+					std::cerr << "Invalid lastdir" << std::endl;
+					break;
+				}
+
+				this->lastdir = path + this->lastdir;
+
+				dir = opendir(path.c_str());
+				if (dir == NULL) {
+					std::cerr << "Cannot open directory \"" << dirpath << "\"" << std::endl;
+					break;
+				}
+
+				tables.push_back(std::string(path));
+
+			} else {
+				/* user specified parent directory */
+				dir = opendir(dirpath.c_str());
+				if (dir == NULL) {
+					std::cerr << "Cannot open directory \"" << dirpath << "\"" << std::endl;
+					break;
+				}
+
+				while((dent = readdir(dir)) != NULL) {
+					if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
+					  && strcmp(dent->d_name, "..")) {
+						std::string tableDir(path);
+
+						tableDir = tableDir + dent->d_name + "/";
 #ifdef DEBUG
-					std::cerr << "Adding table " << tableDir << std::endl;
+						std::cerr << "Adding table " << tableDir << std::endl;
 #endif
-					tables.push_back(std::string(tableDir));
+						tables.push_back(std::string(tableDir));
+					}
 				}
 			}
 
@@ -251,8 +301,11 @@ int Configuration::init(int argc, char *argv[])
 
 int Configuration::searchForTableParts(stringVector &tables)
 {
-	DIR *d;
 	struct dirent *dent;
+	struct dirent **namelist;
+	int dirs_counter;
+	int counter;
+	bool firstdir_found;
 
 	/* do we have any tables (directories) specified? */
 	if (tables.size() < 1) {
@@ -260,21 +313,48 @@ int Configuration::searchForTableParts(stringVector &tables)
 		return -1;
 	}
 
+
 	/* read tables subdirectories(templates) */
 	for (size_t i = 0; i < tables.size(); i++) {
-		d = opendir(tables[i].c_str());
-		if (d == NULL) {
-			std::cerr << "Cannot open directory \"" << tables[i] << "\"" << std::endl;
-			return -1;
+		dirs_counter = scandir(tables[i].c_str(), &namelist, NULL, alphasort);
+		if (dirs_counter < 0) {
+			/* oops? try another directory */
+			continue;
 		}
 
-		while((dent = readdir(d)) != NULL) {
+//		d = opendir(tables[i].c_str());
+//		if (d == NULL) {
+//			std::cerr << "Cannot open directory \"" << tables[i] << "\"" << std::endl;
+//			return -1;
+//		}
+
+		counter = 0;
+		firstdir_found = false;
+		while(dirs_counter--) {
+			dent = namelist[counter++];
+
 			if (dent->d_type == DT_DIR && atoi(dent->d_name) != 0) {
-				this->parts.push_back(tables[i] + "/" + std::string(dent->d_name));
+				std::string table(tables[i] + std::string(dent->d_name));
+
+				if ((this->firstdir.empty() == false) && (this->lastdir.empty() == false)) {
+					if (firstdir_found == false && !table.compare(this->firstdir)) {
+						firstdir_found = true;
+					}
+
+					if (firstdir_found == true) {
+						this->parts.push_back(table);
+					}
+
+					if (firstdir_found == true && !table.compare(this->lastdir)) {
+						break;
+					}
+				} else {
+					this->parts.push_back(table);
+				}
 			}
 		}
 
-		closedir(d);
+		free(namelist);
 	}
 
 	return 0;
