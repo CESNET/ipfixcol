@@ -13,7 +13,8 @@
 #include "nffile.h"
 #include "../../../headers/storage.h"
 
-#define ARGUMENTS "hi:w:"
+#define ARGUMENTS "hbi:w:v:p:V"
+#define VERSION "1.0"
 
 volatile int stop = 0;
 static int ctrl_c = 0;
@@ -923,10 +924,14 @@ void clean_tmp_manager(struct ipfix_template_mgr *manager){
 }
 
 int usage(){
-	printf("Usage: %s -i input_file -w output_dir [-h]\n",getprogname());
+	printf("Usage: %s -i input_file -w output_dir [-p prefix] [-v level] [-hVb]\n",getprogname());
 	printf(" -i input_file	path to nfdump file for conversion\n");
 	printf(" -w output_dir	output direcotry for fastbit files\n");
+	printf(" -b		build indexes\n");
+	printf(" -p prefix	output files prefix\n");
 	printf(" -h 		prints this help\n");
+	printf(" -v level 	set verbose level\n");
+	printf(" -V		show version\n");
 	return 0;
 }
 
@@ -950,11 +955,15 @@ int main(int argc, char *argv[]){
 	char *error;
 	struct ipfix_message ipfix_msg;
 	struct ipfix_template_mgr template_mgr;
+
+	//param handlers
 	char *input_file = 0;
 	char *output_dir = 0;
+	char indexes[4] = "no";
+	char *prefix = 0;
+
+
 	char c;
-
-
 	while((c = getopt(argc, argv, ARGUMENTS)) != -1) {
 		switch (c) {
 
@@ -965,8 +974,21 @@ int main(int argc, char *argv[]){
 		case 'w':
 			output_dir = optarg;
 			break;
+		case 'p':
+			prefix = optarg;
+			break;
+		case 'b':
+			strcpy(indexes,"yes");
+			break;
 		case 'h':
 			usage();
+			return 1;
+			break;
+		case 'v':
+			verbose = atoi(optarg);
+			break;
+		case 'V':
+			printf("%s - version %s\n",getprogname(),VERSION);
 			return 1;
 			break;
 		default:
@@ -1026,15 +1048,15 @@ int main(int argc, char *argv[]){
 			</dumpInterval> \
 			<namingStrategy> \
 				<type>incremental</type> \
-				<prefix>ic</prefix> \
+				<prefix>%s</prefix> \
 			</namingStrategy> \
-			<onTheFlightIndexes>yes</onTheFlightIndexes> \
+			<onTheFlightIndexes>%s</onTheFlightIndexes> \
 		</fileWriter>";
 
 	char *params;
-	params = (char *) malloc(strlen(params_template)+strlen(output_dir));
+	params = (char *) malloc(strlen(params_template)+strlen(output_dir)+strlen(prefix)+strlen(indexes));
 
-	sprintf(params, params_template, output_dir);
+	sprintf(params, params_template, output_dir,prefix,indexes);
 
 
 	plugin_init(params, &config); //TODO add arguments
