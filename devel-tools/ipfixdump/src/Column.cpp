@@ -268,6 +268,7 @@ values *Column::evaluate(AST *ast, Cursor *cur) {
 			break;}
 		case ipfixdump::operation:
 			values *left, *right;
+
 			left = evaluate(ast->left, cur);
 			right = evaluate(ast->right, cur);
 
@@ -367,22 +368,22 @@ values* Column::performOperation(values *left, values *right, unsigned char op) 
 	switch (op) {
 				case '+':
 					result->type = ibis::ULONG;
-					result->value[0].int64 = left->toULong() + right->toULong();
+					result->value[0].int64 = left->toDouble() + right->toDouble();
 					break;
 				case '-':
 					result->type = ibis::ULONG;
-					result->value[0].int64 = left->toULong() - right->toULong();
+					result->value[0].int64 = left->toDouble() - right->toDouble();
 					break;
 				case '*':
 					result->type = ibis::ULONG;
-					result->value[0].int64 = left->toULong() * right->toULong();
+					result->value[0].int64 = left->toDouble() * right->toDouble();
 					break;
 				case '/':
 					result->type = ibis::ULONG;
-					if (right->toULong() == 0) {
+					if (right->toDouble() == 0) {
 						result->value[0].int64 = 0;
 					} else {
-						result->value[0].int64 = left->toULong() / right->toULong();
+						result->value[0].int64 = left->toDouble() / right->toDouble();
 					}
 					break;
 				}
