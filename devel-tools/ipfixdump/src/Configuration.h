@@ -43,7 +43,6 @@
 #include "../3rdparty/pugixml.hpp"
 #include "typedefs.h"
 #include "Column.h"
-#include "AST.h"
 
 
 namespace ipfixdump {
@@ -151,7 +150,13 @@ public:
      *
      * @return Vector of columns
      */
-    columnVector getColumns();
+    columnVector& getColumns();
+
+    /**
+     * \brief Returns path to configuration XML
+     * @return Path to configuration XML
+     */
+    char* getXmlConfPath();
 
     /**
      * \brief Class destructor
@@ -188,24 +193,6 @@ private:
 	 * @param format output format string
 	 */
 	void parseFormat(std::string format);
-
-	/**
-	 * \brief Create element of type value from XMLnode element
-	 *
-	 * @param element XML node element
-	 * @param doc XML document with configuration
-	 * @return AST structure of created element
-	 */
-	AST* createValueElement(pugi::xml_node element, pugi::xml_document &doc);
-
-	/**
-	 * \brief Create element of type operation from XMLnode element
-	 *
-	 * @param operation XML node element
-	 * @param doc XML document with configuration
-	 * @return AST structure of created operation
-	 */
-	AST* createOperationElement(pugi::xml_node operation, pugi::xml_document &doc);
 
     stringVector parts; /**< Fastbit parts paths to be used*/
     char *appName; /**< Application name, parsed from command line args*/

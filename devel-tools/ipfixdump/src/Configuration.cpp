@@ -281,7 +281,6 @@ int Configuration::searchForTableParts(stringVector &tables)
 }
 
 void Configuration::parseFormat(std::string format) {
-	std::string alias;
 	Column *col;
 	regex_t reg;
 	int err;
@@ -307,54 +306,11 @@ void Configuration::parseFormat(std::string format) {
 				this->columns.push_back(col);
 			}
 
-			/* set alias of column */
-			alias = format.substr(matches[0].rm_so, matches[0].rm_eo - matches[0].rm_so);
-
-			/* search xml for an alias */
-			pugi::xpath_node column = doc.select_single_node(("/columns/column[alias='"+alias+"']").c_str());
-			/* check what we found */
-			if (column != NULL) {
-
-				/* create new column */
-				if (column.node().child("default-value") != NULL) {
-					col = new Column(column.node().child_value("default-value"));
-				} else {
-					col = new Column();
-				}
-
-				col->setName(column.node().child_value("name"));
-				col->setAggregation(this->aggregate);
-#ifdef DEBUG
-				std::cerr << "Creating column '" << col->getName() << "'" << std::endl;
-#endif
-				/* set alignment */
-				if (column.node().child("alignLeft") != NULL) {
-					col->setAlignLeft(true);
-				}
-
-				/* set width */
-				if (column.node().child("width") != NULL) {
-					col->setWidth(atoi(column.node().child_value("width")));
-				}
-
-				/* set value according to type */
-				if (column.node().child("value").attribute("type").value() == std::string("plain")) {
-					/* simple element */
-					col->setAST(createValueElement(column.node().child("value").child("element"), doc));
-				} else if (column.node().child("value").attribute("type").value() == std::string("operation")) {
-					/* operation */
-					col->setAST(createOperationElement(column.node().child("value").child("operation"), doc));
-				}
-
-				/* add aliases from XML to column (with starting %) */
-				pugi::xpath_node_set aliases = column.node().select_nodes("alias");
-				for (pugi::xpath_node_set::const_iterator it = aliases.begin(); it != aliases.end(); ++it) {
-					col->addAlias(it->node().child_value());
-				}
-
+			col = new Column();
+			if (col->init(doc, format.substr(matches[0].rm_so, matches[0].rm_eo - matches[0].rm_so), this->aggregate)) {
 				this->columns.push_back(col);
 			} else {
-				std::cerr << "Column '" << alias << "' not defined" << std::endl;
+				delete col;
 			}
 
 			/* discard processed part of the format string */
@@ -370,75 +326,6 @@ void Configuration::parseFormat(std::string format) {
 	}
 	/* free created regular expression */
 	regfree(&reg);
-
-
-}
-
-AST* Configuration::createValueElement(pugi::xml_node element, pugi::xml_document &doc) {
-
-	/* when we have alias, go down one level */
-	if (element.child_value()[0] == '%') {
-		pugi::xpath_node el = doc.select_single_node(
-				("/columns/column[alias='"
-						+ std::string(element.child_value())
-						+ "']/value/element").c_str());
-		return createValueElement(el.node(), doc);
-	}
-
-	/* create the element */
-	AST *ast = new AST;
-
-	ast->type = ipfixdump::value;
-	ast->value = element.child_value();
-	ast->semantics = element.attribute("semantics").value();
-	if (element.attribute("parts")) {
-		ast->parts = atoi(element.attribute("parts").value());
-	}
-	if (element.attribute("aggregation")) {
-		ast->aggregation = element.attribute("aggregation").value();
-	}
-
-	return ast;
-}
-
-AST* Configuration::createOperationElement(pugi::xml_node operation, pugi::xml_document &doc) {
-
-	AST *ast = new AST;
-	pugi::xpath_node arg1, arg2;
-	std::string type;
-
-	/* set type and operation */
-	ast->type = ipfixdump::operation;
-	ast->operation = operation.attribute("name").value()[0];
-
-	/* get argument nodes */
-	arg1 = doc.select_single_node(("/columns/column[alias='"+ std::string(operation.child_value("arg1"))+ "']").c_str());
-	arg2 = doc.select_single_node(("/columns/column[alias='"+ std::string(operation.child_value("arg2"))+ "']").c_str());
-
-	/* get argument type */
-	type = arg1.node().child("value").attribute("type").value();
-
-	/* add argument to AST */
-	if (type == "operation") {
-		ast->left = createOperationElement(arg1.node().child("value").child("operation"), doc);
-	} else if (type == "plain"){
-		ast->left = createValueElement(arg1.node().child("value").child("element"), doc);
-	} else {
-		std::cerr << "Value of type operation contains node of type " << type << std::endl;
-	}
-
-	/* same for the second argument */
-	type = arg2.node().child("value").attribute("type").value();
-
-	if (type == "operation") {
-		ast->right = createOperationElement(arg2.node().child("value").child("operation"), doc);
-	} else if (type == "plain"){
-		ast->right = createValueElement(arg2.node().child("value").child("element"), doc);
-	} else {
-		std::cerr << "Value of type operation contains node of type '" << type << "'" << std::endl;
-	}
-
-	return ast;
 }
 
 stringVector Configuration::getPartsNames() {
@@ -451,26 +338,21 @@ std::string Configuration::getFilter() {
 
 stringSet Configuration::getAggregateColumns() {
 	stringSet aggregateColumns;
+	Column *col;
+
+	/* Open XML configuration file */
+	pugi::xml_document doc;
+	doc.load_file(this->getXmlConfPath());
 
 	/* go over all aliases */
 	for (stringSet::iterator aliasIt = this->aggregateColumnsAliases.begin();
 			aliasIt != this->aggregateColumnsAliases.end(); aliasIt++) {
-		bool found = false;
-		/* for each alias go over all columns */
-		for (columnVector::iterator columnIt = this->columns.begin(); columnIt != columns.end(); columnIt++) {
-			/* get column aliases */
-			stringSet aliases = (*columnIt)->getAliases();
-			/* if current alias matches one of columns aliases */
-			if (aliases.find(*aliasIt) != aliases.end()) {
-				/* add column fastbit columns to final set */
-				stringSet cols = (*columnIt)->getColumns();
-				aggregateColumns.insert(cols.begin(), cols.end());
-				found = true;
-			}
-		}
-		if (!found) { /* TODO columns can still be in configuration file, but it is not displayed... */
-			std::cerr << "Aggregation column '" << *aliasIt << "' not found!" << std::endl;
-		}
+
+		col = new Column();
+		col->init(doc, *aliasIt, this->aggregate);
+		stringSet cols = col->getColumns();
+		aggregateColumns.insert(cols.begin(), cols.end());
+		delete col;
 	}
 
 	return aggregateColumns;
@@ -510,12 +392,16 @@ bool Configuration::getQuiet() {
 	return this->quiet;
 }
 
-columnVector Configuration::getColumns() {
+columnVector& Configuration::getColumns() {
 	return this->columns;
 }
 
 std::string Configuration::version() {
 	return VERSION;
+}
+
+char* Configuration::getXmlConfPath() {
+	return (char*) COLUMNS_XML;
 }
 
 void Configuration::help() {

@@ -46,6 +46,122 @@
 namespace ipfixdump
 {
 
+bool Column::init(pugi::xml_document &doc, std::string alias, bool aggregate) {
+
+	/* search xml for an alias */
+	pugi::xpath_node column = doc.select_single_node(("/columns/column[alias='"+alias+"']").c_str());
+	/* check what we found */
+	if (column == NULL) {
+		std::cerr << "Column '" << alias << "' not defined" << std::endl;
+		return false;
+	}
+
+	/* set default value */
+	if (column.node().child("default-value") != NULL) {
+		this->nullStr = column.node().child_value("default-value");
+	}
+
+	this->setName(column.node().child_value("name"));
+	this->setAggregation(aggregate);
+
+#ifdef DEBUG
+	std::cerr << "Creating column '" << this->name << "'" << std::endl;
+#endif
+
+	/* set alignment */
+	if (column.node().child("alignLeft") != NULL) {
+		this->setAlignLeft(true);
+	}
+
+	/* set width */
+	if (column.node().child("width") != NULL) {
+		this->setWidth(atoi(column.node().child_value("width")));
+	}
+
+	/* set value according to type */
+	if (column.node().child("value").attribute("type").value() == std::string("plain")) {
+		/* simple element */
+		this->setAST(createValueElement(column.node().child("value").child("element"), doc));
+	} else if (column.node().child("value").attribute("type").value() == std::string("operation")) {
+		/* operation */
+		this->setAST(createOperationElement(column.node().child("value").child("operation"), doc));
+	}
+
+	/* add aliases from XML to column (with starting %) */
+	pugi::xpath_node_set aliases = column.node().select_nodes("alias");
+	for (pugi::xpath_node_set::const_iterator it = aliases.begin(); it != aliases.end(); ++it) {
+		this->addAlias(it->node().child_value());
+	}
+	return true;
+}
+
+AST* Column::createValueElement(pugi::xml_node element, pugi::xml_document &doc) {
+
+	/* when we have alias, go down one level */
+	if (element.child_value()[0] == '%') {
+		pugi::xpath_node el = doc.select_single_node(
+				("/columns/column[alias='"
+						+ std::string(element.child_value())
+						+ "']/value/element").c_str());
+		return createValueElement(el.node(), doc);
+	}
+
+	/* create the element */
+	AST *ast = new AST;
+
+	ast->type = ipfixdump::value;
+	ast->value = element.child_value();
+	ast->semantics = element.attribute("semantics").value();
+	if (element.attribute("parts")) {
+		ast->parts = atoi(element.attribute("parts").value());
+	}
+	if (element.attribute("aggregation")) {
+		ast->aggregation = element.attribute("aggregation").value();
+	}
+
+	return ast;
+}
+
+AST* Column::createOperationElement(pugi::xml_node operation, pugi::xml_document &doc) {
+
+	AST *ast = new AST;
+	pugi::xpath_node arg1, arg2;
+	std::string type;
+
+	/* set type and operation */
+	ast->type = ipfixdump::operation;
+	ast->operation = operation.attribute("name").value()[0];
+
+	/* get argument nodes */
+	arg1 = doc.select_single_node(("/columns/column[alias='"+ std::string(operation.child_value("arg1"))+ "']").c_str());
+	arg2 = doc.select_single_node(("/columns/column[alias='"+ std::string(operation.child_value("arg2"))+ "']").c_str());
+
+	/* get argument type */
+	type = arg1.node().child("value").attribute("type").value();
+
+	/* add argument to AST */
+	if (type == "operation") {
+		ast->left = createOperationElement(arg1.node().child("value").child("operation"), doc);
+	} else if (type == "plain"){
+		ast->left = createValueElement(arg1.node().child("value").child("element"), doc);
+	} else {
+		std::cerr << "Value of type operation contains node of type " << type << std::endl;
+	}
+
+	/* same for the second argument */
+	type = arg2.node().child("value").attribute("type").value();
+
+	if (type == "operation") {
+		ast->right = createOperationElement(arg2.node().child("value").child("operation"), doc);
+	} else if (type == "plain"){
+		ast->right = createValueElement(arg2.node().child("value").child("element"), doc);
+	} else {
+		std::cerr << "Value of type operation contains node of type '" << type << "'" << std::endl;
+	}
+
+	return ast;
+}
+
 std::string Column::getName() {
 	return this->name;
 }
@@ -351,6 +467,6 @@ void Column::setAggregation(bool aggregation) {
 	this->aggregation = aggregation;
 }
 
-Column::Column(std::string nullStr): nullStr(nullStr), width(0), alignLeft(false), ast(NULL), aggregation(false) {}
+Column::Column(): nullStr("NULL"), width(0), alignLeft(false), ast(NULL), aggregation(false) {}
 
 }

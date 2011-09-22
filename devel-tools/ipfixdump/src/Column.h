@@ -55,6 +55,35 @@ class Cursor;
 class Column
 {
 public:
+
+	/**
+	 * \brief Initialise column from xml configuration
+	 *
+	 * @param doc pugi xml document
+	 * @param alias alias of the new column
+	 * @param aggregate Aggregate mode
+	 * @return true when initialization completed, false on error
+	 */
+	bool init(pugi::xml_document &doc, std::string alias, bool aggregate);
+
+	/**
+	 * \brief Create element of type value from XMLnode element
+	 *
+	 * @param element XML node element
+	 * @param doc XML document with configuration
+	 * @return AST structure of created element
+	 */
+	AST* createValueElement(pugi::xml_node element, pugi::xml_document &doc);
+
+	/**
+	 * \brief Create element of type operation from XMLnode element
+	 *
+	 * @param operation XML node element
+	 * @param doc XML document with configuration
+	 * @return AST structure of created operation
+	 */
+	AST* createOperationElement(pugi::xml_node operation, pugi::xml_document &doc);
+
 	/**
 	 * \brief Returns column name (that should be printed in header)
 	 *
@@ -110,7 +139,7 @@ public:
 	 *
 	 * @param nullStr string returned when column contains no value
 	 */
-	Column(std::string nullStr="NULL");
+	Column();
 
 	/**
 	 * \brief Returns value of current column in row specified by cursor

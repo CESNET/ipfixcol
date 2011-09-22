@@ -41,6 +41,7 @@
 
 #include "Filter.h"
 #include "Configuration.h"
+#include "Column.h"
 #include "typedefs.h"
 #include "scanner.h"
 
@@ -73,54 +74,26 @@ Filter::Filter(Configuration &conf): conf(conf) {
 		switch (c) {
 		case COLUMN: {
 			/* get real columns */
-//			pugi::xml_document doc;
-//			doc.load_file(COLUMNS_XML);
-//			pugi::xpath_node column = doc.select_single_node(("/columns/column[alias='"+arg+"']").c_str());
-//			if (column == NULL) {
-//				std::cout << "Cannot find alias: '"<< arg << "'" << std::endl;
-//				this->filterString = "";
-//			} else if ( column.node().child("value").attribute("type").value() == std::string("plain")) {
-//				/* replace alias with column */
-//				filter += column.node().child("value").child_value("element");
-//				filter += " ";
-//			} else if ( column.node().child("value").attribute("type").value() == std::string("operation")) {
-//				// TODO this should prepare for isValid() function
-//			} else {
-//				std::cout << "Column : '"<<  column.node().child_value("name") << "' is not of supported type" << std::endl;
-//				this->filterString = "";
-//			}
 
-			bool found = false;
-			/* go over all columns */
-			for (columnVector::iterator columnIt = conf.getColumns().begin(); columnIt !=conf.getColumns().end(); columnIt++) {
-				/* get column aliases */
-				stringSet aliases = (*columnIt)->getAliases();
-				/* if current alias matches one of columns aliases */
-				if (aliases.find(arg) != aliases.end()) {
-					/* add column fastbit columns to final set */
-					stringSet cols = (*columnIt)->getColumns();
-					if (cols.size() == 1) { /* plain value */
-						if (conf.getAggregate() && (*columnIt)->getAggregate()) { /* with aggregation */
-							int begin = cols.begin()->find_first_of('(') + 1;
-							int end = cols.begin()->find_first_of(')');
+			/* Open XML configuration file */
+			pugi::xml_document doc;
+			doc.load_file(conf.getXmlConfPath());
 
-							filter += cols.begin()->substr(begin, end-begin) + " ";
-						} else { /* without aggregation */
-							filter += *cols.begin() + " ";
-						}
-					} else { /* operation */
-						/* TODO */
-					}
-
-					found = true;
-					break;
+			Column *col = new Column();
+			if (col->init(doc, arg, false)) {
+				stringSet cols = col->getColumns();
+				if (cols.size() == 1) { /* plain value */
+					filter += *cols.begin() + " ";
+				} else { /* operation */
+					/* TODO */
 				}
-			}
-			if (!found) {
+
+			} else {
 				std::cerr << "Filter column '" << arg << "' not found!" << std::endl;
 			}
+			delete col;
 
-		}
+			}
 			break;
 		case IPv4:{
 			/* convert ipv4 address to uint32_t */

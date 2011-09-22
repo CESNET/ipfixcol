@@ -28,8 +28,6 @@ ipfixdump: $(OBJS)
 	$(CC) $(CPPFLAGS) $(LIBS) $(OBJS) -o $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
-	@[ -d $$(dirname $@) ] || \
-		(mkdir -p $$(dirname $@))
 	$(CC) $(CPPFLAGS) -c $< -o $@
 
 $(SRCDIR)/protocols.cpp: /etc/protocols
@@ -40,6 +38,8 @@ $(OBJDIR)/pugi.o: $(SRC3RD)/pugixml.cpp
 
 # rules to build the lex scanner
 $(OBJDIR)/scanner.o: $(SRCDIR)/scanner.c
+	@[ -d $$(dirname $@) ] || \
+		(mkdir -p $$(dirname $@))
 	$(CC) $(CPPFLAGS) -c $< -o $@
 
 $(SRCDIR)/scanner.c: $(SRCDIR)/scanner.l
