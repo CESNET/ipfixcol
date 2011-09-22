@@ -732,8 +732,8 @@ void (*ext_fill_tm[26]) (uint8_t flags, struct ipfix_template * template) = {
 #define HEADER_ELEMENTS 7
 int header_elements[][2] = {
 	//id,size
-	{21,4}, //flowEndSysUpTime MILLISECONDS !
-	{22,4}, //flowStartSysUpTime MILLISECONDS !
+	{152,8}, //flowEndSysUpTime MILLISECONDS !
+	{153,8}, //flowStartSysUpTime MILLISECONDS !
 	{6,1},  //tcpControlBits flags
 	{4,1},  //protocolIdentifier
 	{5,1},  //ipClassOfService
@@ -754,11 +754,11 @@ void fill_basic_data(struct ipfix_data_set *data_set, struct common_record_s *re
 	VERBOSE(CL_VERBOSE_ADVANCED,"\tMSEC-LAST: %hu", record->msec_last);
 	VERBOSE(CL_VERBOSE_ADVANCED,"\tFIRST: %u", record->first);
 	VERBOSE(CL_VERBOSE_ADVANCED,"\tLAST: %u", record->last);
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tFWD-STATUS: %hhu", record->fwd_status);
-	*((uint32_t *) &(data_set->records[data_set->header.length])) = htonl(record->first);
-	data_set->header.length += 4;
-	*((uint32_t *) &(data_set->records[data_set->header.length])) = htonl(record->last);
-	data_set->header.length += 4;
+	VERBOSE(CL_VERBOSE_ADVANCED,"\tFWD-STATUS: %hhu", record->fwd_status); //TODO?
+	*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64((uint64_t)record->first*1000+record->msec_first); //sec 2 msec
+	data_set->header.length += 8;
+	*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64((uint64_t)record->last*1000+record->msec_last); //sec 2 msec
+	data_set->header.length += 8;
 	VERBOSE(CL_VERBOSE_ADVANCED,"\tTCP-FLAGS: %hhu", record->tcp_flags);
 	data_set->records[data_set->header.length] =record->tcp_flags;
 	data_set->header.length += 1;
