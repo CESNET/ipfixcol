@@ -40,6 +40,7 @@ $(OBJDIR)/pugi.o: $(SRC3RD)/pugixml.cpp
 
 # rules to build the lex scanner
 $(OBJDIR)/scanner.o: $(SRCDIR)/scanner.c
+	-mkdir $(OBJDIR)
 	$(CC) $(CPPFLAGS) -c $< -o $@
 
 $(SRCDIR)/scanner.c: $(SRCDIR)/scanner.l
@@ -48,3 +49,5 @@ $(SRCDIR)/scanner.c: $(SRCDIR)/scanner.l
 clean:
 	rm -f ipfixdump $(OBJDIR)/*
 	rm -f src/protocols.cpp src/scanner.h src/scanner.c
+	-rmdir $(OBJDIR)
+
