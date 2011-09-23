@@ -280,7 +280,8 @@ int Configuration::searchForTableParts(stringVector &tables)
 	return 0;
 }
 
-void Configuration::parseFormat(std::string format) {
+void Configuration::parseFormat(std::string format)
+{
 	Column *col;
 	regex_t reg;
 	int err;
@@ -328,15 +329,18 @@ void Configuration::parseFormat(std::string format) {
 	regfree(&reg);
 }
 
-stringVector Configuration::getPartsNames() {
+stringVector Configuration::getPartsNames()
+{
 	return this->parts;
 }
 
-std::string Configuration::getFilter() {
+std::string Configuration::getFilter()
+{
 	return this->filter;
 }
 
-stringSet Configuration::getAggregateColumns() {
+stringSet Configuration::getAggregateColumns()
+{
 	stringSet aggregateColumns;
 	Column *col;
 
@@ -358,7 +362,8 @@ stringSet Configuration::getAggregateColumns() {
 	return aggregateColumns;
 }
 
-stringSet Configuration::getSummaryColumns() {
+stringSet Configuration::getSummaryColumns()
+{
 	stringSet summaryColumns, tmp;
 
 	/* go over all columns */
@@ -372,39 +377,48 @@ stringSet Configuration::getSummaryColumns() {
 	return summaryColumns;
 }
 
-stringVector Configuration::getOrder() {
+stringVector Configuration::getOrder()
+{
 	return this->order;
 }
 
-bool Configuration::getPlainNumbers() {
+bool Configuration::getPlainNumbers()
+{
 	return this->plainNumbers;
 }
 
-size_t Configuration::getMaxRecords() {
+size_t Configuration::getMaxRecords()
+{
 	return this->maxRecords;
 }
 
-bool Configuration::getAggregate() {
+bool Configuration::getAggregate()
+{
 	return this->aggregate;
 }
 
-bool Configuration::getQuiet() {
+bool Configuration::getQuiet()
+{
 	return this->quiet;
 }
 
-columnVector& Configuration::getColumns() {
+columnVector& Configuration::getColumns()
+{
 	return this->columns;
 }
 
-std::string Configuration::version() {
+std::string Configuration::version()
+{
 	return VERSION;
 }
 
-char* Configuration::getXmlConfPath() {
+char* Configuration::getXmlConfPath()
+{
 	return (char*) COLUMNS_XML;
 }
 
-void Configuration::help() {
+void Configuration::help()
+{
 	std::cout
 	<< "usage "<< this->appName <<" [options] [\"filter\"]" << std::endl
 	<< "-h              this text you see right here" << std::endl
@@ -459,7 +473,8 @@ void Configuration::help() {
 
 Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false) {}
 
-Configuration::~Configuration() {
+Configuration::~Configuration()
+{
 	for (columnVector::iterator it = columns.begin(); it != columns.end(); it++) {
 		delete *it;
 	}

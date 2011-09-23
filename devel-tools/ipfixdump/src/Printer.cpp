@@ -48,7 +48,8 @@ namespace ipfixdump
 {
 
 
-bool Printer::print(TableManager &tm, size_t limit) {
+bool Printer::print(TableManager &tm, size_t limit)
+{
 	bool hasRow;
 	size_t printedRows = 0;
 
@@ -93,7 +94,8 @@ bool Printer::print(TableManager &tm, size_t limit) {
 	return true;
 }
 
-void Printer::printHeader() {
+void Printer::printHeader()
+{
 	/* print column names */
 	for (size_t i = 0; i < conf.getColumns().size(); i++) {
 		/* set defined column width */
@@ -113,7 +115,8 @@ void Printer::printHeader() {
 
 }
 
-void Printer::printRow(Cursor *cur) {
+void Printer::printRow(Cursor *cur)
+{
 
 	/* go over all defined columns */
 	for (size_t i = 0; i < conf.getColumns().size(); i++) {

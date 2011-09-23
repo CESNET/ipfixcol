@@ -41,11 +41,13 @@
 
 namespace ipfixdump {
 
-Cursor::Cursor(Table &table): table(table) {
+Cursor::Cursor(Table &table): table(table)
+{
 	this->cursor = this->table.getFastbitTable()->createCursor();
 }
 
-bool Cursor::next() {
+bool Cursor::next()
+{
 	int ret = 0;
 	/* skip filtered rows */
 	do {
@@ -58,7 +60,8 @@ bool Cursor::next() {
 	return true;
 }
 
-bool Cursor::getColumn(const char *name, values &value, int part) {
+bool Cursor::getColumn(const char *name, values &value, int part)
+{
 	int ret = 0, colNum = 0;
 	ibis::TYPE_T type;
 	ibis::table::namesTypes::iterator it;
@@ -140,7 +143,8 @@ bool Cursor::getColumn(const char *name, values &value, int part) {
 	return true;
 }
 
-Cursor::~Cursor() {
+Cursor::~Cursor()
+{
 	delete this->cursor;
 }
 

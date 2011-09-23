@@ -54,7 +54,8 @@ namespace ipfixdump {
  *
  * Handles output formatting
  */
-class Printer {
+class Printer
+{
 public:
 
 	/**
@@ -68,7 +69,7 @@ public:
 	/**
 	 * \brief Prints output in specified format
 	 *
-	 * @param data Data class to print
+	 * @param tm TableManager of tables to print
 	 * @param limit print max limit rows (0 = all)
 	 * @return true on success, false otherwise
 	 */
@@ -80,7 +81,6 @@ private:
 	 * \brief print one row
 	 *
 	 * @param cur cursor poiting to the row
-	 * @param namesColumns map of names to column numbers for current table
 	 */
 	void printRow(Cursor *cur);
 

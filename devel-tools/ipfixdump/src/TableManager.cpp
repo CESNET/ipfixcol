@@ -43,7 +43,8 @@
 namespace ipfixdump {
 
 void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumns,
-		Filter &filter) {
+		Filter &filter)
+{
 
 	std::vector<stringSet> colIntersect;
 	stringSet partCols;
@@ -176,6 +177,8 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 		if (table->aggregate(*outerIter, summaryColumns, filter)) {
 			/* and add it to the list of managed tables, only if it is not empty */
 			this->tables.push_back(table);
+		} else {
+			delete table;
 		}
 
 		/* and clear the part list */
@@ -184,7 +187,8 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 	}
 }
 
-void TableManager::filter(Filter &filter) {
+void TableManager::filter(Filter &filter)
+{
 	Table *table;
 
 	/* go over all parts */
@@ -195,15 +199,19 @@ void TableManager::filter(Filter &filter) {
 		/* If table is not filtered out completely, add to managed tables */
 		if (table->filter(filter)) {
 			this->tables.push_back(table);
+		} else {
+			delete table;
 		}
 	}
 }
 
-tableVector& TableManager::getTables() {
+tableVector& TableManager::getTables()
+{
 	return tables;
 }
 
-TableManager::TableManager(Configuration &conf): conf(conf) {
+TableManager::TableManager(Configuration &conf): conf(conf)
+{
 	std::string tmp;
 	ibis::part *part;
 
@@ -225,7 +233,8 @@ TableManager::TableManager(Configuration &conf): conf(conf) {
 	}
 }
 
-TableManager::~TableManager() {
+TableManager::~TableManager()
+{
 	/* delete all tables */
 	for (tableVector::iterator it = this->tables.begin(); it != this->tables.end(); it++) {
 		delete *it;

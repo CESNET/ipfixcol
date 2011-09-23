@@ -58,7 +58,8 @@ class Cursor;
  *
  * Parses and builds filter
  */
-class Filter {
+class Filter
+{
 public:
 
 	/**

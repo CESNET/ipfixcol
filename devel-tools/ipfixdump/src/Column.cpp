@@ -46,7 +46,8 @@
 namespace ipfixdump
 {
 
-bool Column::init(pugi::xml_document &doc, std::string alias, bool aggregate) {
+bool Column::init(pugi::xml_document &doc, std::string alias, bool aggregate)
+{
 
 	/* search xml for an alias */
 	pugi::xpath_node column = doc.select_single_node(("/columns/column[alias='"+alias+"']").c_str());
@@ -95,7 +96,8 @@ bool Column::init(pugi::xml_document &doc, std::string alias, bool aggregate) {
 	return true;
 }
 
-AST* Column::createValueElement(pugi::xml_node element, pugi::xml_document &doc) {
+AST* Column::createValueElement(pugi::xml_node element, pugi::xml_document &doc)
+{
 
 	/* when we have alias, go down one level */
 	if (element.child_value()[0] == '%') {
@@ -122,7 +124,8 @@ AST* Column::createValueElement(pugi::xml_node element, pugi::xml_document &doc)
 	return ast;
 }
 
-AST* Column::createOperationElement(pugi::xml_node operation, pugi::xml_document &doc) {
+AST* Column::createOperationElement(pugi::xml_node operation, pugi::xml_document &doc)
+{
 
 	AST *ast = new AST;
 	pugi::xpath_node arg1, arg2;
@@ -162,11 +165,13 @@ AST* Column::createOperationElement(pugi::xml_node operation, pugi::xml_document
 	return ast;
 }
 
-std::string Column::getName() {
+std::string Column::getName()
+{
 	return this->name;
 }
 
-void Column::setName(std::string name) {
+void Column::setName(std::string name)
+{
 	this->name = name;
 }
 
@@ -174,28 +179,34 @@ stringSet Column::getAliases() {
 	return this->aliases;
 }
 
-void Column::addAlias(std::string alias) {
+void Column::addAlias(std::string alias)
+{
 	this->aliases.insert(alias);
 }
 
-int Column::getWidth() {
+int Column::getWidth()
+{
 	return this->width;
 }
 
-void Column::setWidth(int width) {
+void Column::setWidth(int width)
+{
 	this->width = width;
 }
 
-bool Column::getAlignLeft() {
+bool Column::getAlignLeft()
+{
 	return this->alignLeft;
 }
 
-void Column::setAlignLeft(bool alignLeft) {
+void Column::setAlignLeft(bool alignLeft)
+{
 	this->alignLeft = alignLeft;
 }
 
 
-std::string Column::getValue(Cursor *cur, bool plainNumbers) {
+std::string Column::getValue(Cursor *cur, bool plainNumbers)
+{
 	std::string valueStr;
 	std::stringstream ss;
 	values *val;
@@ -240,7 +251,8 @@ std::string Column::getValue(Cursor *cur, bool plainNumbers) {
 
 }
 
-values *Column::evaluate(AST *ast, Cursor *cur) {
+values *Column::evaluate(AST *ast, Cursor *cur)
+{
 	values *retVal = NULL;
 
 	/* check input AST */
@@ -288,7 +300,8 @@ values *Column::evaluate(AST *ast, Cursor *cur) {
 	return retVal;
 }
 
-std::string Column::printIPv4(uint32_t address) {
+std::string Column::printIPv4(uint32_t address)
+{
 	char buf[INET_ADDRSTRLEN];
 	struct in_addr in_addr;
 
@@ -298,7 +311,8 @@ std::string Column::printIPv4(uint32_t address) {
 
 	return buf;
 }
-std::string Column::printIPv6(uint64_t part1, uint64_t part2) {
+std::string Column::printIPv6(uint64_t part1, uint64_t part2)
+{
 	char buf[INET6_ADDRSTRLEN];
 	struct in6_addr in6_addr;
 
@@ -310,7 +324,8 @@ std::string Column::printIPv6(uint64_t part1, uint64_t part2) {
 	return buf;
 }
 
-std::string Column::printTimestamp(uint64_t timestamp) {
+std::string Column::printTimestamp(uint64_t timestamp)
+{
 	/* save current stream flags */
 	time_t timesec = timestamp/1000;
 	uint64_t msec = timestamp % 1000;
@@ -337,7 +352,8 @@ std::string Column::printTimestamp(uint64_t timestamp) {
 	return timeStream.str();
 }
 
-std::string Column::printTCPFlags(unsigned char flags) {
+std::string Column::printTCPFlags(unsigned char flags)
+{
 	std::string result = "......";
 
 	if (flags & 0x20) {
@@ -362,7 +378,8 @@ std::string Column::printTCPFlags(unsigned char flags) {
 	return result;
 }
 
-values* Column::performOperation(values *left, values *right, unsigned char op) {
+values* Column::performOperation(values *left, values *right, unsigned char op)
+{
 	values *result = new values;
 	/* TODO add some type checks maybe... */
 	switch (op) {
@@ -390,11 +407,13 @@ values* Column::performOperation(values *left, values *right, unsigned char op) 
 	return result;
 }
 
-Column::~Column() {
+Column::~Column()
+{
 	delete this->ast;
 }
 
-stringSet Column::getColumns(AST* ast) {
+stringSet Column::getColumns(AST* ast)
+{
 	stringSet ss, ls, rs;
 	if (ast->type == ipfixdump::value) {
 		if (ast->semantics != "flows") {
@@ -425,7 +444,8 @@ stringSet Column::getColumns(AST* ast) {
 	return ss;
 }
 
-stringSet Column::getColumns() {
+stringSet Column::getColumns()
+{
 	/* check for name column */
 	if (this->ast == NULL) {
 		return stringSet();
@@ -434,7 +454,8 @@ stringSet Column::getColumns() {
 	return getColumns(this->ast);
 }
 
-bool Column::getAggregate() {
+bool Column::getAggregate()
+{
 
 	/* Name columns are not aggregable */
 	if (this->ast != NULL && getAggregate(this->ast)) {
@@ -444,7 +465,8 @@ bool Column::getAggregate() {
 	return false;
 }
 
-bool Column::getAggregate(AST* ast) {
+bool Column::getAggregate(AST* ast)
+{
 
 	/* AST type must be 'value' and aggregation string must not be empty */
 	if (ast->type == ipfixdump::value) {
@@ -460,11 +482,13 @@ bool Column::getAggregate(AST* ast) {
 	return false;
 }
 
-void Column::setAST(AST *ast) {
+void Column::setAST(AST *ast)
+{
 	this->ast = ast;
 }
 
-void Column::setAggregation(bool aggregation) {
+void Column::setAggregation(bool aggregation)
+{
 	this->aggregation = aggregation;
 }
 

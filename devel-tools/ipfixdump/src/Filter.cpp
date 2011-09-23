@@ -51,16 +51,19 @@ extern YY_DECL;
 namespace ipfixdump
 {
 
-std::string Filter::getFilter() {
+std::string Filter::getFilter()
+{
 	return this->filterString;
 }
 
-bool Filter::isValid(Cursor &cur) {
+bool Filter::isValid(Cursor &cur)
+{
 	// TODO add this functiononality
 	return true;
 }
 
-Filter::Filter(Configuration &conf): conf(conf) {
+Filter::Filter(Configuration &conf): conf(conf)
+{
 	std::string input = this->conf.getFilter(), filter;
 
 	YY_BUFFER_STATE bp;
@@ -141,4 +144,4 @@ Filter::Filter(Configuration &conf): conf(conf) {
 	this->filterString = filter;
 }
 
-}
+} /* end of namespace ipfixdump */

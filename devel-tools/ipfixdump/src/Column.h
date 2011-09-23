@@ -136,8 +136,6 @@ public:
 
 	/**
 	 * \brief Column class constructor
-	 *
-	 * @param nullStr string returned when column contains no value
 	 */
 	Column();
 
@@ -148,7 +146,6 @@ public:
 	 *
 	 * @param cur cursor pointing to current row
 	 * @param plainNumbers print plain numbers
-	 * @param namesColumns map of column names to column numbers
 	 * @return string containing the value to print
 	 */
 	std::string getValue(Cursor *cur, bool plainNumbers);
@@ -227,7 +224,7 @@ private:
 	 *
 	 * @param left left operand
 	 * @param right right operand
-	 * @param operation one of '+', '-', '/', '*'
+	 * @param op one of '+', '-', '/', '*'
 	 * @return return resulting value of appropriate type
 	 */
 	values* performOperation(values *left, values *right, unsigned char op);

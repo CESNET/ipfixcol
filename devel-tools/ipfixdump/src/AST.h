@@ -47,9 +47,11 @@ namespace ipfixdump {
 /**
  * \brief structure for passing values of unknown type
  */
-struct values {
+struct values
+{
 	ibis::TYPE_T type;
-	union {
+	union
+	{
 		char int8;
 		unsigned char uint8;
 		int16_t int16;
@@ -63,8 +65,9 @@ struct values {
 	} value[MAX_PARTS];
 	std::string string;
 
-	uint64_t toULong(int part=0) {
-		switch(type) {
+	uint64_t toULong(int part=0)
+	{
+		switch (type) {
 		case ibis::BYTE:
 			return (uint64_t) this->value[part].int8;
 			break;
@@ -93,8 +96,9 @@ struct values {
 		}
 	}
 
-	double toDouble(int part=0) {
-		switch(type) {
+	double toDouble(int part=0)
+	{
+		switch (type) {
 		case ibis::FLOAT:
 			return (double) this->value[part].flt;
 			break;
@@ -106,7 +110,8 @@ struct values {
 		}
 	}
 
-	std::string toString() {
+	std::string toString()
+	{
 		std::string valStr;
 		std::stringstream ss;
 		/* print by type */
@@ -169,7 +174,8 @@ struct values {
 /**
  * \brief types for AST structure
  */
-enum astTypes {
+enum astTypes
+{
 	value,   //!< value
 	operation//!< operation
 };
@@ -179,7 +185,8 @@ enum astTypes {
  *
  * Describes the way that column value is constructed from database columns
  */
-struct AST {
+struct AST
+{
 	astTypes type; /**< AST type */
 	unsigned char operation; /**< one of '/', '*', '-', '+' */
 	std::string semantics; /**< semantics of the column */
@@ -192,8 +199,13 @@ struct AST {
 	/**
 	 * \brief AST constructor - sets default values
 	 */
-	AST(): parts(1), left(NULL), right(NULL) {};
-	~AST() {
+	AST(): parts(1), left(NULL), right(NULL) {}
+
+	/**
+	 * \brief AST destructor
+	 */
+	~AST()
+	{
 		delete left;
 		delete right;
 	}

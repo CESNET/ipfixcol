@@ -52,7 +52,8 @@ namespace ipfixdump {
 /* this is needed for the lexer: new yylex function prototype */
 #define YY_DECL int yylex(std::string &arg)
 
-enum yytokentype {
+enum yytokentype
+{
 	COLUMN = 258,
 	NUMBER = 259,
 	CMP = 260,
