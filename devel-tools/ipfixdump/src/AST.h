@@ -40,6 +40,8 @@
 #ifndef AST_H_
 #define AST_H_
 
+#include "typedefs.h"
+
 namespace ipfixdump {
 
 #define MAX_PARTS 2
@@ -113,7 +115,9 @@ struct values
 	std::string toString()
 	{
 		std::string valStr;
-		std::stringstream ss;
+		/* this is static for preformance reason */
+		static std::ostringstream ss;
+
 		/* print by type */
 		/* TODO what to do with more parts here? */
 		switch (this->type) {
@@ -167,6 +171,9 @@ struct values
 		default:
 			break;
 		}
+		/* clear string stream buffer for next usage */
+		ss.str("");
+
 		return valStr;
 	}
 };
@@ -196,10 +203,13 @@ struct AST
 	AST *left; /**< left subtree */
 	AST *right; /**< right subtree */
 
+	stringSet astColumns; /**< Cached columns set (computed in Column::getColumns(AST*)) */
+	bool cached;
+
 	/**
 	 * \brief AST constructor - sets default values
 	 */
-	AST(): parts(1), left(NULL), right(NULL) {}
+	AST(): parts(1), left(NULL), right(NULL), cached(false) {}
 
 	/**
 	 * \brief AST destructor

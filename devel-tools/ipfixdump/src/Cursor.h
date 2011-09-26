@@ -82,7 +82,7 @@ public:
 	 * @param[in] part Number of part to write result to
 	 * @return true on success, false otherwise
 	 */
-	bool getColumn(const char *name, values &value, int part);
+	bool getColumn(std::string, values &value, int part);
 
 	/**
 	 * \brief Cursor class destructor
@@ -92,6 +92,7 @@ public:
 private:
 	Table &table; /**< Table of the cursor */
 	ibis::table::cursor *cursor; /**< Ibis cursor to wrap */
+	ibis::table::typeList columnTypes; /**< Column types of the table */
 };
 
 } /* end of namespace ipfixdump */

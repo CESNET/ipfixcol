@@ -3,7 +3,8 @@
 ################################################
 
 CC      = g++
-CPPFLAGS  = -Wall -Wextra -g -DDEBUG
+CPPFLAGS  = -Wall -Wextra -std=gnu++0x -g -DDEBUG
+# may compile with gnu++0x, it is a little more effective
 LIBS    = -lfastbit
 SRCS    = ipfixdump.cpp \
 		Configuration.cpp \

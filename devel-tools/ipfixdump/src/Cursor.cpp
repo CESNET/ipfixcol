@@ -44,6 +44,8 @@ namespace ipfixdump {
 Cursor::Cursor(Table &table): table(table)
 {
 	this->cursor = this->table.getFastbitTable()->createCursor();
+	/* save column types array (this is a lot more effective than calling the menthod on cursor) */
+	this->columnTypes = this->cursor->columnTypes();
 }
 
 bool Cursor::next()
@@ -60,7 +62,7 @@ bool Cursor::next()
 	return true;
 }
 
-bool Cursor::getColumn(const char *name, values &value, int part)
+bool Cursor::getColumn(std::string name, values &value, int part)
 {
 	int ret = 0, colNum = 0;
 	ibis::TYPE_T type;
@@ -75,7 +77,7 @@ bool Cursor::getColumn(const char *name, values &value, int part)
 		return false;
 	}
 
-	type = this->cursor->columnTypes()[colNum];
+	type = this->columnTypes[colNum];
 
 	switch (type) {
 	case ibis::BYTE:

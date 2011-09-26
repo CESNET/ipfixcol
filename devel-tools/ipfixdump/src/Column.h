@@ -235,7 +235,7 @@ private:
 	 * @param ast to go through
 	 * @return Set of column names
 	 */
-	stringSet getColumns(AST* ast);
+	stringSet& getColumns(AST* ast);
 
 	/**
 	 * \brief Is AST aggregable?

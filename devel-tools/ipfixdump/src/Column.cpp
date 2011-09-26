@@ -207,21 +207,19 @@ void Column::setAlignLeft(bool alignLeft)
 
 std::string Column::getValue(Cursor *cur, bool plainNumbers)
 {
-	std::string valueStr;
-	std::stringstream ss;
-	values *val;
-
 	/* check whether we have name column */
 	if (ast == NULL) {
 		return name;
 	}
 
-	val = evaluate(this->ast, cur);
+	values *val = evaluate(this->ast, cur);
 
 	/* check for missing column */
 	if (val == NULL) {
 		return this->nullStr;
 	}
+
+	std::string valueStr;
 
 	if (!this->ast->semantics.empty() && this->ast->semantics != "flows") {
 		if (this->ast->semantics == "ipv4") {
@@ -234,6 +232,7 @@ std::string Column::getValue(Cursor *cur, bool plainNumbers)
 			if (!plainNumbers) {
 				valueStr = protocols[val->value[0].uint8];
 			} else {
+				std::stringstream ss;
 				ss << (uint16_t) val->value[0].uint8;
 				valueStr = ss.str();
 			}
@@ -265,12 +264,11 @@ values *Column::evaluate(AST *ast, Cursor *cur)
 		case ipfixdump::value:{
 			retVal = new values;
 			int part=0;
-			stringSet tmpSet;
+			stringSet &tmpSet = this->getColumns(ast);
 
-			tmpSet = this->getColumns(ast);
 			for (stringSet::iterator it = tmpSet.begin(); it != tmpSet.end(); it++) {
 				/* get value from table */
-				if (!cur->getColumn((*it).c_str(), *retVal, part)) {
+				if (!cur->getColumn(*it, *retVal, part)) {
 					delete retVal;
 					return NULL;
 				}
@@ -330,7 +328,11 @@ std::string Column::printTimestamp(uint64_t timestamp)
 	time_t timesec = timestamp/1000;
 	uint64_t msec = timestamp % 1000;
 	struct tm *tm = gmtime(&timesec);
-	std::stringstream timeStream;
+
+	/* make static for performance reasons */
+	static std::stringstream timeStream;
+	/* empty before use */
+	timeStream.str("");
 
 	timeStream.setf(std::ios_base::right, std::ios_base::adjustfield);
 	timeStream.fill('0');
@@ -412,36 +414,41 @@ Column::~Column()
 	delete this->ast;
 }
 
-stringSet Column::getColumns(AST* ast)
+stringSet& Column::getColumns(AST* ast)
 {
-	stringSet ss, ls, rs;
+	/* use cached values if possible */
+	if (ast->cached) return ast->astColumns;
+
 	if (ast->type == ipfixdump::value) {
 		if (ast->semantics != "flows") {
 			if (ast->parts > 1) {
 				for (int i = 0; i < ast->parts; i++) {
 					std::stringstream strStrm;
 					strStrm << ast->value << "p" << i;
-					ss.insert(strStrm.str());
+					ast->astColumns.insert(strStrm.str());
 				}
 			} else {
 				if (this->aggregation && !ast->aggregation.empty()) {
-					ss.insert(ast->aggregation + "(" + ast->value + ")");
+					ast->astColumns.insert(ast->aggregation + "(" + ast->value + ")");
 				} else {
-					ss.insert(ast->value);
+					ast->astColumns.insert(ast->value);
 				}
 			}
 		} else { /* flows need this (on aggregation value must be set to count) */
-			ss.insert("count(*)");
+			ast->astColumns.insert("count(*)");
 			ast->value = "*";
 		}
 	} else { /* operation */
+		stringSet ls, rs;
 		ls = getColumns(ast->left);
 		rs = getColumns(ast->right);
-		ss.insert(ls.begin(), ls.end());
-		ss.insert(rs.begin(), rs.end());
+		ast->astColumns.insert(ls.begin(), ls.end());
+		ast->astColumns.insert(rs.begin(), rs.end());
 	}
 
-	return ss;
+	ast->cached = true;
+
+	return ast->astColumns;
 }
 
 stringSet Column::getColumns()
