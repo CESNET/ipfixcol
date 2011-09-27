@@ -39,8 +39,6 @@
 
 #include <getopt.h>
 #include <iostream>
-#include <arpa/inet.h>
-#include "protocols.h"
 #include "Column.h"
 
 namespace ipfixdump
@@ -205,49 +203,9 @@ void Column::setAlignLeft(bool alignLeft)
 }
 
 
-std::string Column::getValue(Cursor *cur, bool plainNumbers)
+values* Column::getValue(Cursor *cur)
 {
-	/* check whether we have name column */
-	if (ast == NULL) {
-		return name;
-	}
-
-	values *val = evaluate(this->ast, cur);
-
-	/* check for missing column */
-	if (val == NULL) {
-		return this->nullStr;
-	}
-
-	std::string valueStr;
-
-	if (!this->ast->semantics.empty() && this->ast->semantics != "flows") {
-		if (this->ast->semantics == "ipv4") {
-			valueStr = printIPv4(val->value[0].uint32);
-		} else if (this->ast->semantics == "timestamp") {
-			valueStr = printTimestamp(val->value[0].uint64);
-		} else if (this->ast->semantics == "ipv6") {
-			valueStr = printIPv6(val->value[0].uint64, val->value[1].uint64);
-		} else if (this->ast->semantics == "protocol") {
-			if (!plainNumbers) {
-				valueStr = protocols[val->value[0].uint8];
-			} else {
-				std::stringstream ss;
-				ss << (uint16_t) val->value[0].uint8;
-				valueStr = ss.str();
-			}
-		} else if (this->ast->semantics == "tcpflags") {
-			valueStr = printTCPFlags(val->value[0].uint8);
-		}
-	} else {
-		valueStr = val->toString();
-	}
-
-	/* clean value variable */
-	delete val;
-
-	return valueStr;
-
+	return evaluate(this->ast, cur);
 }
 
 values *Column::evaluate(AST *ast, Cursor *cur)
@@ -296,88 +254,6 @@ values *Column::evaluate(AST *ast, Cursor *cur)
 	}
 
 	return retVal;
-}
-
-std::string Column::printIPv4(uint32_t address)
-{
-	char buf[INET_ADDRSTRLEN];
-	struct in_addr in_addr;
-
-	/* convert address */
-	in_addr.s_addr = htonl(address);
-	inet_ntop(AF_INET, &in_addr, buf, INET_ADDRSTRLEN);
-
-	return buf;
-}
-std::string Column::printIPv6(uint64_t part1, uint64_t part2)
-{
-	char buf[INET6_ADDRSTRLEN];
-	struct in6_addr in6_addr;
-
-	/* convert address */
-	*((uint64_t*) &in6_addr.s6_addr) = htobe64(part1);
-	*(((uint64_t*) &in6_addr.s6_addr)+1) = htobe64(part2);
-	inet_ntop(AF_INET6, &in6_addr, buf, INET6_ADDRSTRLEN);
-
-	return buf;
-}
-
-std::string Column::printTimestamp(uint64_t timestamp)
-{
-	/* save current stream flags */
-	time_t timesec = timestamp/1000;
-	uint64_t msec = timestamp % 1000;
-	struct tm *tm = gmtime(&timesec);
-
-	/* make static for performance reasons */
-	static std::stringstream timeStream;
-	/* empty before use */
-	timeStream.str("");
-
-	timeStream.setf(std::ios_base::right, std::ios_base::adjustfield);
-	timeStream.fill('0');
-
-	timeStream << (1900 + tm->tm_year) << "-";
-	timeStream.width(2);
-	timeStream << (1 + tm->tm_mon) << "-";
-	timeStream.width(2);
-	timeStream << tm->tm_mday << " ";
-	timeStream.width(2);
-	timeStream << tm->tm_hour << ":";
-	timeStream.width(2);
-	timeStream << tm->tm_min << ":";
-	timeStream.width(2);
-	timeStream << tm->tm_sec << ".";
-	timeStream.width(3);
-	timeStream << msec;
-
-	return timeStream.str();
-}
-
-std::string Column::printTCPFlags(unsigned char flags)
-{
-	std::string result = "......";
-
-	if (flags & 0x20) {
-		result[0] = 'U';
-	}
-	if (flags & 0x10) {
-		result[1] = 'A';
-	}
-	if (flags & 0x08) {
-		result[2] = 'P';
-	}
-	if (flags & 0x04) {
-		result[3] = 'R';
-	}
-	if (flags & 0x02) {
-		result[4] = 'S';
-	}
-	if (flags & 0x01) {
-		result[5] = 'F';
-	}
-
-	return result;
 }
 
 values* Column::performOperation(values *left, values *right, unsigned char op)
@@ -497,6 +373,21 @@ void Column::setAST(AST *ast)
 void Column::setAggregation(bool aggregation)
 {
 	this->aggregation = aggregation;
+}
+
+std::string Column::getNullStr()
+{
+	return this->nullStr;
+}
+
+std::string Column::getSemantics()
+{
+	return this->ast->semantics;
+}
+
+bool Column::isSeparator() {
+	if (this->ast == NULL) return true;
+	return false;
 }
 
 Column::Column(): nullStr("NULL"), width(0), alignLeft(false), ast(NULL), aggregation(false) {}

@@ -130,7 +130,6 @@
 	<column>
 		<name>ICMP type</name>
 		<width>9</width>
-		<alignLeft/>
 		<alias>%icmptype</alias>
 		<default-value>0</default-value>
 		<value type="plain">

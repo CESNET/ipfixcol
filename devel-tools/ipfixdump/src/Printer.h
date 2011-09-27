@@ -89,6 +89,37 @@ private:
 	 */
 	void printHeader();
 
+	/**
+	 * \brief Return printable value of column on row specified by cursor
+	 *
+	 * Applies semantics and other formatting requirements
+	 *
+	 * @param col Column to print
+	 * @param cur Cursor with values to print
+	 * @return String to print
+	 */
+	std::string printValue(Column *col, Cursor *cur);
+
+	/**
+	 * \brief Print formatted IPv4 address
+	 */
+	std::string printIPv4(uint32_t address);
+
+	/**
+	 * \brief Print formatted IPv6 address
+	 */
+	std::string printIPv6(uint64_t part1, uint64_t part2);
+
+	/**
+	 * \brief Print formatted timestamp
+	 */
+	std::string printTimestamp(uint64_t timestamp);
+
+	/**
+	 * \brief Print formatted TCP flags
+	 */
+	std::string printTCPFlags(unsigned char flags);
+
 	std::ostream &out; /**< Stream to write to */
 	Configuration &conf; /**< program configuration */
 };
