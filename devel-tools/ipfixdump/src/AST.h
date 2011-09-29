@@ -1,7 +1,7 @@
 /**
  * \file AST.h
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Header of class for managing abstract syntax tree
+ * \brief Header of struct for managing abstract syntax tree
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -67,115 +67,29 @@ struct values
 	} value[MAX_PARTS];
 	std::string string;
 
-	uint64_t toULong(int part=0)
-	{
-		switch (type) {
-		case ibis::BYTE:
-			return (uint64_t) this->value[part].int8;
-			break;
-		case ibis::UBYTE:
-			return (uint64_t) this->value[part].uint8;
-			break;
-		case ibis::SHORT:
-			return (uint64_t) this->value[part].int16;
-			break;
-		case ibis::USHORT:
-			return (uint64_t) this->value[part].uint16;
-			break;
-		case ibis::INT:
-			return (uint64_t) this->value[part].int32;
-			break;
-		case ibis::UINT:
-			return (uint64_t) this->value[part].uint32;
-			break;
-		case ibis::LONG:
-			return (uint64_t) this->value[part].int64;
-			break;
-		case ibis::ULONG:
-			return this->value[part].uint64;
-			break;
-		default: return 0;
-		}
-	}
+	/**
+	 * \brief Convert value to int64_t type
+	 *
+	 * @param part which part to convert
+	 * @return int64_t converted value
+	 */
+	int64_t toLong(int part=0);
 
-	double toDouble(int part=0)
-	{
-		switch (type) {
-		case ibis::FLOAT:
-			return (double) this->value[part].flt;
-			break;
-		case ibis::DOUBLE:
-			return this->value[part].dbl;
-			break;
-		default:
-			return (double) this->toULong(part);
-		}
-	}
+	/**
+	 * \brief Convert value to double type
+	 *
+	 * @param part which part to convert
+	 * @return converted value of type double
+	 */
+	double toDouble(int part=0);
 
-	std::string toString()
-	{
-		std::string valStr;
-		/* this is static for preformance reason */
-		static std::ostringstream ss;
-
-		/* print by type */
-		/* TODO what to do with more parts here? */
-		switch (this->type) {
-		case ibis::BYTE:
-			ss << (int16_t) this->value[0].int8;
-			valStr = ss.str();
-			break;
-		case ibis::UBYTE:
-			ss << (uint16_t) this->value[0].uint8;
-			valStr = ss.str();
-			break;
-		case ibis::SHORT:
-			ss << this->value[0].int16;
-			valStr = ss.str();
-			break;
-		case ibis::USHORT:
-			ss << this->value[0].uint16;
-			valStr = ss.str();
-			break;
-		case ibis::INT:
-			ss << this->value[0].int32;
-			valStr = ss.str();
-			break;
-		case ibis::UINT:
-			ss << this->value[0].uint32;
-			valStr = ss.str();
-			break;
-		case ibis::LONG:
-			ss << this->value[0].int64;
-			valStr = ss.str();
-			break;
-		case ibis::ULONG:
-			ss << this->value[0].uint64;
-			valStr = ss.str();
-			break;
-		case ibis::FLOAT:
-			ss << this->value[0].flt;
-			valStr = ss.str();
-			break;
-		case ibis::DOUBLE:
-			ss << this->value[0].dbl;
-			valStr = ss.str();
-			break;
-		case ibis::TEXT:
-		case ibis::CATEGORY:
-		case ibis::OID:
-		case ibis::BLOB:
-		case ibis::UNKNOWN_TYPE:
-			valStr = this->string;
-			break;
-		default:
-			break;
-		}
-		/* clear string stream buffer for next usage */
-		ss.str("");
-
-		return valStr;
-	}
+	/**
+	 * \brief Return string representation of value
+	 *
+	 * @param plainNumbers Don't use M,G format for long numbers
+	 * @return String representation of value
+	 */
+	std::string toString(bool plainNumbers);
 };
 
 /**

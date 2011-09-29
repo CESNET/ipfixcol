@@ -14,7 +14,8 @@ SRCS    = ipfixdump.cpp \
 		Printer.cpp \
 		Filter.cpp \
 		TableManager.cpp \
-		Cursor.cpp
+		Cursor.cpp \
+		AST.cpp
 OBJDIR  = .obj
 SRCDIR  = src
 SRC3RD  = 3rdparty

@@ -169,7 +169,7 @@ std::string Printer::printValue(Column *col, Cursor *cur)
 			valueStr = printTCPFlags(val->value[0].uint8);
 		}
 	} else {
-		valueStr = val->toString();
+		valueStr = val->toString(conf.getPlainNumbers());
 	}
 
 	/* clean value variable */
