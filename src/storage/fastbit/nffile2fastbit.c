@@ -960,7 +960,8 @@ int main(int argc, char *argv[]){
 	char *input_file = 0;
 	char *output_dir = 0;
 	char indexes[4] = "no";
-	char *prefix = 0;
+	char def_prefix[2] = "";
+	char *prefix = def_prefix;
 
 
 	char c;
