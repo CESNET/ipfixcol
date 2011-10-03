@@ -962,6 +962,8 @@ int main(int argc, char *argv[]){
 	char indexes[4] = "no";
 	char def_prefix[2] = "";
 	char *prefix = def_prefix;
+	char def_plugin[] = "./fastbit_output.so";
+	char *plugin = def_plugin;
 
 
 	char c;
@@ -1011,7 +1013,7 @@ int main(int argc, char *argv[]){
 
 	signal(SIGINT,&signal_handler);
 
-	dlhandle = dlopen ("/home/kramolis/git/ipfixcol/src/storage/fastbit/fastbit_output.so", RTLD_LAZY); //TODO!!
+	dlhandle = dlopen (plugin, RTLD_LAZY);
 	if (!dlhandle) {
 	    fputs (dlerror(), stderr);
 	    exit(1);
