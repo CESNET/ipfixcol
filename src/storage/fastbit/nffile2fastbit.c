@@ -924,11 +924,12 @@ void clean_tmp_manager(struct ipfix_template_mgr *manager){
 }
 
 int usage(){
-	printf("Usage: %s -i input_file -w output_dir [-p prefix] [-v level] [-hVb]\n",getprogname());
+	printf("Usage: %s -i input_file -w output_dir [-p prefix] [-P path] [-v level] [-hVb]\n",getprogname());
 	printf(" -i input_file	path to nfdump file for conversion\n");
 	printf(" -w output_dir	output direcotry for fastbit files\n");
 	printf(" -b		build indexes\n");
 	printf(" -p prefix	output files prefix\n");
+	printf(" -P path	path to fastbit plugin\n");
 	printf(" -h 		prints this help\n");
 	printf(" -v level 	set verbose level\n");
 	printf(" -V		show version\n");
