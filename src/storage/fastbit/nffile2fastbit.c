@@ -13,7 +13,7 @@
 #include "nffile.h"
 #include "../../../headers/storage.h"
 
-#define ARGUMENTS "hbi:w:v:p:V"
+#define ARGUMENTS "hbi:w:v:p:P:V"
 #define VERSION "1.0"
 
 volatile int stop = 0;
@@ -979,6 +979,16 @@ int main(int argc, char *argv[]){
 			break;
 		case 'p':
 			prefix = optarg;
+			break;
+		case 'P':
+			if(optarg[0]=='/'){
+				VERBOSE(CL_VERBOSE_BASIC,"plugin absolut path: %s\n",optarg);
+				plugin = optarg;
+			}else{
+				plugin = (char *) malloc(strlen(optarg)+2);
+				sprintf(plugin,"./%s",optarg);
+				VERBOSE(CL_VERBOSE_BASIC,"plugin relative path: %s\n", plugin);
+			}
 			break;
 		case 'b':
 			strcpy(indexes,"yes");
