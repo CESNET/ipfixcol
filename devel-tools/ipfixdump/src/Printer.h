@@ -102,23 +102,63 @@ private:
 
 	/**
 	 * \brief Print formatted IPv4 address
+	 *
+	 * @param address integer format address
+	 * @return String with printable address
 	 */
 	std::string printIPv4(uint32_t address);
 
 	/**
 	 * \brief Print formatted IPv6 address
+	 *
+	 * @param part1 first half of ipv6 address
+	 * @param part2 second half of ipv6 address
+	 * @return String with printable address
 	 */
 	std::string printIPv6(uint64_t part1, uint64_t part2);
 
 	/**
 	 * \brief Print formatted timestamp
+	 *
+	 * This is called from printTimestamp[32|64]
+	 *
+	 * @param tm datetime structure
+	 * @param msec miliseconds
+	 * @return String with printable timestamp
 	 */
-	std::string printTimestamp(uint64_t timestamp);
+	std::string printTimestamp(struct tm *tm, uint64_t msec);
+
+	/**
+	 * \brief Print formatted timestamp from seconds
+	 *
+	 * @param timestamp uint32_t number of seconds
+	 * @return String with printable timestamp
+	 */
+	std::string printTimestamp32(uint32_t timestamp);
+
+	/**
+	 * \brief Print formatted timestamp from miliseconds
+	 *
+	 * @param timestamp uint64_t number of miliseconds
+	 * @return String with printable timestamp
+	 */
+	std::string printTimestamp64(uint64_t timestamp);
 
 	/**
 	 * \brief Print formatted TCP flags
+	 *
+	 * @param flags unsigned char value
+	 * @return String with printable flags
 	 */
 	std::string printTCPFlags(unsigned char flags);
+
+	/**
+	 * \brief Print duration as decimal number
+	 *
+	 * @param duration
+	 * @return String with duration
+	 */
+	std::string printDuration(uint64_t duration);
 
 	std::ostream &out; /**< Stream to write to */
 	Configuration &conf; /**< program configuration */

@@ -132,6 +132,7 @@ AST* Column::createOperationElement(pugi::xml_node operation, pugi::xml_document
 	/* set type and operation */
 	ast->type = ipfixdump::operation;
 	ast->operation = operation.attribute("name").value()[0];
+	ast->semantics = operation.attribute("semantics").value();
 
 	/* get argument nodes */
 	arg1 = doc.select_single_node(("/columns/column[alias='"+ std::string(operation.child_value("arg1"))+ "']").c_str());
@@ -263,22 +264,22 @@ values* Column::performOperation(values *left, values *right, unsigned char op)
 	switch (op) {
 				case '+':
 					result->type = ibis::ULONG;
-					result->value[0].int64 = left->toDouble() + right->toDouble();
+					result->value[0].uint64 = left->toDouble() + right->toDouble();
 					break;
 				case '-':
 					result->type = ibis::ULONG;
-					result->value[0].int64 = left->toDouble() - right->toDouble();
+					result->value[0].uint64 = left->toDouble() - right->toDouble();
 					break;
 				case '*':
 					result->type = ibis::ULONG;
-					result->value[0].int64 = left->toDouble() * right->toDouble();
+					result->value[0].uint64 = left->toDouble() * right->toDouble();
 					break;
 				case '/':
 					result->type = ibis::ULONG;
 					if (right->toDouble() == 0) {
-						result->value[0].int64 = 0;
+						result->value[0].uint64 = 0;
 					} else {
-						result->value[0].int64 = left->toDouble() / right->toDouble();
+						result->value[0].uint64 = left->toDouble() / right->toDouble();
 					}
 					break;
 				}

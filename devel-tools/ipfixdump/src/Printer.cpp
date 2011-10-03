@@ -153,8 +153,10 @@ std::string Printer::printValue(Column *col, Cursor *cur)
 	if (!col->getSemantics().empty() && col->getSemantics() != "flows") {
 		if (col->getSemantics() == "ipv4") {
 			valueStr = printIPv4(val->value[0].uint32);
-		} else if (col->getSemantics() == "timestamp") {
-			valueStr = printTimestamp(val->value[0].uint64);
+		} else if (col->getSemantics() == "tmstmp64") {
+			valueStr = printTimestamp64(val->value[0].uint64);
+		} else if (col->getSemantics() == "tmstmp32") {
+			valueStr = printTimestamp32(val->value[0].uint32);
 		} else if (col->getSemantics() == "ipv6") {
 			valueStr = printIPv6(val->value[0].uint64, val->value[1].uint64);
 		} else if (col->getSemantics() == "protocol") {
@@ -167,6 +169,8 @@ std::string Printer::printValue(Column *col, Cursor *cur)
 			}
 		} else if (col->getSemantics() == "tcpflags") {
 			valueStr = printTCPFlags(val->value[0].uint8);
+		} else if (col->getSemantics() == "duration") {
+			valueStr = printDuration(val->value[0].uint64);
 		}
 	} else {
 		valueStr = val->toString(conf.getPlainNumbers());
@@ -203,15 +207,27 @@ std::string Printer::printIPv6(uint64_t part1, uint64_t part2)
 	return buf;
 }
 
-std::string Printer::printTimestamp(uint64_t timestamp)
+std::string Printer::printTimestamp32(uint32_t timestamp)
 {
-	/* save current stream flags */
+	time_t timesec = timestamp;
+	struct tm *tm = gmtime(&timesec);
+
+	return this->printTimestamp(tm, 0);
+}
+
+std::string Printer::printTimestamp64(uint64_t timestamp)
+{
 	time_t timesec = timestamp/1000;
 	uint64_t msec = timestamp % 1000;
 	struct tm *tm = gmtime(&timesec);
 
+	return this->printTimestamp(tm, msec);
+}
+
+std::string Printer::printTimestamp(struct tm *tm, uint64_t msec)
+{
 	/* make static for performance reasons */
-	static std::stringstream timeStream;
+	static std::ostringstream timeStream;
 	/* empty before use */
 	timeStream.str("");
 
@@ -259,6 +275,20 @@ std::string Printer::printTCPFlags(unsigned char flags)
 	}
 
 	return result;
+}
+
+std::string Printer::printDuration(uint64_t duration) {
+	static std::ostringstream ss;
+	static std::string str;
+	ss << std::fixed;
+	ss.precision(3);
+
+	ss << (float) duration/1000;
+
+	str = ss.str();
+	ss.str("");
+
+	return str;
 }
 
 /* copy output stream and format */

@@ -21,9 +21,12 @@
 				options to format ouput columns: as
 				'ipv4'	 : expects uint32 column and prints it as IPv4 address
 				'ipv6'	 : expects uint64 column and prints it as IPv6 address. 'parts' attribute must be set to 2 
-				'timestamp': expects uint64 column and prints it as timestamp
+				'tmstmp64': expects uint64 column (miliseconds since 1970) and prints it as timestamp
+				'tmstmp32': expects uint32 column (seconds since 1970) and prints it as timestamp
 				'tcpflags' : expects uint8 column and print it as TCP flags
 				'flows'	: this is special column with no relation to the database. It is always computed as number of flows
+			elements under <value type="operation"> can also have attribute 'semantics'. Currently only following can be used:
+				'duration': formats miliseconds as seconds with precision 3.
 			elements under <value type="plain"> have attribute 'aggregation'. This determines how the columns is
 				aggregated. If attribute is empty, column is not aggregated. Supported values are: 'min', 'max', 'sum', 'avg'
 				
@@ -36,7 +39,7 @@
 		<width>23</width>
 		<alias>%ts</alias>
 		<value type="plain">
-			<element semantics="timestamp" aggregation="min">e0id152</element>
+			<element semantics="tmstmp64" aggregation="min">e0id152</element>
 		</value>
 	</column>
 	<column>
@@ -44,7 +47,23 @@
 		<width>23</width>
 		<alias>%te</alias>
 		<value type="plain">
-			<element semantics="timestamp" aggregation="max">e0id153</element>
+			<element semantics="tmstmp64" aggregation="max">e0id153</element>
+		</value>
+	</column>
+	<column>
+		<name>Date flow start</name>
+		<width>23</width>
+		<alias>%ts32</alias>
+		<value type="plain">
+			<element semantics="tmstmp32" aggregation="min">e0id150</element>
+		</value>
+	</column>
+	<column>
+		<name>Date flow end</name>
+		<width>23</width>
+		<alias>%te32</alias>
+		<value type="plain">
+			<element semantics="tmstmp32" aggregation="max">e0id151</element>
 		</value>
 	</column>
 	<column>
@@ -53,7 +72,7 @@
 		<alias>%td</alias>
 		<alias>%duration</alias>
 		<value type="operation">
-			<operation name="-">
+			<operation name="-" semantics="duration">
 				<arg1>%te</arg1>
 				<arg2>%ts</arg2>
 			</operation>
