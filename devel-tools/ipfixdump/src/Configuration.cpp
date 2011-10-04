@@ -136,10 +136,10 @@ int Configuration::init(int argc, char *argv[])
 			NOT_SUPPORTED
 			break;
 		case 'M':
-			this->optM = true;
+			NOT_SUPPORTED
 			break;
 		case 'm':
-			NOT_SUPPORTED
+			this->optm = true;
 			break;
 		case 'R': {
 			std::string dirpath;
@@ -551,12 +551,12 @@ void Configuration::help()
 	<< "                yyyy/MM/dd.hh:mm:ss[-yyyy/MM/dd.hh:mm:ss]" << std::endl;
 }
 
-bool Configuration::getOptionM()
+bool Configuration::getOptionm()
 {
-	return this->optM;
+	return this->optm;
 }
 
-Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false), optM(false) {}
+Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false), optm(false) {}
 
 Configuration::~Configuration()
 {

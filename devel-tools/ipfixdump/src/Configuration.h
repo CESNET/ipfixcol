@@ -163,7 +163,7 @@ public:
      *
      * @return true if option "-m" was specified, false otherwise
      */
-    bool getOptionM();
+    bool getOptionm();
 
     /**
      * \brief Class destructor
@@ -233,7 +233,7 @@ private:
 	columnVector columns;              /**< Vector of columns to print */
 	std::string firstdir;              /**< first table (directory) user wants to work with */
 	std::string lastdir;               /**< last table (directory) user wants to work with */
-	bool optM;                         /**< indicates whether user specified "-m" option or not */
+	bool optm;                         /**< indicates whether user specified "-m" option or not */
 }; /* end of Configuration class */
 
 } /* end of ipfixdump namespace */
