@@ -125,24 +125,27 @@ bool TableManagerCursor::next()
 		return true;
 	}
 
+
+
 	/* just print out all rows */
 	if (this->currentCursor == NULL) {
 		/* this is first time we call this method */
 		this->currentCursor = *(this->cursorListIter);
-		next_ret = this->currentCursor->next();
+		this->currentCursor->next();
 	} else {
 		/* proceed to the next row */
-		next_ret = this->currentCursor->next();
-		if (next_ret == false) {
-			if (this->cursorListIter == this->cursorList.end()) {
-				/* we have processed all rows */
-				this->currentCursor = NULL;
-				return false;
-			}
 
-			this->cursorListIter++;
-			this->currentCursor = *(this->cursorListIter);
-			this->currentCursor->next();
+		if (this->cursorListIter == this->cursorList.end()) {
+			/* we reached end of vector, start from beginning again */
+			this->cursorListIter = this->cursorList.begin();
+		}
+
+		this->currentCursor = *(this->cursorListIter);
+		next_ret = this->currentCursor->next();
+		if (!next_ret) {
+			/* we have processed all rows */
+			this->currentCursor = NULL;
+			return false;
 		}
 	}
 
