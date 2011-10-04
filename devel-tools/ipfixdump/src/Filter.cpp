@@ -58,13 +58,14 @@ std::string Filter::getFilter()
 
 bool Filter::isValid(Cursor &cur)
 {
-	// TODO add this functiononality
+	// TODO add this functionality
 	return true;
 }
 
 Filter::Filter(Configuration &conf): conf(conf)
 {
-	std::string input = this->conf.getFilter(), filter;
+	std::string input = this->conf.getFilter();
+	std::string filter;
 
 	YY_BUFFER_STATE bp;
 	int c;
