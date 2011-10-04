@@ -45,15 +45,16 @@
 
 %%
 
-%[a-zA-Z0-9]+			{ arg = yytext; return ipfixdump::COLUMN; }
+%[a-zA-Z0-9]+		{ arg = yytext; return ipfixdump::COLUMN; }
 e[0-9]+id[0-9]+		{ arg = yytext; return ipfixdump::RAWCOLUMN; }
 " "+|\t+|\n+		{/* ignore spaces and newlines */}
-[0-9]+				{ arg = yytext; return ipfixdump::NUMBER; }
+[0-9]+[kKmMgGtT]{0,1}	{ arg = yytext; return ipfixdump::NUMBER; }
 [0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}	{ arg = yytext; return ipfixdump::IPv4; }
 ">"|"<"|"="|"==" |
 "=>"|"<="|">=" | 
-"=>"|"!="				{ arg = yytext; return ipfixdump::CMP; }
+"=>"|"!="			{ arg = yytext; return ipfixdump::CMP; }
 AND|OR|and|or		{ arg = yytext; return ipfixdump::OPERATOR; }
+"("|")"				{ arg = yytext; return ipfixdump::BRACKET; }
 .					{ arg = yytext; return ipfixdump::OTHER; }
 
 %%

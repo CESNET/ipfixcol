@@ -73,31 +73,28 @@ Filter::Filter(Configuration &conf): conf(conf)
 	bp = yy_scan_string(input.c_str());
 	yy_switch_to_buffer(bp);
 
+	/* Open XML configuration file */
+	pugi::xml_document doc;
+	doc.load_file(conf.getXmlConfPath());
+
 	while ((c = yylex(arg)) != 0) {
 		switch (c) {
 		case COLUMN: {
 			/* get real columns */
-
-			/* Open XML configuration file */
-			pugi::xml_document doc;
-			doc.load_file(conf.getXmlConfPath());
-
 			Column *col = new Column();
 			if (col->init(doc, arg, false)) {
 				stringSet cols = col->getColumns();
 				if (cols.size() == 1) { /* plain value */
 					filter += *cols.begin() + " ";
 				} else { /* operation */
-					/* TODO */
+					/* \TODO  save for post-filtering */
 				}
 
 			} else {
 				std::cerr << "Filter column '" << arg << "' not found!" << std::endl;
 			}
 			delete col;
-
-			}
-			break;
+			break;}
 		case IPv4:{
 			/* convert ipv4 address to uint32_t */
 			struct in_addr addr;
@@ -110,10 +107,31 @@ Filter::Filter(Configuration &conf): conf(conf)
 			ss << addrNum;
 			filter += ss.str() + " ";
 			break;}
-/*		case NUMBER:
-			std::cout << "number: ";
+		case NUMBER:
+			filter += arg.substr(0, arg.length()-1);
+			switch (arg[arg.length()-1]) {
+			case 'k':
+			case 'K':
+				filter += "000";
+				break;
+			case 'm':
+			case 'M':
+				filter += "000000";
+				break;
+			case 'g':
+			case 'G':
+				filter += "000000000";
+				break;
+			case 't':
+			case 'T':
+				filter += "000000000000";
+				break;
+			default:
+				break;
+			}
+			filter += " ";
 			break;
-		case OPERATOR:
+/*		case OPERATOR:
 			std::cout << "operator: ";
 			break;
 		case RAWCOLUMN:
@@ -122,14 +140,15 @@ Filter::Filter(Configuration &conf): conf(conf)
 		case CMP:
 			std::cout << "comparison: ";
 			break;*/
+		case BRACKET:
+			filter += arg + " ";
+			break;
 		case OTHER:
 			std::cout << "Wrong filter string: '"<< arg << "'" << std::endl;
-			/* end */
-			this->filterString = "";
 			break;
 		default:
 			filter += arg + " ";
-		break;
+			break;
 		}
 	}
 
