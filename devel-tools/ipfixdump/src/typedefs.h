@@ -59,7 +59,8 @@ enum yytokentype
 	CMP = 260,
 	RAWCOLUMN = 261,
 	OPERATOR = 262,
-	IPv4 = 163,
+	IPv4 = 263,
+	BRACKET = 264,
 	OTHER = 300
 };
 
