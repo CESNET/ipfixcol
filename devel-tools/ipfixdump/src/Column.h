@@ -139,22 +139,18 @@ public:
 
 	/**
 	 * \brief Column class constructor
-	 *
-	 * @param nullStr string returned when column contains no value
 	 */
 	Column();
 
 	/**
 	 * \brief Returns value of current column in row specified by cursor
 	 *
-	 * This value is formatted as specified by semantics
+	 * structure values contains required value in form of union
 	 *
 	 * @param cur cursor pointing to current row
-	 * @param plainNumbers print plain numbers
-	 * @param namesColumns map of column names to column numbers
-	 * @return string containing the value to print
+	 * @return values structure containing required value
 	 */
-	std::string getValue(Cursor *cur, bool plainNumbers);
+	values* getValue(Cursor *cur);
 
 	/**
 	 * \brief Can this column be used in aggregation?
@@ -187,6 +183,28 @@ public:
 	void setAggregation(bool aggregation);
 
 	/**
+	 * \brief Returns string to print when value is not available
+	 *
+	 * @return string to print when value is not available
+	 */
+	std::string getNullStr();
+
+	/**
+	 * \brief Returns semantics of the column
+	 * This is used to specify formatting of the column
+	 *
+	 * @return semantics of the column
+	 */
+	std::string getSemantics();
+
+	/**
+	 * \brief Returns true if column is a separator column
+	 *
+	 * @return returns true if column is a separator column, false otherwise
+	 */
+	bool isSeparator();
+
+	/**
 	 * \brief Class destructor
 	 * Frees AST
 	 */
@@ -203,34 +221,14 @@ private:
 	 */
 	values *evaluate(AST *ast, Cursor *cur);
 
-	/**
-	 * \brief Print formatted IPv4 address
-	 */
-	std::string printIPv4(uint32_t address);
-
-	/**
-	 * \brief Print formatted IPv6 address
-	 */
-	std::string printIPv6(uint64_t part1, uint64_t part2);
-
-	/**
-	 * \brief Print formatted timestamp
-	 */
-	std::string printTimestamp(uint64_t timestamp);
-
-	/**
-	 * \brief Print formatted TCP flags
-	 */
-	std::string printTCPFlags(unsigned char flags);
-
-	/**
+		/**
 	 * \brief Performs operation on given data
 	 *
 	 * Can change value type (bigger integer)
 	 *
 	 * @param left left operand
 	 * @param right right operand
-	 * @param operation one of '+', '-', '/', '*'
+	 * @param op one of '+', '-', '/', '*'
 	 * @return return resulting value of appropriate type
 	 */
 	values* performOperation(values *left, values *right, unsigned char op);
@@ -241,7 +239,7 @@ private:
 	 * @param ast to go through
 	 * @return Set of column names
 	 */
-	stringSet getColumns(AST* ast);
+	stringSet& getColumns(AST* ast);
 
 	/**
 	 * \brief Is AST aggregable?

@@ -62,7 +62,8 @@ class Configuration;
  * After filter()/aggregate() call holds resulting tables and returns them on
  * getTables() call.
  */
-class TableManager {
+class TableManager
+{
 public:
 	/**
 	 * \brief Data class constructor

@@ -41,15 +41,18 @@
 
 namespace ipfixdump {
 
-Table::Table(ibis::part *part) {
+Table::Table(ibis::part *part)
+{
 	this->table = ibis::table::create(*part);
 }
 
-Table::Table(ibis::partList &partList) {
+Table::Table(ibis::partList &partList)
+{
 	this->table = ibis::table::create(partList);
 }
 
-Cursor* Table::createCursor() {
+Cursor* Table::createCursor()
+{
 	/* check for NULL table */
 	if (this->table == NULL) {
 		return NULL;
@@ -59,7 +62,8 @@ Cursor* Table::createCursor() {
 }
 
 bool Table::aggregate(stringSet &aggregateColumns, stringSet &summaryColumns,
-		Filter &filter) {
+		Filter &filter)
+{
 	ibis::table *tmpTable = this->table;
 	std::string colNames;
 	stringSet combined;
@@ -91,7 +95,8 @@ bool Table::aggregate(stringSet &aggregateColumns, stringSet &summaryColumns,
 	return true;
 }
 
-bool Table::filter(Filter &filter) {
+bool Table::filter(Filter &filter)
+{
 	ibis::table *tmpTable = this->table;
 	std::string colNames;
 
@@ -118,23 +123,28 @@ bool Table::filter(Filter &filter) {
 	return true;
 }
 
-size_t Table::nRows() {
+size_t Table::nRows()
+{
 	return this->table->nRows();
 }
 
-ibis::table* Table::getFastbitTable() {
+ibis::table* Table::getFastbitTable()
+{
 	return this->table;
 }
 
-namesColumnsMap& Table::getNamesColumns() {
+namesColumnsMap& Table::getNamesColumns()
+{
 	return this->namesColumns;
 }
 
-Filter& Table::getFilter() {
+Filter& Table::getFilter()
+{
 	return *this->usedFilter;
 }
 
-Table::~Table() {
+Table::~Table()
+{
 	delete this->table;
 }
 

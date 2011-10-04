@@ -54,7 +54,8 @@ namespace ipfixdump {
  *
  * Handles output formatting
  */
-class Printer {
+class Printer
+{
 public:
 
 	/**
@@ -68,7 +69,7 @@ public:
 	/**
 	 * \brief Prints output in specified format
 	 *
-	 * @param data Data class to print
+	 * @param tm TableManager of tables to print
 	 * @param limit print max limit rows (0 = all)
 	 * @return true on success, false otherwise
 	 */
@@ -80,7 +81,6 @@ private:
 	 * \brief print one row
 	 *
 	 * @param cur cursor poiting to the row
-	 * @param namesColumns map of names to column numbers for current table
 	 */
 	void printRow(Cursor *cur);
 
@@ -88,6 +88,77 @@ private:
 	 * \brief Print table header
 	 */
 	void printHeader();
+
+	/**
+	 * \brief Return printable value of column on row specified by cursor
+	 *
+	 * Applies semantics and other formatting requirements
+	 *
+	 * @param col Column to print
+	 * @param cur Cursor with values to print
+	 * @return String to print
+	 */
+	std::string printValue(Column *col, Cursor *cur);
+
+	/**
+	 * \brief Print formatted IPv4 address
+	 *
+	 * @param address integer format address
+	 * @return String with printable address
+	 */
+	std::string printIPv4(uint32_t address);
+
+	/**
+	 * \brief Print formatted IPv6 address
+	 *
+	 * @param part1 first half of ipv6 address
+	 * @param part2 second half of ipv6 address
+	 * @return String with printable address
+	 */
+	std::string printIPv6(uint64_t part1, uint64_t part2);
+
+	/**
+	 * \brief Print formatted timestamp
+	 *
+	 * This is called from printTimestamp[32|64]
+	 *
+	 * @param tm datetime structure
+	 * @param msec miliseconds
+	 * @return String with printable timestamp
+	 */
+	std::string printTimestamp(struct tm *tm, uint64_t msec);
+
+	/**
+	 * \brief Print formatted timestamp from seconds
+	 *
+	 * @param timestamp uint32_t number of seconds
+	 * @return String with printable timestamp
+	 */
+	std::string printTimestamp32(uint32_t timestamp);
+
+	/**
+	 * \brief Print formatted timestamp from miliseconds
+	 *
+	 * @param timestamp uint64_t number of miliseconds
+	 * @return String with printable timestamp
+	 */
+	std::string printTimestamp64(uint64_t timestamp);
+
+	/**
+	 * \brief Print formatted TCP flags
+	 *
+	 * @param flags unsigned char value
+	 * @return String with printable flags
+	 */
+	std::string printTCPFlags(unsigned char flags);
+
+	/**
+	 * \brief Print duration as decimal number
+	 *
+	 * @param duration
+	 * @return String with duration
+	 */
+	std::string printDuration(uint64_t duration);
 
 	std::ostream &out; /**< Stream to write to */
 	Configuration &conf; /**< program configuration */
