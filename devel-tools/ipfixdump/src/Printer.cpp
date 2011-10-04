@@ -67,14 +67,18 @@ bool Printer::print(TableManager &tm, size_t limit)
 		printHeader();
 	}
 
+	Cursor *cursor;
 	TableManagerCursor *tmc = tm.createCursor();
+	if (tmc == NULL) {
+		/* no tables, no rows */
+		return true;
+	}
 
-	Cursor *cursor = tmc->getCurrentCursor();
-
-
-	while (cursor->next()) {
+	while (tmc->next()) {
+		cursor = tmc->getCurrentCursor();
 		printRow(cursor);
 	}
+
 
 	/* go over all tables to print */
 //	for (tableVector::iterator tableIt = tm.getTables().begin(); tableIt != tm.getTables().end(); tableIt++) {
