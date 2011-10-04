@@ -44,11 +44,16 @@
 #include "Configuration.h"
 #include "Filter.h"
 #include "Table.h"
+#include "TableManagerCursor.h"
 
 /**
  * \brief Namespace of the ipfixdump utility
  */
 namespace ipfixdump {
+
+class TableManagerCursor;
+class Filter;
+class Configuration;
 
 /**
  * \brief Class managing tables
@@ -96,6 +101,13 @@ public:
 	 * @return vector of tables
 	 */
 	tableVector& getTables();
+
+	/**
+	 * \brief Creates cursor for this Table Manager
+	 *
+	 * @return Pointer to new TableManagerCursor class instance
+	 */
+	TableManagerCursor *createCursor();
 
 	/**
 	 * \brief Class destructor

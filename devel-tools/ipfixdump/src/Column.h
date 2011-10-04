@@ -43,11 +43,14 @@
 #include "typedefs.h"
 #include "AST.h"
 #include "Cursor.h"
+#include "TableManagerCursor.h"
 
 namespace ipfixdump {
 
 /* Cursor depends on Column class */
 class Cursor;
+
+class TableManagerCursor;
 
 /**
  * \brief Class with information about one column
@@ -155,7 +158,7 @@ public:
 
 	/**
 	 * \brief Can this column be used in aggregation?
-	 * @return true when column is aggregable
+	 * @return true when column is aggregatable
 	 */
 	bool getAggregate();
 

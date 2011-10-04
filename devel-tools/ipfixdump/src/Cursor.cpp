@@ -52,6 +52,7 @@ bool Cursor::next() {
 		ret = this->cursor->fetch();
 		/* no more rows */
 		if (ret != 0) return false;
+
 	} while (!this->table.getFilter().isValid(*this));
 
 	/* we got valid row */

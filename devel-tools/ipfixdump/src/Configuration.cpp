@@ -136,7 +136,7 @@ int Configuration::init(int argc, char *argv[])
 			NOT_SUPPORTED
 			break;
 		case 'M':
-			NOT_SUPPORTED
+			this->optM = true;
 			break;
 		case 'm':
 			NOT_SUPPORTED
@@ -537,7 +537,12 @@ void Configuration::help() {
 	<< "                yyyy/MM/dd.hh:mm:ss[-yyyy/MM/dd.hh:mm:ss]" << std::endl;
 }
 
-Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false) {}
+bool Configuration::getOptionM()
+{
+	return this->optM;
+}
+
+Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false), optM(false) {}
 
 Configuration::~Configuration() {
 	for (columnVector::iterator it = columns.begin(); it != columns.end(); it++) {

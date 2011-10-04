@@ -64,31 +64,53 @@ bool Printer::print(TableManager &tm, size_t limit) {
 		printHeader();
 	}
 
-	/* go over all tables to print */
-	for (tableVector::iterator tableIt = tm.getTables().begin(); tableIt != tm.getTables().end(); tableIt++) {
+	TableManagerCursor *tmc = tm.createCursor();
 
-		/* create cursor */
-		Cursor *cur = (*tableIt)->createCursor();
-		/* this should not happen */
-		if (cur == NULL) return false;
+	Cursor *cursor = tmc->getCurrentCursor();
 
-		/* set default for first iteration */
-		hasRow = true;
 
-		/* print rows */
-		while((limit == 0 || limit - printedRows > 0) && hasRow) {
-			hasRow = cur->next(); /* make the next row ready */
-			if (hasRow) {
-				printRow(cur);
-				printedRows++;
-			}
-		}
-
-		/* free cursor */
-		delete cur;
+	while (cursor->next()) {
+		printRow(cursor);
 	}
 
+	/* go over all tables to print */
+//	for (tableVector::iterator tableIt = tm.getTables().begin(); tableIt != tm.getTables().end(); tableIt++) {
+//
+//		/* create cursor */
+//		Cursor *cur = (*tableIt)->createCursor();
+//		/* this should not happen */
+//		if (cur == NULL) return false;
+//
+//		/* set default for first iteration */
+//		hasRow = true;
+//
+//		/* print rows */
+//		while((limit == 0 || limit - printedRows > 0) && hasRow) {
+//			hasRow = cur->next(); /* make the next row ready */
+//			if (hasRow) {
+//				printRow(cur);
+//				printedRows++;
+//			}
+//		}
+//
+//		/* free cursor */
+//		delete cur;
+//	}
+
+
+//	TableManagerCursor *cursor = tm.createCursor();
+//
+//	while((limit == 0 || limit - printedRows > 0) && hasRow) {
+//		hasRow = cursor->next(); /* make the next row ready */
+//		if (hasRow) {
+//			printRow(cursor);
+//			printedRows++;
+//		}
+//	}
+
 	/* TODO print nfdump-like statistics, maybe in main program */
+
+
 
 	return true;
 }

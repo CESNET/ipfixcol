@@ -13,6 +13,7 @@ SRCS    = ipfixdump.cpp \
 		Printer.cpp \
 		Filter.cpp \
 		TableManager.cpp \
+		TableManagerCursor.cpp \
 		Cursor.cpp
 OBJDIR  = .obj
 SRCDIR  = src

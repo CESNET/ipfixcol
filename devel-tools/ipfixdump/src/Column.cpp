@@ -216,7 +216,11 @@ std::string Column::getValue(Cursor *cur, bool plainNumbers) {
 		if (this->ast->semantics == "ipv4") {
 			valueStr = printIPv4(val->value[0].uint32);
 		} else if (this->ast->semantics == "timestamp") {
-			valueStr = printTimestamp(val->value[0].uint64);
+			if (plainNumbers == true) {
+				valueStr = val->value[0].uint64;
+			} else {
+				valueStr = printTimestamp(val->value[0].uint64);
+			}
 		} else if (this->ast->semantics == "ipv6") {
 			valueStr = printIPv6(val->value[0].uint64, val->value[1].uint64);
 		} else if (this->ast->semantics == "protocol") {

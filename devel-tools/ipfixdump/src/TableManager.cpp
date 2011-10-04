@@ -199,6 +199,18 @@ void TableManager::filter(Filter &filter) {
 	}
 }
 
+TableManagerCursor *TableManager::createCursor()
+{
+	/* create cursor only if we have some table */
+	if (this->tables.size() == 0) {
+		return NULL;
+	}
+
+	TableManagerCursor *tableManagerCursor = new TableManagerCursor(*this, this->conf);
+
+	return tableManagerCursor;
+}
+
 tableVector& TableManager::getTables() {
 	return tables;
 }
