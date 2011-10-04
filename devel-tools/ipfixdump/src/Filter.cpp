@@ -109,25 +109,25 @@ Filter::Filter(Configuration &conf): conf(conf)
 			filter += ss.str() + " ";
 			break;}
 		case NUMBER:
-			filter += arg.substr(0, arg.length()-1);
 			switch (arg[arg.length()-1]) {
 			case 'k':
 			case 'K':
-				filter += "000";
+				filter += arg.substr(0, arg.length()-1) + "000";
 				break;
 			case 'm':
 			case 'M':
-				filter += "000000";
+				filter += arg.substr(0, arg.length()-1) + "000000";
 				break;
 			case 'g':
 			case 'G':
-				filter += "000000000";
+				filter += arg.substr(0, arg.length()-1) + "000000000";
 				break;
 			case 't':
 			case 'T':
-				filter += "000000000000";
+				filter += arg.substr(0, arg.length()-1) + "000000000000";
 				break;
 			default:
+				filter += arg;
 				break;
 			}
 			filter += " ";
