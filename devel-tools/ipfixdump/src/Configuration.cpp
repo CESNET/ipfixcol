@@ -322,19 +322,13 @@ int Configuration::searchForTableParts(stringVector &tables)
 			continue;
 		}
 
-//		d = opendir(tables[i].c_str());
-//		if (d == NULL) {
-//			std::cerr << "Cannot open directory \"" << tables[i] << "\"" << std::endl;
-//			return -1;
-//		}
-
 		counter = 0;
 		firstdir_found = false;
 		while(dirs_counter--) {
 			dent = namelist[counter++];
 
 			if (dent->d_type == DT_DIR && atoi(dent->d_name) != 0) {
-				std::string table(tables[i] + std::string(dent->d_name));
+				std::string table(tables[i] + "/" + std::string(dent->d_name));
 
 				if ((this->firstdir.empty() == false) && (this->lastdir.empty() == false)) {
 					if (firstdir_found == false && !table.compare(this->firstdir)) {
@@ -349,6 +343,7 @@ int Configuration::searchForTableParts(stringVector &tables)
 						break;
 					}
 				} else {
+					/* no restrictions, use every table in directory */
 					this->parts.push_back(table);
 				}
 			}
