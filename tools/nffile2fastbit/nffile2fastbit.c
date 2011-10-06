@@ -62,8 +62,8 @@ struct extension{
 };
 
 struct extensions{
-	int filled;
-	int size;
+	unsigned int filled;
+	unsigned int size;
 	struct extension *map;
 };
 
@@ -938,9 +938,9 @@ int usage(){
 
 int main(int argc, char *argv[]){
 	FILE *f;
-	int i;
+	unsigned int i;
 	char *buffer = NULL;
-	int buffer_size = 0;
+	unsigned int buffer_size = 0;
 	struct file_header_s header;
 	struct stat_record_s stats;
 	struct data_block_header_s block_header;
@@ -956,6 +956,7 @@ int main(int argc, char *argv[]){
 	char *error;
 	struct ipfix_message ipfix_msg;
 	struct ipfix_template_mgr template_mgr;
+	unsigned int size = 0;
 
 	//param handlers
 	char *input_file = 0;
@@ -1196,7 +1197,6 @@ int main(int argc, char *argv[]){
 			//VERBOSE(CL_VERBOSE_ADVANCED,"---------BLOCK---------");
 			//hex(buffer, block_header.size);
 		
-			int size = 0;
 			while (size < block_header.size && !stop){
 				VERBOSE(CL_VERBOSE_ADVANCED,"OFFSET: %u - %p",size,buffer);
 				record = (struct common_record_s *) buffer;
@@ -1204,8 +1204,8 @@ int main(int argc, char *argv[]){
 				if(record->type == CommonRecordType){
 					//hex(record->data,record->size - sizeof(struct common_record_s));
 					int data_offset = 0; // record->data = uint32_t
-					int id;
-					int j,eid;
+					int id,eid;
+					unsigned j;
 
 					//check id -> most extensions should be on its index
 					VERBOSE(CL_VERBOSE_ADVANCED,"\tMAPP: %hu - filled %i", record->ext_map,ext.filled);
