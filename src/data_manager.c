@@ -240,22 +240,22 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 			if ((msg->input_info->type == SOURCE_TYPE_UDP) && /* source UDP */
 					((time(NULL) - msg->data_couple[i].data_template->last_transmission > udp_conf->template_life_time) || /* lifetime expired */
 					(udp_conf->template_life_packet > 0 && /* life packet should be checked */
-					(uint32_t) (msg_counter - msg->data_set[i].template->last_message) > udp_conf->template_life_packet))) {
+					(uint32_t) (msg_counter - msg->data_couple[i].data_template->last_message) > udp_conf->template_life_packet))) {
 				VERBOSE(CL_VERBOSE_BASIC, "Data template ID %i expired! Using old template.",
-				                                               msg->data_set[i].template->template_id);
+				                                               msg->data_couple[i].data_template->template_id);
 			}
 
 			/* compute sequence number */
-			if (msg->data_set[i].template->data_length & 0x80000000) {
+			if (msg->data_couple[i].data_template->data_length & 0x80000000) {
 				/* damn... there is a Information Element with variable length. we have to
 				 * compute number of the Data Records in current Set by hand */
 
 				/* template for current Data Set */
-				template = msg->data_set[i].template;
+				template = msg->data_couple[i].data_template;
 				/* every Data Record has to be at least this long */
-				min_data_length = (uint16_t) msg->data_set[i].template->data_length;
+				min_data_length = (uint16_t) msg->data_couple[i].data_template->data_length;
 
-				data_length = ntohs(msg->data_set[i].data_set->header.length) - sizeof(struct ipfix_set_header);
+				data_length = ntohs(msg->data_couple[i].data_set->header.length) - sizeof(struct ipfix_set_header);
 
 
 				length = 0;   /* position in Data Record */
@@ -265,14 +265,14 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 						if (template->fields[offset].ie.length == 0xffff) {
 							/* this element has variable length. read first byte from actual data record to determine
 							 * real length of the field */
-							var_len = msg->data_set[i].data_set->records[length];
+							var_len = msg->data_couple[i].data_set->records[length];
 							if (var_len < 255) {
 								/* field length is var_len */
 								length += var_len;
 								length += 1; /* first 1 byte contains information about field length */
 							} else {
 								/* field length is more than 255, actual length is stored in next two bytes */
-								length += ntohs(*((uint16_t *) (msg->data_set[i].data_set->records + length + 1)));
+								length += ntohs(*((uint16_t *) (msg->data_couple[i].data_set->records + length + 1)));
 								length += 3; /* first 3 bytes contain information about field length */
 							}
 						} else {
@@ -292,7 +292,7 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 				}
 			} else {
 				/* no elements with variable length */
-				records_count += ntohs(msg->data_set[i].data_set->header.length) / msg->data_set[i].template->data_length;
+				records_count += ntohs(msg->data_couple[i].data_set->header.length) / msg->data_couple[i].data_template->data_length;
 			}
 		}
 	}
