@@ -313,18 +313,18 @@ for dir in *; do
         TESTS="$TESTS $dir";
     fi;
 done;
-cd ../..;
+cd -;
 
 AC_SUBST(TESTS)
 
-############################# Check for tests ##################################
+############################# Check for tools ##################################
 cd tools/;
 for dir in *; do
     if test -d "$dir" -a -f "$dir"/Makefile.in; then
         TOOLS="$TOOLS $dir";
     fi;
 done;
-cd ..;
+cd -;
 
 AC_SUBST(TOOLS)
 
