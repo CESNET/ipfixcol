@@ -11,7 +11,7 @@
 #include <signal.h>
 
 #include "nffile.h"
-#include "../../../headers/storage.h"
+#include "../../headers/storage.h"
 
 #define ARGUMENTS "hbi:w:v:p:P:V"
 #define VERSION "1.0"
