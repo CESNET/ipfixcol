@@ -603,6 +603,7 @@ ac_func_list=
 ac_subst_vars='LTLIBOBJS
 CONFIGURE_PARAMS
 DISTRO
+TOOLS
 TESTS
 STORAGE_PLUGINS
 INPUT_PLUGINS
@@ -5485,6 +5486,17 @@ cd ../..;
 
 
 
+############################# Check for tests ##################################
+cd tools/;
+for dir in *; do
+    if test -d "$dir" -a -f "$dir"/Makefile.in; then
+        TOOLS="$TOOLS $dir";
+    fi;
+done;
+cd ..;
+
+
+
 ############################### Set output #####################################
 
 
@@ -5522,6 +5534,11 @@ done;
 # tests makefiles
 for i in $TESTS; do
     ac_config_files="$ac_config_files devel-tools/tests/$i/Makefile"
+
+done;
+# tools makefiles
+for i in $TOOLS; do
+    ac_config_files="$ac_config_files tools/$i/Makefile"
 
 done;
 
@@ -6248,6 +6265,7 @@ do
     "ipfixcol.pc") CONFIG_FILES="$CONFIG_FILES ipfixcol.pc" ;;
     "src/$i/Makefile") CONFIG_FILES="$CONFIG_FILES src/$i/Makefile" ;;
     "devel-tools/tests/$i/Makefile") CONFIG_FILES="$CONFIG_FILES devel-tools/tests/$i/Makefile" ;;
+    "tools/$i/Makefile") CONFIG_FILES="$CONFIG_FILES tools/$i/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

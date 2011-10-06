@@ -232,13 +232,13 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 	}
 
 	/* add template to message data_couples */
-	for (i=0; msg->data_set[i].data_set != NULL && i<1023; i++) {
-		msg->data_set[i].template = tm_get_template(template_mgr, ntohs(msg->data_set[i].data_set->header.flowset_id));
-		if (msg->data_set[i].template == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "Data template with ID %i not found!", ntohs(msg->data_set[i].data_set->header.flowset_id));
+	for (i=0; msg->data_couple[i].data_set != NULL && i<1023; i++) {
+		msg->data_couple[i].data_template = tm_get_template(template_mgr, ntohs(msg->data_couple[i].data_set->header.flowset_id));
+		if (msg->data_couple[i].data_template == NULL) {
+			VERBOSE(CL_VERBOSE_OFF, "Data template with ID %i not found!", ntohs(msg->data_couple[i].data_set->header.flowset_id));
 		} else {
 			if ((msg->input_info->type == SOURCE_TYPE_UDP) && /* source UDP */
-					((time(NULL) - msg->data_set[i].template->last_transmission > udp_conf->template_life_time) || /* lifetime expired */
+					((time(NULL) - msg->data_couple[i].data_template->last_transmission > udp_conf->template_life_time) || /* lifetime expired */
 					(udp_conf->template_life_packet > 0 && /* life packet should be checked */
 					(uint32_t) (msg_counter - msg->data_set[i].template->last_message) > udp_conf->template_life_packet))) {
 				VERBOSE(CL_VERBOSE_BASIC, "Data template ID %i expired! Using old template.",
@@ -535,16 +535,16 @@ struct data_manager_config* data_manager_create (
 	config->observation_domain_id = observation_domain_id;
 	config->storage_plugins = NULL;
 	config->plugins_count = 0;
-    config->input_info = input_info;
-    config->template_mgr = tm_create();
+	config->input_info = input_info;
+	config->template_mgr = tm_create();
 
-    /* check whether there is OID specific plugin for this OID */
-    for (aux_storage = storage_plugins; aux_storage != NULL; aux_storage = aux_storage->next) {
-    	if (storage_plugins->storage.xml_conf->observation_domain_id != NULL &&
-    			atol(storage_plugins->storage.xml_conf->observation_domain_id) == config->observation_domain_id) {
-    		oid_specific_plugins++;
-    	}
-    }
+	/* check whether there is OID specific plugin for this OID */
+	for (aux_storage = storage_plugins; aux_storage != NULL; aux_storage = aux_storage->next) {
+		if (storage_plugins->storage.xml_conf->observation_domain_id != NULL &&
+			atol(storage_plugins->storage.xml_conf->observation_domain_id) == config->observation_domain_id) {
+			oid_specific_plugins++;
+		}
+	}
 
 	/* initiate all storage plugins */
 	while (storage_plugins) {
@@ -598,12 +598,12 @@ struct data_manager_config* data_manager_create (
 		}
 		plugin_cfg->queue = config->store_queue;
 		plugin_cfg->template_mgr = config->template_mgr;
-        aux_storage->storage.thread_config = plugin_cfg;
+		aux_storage->storage.thread_config = plugin_cfg;
 		if (pthread_create(&(plugin_cfg->thread_id), NULL, &storage_plugin_thread, (void*) &aux_storage->storage) != 0) {
 			VERBOSE(CL_VERBOSE_OFF, "Unable to create storage plugin thread.");
 			aux_storage->storage.close (&(aux_storage->storage.config));
 			free (plugin_cfg);
-            aux_storage->storage.thread_config = NULL;
+			aux_storage->storage.thread_config = NULL;
 			storage_plugins = storage_plugins->next;
 			continue;
 		}

@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+	This is configuration XML for ipfixdump utility
+	
+	The rules for printing columns are defined here. Each column has one column element which contains:
+		name: Name of the column
+		width: Width of the column, default is 0
+		alias: Alias(es) of the columns, used for operations and custom formatting
+        default-value: Defines what to show when table does not have this column
+		value: Defines where to get actual value
+			value can be of several types:
+				plain: just take specified element value for input. Value can be entered as fastbit 
+					   column name or 'alias' to plain type
+				operation: takes 'arg1' and 'arg2' and performs operation with name from attribute 'name', which
+							is one of '+', '-', '/', '*'
+						   	Operation arguments can be only of plain and operation types and alias to plain type must be used
+						   	Currently operations are working with integers up to uint64 (int64 is converted to uint64). 
+				group: contains multiple 'group' elements, each of which contains one 'element'. This is used to combine multiple
+					   columns together, i.e. IPv4 and IPv6 address.
+					   Elements of type group can be only aliases to plain types (or column names).
+					   Groups have attribute id, which determins which columns should be tried together in aggregation
+			elements under <value type="plain"> or "<group>" have attribute 'parts'. This specifies to how many columns in database
+				is this element splitted.  
+			elements under <value type="plain"> or "<group>" have attribute 'semantics'. There are several pre-defined
+				options to format ouput columns: as
+				'ipv4'     : expects uint32 column and prints it as IPv4 address
+				'ipv6'     : expects uint64 column and prints it as IPv6 address. 'parts' attribute must be set to 2 
+				'timestamp': expects uint64 column and prints it as timestamp
+				'tcpflags' : expects uint8 column and print it as TCP flags
+				'flows'    : this is special column with no relation to the database. It is always computed as number of flows
+			elements under <value type="plain"> or "<group>" have attribute 'aggregation'. This determines how the columns is
+				aggregated. If attribute is empty, column is not aggregated. Supported values are: 'min', 'max', 'sum', 'avg'
+				
+				
+	Examples are shown below
+ -->
+<columns>
+    <column>
+    	<name>Date flow start</name>
+    	<width>23</width>
+    	<alias>%ts</alias>
+    	<value type="plain">
+    		<element semantics="timestamp" aggregation="min">e0id152</element>
+    	</value>
+    </column>
+    <column>
+    	<name>Date flow end</name>
+    	<width>23</width>
+    	<alias>%te</alias>
+    	<value type="plain">
+    		<element semantics="timestamp" aggregation="max">e0id153</element>
+    	</value>
+    </column>
+    <column>
+    	<name>Duration</name>
+    	<width>9</width>
+    	<alias>%td</alias>
+    	<alias>%duration</alias>
+    	<value type="operation">
+    		<operation name="-">
+    			<arg1>%te</arg1>
+    			<arg2>%ts</arg2>
+    		</operation>
+    	</value>
+    </column>
+    <column>
+    	<name>Proto</name>
+    	<width>10</width>
+    	<alias>%pr</alias>
+    	<alias>%proto</alias>
+    	<value type="plain">
+    		<element semantics="protocol">e0id4</element>
+    	</value>
+    </column>
+    <column>
+    	<name>Src IP</name>
+    	<width>28</width>
+    	<alias>%sa</alias>
+    	<alias>%srcip</alias>
+    	<value type="group">
+    		<group id="0">
+    			<element semantics="ipv4">e0id8</element>
+    		</group>
+    		<group id="1">
+    			<element semantics="ipv6" parts="2">e0id27</element>
+    		</group>
+            <group id="2">
+    			<element semantics="ipv4">e0id8</element>
+    		</group>
+    		<group id="3">
+    			<element semantics="ipv6" parts="2">e0id27</element>
+    		</group>
+<!--            <group id="4">
+    			<element semantics="ipv4">e0id8</element>
+    		</group>
+    		<group id="5">
+    			<element semantics="ipv6" parts="2">e0id27</element>
+    		</group>-->
+    	</value>
+    </column>
+    <column>
+    	<name>Dst IP</name>
+    	<width>28</width>
+    	<alias>%da</alias>
+    	<alias>%dstip</alias>
+    	<value type="group">
+    		<group id="0">
+    			<element semantics="ipv4">e0id12</element>
+    		</group>
+    		<group id="1">
+    			<element semantics="ipv6" parts="2">e0id28</element>
+    		</group>
+            <group id="2">
+    			<element semantics="ipv4">e0id12</element>
+    		</group>
+    		<group id="3">
+    			<element semantics="ipv6" parts="2">e0id28</element>
+    		</group>
+<!--            <group id="4">
+    			<element semantics="ipv4">e0id12</element>
+    		</group>
+    		<group id="5">
+    			<element semantics="ipv6" parts="2">e0id28</element>
+    		</group>-->
+    	</value>
+    </column>
+    <column>
+    	<name>Port</name>
+    	<width>5</width>
+    	<alignLeft/>
+    	<alias>%sp</alias>
+    	<alias>%srcport</alias>
+    	<default-value>0</default-value>
+    	<value type="group">
+            <group id="0">
+        		<element>e0id7</element>
+            </group>
+            <group id="1">
+                <element>e0id7</element>
+            </group>
+    	</value>
+    </column>
+    <column>
+    	<name>Port</name>
+    	<width>5</width>
+    	<alignLeft/>
+    	<alias>%dp</alias>
+    	<alias>%dstport</alias>
+    	<default-value>0</default-value>
+    	<value type="group">
+            <group id="0">
+        		<element>e0id11</element>
+            </group>
+            <group id="1">
+        		<element>e0id11</element>
+            </group>
+            <group id="2">
+                <element>e0id32</element>
+            </group>
+            <group id="3">
+                <element>e0id32</element>
+            </group>
+
+    	</value>
+    </column>
+    <column>
+    	<name>Flags</name>
+    	<width>6</width>
+    	<alias>%flg</alias>
+    	<default-value>......</default-value>
+    	<value type="plain">
+    		<element semantics="tcpflags">e0id6</element>
+    	</value>
+    </column>
+    <column>
+    	<name>Tos</name>
+    	<width>4</width>
+    	<alias>%tos</alias>
+    	<default-value>0</default-value>
+    	<value type="plain">
+    		<element>e0id5</element>
+    	</value>
+    </column>
+    <column>
+    	<name>Packets</name>
+    	<width>7</width>
+    	<alias>%pkt</alias>
+    	<value type="plain">
+    		<element aggregation="sum">e0id2</element>
+    	</value>
+    </column>
+    <column>
+    	<name>Bytes</name>
+    	<width>8</width>
+    	<alias>%byt</alias>
+    	<value type="plain">
+    		<element aggregation="sum">e0id1</element>
+    	</value>
+    </column>
+    <column>
+    	<name>pps</name>
+    	<width>8</width>
+    	<alias>%pps</alias>
+    	<value type="operation">
+    		<operation name="/">
+    			<arg1>%pkt</arg1>
+    			<arg2>%td</arg2>
+    		</operation>
+    	</value>
+    </column>
+    <column>
+    	<name>bps</name>
+    	<width>8</width>
+    	<alias>%bps</alias>
+    	<value type="operation">
+    		<operation name="/">
+    			<arg1>%byt</arg1>
+    			<arg2>%td</arg2>
+    		</operation>
+    	</value>
+    </column>
+    <column>
+    	<name>Bpp</name>
+    	<width>8</width>
+    	<alias>%bpp</alias>
+    	<value type="operation">
+    		<operation name="/">
+    			<arg1>%byt</arg1>
+    			<arg2>%pkt</arg2>
+    		</operation>
+    	</value>
+    </column>
+    <column>
+    	<name>Flows</name>
+    	<width>5</width>
+    	<alias>%fl</alias>
+    	<value type="plain">
+    		<element semantics="flows" aggregation="count"></element>
+    	</value>
+    </column>
+</columns>

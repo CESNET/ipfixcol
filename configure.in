@@ -291,6 +291,17 @@ cd ../..;
 
 AC_SUBST(TESTS)
 
+############################# Check for tests ##################################
+cd tools/;
+for dir in *; do
+    if test -d "$dir" -a -f "$dir"/Makefile.in; then
+        TOOLS="$TOOLS $dir";
+    fi;
+done;
+cd ..;
+
+AC_SUBST(TOOLS)
+
 ############################### Set output #####################################
 AC_SUBST(DISTRO)
 AC_SUBST(CONFIGURE_PARAMS)
@@ -321,6 +332,10 @@ done;
 # tests makefiles
 for i in $TESTS; do
     AC_CONFIG_FILES([devel-tools/tests/$i/Makefile])
+done;
+# tools makefiles
+for i in $TOOLS; do
+    AC_CONFIG_FILES([tools/$i/Makefile])
 done;
 
 AC_OUTPUT

@@ -26,7 +26,7 @@
 		<exportingProcess>File writer UDP</exportingProcess>
 	</collectingProcess>
 
-    <collectingProcess>
+	<collectingProcess>
 		<name>TCP collector</name>
 		<tcpCollector>
 			<name>Listening port 4739</name>
@@ -120,6 +120,19 @@
 			<fileWriter>
 				<fileFormat>ipfix</fileFormat>
 				<file>file://tmp/collected-records-sctp.ipfix</file>
+			<fileWriter>
+				<fileFormat>fastbit</fileFormat>
+				<path>storagePath</path>
+				<dumpInterval>
+					<timeWindow>300</timeWindow>
+					<timeAlignment>yes</timeAlignment>
+					<recordLimit>no</recordLimit>
+				</dumpInterval>
+				<namingStrategy>
+					<type>time</type>
+					<prefix>ic</prefix>
+				</namingStrategy>
+				<onTheFlightIndexes>yes</onTheFlightIndexes>
 			</fileWriter>
 		</destination>
 	</exportingProcess>

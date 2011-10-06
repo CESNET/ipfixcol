@@ -69,7 +69,7 @@ struct data_template_couple{
 	/**< Address of the Data Set in the packet */
 	struct ipfix_data_set *data_set;
 	/**< Template structure corresponding to this Data set */
-	struct ipfix_template *template;
+	struct ipfix_template *data_template;
 };
 
 /**
@@ -86,7 +86,7 @@ struct ipfix_message {
 	/** List of Options Template Sets in the packet */
 	struct ipfix_options_template_set *opt_templ_set[1024];
 	/** List of Data Sets (with a link to corresponding template) in the packet */
-	struct data_template_couple       data_set[1023];
+	struct data_template_couple       data_couple[1023];
 };
 
 /**
