@@ -47,6 +47,10 @@ using namespace ipfixdump;
 int main(int argc, char *argv[])
 {
 	int ret;
+
+	/* raise limit for cache size. this allows more mmaped files */
+	ibis::fileManager::adjustCacheSize(1000000000000);
+
 	/* create configuration to work with */
 	Configuration conf;
 

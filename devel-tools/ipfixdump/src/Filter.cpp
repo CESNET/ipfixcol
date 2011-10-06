@@ -84,7 +84,7 @@ Filter::Filter(Configuration &conf): conf(conf)
 			Column *col = new Column();
 			if (col->init(doc, arg, false)) {
 				stringSet cols = col->getColumns();
-				if (cols.size() == 1) { /* plain value */
+				if (!col->isOperation()) { /* plain value */
 					filter += *cols.begin() + " ";
 				} else { /* operation */
 					/* \TODO  save for post-filtering */
@@ -131,11 +131,11 @@ Filter::Filter(Configuration &conf): conf(conf)
 			}
 			filter += " ";
 			break;
-/*		case OPERATOR:
-			std::cout << "operator: ";
-			break;
-		case RAWCOLUMN:
+/*		case RAWCOLUMN:
 			std::cout << "raw column: ";
+			break;
+		case OPERATOR:
+			std::cout << "operator: ";
 			break;
 		case CMP:
 			std::cout << "comparison: ";

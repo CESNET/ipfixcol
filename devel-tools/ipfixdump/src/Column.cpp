@@ -391,6 +391,14 @@ bool Column::isSeparator() {
 	return false;
 }
 
+bool Column::isOperation() {
+	if (this->ast == NULL && this->ast->type == ipfixdump::operation) {
+		return true;
+	}
+
+	return false;
+}
+
 Column::Column(): nullStr("NULL"), width(0), alignLeft(false), ast(NULL), aggregation(false) {}
 
 }

@@ -98,7 +98,7 @@
 	</column>
 	<column>
 		<name>Src IPv6</name>
-		<width>28</width>
+		<width>39</width>
 		<alias>%sa6</alias>
 		<alias>%srcip6</alias>
 		<value type="plain">
@@ -116,7 +116,7 @@
 	</column>
 	<column>
 		<name>Dst IPv6</name>
-		<width>28</width>
+		<width>39</width>
 		<alias>%da6</alias>
 		<alias>%dstip6</alias>
 		<value type="plain">
