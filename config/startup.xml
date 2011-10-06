@@ -96,7 +96,8 @@
 		<name>Postgres</name>
 		<destination>
 			<name>store data records in PostgreSQL database</name>
-			<fileWriter>
+		    <fileWriter>
+                <fileFormat>postgres</fileFormat>
 				<!--## Name of host to connect to -->
 				<host>localhost</host>
 				<!--## IP address of host to connect to -->
@@ -116,10 +117,7 @@
 	<exportingProcess>
 		<name>File writer SCTP</name>
 		<destination>
-			<name>Write to /tmp folder</name>
-			<fileWriter>
-				<fileFormat>ipfix</fileFormat>
-				<file>file://tmp/collected-records-sctp.ipfix</file>
+			<name>Store data using fastbit</name>
 			<fileWriter>
 				<fileFormat>fastbit</fileFormat>
 				<path>storagePath</path>
