@@ -41,6 +41,7 @@
 #include <getopt.h>
 #include <regex.h>
 #include <dirent.h>
+#include <fstream>
 
 namespace ipfixdump {
 
@@ -409,7 +410,15 @@ columnVector& Configuration::getColumns()
 
 std::string Configuration::version()
 {
-	return VERSION;
+	std::ifstream ifs;
+	ifs.open("VERSION");
+
+	std::string version;
+	if (ifs.is_open()) {
+		getline (ifs, version);
+	}
+
+	return version;
 }
 
 char* Configuration::getXmlConfPath()
@@ -419,6 +428,7 @@ char* Configuration::getXmlConfPath()
 
 void Configuration::help()
 {
+	/* lines with // at the beginning should be implemented sooner */
 	std::cout
 	<< "usage "<< this->appName <<" [options] [\"filter\"]" << std::endl
 	<< "-h              this text you see right here" << std::endl
@@ -430,13 +440,13 @@ void Configuration::help()
 	//<< "-B              Aggregate netflow records as bidirectional flows - Guess direction." << std::endl
 	<< "-r <dir>        read input tables from directory" << std::endl
 	//<< "-w <file>       write output to file" << std::endl
-	<< "-f              read netflow filter from file" << std::endl
-	<< "-n              Define number of top N. " << std::endl
+//	<< "-f              read netflow filter from file" << std::endl
+//	<< "-n              Define number of top N. " << std::endl
 	<< "-c              Limit number of records to display" << std::endl
-	<< "-D <dns>        Use nameserver <dns> for host lookup." << std::endl
+//	<< "-D <dns>        Use nameserver <dns> for host lookup." << std::endl
 	<< "-N              Print plain numbers" << std::endl
-	<< "-s <expr>[/<order>]     Generate statistics for <expr> any valid record element." << std::endl
-	<< "                and ordered by <order>: packets, bytes, flows, bps pps and bpp." << std::endl
+//	<< "-s <expr>[/<order>]     Generate statistics for <expr> any valid record element." << std::endl
+//	<< "                and ordered by <order>: packets, bytes, flows, bps pps and bpp." << std::endl
 	<< "-q              Quiet: Do not print the header and bottom stat lines." << std::endl
 	//<< "-H Add xstat histogram data to flow file.(default 'no')" << std::endl
 	//<< "-i <ident>      Change Ident to <ident> in file given by -r." << std::endl
@@ -445,30 +455,32 @@ void Configuration::help()
 	//<< "-l <expr>       Set limit on packets for line and packed output format." << std::endl
 	//<< "                key: 32 character string or 64 digit hex string starting with 0x." << std::endl
 	//<< "-L <expr>       Set limit on bytes for line and packed output format." << std::endl
-	<< "-I              Print netflow summary statistics info from file, specified by -r." << std::endl
-	<< "-M <expr>       Read input from multiple directories." << std::endl
-	<< "                /dir/dir1:dir2:dir3 Read the same files from '/dir/dir1' '/dir/dir2' and '/dir/dir3'." << std::endl
-	<< "                requests either -r filename or -R firstfile:lastfile without pathnames" << std::endl
-	<< "-m              Print netflow data date sorted. Only useful with -M" << std::endl
+//	<< "-I              Print netflow summary statistics info from file, specified by -r." << std::endl
+//	<< "-M <expr>       Read input from multiple directories." << std::endl
+//	<< "                /dir/dir1:dir2:dir3 Read the same files from '/dir/dir1' '/dir/dir2' and '/dir/dir3'." << std::endl
+//	<< "                requests either -r filename or -R firstfile:lastfile without pathnames" << std::endl
+//	<< "-m              Print netflow data date sorted. Only useful with -M" << std::endl
 	<< "-R <expr>       Read input from sequence of files." << std::endl
 	<< "                /any/dir  Read all files in that directory." << std::endl
-	<< "                /dir/file Read all files beginning with 'file'." << std::endl
-	<< "                /dir/file1:file2: Read all files from 'file1' to file2." << std::endl
+//	<< "                /dir/file Read all files beginning with 'file'." << std::endl
+//	<< "                /dir/file1:file2: Read all files from 'file1' to file2." << std::endl
 	<< "-o <mode>       Use <mode> to print out netflow records:" << std::endl
-	<< "                 raw      Raw record dump." << std::endl
+//	<< "                 raw      Raw record dump." << std::endl
 	<< "                 line     Standard output line format." << std::endl
 	<< "                 long     Standard output line format with additional fields." << std::endl
 	<< "                 extended Even more information." << std::endl
 	<< "                 extra    More than you want to know..." << std::endl
 	<< "                 csv      ',' separated, machine parseable output format." << std::endl
 	<< "                 pipe     '|' separated legacy machine parseable output format." << std::endl
-	<< "                        mode may be extended by '6' for full IPv6 listing. e.g.long6, extended6." << std::endl
-	<< "-v <file>       verify netflow data file. Print version and blocks." << std::endl
+	<< "                        modes line, long, extended and extra may be extended by '4' '6' to display" << std::endl
+	<< "                        only IPv4 or IPv6 addresses. e.g.long4, extended6." << std::endl
+//	<< "-v <file>       verify netflow data file. Print version and blocks." << std::endl
 	//<< "-x <file>       verify extension records in netflow data file." << std::endl
 	//<< "-X              Dump Filtertable and exit (debug option)." << std::endl
-	<< "-Z              Check filter syntax and exit." << std::endl
-	<< "-t <time>       time window for filtering packets" << std::endl
-	<< "                yyyy/MM/dd.hh:mm:ss[-yyyy/MM/dd.hh:mm:ss]" << std::endl;
+//	<< "-Z              Check filter syntax and exit." << std::endl
+//	<< "-t <time>       time window for filtering packets" << std::endl
+//	<< "                yyyy/MM/dd.hh:mm:ss[-yyyy/MM/dd.hh:mm:ss]" << std::endl
+	;
 }
 
 Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false) {}

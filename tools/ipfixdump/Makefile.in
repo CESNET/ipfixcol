@@ -2,10 +2,11 @@
 #    Makefile for the ipfixdump utility        #
 ################################################
 
-CC      = g++
-CPPFLAGS  = -Wall -Wextra -std=gnu++0x -g -DDEBUG
-# may compile with gnu++0x, it is a little more effective
-LIBS    = -lfastbit
+CXX      = @CXX@
+CXXFLAGS  = @CXXFLAGS@
+LIBS    = @LIBS@
+FLEX = @FLEX@
+
 SRCS    = ipfixdump.cpp \
 		Configuration.cpp \
 		Column.cpp \
@@ -19,8 +20,9 @@ SRCS    = ipfixdump.cpp \
 OBJDIR  = .obj
 SRCDIR  = src
 SRC3RD  = 3rdparty
+VERSION = VERSION
 
-DOXYGEN = doxygen
+DOXYGEN = @DOXYGEN@
 DOXYGEN_CONFIG = doxyconf
 DOXYGEN_DIR = doc
 
@@ -30,26 +32,30 @@ OBJS    = $(OBJDIR)/scanner.o $(SRCS:%.cpp=$(OBJDIR)/%.o) $(OBJDIR)/pugi.o
 all: ipfixdump
 
 # ipfixdump
-ipfixdump: $(OBJS)
-	$(CC) $(CPPFLAGS) $(LIBS) $(OBJS) -o $@
+ipfixdump: $(OBJS) $(VERSION)
+	$(CXX) $(CXXFLAGS) $(LIBS) $(OBJS) -o $@
+
+# Printer is specified extra with -fno-strict-aliasing for performance reasons
+$(OBJDIR)/Printer.o: $(SRCDIR)/Printer.cpp
+	$(CXX) $(CXXFLAGS) -fno-strict-aliasing -c $< -o $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
-	$(CC) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(SRCDIR)/protocols.cpp: /etc/protocols
 	cd tools && ./generate_protocols.sh
 
 $(OBJDIR)/pugi.o: $(SRC3RD)/pugixml.cpp
-	$(CC) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # rules to build the lex scanner
 $(OBJDIR)/scanner.o: $(SRCDIR)/scanner.c
 	@[ -d $$(dirname $@) ] || \
 		(mkdir -p $$(dirname $@))
-	$(CC) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(SRCDIR)/scanner.c: $(SRCDIR)/scanner.l
-	flex -o $(SRCDIR)/scanner.c --header-file=$(SRCDIR)/scanner.h $<
+	$(FLEX) -o $(SRCDIR)/scanner.c --header-file=$(SRCDIR)/scanner.h $<
 
 .PHONY: doc
 doc: doxygen
@@ -67,6 +73,5 @@ doxygen: $(DOXYGEN_CONFIG) $(SRCS:%=$(SRCDIR)/%)
 
 
 clean:
-	rm -f ipfixdump $(OBJDIR)/*
-	rm -f src/protocols.cpp src/scanner.h src/scanner.c
-	rm -fr doc 
+	rm -f ipfixdump src/protocols.cpp src/scanner.h src/scanner.c
+	rm -fr doc $(OBJDIR)

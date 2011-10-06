@@ -1,7 +1,7 @@
 /**
- * \file typedefs.h
+ * \file ipfixdump.cpp
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Header containing typedefs for ipfixdump utility
+ * \brief Tool for ipfix fastbit format querying
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,58 +37,51 @@
  *
  */
 
-#ifndef TYPEDEFS_H_
-#define TYPEDEFS_H_
-
-#include <cstdio>
-#include <vector>
-#include <set>
-#include <map>
-#include "ibis.h"
-
-/* this is needed for the lexer: new yylex function prototype */
-#define YY_DECL int yylex(std::string &arg)
-
-enum yytokentype {
-	COLUMN = 258,
-	NUMBER = 259,
-	CMP = 260,
-	RAWCOLUMN = 261,
-	OPERATOR = 262,
-	OTHER = 300
-};
-
-
 /**
- * \brief Namespace of the ipfixdump utility
- */
-namespace ipfixdump {
-
-typedef std::map<std::string, int> namesColumnsMap;
-
-/**
- * \brief Structure holding fastbit table and map of column names and column
- * numbers
+ * \mainpage IPFIX Dump Developer's Documentation
  *
- * This is used when table contains aggregated columns of names like "max4",
- * so that columnFormat can still access appropriate columns by its index.
+ * This documents provides documentation of IPFIX Dump utility (ipfixdump).
  */
-struct tableContainer {
-	ibis::table* table;
-	namesColumnsMap namesColumns;
 
-	tableContainer(): table(NULL){};
+#include "Configuration.h"
+#include "TableManager.h"
+#include "Printer.h"
+#include "Filter.h"
 
-	~tableContainer() {
-		delete table;
+using namespace ipfixdump;
+
+int main(int argc, char *argv[])
+{
+	int ret;
+
+	/* raise limit for cache size. this allows more mmaped files */
+	ibis::fileManager::adjustCacheSize(1000000000000);
+
+	/* create configuration to work with */
+	Configuration conf;
+
+	/* process configuration and check whether end program */
+	ret = conf.init(argc, argv);
+	if (ret != 0) return ret;
+
+	/* initialise filter */
+	Filter filter(conf);
+
+	/* initialise printer */
+	Printer print(std::cout, conf);
+
+	/* initialise tables */
+	TableManager tm(conf);
+
+	/* do some work */
+	if (conf.getAggregate()) {
+		tm.aggregate(conf.getAggregateColumns(), conf.getSummaryColumns(), filter);
+	} else {
+		tm.filter(filter);
 	}
-};
 
-typedef std::vector<std::string> stringVector;
-typedef std::vector<tableContainer*> tableVector;
-typedef std::set<std::string> stringSet;
+	/* print tables */
+	print.print(tm, conf.getMaxRecords());
 
-}  // namespace ipfixdump
-
-
-#endif /* CONFIGURATION_H_ */
+	return 0;
+}
