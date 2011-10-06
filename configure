@@ -687,6 +687,8 @@ with_distro
 with_libxml2_path
 with_libcommlbr
 enable_debug
+enable_sctp
+enable_postgres
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1314,6 +1316,8 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-debug          turn on more debugging options
+  --disable-sctp          disable sctp input plugin
+  --disable-postgres      disable PostgreSQL storage plugin
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -4044,6 +4048,22 @@ if test "${enable_debug+set}" = set; then :
 fi
 
 
+# Check whether --enable-sctp was given.
+if test "${enable_sctp+set}" = set; then :
+  enableval=$enable_sctp; SCTP=no
+else
+  SCTP=yes
+fi
+
+
+# Check whether --enable-postgres was given.
+if test "${enable_postgres+set}" = set; then :
+  enableval=$enable_postgres; POSTGRES=no
+else
+  POSTGRES=yes
+fi
+
+
 ######################### Checks for header files ##############################
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -4455,6 +4475,30 @@ fi
 
 done
 
+
+if test "$SCTP" = "yes"; then
+	ac_fn_c_check_header_mongrel "$LINENO" "netinet/sctp.h" "ac_cv_header_netinet_sctp_h" "$ac_includes_default"
+if test "x$ac_cv_header_netinet_sctp_h" = xyes; then :
+
+else
+  as_fn_error $? "netinet/sctp.h header not found, run with --disable-sctp to build without SCTP support" "$LINENO" 5
+
+fi
+
+
+fi
+
+if test "$POSTGRES" = "yes"; then
+	ac_fn_c_check_header_mongrel "$LINENO" "libpq-fe.h" "ac_cv_header_libpq_fe_h" "$ac_includes_default"
+if test "x$ac_cv_header_libpq_fe_h" = xyes; then :
+
+else
+  as_fn_error $? "libpq-fe.h header not found, run with --disable-postgres to build without PostgreSQL support" "$LINENO" 5
+
+fi
+
+
+fi
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for stdbool.h that conforms to C99" >&5
@@ -5457,19 +5501,23 @@ done
 # input plugins are located in src/input/
 cd src;
 for dir in input/*; do
-    if test -d "$dir" -a -f "$dir"/Makefile.in; then
-        INPUT_PLUGINS="$INPUT_PLUGINS $dir";
+    if test -d "$dir" && test -f "$dir"/Makefile.in; then
+    	if test ! "$dir" = "input/sctp" || test ! "$SCTP" = "no"; then
+        	INPUT_PLUGINS="$INPUT_PLUGINS $dir";
+        fi;
     fi;
 done;
 
 # storage plugins are located in src/storage
 for dir in storage/*; do
-    if test -d "$dir" -a -f "$dir"/Makefile.in; then
-        STORAGE_PLUGINS="$STORAGE_PLUGINS $dir";
+    if test -d "$dir" && test -f "$dir"/Makefile.in; then
+    	if test ! "$dir" = "storage/postgres" || test ! "$POSTGRES" = "no"; then
+        	STORAGE_PLUGINS="$STORAGE_PLUGINS $dir";
+        fi;
     fi;
 done;
 
-cd ..;
+cd -;
 
 
 
@@ -5482,18 +5530,18 @@ for dir in *; do
         TESTS="$TESTS $dir";
     fi;
 done;
-cd ../..;
+cd -;
 
 
 
-############################# Check for tests ##################################
+############################# Check for tools ##################################
 cd tools/;
 for dir in *; do
     if test -d "$dir" -a -f "$dir"/Makefile.in; then
         TOOLS="$TOOLS $dir";
     fi;
 done;
-cd ..;
+cd -;
 
 
 

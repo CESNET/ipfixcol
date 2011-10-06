@@ -232,9 +232,31 @@ AC_CHECK_LIB([dl], [dlopen],,
 AC_ARG_ENABLE([debug], 
         AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
         [CFLAGS="$CFLAGS -Wextra -g -pg -DDEBUG"])
+        
+AC_ARG_ENABLE([sctp], 
+        AC_HELP_STRING([--disable-sctp],[disable sctp input plugin]),
+        [SCTP=no], 
+        [SCTP=yes])
+        
+AC_ARG_ENABLE([postgres], 
+        AC_HELP_STRING([--disable-postgres],[disable PostgreSQL storage plugin]),
+        [POSTGRES=no],
+        [POSTGRES=yes])
 
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h syslog.h unistd.h])
+
+if test "$SCTP" = "yes"; then
+	AC_CHECK_HEADER([netinet/sctp.h], , 
+		[AC_MSG_ERROR([netinet/sctp.h header not found, run with --disable-sctp to build without SCTP support])]
+	)
+fi
+
+if test "$POSTGRES" = "yes"; then
+	AC_CHECK_HEADER([libpq-fe.h], , 
+		[AC_MSG_ERROR([libpq-fe.h header not found, run with --disable-postgres to build without PostgreSQL support])]
+	)
+fi
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 AC_HEADER_STDBOOL
@@ -262,19 +284,23 @@ AC_CHECK_FUNCS([alarm atexit gethostbyname gettimeofday isascii localtime_r mems
 # input plugins are located in src/input/
 cd src;
 for dir in input/*; do
-    if test -d "$dir" -a -f "$dir"/Makefile.in; then
-        INPUT_PLUGINS="$INPUT_PLUGINS $dir";
+    if test -d "$dir" && test -f "$dir"/Makefile.in; then
+    	if test ! "$dir" = "input/sctp" || test ! "$SCTP" = "no"; then
+        	INPUT_PLUGINS="$INPUT_PLUGINS $dir";
+        fi;
     fi;
 done;
 
 # storage plugins are located in src/storage
 for dir in storage/*; do
-    if test -d "$dir" -a -f "$dir"/Makefile.in; then
-        STORAGE_PLUGINS="$STORAGE_PLUGINS $dir";
+    if test -d "$dir" && test -f "$dir"/Makefile.in; then
+    	if test ! "$dir" = "storage/postgres" || test ! "$POSTGRES" = "no"; then
+        	STORAGE_PLUGINS="$STORAGE_PLUGINS $dir";
+        fi;
     fi;
 done;
 
-cd ..;
+cd -;
 
 AC_SUBST(INPUT_PLUGINS)
 AC_SUBST(STORAGE_PLUGINS)
@@ -287,18 +313,18 @@ for dir in *; do
         TESTS="$TESTS $dir";
     fi;
 done;
-cd ../..;
+cd -;
 
 AC_SUBST(TESTS)
 
-############################# Check for tests ##################################
+############################# Check for tools ##################################
 cd tools/;
 for dir in *; do
     if test -d "$dir" -a -f "$dir"/Makefile.in; then
         TOOLS="$TOOLS $dir";
     fi;
 done;
-cd ..;
+cd -;
 
 AC_SUBST(TOOLS)
 

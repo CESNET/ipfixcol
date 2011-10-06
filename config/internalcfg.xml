@@ -48,6 +48,7 @@
 	</storagePlugin>
 
 	<storagePlugin>
-		<file>src/storage/postgres/postgres_output.so</file>
+        <fileFormat>postgres</fileFormat>
+        <file>src/storage/postgres/postgres_output.so</file>
 	</storagePlugin>
 </ipfixcol>
