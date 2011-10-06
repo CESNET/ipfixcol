@@ -6,7 +6,7 @@ INCLUDE = "-I../../../"
 XSLTPROC = @XSLTPROC@
 XSLTMANSTYLE = @XSLTMANSTYLE@
 
-all: fastbit_output.so nffile2fastbit
+all: fastbit_output.so
 
 doc: fastbit.1
 
@@ -25,9 +25,6 @@ fastbit_table.o: fastbit_table.cpp
 pugixml.o: pugixml/pugixml.cpp
 	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
 
-nffile2fastbit: nffile2fastbit.c
-	$(CC) $(CFLAGS) $(LIBS) -o $@ $<
-
 %.1 %.2 %.3 %.4 %.5 %.6 %.7 %.8 %.9: %.dbk
 	@if [ -n "$(XSLTPROC)" ]; then \
 		if [ -f "$(XSLTMANSTYLE)" ]; then \
@@ -43,5 +40,5 @@ nffile2fastbit: nffile2fastbit.c
 
 
 clean:
-	-rm fastbit_output.so *.o nffile2fastbit
+	-rm fastbit_output.so *.o
 
