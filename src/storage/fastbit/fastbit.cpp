@@ -115,11 +115,7 @@ int storage_init (char *params, void **config){
 		c->time_window = atoi(timeWindow.c_str());
 
         	recordLimit=ie.node().child_value("recordLimit");
-		if(recordLimit == "yes"){
-			c->records_window = 8000000;
-		} else {
-			c->records_window = 0;
-		}
+		c->records_window = atoi(recordLimit.c_str());
 
         	timeAligment=ie.node().child_value("timeAlignment");
 
