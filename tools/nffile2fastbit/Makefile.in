@@ -1,0 +1,30 @@
+CC      = @CC@
+CFLAGS  = @CFLAGS@
+LIBS    = @LIBS@
+INCLUDE = "-I../../../"
+
+XSLTPROC = @XSLTPROC@
+XSLTMANSTYLE = @XSLTMANSTYLE@
+
+all: nffile2fastbit
+
+nffile2fastbit: nffile2fastbit.c
+	$(CC) $(CFLAGS) $(LIBS) -o $@ $<
+
+%.1 %.2 %.3 %.4 %.5 %.6 %.7 %.8 %.9: %.dbk
+	@if [ -n "$(XSLTPROC)" ]; then \
+		if [ -f "$(XSLTMANSTYLE)" ]; then \
+			echo $(XSLTPROC) $(XSLTMANSTYLE) $<; \
+			$(XSLTPROC) $(XSLTMANSTYLE) $<; \
+		else \
+			echo "Missing $(XSLTMANSTYLE)!"; \
+			exit 1; \
+		fi \
+	else \
+		echo "Missing xsltproc"; \
+	fi
+
+
+clean:
+	-rm *.o nffile2fastbit;
+
