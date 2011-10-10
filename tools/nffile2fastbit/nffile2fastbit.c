@@ -13,7 +13,7 @@
 #include "nffile.h"
 #include "../../headers/storage.h"
 
-#define ARGUMENTS "hbi:w:v:p:P:V"
+#define ARGUMENTS "hbi:w:v:p:P:r:V"
 #define VERSION "1.0"
 
 volatile int stop = 0;
@@ -924,12 +924,13 @@ void clean_tmp_manager(struct ipfix_template_mgr *manager){
 }
 
 int usage(){
-	printf("Usage: %s -i input_file -w output_dir [-p prefix] [-P path] [-v level] [-hVb]\n",getprogname());
+	printf("Usage: %s -i input_file -w output_dir [-p prefix] [-P path] [-r limit] [-v level] [-hVb]\n",getprogname());
 	printf(" -i input_file	path to nfdump file for conversion\n");
 	printf(" -w output_dir	output direcotry for fastbit files\n");
 	printf(" -b		build indexes\n");
 	printf(" -p prefix	output files prefix\n");
 	printf(" -P path	path to fastbit plugin\n");
+	printf(" -r limit	record limit for fastbit files\n");
 	printf(" -h 		prints this help\n");
 	printf(" -v level 	set verbose level\n");
 	printf(" -V		show version\n");
@@ -962,10 +963,12 @@ int main(int argc, char *argv[]){
 	char *input_file = 0;
 	char *output_dir = 0;
 	char indexes[4] = "no";
-	char def_prefix[2] = "";
+	char def_prefix[] = "";
 	char *prefix = def_prefix;
 	char def_plugin[] = "./fastbit_output.so";
 	char *plugin = def_plugin;
+	char def_record_limit[] = "8000000";
+	char *record_limit = def_record_limit;
 
 
 	char c;
@@ -991,6 +994,9 @@ int main(int argc, char *argv[]){
 				sprintf(plugin,"./%s",optarg);
 				VERBOSE(CL_VERBOSE_BASIC,"plugin relative path: %s\n", plugin);
 			}
+			break;
+		case 'r':
+			record_limit = optarg;
 			break;
 		case 'b':
 			strcpy(indexes,"yes");
@@ -1059,7 +1065,7 @@ int main(int argc, char *argv[]){
 			<dumpInterval> \
 				<timeWindow>0</timeWindow> \
 				<timeAlignment>yes</timeAlignment> \
-				<recordLimit>yes</recordLimit> \
+				<recordLimit>%s</recordLimit> \
 			</dumpInterval> \
 			<namingStrategy> \
 				<type>incremental</type> \
@@ -1069,9 +1075,9 @@ int main(int argc, char *argv[]){
 		</fileWriter>";
 
 	char *params;
-	params = (char *) malloc(strlen(params_template)+strlen(output_dir)+strlen(prefix)+strlen(indexes));
+	params = (char *) malloc(strlen(params_template)+strlen(record_limit)+strlen(output_dir)+strlen(prefix)+strlen(indexes));
 
-	sprintf(params, params_template, output_dir,prefix,indexes);
+	sprintf(params, params_template, output_dir,record_limit,prefix,indexes);
 
 
 	plugin_init(params, &config); //TODO add arguments
