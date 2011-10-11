@@ -71,6 +71,12 @@ TableManagerCursor::TableManagerCursor(TableManager &tableManager, Configuration
 
 TableManagerCursor::~TableManagerCursor()
 {
+	for (unsigned int u = 0; u < this->cursorList.size(); u++) {
+		delete(this->cursorList[u]);
+	}
+
+	delete(this->timestampColumn);
+
 	this->cursorList.clear();
 	this->auxList.clear();
 	this->auxNoMoreRows.clear();

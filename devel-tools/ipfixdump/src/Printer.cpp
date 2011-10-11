@@ -79,6 +79,8 @@ bool Printer::print(TableManager &tm, size_t limit)
 		printRow(cursor);
 	}
 
+	delete(tmc);
+
 	/* TODO print nfdump-like statistics, maybe in main program */
 
 
