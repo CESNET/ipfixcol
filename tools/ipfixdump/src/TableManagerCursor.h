@@ -65,21 +65,61 @@ private:
 	Cursor *currentCursor;              /**< current cursor with actual data */
 	Column *timestampColumn;            /**< column with timestamp information */
 
-	unsigned int cursorIndex;
-	std::vector<bool> auxList;
-	std::vector<bool> auxNoMoreRows;
+	unsigned int cursorIndex;           /**< index of the current table cursor */
+	std::vector<bool> auxList;          /**< auxiliary list, true means that on
+	                                     *   corresponding cursor should be called next() */
+	std::vector<bool> auxNoMoreRows;    /**< auxiliary list, indicates whether we
+	                                     *   reached end of the table */
+	uint64_t rowCounter;                /**< number of printed rows */
 
-	/* private methods */
+
+	/** private methods **/
+
+	/**
+	 * \brief Get table cursors for all tables
+	 *
+	 * @return true if there are any cursors, false otherwise
+	 */
 	bool getTableCursors();
 
-	uint64_t rowCounter;             /* number of printed rows */
 
 
 public:
+	/**
+	 * \brief Constructor
+	 *
+	 * @param[in] tableManager Table Manager to make global cursor for
+	 * @param[in] conf Configuration object
+	 */
 	TableManagerCursor(TableManager &tableManager, Configuration &conf);
+
+	/**
+	 * \brief Destructor
+	 */
 	~TableManagerCursor();
+
+	/**
+	 * \brief Point cursor to the next row
+	 *
+	 * @return true, if there is another row, false otherwise
+	 */
 	bool next();
+
+	/**
+	 * \brief Get column value and return it as a "values" structure
+	 *
+	 * @param[in] name Name of the fastbit column to get value for
+	 * @param[out] value Values structure with column values
+	 * @param[in] part Number of part to write result to
+	 * @return true on success, false otherwise
+	 */
 	bool getColumn(const char *name, values &value, int part);
+
+	/**
+	 * \brief Get cursor to the current row
+	 *
+	 * @return current cursor
+	 */
 	Cursor *getCurrentCursor();
 };
 
