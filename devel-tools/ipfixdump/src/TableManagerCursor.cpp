@@ -46,10 +46,15 @@ TableManagerCursor::TableManagerCursor(TableManager &tableManager, Configuration
 {
 	this->tableManager = &tableManager;
 	this->conf = &conf;
+
 	this->currentCursor = NULL;
+	this->cursorIndex = 0;
 
 	/* get table cursors */
-	this->getTableCursors();
+	if (this->getTableCursors() == false) {
+		std::cerr << "Unable to get table cursors" << std::endl;
+		exit(EXIT_FAILURE);
+	}
 
 	pugi::xml_document doc;
 	if (!doc.load_file(COLUMNS_XML)) {
@@ -60,13 +65,21 @@ TableManagerCursor::TableManagerCursor(TableManager &tableManager, Configuration
 
 	this->timestampColumn->init(doc, "%ts", false);
 
-	this->currentCursor = *(this->cursorListIter); // FIXME
+	this->auxList.resize(this->tableManager->getTables().size(), true);
+	this->auxNoMoreRows.resize(this->tableManager->getTables().size(), false);
+}
+
+TableManagerCursor::~TableManagerCursor()
+{
+	this->cursorList.clear();
+	this->auxList.clear();
+	this->auxNoMoreRows.clear();
 }
 
 bool TableManagerCursor::getTableCursors()
 {
-	unsigned long ncursors = 0;
 	tableVector::iterator iter;
+	Cursor *cursor;
 
 	if (this->tableManager == NULL) {
 		return false;
@@ -76,82 +89,122 @@ bool TableManagerCursor::getTableCursors()
 
 	/* get table cursors */
 	for (iter = this->tableManager->getTables().begin(); iter != this->tableManager->getTables().end(); iter++) {
-		this->cursorList.push_back((*iter)->createCursor());
+		cursor = (*iter)->createCursor();
+		this->cursorList.push_back(cursor);
 	}
 
 	this->cursorListIter = this->cursorList.begin();
+	this->cursorIndex = 0;
 
-	if (ncursors > 0) {
-		return true;
+	if (this->cursorList.size() == 0) {
+		/* no cursors */
+		return false;
 	}
 
-	/* no cursors */
-	return false;
+	return true;
 }
 
-
-TableManagerCursor::~TableManagerCursor()
-{
-	/* nothing to do */
-	/* TODO - do we really need this constructor? */
-}
 
 bool TableManagerCursor::next()
 {
-	bool next_ret;
-	struct values *minValue;
+	bool ret_next;
+	struct values *minValue = NULL;
 	struct values *value;
-	Cursor *minCursor;
+	Cursor *minCursor = NULL;
+	Cursor *cursor;
+	unsigned int minIndex = 0;
+	unsigned int u;
 
 	if (this->conf->getOptionm()) {
 		/* user wants to sort rows according to timestamp */
-		/* TODO */
-		if (this->currentCursor != NULL) {
-			this->currentCursor->next();
-		}
 
-		std::vector<Cursor *>::iterator cursor;
-		for (cursor = this->cursorList.begin(); cursor < this->cursorList.end(); cursor++) {
-			value = this->timestampColumn->getValue(this->getCurrentCursor());
-			if (value->toLong() < minValue->toLong()) {
-				minCursor = *cursor;
-				free(minValue);
+		/* find record with smallest timestamp */
+		for (u = 0; u < this->cursorList.size(); u++) {
+			cursor = this->cursorList[u];
+
+			if (this->auxList[u] == true) {
+				if (this->auxNoMoreRows[u] == false) {
+					/* there should be another rows */
+					ret_next = cursor->next();
+
+					if (ret_next == false) {
+						this->auxNoMoreRows[u] = true;
+					}
+
+					this->auxList[u] = false;
+				}
+			}
+
+			this->auxList[u] == false;
+
+			/* read timestamp */
+			if (this->auxNoMoreRows[u]) {
+				/* no more rows in this table */
+				cursor = NULL;
+				continue;
+			} else {
+				value = this->timestampColumn->getValue(cursor);
+			}
+
+			if (minValue == NULL) {
 				minValue = value;
+				minCursor = cursor;
+				minIndex = u;
+			} else if (value->toLong() < minValue->toLong()) {
+				minCursor = cursor;
+				delete(minValue);
+				minValue = value;
+				minIndex = u;
+			} else {
+				delete(value);
 			}
 		}
+
+		/* check whether we have valid row */
+		if (!cursor) {
+			/* looks like there are no data left */
+			return false;
+		}
+
+		this->auxNoMoreRows[u] = true;
+
+		/* don't forgot to call next() on this table next time */
+		this->auxList[minIndex] = true;
 
 		this->currentCursor = minCursor;
 
 		return true;
 	}
 
-
-
-	/* just print out all rows */
-	if (this->currentCursor == NULL) {
-		/* this is first time we call this method */
-		this->currentCursor = *(this->cursorListIter);
-		this->currentCursor->next();
-	} else {
-		/* proceed to the next row */
-
-		if (this->cursorListIter == this->cursorList.end()) {
-			/* we reached end of vector, start from beginning again */
-			this->cursorListIter = this->cursorList.begin();
+	/* no filter, just print all rows */
+	if (true) {
+		if (this->currentCursor == NULL) {
+			/* this is first time we call this method */
+			this->currentCursor = this->cursorList[0];
 		}
 
-		this->currentCursor = *(this->cursorListIter);
-		next_ret = this->currentCursor->next();
-		if (!next_ret) {
-			/* we have processed all rows */
-			this->currentCursor = NULL;
-			return false;
+		/* proceed to the next row */
+fetch_row:
+		ret_next = this->currentCursor->next();
+		if (ret_next == false) {
+			/* error during fetching new row, try next table */
+			this->cursorIndex++;
+			if (this->cursorIndex < this->cursorList.size()) {
+				this->currentCursor = this->cursorList[this->cursorIndex];
+
+				/* fetch row from next table */
+				goto fetch_row;
+			} else {
+				/* no more rows */
+				return false;
+			}
 		}
 	}
 
 	/* we got valid row */
 	return true;
 }
+
 
 bool TableManagerCursor::getColumn(const char *name, values &value, int part)
 {

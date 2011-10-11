@@ -41,7 +41,7 @@
 #define TABLE_MANAGER_CURSOR_H_
 
 #include <ibis.h>
-#include <string>
+#include <cstring>
 #include "AST.h"
 #include "Table.h"
 #include "TableManager.h"
@@ -61,12 +61,15 @@ private:
 	Cursor *currentCursor;
 	Column *timestampColumn;
 
+	unsigned int cursorIndex;
+	std::vector<bool> auxList;
+	std::vector<bool> auxNoMoreRows;
+
 	/* private methods */
 	bool getTableCursors();
 
 
 public:
-//	TableManagerCursor();
 	TableManagerCursor(TableManager &tableManager, Configuration &conf);
 	~TableManagerCursor();
 	bool next();
