@@ -392,7 +392,7 @@ bool Column::isSeparator() {
 }
 
 bool Column::isOperation() {
-	if (this->ast == NULL && this->ast->type == ipfixdump::operation) {
+	if (this->ast != NULL && this->ast->type == ipfixdump::operation) {
 		return true;
 	}
 

@@ -156,6 +156,20 @@ public:
     char* getXmlConfPath();
 
     /**
+     * \brief Returns string with time window start
+     *
+     * @return string with time window start, empty if none used
+     */
+    std::string getTimeWindowStart();
+
+    /**
+     * \brief Returns string with time window end
+     *
+     * @return string with time window end, empty if none used
+     */
+    std::string getTimeWindowEnd();
+
+    /**
      * \brief Class destructor
      */
     ~Configuration();
@@ -202,6 +216,7 @@ private:
 	stringVector order; /**< Ordering columns aliases */
 	std::string format; /**< Output format*/
 	columnVector columns; /**< Vector of columns to print */
+	std::string timeWindow; /**< Time window for filtering columns */
 
 }; /* end of Configuration class */
 

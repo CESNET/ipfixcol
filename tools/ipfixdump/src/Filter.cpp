@@ -38,6 +38,7 @@
  */
 #include <iostream>
 #include <arpa/inet.h>
+#include <time.h>
 
 #include "Filter.h"
 #include "Configuration.h"
@@ -62,12 +63,22 @@ bool Filter::isValid(Cursor &cur)
 	return true;
 }
 
-Filter::Filter(Configuration &conf): conf(conf)
+int Filter::init()
 {
-	std::string input = this->conf.getFilter(), filter;
+	std::string input = this->conf.getFilter(), filter, tw;
+
+	/* incorporate time windows argument in filter */
+	if (!conf.getTimeWindowStart().empty()) {
+		tw = "(%ts >= " + conf.getTimeWindowStart();
+		if (!conf.getTimeWindowEnd().empty()) {
+			tw += "AND %te <= " + conf.getTimeWindowEnd();
+		}
+		tw += ") AND ";
+	input = tw + input;
+	}
 
 	YY_BUFFER_STATE bp;
-	int c;
+	int c, ret = 0;
 	std::string arg;
 
 	bp = yy_scan_string(input.c_str());
@@ -88,10 +99,12 @@ Filter::Filter(Configuration &conf): conf(conf)
 					filter += *cols.begin() + " ";
 				} else { /* operation */
 					/* \TODO  save for post-filtering */
+					std::cerr << "Computed column '" << arg << "' cannot be used for filtering." << std::endl;
+					ret = -1;
 				}
-
 			} else {
 				std::cerr << "Filter column '" << arg << "' not found!" << std::endl;
+				ret = -2;
 			}
 			delete col;
 			break;}
@@ -131,24 +144,37 @@ Filter::Filter(Configuration &conf): conf(conf)
 			}
 			filter += " ";
 			break;
-/*		case RAWCOLUMN:
-			std::cout << "raw column: ";
-			break;
-		case OPERATOR:
-			std::cout << "operator: ";
-			break;
-		case CMP:
-			std::cout << "comparison: ";
-			break;*/
-		case BRACKET:
-			filter += arg + " ";
-			break;
-		case OTHER:
-			std::cout << "Wrong filter string: '"<< arg << "'" << std::endl;
-			break;
-		default:
-			filter += arg + " ";
-			break;
+			case TIMESTAMP: {
+				time_t ntime = parseTimestamp(arg);
+				if (ntime == -1) { /* parsing error */
+					ret = -3;
+				} else {
+					std::ostringstream ss;
+					ss << ntime*1000; /* \TODO use ms only for miliseconds timetamp columns */
+
+					filter += ss.str() + " ";
+				}
+
+				break;}
+			/*		case RAWCOLUMN:
+				std::cout << "raw column: ";
+				break;
+			case OPERATOR:
+				std::cout << "operator: ";
+				break;
+			case CMP:
+				std::cout << "comparison: ";
+				break;*/
+			case BRACKET:
+				filter += arg + " ";
+				break;
+			case OTHER:
+				std::cerr << "Wrong filter string: '"<< arg << "'" << std::endl;
+				ret = -3;
+				break;
+			default:
+				filter += arg + " ";
+				break;
 		}
 	}
 
@@ -157,10 +183,31 @@ Filter::Filter(Configuration &conf): conf(conf)
 	yy_delete_buffer(bp);
 	yylex_destroy();
 
+	/* Don't show debug message with filter on error */
+	if (ret != 0) {
+		return ret;
+	}
+
 #ifdef DEBUG
 	std::cerr << "Using filter: '" << filter << "'" << std::endl;
 #endif
 	this->filterString = filter;
+
+	return ret;
 }
+
+time_t Filter::parseTimestamp(std::string str)
+{
+	struct tm ctime;
+
+	if (strptime(str.c_str(), "%Y/%m/%d.%H:%M:%S", &ctime) == NULL) {
+		std::cerr << "Cannot parse timestamp '" << str << "'" << std::endl;
+		return -1;
+	}
+
+	return mktime(&ctime);
+}
+
+Filter::Filter(Configuration &conf): conf(conf) {}
 
 } /* end of namespace ipfixdump */

@@ -70,6 +70,13 @@ public:
 	Filter(Configuration &conf);
 
 	/**
+	 * \brief Initialise the filter
+	 *
+	 * @return Zero on success, non-zero otherwise
+	 */
+	int init();
+
+	/**
 	 * \brief Build and return filter string for fastbit query
 	 *
 	 * This should take specified time  windows into consideration
@@ -87,6 +94,14 @@ public:
 	bool isValid(Cursor &cur);
 
 private:
+	/**
+	 * \brief Parse timestamp to number of seconds
+	 *
+	 * @param str String with text representation of the timestamp
+	 * @return Number of seconds in timestamp
+	 */
+	time_t parseTimestamp(std::string str);
+
 	Configuration &conf; /**< Program configuration */
 	std::string filterString; /**< String for fastbit condition */
 };

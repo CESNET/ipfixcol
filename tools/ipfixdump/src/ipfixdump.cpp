@@ -57,15 +57,20 @@ int main(int argc, char *argv[])
 	/* raise limit for cache size. this allows more mmaped files */
 	ibis::fileManager::adjustCacheSize(1000000000000);
 
+//	ibis::gVerbose = 1;
+
 	/* create configuration to work with */
 	Configuration conf;
 
-	/* process configuration and check whether end program */
+	/* process configuration and check whether to end the program */
 	ret = conf.init(argc, argv);
 	if (ret != 0) return ret;
 
-	/* initialise filter */
+	/* create filter */
 	Filter filter(conf);
+	/* initialise filter and check correctness */
+	ret = filter.init();
+	if (ret != 0) return ret;
 
 	/* initialise printer */
 	Printer print(std::cout, conf);
