@@ -160,6 +160,8 @@ bool TableManagerCursor::next()
 			}
 		}
 
+		delete(minValue);
+
 		/* check whether we have valid row */
 		if (!cursor) {
 			/* looks like there are no data left */
