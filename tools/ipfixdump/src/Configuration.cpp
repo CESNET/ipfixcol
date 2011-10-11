@@ -320,10 +320,6 @@ int Configuration::searchForTableParts(stringVector &tables)
 		dirs_counter = scandir(tables[i].c_str(), &namelist, NULL, alphasort);
 		if (dirs_counter < 0) {
 			/* oops? try another directory */
-			while(dirs_counter--) {
-				free(namelist[dirs_counter]);
-			}
-			free(namelist);
 			continue;
 		}
 
@@ -352,7 +348,8 @@ int Configuration::searchForTableParts(stringVector &tables)
 					this->parts.push_back(table);
 				}
 			}
-			free(namelist[dirs_counter]);
+
+			free(namelist[counter-1]);
 		}
 
 		free(namelist);
