@@ -229,7 +229,7 @@ int Configuration::init(int argc, char *argv[])
 			NOT_SUPPORTED
 			break;
 		case 't':
-			NOT_SUPPORTED
+				this->timeWindow = optarg;
 			break;
 		default:
 			help ();
@@ -506,6 +506,20 @@ char* Configuration::getXmlConfPath()
 	return (char*) COLUMNS_XML;
 }
 
+std::string Configuration::getTimeWindowStart()
+{
+	return this->timeWindow.substr(0, this->timeWindow.find('-'));
+}
+
+std::string Configuration::getTimeWindowEnd()
+{
+	size_t pos = this->timeWindow.find('-');
+	if (pos == std::string::npos) {
+		return "";
+	}
+	return this->timeWindow.substr(pos+1);
+}
+
 void Configuration::help()
 {
 	/* lines with // at the beginning should be implemented sooner */
@@ -558,8 +572,8 @@ void Configuration::help()
 	//<< "-x <file>       verify extension records in netflow data file." << std::endl
 	//<< "-X              Dump Filtertable and exit (debug option)." << std::endl
 //	<< "-Z              Check filter syntax and exit." << std::endl
-//	<< "-t <time>       time window for filtering packets" << std::endl
-//	<< "                yyyy/MM/dd.hh:mm:ss[-yyyy/MM/dd.hh:mm:ss]" << std::endl
+	<< "-t <time>       time window for filtering packets" << std::endl
+	<< "                yyyy/MM/dd.hh:mm:ss[-yyyy/MM/dd.hh:mm:ss]" << std::endl
 	;
 }
 

@@ -162,6 +162,20 @@ public:
      */
     bool getOptionm();
 
+	/**
+     * \brief Returns string with time window start
+     *
+     * @return string with time window start, empty if none used
+     */
+    std::string getTimeWindowStart();
+
+    /**
+     * \brief Returns string with time window end
+     *
+     * @return string with time window end, empty if none used
+     */
+    std::string getTimeWindowEnd();
+
     /**
      * \brief Class destructor
      */
@@ -198,7 +212,6 @@ private:
 	 */
 	void parseFormat(std::string format);
 
-
 	/**
 	 * \brief Create element of type value from XMLnode element
 	 *
@@ -233,6 +246,7 @@ private:
 	std::string firstdir;              /**< first table (directory) user wants to work with */
 	std::string lastdir;               /**< last table (directory) user wants to work with */
 	bool optm;                         /**< indicates whether user specified "-m" option or not */
+	std::string timeWindow;            /**< time window */
 }; /* end of Configuration class */
 
 } /* end of ipfixdump namespace */

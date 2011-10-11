@@ -116,9 +116,9 @@ public:
 	~TableManager();
 
 private:
-	Configuration &conf; /**< Program configuration */
-	ibis::partList parts; /**< List of loaded table parts */
-	tableVector tables; /**< List of managed tables */
+	Configuration &conf;       /**< Program configuration */
+	ibis::partList parts;      /**< List of loaded table parts */
+	tableVector tables;        /**< List of managed tables */
 };
 
 }  // namespace ipfixdump

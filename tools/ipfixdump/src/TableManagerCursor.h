@@ -1,7 +1,7 @@
 /**
  * \file TableManagerCursor.h
  * \author Michal Srb <michal.srb@cesnet.cz>
- * \brief TODO
+ * \brief Global cursor over all Tables
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -51,14 +51,19 @@ namespace ipfixdump {
 class TableManager;  /* forward declaration */
 class Cursor;
 
-
+/**
+ * \brief Global cursor for all Tables
+ *
+ * It allows us to iterate over all rows in all tables with single cursor.
+ * It can limit number of rows, sort output according to timestamp
+ */
 class TableManagerCursor {
 private:
-	TableManager *tableManager;
-	Configuration *conf;
-	std::vector<Cursor *> cursorList;
-	Cursor *currentCursor;
-	Column *timestampColumn;
+	TableManager *tableManager;         /**< table manager */
+	Configuration *conf;                /**< program configuration */
+	std::vector<Cursor *> cursorList;   /**< list of table specific cursors */
+	Cursor *currentCursor;              /**< current cursor with actual data */
+	Column *timestampColumn;            /**< column with timestamp information */
 
 	unsigned int cursorIndex;
 	std::vector<bool> auxList;

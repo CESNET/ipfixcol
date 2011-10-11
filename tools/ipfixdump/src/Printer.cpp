@@ -206,7 +206,7 @@ std::string Printer::printTimestamp64(uint64_t timestamp)
 {
 	time_t timesec = timestamp/1000;
 	uint64_t msec = timestamp % 1000;
-	struct tm *tm = gmtime(&timesec);
+	struct tm *tm = localtime(&timesec);
 
 	return this->printTimestamp(tm, msec);
 }

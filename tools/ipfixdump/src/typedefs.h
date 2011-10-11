@@ -61,6 +61,7 @@ enum yytokentype
 	OPERATOR = 262,
 	IPv4 = 263,
 	BRACKET = 264,
+	TIMESTAMP = 265,
 	OTHER = 300
 };
 
