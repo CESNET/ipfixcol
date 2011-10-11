@@ -99,7 +99,6 @@ bool TableManagerCursor::getTableCursors()
 		this->cursorList.push_back(cursor);
 	}
 
-	this->cursorListIter = this->cursorList.begin();
 	this->cursorIndex = 0;
 
 	if (this->cursorList.size() == 0) {

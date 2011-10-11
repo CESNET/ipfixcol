@@ -57,7 +57,6 @@ private:
 	TableManager *tableManager;
 	Configuration *conf;
 	std::vector<Cursor *> cursorList;
-	std::vector<Cursor *>::iterator cursorListIter;
 	Cursor *currentCursor;
 	Column *timestampColumn;
 
