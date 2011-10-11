@@ -1,5 +1,5 @@
 /**
- * \file filter.cpp
+ * \file Filter.cpp
  * \author Petr Velan <petr.velan@cesnet.cz>
  * \brief Class for management of result filtering
  *
@@ -37,17 +37,35 @@
  *
  */
 #include <iostream>
-#include "filter.h"
+#include <arpa/inet.h>
 
+#include "Filter.h"
+#include "Configuration.h"
+#include "Column.h"
+#include "typedefs.h"
 #include "scanner.h"
+
 /* yylex is not in the header, declare it separately */
 extern YY_DECL;
 
 namespace ipfixdump
 {
 
-std::string filter::run() {
-	std::string input = conf.filter, filter;
+std::string Filter::getFilter()
+{
+	return this->filterString;
+}
+
+bool Filter::isValid(Cursor &cur)
+{
+	// TODO add this functionality
+	return true;
+}
+
+Filter::Filter(Configuration &conf): conf(conf)
+{
+	std::string input = this->conf.getFilter();
+	std::string filter;
 
 	YY_BUFFER_STATE bp;
 	int c;
@@ -56,61 +74,94 @@ std::string filter::run() {
 	bp = yy_scan_string(input.c_str());
 	yy_switch_to_buffer(bp);
 
+	/* Open XML configuration file */
+	pugi::xml_document doc;
+	doc.load_file(conf.getXmlConfPath());
+
 	while ((c = yylex(arg)) != 0) {
 		switch (c) {
 		case COLUMN: {
 			/* get real columns */
-			pugi::xml_document doc;
-			doc.load_file(COLUMNS_XML);
-			pugi::xpath_node column = doc.select_single_node(("/columns/column[alias='"+arg+"']").c_str());
-			if (column == NULL) {
-				std::cout << "Cannot find alias: '"<< arg << "'" << std::endl;
-				return "";
-			} else if ( column.node().child("value").attribute("type").value() == std::string("plain")) {
-				/* replace alias with column */
-				filter += column.node().child("value").child_value("element");
-				filter += " ";
-			//} else if ( column.node().child("value").attribute("type").value() == std::string("group")) {
-				/* TODO: this should be somehow done individually for each table
-				 * When table has one of the columns, use it. In other case, drop it. */
+			Column *col = new Column();
+			if (col->init(doc, arg, false)) {
+				stringSet cols = col->getColumns();
+				if (!col->isOperation()) { /* plain value */
+					filter += *cols.begin() + " ";
+				} else { /* operation */
+					/* \TODO  save for post-filtering */
+				}
+
 			} else {
-				std::cout << "Column : '"<<  column.node().child_value("name") << "' is not of supported type" << std::endl;
-				return "";
+				std::cerr << "Filter column '" << arg << "' not found!" << std::endl;
 			}
-		}
+			delete col;
+			break;}
+		case IPv4:{
+			/* convert ipv4 address to uint32_t */
+			struct in_addr addr;
+			std::stringstream ss;
+			/* convert ipv4 address, returns network byte order */
+			inet_pton(AF_INET, arg.c_str(), &addr);
+			/* convert to host byte order */
+			uint32_t addrNum = ntohl(addr.s_addr);
+			/* integer to string */
+			ss << addrNum;
+			filter += ss.str() + " ";
+			break;}
+		case NUMBER:
+			switch (arg[arg.length()-1]) {
+			case 'k':
+			case 'K':
+				filter += arg.substr(0, arg.length()-1) + "000";
+				break;
+			case 'm':
+			case 'M':
+				filter += arg.substr(0, arg.length()-1) + "000000";
+				break;
+			case 'g':
+			case 'G':
+				filter += arg.substr(0, arg.length()-1) + "000000000";
+				break;
+			case 't':
+			case 'T':
+				filter += arg.substr(0, arg.length()-1) + "000000000000";
+				break;
+			default:
+				filter += arg;
+				break;
+			}
+			filter += " ";
 			break;
-/*		case NUMBER:
-			std::cout << "number: ";
+/*		case RAWCOLUMN:
+			std::cout << "raw column: ";
 			break;
 		case OPERATOR:
 			std::cout << "operator: ";
 			break;
-		case RAWCOLUMN:
-			std::cout << "raw column: ";
-			break;
 		case CMP:
 			std::cout << "comparison: ";
 			break;*/
+		case BRACKET:
+			filter += arg + " ";
+			break;
 		case OTHER:
 			std::cout << "Wrong filter string: '"<< arg << "'" << std::endl;
-			/* end */
-			return "";
 			break;
 		default:
 			filter += arg + " ";
-		break;
+			break;
 		}
 	}
 
+	/* free flex allocated resources */
 	yy_flush_buffer(bp);
 	yy_delete_buffer(bp);
+	yylex_destroy();
 
 #ifdef DEBUG
 	std::cerr << "Using filter: '" << filter << "'" << std::endl;
 #endif
-	return filter;
+	this->filterString = filter;
 }
 
-filter::filter(configuration &conf): conf(conf) {}
-
-}
+} /* end of namespace ipfixdump */

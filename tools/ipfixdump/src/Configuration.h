@@ -50,9 +50,6 @@ namespace ipfixdump {
 /** Acceptable command-line parameters */
 #define OPTSTRING "hVaA:r:f:n:c:D:Ns:qIM:mR:o:v:Z:t:"
 
-/** ipfixdump version */
-#define VERSION "0.2"
-
 #define COLUMNS_XML "ipfixdump.xml"
 
 /**

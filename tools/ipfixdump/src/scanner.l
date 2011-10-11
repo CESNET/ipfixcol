@@ -1,7 +1,7 @@
 /**
- * \file printer.h
+ * \file scanner.l
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Header of class for printing fastbit tables
+ * \brief Flex ipfixdump filter scanner
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -36,94 +36,26 @@
  * if advised of the possibility of such damage.
  *
  */
-
-#ifndef PRINTER_H_
-#define PRINTER_H_
-
+%{
 #include "typedefs.h"
-#include "configuration.h"
+%}
+ 
+%option noyywrap nounput
+/*nodefault*/
 
-/**
- * \brief Namespace of the ipfixdump utility
- */
-namespace ipfixdump {
+%%
 
-/**
- * \brief Class printing tables
- *
- * Handles output formatting
- */
-class printer {
-private:
+%[a-zA-Z0-9]+		{ arg = yytext; return ipfixdump::COLUMN; }
+e[0-9]+id[0-9]+(p[0-9]+)?		{ arg = yytext; return ipfixdump::RAWCOLUMN; }
+" "+|\t+|\n+		{/* ignore spaces and newlines */}
+[0-9]+[kKmMgGtT]{0,1}	{ arg = yytext; return ipfixdump::NUMBER; }
+[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}	{ arg = yytext; return ipfixdump::IPv4; }
+">"|"<"|"="|"==" |
+"=>"|"<="|">=" | 
+"=>"|"!="			{ arg = yytext; return ipfixdump::CMP; }
+AND|OR|and|or		{ arg = yytext; return ipfixdump::OPERATOR; }
+"("|")"				{ arg = yytext; return ipfixdump::BRACKET; }
+.					{ arg = yytext; return ipfixdump::OTHER; }
 
-	/**
-	 * \brief print one row
-	 *
-	 * @param cur cursor poiting to the row
-	 * @param namesColumns map of names to column numbers for current table
-	 */
-	void printRow(ibis::table::cursor *cur, namesColumnsMap &namesColumns);
-
-	/**
-	 * \brief Print table header
-	 */
-	void printHeader();
-
-	/**
-	 * \brief Private default constructor
-	 */
-	printer();
-
-	std::ostream &out; /**< Stream to write to */
-	configuration &conf; /**< program configuration */
-
-	tableVector tables; /**< tables to print */
-	ibis::table::namesTypes namesTypes; /**< assoc. array of names and types */
-
-public:
-
-	/**
-	 * \brief Constructor
-	 *
-	 * @param out ostream to print to
-	 * @param conf configuration class
-	 */
-	printer(std::ostream &out, configuration &conf);
-
-	/**
-	 * \brief Prints output in specified format
-	 *
-	 * This is the real printer function, public ones only
-	 * set tables to work with and call this.
-	 *
-	 * @param limit print max limit rows (0 = all)
-	 * @return 0 on success, non-zero otherwise
-	 */
-	int print(uint64_t limit);
-
-	/**
-	 * \brief Adds table to list of tables to print
-	 *
-	 * @param table table_container to be added
-	 */
-	void addTable(tableContainer *table);
-
-	/**
-	 * \brief Add tables to list of tables to print
-	 *
-	 * @param tables vector of tables to be added
-	 */
-	void addTables(tableVector &tables);
-
-	/**
-	 * \brief clear list of tables to print
-	 *
-	 * @return Vector of tables preciously stored
-	 */
-	tableVector clearTables();
-};
-
-}  // namespace ipfixdump
-
-
-#endif /* PRINTER_H_ */
+%%
+ 
