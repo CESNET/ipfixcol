@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* print tables */
-	print.print(tm, conf.getMaxRecords());
+	print.print(tm);
 
 	return 0;
 }

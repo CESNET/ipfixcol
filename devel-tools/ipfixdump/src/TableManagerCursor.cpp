@@ -67,6 +67,8 @@ TableManagerCursor::TableManagerCursor(TableManager &tableManager, Configuration
 
 	this->auxList.resize(this->tableManager->getTables().size(), true);
 	this->auxNoMoreRows.resize(this->tableManager->getTables().size(), false);
+
+	this->rowCounter = 0;
 }
 
 TableManagerCursor::~TableManagerCursor()
@@ -119,6 +121,11 @@ bool TableManagerCursor::next()
 	Cursor *cursor;
 	unsigned int minIndex = 0;
 	unsigned int u;
+
+	/* check whether we reached limit on number of printed rows */
+	if (this->conf->getMaxRecords() && this->rowCounter >= this->conf->getMaxRecords()) {
+		return false;
+	}
 
 	if (this->conf->getOptionm()) {
 		/* user wants to sort rows according to timestamp */
@@ -180,11 +187,14 @@ bool TableManagerCursor::next()
 
 		this->currentCursor = minCursor;
 
+		this->rowCounter += 1;
+
 		return true;
 	}
 
 	/* no filter, just print all rows */
 	if (true) {
+
 		if (this->currentCursor == NULL) {
 			/* this is first time we call this method */
 			this->currentCursor = this->cursorList[0];
@@ -207,6 +217,8 @@ fetch_row:
 			}
 		}
 	}
+
+	this->rowCounter += 1;
 
 	/* we got valid row */
 	return true;

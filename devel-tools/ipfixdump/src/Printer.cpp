@@ -50,12 +50,8 @@ namespace ipfixdump
 {
 
 
-bool Printer::print(TableManager &tm, size_t limit)
+bool Printer::print(TableManager &tm)
 {
-	bool hasRow;
-	size_t printedRows = 0;
-
-
 	/* if there is nothing to print, return */
 	if (conf.getColumns().size() == 0) {
 		return true;

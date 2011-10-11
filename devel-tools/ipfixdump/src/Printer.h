@@ -70,10 +70,9 @@ public:
 	 * \brief Prints output in specified format
 	 *
 	 * @param tm TableManager of tables to print
-	 * @param limit print max limit rows (0 = all)
 	 * @return true on success, false otherwise
 	 */
-	bool print(TableManager &tm, size_t limit);
+	bool print(TableManager &tm);
 
 private:
 

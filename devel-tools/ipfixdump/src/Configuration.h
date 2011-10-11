@@ -220,6 +220,8 @@ private:
 	 */
 	AST* createOperationElement(pugi::xml_node operation, pugi::xml_document &doc);
 
+
+
     stringVector parts;                /**< Fastbit parts paths to be used*/
     char *appName;                     /**< Application name, parsed from command line args*/
     stringSet aggregateColumnsAliases; /**< Aggregate columns aliases set */

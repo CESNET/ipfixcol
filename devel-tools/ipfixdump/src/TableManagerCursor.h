@@ -67,6 +67,8 @@ private:
 	/* private methods */
 	bool getTableCursors();
 
+	uint64_t rowCounter;             /* number of printed rows */
+
 
 public:
 	TableManagerCursor(TableManager &tableManager, Configuration &conf);
