@@ -314,11 +314,15 @@ int Configuration::searchForTableParts(stringVector &tables)
 	}
 
 
-	/* read tables subdirectories(templates) */
+	/* read tables subdirectories (templates) */
 	for (size_t i = 0; i < tables.size(); i++) {
 		dirs_counter = scandir(tables[i].c_str(), &namelist, NULL, alphasort);
 		if (dirs_counter < 0) {
 			/* oops? try another directory */
+			while(dirs_counter--) {
+				free(namelist[dirs_counter]);
+			}
+			free(namelist);
 			continue;
 		}
 
@@ -347,6 +351,7 @@ int Configuration::searchForTableParts(stringVector &tables)
 					this->parts.push_back(table);
 				}
 			}
+			free(namelist[dirs_counter]);
 		}
 
 		free(namelist);
