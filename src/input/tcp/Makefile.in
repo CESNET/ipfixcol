@@ -3,8 +3,8 @@
 ################################################
 
 CC      = @CC@
-CFLAGS  = @CFLAGS@
-LIBS    = @LIBS@
+CFLAGS  = @CFLAGS@ `pkg-config --cflags libssl`
+LIBS    = @LIBS@ `pkg-config --libs libssl`
 INCLUDE = "-I../../../"
 
 all: tcp_input.so
