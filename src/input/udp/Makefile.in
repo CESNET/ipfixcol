@@ -12,11 +12,10 @@ all: udp_input.so
 # udp_input.so
 udp_input.so: udp_input.o
 	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,udp_input.so.1 -o $@ $< -lc
-	rm udp_input.o
 	
 udp_input.o: udp_input.c
 	$(CC) $(CFLAGS) $(INCLUDE) -fPIC -c $<
 
 clean:
-	rm -f udp_input.so
+	rm -f udp_input.so udp_input.o
 
