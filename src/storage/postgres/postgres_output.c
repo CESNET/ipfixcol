@@ -301,7 +301,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 	size_t to_length;
 
 	struct ipfix_data_set *data_set = couple->data_set;
-	struct ipfix_template *template = couple->template;
+	struct ipfix_template *template = couple->data_template;
 	char *ipfix_type;
 	char *sql_command;
 	uint16_t sql_command_max_len = SQL_COMMAND_LENGTH;
@@ -778,7 +778,7 @@ static int process_new_templates(struct postgres_config *conf, const struct ipfi
 		return -1;
 	}
 
-	while ((template = ipfix_msg->data_set[template_index].template) != NULL) {
+	while ((template = ipfix_msg->data_couple[template_index].data_template) != NULL) {
 
 		flag = 1;     /* create table if list is empty */
 		/* check whether table for the template exists */
@@ -832,13 +832,13 @@ static int process_data_records(struct postgres_config *conf, const struct ipfix
 		return -1;
 	}
 
-	while ((data_set = ipfix_msg->data_set[set_index].data_set) != NULL) {
-		if (ipfix_msg->data_set[set_index].template == NULL) {
+	while ((data_set = ipfix_msg->data_couple[set_index].data_set) != NULL) {
+		if (ipfix_msg->data_couple[set_index].data_template == NULL) {
 			/* no template for data record, skip */
 			continue;
 		}
-		snprintf(table_name, TABLE_NAME_LEN, TABLE_NAME_PREFIX "%u", ipfix_msg->data_set[set_index].template->template_id);
-		insert_into(conf, table_name, &(ipfix_msg->data_set[set_index]));
+		snprintf(table_name, TABLE_NAME_LEN, TABLE_NAME_PREFIX "%u", ipfix_msg->data_couple[set_index].data_template->template_id);
+		insert_into(conf, table_name, &(ipfix_msg->data_couple[set_index]));
 
 		set_index++;
 	}
