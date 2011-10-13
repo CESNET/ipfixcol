@@ -1203,6 +1203,7 @@ int main(int argc, char *argv[]){
 			//VERBOSE(CL_VERBOSE_ADVANCED,"---------BLOCK---------");
 			//hex(buffer, block_header.size);
 		
+			size = 0;
 			while (size < block_header.size && !stop){
 				VERBOSE(CL_VERBOSE_ADVANCED,"OFFSET: %u - %p",size,buffer);
 				record = (struct common_record_s *) buffer;

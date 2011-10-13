@@ -61,6 +61,8 @@ INPUT_PLUGINS = @INPUT_PLUGINS@
 # Tests in devel-tools/tests that should be built on "make test"
 TESTS = @TESTS@
 
+TOOLS = @TOOLS@
+
 # Various configurable paths (remember to edit Makefile.in, not Makefile)
 prefix = @prefix@
 exec_prefix = @exec_prefix@
@@ -151,11 +153,10 @@ tarball: $(SRCS) $(HDRS)
 		[ "$$i" != "$${i%/*}" -a ! -d $(NAME)-$(VERSION)/$${i%/*} ] && mkdir -p $(NAME)-$(VERSION)/$${i%/*}; \
 		cp $$i $(NAME)-$(VERSION)/$$i; \
 	done;
-	for i in $(STORAGE_PLUGINS) $(INPUT_PLUGINS); do \
-		[ -d $(NAME)-$(VERSION)/src/$${i%%-*}/$${i#*-} ] || mkdir -p $(NAME)-$(VERSION)/src/$${i%%-*}/$${i#*-}; \
-		cp -R src/$${i%%-*}/$${i#*-} $(NAME)-$(VERSION)/src/$${i%%-*}/; \
-	done;
-	@rm -rf $(RPMDIR)/SOURCES/; \
+	for i in src/$(STORAGE_PLUGINS) ; do $(MAKE) -C $$i tarball-prepare; done; \
+	for i in src/$(INOUT_PLUGINS) ; do $(MAKE) -C $$i tarball-prepare; done; \
+	for i in tools/$(TOOLS) ; do $(MAKE) -C $$i tarball-prepare; done; \
+	rm -rf $(RPMDIR)/SOURCES/; \
 	mkdir -p $(RPMDIR)/SOURCES/; \
 	tar -c -z -f $(RPMDIR)/SOURCES/$(NAME)-$(VERSION)-$(RELEASE).tar.gz \
 	    $(NAME)-$(VERSION); \
