@@ -124,7 +124,7 @@ struct plugin_conf
 };
 
 #ifdef TLS_SUPPORT
-/* auxiliarry structure for error handling */
+/* auxiliary structure for error handling */
 struct cleanup {
 	struct sockaddr_in6 *address;
 	SSL *ssl;
@@ -211,7 +211,7 @@ void *input_listen(void *config)
 	int i;
 	SSL *ssl = NULL;           /* structure for TLS connection */
 	X509 *peer_cert = NULL;    /* peer's certificate */
-	struct cleanup maid;       /* auxiliarry struct for TLS error handling */
+	struct cleanup maid;       /* auxiliary struct for TLS error handling */
 #endif
 
 
