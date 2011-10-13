@@ -93,6 +93,10 @@
 struct input_info_list {
 	struct input_info_network info;
 	struct input_info_list *next;
+#ifdef TLS_SUPPORT
+	char *collector_cert;
+	X509 *exporter_cert;
+#endif
 };
 
 /**

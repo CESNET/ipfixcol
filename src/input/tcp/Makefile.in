@@ -3,8 +3,8 @@
 ################################################
 
 CC      = @CC@
-CFLAGS  = @CFLAGS@
-LIBS    = @LIBS@
+CFLAGS  = @CFLAGS@ `pkg-config --cflags libssl`
+LIBS    = @LIBS@ `pkg-config --libs libssl`
 INCLUDE = "-I../../../"
 
 all: tcp_input.so
@@ -12,11 +12,10 @@ all: tcp_input.so
 # udp_input.so
 tcp_input.so: tcp_input.o
 	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,tcp_input.so.1 -o $@ $< -lc
-	rm tcp_input.o
 	
 tcp_input.o: tcp_input.c
 	$(CC) $(CFLAGS) $(INCLUDE) -fPIC -c $<
 
 clean:
-	rm -f tcp_input.so
+	rm -f tcp_input.so tcp_input.o
 
