@@ -102,16 +102,6 @@ int Configuration::init(int argc, char *argv[])
 				}
 			}
 			break;
-		case 'r': /* file to open */
-                if (optarg == std::string("")) {
-                	help();
-                	return -2;
-                }
-#ifdef DEBUG
-                std::cerr << "Adding table " << optarg << std::endl;
-#endif
-				tables.push_back(std::string(optarg));
-			break;
 		case 'f':
 			NOT_SUPPORTED
 			break;
@@ -136,9 +126,51 @@ int Configuration::init(int argc, char *argv[])
 		case 'I':
 			NOT_SUPPORTED
 			break;
-		case 'M':
-			NOT_SUPPORTED
+		case 'M': {
+			char *saveptr;
+			char *token;
+
+			if (strchr(optarg, ':')) {
+
+				token = strtok_r(optarg, ":", &saveptr);
+
+				while (token) {
+					tables.push_back(std::string(token));
+					token = strtok_r(NULL, ":", &saveptr);
+				}
+
+			} else {
+				/* no break here, no multiple directories specified, so it's like -r */
+				/* TODO - same code as -r, maybe create some method? */
+                if (optarg == std::string("")) {
+                	help();
+                	return -2;
+                }
+#ifdef DEBUG
+                std::cerr << "Adding table " << optarg << std::endl;
+#endif
+				tables.push_back(std::string(optarg));
+			}
+
 			break;
+		}
+		case 'r': {/* file to open */
+                if (optarg == std::string("")) {
+                	help();
+                	return -2;
+                }
+
+                std::string dir(optarg);
+
+                if (this->isDirectory(dir)) {
+                	this->sanitizePath(dir);
+#ifdef DEBUG
+                	std::cerr << "Adding table " << optarg << std::endl;
+#endif
+					tables.push_back(dir);
+                }
+			break;
+		}
 		case 'm':
 			this->optm = true;
 			break;
@@ -191,6 +223,9 @@ int Configuration::init(int argc, char *argv[])
 					std::cerr << "Cannot open directory \"" << dirpath << "\"" << std::endl;
 					break;
 				}
+
+				std::cout << this->firstdir << std::endl;
+				std::cout << this->lastdir << std::endl;
 
 				tables.push_back(std::string(path));
 
@@ -300,6 +335,7 @@ int Configuration::init(int argc, char *argv[])
 	return 0;
 }
 
+
 int Configuration::searchForTableParts(stringVector &tables)
 {
 	struct dirent *dent;
@@ -329,7 +365,7 @@ int Configuration::searchForTableParts(stringVector &tables)
 			dent = namelist[counter++];
 
 			if (dent->d_type == DT_DIR && atoi(dent->d_name) != 0) {
-				std::string table(tables[i] + "/" + std::string(dent->d_name));
+				std::string table(tables[i] + std::string(dent->d_name));
 
 				if ((this->firstdir.empty() == false) && (this->lastdir.empty() == false)) {
 					if (firstdir_found == false && !table.compare(this->firstdir)) {
@@ -517,6 +553,33 @@ std::string Configuration::getTimeWindowEnd()
 	return this->timeWindow.substr(pos+1);
 }
 
+bool Configuration::isDirectory(std::string dir)
+{
+	int ret;
+	struct stat st;
+
+	ret = stat(dir.c_str(), &st);
+	if (ret != 0) {
+		/* it's definitely not a directory */
+		return false;
+	}
+
+	if (!S_ISDIR(st.st_mode)) {
+		return false;
+	}
+
+	/* it is a directory */
+	return true;
+}
+
+void Configuration::sanitizePath(std::string &path)
+{
+	if (path[path.length()] != '/') {
+		/* add  */
+		path += "/";
+	}
+}
+
 void Configuration::help()
 {
 	/* lines with // at the beginning should be implemented sooner */
@@ -554,7 +617,7 @@ void Configuration::help()
 	<< "-R <expr>       Read input from sequence of files." << std::endl
 	<< "                /any/dir  Read all files in that directory." << std::endl
 //	<< "                /dir/file Read all files beginning with 'file'." << std::endl
-//	<< "                /dir/file1:file2: Read all files from 'file1' to file2." << std::endl
+	<< "                /dir/file1:file2: Read all files from 'file1' to file2." << std::endl
 	<< "-o <mode>       Use <mode> to print out netflow records:" << std::endl
 //	<< "                 raw      Raw record dump." << std::endl
 	<< "                 line     Standard output line format." << std::endl

@@ -176,6 +176,7 @@ public:
      */
     std::string getTimeWindowEnd();
 
+
     /**
      * \brief Class destructor
      */
@@ -229,6 +230,23 @@ private:
 	 * @return AST structure of created operation
 	 */
 	AST* createOperationElement(pugi::xml_node operation, pugi::xml_document &doc);
+
+
+    /**
+     * \brief Check whether argument is a directory
+     *
+     * @return true if given argument is a directory, false otherwise
+     */
+    bool isDirectory(std::string dir);
+
+    /**
+     * Sanitize path
+     *
+     * Add slash on the end of the path in case of path is a directory
+     *
+     * @return nothing
+     */
+    void sanitizePath(std::string &path);
 
 
 
