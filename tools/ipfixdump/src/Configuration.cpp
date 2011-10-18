@@ -233,13 +233,8 @@ int Configuration::init(int argc, char *argv[])
 				/* dirty hack, see below for more information */
 				bool sameLength = (firstDir.length() == lastDir.length()) ? true : false;
 
-				dir = opendir(dname.c_str());
-				if (dir == NULL) {
-					std::cerr << "Cannot open directory \"" << dname << "\"" << std::endl;
-					break;
-				}
-
-				bool firstDirFound = false; /* indicates whether we already found first specified dir */
+				/* indicates whether we already found first specified dir */
+				bool firstDirFound = false;
 				struct dirent **namelist;
 				int dirs_counter;
 				int counter;
@@ -292,6 +287,7 @@ int Configuration::init(int argc, char *argv[])
 
 							if (!strcmp(dent->d_name, lastDir.c_str())) {
 								/* this is last directory we are interested in */
+								free(namelist[counter-1]);
 								break;
 							}
 						}
