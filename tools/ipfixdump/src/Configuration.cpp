@@ -574,8 +574,7 @@ bool Configuration::isDirectory(std::string dir)
 
 void Configuration::sanitizePath(std::string &path)
 {
-	if (path[path.length()] != '/') {
-		/* add  */
+	if (path[path.length()-1] != '/') {
 		path += "/";
 	}
 }
