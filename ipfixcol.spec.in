@@ -43,8 +43,8 @@ make DESTDIR=$RPM_BUILD_ROOT install
 
 %files
 %{_bindir}/ipfixcol
-%{_mandir}/man1/ipfixcol.1*
-%{_mandir}/man5/ipfixcol.conf.5*
+#%{_mandir}/man1/ipfixcol.1*
+#%{_mandir}/man5/ipfixcol.conf.5*
 
 %files devel
 %{_prefix}/include/ipfixcol.h
