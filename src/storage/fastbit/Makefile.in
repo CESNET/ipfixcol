@@ -1,7 +1,11 @@
-CC      = @CC@
+CC      = g++
 CFLAGS  = @CFLAGS@
 LIBS    = @LIBS@
 INCLUDE = "-I../../../"
+DIR = "src/storage/fastbit"
+SRCS = fastbit.cpp fastbit_element.cpp fastbit_table.cpp pugixml/pugixml.cpp
+OBJ = fastbit.o fastbit_element.o fastbit_table.o pugixml.o
+
 
 XSLTPROC = @XSLTPROC@
 XSLTMANSTYLE = @XSLTMANSTYLE@
@@ -10,20 +14,29 @@ all: fastbit_output.so
 
 doc: fastbit.1
 
-fastbit_output.so: fastbit_output.o fastbit_element.o fastbit_table.o pugixml.o
-	g++ $(CFLAGS) $(LIBS) -lfastbit -L/usr/local/lib -shared -Wl,-soname,fastbit_output.so.1 fastbit_output.o fastbit_element.o fastbit_table.o pugixml.o -o $@ -lc
+fastbit_output.so: $(OBJ)
+	$(CC) $(CFLAGS) $(LIBS) -lfastbit -L/usr/local/lib -shared -Wl,-soname,fastbit_output.so.1 $(OBJ) -o $@ -lc
 
-fastbit_output.o: fastbit.cpp
-	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
 
-fastbit_element.o: fastbit_element.cpp
-	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
+$(OBJ): $(SRCS)
+	@for i in $(SRCS); do \
+		$(CC) $(CFLAGS) $(INCLUDE) -fPIC -c $$i; \
+	done;
 
-fastbit_table.o: fastbit_table.cpp
-	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
+#fastbit_output.so: fastbit_output.o fastbit_element.o fastbit_table.o pugixml.o
+#	g++ $(CFLAGS) $(LIBS) -lfastbit -L/usr/local/lib -shared -Wl,-soname,fastbit_output.so.1 fastbit_output.o fastbit_element.o fastbit_table.o pugixml.o -o $@ -lc
 
-pugixml.o: pugixml/pugixml.cpp
-	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
+#fastbit_output.o: fastbit.cpp
+#	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
+
+#fastbit_element.o: fastbit_element.cpp
+#	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
+
+#fastbit_table.o: fastbit_table.cpp
+#	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
+
+#pugixml.o: pugixml/pugixml.cpp
+#	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
 
 %.1 %.2 %.3 %.4 %.5 %.6 %.7 %.8 %.9: %.dbk
 	@if [ -n "$(XSLTPROC)" ]; then \
@@ -40,5 +53,12 @@ pugixml.o: pugixml/pugixml.cpp
 
 
 clean:
-	-rm fastbit_output.so *.o
+	-rm -f fastbit_output.so *.o pugixml/*.o
 
+.PHONY: tarball-prepare
+tarball-prepare:
+	@for i in Makefile.in $(SRCS) $(MANSRCS) $(SCRIPTS) $(RCSCRIPTS); do \
+		[ -d $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) ] || \
+			mkdir -p $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) -p; \
+		cp $$i $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR)/$$i; \
+	done;
