@@ -47,10 +47,15 @@ SRCS =	src/ipfixcol.c \
 	src/data_manager.c \
 	src/template_manager.c
 
+PHDRS = src/config.h \
+	src/data_manager.h \
+	src/queues.h \
+	src/preprocessor.h
+
 HDRS =	headers/ipfix.h \
 	headers/input.h \
 	headers/storage.h \
-	headers/templates.h
+	headers/templates.h \
 
 # The form of name is 'storage/'<name of subdir in src/storage/>
 STORAGE_PLUGINS = @STORAGE_PLUGINS@
@@ -127,7 +132,7 @@ $(INPUT_PLUGINS):
 $(STORAGE_PLUGINS):
 	$(MAKE) -C src/storage/${@F}
 
-doxygen: $(DOXYGEN_CONFIG) $(HDRS) ipfixcol.h $(SRCS)
+doxygen: $(DOXYGEN_CONFIG) $(HDRS) ipfixcol.h $(SRCS) $(PHDRS)
 	@[ -d $(DOXYGEN_DIR) ] || mkdir -p $(DOXYGEN_DIR); \
 	if [ -n "$(DOXYGEN)" ]; then \
 		(cat $(DOXYGEN_CONFIG); \
@@ -145,11 +150,11 @@ doc: doxygen
 dist: tarball rpm
 
 .PHONY: tarball
-tarball: $(SRCS) $(HDRS)
+tarball: $(SRCS) $(HDRS) $(PHDRS)
 	@rm -rf $(NAME)-$(VERSION); \
 	mkdir $(NAME)-$(VERSION); \
-	for i in $(SRCS) $(HDRS) configure.in configure Makefile.in VERSION \
-	    Doxyfile $(NAME).spec.in $(NAME).pc.in install-sh; do \
+	for i in $(SRCS) $(HDRS) $(PHDRS) configure.in configure Makefile.in VERSION \
+	    Doxyfile $(NAME).spec.in $(NAME).pc.in install-sh ipfixcol.h headers/ipfixcol.h; do \
 		[ "$$i" != "$${i%/*}" -a ! -d $(NAME)-$(VERSION)/$${i%/*} ] && mkdir -p $(NAME)-$(VERSION)/$${i%/*}; \
 		cp $$i $(NAME)-$(VERSION)/$$i; \
 	done;
@@ -176,11 +181,12 @@ distclean:
 	rm -rf $(RPMDIR)
 
 .PHONY: install
-install: install-devel install-doc $(TARGETS) $(MANPAGES)
+#install: install-devel install-doc $(TARGETS) $(MANPAGES)
+install: install-devel install-doc $(TARGETS)
 	[ -d $(DESTDIR)/$(bindir) ] || \
 	    (mkdir -p $(DESTDIR)/$(bindir); chmod 755 $(DESTDIR)/$(bindir))
 	$(INSTALL_PROGRAM) $(TARGETS) $(DESTDIR)/$(bindir)/;
-	$(foreach man,$(MANPAGES),$(call MANINSTALL,$(man)))
+	#$(foreach man,$(MANPAGES),$(call MANINSTALL,$(man)))
 
 .PHONY: install-devel
 install-devel: $(HDRS) headers/ipfixcol.h $(NAME).pc
