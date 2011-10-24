@@ -1,3 +1,5 @@
+#!/bin/awk -f
+
 BEGIN {
     print "const char *protocols[] = {"; 
     currentVal = 0;
@@ -6,12 +8,16 @@ BEGIN {
 
 
 !/^#/ {
-    while(currentVal != $2) {
+    while(currentVal < $2) {
         print "\""currentVal"\",";
         currentVal++;
     }
-    print "\""$3"\",";
-    currentVal++;
+
+	# one name per protocol number is enough
+	if (currentVal == $2) {
+		print "\""$3"\",";
+		currentVal++;
+	}
 }
 
 END {

@@ -37,53 +37,56 @@
  *
  */
 
-#include <ibis.h>
-#include <sstream>
-#include <set>
-#include <string>
+/**
+ * \mainpage IPFIX Dump Developer's Documentation
+ *
+ * This documents provides documentation of IPFIX Dump utility (ipfixdump).
+ */
 
-#include "configuration.h"
-#include "data.h"
-#include "printer.h"
+#include "Configuration.h"
+#include "TableManager.h"
+#include "Printer.h"
+#include "Filter.h"
 
 using namespace ipfixdump;
 
 int main(int argc, char *argv[])
 {
 	int ret;
+
+	/* raise limit for cache size. this allows more mmaped files */
+	ibis::fileManager::adjustCacheSize(1000000000000);
+
+//	ibis::gVerbose = 1;
+
 	/* create configuration to work with */
-	configuration conf;
-	data data;
+	Configuration conf;
 
-	tableVector tables;
-
-	/* process configuration and check whether end program */
+	/* process configuration and check whether to end the program */
 	ret = conf.init(argc, argv);
 	if (ret != 0) return ret;
 
+	/* create filter */
+	Filter filter(conf);
+	/* initialise filter and check correctness */
+	ret = filter.init();
+	if (ret != 0) return ret;
+
 	/* initialise printer */
-	printer print(std::cout, conf);
+	Printer print(std::cout, conf);
 
 	/* initialise tables */
-	data.init(conf);
+	TableManager tm(conf);
 
 	/* do some work */
-	if (conf.aggregate) {
-		tables = data.aggregate(conf.aggregateColumnsDb, conf.filter.c_str());
-//		tables = data.select(conf.aggregateColumnsDb, conf.filter.c_str());
+	if (conf.getAggregate()) {
+		tm.aggregate(conf.getAggregateColumns(), conf.getSummaryColumns(), filter);
 	} else {
-		tables = data.filter(conf.filter.c_str());
+		tm.filter(filter);
 	}
 
 	/* print tables */
-	print.addTables(tables);
-	print.print(conf.maxRecords);
-
-	/* free used tables */
-	print.clearTables();
-	for (tableVector::iterator it = tables.begin(); it != tables.end(); it++) {
-		delete *it;
-	}
+	print.print(tm);
 
 	return 0;
 }
