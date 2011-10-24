@@ -54,8 +54,8 @@ int main(int argc, char *argv[])
 {
 	int ret;
 
-	/* raise limit for cache size. this allows more mmaped files */
-	ibis::fileManager::adjustCacheSize(1000000000000);
+	/* raise limit for cache size, when there is more memory available */
+//	ibis::fileManager::adjustCacheSize(2048000000);
 
 //	ibis::gVerbose = 1;
 
