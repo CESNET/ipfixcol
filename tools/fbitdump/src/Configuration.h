@@ -50,7 +50,7 @@ namespace ipfixdump {
 /** Acceptable command-line parameters */
 #define OPTSTRING "hVaA:r:f:n:c:D:Ns:qIM:mR:o:v:Z:t:"
 
-#define COLUMNS_XML "ipfixdump.xml"
+#define COLUMNS_XML "fbitdump.xml"
 
 /**
  * \brief Class handling command line configuration

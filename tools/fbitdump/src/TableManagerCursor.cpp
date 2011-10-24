@@ -116,9 +116,9 @@ bool TableManagerCursor::next()
 {
 	bool ret_next;
 	struct values *minValue = NULL;
-	struct values *value;
+	struct values *value = NULL;
 	Cursor *minCursor = NULL;
-	Cursor *cursor;
+	Cursor *cursor = NULL;
 	unsigned int minIndex = 0;
 	unsigned int u;
 

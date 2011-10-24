@@ -1,5 +1,5 @@
 ################################################
-#    Makefile for the ipfixdump utility        #
+#     Makefile for the fbitdump utility        #
 ################################################
 
 CXX      = @CXX@
@@ -7,7 +7,7 @@ CXXFLAGS  = @CXXFLAGS@
 LIBS    = @LIBS@
 FLEX = @FLEX@
 
-SRCS    = ipfixdump.cpp \
+SRCS    = fbitdump.cpp \
 		Configuration.cpp \
 		Column.cpp \
 		protocols.cpp \
@@ -30,10 +30,10 @@ DOXYGEN_DIR = doc
 # scanner must be build before filter (filter includes scanner's header)
 OBJS    = $(OBJDIR)/scanner.o $(SRCS:%.cpp=$(OBJDIR)/%.o) $(OBJDIR)/pugi.o
 
-all: ipfixdump
+all: fbitdump
 
-# ipfixdump
-ipfixdump: $(OBJS) $(VERSION)
+# fbitdump
+fbitdump: $(OBJS) $(VERSION)
 	$(CXX) $(CXXFLAGS) $(LIBS) $(OBJS) -o $@
 
 # Printer is specified extra with -fno-strict-aliasing for performance reasons
