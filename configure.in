@@ -282,25 +282,23 @@ AC_CHECK_FUNCS([alarm atexit gethostbyname gettimeofday isascii localtime_r mems
 
 ########################## Check for plugins ###################################
 # input plugins are located in src/input/
-cd src;
-for dir in input/*; do
+for dir in src/input/*; do
     if test -d "$dir" && test -f "$dir"/Makefile.in; then
-    	if test ! "$dir" = "input/sctp" || test ! "$SCTP" = "no"; then
+    	if test ! "$dir" = "src/input/sctp" || test ! "$SCTP" = "no"; then
         	INPUT_PLUGINS="$INPUT_PLUGINS $dir";
         fi;
     fi;
 done;
 
 # storage plugins are located in src/storage
-for dir in storage/*; do
+for dir in src/storage/*; do
     if test -d "$dir" && test -f "$dir"/Makefile.in; then
-    	if test ! "$dir" = "storage/postgres" || test ! "$POSTGRES" = "no"; then
+    	if test ! "$dir" = "src/storage/postgres" || test ! "$POSTGRES" = "no"; then
         	STORAGE_PLUGINS="$STORAGE_PLUGINS $dir";
         fi;
     fi;
 done;
 
-cd -;
 
 AC_SUBST(INPUT_PLUGINS)
 AC_SUBST(STORAGE_PLUGINS)
@@ -353,15 +351,12 @@ AC_CONFIG_FILES(ipfixcol.spec)
 AC_CONFIG_FILES(ipfixcol.pc)
 # plugins makefiles
 for i in $INPUT_PLUGINS $STORAGE_PLUGINS; do
-    AC_CONFIG_FILES([src/$i/Makefile])
+    AC_CONFIG_FILES([$i/Makefile])
 done;
 # tests makefiles
 for i in $TESTS; do
     AC_CONFIG_FILES([devel-tools/tests/$i/Makefile])
 done;
 # tools makefiles
-for i in $TOOLS; do
-    AC_CONFIG_FILES([tools/$i/Makefile])
-done;
 
 AC_OUTPUT

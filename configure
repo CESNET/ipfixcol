@@ -3916,7 +3916,6 @@ installed software in a non-standard prefix.
 Alternatively, you may set the environment variables LIBCOMMLBR_CFLAGS
 and LIBCOMMLBR_LIBS to avoid the need to call pkg-config.
 See the pkg-config man page for more details." "$LINENO" 5
-
 elif test $pkg_failed = untried; then
      	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
@@ -3932,7 +3931,6 @@ See the pkg-config man page for more details.
 
 To get pkg-config, see <http://pkg-config.freedesktop.org/>.
 See \`config.log' for more details" "$LINENO" 5; }
-
 else
 	LIBCOMMLBR_CFLAGS=$pkg_cv_LIBCOMMLBR_CFLAGS
 	LIBCOMMLBR_LIBS=$pkg_cv_LIBCOMMLBR_LIBS
@@ -5501,25 +5499,23 @@ done
 
 ########################## Check for plugins ###################################
 # input plugins are located in src/input/
-cd src;
-for dir in input/*; do
+for dir in src/input/*; do
     if test -d "$dir" && test -f "$dir"/Makefile.in; then
-    	if test ! "$dir" = "input/sctp" || test ! "$SCTP" = "no"; then
+    	if test ! "$dir" = "src/input/sctp" || test ! "$SCTP" = "no"; then
         	INPUT_PLUGINS="$INPUT_PLUGINS $dir";
         fi;
     fi;
 done;
 
 # storage plugins are located in src/storage
-for dir in storage/*; do
+for dir in src/storage/*; do
     if test -d "$dir" && test -f "$dir"/Makefile.in; then
-    	if test ! "$dir" = "storage/postgres" || test ! "$POSTGRES" = "no"; then
+    	if test ! "$dir" = "src/storage/postgres" || test ! "$POSTGRES" = "no"; then
         	STORAGE_PLUGINS="$STORAGE_PLUGINS $dir";
         fi;
     fi;
 done;
 
-cd -;
 
 
 
@@ -5578,7 +5574,7 @@ ac_config_files="$ac_config_files ipfixcol.pc"
 
 # plugins makefiles
 for i in $INPUT_PLUGINS $STORAGE_PLUGINS; do
-    ac_config_files="$ac_config_files src/$i/Makefile"
+    ac_config_files="$ac_config_files $i/Makefile"
 
 done;
 # tests makefiles
@@ -5587,10 +5583,6 @@ for i in $TESTS; do
 
 done;
 # tools makefiles
-for i in $TOOLS; do
-    ac_config_files="$ac_config_files tools/$i/Makefile"
-
-done;
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6313,9 +6305,8 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "ipfixcol.spec") CONFIG_FILES="$CONFIG_FILES ipfixcol.spec" ;;
     "ipfixcol.pc") CONFIG_FILES="$CONFIG_FILES ipfixcol.pc" ;;
-    "src/$i/Makefile") CONFIG_FILES="$CONFIG_FILES src/$i/Makefile" ;;
+    "$i/Makefile") CONFIG_FILES="$CONFIG_FILES $i/Makefile" ;;
     "devel-tools/tests/$i/Makefile") CONFIG_FILES="$CONFIG_FILES devel-tools/tests/$i/Makefile" ;;
-    "tools/$i/Makefile") CONFIG_FILES="$CONFIG_FILES tools/$i/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
