@@ -153,19 +153,19 @@ dist: tarball rpm
 tarball: $(SRCS) $(HDRS) $(PHDRS)
 	@rm -rf $(NAME)-$(VERSION); \
 	mkdir $(NAME)-$(VERSION); \
+	rm -rf $(RPMDIR)/SOURCES/; \
+	mkdir -p $(RPMDIR)/SOURCES/; \
 	for i in $(SRCS) $(HDRS) $(PHDRS) configure.in configure Makefile.in VERSION \
 	    Doxyfile $(NAME).spec.in $(NAME).pc.in install-sh ipfixcol.h headers/ipfixcol.h; do \
 		[ "$$i" != "$${i%/*}" -a ! -d $(NAME)-$(VERSION)/$${i%/*} ] && mkdir -p $(NAME)-$(VERSION)/$${i%/*}; \
 		cp $$i $(NAME)-$(VERSION)/$$i; \
 	done;
-	for i in src/$(STORAGE_PLUGINS) ; do $(MAKE) -C $$i tarball-prepare; done; \
-	for i in src/$(INOUT_PLUGINS) ; do $(MAKE) -C $$i tarball-prepare; done; \
-	for i in tools/$(TOOLS) ; do $(MAKE) -C $$i tarball-prepare; done; \
-	rm -rf $(RPMDIR)/SOURCES/; \
-	mkdir -p $(RPMDIR)/SOURCES/; \
+	for i in $(STORAGE_PLUGINS) ; do $(MAKE) -C $$i tarball-prepare; done; \
+	for i in $(INPUT_PLUGINS) ; do $(MAKE) -C $$i tarball-prepare; done; \
 	tar -c -z -f $(RPMDIR)/SOURCES/$(NAME)-$(VERSION)-$(RELEASE).tar.gz \
-	    $(NAME)-$(VERSION); \
-	rm -rf $(NAME)-$(VERSION);
+	    $(NAME)-$(VERSION);
+	@rm -rf $(NAME)-$(VERSION);
+	#for i in tools/$(TOOLS) ; do $(MAKE) -C $$i tarball-prepare; done; 
 
 .PHONY: rpm
 rpm: tarball $(NAME).spec
@@ -185,6 +185,8 @@ distclean:
 install: install-devel install-doc $(TARGETS)
 	[ -d $(DESTDIR)/$(bindir) ] || \
 	    (mkdir -p $(DESTDIR)/$(bindir); chmod 755 $(DESTDIR)/$(bindir))
+	for i in $(STORAGE_PLUGINS) ; do $(MAKE) -C $$i DESTDIR=$(DESTDIR) install; done; \
+	for i in $(INPUT_PLUGINS) ; do $(MAKE) -C $$i DESTDIR=$(DESTDIR) install; done; \
 	$(INSTALL_PROGRAM) $(TARGETS) $(DESTDIR)/$(bindir)/;
 	#$(foreach man,$(MANPAGES),$(call MANINSTALL,$(man)))
 
