@@ -128,29 +128,180 @@ int Configuration::init(int argc, char *argv[])
 			NOT_SUPPORTED
 			break;
 		case 'M': {
-			char *saveptr;
-			char *token;
 
-			if (strchr(optarg, ':')) {
+			char *optarg_copy = strdup(optarg);
+			if (!optarg_copy) {
+				std::cerr << "Not enough memory (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;
+			}
 
-				token = strtok_r(optarg, ":", &saveptr);
+			std::string dname = dirname(optarg_copy);
+			this->sanitizePath(dname);
+			free(optarg_copy);
+			optarg_copy = NULL;
 
-				while (token) {
-					tables.push_back(std::string(token));
-					token = strtok_r(NULL, ":", &saveptr);
+			optarg_copy = strdup(optarg);
+			if (!optarg_copy) {
+				std::cerr << "Not enough memory (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;
+			}
+
+			std::string bname = basename(optarg_copy);
+			free(optarg_copy);
+
+			std::vector<std::string> dirs;
+
+			size_t last_pos = bname.length()-1;
+			size_t found;
+			/* separate directories (dir1:dir2:dir3) */
+			while ((found = bname.rfind(':')) != std::string::npos) {
+				std::string dir(dname);
+
+				dir += bname.substr(found + 1, last_pos - found);
+
+				this->sanitizePath(dir);
+
+				dirs.push_back(dir);
+
+				bname.resize(found);
+
+				last_pos = found - 1;
+			}
+			/* don't forget last directory */
+			dirs.push_back(dname + bname.substr(0, found));
+			this->sanitizePath(dirs[dirs.size()-1]);
+
+			/* add filename from -r option */
+			if (this->rOptarg.empty() == false) {
+				std::cout << "DEBUG x" << std::endl;
+				char *crOptarg = (char *) malloc (strlen(this->rOptarg.c_str())+1);
+				if (!crOptarg) {
+					std::cerr << "Not enough memory (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;
+					break;
+				}
+				memset(crOptarg, 0, strlen(this->rOptarg.c_str())+1);
+
+				this->rOptarg.copy(crOptarg, this->rOptarg.length());
+
+				for (unsigned int u = 0; u < dirs.size(); u++) {
+					std::string table(dirs[u] + crOptarg);
+
+#ifdef DEBUG
+					std::cerr << "Adding table " << table << std::endl;
+#endif
+					tables.push_back(table);
 				}
 
-			} else {
-				/* no break here, no multiple directories specified, so it's like -r */
-				/* TODO - same code as -r, maybe create some method? */
-                if (optarg == std::string("")) {
-                	help();
-                	return -2;
-                }
+				free(crOptarg);
+
+				std::vector<std::string>::iterator iter;
+
+				/* if -M is specified, -r is only auxiliary option. erase table specified by this option */
+				for (iter = tables.begin(); iter != tables.end(); iter++) {
+					if (!(*iter).compare(this->rOptarg)) {
+						/* found it */
+						tables.erase(iter);
+						break;
+					}
+				}
+			} else if (this->ROptarg.empty() == false) {
+				/* -r option is missing, try -R instead */
+				size_t found = this->ROptarg.find(':');
+
+				if (found != std::string::npos) {
+					/* ROptarg contains colon */
+
+					/*
+					 * "file1:file2
+					 * firstOpt = file1
+					 * secondOpt = file2
+					 */
+					std::string firstOpt = this->ROptarg.substr(0, found);
+					std::string secondOpt = this->ROptarg.substr(found+1, this->ROptarg.length()-found);
+
+					/* remove trailing slash, if any */
+					if (firstOpt[firstOpt.length()-1] == '/') {
+						firstOpt.resize(firstOpt.length()-1);
+					}
+					if (secondOpt[secondOpt.length()-1] == '/') {
+						secondOpt.resize(secondOpt.length()-1);
+					}
+
+					struct dirent **namelist;
+
+					/* indicates whether we already found first specified dir */
+					bool firstDirFound = false;
+					int counter;
+					struct dirent *dent;
+					bool sameLength;
+
+
+					for (unsigned int u = 0; u < dirs.size(); u++) {
+
+						int dirs_counter = scandir(dirs[u].c_str(), &namelist, NULL, alphasort);
+						if (dirs_counter < 0) {
+							break;
+						}
+
+						if (firstOpt.length() == secondOpt.length()) {
+							sameLength = true;
+						}
+
+						counter = 0;
+						firstDirFound = false;
+
+						while(dirs_counter--) {
+							dent = namelist[counter++];
+
+							if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
+							  && strcmp(dent->d_name, "..")) {
+								std::string tableDir(dirs[u].c_str());
+
+
+								if (firstDirFound || !strcmp(dent->d_name, firstOpt.c_str())) {
+
+									if ((sameLength && strlen(dent->d_name) == firstOpt.length())
+									  || (!sameLength)) {
+										firstDirFound = true;
+										tableDir += dent->d_name;
+										this->sanitizePath(tableDir);
+
 #ifdef DEBUG
-                std::cerr << "Adding table " << optarg << std::endl;
+										std::cerr << "Adding table " << tableDir << std::endl;
 #endif
-				tables.push_back(std::string(optarg));
+
+										tables.push_back(std::string(tableDir));
+									}
+
+									if (!strcmp(dent->d_name, secondOpt.c_str())) {
+										/* this is last directory we are interested in */
+										free(namelist[counter-1]);
+										break;
+									}
+								}
+							}
+
+							free(namelist[counter-1]);
+						}
+						free(namelist);
+
+					}
+				} else {
+					/* no colon */
+					for (unsigned int u = 0; u < dirs.size(); u++) {
+						std::string table(dirs[u] + this->ROptarg);
+						this->sanitizePath(table);
+
+#ifdef DEBUG
+						std::cerr << "Adding table " << table << std::endl;
+#endif
+						tables.push_back(table);
+					}
+				}
+			}
+
+			if (this->rOptarg.empty() && this->ROptarg.empty()) {
+				std::cerr << "Please specify either \"-r dirname\" or \"-R firstdir:lastdir\" " <<
+						"before -M option" << std::endl;
+				// FIXME - exit?
 			}
 
 			break;
@@ -161,21 +312,23 @@ int Configuration::init(int argc, char *argv[])
                 	return -2;
                 }
 
-                std::string dir(optarg);
+                this->rOptarg = optarg;
 
-                if (this->isDirectory(dir)) {
-                	this->sanitizePath(dir);
+                this->sanitizePath(this->rOptarg);
 #ifdef DEBUG
-                	std::cerr << "Adding table " << optarg << std::endl;
+                std::cerr << "Adding table " << this->rOptarg << std::endl;
 #endif
-					tables.push_back(dir);
-                }
+				tables.push_back(this->rOptarg);
+
 			break;
 		}
 		case 'm':
 			this->optm = true;
 			break;
 		case 'R': {
+
+			this->ROptarg = optarg;
+
 			/* find dirname() */
 			char *optarg_copy = strdup(optarg);
 			if (!optarg_copy) {
@@ -235,6 +388,7 @@ int Configuration::init(int argc, char *argv[])
 
 				/* indicates whether we already found first specified dir */
 				bool firstDirFound = false;
+
 				struct dirent **namelist;
 				int dirs_counter;
 				int counter;
@@ -661,9 +815,9 @@ void Configuration::help()
 	//<< "                key: 32 character string or 64 digit hex string starting with 0x." << std::endl
 	//<< "-L <expr>       Set limit on bytes for line and packed output format." << std::endl
 //	<< "-I              Print netflow summary statistics info from file, specified by -r." << std::endl
-//	<< "-M <expr>       Read input from multiple directories." << std::endl
-//	<< "                /dir/dir1:dir2:dir3 Read the same files from '/dir/dir1' '/dir/dir2' and '/dir/dir3'." << std::endl
-//	<< "                requests either -r filename or -R firstfile:lastfile without pathnames" << std::endl
+	<< "-M <expr>       Read input from multiple directories." << std::endl
+	<< "                /dir/dir1:dir2:dir3 Read the same files from '/dir/dir1' '/dir/dir2' and '/dir/dir3'." << std::endl
+	<< "                requests either -r filename or -R firstfile:lastfile without pathnames" << std::endl
 	<< "-m              Print netflow data date sorted. Only useful with -M" << std::endl
 	<< "-R <expr>       Read input from sequence of files." << std::endl
 	<< "                /any/dir  Read all files in that directory." << std::endl
@@ -693,7 +847,8 @@ bool Configuration::getOptionm()
 	return this->optm;
 }
 
-Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false), optm(false) {}
+Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false),
+		optm(false) {}
 
 Configuration::~Configuration()
 {

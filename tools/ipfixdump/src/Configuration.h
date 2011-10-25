@@ -242,7 +242,7 @@ private:
     /**
      * Sanitize path
      *
-     * Add slash on the end of the path in case of path is a directory
+     * Add slash on the end of the path
      *
      * @return nothing
      */
@@ -265,6 +265,8 @@ private:
 	std::string lastdir;               /**< last table (directory) user wants to work with */
 	bool optm;                         /**< indicates whether user specified "-m" option or not */
 	std::string timeWindow;            /**< time window */
+	std::string rOptarg;               /**< optarg for -r option */
+	std::string ROptarg;               /**< optarg for -R option */
 }; /* end of Configuration class */
 
 } /* end of ipfixdump namespace */
