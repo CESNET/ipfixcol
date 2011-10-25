@@ -41,7 +41,7 @@ AC_PREREQ([2.65])
 PACKAGE_VERSION=`cut -f1 ./VERSION | tr -d '\n'`
 
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixdump.xml], m4_esyscmd($PACKAGE_VERSION))
+AC_INIT([fbitdump.xml], m4_esyscmd($PACKAGE_VERSION))
 
 AC_SUBST(PACKAGE_VERSION)
 
