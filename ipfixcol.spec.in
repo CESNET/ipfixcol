@@ -47,8 +47,13 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %{_bindir}/ipfixcol
 #%{_mandir}/man1/ipfixcol.1*
 #%{_mandir}/man5/ipfixcol.conf.5*
+#input plugins
 /usr/lib64/ipfixcol_udp_input.so
+/usr/lib64/ipfixcol_tcp_input.so
+/usr/lib64/ipfixcol_sctp_input.so
 /usr/lib64/pkgconfig/ipfixcol.pc
+
+#doxygen
 /usr/share/ipfixcol/doxygen/html/bc_s.png
 /usr/share/ipfixcol/doxygen/html/closed.png
 /usr/share/ipfixcol/doxygen/html/doxygen.css
