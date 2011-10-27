@@ -1,18 +1,52 @@
-CC=gcc
-CFLAGS=-Wall -I/usr/include/libxml2 -pthread
-LIBS=-ldl -lxml2 -lcommlbr -lsctp
-DEBUG=-g
-INCLUDE="-I../../../"
+CC      = @CC@
+CFLAGS  = @CFLAGS@ `pkg-config --cflags libssl`
+LIBS    = @LIBS@ `pkg-config --libs libssl`
+INCLUDE = "-I../../../"
 
-all: sctp_input.so
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+datarootdir = @datarootdir@
+datadir = @datadir@
+bindir = @bindir@
+includedir = @includedir@
+libdir =  @libdir@
+mandir = @mandir@
 
-sctp_input.so: sctp_input.o
-	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,sctp_input.so.1 \
-	sctp_input.o -o $@ -lc
+TARGETS = ipfixcol_sctp_input.so
+TOPDIR = @CONFIGURE_PWD@
+NAME = @PACKAGE_NAME@
+RELEASE = @RELEASE@
+INSTALL = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+VERSION = $(shell cut -f1 $(TOPDIR)/VERSION | tr -d '\n')
+DIR = "src/input/sctp"
+
+SRCS = sctp_input.c
+OBJ = sctp_input.o
+
+all: ipfixcol_sctp_input.so
+
+ipfixcol_sctp_input.so: $(OBJ)
+	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfixcol_sctp_input.so.1 -o $@ $< -lc
 	
-sctp_input.o: sctp_input.c
-	$(CC) $(DEBUG) $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
+$(OBJ): $(SRCS)
+	@for i in $(SRCS); do \
+		$(CC) $(CFLAGS) $(INCLUDE) -fPIC -c $$i; \
+	done;
 
 clean:
-	-rm sctp_input.so sctp_input.o
+	rm -f tcp_input.so tcp_input.o
 
+.PHONY: tarball-prepare
+tarball-prepare:
+	@for i in Makefile.in $(SRCS) $(MANSRCS) $(DOC); do \
+		[ -d $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) ] || \
+		mkdir -p $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) -p; \
+		cp $$i $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR)/$$i; \
+	done;
+
+.PHONY: install
+install: $(TARGETS)
+	[ -d $(DESTDIR)/$(libdir) ] || \
+		(mkdir -p $(DESTDIR)/$(libdir); chmod 755 $(DESTDIR)/$(libdir));
+	$(INSTALL_PROGRAM) $(TARGETS) $(DESTDIR)/$(libdir)/;
