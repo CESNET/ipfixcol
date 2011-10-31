@@ -57,6 +57,10 @@ HDRS =	headers/ipfix.h \
 	headers/storage.h \
 	headers/templates.h \
 
+CONF=	config/internalcfg.xml \
+	config/ipfix-elements.xml \
+	config/startup.xml
+
 # The form of name is 'storage/'<name of subdir in src/storage/>
 STORAGE_PLUGINS = @STORAGE_PLUGINS@
 
@@ -155,8 +159,8 @@ tarball: $(SRCS) $(HDRS) $(PHDRS)
 	mkdir $(NAME)-$(VERSION); \
 	rm -rf $(RPMDIR)/SOURCES/; \
 	mkdir -p $(RPMDIR)/SOURCES/; \
-	for i in $(SRCS) $(HDRS) $(PHDRS) configure.in configure Makefile.in VERSION \
-	    Doxyfile $(NAME).spec.in $(NAME).pc.in install-sh ipfixcol.h headers/ipfixcol.h; do \
+	for i in $(SRCS) $(HDRS) $(PHDRS) $(CONF) configure.in configure Makefile.in VERSION \
+		Doxyfile $(NAME).spec.in $(NAME).pc.in install-sh ipfixcol.h headers/ipfixcol.h; do \
 		[ "$$i" != "$${i%/*}" -a ! -d $(NAME)-$(VERSION)/$${i%/*} ] && mkdir -p $(NAME)-$(VERSION)/$${i%/*}; \
 		cp $$i $(NAME)-$(VERSION)/$$i; \
 	done;
@@ -188,6 +192,9 @@ install: install-devel install-doc $(TARGETS)
 	for i in $(STORAGE_PLUGINS) ; do $(MAKE) -C $$i DESTDIR=$(DESTDIR) install; done; \
 	for i in $(INPUT_PLUGINS) ; do $(MAKE) -C $$i DESTDIR=$(DESTDIR) install; done; \
 	$(INSTALL_PROGRAM) $(TARGETS) $(DESTDIR)/$(bindir)/;
+	[ -d $(DESTDIR)/etc/ipfixcol ] || \
+	    (mkdir -p $(DESTDIR)/etc/ipfixcol; chmod 755 $(DESTDIR)/etc/ipfixcol)
+	$(INSTALL_DATA) $(CONF) $(DESTDIR)/etc/ipfixcol/;
 	#$(foreach man,$(MANPAGES),$(call MANINSTALL,$(man)))
 
 .PHONY: install-devel
