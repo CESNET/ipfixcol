@@ -1,16 +1,53 @@
 CC      = @CC@
-CFLAGS  = @CFLAGS@
-LIBS    = @LIBS@
+CFLAGS  = @CFLAGS@ `pkg-config --cflags libssl`
+LIBS    = @LIBS@ `pkg-config --libs libssl`
 INCLUDE = "-I../../../"
 
-all: ipfix_output.so
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+datarootdir = @datarootdir@
+datadir = @datadir@
+bindir = @bindir@
+includedir = @includedir@
+libdir =  @libdir@
+mandir = @mandir@
 
-ipfix_output.so: ipfix_output.o
-	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfix_output.so.1 ipfix_output.o -o $@ -lc
-	
-ipfix_output.o: ipfix_file.c
-	$(CC) $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
+TARGETS = ipfixcol_ipfix_output.so
+TOPDIR = @CONFIGURE_PWD@
+NAME = @PACKAGE_NAME@
+RELEASE = @RELEASE@
+INSTALL = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+VERSION = $(shell cut -f1 $(TOPDIR)/VERSION | tr -d '\n')
+DIR = "src/storage/ipfix"
+
+SRCS = ipfix_file.c
+OBJ = ipfix_file.o
+
+all: ipfixcol_ipfix_output.so
+
+ipfixcol_ipfix_output.so: ipfix_file.o
+	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfixcol_ipfix_output.so.1 -o $@ $< -lc
+        
+$(OBJ): $(SRCS)
+	@for i in $(SRCS); do \
+		$(CC) $(CFLAGS) $(INCLUDE) -fPIC -c $$i; \
+	done;
 
 clean:
-	-rm ipfix_output.so ipfix_output.o
+	-rm $(TARGETS) $(OBJ)
+
+.PHONY: tarball-prepare
+tarball-prepare:
+	@for i in Makefile.in $(SRCS) $(MANSRCS) $(DOC); do \
+		[ -d $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) ] || \
+		mkdir -p $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) -p; \
+		cp $$i $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR)/$$i; \
+	done;
+
+.PHONY: install
+install: $(TARGETS)
+	[ -d $(DESTDIR)/$(libdir) ] || \
+		(mkdir -p $(DESTDIR)/$(libdir); chmod 755 $(DESTDIR)/$(libdir));
+	$(INSTALL_PROGRAM) $(TARGETS) $(DESTDIR)/$(libdir)/;
 
