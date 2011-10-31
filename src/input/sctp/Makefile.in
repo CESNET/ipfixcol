@@ -35,7 +35,7 @@ $(OBJ): $(SRCS)
 	done;
 
 clean:
-	rm -f tcp_input.so tcp_input.o
+	rm -f $(TARGETS) $(OBJ)
 
 .PHONY: tarball-prepare
 tarball-prepare:

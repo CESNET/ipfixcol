@@ -41,7 +41,7 @@ $(OBJ): $(SRCS)
 	done;
 
 clean:
-	rm -f udp_input.so udp_input.o
+	rm -f $(TARGETS) $(OBJ)
 
 .PHONY: tarball-prepare
 tarball-prepare:
