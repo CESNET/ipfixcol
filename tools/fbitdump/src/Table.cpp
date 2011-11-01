@@ -37,40 +37,32 @@
  *
  */
 
+#include <exception>
 #include "Table.h"
 
 namespace ipfixdump {
 
-Table::Table(ibis::part *part)
+Table::Table(ibis::part *part): queryDone(true)
 {
 	this->table = ibis::table::create(*part);
 }
 
-Table::Table(ibis::partList &partList)
+Table::Table(ibis::partList &partList): queryDone(true)
 {
 	this->table = ibis::table::create(partList);
 }
 
 Cursor* Table::createCursor()
 {
-	/* check for NULL table */
-	if (this->table == NULL) {
-		return NULL;
-	}
-
 	return new Cursor(*this);
 }
 
-bool Table::aggregate(stringSet &aggregateColumns, stringSet &summaryColumns,
+void Table::aggregate(stringSet &aggregateColumns, stringSet &summaryColumns,
 		Filter &filter)
 {
-	ibis::table *tmpTable = this->table;
 	std::string colNames;
 	stringSet combined;
 	size_t i = 0;
-
-	/* Save the filter */
-	//this->usedFilter = &filter; TODO check this
 
 	/* create select string and build namesColumns map */
 	combined.insert(aggregateColumns.begin(), aggregateColumns.end());
@@ -84,63 +76,84 @@ bool Table::aggregate(stringSet &aggregateColumns, stringSet &summaryColumns,
 		}
 	}
 
-	/* do select */
-	this->table = this->table->select(colNames.c_str(), filter.getFilter().c_str());
-
-	/* delete original table */
-	delete tmpTable;
-
-	if (this->table == NULL) return false;
-
-	return true;
+	/* add query */
+	queueQuery(colNames.c_str(), filter);
 }
 
-bool Table::filter(Filter &filter)
+void Table::filter(stringSet columnNames, Filter &filter)
 {
-	ibis::table *tmpTable = this->table;
 	std::string colNames;
-
-	/* Save the filter */
-	this->usedFilter = &filter;
+	size_t idx = 0;
 
 	/* create select string and build namesColumns map */
 	for (size_t i = 0; i < table->columnNames().size(); i++) {
-		colNames += table->columnNames()[i];
-		this->namesColumns.insert(std::pair<std::string, int>(table->columnNames()[i], i));
-		if (i != table->columnNames().size() - 1) {
+		/* ignore unused columns */
+		if (columnNames.find(table->columnNames()[i]) != columnNames.end()) {
+			colNames += table->columnNames()[i];
+			this->namesColumns.insert(std::pair<std::string, int>(table->columnNames()[i], idx++));
 			colNames += ",";
 		}
 	}
 
-	/* do select */
-	this->table = this->table->select(colNames.c_str(), filter.getFilter().c_str());
+	/* remove trailing comma */
+	colNames = colNames.substr(0, colNames.size()-1);
 
-	/* delete original table */
-	delete tmpTable;
+#ifdef DEBUG
+	uint64_t min, max;
+	this->table->estimate(filter.getFilter().c_str(), min, max);
+	std::cerr << "Estimating between " << min << " and " << max << " records" << std::endl;
+#endif
 
-	if (this->table == NULL) return false;
-
-	return true;
+	/* add query */
+	queueQuery(colNames.c_str(), filter);
 }
 
 size_t Table::nRows()
 {
+	this->doQuery();
 	return this->table->nRows();
 }
 
 ibis::table* Table::getFastbitTable()
 {
+	this->doQuery();
 	return this->table;
 }
 
 namesColumnsMap& Table::getNamesColumns()
 {
+	this->doQuery();
 	return this->namesColumns;
 }
 
-Filter& Table::getFilter()
+Filter* Table::getFilter()
 {
-	return *this->usedFilter;
+	this->doQuery();
+	return this->usedFilter;
+}
+
+void Table::queueQuery(std::string select, Filter &filter)
+{
+	/* Run any previous query */
+	this->doQuery();
+
+	this->select = select;
+	this->usedFilter = &filter;
+	this->queryDone = false;
+}
+
+void Table::doQuery()
+{
+	if (!queryDone) {
+		/* do select */
+		ibis::table *tmpTable = this->table;
+		this->table = this->table->select(this->select.c_str(), this->usedFilter->getFilter().c_str());
+
+		/* delete original table */
+		delete tmpTable;
+
+		queryDone = true;
+	}
 }
 
 Table::~Table()

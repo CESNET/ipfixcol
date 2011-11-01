@@ -63,6 +63,7 @@ private:
 	Configuration *conf;                /**< program configuration */
 	std::vector<Cursor *> cursorList;   /**< list of table specific cursors */
 	Cursor *currentCursor;              /**< current cursor with actual data */
+	tableVector::iterator currentTableIt;/**< index of current table */
 	Column *timestampColumn;            /**< column with timestamp information */
 
 	unsigned int cursorIndex;           /**< index of the current table cursor */

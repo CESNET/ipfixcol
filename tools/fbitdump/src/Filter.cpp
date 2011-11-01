@@ -59,7 +59,7 @@ std::string Filter::getFilter()
 
 bool Filter::isValid(Cursor &cur)
 {
-	// TODO add this functionality
+	// TODO add this functiononality
 	return true;
 }
 

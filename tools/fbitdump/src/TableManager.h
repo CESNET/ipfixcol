@@ -103,6 +103,9 @@ public:
 	 */
 	tableVector& getTables();
 
+
+	void removeTable(tableVector::iterator &it);
+
 	/**
 	 * \brief Creates cursor for this Table Manager
 	 *
