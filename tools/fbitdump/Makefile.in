@@ -17,7 +17,8 @@ SRCS    = fbitdump.cpp \
 		TableManager.cpp \
 		TableManagerCursor.cpp \
 		Cursor.cpp \
-		AST.cpp
+		AST.cpp \
+		Resolver.cpp
 OBJDIR  = .obj
 SRCDIR  = src
 SRC3RD  = 3rdparty

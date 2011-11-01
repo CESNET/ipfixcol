@@ -43,6 +43,7 @@
 #include "../3rdparty/pugixml.hpp"
 #include "typedefs.h"
 #include "Column.h"
+#include "Resolver.h"
 
 
 namespace ipfixdump {
@@ -267,6 +268,7 @@ private:
 	std::string timeWindow;            /**< time window */
 	std::string rOptarg;               /**< optarg for -r option */
 	std::string ROptarg;               /**< optarg for -R option */
+	Resolver *resolver;                /**< DNS resolver */
 }; /* end of Configuration class */
 
 } /* end of ipfixdump namespace */
