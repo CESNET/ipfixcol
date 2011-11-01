@@ -44,6 +44,11 @@
 #include <cstring>
 #include <fstream>
 #include <libgen.h>
+#include <resolv.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+
 
 namespace ipfixdump {
 
@@ -112,8 +117,43 @@ int Configuration::init(int argc, char *argv[])
 		case 'c': /* number of records to display */
 				this->maxRecords = atoi(optarg);
 			break;
-		case 'D':
-			NOT_SUPPORTED
+		case 'D': {
+				char *nameserver;
+				int ret;
+				struct addrinfo *result;
+				struct addrinfo hints;
+
+				nameserver = optarg;
+
+				memset(&hints, 0, sizeof(hints));
+				hints.ai_family = AF_UNSPEC;
+				hints.ai_protocol = SOCK_STREAM;
+
+				ret = getaddrinfo(nameserver, 0, &hints, &result);
+				if (ret != 0) {
+					std::cerr << "Unable to resolve address for " << nameserver << std::endl;
+					break;
+				}
+
+				res_init();
+
+				struct sockaddr_in *sock4 = NULL;
+				struct sockaddr_in6 *sock6 = NULL;
+				if (result->ai_addr->sa_family == AF_INET) {
+					sock4 = (struct sockaddr_in *) result->ai_addr;
+					memcpy((void *)&_res.nsaddr_list[0].sin_addr, &(sock4->sin_addr), result->ai_addrlen);
+					_res.nscount = 1;
+				} else if (result->ai_addr->sa_family == AF_INET6) {
+					sock6 = (struct sockaddr_in6 *) result->ai_addr;
+					memcpy((void *)&_res.nsaddr_list[0].sin_addr, &(sock6->sin6_addr), result->ai_addrlen);
+					_res.nscount = 1;
+				} else {
+					std::cerr << "error: unknown address family" << std::endl;
+				}
+
+				freeaddrinfo(result);
+
+			}
 			break;
 		case 'N': /* print plain numbers */
 				this->plainNumbers = true;
@@ -802,7 +842,7 @@ void Configuration::help()
 //	<< "-f              read netflow filter from file" << std::endl
 //	<< "-n              Define number of top N. " << std::endl
 	<< "-c              Limit number of records to display" << std::endl
-//	<< "-D <dns>        Use nameserver <dns> for host lookup." << std::endl
+	<< "-D <dns>        Use nameserver <dns> for host lookup." << std::endl
 	<< "-N              Print plain numbers" << std::endl
 //	<< "-s <expr>[/<order>]     Generate statistics for <expr> any valid record element." << std::endl
 //	<< "                and ordered by <order>: packets, bytes, flows, bps pps and bpp." << std::endl
