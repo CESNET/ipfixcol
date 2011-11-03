@@ -119,7 +119,7 @@ void Printer::printRow(Cursor *cur)
 		}
 		out << printValue(conf.getColumns()[i], cur);
 	}
-	out << std::endl;
+	out << "\n"; /* much faster then std::endl */
 }
 
 std::string Printer::printValue(Column *col, Cursor *cur)
@@ -150,9 +150,10 @@ std::string Printer::printValue(Column *col, Cursor *cur)
 			if (!conf.getPlainNumbers()) {
 				valueStr = protocols[val->value[0].uint8];
 			} else {
-				std::stringstream ss;
+				static std::stringstream ss;
 				ss << (uint16_t) val->value[0].uint8;
 				valueStr = ss.str();
+				ss.str("");
 			}
 		} else if (col->getSemantics() == "tcpflags") {
 			valueStr = printTCPFlags(val->value[0].uint8);
@@ -213,29 +214,13 @@ std::string Printer::printTimestamp64(uint64_t timestamp)
 
 std::string Printer::printTimestamp(struct tm *tm, uint64_t msec)
 {
-	/* make static for performance reasons */
-	static std::ostringstream timeStream;
-	/* empty before use */
-	timeStream.str("");
+	char buff[23];
 
-	timeStream.setf(std::ios_base::right, std::ios_base::adjustfield);
-	timeStream.fill('0');
+	strftime(buff, sizeof(buff), "%Y-%m-%d %T", tm);
+	/* append miliseconds */
+	sprintf(&buff[19], ".%03u", (unsigned int) msec);
 
-	timeStream << (1900 + tm->tm_year) << "-";
-	timeStream.width(2);
-	timeStream << (1 + tm->tm_mon) << "-";
-	timeStream.width(2);
-	timeStream << tm->tm_mday << " ";
-	timeStream.width(2);
-	timeStream << tm->tm_hour << ":";
-	timeStream.width(2);
-	timeStream << tm->tm_min << ":";
-	timeStream.width(2);
-	timeStream << tm->tm_sec << ".";
-	timeStream.width(3);
-	timeStream << msec;
-
-	return timeStream.str();
+	return buff;
 }
 
 std::string Printer::printTCPFlags(unsigned char flags)
