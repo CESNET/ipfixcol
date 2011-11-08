@@ -39,6 +39,7 @@
 
 #include "TableManager.h"
 #include <algorithm>
+#include <ibis.h>
 
 namespace ipfixdump {
 
@@ -173,13 +174,10 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 
 		/* create table for each partList */
 		table = new Table(pList);
+
 		/* aggregate the table, use only present aggregation columns */
-		if (table->aggregate(*outerIter, summaryColumns, filter)) {
-			/* and add it to the list of managed tables, only if it is not empty */
-			this->tables.push_back(table);
-		} else {
-			delete table;
-		}
+		table->aggregate(*outerIter, summaryColumns, filter);
+		this->tables.push_back(table);
 
 		/* and clear the part list */
 		pList.clear();
@@ -191,17 +189,31 @@ void TableManager::filter(Filter &filter)
 {
 	Table *table;
 
+	stringSet columnNames;
+	for (columnVector::iterator it = conf.getColumns().begin(); it != conf.getColumns().end(); it++) {
+		/* don't add flows as count(*) */
+		if (!(*it)->isSeparator() && (*it)->getSemantics() == "flows") {
+			continue;
+		}
+		stringSet tmp = (*it)->getColumns();
+		if (tmp.size() > 0) {
+			columnNames.insert(tmp.begin(), tmp.end());
+		}
+	}
+
 	/* go over all parts */
 	for (ibis::partList::iterator it = this->parts.begin(); it != this->parts.end(); it++) {
 
 		/* create table for each part */
 		table = new Table(*it);
-		/* If table is not filtered out completely, add to managed tables */
-		if (table->filter(filter)) {
-			this->tables.push_back(table);
-		} else {
-			delete table;
-		}
+
+		/* add to managed tables */
+		table->filter(columnNames, filter);
+		this->tables.push_back(table);
+
+#ifdef DEBUG
+		std::cerr << "Created new table, MB in use: " << ibis::fileManager::bytesInUse()/1000000 << std::endl;
+#endif
 	}
 }
 
@@ -220,6 +232,12 @@ TableManagerCursor *TableManager::createCursor()
 tableVector& TableManager::getTables()
 {
 	return tables;
+}
+
+void TableManager::removeTable(tableVector::iterator &it)
+{
+	delete *it;
+	tables.erase(it--);
 }
 
 TableManager::TableManager(Configuration &conf): conf(conf)

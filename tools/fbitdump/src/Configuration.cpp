@@ -59,6 +59,8 @@ int Configuration::init(int argc, char *argv[])
 {
 	char c;
 	stringVector tables;
+	std::string filterFile;
+
 	/* get program name without execute path */
 	this->appName = ((this->appName = strrchr (argv[0], '/')) != NULL) ? (this->appName + 1) : argv[0];
 	argv[0] = this->appName;
@@ -109,7 +111,7 @@ int Configuration::init(int argc, char *argv[])
 			}
 			break;
 		case 'f':
-			NOT_SUPPORTED
+				filterFile = optarg;
 			break;
 		case 'n':
 			NOT_SUPPORTED
@@ -324,20 +326,17 @@ int Configuration::init(int argc, char *argv[])
                 }
 
                 this->rOptarg = optarg;
-
                 this->sanitizePath(this->rOptarg);
 #ifdef DEBUG
                 std::cerr << "Adding table " << this->rOptarg << std::endl;
 #endif
 				tables.push_back(this->rOptarg);
-
 			break;
 		}
 		case 'm':
 			this->optm = true;
 			break;
 		case 'R': {
-
 			this->ROptarg = optarg;
 
 			/* find dirname() */
@@ -356,7 +355,6 @@ int Configuration::init(int argc, char *argv[])
 			/* add slash on the end */
 			this->sanitizePath(dname);
 
-
 			/* find basename() */
 			optarg_copy = strdup(optarg);
 			if (!optarg_copy) {
@@ -372,7 +370,6 @@ int Configuration::init(int argc, char *argv[])
 
 			/* add slash on the end */
 			this->sanitizePath(bname);
-
 
 			/* check whether user specified region defined like fromDirX:toDirY */
 			/* NOTE: this will not work correctly if directory name contains colon */
@@ -518,6 +515,20 @@ int Configuration::init(int argc, char *argv[])
 	/* read filter */
 	if (optind < argc) {
 		this->filter = argv[optind];
+	} else if (!filterFile.empty()) {
+		std::ifstream t(filterFile, std::ifstream::in | std::ifstream::ate);
+
+		if (!t.good()) {
+			std::cerr << "Cannot open file '" << filterFile << "'" << std::endl;
+			return  -2;
+		}
+
+		this->filter.reserve((unsigned int) t.tellg());
+		t.seekg(0, std::ios::beg);
+
+		this->filter.assign((std::istreambuf_iterator<char>(t)),
+        std::istreambuf_iterator<char>());
+
 	} else {
 		/* set default filter */
 		this->filter = "1=1";
@@ -809,8 +820,8 @@ void Configuration::help()
 	//<< "-b              Aggregate netflow records as bidirectional flows." << std::endl
 	//<< "-B              Aggregate netflow records as bidirectional flows - Guess direction." << std::endl
 	<< "-r <dir>        read input tables from directory" << std::endl
-	//<< "-w <file>       write output to file" << std::endl
-//	<< "-f              read netflow filter from file" << std::endl
+//	<< "-w <file>       write output to file" << std::endl
+	<< "-f              read netflow filter from file" << std::endl
 //	<< "-n              Define number of top N. " << std::endl
 	<< "-c              Limit number of records to display" << std::endl
 	<< "-D <dns>        Use nameserver <dns> for host lookup." << std::endl
@@ -829,7 +840,7 @@ void Configuration::help()
 	<< "-M <expr>       Read input from multiple directories." << std::endl
 	<< "                /dir/dir1:dir2:dir3 Read the same files from '/dir/dir1' '/dir/dir2' and '/dir/dir3'." << std::endl
 	<< "                requests either -r filename or -R firstfile:lastfile without pathnames" << std::endl
-	<< "-m              Print netflow data date sorted. Only useful with -M" << std::endl
+	<< "-m              Print netflow data date sorted." << std::endl
 	<< "-R <expr>       Read input from sequence of files." << std::endl
 	<< "                /any/dir  Read all files in that directory." << std::endl
 //	<< "                /dir/file Read all files beginning with 'file'." << std::endl

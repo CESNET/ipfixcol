@@ -430,6 +430,10 @@ std::string Column::getNullStr()
 
 std::string Column::getSemantics()
 {
+	if (this->ast == NULL) {
+		return "";
+	}
+
 	return this->ast->semantics;
 }
 
