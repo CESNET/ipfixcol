@@ -63,10 +63,26 @@ void Table::aggregate(stringSet &aggregateColumns, stringSet &summaryColumns,
 	std::string colNames;
 	stringSet combined;
 	size_t i = 0;
+	stringSet sColumns;
+
+	/* later queries must be made with proper column names */
+	if (namesColumns.size() > 0) { /* not first query */
+		for (stringSet::iterator it = summaryColumns.begin(); it != summaryColumns.end(); it++) {
+			/* get location of the column */
+			namesColumnsMap::iterator cit;
+			if ((cit = this->getNamesColumns().find(*it)) != this->getNamesColumns().end()) {
+				sColumns.insert(this->table->columnNames()[cit->second]);
+			} else {
+				std::cerr << "Cannot find column '" << *it << "'" << std::endl;
+			}
+		}
+	} else {
+		sColumns = summaryColumns;
+	}
 
 	/* create select string and build namesColumns map */
 	combined.insert(aggregateColumns.begin(), aggregateColumns.end());
-	combined.insert(summaryColumns.begin(), summaryColumns.end());
+	combined.insert(sColumns.begin(), sColumns.end());
 
 	for (stringSet::iterator it = combined.begin(); it != combined.end(); it++, i++) {
 		colNames += *it;

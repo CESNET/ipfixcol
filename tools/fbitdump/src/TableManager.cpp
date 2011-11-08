@@ -39,6 +39,7 @@
 
 #include "TableManager.h"
 #include <algorithm>
+#include <ibis.h>
 
 namespace ipfixdump {
 
