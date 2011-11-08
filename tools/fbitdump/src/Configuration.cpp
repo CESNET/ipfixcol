@@ -864,11 +864,18 @@ Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(fa
 	this->resolver = new Resolver();
 }
 
+Resolver *Configuration::getResolver()
+{
+	return this->resolver;
+}
+
 Configuration::~Configuration()
 {
 	for (columnVector::iterator it = columns.begin(); it != columns.end(); it++) {
 		delete *it;
 	}
+
+	delete this->resolver;
 }
 
 } /* end of ipfixdump namespace */

@@ -177,6 +177,13 @@ public:
      */
     std::string getTimeWindowEnd();
 
+    /**
+     * \brief Returns resolver
+     *
+     * @return object which provides DNS resolving functionality
+     */
+    Resolver *getResolver();
+
 
     /**
      * \brief Class destructor

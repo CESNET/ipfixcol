@@ -60,10 +60,26 @@ public:
 	Resolver(char *nameserver);
 	~Resolver();
 
+    /**
+     * \brief Returns resolver
+     *
+     * @return object which provides DNS resolving functionality
+     */
 	int setNameserver(char *nameserver);
+
+    /**
+     * \brief Returns resolver
+     *
+     * @return object which provides DNS resolving functionality
+     */
 	const char *getNameserver();
+
+    /**
+     * \brief Returns resolver
+     *
+     * @return object which provides DNS resolving functionality
+     */
 	bool isConfigured();
-	//hostLookup(char *host);
 };
 
 }
