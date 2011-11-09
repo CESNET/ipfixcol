@@ -248,13 +248,39 @@ private:
     bool isDirectory(std::string dir);
 
     /**
-     * Sanitize path
+     * \brief Sanitize path
      *
      * Add slash on the end of the path
      *
      * @return nothing
      */
     void sanitizePath(std::string &path);
+
+    /**
+     * \brief Process -M option from getopt()
+     *
+     * @param tables vector containing names of input directories
+     * @param optarg optarg for -M option
+     *
+     * Local variable "tables", specified in init() method, will contain input
+     * directories specified by -M option.
+     *
+     * @return true, if no error occurred, false otherwise
+     */
+    bool processMOption(stringVector &tables, const char *optarg);
+
+    /**
+     * \brief Process -R option from getopt()
+     *
+     * @param tables vector containing names of input directories
+     * @param optarg optarg for -R option
+     *
+     * Local variable "tables", specified in init() method, will contain input
+     * directories specified by -R option.
+     *
+     * @return true, if no error occurred, false otherwise
+     */
+    bool processROption(stringVector &tables, const char *optarg);
 
 
 
