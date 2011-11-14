@@ -44,7 +44,7 @@
 #include <iostream>
 #include <cstring>
 
-namespace ipfixdump {
+namespace fbitdump {
 
 /**
  * \brief Class for DNS lookups
