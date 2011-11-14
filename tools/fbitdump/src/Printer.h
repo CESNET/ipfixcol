@@ -45,9 +45,9 @@
 #include "TableManager.h"
 
 /**
- * \brief Namespace of the ipfixdump utility
+ * \brief Namespace of the fbitdump utility
  */
-namespace ipfixdump {
+namespace fbitdump {
 
 /**
  * \brief Class printing tables
@@ -163,7 +163,7 @@ private:
 	Configuration &conf; /**< program configuration */
 };
 
-}  // namespace ipfixdump
+}  // namespace fbitdump
 
 
 #endif /* PRINTER_H_ */

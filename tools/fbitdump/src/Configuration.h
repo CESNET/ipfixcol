@@ -1,7 +1,7 @@
 /**
  * \file Configuration.h
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Header of class for managing user input of ipfixdump
+ * \brief Header of class for managing user input of fbitdump
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -45,7 +45,7 @@
 #include "Column.h"
 
 
-namespace ipfixdump {
+namespace fbitdump {
 
 /** Acceptable command-line parameters */
 #define OPTSTRING "hVaA:r:f:n:c:D:Ns:qIM:mR:o:v:Z:t:"
@@ -269,6 +269,6 @@ private:
 	std::string ROptarg;               /**< optarg for -R option */
 }; /* end of Configuration class */
 
-} /* end of ipfixdump namespace */
+} /* end of fbitdump namespace */
 
 #endif /* CONFIGURATION_H_ */

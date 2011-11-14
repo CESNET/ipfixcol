@@ -46,7 +46,7 @@
 #include "Table.h"
 #include "TableManager.h"
 
-namespace ipfixdump {
+namespace fbitdump {
 
 class TableManager;  /* forward declaration */
 class Cursor;

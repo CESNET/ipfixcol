@@ -1,7 +1,7 @@
 /**
  * \file typedefs.h
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Header containing typedefs for ipfixdump utility
+ * \brief Header containing typedefs for fbitdump utility
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -47,7 +47,7 @@
 #include <string>
 #include "ibis.h"
 
-namespace ipfixdump {
+namespace fbitdump {
 
 /* this is needed for the lexer: new yylex function prototype */
 #define YY_DECL int yylex(std::string &arg)
@@ -75,7 +75,7 @@ typedef std::vector<Column*> columnVector;
 class Table;
 typedef std::vector<Table*> tableVector;
 
-}  /* end of namespace ipfixdump */
+}  /* end of namespace fbitdump */
 
 #endif /* TYPEDEFS_H_ */
 

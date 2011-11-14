@@ -49,7 +49,7 @@
 /* yylex is not in the header, declare it separately */
 extern YY_DECL;
 
-namespace ipfixdump
+namespace fbitdump
 {
 
 std::string Filter::getFilter()
@@ -210,4 +210,4 @@ time_t Filter::parseTimestamp(std::string str)
 
 Filter::Filter(Configuration &conf): conf(conf) {}
 
-} /* end of namespace ipfixdump */
+} /* end of namespace fbitdump */

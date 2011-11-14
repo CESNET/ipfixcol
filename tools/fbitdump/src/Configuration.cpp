@@ -1,7 +1,7 @@
 /**
  * \file Configuration.cpp
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Class for managing user input of ipfixdump
+ * \brief Class for managing user input of fbitdump
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -45,7 +45,7 @@
 #include <fstream>
 #include <libgen.h>
 
-namespace ipfixdump {
+namespace fbitdump {
 
 /* temporary macro that should be removed in full implementation */
 #define NOT_SUPPORTED std::cerr << "Not supported" << std::endl; return -2;
@@ -804,7 +804,7 @@ void Configuration::help()
 	<< "-h              this text you see right here" << std::endl
 	<< "-V              Print version and exit." << std::endl
 	<< "-a              Aggregate netflow data." << std::endl
-	<< "-A <expr>[/net] How to aggregate: ',' sep list of tags see ipfixdump(1)" << std::endl
+	<< "-A <expr>[/net] How to aggregate: ',' sep list of tags see fbitdump(1)" << std::endl
 	<< "                or subnet aggregation: srcip4/24, srcip6/64." << std::endl
 	//<< "-b              Aggregate netflow records as bidirectional flows." << std::endl
 	//<< "-B              Aggregate netflow records as bidirectional flows - Guess direction." << std::endl
@@ -868,4 +868,4 @@ Configuration::~Configuration()
 	}
 }
 
-} /* end of ipfixdump namespace */
+} /* end of fbitdump namespace */

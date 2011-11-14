@@ -41,7 +41,7 @@
 #include <algorithm>
 #include <ibis.h>
 
-namespace ipfixdump {
+namespace fbitdump {
 
 void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumns,
 		Filter &filter)
@@ -276,6 +276,6 @@ TableManager::~TableManager()
 	}
 }
 
-}  // namespace ipfixdump
+}  // namespace fbitdump
 
 
