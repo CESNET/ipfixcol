@@ -41,6 +41,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <arpa/inet.h>
+#include <netdb.h>
 #include "protocols.h"
 #include "Column.h"
 #include "Printer.h"
@@ -117,6 +118,7 @@ void Printer::printRow(Cursor *cur)
 		} else {
 			out.setf(std::ios_base::right, std::ios_base::adjustfield);
 		}
+
 		out << printValue(conf.getColumns()[i], cur);
 	}
 	out << "\n"; /* much faster then std::endl */
@@ -175,13 +177,36 @@ std::string Printer::printIPv4(uint32_t address)
 {
 	char buf[INET_ADDRSTRLEN];
 	struct in_addr in_addr;
+	int ret;
+	Resolver *resolver;
+
+	resolver = this->conf.getResolver();
+
+	if (resolver->isConfigured()) {
+		/* do reverse DNS lookup */
+		struct sockaddr_in sock;
+		char host[NI_MAXHOST];
+
+		memset(&sock, 0, sizeof(sock));
+		sock.sin_family = AF_INET;
+		sock.sin_addr.s_addr = htonl(address);
+
+		ret = getnameinfo((const struct sockaddr *)&sock, sizeof(sock), host, NI_MAXHOST, NULL, 0, 0);
+		if (ret == 0) {
+			/* name successfully translated, return */
+			return host;
+		}
+		/* error during DNS lookup, print IP address instead */
+	}
 
 	/* convert address */
 	in_addr.s_addr = htonl(address);
 	inet_ntop(AF_INET, &in_addr, buf, INET_ADDRSTRLEN);
 
+	/* IP address in printable form */
 	return buf;
 }
+
 std::string Printer::printIPv6(uint64_t part1, uint64_t part2)
 {
 	char buf[INET6_ADDRSTRLEN];

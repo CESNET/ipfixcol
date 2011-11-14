@@ -43,6 +43,7 @@
 #include "../3rdparty/pugixml.hpp"
 #include "typedefs.h"
 #include "Column.h"
+#include "Resolver.h"
 
 
 namespace fbitdump {
@@ -176,6 +177,13 @@ public:
      */
     std::string getTimeWindowEnd();
 
+    /**
+     * \brief Returns resolver
+     *
+     * @return object which provides DNS resolving functionality
+     */
+    Resolver *getResolver();
+
 
     /**
      * \brief Class destructor
@@ -240,13 +248,39 @@ private:
     bool isDirectory(std::string dir);
 
     /**
-     * Sanitize path
+     * \brief Sanitize path
      *
      * Add slash on the end of the path
      *
      * @return nothing
      */
     void sanitizePath(std::string &path);
+
+    /**
+     * \brief Process -M option from getopt()
+     *
+     * @param tables vector containing names of input directories
+     * @param optarg optarg for -M option
+     *
+     * Local variable "tables", specified in init() method, will contain input
+     * directories specified by -M option.
+     *
+     * @return true, if no error occurred, false otherwise
+     */
+    bool processMOption(stringVector &tables, const char *optarg);
+
+    /**
+     * \brief Process -R option from getopt()
+     *
+     * @param tables vector containing names of input directories
+     * @param optarg optarg for -R option
+     *
+     * Local variable "tables", specified in init() method, will contain input
+     * directories specified by -R option.
+     *
+     * @return true, if no error occurred, false otherwise
+     */
+    bool processROption(stringVector &tables, const char *optarg);
 
 
 
@@ -267,6 +301,7 @@ private:
 	std::string timeWindow;            /**< time window */
 	std::string rOptarg;               /**< optarg for -r option */
 	std::string ROptarg;               /**< optarg for -R option */
+	Resolver *resolver;                /**< DNS resolver */
 }; /* end of Configuration class */
 
 } /* end of fbitdump namespace */
