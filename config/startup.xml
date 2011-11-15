@@ -92,6 +92,28 @@
 		</destination>
 	</exportingProcess>
 
+
+	<exportingProcess>
+		<name>File writer SCTP</name>
+		<destination>
+			<name>Store data using ipfix file format</name>
+			<fileWriter>
+				<fileFormat>ipfix</fileFormat>
+				<path>storagePath</path>
+				<dumpInterval>
+					<timeWindow>300</timeWindow>
+					<timeAlignment>yes</timeAlignment>
+					<recordLimit>no</recordLimit>
+				</dumpInterval>
+				<namingStrategy>
+					<type>time</type>
+					<prefix>ic</prefix>
+				</namingStrategy>
+				<onTheFlightIndexes>yes</onTheFlightIndexes>
+			</fileWriter>
+		</destination>
+	</exportingProcess>
+
 	<exportingProcess>
 		<name>Postgres</name>
 		<destination>
@@ -110,27 +132,6 @@
 				<user>username</user>
 				<!--## Password to be used if the server demands password authentication -->
 				<pass>password</pass>
-			</fileWriter>
-		</destination>
-	</exportingProcess>
-
-	<exportingProcess>
-		<name>File writer SCTP</name>
-		<destination>
-			<name>Store data using fastbit</name>
-			<fileWriter>
-				<fileFormat>fastbit</fileFormat>
-				<path>storagePath</path>
-				<dumpInterval>
-					<timeWindow>300</timeWindow>
-					<timeAlignment>yes</timeAlignment>
-					<recordLimit>no</recordLimit>
-				</dumpInterval>
-				<namingStrategy>
-					<type>time</type>
-					<prefix>ic</prefix>
-				</namingStrategy>
-				<onTheFlightIndexes>yes</onTheFlightIndexes>
 			</fileWriter>
 		</destination>
 	</exportingProcess>
