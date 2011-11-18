@@ -34,7 +34,7 @@ This package contains header files needed for development of plugins for IPFIX C
 
 
 %build
-./configure --with-distro=@DISTRO@ --prefix=%{_prefix} --disable-postgres @CONFIGURE_PARAMS@;
+./configure --with-distro=@DISTRO@ --prefix=%{_prefix} @CONFIGURE_PARAMS@;
 make
 make storage-plugins
 make input-plugins
