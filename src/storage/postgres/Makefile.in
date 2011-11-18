@@ -1,16 +1,56 @@
-CC      = gcc
-CFLAGS  = -Wall -I/usr/include/libxml2 -pthread -g
-LIBS    = -ldl  -lxml2 -lcommlbr -lpq
+CC      = @CC@
+CFLAGS  = @CFLAGS@
+LIBS    = @LIBS@ -lpq
 INCLUDE = "-I../../../"
 
-all: postgres_output.so
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+datarootdir = @datarootdir@
+datadir = @datadir@
+bindir = @bindir@
+includedir = @includedir@
+libdir =  @libdir@
+mandir = @mandir@
 
-postgres_output.so: postgres_output.o
-	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,postgres_output.so.1 postgres_output.o -o $@ -lc
-	
-postgres_output.o: postgres_output.c
-	$(CC) $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
+TARGETS = ipfixcol_postgres_output.so
+TOPDIR = @CONFIGURE_PWD@
+NAME = @PACKAGE_NAME@
+RELEASE = @RELEASE@
+INSTALL = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+VERSION = $(shell cut -f1 $(TOPDIR)/VERSION | tr -d '\n')
+DIR = "src/storage/postgres"
+
+SRCS = postgres_output.c
+OBJ = postgres_output.o
+HDRS = ipfix_entities.h ipfix_postgres_types.h
+
+all: ipfixcol_postgres_output.so
+
+ipfixcol_postgres_output.so: $(OBJ)
+	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfixcol_postgres_output.so.1 -o $@ $< -lc
+
+$(OBJ): $(SRCS)
+	@for i in $(SRCS); do \
+		$(CC) $(CFLAGS) $(INCLUDE) -fPIC -c $$i; \
+	done;
 
 clean:
-	-rm postgres_output.so postgres_output.o
+	-rm $(TARGETS) $(OBJ)
+
+.PHONY: tarball-prepare
+tarball-prepare:
+	@for i in Makefile.in $(SRCS) $(HDRS) $(MANSRCS) $(DOC); do \
+		[ -d $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) ] || \
+		mkdir -p $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) -p; \
+		cp $$i $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR)/$$i; \
+	done;
+
+.PHONY: install
+install: $(TARGETS)
+	[ -d $(DESTDIR)/$(libdir) ] || \
+		(mkdir -p $(DESTDIR)/$(libdir); chmod 755 $(DESTDIR)/$(libdir));
+	$(INSTALL_PROGRAM) $(TARGETS) $(DESTDIR)/$(libdir)/;
+
+
 
