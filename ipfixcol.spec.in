@@ -11,6 +11,11 @@ Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 
 BuildRequires: gcc make doxygen pkgconfig
+BuildRequires: libcommlbr-devel >= 2.0.0 , libcommlbr-devel < 3.0.0
+Requires: libcommlbr >= 2.0.0 , libcommlbr < 3.0.0
+BuildRequires: libcombo-devel >= 1.4.0 , libcombo-devel < 2.0.0
+Requires: postgresql-devel
+Requires: libxml2
 
 %description
 IPFIX Collector Toolset
@@ -59,48 +64,7 @@ make DESTDIR=$RPM_BUILD_ROOT install
 /etc/ipfixcol/ipfix-elements.xml
 /etc/ipfixcol/startup.xml
 #doxygen
-/usr/share/ipfixcol/doxygen/html/bc_s.png
-/usr/share/ipfixcol/doxygen/html/closed.png
-/usr/share/ipfixcol/doxygen/html/doxygen.css
-/usr/share/ipfixcol/doxygen/html/doxygen.png
-/usr/share/ipfixcol/doxygen/html/ftv2blank.png
-/usr/share/ipfixcol/doxygen/html/ftv2doc.png
-/usr/share/ipfixcol/doxygen/html/ftv2folderclosed.png
-/usr/share/ipfixcol/doxygen/html/ftv2folderopen.png
-/usr/share/ipfixcol/doxygen/html/ftv2lastnode.png
-/usr/share/ipfixcol/doxygen/html/ftv2link.png
-/usr/share/ipfixcol/doxygen/html/ftv2mlastnode.png
-/usr/share/ipfixcol/doxygen/html/ftv2mnode.png
-/usr/share/ipfixcol/doxygen/html/ftv2node.png
-/usr/share/ipfixcol/doxygen/html/ftv2plastnode.png
-/usr/share/ipfixcol/doxygen/html/ftv2pnode.png
-/usr/share/ipfixcol/doxygen/html/ftv2splitbar.png
-/usr/share/ipfixcol/doxygen/html/ftv2vertline.png
-/usr/share/ipfixcol/doxygen/html/index.html
-/usr/share/ipfixcol/doxygen/html/installdox
-/usr/share/ipfixcol/doxygen/html/jquery.js
-/usr/share/ipfixcol/doxygen/html/nav_f.png
-/usr/share/ipfixcol/doxygen/html/nav_h.png
-/usr/share/ipfixcol/doxygen/html/navtree.css
-/usr/share/ipfixcol/doxygen/html/navtree.js
-/usr/share/ipfixcol/doxygen/html/open.png
-/usr/share/ipfixcol/doxygen/html/resize.js
-/usr/share/ipfixcol/doxygen/html/search/close.png
-/usr/share/ipfixcol/doxygen/html/search/mag_sel.png
-/usr/share/ipfixcol/doxygen/html/search/nomatches.html
-/usr/share/ipfixcol/doxygen/html/search/search.css
-/usr/share/ipfixcol/doxygen/html/search/search.js
-/usr/share/ipfixcol/doxygen/html/search/search_l.png
-/usr/share/ipfixcol/doxygen/html/search/search_m.png
-/usr/share/ipfixcol/doxygen/html/search/search_r.png
-/usr/share/ipfixcol/doxygen/html/tab_a.png
-/usr/share/ipfixcol/doxygen/html/tab_b.png
-/usr/share/ipfixcol/doxygen/html/tab_h.png
-/usr/share/ipfixcol/doxygen/html/tab_s.png
-/usr/share/ipfixcol/doxygen/html/tabs.css
-/usr/share/ipfixcol/doxygen/latex/Makefile
-/usr/share/ipfixcol/doxygen/latex/doxygen.sty
-/usr/share/ipfixcol/doxygen/latex/refman.tex
+/usr/share/ipfixcol/doxygen/*
 
 %files devel
 %{_prefix}/include/ipfixcol.h
