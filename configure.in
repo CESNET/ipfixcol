@@ -239,9 +239,9 @@ AC_ARG_ENABLE([sctp],
         [SCTP=yes])
         
 AC_ARG_ENABLE([postgres], 
-        AC_HELP_STRING([--disable-postgres],[disable PostgreSQL storage plugin]),
-        [POSTGRES=no],
-        [POSTGRES=yes])
+        AC_HELP_STRING([--enable-postgres],[enable PostgreSQL storage plugin]),
+        [POSTGRES=yes],
+        [POSTGRES=no])
 
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h syslog.h unistd.h])

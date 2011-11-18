@@ -1317,7 +1317,7 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-debug          turn on more debugging options
   --disable-sctp          disable sctp input plugin
-  --disable-postgres      disable PostgreSQL storage plugin
+  --enable-postgres       enable PostgreSQL storage plugin
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -4058,9 +4058,9 @@ fi
 
 # Check whether --enable-postgres was given.
 if test "${enable_postgres+set}" = set; then :
-  enableval=$enable_postgres; POSTGRES=no
+  enableval=$enable_postgres; POSTGRES=yes
 else
-  POSTGRES=yes
+  POSTGRES=no
 fi
 
 
