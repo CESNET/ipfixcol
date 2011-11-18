@@ -36,7 +36,7 @@
 # $Id$
 #
 
-AC_PREREQ([2.65])
+AC_PREREQ([2.60])
 
 # Process this file with autoconf to produce a configure script.
 AC_INIT([ipfixcol], m4_esyscmd([cut -f1 ./VERSION | tr -d '\n']))
