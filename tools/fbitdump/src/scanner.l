@@ -1,7 +1,7 @@
 /**
- * \file ipfixdump.cpp
+ * \file scanner.l
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Tool for ipfix fastbit format querying
+ * \brief Flex ipfixdump filter scanner
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -36,54 +36,27 @@
  * if advised of the possibility of such damage.
  *
  */
+%{
+#include "typedefs.h"
+%}
+ 
+%option noyywrap nounput
+/*nodefault*/
 
-#include <ibis.h>
-#include <sstream>
-#include <set>
-#include <string>
+%%
 
-#include "configuration.h"
-#include "data.h"
-#include "printer.h"
+%[a-zA-Z0-9]+		{ arg = yytext; return ipfixdump::COLUMN; }
+e[0-9]+id[0-9]+(p[0-9]+)?		{ arg = yytext; return ipfixdump::RAWCOLUMN; }
+" "+|\t+|\n+		{/* ignore spaces and newlines */}
+[0-9]+[kKmMgGtT]{0,1}	{ arg = yytext; return ipfixdump::NUMBER; }
+[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}	{ arg = yytext; return ipfixdump::IPv4; }
+[0-9]{4}"/"[0-9]{2}"/"[0-9]{2}\.[0-9]{2}:[0-9]{2}:[0-9]{2}	{ arg = yytext; return ipfixdump::TIMESTAMP; }
+">"|"<"|"="|"==" |
+"=>"|"<="|">=" | 
+"=>"|"!="			{ arg = yytext; return ipfixdump::CMP; }
+AND|OR|and|or		{ arg = yytext; return ipfixdump::OPERATOR; }
+"("|")"				{ arg = yytext; return ipfixdump::BRACKET; }
+.					{ arg = yytext; return ipfixdump::OTHER; }
 
-using namespace ipfixdump;
-
-int main(int argc, char *argv[])
-{
-	int ret;
-	/* create configuration to work with */
-	configuration conf;
-	data data;
-
-	tableVector tables;
-
-	/* process configuration and check whether end program */
-	ret = conf.init(argc, argv);
-	if (ret != 0) return ret;
-
-	/* initialise printer */
-	printer print(std::cout, conf);
-
-	/* initialise tables */
-	data.init(conf);
-
-	/* do some work */
-	if (conf.aggregate) {
-		tables = data.aggregate(conf.aggregateColumnsDb, conf.filter.c_str());
-//		tables = data.select(conf.aggregateColumnsDb, conf.filter.c_str());
-	} else {
-		tables = data.filter(conf.filter.c_str());
-	}
-
-	/* print tables */
-	print.addTables(tables);
-	print.print(conf.maxRecords);
-
-	/* free used tables */
-	print.clearTables();
-	for (tableVector::iterator it = tables.begin(); it != tables.end(); it++) {
-		delete *it;
-	}
-
-	return 0;
-}
+%%
+ 

@@ -43,39 +43,39 @@
 #include <cstdio>
 #include <vector>
 #include <set>
+#include <map>
+#include <string>
+#include "ibis.h"
 
-
-
-/**
- * \brief Namespace of the ipfixdump utility
- */
 namespace ipfixdump {
 
-typedef std::map<std::string, int> namesColumnsMap;
+/* this is needed for the lexer: new yylex function prototype */
+#define YY_DECL int yylex(std::string &arg)
 
-/**
- * \brief Structure holding fastbit table and map of column names and column
- * numbers
- *
- * This is used when table contains aggregated columns of names like "max4",
- * so that columnFormat can still access appropriate columns by its index.
- */
-struct tableContainer {
-	ibis::table* table;
-	namesColumnsMap namesColumns;
-
-	tableContainer(): table(NULL){};
-
-	~tableContainer() {
-		delete table;
-	}
+enum yytokentype
+{
+	COLUMN = 258,
+	NUMBER = 259,
+	CMP = 260,
+	RAWCOLUMN = 261,
+	OPERATOR = 262,
+	IPv4 = 263,
+	BRACKET = 264,
+	TIMESTAMP = 265,
+	OTHER = 300
 };
 
 typedef std::vector<std::string> stringVector;
-typedef std::vector<tableContainer*> tableVector;
 typedef std::set<std::string> stringSet;
+typedef std::map<std::string, int> namesColumnsMap;
 
-}  // namespace ipfixdump
+/* define these vectors with forward definitions of the classes */
+class Column;
+typedef std::vector<Column*> columnVector;
+class Table;
+typedef std::vector<Table*> tableVector;
 
+}  /* end of namespace ipfixdump */
 
-#endif /* CONFIGURATION_H_ */
+#endif /* TYPEDEFS_H_ */
+

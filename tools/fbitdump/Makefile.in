@@ -1,0 +1,80 @@
+################################################
+#     Makefile for the fbitdump utility        #
+################################################
+
+CXX      = @CXX@
+CXXFLAGS  = @CXXFLAGS@
+LIBS    = @LIBS@
+FLEX = @FLEX@
+
+SRCS    = fbitdump.cpp \
+		Configuration.cpp \
+		Column.cpp \
+		protocols.cpp \
+		Table.cpp \
+		Printer.cpp \
+		Filter.cpp \
+		TableManager.cpp \
+		TableManagerCursor.cpp \
+		Cursor.cpp \
+		AST.cpp
+OBJDIR  = .obj
+SRCDIR  = src
+SRC3RD  = 3rdparty
+VERSION = VERSION
+
+DOXYGEN = @DOXYGEN@
+DOXYGEN_CONFIG = doxyconf
+DOXYGEN_DIR = doc
+
+# scanner must be build before filter (filter includes scanner's header)
+OBJS    = $(OBJDIR)/scanner.o $(SRCS:%.cpp=$(OBJDIR)/%.o) $(OBJDIR)/pugi.o
+
+all: fbitdump
+
+# fbitdump
+fbitdump: $(OBJS) $(VERSION)
+	$(CXX) $(CXXFLAGS) $(LIBS) $(OBJS) -o $@
+
+# Printer is specified extra with -fno-strict-aliasing for performance reasons
+$(OBJDIR)/Printer.o: $(SRCDIR)/Printer.cpp
+	$(CXX) $(CXXFLAGS) -fno-strict-aliasing -c $< -o $@
+
+$(OBJDIR)/%.o: $(SRCDIR)/%.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(SRCDIR)/protocols.cpp: /etc/protocols
+	cd tools && ./generate_protocols.sh
+
+$(OBJDIR)/pugi.o: $(SRC3RD)/pugixml.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# rules to build the lex scanner
+$(OBJDIR)/scanner.o: $(SRCDIR)/scanner.c
+	-mkdir $(OBJDIR)
+	@[ -d $$(dirname $@) ] || \
+		(mkdir -p $$(dirname $@))
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(SRCDIR)/scanner.c: $(SRCDIR)/scanner.l
+	$(FLEX) -o $(SRCDIR)/scanner.c --header-file=$(SRCDIR)/scanner.h $<
+
+.PHONY: doc
+doc: doxygen
+
+doxygen: $(DOXYGEN_CONFIG) $(SRCS:%=$(SRCDIR)/%)
+	@[ -d $(DOXYGEN_DIR) ] || mkdir -p $(DOXYGEN_DIR); \
+	if [ -n "$(DOXYGEN)" ]; then \
+		(cat $(DOXYGEN_CONFIG); \
+		echo 'OUTPUT_DIRECTORY = $(DOXYGEN_DIR)' ) | \
+		$(DOXYGEN) - > /dev/null; \
+	else \
+		echo "Missing doxygen"; \
+		exit 1; \
+	fi
+
+
+clean:
+	rm -f ipfixdump src/protocols.cpp src/scanner.h src/scanner.c
+	rm -fr doc $(OBJDIR)
+
