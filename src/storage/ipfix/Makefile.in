@@ -1,6 +1,6 @@
 CC      = @CC@
-CFLAGS  = @CFLAGS@ `pkg-config --cflags libssl`
-LIBS    = @LIBS@ `pkg-config --libs libssl`
+CFLAGS  = @CFLAGS@
+LIBS    = @LIBS@
 INCLUDE = "-I../../../"
 
 prefix = @prefix@
