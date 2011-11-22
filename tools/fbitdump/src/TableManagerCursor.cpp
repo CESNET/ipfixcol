@@ -203,29 +203,27 @@ bool TableManagerCursor::next()
 	}
 
 	/* no filter, just print all rows */
-	if (true) {
 
-		/* first time we call this method */
-		if (this->currentCursor == NULL) {
-			this->currentCursor = (*this->currentTableIt)->createCursor();
-		}
-
-		/* proceed to the next row */
-		while (!this->currentCursor->next()) {
-			/* delete the cursor (not in list) */
-			delete this->currentCursor;
-			/* delete the table to save some memory, might become optional */
-			tableManager->removeTable(this->currentTableIt);
-
-			/* error during fetching new row, try next table */
-			this->currentTableIt++;
-			if (this->currentTableIt == this->tableManager->getTables().end()) {
-				return false;
-			}
-			this->currentCursor = (*this->currentTableIt)->createCursor();
-		}
-
+	/* first time we call this method */
+	if (this->currentCursor == NULL) {
+		this->currentCursor = (*this->currentTableIt)->createCursor();
 	}
+
+	/* proceed to the next row */
+	while (!this->currentCursor->next()) {
+		/* delete the cursor (not in list) */
+		delete this->currentCursor;
+		/* delete the table to save some memory, might become optional */
+		tableManager->removeTable(this->currentTableIt);
+
+		/* error during fetching new row, try next table */
+		this->currentTableIt++;
+		if (this->currentTableIt == this->tableManager->getTables().end()) {
+			return false;
+		}
+		this->currentCursor = (*this->currentTableIt)->createCursor();
+	}
+
 
 	this->rowCounter += 1;
 
