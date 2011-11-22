@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- 
-	This is configuration XML for ipfixdump utility
+	This is configuration XML for fbitdump utility
 	
 	The rules for printing columns are defined here. Each column has one column element which contains:
 		name: Name of the column

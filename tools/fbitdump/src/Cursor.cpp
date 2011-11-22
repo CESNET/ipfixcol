@@ -39,7 +39,7 @@
 
 #include "Cursor.h"
 
-namespace ipfixdump {
+namespace fbitdump {
 
 Cursor::Cursor(Table &table): table(table), cursor(NULL) {}
 
@@ -158,4 +158,4 @@ Cursor::~Cursor()
 	delete this->cursor;
 }
 
-} /* end of namespace ipfixdump */
+} /* end of namespace fbitdump */

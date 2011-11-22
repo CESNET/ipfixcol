@@ -39,7 +39,7 @@
 
 #include "AST.h"
 
-namespace ipfixdump {
+namespace fbitdump {
 
 /**
  * \brief Formats number 'num' to ostringstream 'ss'
@@ -171,5 +171,5 @@ std::string values::toString(bool plainNumbers)
 	return valStr;
 }
 
-} /* end of namespace ipfixdump */
+} /* end of namespace fbitdump */
 

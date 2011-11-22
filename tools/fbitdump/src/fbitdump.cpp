@@ -48,7 +48,7 @@
 #include "Printer.h"
 #include "Filter.h"
 
-using namespace ipfixdump;
+using namespace fbitdump;
 
 int main(int argc, char *argv[])
 {

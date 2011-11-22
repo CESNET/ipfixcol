@@ -40,7 +40,7 @@
 #include <exception>
 #include "Table.h"
 
-namespace ipfixdump {
+namespace fbitdump {
 
 Table::Table(ibis::part *part): queryDone(true)
 {
@@ -177,4 +177,4 @@ Table::~Table()
 	delete this->table;
 }
 
-} /* end namespace ipfixdump */
+} /* end namespace fbitdump */

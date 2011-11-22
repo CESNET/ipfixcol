@@ -1,7 +1,7 @@
 /**
  * \file Resolver.cpp
  * \author Michal Srb <michal.srb@cesnet.cz>
- * \brief Class for managing user input of ipfixdump
+ * \brief Class for managing user input of fbitdump
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -46,7 +46,7 @@
 
 #include "Resolver.h"
 
-namespace ipfixdump {
+namespace fbitdump {
 
 Resolver::Resolver() : configured(false)
 {

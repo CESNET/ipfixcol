@@ -44,7 +44,7 @@
 #include "Filter.h"
 #include "Cursor.h"
 
-namespace ipfixdump {
+namespace fbitdump {
 
 /* Table and Cursor(Filter) classes are dependent on each other */
 class Cursor;
@@ -156,7 +156,7 @@ private:
 	std::string select; /**< Select string to be used on next query */
 };
 
-} /* end of namespace ipfixdump */
+} /* end of namespace fbitdump */
 
 
 #endif /* TABLE_H_ */

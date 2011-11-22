@@ -47,7 +47,7 @@
 #include "Printer.h"
 #include "Table.h"
 
-namespace ipfixdump
+namespace fbitdump
 {
 
 

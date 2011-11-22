@@ -39,7 +39,7 @@
 
 #include "TableManagerCursor.h"
 
-namespace ipfixdump {
+namespace fbitdump {
 
 
 TableManagerCursor::TableManagerCursor(TableManager &tableManager, Configuration &conf):
@@ -252,4 +252,4 @@ Cursor *TableManagerCursor::getCurrentCursor()
 	return this->currentCursor;
 }
 
-} /* namespace ipfixdump */
+} /* namespace fbitdump */

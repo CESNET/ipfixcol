@@ -41,7 +41,7 @@
 #include <iostream>
 #include "Column.h"
 
-namespace ipfixdump
+namespace fbitdump
 {
 
 bool Column::init(pugi::xml_document &doc, std::string alias, bool aggregate)
@@ -109,7 +109,7 @@ AST* Column::createValueElement(pugi::xml_node element, pugi::xml_document &doc)
 	/* create the element */
 	AST *ast = new AST;
 
-	ast->type = ipfixdump::value;
+	ast->type = fbitdump::value;
 	ast->value = element.child_value();
 	ast->semantics = element.attribute("semantics").value();
 	if (element.attribute("parts")) {
@@ -130,7 +130,7 @@ AST* Column::createOperationElement(pugi::xml_node operation, pugi::xml_document
 	std::string type;
 
 	/* set type and operation */
-	ast->type = ipfixdump::operation;
+	ast->type = fbitdump::operation;
 	ast->operation = operation.attribute("name").value()[0];
 	ast->semantics = operation.attribute("semantics").value();
 
@@ -267,7 +267,7 @@ values *Column::evaluate(AST *ast, Cursor *cur)
 
 	/* evaluate AST */
 	switch (ast->type) {
-		case ipfixdump::value:{
+		case fbitdump::value:{
 			retVal = new values;
 			int part=0;
 			stringSet &tmpSet = this->getColumns(ast);
@@ -282,7 +282,7 @@ values *Column::evaluate(AST *ast, Cursor *cur)
 			}
 
 			break;}
-		case ipfixdump::operation:
+		case fbitdump::operation:
 			values *left, *right;
 
 			left = evaluate(ast->left, cur);
@@ -343,7 +343,7 @@ stringSet& Column::getColumns(AST* ast)
 	/* use cached values if possible */
 	if (ast->cached) return ast->astColumns;
 
-	if (ast->type == ipfixdump::value) {
+	if (ast->type == fbitdump::value) {
 		if (ast->semantics != "flows") {
 			if (ast->parts > 1) {
 				for (int i = 0; i < ast->parts; i++) {
@@ -400,12 +400,12 @@ bool Column::getAggregate(AST* ast)
 {
 
 	/* AST type must be 'value' and aggregation string must not be empty */
-	if (ast->type == ipfixdump::value) {
+	if (ast->type == fbitdump::value) {
 		if (!ast->aggregation.empty()) {
 			return true;
 		}
 	/* or both sides of operation must be aggregable */
-	} else if (ast->type == ipfixdump::operation) {
+	} else if (ast->type == fbitdump::operation) {
 		return getAggregate(ast->left) && getAggregate(ast->right);
 	}
 
@@ -443,7 +443,7 @@ bool Column::isSeparator() {
 }
 
 bool Column::isOperation() {
-	if (this->ast != NULL && this->ast->type == ipfixdump::operation) {
+	if (this->ast != NULL && this->ast->type == fbitdump::operation) {
 		return true;
 	}
 
