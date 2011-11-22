@@ -196,8 +196,12 @@ std::string Printer::printIPv4(uint32_t address)
 			/* name successfully translated, return */
 			return host;
 		}
-		/* error during DNS lookup, print IP address instead */
+
+		/* error */
 	}
+
+
+	/* Error during DNS lookup, print IP address instead */
 
 	/* convert address */
 	in_addr.s_addr = htonl(address);
@@ -211,6 +215,35 @@ std::string Printer::printIPv6(uint64_t part1, uint64_t part2)
 {
 	char buf[INET6_ADDRSTRLEN];
 	struct in6_addr in6_addr;
+	int ret;
+	Resolver *resolver;
+
+	resolver = this->conf.getResolver();
+
+	if (resolver->isConfigured()) {
+		/* do reverse DNS lookup */
+		struct sockaddr_in6 sock6;
+		char host[NI_MAXHOST];
+		struct in6_addr *in6addr = &(sock6.sin6_addr);
+
+		memset(&sock6, 0, sizeof(sock6));
+		sock6.sin6_family = AF_INET6;
+		*((uint64_t *) in6addr->s6_addr) = htobe64(part1);
+		*(((uint64_t *) in6addr->s6_addr)+1) = htobe64(part2);
+
+		ret = getnameinfo((const struct sockaddr *)&sock6, sizeof(sock6), host, NI_MAXHOST, NULL, 0, 0);
+		if (ret == 0) {
+			/* name successfully translated, return */
+			return host;
+		}
+
+		/* error */
+	}
+
+	std::cerr << "\n\n\nDEBUG!!!!!!\n\n\n" << std::endl;
+
+	/* Error during DNS lookup, print IP address instead */
+
 
 	/* convert address */
 	*((uint64_t*) &in6_addr.s6_addr) = htobe64(part1);
