@@ -240,10 +240,8 @@ std::string Printer::printIPv6(uint64_t part1, uint64_t part2)
 		/* error */
 	}
 
-	std::cerr << "\n\n\nDEBUG!!!!!!\n\n\n" << std::endl;
 
 	/* Error during DNS lookup, print IP address instead */
-
 
 	/* convert address */
 	*((uint64_t*) &in6_addr.s6_addr) = htobe64(part1);
