@@ -40,7 +40,7 @@
 #ifndef CURSOR_H_
 #define CURSOR_H_
 
-#include <ibis.h>
+#include <fastbit/ibis.h>
 #include <string>
 #include "AST.h"
 #include "Table.h"

@@ -39,7 +39,7 @@
 
 #include "TableManager.h"
 #include <algorithm>
-#include <ibis.h>
+#include <fastbit/ibis.h>
 
 namespace fbitdump {
 

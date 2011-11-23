@@ -40,7 +40,7 @@
 #ifndef TABLE_MANAGER_CURSOR_H_
 #define TABLE_MANAGER_CURSOR_H_
 
-#include <ibis.h>
+#include <fastbit/ibis.h>
 #include <cstring>
 #include "AST.h"
 #include "Table.h"
