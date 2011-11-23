@@ -44,6 +44,7 @@
 #include <netdb.h>
 #include <resolv.h>
 
+
 #include "Resolver.h"
 
 namespace fbitdump {
@@ -115,9 +116,63 @@ bool Resolver::isConfigured()
 	return this->configured;
 }
 
+bool Resolver::reverseLookup(uint32_t in_addr, char *result, int len)
+{
+	if (!this->isConfigured()) {
+		/* configure the resolver first */
+#ifdef DEBUG
+		std::cerr << "DNS resolver is not configured yet" << std::endl;
+#endif
+
+		return false;
+	}
+
+	int ret;
+	struct sockaddr_in sock;
+
+	memset(&sock, 0, sizeof(sock));
+	sock.sin_family = AF_INET;
+	sock.sin_addr.s_addr = htonl(in_addr);
+
+	ret = getnameinfo((const struct sockaddr *)&sock, sizeof(sock), result, len, NULL, 0, 0);
+	if (ret != 0) {
+		return false;
+	}
+
+	return true;
+}
+
+bool Resolver::reverseLookup6(uint64_t in6_addr_part1, uint64_t in6_addr_part2, char *result, int len)
+{
+	if (!this->isConfigured()) {
+		/* configure the resolver first */
+#ifdef DEBUG
+		std::cerr << "DNS resolver is not configured yet" << std::endl;
+#endif
+
+		return false;
+	}
+
+	int ret;
+	struct sockaddr_in6 sock6;
+	struct in6_addr *in6addr = &(sock6.sin6_addr);
+
+	memset(&sock6, 0, sizeof(sock6));
+	sock6.sin6_family = AF_INET6;
+	*((uint64_t *) in6addr->s6_addr) = htobe64(in6_addr_part1);
+	*(((uint64_t *) in6addr->s6_addr)+1) = htobe64(in6_addr_part2);
+
+	ret = getnameinfo((const struct sockaddr *)&sock6, sizeof(sock6), result, len, NULL, 0, 0);
+	if (ret != 0) {
+		return false;
+	}
+
+	return true;
+}
+
 Resolver::~Resolver()
 {
 	/* nothing to do */
 }
 
-} /* namespace */
+} /* namespace fbitdump */

@@ -46,6 +46,7 @@
 #include "Column.h"
 #include "Printer.h"
 #include "Table.h"
+#include "Resolver.h"
 
 namespace fbitdump
 {
@@ -182,28 +183,22 @@ std::string Printer::printIPv4(uint32_t address)
 
 	resolver = this->conf.getResolver();
 
+	/* translate IP address to domain name, if user wishes so */
 	if (resolver->isConfigured()) {
-		/* do reverse DNS lookup */
-		struct sockaddr_in sock;
 		char host[NI_MAXHOST];
 
-		memset(&sock, 0, sizeof(sock));
-		sock.sin_family = AF_INET;
-		sock.sin_addr.s_addr = htonl(address);
-
-		ret = getnameinfo((const struct sockaddr *)&sock, sizeof(sock), host, NI_MAXHOST, NULL, 0, 0);
-		if (ret == 0) {
-			/* name successfully translated, return */
+		ret = resolver->reverseLookup(address, host, NI_MAXHOST);
+		if (ret == true) {
 			return host;
 		}
 
-		/* error */
+		/* Error during DNS lookup, print IP address instead */
 	}
 
-
-	/* Error during DNS lookup, print IP address instead */
-
-	/* convert address */
+	/*
+	 * user don't want to see domain names, or DNS is somehow broken.
+	 * print just IP address
+	 */
 	in_addr.s_addr = htonl(address);
 	inet_ntop(AF_INET, &in_addr, buf, INET_ADDRSTRLEN);
 
@@ -220,30 +215,22 @@ std::string Printer::printIPv6(uint64_t part1, uint64_t part2)
 
 	resolver = this->conf.getResolver();
 
+	/* translate IP address to domain name, if user wishes so */
 	if (resolver->isConfigured()) {
-		/* do reverse DNS lookup */
-		struct sockaddr_in6 sock6;
 		char host[NI_MAXHOST];
-		struct in6_addr *in6addr = &(sock6.sin6_addr);
 
-		memset(&sock6, 0, sizeof(sock6));
-		sock6.sin6_family = AF_INET6;
-		*((uint64_t *) in6addr->s6_addr) = htobe64(part1);
-		*(((uint64_t *) in6addr->s6_addr)+1) = htobe64(part2);
-
-		ret = getnameinfo((const struct sockaddr *)&sock6, sizeof(sock6), host, NI_MAXHOST, NULL, 0, 0);
-		if (ret == 0) {
-			/* name successfully translated, return */
+		ret = resolver->reverseLookup6(part1, part2, host, NI_MAXHOST);
+		if (ret == true) {
 			return host;
 		}
 
-		/* error */
+		/* Error during DNS lookup, print IP address instead */
 	}
 
-
-	/* Error during DNS lookup, print IP address instead */
-
-	/* convert address */
+	/*
+	 * user don't want to see domain names, or DNS is somehow broken.
+	 * print just IP address
+	 */
 	*((uint64_t*) &in6_addr.s6_addr) = htobe64(part1);
 	*(((uint64_t*) &in6_addr.s6_addr)+1) = htobe64(part2);
 	inet_ntop(AF_INET6, &in6_addr, buf, INET6_ADDRSTRLEN);
