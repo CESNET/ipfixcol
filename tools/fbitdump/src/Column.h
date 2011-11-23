@@ -194,6 +194,13 @@ public:
 	bool isOperation();
 
 	/**
+	 * \brief Return name of the file, that contains data for this column
+	 *
+	 * @return this->element
+	 */
+	std::string getElement();
+
+	/**
 	 * \brief Class destructor
 	 * Frees AST
 	 */
@@ -256,13 +263,15 @@ private:
 	 */
 	bool getAggregate(AST* ast);
 
-	std::string nullStr; /**< String to print when columns has no value */
-	std::string name; /**< name of the column  */
-	int width; /**< Width of the column */
-	bool alignLeft; /**< Align column to left?*/
-	AST *ast; /**< Abstract syntax tree for value of this column */
-	stringSet aliases; /**< Aliases of the column*/
-	bool aggregation; /**< Determines whether column is in aggregation mode */
+
+	std::string nullStr;    /**< String to print when columns has no value */
+	std::string name;       /**< name of the column  */
+	int width;              /**< Width of the column */
+	bool alignLeft;         /**< Align column to left?*/
+	AST *ast;               /**< Abstract syntax tree for value of this column */
+	stringSet aliases;      /**< Aliases of the column*/
+	bool aggregation;       /**< Determines whether column is in aggregation mode */
+	std::string element;    /**< name of the file, which contains actual data for this column */
 
 }; /* end of Column class */
 

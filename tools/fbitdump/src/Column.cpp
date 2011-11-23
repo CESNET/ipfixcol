@@ -91,6 +91,12 @@ bool Column::init(pugi::xml_document &doc, std::string alias, bool aggregate)
 	for (pugi::xpath_node_set::const_iterator it = aliases.begin(); it != aliases.end(); ++it) {
 		this->addAlias(it->node().child_value());
 	}
+
+	/* element is name of the file, which contains actual data for this column */
+	if (column.node().child("value").child("element") != 0) {
+		this->element = column.node().child("value").child_value("element");
+	}
+
 	return true;
 }
 
@@ -400,6 +406,11 @@ bool Column::isOperation() {
 	}
 
 	return false;
+}
+
+std::string Column::getElement()
+{
+	return this->element;
 }
 
 Column::Column(): nullStr("NULL"), width(0), alignLeft(false), ast(NULL), aggregation(false) {}

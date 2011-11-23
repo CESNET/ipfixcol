@@ -85,6 +85,9 @@ int64_t values::toLong(int part)
 	case ibis::LONG:
 		return (int64_t) this->value[part].int64;
 		break;
+	case ibis::ULONG:
+		return (int64_t) this->value[part].uint64;
+		break;
 	default: return 0;
 	}
 }
@@ -109,7 +112,7 @@ double values::toDouble(int part)
 std::string values::toString(bool plainNumbers)
 {
 	std::string valStr;
-	/* this is static for preformance reason */
+	/* this is static for performance reason */
 	static std::ostringstream ss;
 
 	/* print by type */

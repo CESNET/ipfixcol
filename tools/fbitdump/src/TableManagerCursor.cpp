@@ -51,15 +51,6 @@ TableManagerCursor::TableManagerCursor(TableManager &tableManager, Configuration
 	this->currentCursor = NULL;
 	this->cursorIndex = 0;
 
-	/* build list of all cursors only with m option */
-	if (this->conf->getOptionm()) {
-		/* get table cursors */
-		if (this->getTableCursors() == false) {
-			std::cerr << "Unable to get table cursors" << std::endl;
-			exit(EXIT_FAILURE);
-		}
-	}
-
 	pugi::xml_document doc;
 	if (!doc.load_file(COLUMNS_XML)) {
 		std::cerr << "XML '"<< COLUMNS_XML << "' with columns configuration cannot be loaded!" << std::endl;
@@ -68,6 +59,18 @@ TableManagerCursor::TableManagerCursor(TableManager &tableManager, Configuration
 	this->timestampColumn = new Column();
 
 	this->timestampColumn->init(doc, "%ts", false);
+
+	/* build list of all cursors only with m option */
+	if (this->conf->getOptionm()) {
+		/* order  */
+		this->orderAllTables();
+
+		/* get table cursors */
+		if (this->getTableCursors() == false) {
+			std::cerr << "Unable to get table cursors" << std::endl;
+			exit(EXIT_FAILURE);
+		}
+	}
 
 	this->auxList.resize(this->tableManager->getTables().size(), true);
 	this->auxNoMoreRows.resize(this->tableManager->getTables().size(), false);
@@ -128,6 +131,9 @@ bool TableManagerCursor::next()
 	unsigned int minIndex = 0;
 	unsigned int u;
 
+	unsigned long minValueLong;
+	unsigned long valueLong;
+
 	/* check whether we reached limit on number of printed rows */
 	if (this->conf->getMaxRecords() && this->rowCounter >= this->conf->getMaxRecords()) {
 		/* without option m, cursor list is not used => delete current cursor here  */
@@ -172,20 +178,24 @@ bool TableManagerCursor::next()
 				minValue = value;
 				minCursor = cursor;
 				minIndex = u;
-			} else if (value->toLong() < minValue->toLong()) {
-				minCursor = cursor;
-				delete(minValue);
-				minValue = value;
-				minIndex = u;
 			} else {
-				delete(value);
+					valueLong = value->toLong();
+					minValueLong = minValue->toLong();
+				if (valueLong < minValueLong) {
+					minCursor = cursor;
+					delete(minValue);
+					minValue = value;
+					minIndex = u;
+				} else {
+					delete(value);
+				}
 			}
 		}
 
 		delete(minValue);
 
 		/* check whether we have valid row */
-		if (!cursor) {
+		if (!minCursor) {
 			/* looks like there are no data left */
 			return false;
 		}
@@ -248,6 +258,30 @@ bool TableManagerCursor::getColumn(const char *name, values &value, int part)
 Cursor *TableManagerCursor::getCurrentCursor()
 {
 	return this->currentCursor;
+}
+
+bool TableManagerCursor::orderAllTables()
+{
+	tableVector::iterator iter;
+	ibis::table *table;
+
+#ifdef DEBUG
+	std::cerr << "Sorting tables..." << std::endl;
+#endif
+
+	for (iter = this->tableManager->getTables().begin(); iter != this->tableManager->getTables().end(); iter++) {
+		table = (*iter)->getFastbitTable();
+
+		if (table) {
+			table->orderby(this->timestampColumn->getElement().c_str());
+		}
+	}
+
+#ifdef DEBUG
+	std::cerr << "Done." << std::endl;
+#endif
+
+	return true;
 }
 
 } /* namespace fbitdump */
