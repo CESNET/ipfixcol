@@ -60,7 +60,7 @@ $(OBJDIR)/scanner.o: $(SRCDIR)/scanner.c
 $(SRCDIR)/scanner.c: $(SRCDIR)/scanner.l
 	$(FLEX) -o $(SRCDIR)/scanner.c --header-file=$(SRCDIR)/scanner.h $<
 
-.PHONY: doc
+.PHONY: doc clean
 doc: doxygen
 
 doxygen: $(DOXYGEN_CONFIG) $(SRCS:%=$(SRCDIR)/%)
