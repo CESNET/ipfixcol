@@ -203,54 +203,6 @@ void Column::setAlignLeft(bool alignLeft)
 	this->alignLeft = alignLeft;
 }
 
-
-//std::string Column::getValue(Cursor *cur, bool plainNumbers) {
-//	std::string valueStr;
-//	std::stringstream ss;
-//	values *val;
-//
-//	/* check whether we have name column */
-//	if (ast == NULL) {
-//		return name;
-//	}
-//
-//	val = evaluate(this->ast, cur);
-//
-//	/* check for missing column */
-//	if (val == NULL) {
-//		return this->nullStr;
-//	}
-//
-//	if (!this->ast->semantics.empty() && this->ast->semantics != "flows") {
-//		if (this->ast->semantics == "ipv4") {
-//			valueStr = printIPv4(val->value[0].uint32);
-//		} else if (this->ast->semantics == "timestamp") {
-//			if (plainNumbers == true) {
-//				valueStr = val->value[0].uint64;
-//			} else {
-//				valueStr = printTimestamp(val->value[0].uint64);
-//			}
-//		} else if (this->ast->semantics == "ipv6") {
-//			valueStr = printIPv6(val->value[0].uint64, val->value[1].uint64);
-//		} else if (this->ast->semantics == "protocol") {
-//			if (!plainNumbers) {
-//				valueStr = protocols[val->value[0].uint8];
-//			} else {
-//				ss << (uint16_t) val->value[0].uint8;
-//				valueStr = ss.str();
-//			}
-//		} else if (this->ast->semantics == "tcpflags") {
-//			valueStr = printTCPFlags(val->value[0].uint8);
-//		}
-//	} else {
-//		valueStr = val->toString();
-//	}
-//
-//	/* clean value variable */
-//	delete val;
-//
-//	return valueStr;
-
 values* Column::getValue(Cursor *cur)
 {
 	return evaluate(this->ast, cur);
