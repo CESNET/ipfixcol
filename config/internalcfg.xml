@@ -45,12 +45,12 @@
 	<!-- fastbit storage plugin
 	<storagePlugin>
 		<fileFormat>fastbit</fileFormat>
-		<file>/usr/lib64/fastbit_output.so</file>
+		<file>/usr/lib64/ipfixcol_fastbit_output.so</file>
 	</storagePlugin> -->
 
 	<!-- postgress storage plugin
 	<storagePlugin>
         <fileFormat>postgres</fileFormat>
-        <file>/usr/lib64/postgres_output.so</file>
+        <file>/usr/lib64/ipfixcol_postgres_output.so</file>
 	</storagePlugin> -->
 </ipfixcol>
