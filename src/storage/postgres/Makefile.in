@@ -38,7 +38,7 @@ $(OBJ): $(SRCS)
 	done;
 
 clean:
-	-rm $(TARGETS) $(OBJ)
+	-rm -f $(TARGETS) $(OBJ)
 
 .PHONY: tarball-prepare
 tarball-prepare:
