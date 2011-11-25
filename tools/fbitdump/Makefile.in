@@ -7,6 +7,10 @@ CXXFLAGS  = @CXXFLAGS@
 LIBS    = @LIBS@
 FLEX = @FLEX@
 
+NAME = @PACKAGE_NAME@
+VERSION = @PACKAGE_VERSION@
+RELEASE= @RELEASE@
+
 SRCS    = fbitdump.cpp \
 		Configuration.cpp \
 		Column.cpp \
@@ -22,11 +26,29 @@ SRCS    = fbitdump.cpp \
 OBJDIR  = .obj
 SRCDIR  = src
 SRC3RD  = 3rdparty
-VERSION = VERSION
 
 DOXYGEN = @DOXYGEN@
 DOXYGEN_CONFIG = doxyconf
 DOXYGEN_DIR = doc
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+datadir = @datadir@
+bindir = @bindir@
+includedir = @includedir@
+libdir =  @libdir@
+mandir = @mandir@
+
+RPMDIR=RPMBUILD
+RPMBUILD = @RPMBUILD@
+INSTALL = @INSTALL@
+INSTALL_DATA = @INSTALL_DATA@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+# what should be copied to ouput, resulting binary
+TARGET_BIN = fbitdump
+TARGET_DATA = fbitdump.xml
+# configuration and installation files
+CONF = configure.in fbitdump.xml install-sh Makefile.in VERSION fbitdump.spec.in tools
 
 # scanner must be build before filter (filter includes scanner's header)
 OBJS    = $(OBJDIR)/scanner.o $(SRCS:%.cpp=$(OBJDIR)/%.o) $(OBJDIR)/pugi.o
@@ -34,7 +56,7 @@ OBJS    = $(OBJDIR)/scanner.o $(SRCS:%.cpp=$(OBJDIR)/%.o) $(OBJDIR)/pugi.o
 all: fbitdump
 
 # fbitdump
-fbitdump: $(OBJS) $(VERSION)
+fbitdump: $(OBJS) VERSION
 	$(CXX) $(CXXFLAGS) $(LIBS) $(OBJS) -o $@
 
 # Printer is specified extra with -fno-strict-aliasing for performance reasons
@@ -74,8 +96,38 @@ doxygen: $(DOXYGEN_CONFIG) $(SRCS:%=$(SRCDIR)/%)
 		exit 1; \
 	fi
 
+.PHONY: install
+install: $(TARGET_BIN) $(TARGET_DATA)
+	[ -d $(DESTDIR)$(bindir) ] || \
+		(mkdir -p $(DESTDIR)$(bindir); chmod 755 $(DESTDIR)$(bindir));
+	$(INSTALL_PROGRAM) $(TARGET_BIN) $(DESTDIR)$(bindir)/;
+	[ -d $(DESTDIR)$(datadir)/$(NAME)/ ] || \
+		(mkdir -p $(DESTDIR)$(datadir)/$(NAME)/; chmod 755 $(DESTDIR)$(datadir)/$(NAME)/);
+	$(INSTALL_DATA) $(TARGET_DATA) $(DESTDIR)$(datadir)/$(NAME)/;
+
+.PHONY: tarball
+tarball: $(CONF) $(SRCDIR)
+	@rm -rf $(NAME)-$(VERSION); \
+	mkdir $(NAME)-$(VERSION); \
+	rm -rf $(RPMDIR)/SOURCES/; \
+	mkdir -p $(RPMDIR)/SOURCES/; \
+	for i in $(SRC3RD) $(SRCDIR) $(CONF); do \
+		[ "$$i" != "$${i%/*}" -a ! -d $(NAME)-$(VERSION)/$${i%/*} ] && mkdir -p $(NAME)-$(VERSION)/$${i%/*}; \
+		cp -r $$i $(NAME)-$(VERSION)/$$i; \
+	done;
+	tar -c -z -f $(RPMDIR)/SOURCES/$(NAME)-$(VERSION)-$(RELEASE).tar.gz \
+	    $(NAME)-$(VERSION);
+	@rm -rf $(NAME)-$(VERSION);
+
+.PHONY: rpm
+rpm: tarball $(NAME).spec
+	@mkdir -p $(RPMDIR)/BUILD $(RPMDIR)/RPMS $(RPMDIR)/SOURCES $(RPMDIR)/SPECS $(RPMDIR)/SRPMS;
+	$(RPMBUILD) -ba $(NAME).spec \
+		--define "_topdir `pwd`/$(RPMDIR)";
+
 
 clean:
-	rm -f ipfixdump src/protocols.cpp src/scanner.h src/scanner.c
+	rm -f fbitdump src/protocols.cpp src/scanner.h src/scanner.c
 	rm -fr doc $(OBJDIR)
+	rm -fr $(RPMDIR)
 
