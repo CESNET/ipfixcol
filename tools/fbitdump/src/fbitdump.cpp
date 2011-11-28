@@ -48,16 +48,17 @@
 #include "Printer.h"
 #include "Filter.h"
 
-using namespace ipfixdump;
+using namespace fbitdump;
 
 int main(int argc, char *argv[])
 {
 	int ret;
 
 	/* raise limit for cache size, when there is more memory available */
-//	ibis::fileManager::adjustCacheSize(2048000000);
+	ibis::fileManager::adjustCacheSize(512000000);
 
-//	ibis::gVerbose = 1;
+//	ibis::gVerbose = 7;
+	ibis::gParameters().add("fileManager.minMapSize", "50");
 
 	/* create configuration to work with */
 	Configuration conf;

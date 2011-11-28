@@ -42,7 +42,7 @@
 
 #include "typedefs.h"
 
-namespace ipfixdump {
+namespace fbitdump {
 
 #define MAX_PARTS 2
 
@@ -135,6 +135,6 @@ struct AST
 	}
 };
 
-} /* end of namespace ipfixdump */
+} /* end of namespace fbitdump */
 
 #endif /* AST_H_ */

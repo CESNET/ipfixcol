@@ -41,12 +41,13 @@
 #include <cstdlib>
 #include <cstring>
 #include <arpa/inet.h>
+#include <netdb.h>
 #include "protocols.h"
 #include "Column.h"
 #include "Printer.h"
 #include "Table.h"
 
-namespace ipfixdump
+namespace fbitdump
 {
 
 
@@ -117,9 +118,10 @@ void Printer::printRow(Cursor *cur)
 		} else {
 			out.setf(std::ios_base::right, std::ios_base::adjustfield);
 		}
+
 		out << printValue(conf.getColumns()[i], cur);
 	}
-	out << std::endl;
+	out << "\n"; /* much faster then std::endl */
 }
 
 std::string Printer::printValue(Column *col, Cursor *cur)
@@ -150,9 +152,10 @@ std::string Printer::printValue(Column *col, Cursor *cur)
 			if (!conf.getPlainNumbers()) {
 				valueStr = protocols[val->value[0].uint8];
 			} else {
-				std::stringstream ss;
+				static std::stringstream ss;
 				ss << (uint16_t) val->value[0].uint8;
 				valueStr = ss.str();
+				ss.str("");
 			}
 		} else if (col->getSemantics() == "tcpflags") {
 			valueStr = printTCPFlags(val->value[0].uint8);
@@ -174,17 +177,73 @@ std::string Printer::printIPv4(uint32_t address)
 {
 	char buf[INET_ADDRSTRLEN];
 	struct in_addr in_addr;
+	int ret;
+	Resolver *resolver;
+
+	resolver = this->conf.getResolver();
+
+	if (resolver->isConfigured()) {
+		/* do reverse DNS lookup */
+		struct sockaddr_in sock;
+		char host[NI_MAXHOST];
+
+		memset(&sock, 0, sizeof(sock));
+		sock.sin_family = AF_INET;
+		sock.sin_addr.s_addr = htonl(address);
+
+		ret = getnameinfo((const struct sockaddr *)&sock, sizeof(sock), host, NI_MAXHOST, NULL, 0, 0);
+		if (ret == 0) {
+			/* name successfully translated, return */
+			return host;
+		}
+
+		/* error */
+	}
+
+
+	/* Error during DNS lookup, print IP address instead */
 
 	/* convert address */
 	in_addr.s_addr = htonl(address);
 	inet_ntop(AF_INET, &in_addr, buf, INET_ADDRSTRLEN);
 
+	/* IP address in printable form */
 	return buf;
 }
+
 std::string Printer::printIPv6(uint64_t part1, uint64_t part2)
 {
 	char buf[INET6_ADDRSTRLEN];
 	struct in6_addr in6_addr;
+	int ret;
+	Resolver *resolver;
+
+	resolver = this->conf.getResolver();
+
+	if (resolver->isConfigured()) {
+		/* do reverse DNS lookup */
+		struct sockaddr_in6 sock6;
+		char host[NI_MAXHOST];
+		struct in6_addr *in6addr = &(sock6.sin6_addr);
+
+		memset(&sock6, 0, sizeof(sock6));
+		sock6.sin6_family = AF_INET6;
+		*((uint64_t *) in6addr->s6_addr) = htobe64(part1);
+		*(((uint64_t *) in6addr->s6_addr)+1) = htobe64(part2);
+
+		ret = getnameinfo((const struct sockaddr *)&sock6, sizeof(sock6), host, NI_MAXHOST, NULL, 0, 0);
+		if (ret == 0) {
+			/* name successfully translated, return */
+			return host;
+		}
+
+		/* error */
+	}
+
+	std::cerr << "\n\n\nDEBUG!!!!!!\n\n\n" << std::endl;
+
+	/* Error during DNS lookup, print IP address instead */
+
 
 	/* convert address */
 	*((uint64_t*) &in6_addr.s6_addr) = htobe64(part1);
@@ -213,29 +272,13 @@ std::string Printer::printTimestamp64(uint64_t timestamp)
 
 std::string Printer::printTimestamp(struct tm *tm, uint64_t msec)
 {
-	/* make static for performance reasons */
-	static std::ostringstream timeStream;
-	/* empty before use */
-	timeStream.str("");
+	char buff[23];
 
-	timeStream.setf(std::ios_base::right, std::ios_base::adjustfield);
-	timeStream.fill('0');
+	strftime(buff, sizeof(buff), "%Y-%m-%d %T", tm);
+	/* append miliseconds */
+	sprintf(&buff[19], ".%03u", (unsigned int) msec);
 
-	timeStream << (1900 + tm->tm_year) << "-";
-	timeStream.width(2);
-	timeStream << (1 + tm->tm_mon) << "-";
-	timeStream.width(2);
-	timeStream << tm->tm_mday << " ";
-	timeStream.width(2);
-	timeStream << tm->tm_hour << ":";
-	timeStream.width(2);
-	timeStream << tm->tm_min << ":";
-	timeStream.width(2);
-	timeStream << tm->tm_sec << ".";
-	timeStream.width(3);
-	timeStream << msec;
-
-	return timeStream.str();
+	return buff;
 }
 
 std::string Printer::printTCPFlags(unsigned char flags)

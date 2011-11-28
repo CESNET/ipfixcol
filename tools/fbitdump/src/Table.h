@@ -44,7 +44,7 @@
 #include "Filter.h"
 #include "Cursor.h"
 
-namespace ipfixdump {
+namespace fbitdump {
 
 /* Table and Cursor(Filter) classes are dependent on each other */
 class Cursor;
@@ -74,6 +74,8 @@ public:
 
 	/**
 	 * \brief Creates cursor for this table
+	 * When the table is filtered out, cursor might be NULL
+	 *
 	 * @return Pointer to new Cursor class instance
 	 */
 	Cursor* createCursor();
@@ -87,19 +89,17 @@ public:
 	 * @param aggregateColumns Set of column to aggregate by
 	 * @param summaryColumns Set of columns to summarize
 	 * @param filter Filter to use
-	 * @return true when table can be used further, false when table is
-	 * fitered out
 	 */
-	bool aggregate(stringSet &aggregateColumns, stringSet &summaryColumns,
+	void aggregate(stringSet &aggregateColumns, stringSet &summaryColumns,
 			Filter &filter);
 
 	/**
 	 * \brief Run query that filters data in this table
+	 *
+	 * @param select Set of column names to use in query
 	 * @param filter Filter to use
-	 * @return true when table can be used further, false when table is
-	 * fitered out
 	 */
-	bool filter(Filter &filter);
+	void filter(stringSet columnNames, Filter &filter);
 
 	/**
 	 * \brief Get number of rows
@@ -123,12 +123,12 @@ public:
 	namesColumnsMap& getNamesColumns();
 
 	/**
-	 * \brief Return reference to used filter
+	 * \brief Return pointer to used filter
 	 * (For cursor)
 	 *
 	 * @return Table filter reference
 	 */
-	Filter& getFilter();
+	Filter* getFilter();
 
 	/**
 	 * \brief Table class destructor
@@ -136,12 +136,27 @@ public:
 	~Table();
 
 private:
+	/**
+	 * \brief Run query specified by queueQuery
+	 */
+	void doQuery();
+
+	/**
+	 * \brief Enquque query to be performed when table is used
+	 *
+	 * @param select Select part of the query
+	 * @param filter Where part of the query
+	 */
+	void queueQuery(std::string select, Filter &filter);
+
 	ibis::table *table; /**< wrapped cursors table */
 	Filter *usedFilter; /**< Saved filter for cursor */
 	namesColumnsMap namesColumns; /**< Map of column names to column numbers */
+	bool queryDone; /**< Indicates that query was already preformed */
+	std::string select; /**< Select string to be used on next query */
 };
 
-} /* end of namespace ipfixdump */
+} /* end of namespace fbitdump */
 
 
 #endif /* TABLE_H_ */

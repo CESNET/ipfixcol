@@ -39,17 +39,24 @@
 
 #include "Cursor.h"
 
-namespace ipfixdump {
+namespace fbitdump {
 
-Cursor::Cursor(Table &table): table(table)
-{
-	this->cursor = this->table.getFastbitTable()->createCursor();
-	/* save column types array (this is a lot more effective than calling the menthod on cursor) */
-	this->columnTypes = this->cursor->columnTypes();
-}
+Cursor::Cursor(Table &table): table(table), cursor(NULL) {}
 
 bool Cursor::next()
 {
+	/* on first run create the real cursor */
+	if (this->cursor == NULL) {
+		/* if table was filtered out, there is no next row */
+		if (this->table.getFastbitTable() == NULL) {
+			return false;
+		}
+
+		this->cursor = this->table.getFastbitTable()->createCursor();
+		/* save column types array (this is a lot more effective than calling the menthod on cursor) */
+		this->columnTypes = this->cursor->columnTypes();
+	}
+
 	int ret = 0;
 	/* skip filtered rows */
 	do {
@@ -57,7 +64,7 @@ bool Cursor::next()
 		/* no more rows */
 		if (ret != 0) return false;
 
-	} while (!this->table.getFilter().isValid(*this));
+	} while (!this->table.getFilter()->isValid(*this));
 
 	/* we got valid row */
 	return true;
@@ -151,4 +158,4 @@ Cursor::~Cursor()
 	delete this->cursor;
 }
 
-} /* end of namespace ipfixdump */
+} /* end of namespace fbitdump */

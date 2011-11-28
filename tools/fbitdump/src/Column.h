@@ -45,7 +45,7 @@
 #include "Cursor.h"
 #include "TableManagerCursor.h"
 
-namespace ipfixdump {
+namespace fbitdump {
 
 /* Cursor depends on Column class */
 class Cursor;
@@ -266,6 +266,6 @@ private:
 
 }; /* end of Column class */
 
-} /* end of ipfixdump namespace */
+} /* end of fbitdump namespace */
 
 #endif /* COLUMN_H_ */
