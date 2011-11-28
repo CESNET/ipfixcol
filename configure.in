@@ -243,6 +243,11 @@ AC_ARG_ENABLE([postgres],
         [POSTGRES=yes],
         [POSTGRES=no])
 
+AC_ARG_ENABLE([fastbit], 
+        AC_HELP_STRING([--enable-fastbit],[enable fastbit storage plugin]),
+        [FASTBIT=yes],
+        [FASTBIT=no])
+
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h syslog.h unistd.h])
 
@@ -254,7 +259,13 @@ fi
 
 if test "$POSTGRES" = "yes"; then
 	AC_CHECK_HEADER([libpq-fe.h], , 
-		[AC_MSG_ERROR([libpq-fe.h header not found, run with --disable-postgres to build without PostgreSQL support])]
+		[AC_MSG_ERROR([libpq-fe.h header not found])]
+	)
+fi
+
+if test "$FASTBIT" = "yes"; then
+	AC_CHECK_HEADER([fastbit/ibis.h], , 
+		[AC_MSG_ERROR([fastbit/ibis.h header not found])]
 	)
 fi
 
@@ -294,7 +305,9 @@ done;
 for dir in src/storage/*; do
     if test -d "$dir" && test -f "$dir"/Makefile.in; then
     	if test ! "$dir" = "src/storage/postgres" || test ! "$POSTGRES" = "no"; then
-        	STORAGE_PLUGINS="$STORAGE_PLUGINS $dir";
+    		if test ! "$dir" = "src/storage/fastbit" || test ! "$FASTBIT" = "no"; then
+        		STORAGE_PLUGINS="$STORAGE_PLUGINS $dir";
+		fi;
         fi;
     fi;
 done;
