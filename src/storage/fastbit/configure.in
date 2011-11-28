@@ -229,8 +229,8 @@ AC_ARG_ENABLE([debug],
         [CFLAGS="$CFLAGS -Wextra -g -pg -DDEBUG"])
         
 ######################### Checks for header files ##############################
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h syslog.h unistd.h])
-#AC_CHECK_HEADER([fastbit/ibis.h], ,
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h syslog.h unistd.h fastbit/ibis.h])
+#AC_CHECK_HEADER([ibis.h], ,
 #                [AC_MSG_ERROR([fastbit/ibis.h header not found, Fastbit library is needed.])])
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
