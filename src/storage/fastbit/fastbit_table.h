@@ -45,7 +45,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <ibis.h>
+#include <fastbit/ibis.h>
 #include <map>
 #include <iostream>
 #include <string>

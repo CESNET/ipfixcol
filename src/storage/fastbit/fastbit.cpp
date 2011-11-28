@@ -52,7 +52,7 @@ extern "C" {
 #include "fastbit_table.h"
 #include "fastbit_element.h"
 
-#include <ibis.h>
+#include <fastbit/ibis.h>
 
 #include <map>
 #include <iostream>
