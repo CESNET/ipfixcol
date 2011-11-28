@@ -3,14 +3,51 @@ CFLAGS  = @CFLAGS@
 LIBS    = @LIBS@
 INCLUDE = "-I../../../"
 
-all: ipfix_input.so
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+datarootdir = @datarootdir@
+datadir = @datadir@
+bindir = @bindir@
+includedir = @includedir@
+libdir =  @libdir@
+mandir = @mandir@
 
-ipfix_input.so: ipfix_input.o
-	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfix_input.so.1 ipfix_input.o -o $@ -lc
-	
-ipfix_input.o: ipfix_file.c
-	$(CC) $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
+TARGETS = ipfixcol_ipfix_input.so
+TOPDIR = @CONFIGURE_PWD@
+NAME = @PACKAGE_NAME@
+RELEASE = @RELEASE@
+INSTALL = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+VERSION = $(shell cut -f1 $(TOPDIR)/VERSION | tr -d '\n')
+DIR = "src/input/ipfix"
+
+SRCS = ipfix_file.c
+OBJ = ipfix_file.o
+
+all: ipfixcol_ipfix_input.so
+
+ipfixcol_ipfix_input.so: $(OBJ)
+	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfixcol_ipfix_input.so.1 -o $@ $< -lc
+        
+$(OBJ): $(SRCS)
+	@for i in $(SRCS); do \
+		$(CC) $(CFLAGS) $(INCLUDE) -fPIC -c $$i; \
+	done;
 
 clean:
-	-rm ipfix_input.so ipfix_input.o
+	rm -f $(TARGETS) $(OBJ)
+
+.PHONY: tarball-prepare
+tarball-prepare:
+	@for i in Makefile.in $(SRCS) $(MANSRCS) $(DOC); do \
+		[ -d $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) ] || \
+		mkdir -p $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) -p; \
+		cp $$i $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR)/$$i; \
+	done;
+
+.PHONY: install
+install: $(TARGETS)
+	[ -d $(DESTDIR)/$(libdir) ] || \
+		(mkdir -p $(DESTDIR)/$(libdir); chmod 755 $(DESTDIR)/$(libdir));
+	$(INSTALL_PROGRAM) $(TARGETS) $(DESTDIR)/$(libdir)/;
 
