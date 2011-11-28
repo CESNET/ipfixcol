@@ -40,12 +40,12 @@
 #ifndef CURSOR_H_
 #define CURSOR_H_
 
-#include <ibis.h>
+#include <fastbit/ibis.h>
 #include <string>
 #include "AST.h"
 #include "Table.h"
 
-namespace ipfixdump {
+namespace fbitdump {
 
 /* Table and Cursor classes are dependent on each other */
 class Table;
@@ -95,7 +95,7 @@ private:
 	ibis::table::typeList columnTypes; /**< Column types of the table */
 };
 
-} /* end of namespace ipfixdump */
+} /* end of namespace fbitdump */
 
 
 #endif /* CURSOR_H_ */

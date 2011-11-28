@@ -1,7 +1,7 @@
 /**
- * \file typedefs.h
- * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Header containing typedefs for fbitdump utility
+ * \file Resolver.h
+ * \author Michal Srb <michal.srb@cesnet.cz>
+ * \brief DNS resolver
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,45 +37,51 @@
  *
  */
 
-#ifndef TYPEDEFS_H_
-#define TYPEDEFS_H_
 
-#include <cstdio>
-#include <vector>
-#include <set>
-#include <map>
-#include <string>
-#include "fastbit/ibis.h"
+#ifndef RESOLVER_H_
+#define RESOLVER_H_
+
+#include <iostream>
+#include <cstring>
 
 namespace fbitdump {
 
-/* this is needed for the lexer: new yylex function prototype */
-#define YY_DECL int yylex(std::string &arg)
+/**
+ * \brief Class for DNS lookups
+ */
+class Resolver {
+private:
+	std::string nameserver;
+	bool configured;
 
-enum yytokentype
-{
-	COLUMN = 258,
-	NUMBER = 259,
-	CMP = 260,
-	RAWCOLUMN = 261,
-	OPERATOR = 262,
-	IPv4 = 263,
-	BRACKET = 264,
-	TIMESTAMP = 265,
-	OTHER = 300
+
+public:
+	Resolver();
+	Resolver(char *nameserver);
+	~Resolver();
+
+    /**
+     * \brief Returns resolver
+     *
+     * @return object which provides DNS resolving functionality
+     */
+	int setNameserver(char *nameserver);
+
+    /**
+     * \brief Returns resolver
+     *
+     * @return object which provides DNS resolving functionality
+     */
+	const char *getNameserver();
+
+    /**
+     * \brief Returns resolver
+     *
+     * @return object which provides DNS resolving functionality
+     */
+	bool isConfigured();
 };
 
-typedef std::vector<std::string> stringVector;
-typedef std::set<std::string> stringSet;
-typedef std::map<std::string, int> namesColumnsMap;
+}
 
-/* define these vectors with forward definitions of the classes */
-class Column;
-typedef std::vector<Column*> columnVector;
-class Table;
-typedef std::vector<Table*> tableVector;
-
-}  /* end of namespace fbitdump */
-
-#endif /* TYPEDEFS_H_ */
-
+#endif

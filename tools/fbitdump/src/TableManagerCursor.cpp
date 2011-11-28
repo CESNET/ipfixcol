@@ -39,10 +39,11 @@
 
 #include "TableManagerCursor.h"
 
-namespace ipfixdump {
+namespace fbitdump {
 
 
-TableManagerCursor::TableManagerCursor(TableManager &tableManager, Configuration &conf)
+TableManagerCursor::TableManagerCursor(TableManager &tableManager, Configuration &conf):
+		currentTableIt(tableManager.getTables().begin())
 {
 	this->tableManager = &tableManager;
 	this->conf = &conf;
@@ -50,10 +51,13 @@ TableManagerCursor::TableManagerCursor(TableManager &tableManager, Configuration
 	this->currentCursor = NULL;
 	this->cursorIndex = 0;
 
-	/* get table cursors */
-	if (this->getTableCursors() == false) {
-		std::cerr << "Unable to get table cursors" << std::endl;
-		exit(EXIT_FAILURE);
+	/* build list of all cursors only with m option */
+	if (this->conf->getOptionm()) {
+		/* get table cursors */
+		if (this->getTableCursors() == false) {
+			std::cerr << "Unable to get table cursors" << std::endl;
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	pugi::xml_document doc;
@@ -98,7 +102,9 @@ bool TableManagerCursor::getTableCursors()
 	/* get table cursors */
 	for (iter = this->tableManager->getTables().begin(); iter != this->tableManager->getTables().end(); iter++) {
 		cursor = (*iter)->createCursor();
-		this->cursorList.push_back(cursor);
+		if (cursor != NULL) {
+			this->cursorList.push_back(cursor);
+		}
 	}
 
 	this->cursorIndex = 0;
@@ -124,6 +130,10 @@ bool TableManagerCursor::next()
 
 	/* check whether we reached limit on number of printed rows */
 	if (this->conf->getMaxRecords() && this->rowCounter >= this->conf->getMaxRecords()) {
+		/* without option m, cursor list is not used => delete current cursor here  */
+		if (!this->conf->getOptionm()) {
+			delete this->currentCursor;
+		}
 		return false;
 	}
 
@@ -195,27 +205,26 @@ bool TableManagerCursor::next()
 	/* no filter, just print all rows */
 	if (true) {
 
+		/* first time we call this method */
 		if (this->currentCursor == NULL) {
-			/* this is first time we call this method */
-			this->currentCursor = this->cursorList[0];
+			this->currentCursor = (*this->currentTableIt)->createCursor();
 		}
 
 		/* proceed to the next row */
-fetch_row:
-		ret_next = this->currentCursor->next();
-		if (ret_next == false) {
-			/* error during fetching new row, try next table */
-			this->cursorIndex++;
-			if (this->cursorIndex < this->cursorList.size()) {
-				this->currentCursor = this->cursorList[this->cursorIndex];
+		while (!this->currentCursor->next()) {
+			/* delete the cursor (not in list) */
+			delete this->currentCursor;
+			/* delete the table to save some memory, might become optional */
+			tableManager->removeTable(this->currentTableIt);
 
-				/* fetch row from next table */
-				goto fetch_row;
-			} else {
-				/* no more rows */
+			/* error during fetching new row, try next table */
+			this->currentTableIt++;
+			if (this->currentTableIt == this->tableManager->getTables().end()) {
 				return false;
 			}
+			this->currentCursor = (*this->currentTableIt)->createCursor();
 		}
+
 	}
 
 	this->rowCounter += 1;
@@ -243,4 +252,4 @@ Cursor *TableManagerCursor::getCurrentCursor()
 	return this->currentCursor;
 }
 
-} /* namespace ipfixdump */
+} /* namespace fbitdump */

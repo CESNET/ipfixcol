@@ -47,9 +47,9 @@
 #include "TableManagerCursor.h"
 
 /**
- * \brief Namespace of the ipfixdump utility
+ * \brief Namespace of the fbitdump utility
  */
-namespace ipfixdump {
+namespace fbitdump {
 
 class TableManagerCursor;
 class Filter;
@@ -103,6 +103,9 @@ public:
 	 */
 	tableVector& getTables();
 
+
+	void removeTable(tableVector::iterator &it);
+
 	/**
 	 * \brief Creates cursor for this Table Manager
 	 *
@@ -121,7 +124,7 @@ private:
 	tableVector tables;        /**< List of managed tables */
 };
 
-}  // namespace ipfixdump
+}  // namespace fbitdump
 
 
 #endif /* TABLE_MANAGER_H_ */

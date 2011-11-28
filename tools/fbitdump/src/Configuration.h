@@ -1,7 +1,7 @@
 /**
  * \file Configuration.h
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Header of class for managing user input of ipfixdump
+ * \brief Header of class for managing user input of fbitdump
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -43,14 +43,15 @@
 #include "../3rdparty/pugixml.hpp"
 #include "typedefs.h"
 #include "Column.h"
+#include "Resolver.h"
 
 
-namespace ipfixdump {
+namespace fbitdump {
 
 /** Acceptable command-line parameters */
 #define OPTSTRING "hVaA:r:f:n:c:D:Ns:qIM:mR:o:v:Z:t:"
 
-#define COLUMNS_XML "fbitdump.xml"
+#define COLUMNS_XML "/usr/share/fbitdump/fbitdump.xml"
 
 /**
  * \brief Class handling command line configuration
@@ -176,6 +177,13 @@ public:
      */
     std::string getTimeWindowEnd();
 
+    /**
+     * \brief Returns resolver
+     *
+     * @return object which provides DNS resolving functionality
+     */
+    Resolver *getResolver();
+
 
     /**
      * \brief Class destructor
@@ -240,13 +248,39 @@ private:
     bool isDirectory(std::string dir);
 
     /**
-     * Sanitize path
+     * \brief Sanitize path
      *
-     * Add slash on the end of the path in case of path is a directory
+     * Add slash on the end of the path
      *
      * @return nothing
      */
     void sanitizePath(std::string &path);
+
+    /**
+     * \brief Process -M option from getopt()
+     *
+     * @param tables vector containing names of input directories
+     * @param optarg optarg for -M option
+     *
+     * Local variable "tables", specified in init() method, will contain input
+     * directories specified by -M option.
+     *
+     * @return true, if no error occurred, false otherwise
+     */
+    bool processMOption(stringVector &tables, const char *optarg);
+
+    /**
+     * \brief Process -R option from getopt()
+     *
+     * @param tables vector containing names of input directories
+     * @param optarg optarg for -R option
+     *
+     * Local variable "tables", specified in init() method, will contain input
+     * directories specified by -R option.
+     *
+     * @return true, if no error occurred, false otherwise
+     */
+    bool processROption(stringVector &tables, const char *optarg);
 
 
 
@@ -265,8 +299,11 @@ private:
 	std::string lastdir;               /**< last table (directory) user wants to work with */
 	bool optm;                         /**< indicates whether user specified "-m" option or not */
 	std::string timeWindow;            /**< time window */
+	std::string rOptarg;               /**< optarg for -r option */
+	std::string ROptarg;               /**< optarg for -R option */
+	Resolver *resolver;                /**< DNS resolver */
 }; /* end of Configuration class */
 
-} /* end of ipfixdump namespace */
+} /* end of fbitdump namespace */
 
 #endif /* CONFIGURATION_H_ */

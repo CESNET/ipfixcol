@@ -1,7 +1,7 @@
 /**
- * \file typedefs.h
- * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Header containing typedefs for fbitdump utility
+ * \file Resolver.cpp
+ * \author Michal Srb <michal.srb@cesnet.cz>
+ * \brief Class for managing user input of fbitdump
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,45 +37,87 @@
  *
  */
 
-#ifndef TYPEDEFS_H_
-#define TYPEDEFS_H_
 
-#include <cstdio>
-#include <vector>
-#include <set>
-#include <map>
-#include <string>
-#include "fastbit/ibis.h"
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <resolv.h>
+
+#include "Resolver.h"
 
 namespace fbitdump {
 
-/* this is needed for the lexer: new yylex function prototype */
-#define YY_DECL int yylex(std::string &arg)
-
-enum yytokentype
+Resolver::Resolver() : configured(false)
 {
-	COLUMN = 258,
-	NUMBER = 259,
-	CMP = 260,
-	RAWCOLUMN = 261,
-	OPERATOR = 262,
-	IPv4 = 263,
-	BRACKET = 264,
-	TIMESTAMP = 265,
-	OTHER = 300
-};
+}
 
-typedef std::vector<std::string> stringVector;
-typedef std::set<std::string> stringSet;
-typedef std::map<std::string, int> namesColumnsMap;
+Resolver::Resolver(char *nameserver) : configured(false)
+{
+	this->setNameserver(nameserver);
+}
 
-/* define these vectors with forward definitions of the classes */
-class Column;
-typedef std::vector<Column*> columnVector;
-class Table;
-typedef std::vector<Table*> tableVector;
+int Resolver::setNameserver(char *nameserver)
+{
+	if (nameserver == NULL) {
+		return false;
+	}
 
-}  /* end of namespace fbitdump */
+	int ret;
+	struct addrinfo *result;
+	struct addrinfo hints;
 
-#endif /* TYPEDEFS_H_ */
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_protocol = SOCK_STREAM;
 
+	ret = getaddrinfo(nameserver, 0, &hints, &result);
+	if (ret != 0) {
+		std::cerr << "Unable to resolve address for " << nameserver << std::endl;
+		return -1;
+	}
+
+	res_init();
+
+	struct sockaddr_in *sock4 = NULL;
+	struct sockaddr_in6 *sock6 = NULL;
+	if (result->ai_addr->sa_family == AF_INET) {
+		sock4 = (struct sockaddr_in *) result->ai_addr;
+		memcpy((void *)&_res.nsaddr_list[0].sin_addr, &(sock4->sin_addr), result->ai_addrlen);
+		_res.nscount = 1;
+	} else if (result->ai_addr->sa_family == AF_INET6) {
+		sock6 = (struct sockaddr_in6 *) result->ai_addr;
+		memcpy((void *)&_res.nsaddr_list[0].sin_addr, &(sock6->sin6_addr), result->ai_addrlen);
+		_res.nscount = 1;
+	} else {
+		std::cerr << "error: unknown address family" << std::endl;
+	}
+
+	freeaddrinfo(result);
+
+	this->nameserver = nameserver;
+	this->configured = true;
+
+	return 0;
+}
+
+const char *Resolver::getNameserver()
+{
+	if (this->nameserver.empty()) {
+		return NULL;
+	}
+
+	return this->nameserver.c_str();
+}
+
+bool Resolver::isConfigured()
+{
+	return this->configured;
+}
+
+Resolver::~Resolver()
+{
+	/* nothing to do */
+}
+
+} /* namespace */

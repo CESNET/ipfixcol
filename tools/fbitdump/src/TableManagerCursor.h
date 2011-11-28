@@ -40,13 +40,13 @@
 #ifndef TABLE_MANAGER_CURSOR_H_
 #define TABLE_MANAGER_CURSOR_H_
 
-#include <ibis.h>
+#include <fastbit/ibis.h>
 #include <cstring>
 #include "AST.h"
 #include "Table.h"
 #include "TableManager.h"
 
-namespace ipfixdump {
+namespace fbitdump {
 
 class TableManager;  /* forward declaration */
 class Cursor;
@@ -63,6 +63,7 @@ private:
 	Configuration *conf;                /**< program configuration */
 	std::vector<Cursor *> cursorList;   /**< list of table specific cursors */
 	Cursor *currentCursor;              /**< current cursor with actual data */
+	tableVector::iterator currentTableIt;/**< index of current table */
 	Column *timestampColumn;            /**< column with timestamp information */
 
 	unsigned int cursorIndex;           /**< index of the current table cursor */

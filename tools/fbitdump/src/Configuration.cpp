@@ -1,7 +1,7 @@
 /**
  * \file Configuration.cpp
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Class for managing user input of ipfixdump
+ * \brief Class for managing user input of fbitdump
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -44,8 +44,13 @@
 #include <cstring>
 #include <fstream>
 #include <libgen.h>
+#include <resolv.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
-namespace ipfixdump {
+
+namespace fbitdump {
 
 /* temporary macro that should be removed in full implementation */
 #define NOT_SUPPORTED std::cerr << "Not supported" << std::endl; return -2;
@@ -54,6 +59,9 @@ int Configuration::init(int argc, char *argv[])
 {
 	char c;
 	stringVector tables;
+	std::string filterFile;
+	std::string optionM;	/* optarg for option -M */
+
 	/* get program name without execute path */
 	this->appName = ((this->appName = strrchr (argv[0], '/')) != NULL) ? (this->appName + 1) : argv[0];
 	argv[0] = this->appName;
@@ -104,7 +112,7 @@ int Configuration::init(int argc, char *argv[])
 			}
 			break;
 		case 'f':
-			NOT_SUPPORTED
+				filterFile = optarg;
 			break;
 		case 'n':
 			NOT_SUPPORTED
@@ -112,8 +120,14 @@ int Configuration::init(int argc, char *argv[])
 		case 'c': /* number of records to display */
 				this->maxRecords = atoi(optarg);
 			break;
-		case 'D':
-			NOT_SUPPORTED
+		case 'D': {
+				char *nameserver;
+
+				nameserver = optarg;
+
+				this->resolver->setNameserver(nameserver);
+
+			}
 			break;
 		case 'N': /* print plain numbers */
 				this->plainNumbers = true;
@@ -127,210 +141,37 @@ int Configuration::init(int argc, char *argv[])
 		case 'I':
 			NOT_SUPPORTED
 			break;
-		case 'M': {
-			char *saveptr;
-			char *token;
-
-			if (strchr(optarg, ':')) {
-
-				token = strtok_r(optarg, ":", &saveptr);
-
-				while (token) {
-					tables.push_back(std::string(token));
-					token = strtok_r(NULL, ":", &saveptr);
-				}
-
-			} else {
-				/* no break here, no multiple directories specified, so it's like -r */
-				/* TODO - same code as -r, maybe create some method? */
-                if (optarg == std::string("")) {
-                	help();
-                	return -2;
-                }
-#ifdef DEBUG
-                std::cerr << "Adding table " << optarg << std::endl;
-#endif
-				tables.push_back(std::string(optarg));
-			}
+		case 'M':
+			optionM = optarg;
+			/* this option will be processed later (it depends on -r or -R */
 
 			break;
-		}
+
 		case 'r': {/* file to open */
                 if (optarg == std::string("")) {
                 	help();
                 	return -2;
                 }
 
-                std::string dir(optarg);
-
-                if (this->isDirectory(dir)) {
-                	this->sanitizePath(dir);
+                this->rOptarg = optarg;
+                this->sanitizePath(this->rOptarg);
 #ifdef DEBUG
-                	std::cerr << "Adding table " << optarg << std::endl;
+                std::cerr << "Adding table " << this->rOptarg << std::endl;
 #endif
-					tables.push_back(dir);
-                }
+				tables.push_back(this->rOptarg);
 			break;
 		}
 		case 'm':
 			this->optm = true;
 			break;
-		case 'R': {
-			/* find dirname() */
-			char *optarg_copy = strdup(optarg);
-			if (!optarg_copy) {
-				/* not enough memory */
-#ifdef DEBUG
-				std::cerr << "Not enough memory (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;
-#endif
-			}
 
-			std::string dname(dirname(optarg_copy));
-			free(optarg_copy);
-			optarg_copy = NULL;
+		case 'R':
+			this->ROptarg = optarg;
 
-			/* add slash on the end */
-			this->sanitizePath(dname);
-
-
-			/* find basename() */
-			optarg_copy = strdup(optarg);
-			if (!optarg_copy) {
-				/* not enough memory */
-#ifdef DEBUG
-				std::cerr << "Not enough memory (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;
-#endif
-			}
-
-			std::string bname(basename(optarg_copy));
-			free(optarg_copy);
-			optarg_copy = NULL;
-
-			/* add slash on the end */
-			this->sanitizePath(bname);
-
-
-			/* check whether user specified region defined like fromDirX:toDirY */
-			/* NOTE: this will not work correctly if directory name contains colon */
-			size_t found = bname.find(':');
-			DIR *dir;
-			struct dirent *dent;
-
-			if (found != std::string::npos) {
-				/* yep, user specified region */
-				std::string firstDir = bname.substr(0, found);
-				/* remove slash, if any */
-				if (firstDir[firstDir.length()-1] == '/') {
-					firstDir.resize(firstDir.length()-1);
-				}
-
-				std::string lastDir = bname.substr(found+1, bname.length()-(found+1));
-				/* remove slash, if any */
-				if (lastDir[lastDir.length()-1] == '/') {
-					lastDir.resize(lastDir.length()-1);
-				}
-
-				/* dirty hack, see below for more information */
-				bool sameLength = (firstDir.length() == lastDir.length()) ? true : false;
-
-				/* indicates whether we already found first specified dir */
-				bool firstDirFound = false;
-				struct dirent **namelist;
-				int dirs_counter;
-				int counter;
-
-				/* scan for subdirectories */
-				dirs_counter = scandir(dname.c_str(), &namelist, NULL, alphasort);
-				if (dirs_counter < 0) {
-					break;
-				}
-				/*
-				 * namelist now contains dirent structure for every entry in directory.
-				 * the structures are sorted alphabetically, but there is one problem:
-				 * ...
-				 * data2/
-				 * data20/  <== ****! not good for us, if user specifies "data2:data3", he only
-				 * data21/            wants data2 and data3 directory.
-				 * ...
-				 * data29/
-				 * data3/
-				 * data30/
-				 * ...
-				 *
-				 * so we will use auxiliary variable sameLength as workaround for this issue
-				 */
-
-				counter = 0;
-
-				while(dirs_counter--) {
-					dent = namelist[counter++];
-
-					if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
-					  && strcmp(dent->d_name, "..")) {
-						std::string tableDir;
-
-
-						if (firstDirFound || !strcmp(dent->d_name, firstDir.c_str())) {
-
-							if ((sameLength && strlen(dent->d_name) == firstDir.length())
-							  || (!sameLength)) {
-								firstDirFound = true;
-								tableDir = dname + dent->d_name;
-								this->sanitizePath(tableDir);
-
-#ifdef DEBUG
-								std::cerr << "Adding table " << tableDir << std::endl;
-#endif
-
-								tables.push_back(std::string(tableDir));
-							}
-
-							if (!strcmp(dent->d_name, lastDir.c_str())) {
-								/* this is last directory we are interested in */
-								free(namelist[counter-1]);
-								break;
-							}
-						}
-					}
-
-					free(namelist[counter-1]);
-				}
-				free(namelist);
-
-			} else {
-				/* user specified parent directory only, so he wants to include
-				 * all subdirectories */
-
-				std::string parentDir(optarg);
-				this->sanitizePath(parentDir);
-
-				dir = opendir(parentDir.c_str());
-				if (dir == NULL) {
-					std::cerr << "Cannot open directory \"" << parentDir << "\"" << std::endl;
-					break;
-				}
-
-				while((dent = readdir(dir)) != NULL) {
-					if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
-					  && strcmp(dent->d_name, "..")) {
-						std::string tableDir;
-
-						tableDir = parentDir + dent->d_name;
-						this->sanitizePath(tableDir);
-
-#ifdef DEBUG
-						std::cerr << "Adding table " << tableDir << std::endl;
-#endif
-
-						tables.push_back(std::string(tableDir));
-					}
-				}
-
-				closedir(dir);
-			}
+			this->processROption(tables, optarg);
 
 			break;
-		}
+
 		case 'o': /* output format */
 				this->format = optarg;
 			break;
@@ -350,9 +191,28 @@ int Configuration::init(int argc, char *argv[])
 		}
 	}
 
+	if (!optionM.empty()) {
+		/* process -M option, this option depends on -r or -R */
+		processMOption(tables, optionM.c_str());
+	}
+
 	/* read filter */
 	if (optind < argc) {
 		this->filter = argv[optind];
+	} else if (!filterFile.empty()) {
+		std::ifstream t(filterFile, std::ifstream::in | std::ifstream::ate);
+
+		if (!t.good()) {
+			std::cerr << "Cannot open file '" << filterFile << "'" << std::endl;
+			return  -2;
+		}
+
+		this->filter.reserve((unsigned int) t.tellg());
+		t.seekg(0, std::ios::beg);
+
+		this->filter.assign((std::istreambuf_iterator<char>(t)),
+        std::istreambuf_iterator<char>());
+
 	} else {
 		/* set default filter */
 		this->filter = "1=1";
@@ -639,16 +499,16 @@ void Configuration::help()
 	<< "-h              this text you see right here" << std::endl
 	<< "-V              Print version and exit." << std::endl
 	<< "-a              Aggregate netflow data." << std::endl
-	<< "-A <expr>[/net] How to aggregate: ',' sep list of tags see ipfixdump(1)" << std::endl
+	<< "-A <expr>[/net] How to aggregate: ',' sep list of tags see fbitdump(1)" << std::endl
 	<< "                or subnet aggregation: srcip4/24, srcip6/64." << std::endl
 	//<< "-b              Aggregate netflow records as bidirectional flows." << std::endl
 	//<< "-B              Aggregate netflow records as bidirectional flows - Guess direction." << std::endl
 	<< "-r <dir>        read input tables from directory" << std::endl
-	//<< "-w <file>       write output to file" << std::endl
-//	<< "-f              read netflow filter from file" << std::endl
+//	<< "-w <file>       write output to file" << std::endl
+	<< "-f              read netflow filter from file" << std::endl
 //	<< "-n              Define number of top N. " << std::endl
 	<< "-c              Limit number of records to display" << std::endl
-//	<< "-D <dns>        Use nameserver <dns> for host lookup." << std::endl
+	<< "-D <dns>        Use nameserver <dns> for host lookup." << std::endl
 	<< "-N              Print plain numbers" << std::endl
 //	<< "-s <expr>[/<order>]     Generate statistics for <expr> any valid record element." << std::endl
 //	<< "                and ordered by <order>: packets, bytes, flows, bps pps and bpp." << std::endl
@@ -661,10 +521,10 @@ void Configuration::help()
 	//<< "                key: 32 character string or 64 digit hex string starting with 0x." << std::endl
 	//<< "-L <expr>       Set limit on bytes for line and packed output format." << std::endl
 //	<< "-I              Print netflow summary statistics info from file, specified by -r." << std::endl
-//	<< "-M <expr>       Read input from multiple directories." << std::endl
-//	<< "                /dir/dir1:dir2:dir3 Read the same files from '/dir/dir1' '/dir/dir2' and '/dir/dir3'." << std::endl
-//	<< "                requests either -r filename or -R firstfile:lastfile without pathnames" << std::endl
-	<< "-m              Print netflow data date sorted. Only useful with -M" << std::endl
+	<< "-M <expr>       Read input from multiple directories." << std::endl
+	<< "                /dir/dir1:dir2:dir3 Read the same files from '/dir/dir1' '/dir/dir2' and '/dir/dir3'." << std::endl
+	<< "                requests either -r filename or -R firstfile:lastfile without pathnames" << std::endl
+	<< "-m              Print netflow data date sorted." << std::endl
 	<< "-R <expr>       Read input from sequence of files." << std::endl
 	<< "                /any/dir  Read all files in that directory." << std::endl
 //	<< "                /dir/file Read all files beginning with 'file'." << std::endl
@@ -693,13 +553,351 @@ bool Configuration::getOptionm()
 	return this->optm;
 }
 
-Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false), optm(false) {}
+Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false),
+		optm(false)
+{
+	this->resolver = new Resolver();
+}
+
+bool Configuration::processMOption(stringVector &tables, const char *optarg)
+{
+	char *optarg_copy = strdup(optarg);
+	if (!optarg_copy) {
+		std::cerr << "Not enough memory (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;
+	}
+
+	std::string dname = dirname(optarg_copy);
+	this->sanitizePath(dname);
+	free(optarg_copy);
+	optarg_copy = NULL;
+
+	optarg_copy = strdup(optarg);
+	if (!optarg_copy) {
+		std::cerr << "Not enough memory (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;
+	}
+
+	std::string bname = basename(optarg_copy);
+	free(optarg_copy);
+
+	std::vector<std::string> dirs;
+
+	size_t last_pos = bname.length()-1;
+	size_t found;
+	/* separate directories (dir1:dir2:dir3) */
+	while ((found = bname.rfind(':')) != std::string::npos) {
+		std::string dir(dname);
+
+		dir += bname.substr(found + 1, last_pos - found);
+
+		this->sanitizePath(dir);
+
+		dirs.push_back(dir);
+
+		bname.resize(found);
+
+		last_pos = found - 1;
+	}
+	/* don't forget last directory */
+	dirs.push_back(dname + bname.substr(0, found));
+	this->sanitizePath(dirs[dirs.size()-1]);
+
+	/* add filename from -r option */
+	if (this->rOptarg.empty() == false) {
+		char *crOptarg = (char *) malloc (strlen(this->rOptarg.c_str())+1);
+		if (!crOptarg) {
+			std::cerr << "Not enough memory (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;
+			return false;
+		}
+		memset(crOptarg, 0, strlen(this->rOptarg.c_str())+1);
+
+		this->rOptarg.copy(crOptarg, this->rOptarg.length());
+
+		for (unsigned int u = 0; u < dirs.size(); u++) {
+			std::string table(dirs[u] + crOptarg);
+
+#ifdef DEBUG
+			std::cerr << "Adding table " << table << std::endl;
+#endif
+			tables.push_back(table);
+		}
+
+		free(crOptarg);
+
+		std::vector<std::string>::iterator iter;
+
+		/* if -M is specified, -r is only auxiliary option. erase table specified by this option */
+		for (iter = tables.begin(); iter != tables.end(); iter++) {
+			if (!(*iter).compare(this->rOptarg)) {
+				/* found it */
+				tables.erase(iter);
+				return false;
+			}
+		}
+	} else if (this->ROptarg.empty() == false) {
+		/* -r option is missing, try -R instead */
+		size_t found = this->ROptarg.find(':');
+
+		if (found != std::string::npos) {
+			/* ROptarg contains colon */
+
+			/*
+			 * "file1:file2 so:
+			 * firstOpt = file1
+			 * secondOpt = file2
+			 */
+			std::string firstOpt = this->ROptarg.substr(0, found);
+			std::string secondOpt = this->ROptarg.substr(found+1, this->ROptarg.length()-found);
+
+			/* remove trailing slash, if any */
+			if (firstOpt[firstOpt.length()-1] == '/') {
+				firstOpt.resize(firstOpt.length()-1);
+			}
+			if (secondOpt[secondOpt.length()-1] == '/') {
+				secondOpt.resize(secondOpt.length()-1);
+			}
+
+			struct dirent **namelist;
+
+			/* indicates whether we already found first specified dir */
+			bool firstDirFound = false;
+			int counter;
+			struct dirent *dent;
+			bool sameLength;
+
+
+			for (unsigned int u = 0; u < dirs.size(); u++) {
+
+				int dirs_counter = scandir(dirs[u].c_str(), &namelist, NULL, alphasort);
+				if (dirs_counter < 0) {
+					break;
+				}
+
+				if (firstOpt.length() == secondOpt.length()) {
+					sameLength = true;
+				}
+
+				counter = 0;
+				firstDirFound = false;
+
+				while(dirs_counter--) {
+					dent = namelist[counter++];
+
+					if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
+					  && strcmp(dent->d_name, "..")) {
+						std::string tableDir(dirs[u].c_str());
+
+
+						if (firstDirFound || !strcmp(dent->d_name, firstOpt.c_str())) {
+
+							if ((sameLength && strlen(dent->d_name) == firstOpt.length())
+							  || (!sameLength)) {
+								firstDirFound = true;
+								tableDir += dent->d_name;
+								this->sanitizePath(tableDir);
+
+#ifdef DEBUG
+								std::cerr << "Adding table " << tableDir << std::endl;
+#endif
+
+								tables.push_back(std::string(tableDir));
+							}
+
+							if (!strcmp(dent->d_name, secondOpt.c_str())) {
+								/* this is last directory we are interested in */
+								free(namelist[counter-1]);
+								break;
+							}
+						}
+					}
+
+					free(namelist[counter-1]);
+				}
+				free(namelist);
+
+			}
+		} else {
+			/* no colon */
+			for (unsigned int u = 0; u < dirs.size(); u++) {
+				std::string table(dirs[u] + this->ROptarg);
+				this->sanitizePath(table);
+
+#ifdef DEBUG
+				std::cerr << "Adding table " << table << std::endl;
+#endif
+				tables.push_back(table);
+			}
+		}
+	}
+
+	return true;	/* all ok */
+}
+
+bool Configuration::processROption(stringVector &tables, const char *optarg)
+{
+
+	/* find dirname() */
+	char *optarg_copy = strdup(optarg);
+	if (!optarg_copy) {
+		std::cerr << "Not enough memory (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	std::string dname(dirname(optarg_copy));
+	free(optarg_copy);
+	optarg_copy = NULL;
+
+	/* add slash on the end */
+	this->sanitizePath(dname);
+
+	/* find basename() */
+	optarg_copy = strdup(optarg);
+	if (!optarg_copy) {
+		std::cerr << "Not enough memory (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	std::string bname(basename(optarg_copy));
+	free(optarg_copy);
+	optarg_copy = NULL;
+
+	/* add slash on the end */
+	this->sanitizePath(bname);
+
+	/* check whether user specified region defined like fromDirX:toDirY */
+	/* NOTE: this will not work correctly if directory name contains colon */
+	size_t found = bname.find(':');
+	DIR *dir;
+	struct dirent *dent;
+
+	if (found != std::string::npos) {
+		/* yep, user specified region */
+		std::string firstDir = bname.substr(0, found);
+		/* remove slash, if any */
+		if (firstDir[firstDir.length()-1] == '/') {
+			firstDir.resize(firstDir.length()-1);
+		}
+
+		std::string lastDir = bname.substr(found+1, bname.length()-(found+1));
+		/* remove slash, if any */
+		if (lastDir[lastDir.length()-1] == '/') {
+			lastDir.resize(lastDir.length()-1);
+		}
+
+		/* dirty hack, see below for more information */
+		bool sameLength = (firstDir.length() == lastDir.length()) ? true : false;
+
+		/* indicates whether we already found first specified dir */
+		bool firstDirFound = false;
+
+		struct dirent **namelist;
+		int dirs_counter;
+		int counter;
+
+		/* scan for subdirectories */
+		dirs_counter = scandir(dname.c_str(), &namelist, NULL, alphasort);
+		if (dirs_counter < 0) {
+			return false;
+		}
+		/*
+		 * namelist now contains dirent structure for every entry in directory.
+		 * the structures are sorted alphabetically, but there is one problem:
+		 * ...
+		 * data2/
+		 * data20/  <== ****! not good for us, if user specifies "data2:data3", he only
+		 * data21/            wants data2 and data3 directory, not data20/
+		 * ...
+		 * data29/
+		 * data3/
+		 * data30/
+		 * ...
+		 *
+		 * so we will use auxiliary variable sameLength as workaround for this issue
+		 */
+
+		counter = 0;
+
+		while(dirs_counter--) {
+			dent = namelist[counter++];
+
+			if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
+			  && strcmp(dent->d_name, "..")) {
+				std::string tableDir;
+
+
+				if (firstDirFound || !strcmp(dent->d_name, firstDir.c_str())) {
+
+					if ((sameLength && strlen(dent->d_name) == firstDir.length())
+					  || (!sameLength)) {
+						firstDirFound = true;
+						tableDir = dname + dent->d_name;
+						this->sanitizePath(tableDir);
+
+#ifdef DEBUG
+						std::cerr << "Adding table " << tableDir << std::endl;
+#endif
+
+						tables.push_back(std::string(tableDir));
+					}
+
+					if (!strcmp(dent->d_name, lastDir.c_str())) {
+						/* this is last directory we are interested in */
+						free(namelist[counter-1]);
+						break;
+					}
+				}
+			}
+
+			free(namelist[counter-1]);
+		}
+		free(namelist);
+
+	} else {
+		/* user specified parent directory only, so he wants to include
+		 * all subdirectories */
+
+		std::string parentDir(optarg);
+		this->sanitizePath(parentDir);
+
+		dir = opendir(parentDir.c_str());
+		if (dir == NULL) {
+			std::cerr << "Cannot open directory \"" << parentDir << "\"" << std::endl;
+			return false;
+		}
+
+		while((dent = readdir(dir)) != NULL) {
+			if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
+			  && strcmp(dent->d_name, "..")) {
+				std::string tableDir;
+
+				tableDir = parentDir + dent->d_name;
+				this->sanitizePath(tableDir);
+
+#ifdef DEBUG
+				std::cerr << "Adding table " << tableDir << std::endl;
+#endif
+
+				tables.push_back(std::string(tableDir));
+			}
+		}
+
+		closedir(dir);
+	}
+
+	return true;
+}
+
+Resolver *Configuration::getResolver()
+{
+	return this->resolver;
+}
 
 Configuration::~Configuration()
 {
 	for (columnVector::iterator it = columns.begin(); it != columns.end(); it++) {
 		delete *it;
 	}
+
+	delete this->resolver;
 }
 
-} /* end of ipfixdump namespace */
+} /* end of fbitdump namespace */

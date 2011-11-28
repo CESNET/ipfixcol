@@ -45,9 +45,9 @@
 #include "Cursor.h"
 
 /**
- * \brief Namespace of the ipfixdump utility
+ * \brief Namespace of the fbitdump utility
  */
-namespace ipfixdump {
+namespace fbitdump {
 
 /* Configuration and Cursor classes transitively depend on this header */
 class Configuration;
@@ -106,7 +106,7 @@ private:
 	std::string filterString; /**< String for fastbit condition */
 };
 
-}  // namespace ipfixdump
+}  // namespace fbitdump
 
 
 #endif /* FILTER_H_ */
