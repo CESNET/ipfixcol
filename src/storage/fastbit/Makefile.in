@@ -1,6 +1,6 @@
 CC      = @CC@
 CFLAGS  = @CFLAGS@
-LIBS    = @LIBS@ -lpq
+LIBS    = @LIBS@
 INCLUDE = "-I../../../"
 
 prefix = @prefix@
@@ -36,7 +36,7 @@ all: ipfixcol_fastbit_output.so $(MANPAGES)
 doc: $(MANPAGES)
 
 ipfixcol_fastbit_output.so: $(OBJ)
-	$(CC) $(CFLAGS) $(LIBS) -lfastbit -L/usr/local/lib -shared -Wl,-soname,ipfixcol_fastbit_output.so.1 -o $@ $< -lc
+	$(CC) $(CFLAGS) $(LIBS) -lfastbit -L/usr/local/lib -shared -Wl,-soname,ipfixcol_fastbit_output.so.1 -o $@ $(OBJ) -lc
 
 $(OBJ): $(SRCS)
 	@for i in $(SRCS); do \
