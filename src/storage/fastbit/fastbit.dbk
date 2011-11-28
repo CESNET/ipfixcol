@@ -21,7 +21,7 @@
     <manvolnum>1</manvolnum>
   </refmeta>
   <refnamediv>
-    <refname>fastbit_output.so</refname>
+    <refname>ipfixcol_fastbit_output</refname>
     <refpurpose>storage plugin for ipfixcol based on fastbit.
     </refpurpose>
   </refnamediv>
