@@ -1,44 +1,53 @@
-CC      = g++
+CC      = @CC@
 CFLAGS  = @CFLAGS@
-LIBS    = @LIBS@
+LIBS    = @LIBS@ -lpq
 INCLUDE = "-I../../../"
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+datarootdir = @datarootdir@
+datadir = @datadir@
+bindir = @bindir@
+includedir = @includedir@
+libdir =  @libdir@
+mandir = @mandir@
+
+TARGETS = ipfixcol_fastbit_output.so
+TOPDIR = @CONFIGURE_PWD@
+NAME = @PACKAGE_NAME@
+RELEASE = @RELEASE@
+RPMBUILD = rpmbuild
+INSTALL = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+INSTALL_DATA = @INSTALL_DATA@
+VERSION = $(shell cut -f1 $(TOPDIR)/VERSION | tr -d '\n')
 DIR = "src/storage/fastbit"
-SRCS = fastbit.cpp fastbit_element.cpp fastbit_table.cpp pugixml/pugixml.cpp
-OBJ = fastbit.o fastbit_element.o fastbit_table.o pugixml.o
-
-
+RPMDIR = RPMBUILD
 XSLTPROC = @XSLTPROC@
 XSLTMANSTYLE = @XSLTMANSTYLE@
 
-all: fastbit_output.so
+SRCS = fastbit.cpp fastbit_element.cpp fastbit_table.cpp pugixml/pugixml.cpp
+OBJ = fastbit.o fastbit_element.o fastbit_table.o pugixml.o
+HDRS = fastbit_table.h fastbit_element.h pugixml/pugiconfig.hpp pugixml/pugixml.hpp
+DOC = fastbit.dbk 
+MANPAGES = ipfixcol_fastbit_output.1
 
-doc: fastbit.1
+all: ipfixcol_fastbit_output.so $(MANPAGES)
+doc: $(MANPAGES)
 
-fastbit_output.so: $(OBJ)
-	$(CC) $(CFLAGS) $(LIBS) -lfastbit -L/usr/local/lib -shared -Wl,-soname,fastbit_output.so.1 $(OBJ) -o $@ -lc
-
+ipfixcol_fastbit_output.so: $(OBJ)
+	$(CC) $(CFLAGS) $(LIBS) -lfastbit -L/usr/local/lib -shared -Wl,-soname,ipfixcol_fastbit_output.so.1 -o $@ $< -lc
 
 $(OBJ): $(SRCS)
 	@for i in $(SRCS); do \
 		$(CC) $(CFLAGS) $(INCLUDE) -fPIC -c $$i; \
 	done;
 
-#fastbit_output.so: fastbit_output.o fastbit_element.o fastbit_table.o pugixml.o
-#	g++ $(CFLAGS) $(LIBS) -lfastbit -L/usr/local/lib -shared -Wl,-soname,fastbit_output.so.1 fastbit_output.o fastbit_element.o fastbit_table.o pugixml.o -o $@ -lc
+clean:
+	-rm -f $(TARGETS) $(OBJ)
 
-#fastbit_output.o: fastbit.cpp
-#	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
 
-#fastbit_element.o: fastbit_element.cpp
-#	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
-
-#fastbit_table.o: fastbit_table.cpp
-#	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
-
-#pugixml.o: pugixml/pugixml.cpp
-#	g++ $(CFLAGS) $(INCLUDE) -fPIC -c -o $@ $<
-
-%.1 %.2 %.3 %.4 %.5 %.6 %.7 %.8 %.9: %.dbk
+$(MANPAGES): $(DOC)
 	@if [ -n "$(XSLTPROC)" ]; then \
 		if [ -f "$(XSLTMANSTYLE)" ]; then \
 			echo $(XSLTPROC) $(XSLTMANSTYLE) $<; \
@@ -52,13 +61,54 @@ $(OBJ): $(SRCS)
 	fi
 
 
-clean:
-	-rm -f fastbit_output.so *.o pugixml/*.o
-
 .PHONY: tarball-prepare
 tarball-prepare:
-	@for i in Makefile.in $(SRCS) $(MANSRCS) $(SCRIPTS) $(RCSCRIPTS); do \
+	@for i in Makefile.in $(SRCS) $(HDRS) $(MANSRCS) $(DOC); do \
 		[ -d $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) ] || \
-			mkdir -p $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) -p; \
+		mkdir -p $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) -p; \
+		[ -d $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR)/pugixml/ ] || \
+		mkdir -p $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR)/pugixml/ -p; \
 		cp $$i $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR)/$$i; \
 	done;
+
+.PHONY: install
+install: $(TARGETS)
+	[ -d $(DESTDIR)/$(libdir) ] || \
+		(mkdir -p $(DESTDIR)/$(libdir); chmod 755 $(DESTDIR)/$(libdir));
+	$(INSTALL_PROGRAM) $(TARGETS) $(DESTDIR)/$(libdir)/;
+	[ -d $(DESTDIR)/$(mandir)/man1/ ] || \
+		(mkdir -p $(DESTDIR)/$(mandir)/man1/; chmod 755 $(DESTDIR)/$(mandir)/man1/);
+	$(INSTALL_DATA) $(MANPAGES) $(DESTDIR)/$(mandir)/man1/
+
+.PHONY: dist
+dist: tarball rpm
+
+.PHONY: tarball
+tarball: $(SRCS) $(HDRS) $(PHDRS)
+	@rm -rf $(NAME)-$(VERSION); \
+	mkdir $(NAME)-$(VERSION); \
+	rm -rf $(RPMDIR)/SOURCES/; \
+	mkdir -p $(RPMDIR)/SOURCES/; \
+	for i in $(SRCS) $(HDRS) $(CONF) $(DOC) configure.in configure Makefile.in VERSION \
+		$(NAME).spec.in install-sh; do \
+		[ "$$i" != "$${i%/*}" -a ! -d $(NAME)-$(VERSION)/$${i%/*} ] && mkdir -p $(NAME)-$(VERSION)/$${i%/*}; \
+		cp $$i $(NAME)-$(VERSION)/$$i; \
+	done;
+	cp -r ../../../headers $(TOPDIR)/$(NAME)-$(VERSION)/
+	cp -r ../../../ipfixcol.h $(TOPDIR)/$(NAME)-$(VERSION)/
+	tar -c -z -f $(RPMDIR)/SOURCES/$(NAME)-$(VERSION)-$(RELEASE).tar.gz \
+	    $(NAME)-$(VERSION);
+	@rm -rf $(NAME)-$(VERSION);
+
+.PHONY: rpm
+rpm: tarball $(NAME).spec
+	@mkdir -p $(RPMDIR)/BUILD $(RPMDIR)/RPMS $(RPMDIR)/SOURCES $(RPMDIR)/SPECS $(RPMDIR)/SRPMS;
+	$(RPMBUILD) -ba $(NAME).spec \
+		--define "_topdir `pwd`/$(RPMDIR)";
+
+.PHONY: cleanall
+cleanall: clean distclean
+
+.PHONY: distclean
+distclean:
+	rm -rf $(RPMDIR)
