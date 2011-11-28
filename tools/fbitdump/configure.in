@@ -36,7 +36,7 @@
 # $Id$
 #
 
-AC_PREREQ([2.65])
+AC_PREREQ([2.60])
 
 # Process this file with autoconf to produce a configure script.
 AC_INIT(fbitdump, m4_esyscmd([cut -f1 ./VERSION | tr -d '\n']))
@@ -192,7 +192,7 @@ AC_ARG_ENABLE([debug],
 
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([getopt.h iostream regex.h dirent.h fatbit/ibis.h string arpa/inet.h \
-	cstdlib cstring unistd.h algorithm cstdio vector set map string fstream])
+	cstdlib cstring unistd.h algorithm cstdio vector set map string fstream fastbit/ibis.h])
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 AC_C_INLINE
