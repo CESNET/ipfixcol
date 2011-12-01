@@ -87,9 +87,14 @@ AC_ARG_WITH([distro],
 AC_ARG_WITH([libxml2-path],
 	AC_HELP_STRING([--with-libxml2-path=DIR],[Path prefix to Libxml2 library]))
 
+# add --without-openssl parameter
+AC_ARG_WITH([openssl],
+	AC_HELP_STRING([--without-openssl],[disable TLS support]), [with_openssl=no], [with_openssl=yes])
+
+
 ############################ Check for programs ################################
 
-# in case of cross-compilation, try to gues cross-compiler if not set
+# in case of cross-compilation, try to guess cross-compiler if not set
 if test "x$target" != "x$host" -a -z "`echo $CC | grep -e '-gcc'`";
 then
   AC_MSG_CHECKING(for cross-compiler)
@@ -202,6 +207,13 @@ CFLAGS="$CFLAGS `xml2-config --cflags`"
 LIBS="$LIBS $LIBS_LIB_XML"
 LDFLAGS="$LDFLAGS $LDFLAGS_LIB_XML"
 
+### TLS support ###
+AS_IF([test "x$with_openssl" != xno],
+  [AC_CHECK_LIB([ssl], [SSL_library_init],
+    [AC_SUBST([TLS_SUPPORT], ["yes"])],
+       AC_MSG_FAILURE([Required library openssl is missing])
+  )], [AC_SUBST([TLS_SUPPORT], [no])])
+
 ### libcommlbr ###
 AC_ARG_WITH([libcommlbr],
     	AC_HELP_STRING([--with-libcommlbr=PATH],[Set the path to libcommlbr (usually local GIT repository)]),
@@ -266,6 +278,12 @@ fi
 if test "$FASTBIT" = "yes"; then
 	AC_CHECK_HEADER([fastbit/ibis.h], , 
 		[AC_MSG_ERROR([fastbit/ibis.h header not found])]
+	)
+fi
+
+if test "$with_openssl" != "no"; then
+	AC_CHECK_HEADER([openssl/ssl.h], , 
+		[AC_MSG_ERROR([openssl/ssl.h header not found])]
 	)
 fi
 

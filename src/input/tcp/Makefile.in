@@ -3,8 +3,17 @@
 ################################################
 
 CC      = @CC@
-CFLAGS  = @CFLAGS@ `pkg-config --cflags libssl`
-LIBS    = @LIBS@ `pkg-config --libs libssl`
+
+# build with TLS support if user wishes so
+TLS_SUPPORT=@TLS_SUPPORT@
+ifeq ($(TLS_SUPPORT), yes)
+  CFLAGS  = @CFLAGS@ `pkg-config --cflags libssl` -DTLS_SUPPORT
+  LIBS    = @LIBS@ `pkg-config --libs libssl`
+else
+  CFLAGS  = @CFLAGS@
+  LIBS    = @LIBS@
+endif
+
 INCLUDE = "-I../../../"
 
 prefix = @prefix@
