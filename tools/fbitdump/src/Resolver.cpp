@@ -139,7 +139,7 @@ bool Resolver::reverseLookup(uint32_t address, char *result, int len)
 		in_addr.s_addr = htonl(address);
 		inet_ntop(AF_INET, &in_addr, buf, INET_ADDRSTRLEN);
 
-		cacheResult = (char *) this->cacheSearch(buf, AF_INET);
+		cacheResult = (char *) this->cacheSearch(buf);
 		if (cacheResult) {
 			/* cache hit */
 			strncpy(result, cacheResult, len);
@@ -169,7 +169,7 @@ bool Resolver::reverseLookup(uint32_t address, char *result, int len)
 		}
 
 		strcpy(persistentResult, result);
-		this->addToCache(buf, persistentResult, AF_INET);
+		this->addToCache(buf, persistentResult);
 	}
 
 	return true;
@@ -187,7 +187,6 @@ bool Resolver::reverseLookup6(uint64_t in6_addr_part1, uint64_t in6_addr_part2, 
 	}
 
 	char buf[INET6_ADDRSTRLEN];
-	//memset(buf, 0, INET6_ADDRSTRLEN);
 
 	/* try cache first */
 	if (this->cacheOn) {
@@ -198,7 +197,7 @@ bool Resolver::reverseLookup6(uint64_t in6_addr_part1, uint64_t in6_addr_part2, 
 		*(((uint64_t*) &in6_addr.s6_addr)+1) = htobe64(in6_addr_part2);
 		inet_ntop(AF_INET6, &in6_addr, buf, INET6_ADDRSTRLEN);
 
-		cacheResult = (char *) this->cacheSearch(buf, AF_INET6);
+		cacheResult = (char *) this->cacheSearch(buf);
 		if (cacheResult) {
 			/* cache hit */
 			strncpy(result, cacheResult, len);
@@ -229,30 +228,22 @@ bool Resolver::reverseLookup6(uint64_t in6_addr_part1, uint64_t in6_addr_part2, 
 		}
 
 		strcpy(persistentResult, result);
-		this->addToCache(buf, persistentResult, AF_INET6);
+		this->addToCache(buf, persistentResult);
 	}
 
 	return true;
 }
 
-void Resolver::enableCache()
+void Resolver::enableCache(unsigned long int cacheSize)
 {
 	int ret;
 
-	/* these structures must be zeroed first */
-	memset(&(this->ipv4Htab), 0, sizeof(struct hsearch_data));
-	memset(&(this->ipv4Htab), 0, sizeof(struct hsearch_data));
+	/* this structure must be zeroed first */
+	memset(&(this->dnsHashTable), 0, sizeof(struct hsearch_data));
 
-	ret = hcreate_r(Resolver::ipv4CacheSize, &(this->ipv4Htab));
+	ret = hcreate_r(cacheSize, &(this->dnsHashTable));
 	if (ret == 0) {
 		std::cerr << "Error, DNS cache disabled" << std::endl;
-		return;
-	}
-
-	ret = hcreate_r(Resolver::ipv6CacheSize, &(this->ipv6Htab));
-	if (ret == 0) {
-		std::cerr << "Error, DNS cache disabled" << std::endl;
-		hdestroy_r(&(this->ipv4Htab));
 		return;
 	}
 
@@ -265,8 +256,7 @@ void Resolver::disableCache()
 		return;
 	}
 
-	hdestroy_r(&(this->ipv4Htab));
-	hdestroy_r(&(this->ipv6Htab));
+	hdestroy_r(&(this->dnsHashTable));
 
 	this->cacheOn = false;
 }
@@ -276,7 +266,7 @@ bool Resolver::cacheEnabled()
 	return this->cacheOn;
 }
 
-bool Resolver::addToCache(char *key, void *data, int af)
+bool Resolver::addToCache(char *key, void *data)
 {
 	ENTRY e;
 	int ret;
@@ -290,32 +280,18 @@ bool Resolver::addToCache(char *key, void *data, int af)
 	e.key = key;
 	e.data = data;
 
-	switch (af) {
-	case (AF_INET):
-		ret = hsearch_r(e, ENTER, &retval, &(this->ipv4Htab));
-		if (ret == 0) {
-			/* adding failed */
-			std::cerr << "Unable to add entry to the cache" << std::endl;
-			return false;
-		}
-		break;
 
-	case (AF_INET6):
-		ret = hsearch_r(e, ENTER, &retval, &(this->ipv6Htab));
-		if (ret == 0) {
-			/* adding failed */
-			return false;
-		}
-		break;
-
-	default:
+	ret = hsearch_r(e, ENTER, &retval, &(this->dnsHashTable));
+	if (ret == 0) {
+		/* adding failed */
+		std::cerr << "Unable to add entry to the cache" << std::endl;
 		return false;
 	}
 
 	return true;
 }
 
-void *Resolver::cacheSearch(char *key, int af)
+void *Resolver::cacheSearch(char *key)
 {
 	ENTRY e;
 	ENTRY *ep;
@@ -327,22 +303,8 @@ void *Resolver::cacheSearch(char *key, int af)
 
 	e.key = key;
 
-	switch (af) {
-	case (AF_INET):
-		ret = hsearch_r(e, FIND, &ep, &(this->ipv4Htab));
-		if (ret == 0) {
-			return NULL;
-		}
-		break;
-
-	case (AF_INET6):
-		ret = hsearch_r(e, FIND, &ep, &(this->ipv6Htab));
-		if (ret == 0) {
-			return NULL;
-		}
-		break;
-
-	default:
+	ret = hsearch_r(e, FIND, &ep, &(this->dnsHashTable));
+	if (ret == 0) {
 		return NULL;
 	}
 

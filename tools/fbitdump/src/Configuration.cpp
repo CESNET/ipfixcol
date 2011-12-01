@@ -127,8 +127,8 @@ int Configuration::init(int argc, char *argv[])
 
 				this->resolver->setNameserver(nameserver);
 
-				/* enable DNS caching */
-				this->resolver->enableCache();
+				/* enable DNS caching - table for 1000 entries */
+				this->resolver->enableCache(1000);
 
 			}
 			break;

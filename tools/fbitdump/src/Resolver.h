@@ -57,12 +57,7 @@ private:
 	bool cacheOn;         /* indicates whether caching is on or off */
 
 	/* associative arrays that represent cache */
-	struct hsearch_data ipv4Htab;
-	struct hsearch_data ipv6Htab;
-
-	/* cache for 300+300 IPv4+IPv6 entries */
-	static const unsigned long int ipv4CacheSize = 300;
-	static const unsigned long int ipv6CacheSize = 300;
+	struct hsearch_data dnsHashTable;
 
 
 public:
@@ -110,15 +105,15 @@ public:
 	 */
 	bool reverseLookup6(uint64_t inaddr_part1, uint64_t inaddr_part2, char *result, int len);
 
-	void enableCache();
+	void enableCache(unsigned long int cacheSize);
 
 	void disableCache();
 
 	bool cacheEnabled();
 
-	bool addToCache(char *key, void *data, int af);
+	bool addToCache(char *key, void *data);
 
-	void *cacheSearch(char *key, int af);
+	void *cacheSearch(char *key);
 };
 
 } /* namespace fbitdump */
