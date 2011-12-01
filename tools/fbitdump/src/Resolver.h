@@ -105,14 +105,46 @@ public:
 	 */
 	bool reverseLookup6(uint64_t inaddr_part1, uint64_t inaddr_part2, char *result, int len);
 
+	/**
+	 * \brief Enable DNS cache
+	 *
+	 * @param[in] cacheSize number of rows in hash table
+	 * @return nothing
+	 */
 	void enableCache(unsigned long int cacheSize);
 
+	/**
+	 * \brief Disable DNS cache
+	 *
+	 * @return nothing
+	 */
 	void disableCache();
 
+	/**
+	 * \brief Test whether cache is enabled or not
+	 *
+	 * @return true, if caching is enabled. false otherwise
+	 */
 	bool cacheEnabled();
 
+	/**
+	 * \brief Add entry to the hash table
+	 *
+	 * @param[in] key key
+	 * @param[in] data value
+	 *
+	 * @return true, if entry was successfully added. false otherwise
+	 */
 	bool addToCache(char *key, void *data);
 
+	/**
+	 * \brief Search in hash table
+	 *
+	 * @param[in] key key to search for
+	 *
+	 * @return if given key exists in table this method will return pointer to the
+	 * corresponding value. NULL otherwise
+	 */
 	void *cacheSearch(char *key);
 };
 
