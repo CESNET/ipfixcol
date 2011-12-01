@@ -127,6 +127,9 @@ int Configuration::init(int argc, char *argv[])
 
 				this->resolver->setNameserver(nameserver);
 
+				/* enable DNS caching */
+				this->resolver->enableCache();
+
 			}
 			break;
 		case 'N': /* print plain numbers */
