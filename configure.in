@@ -276,9 +276,12 @@ if test "$POSTGRES" = "yes"; then
 fi
 
 if test "$FASTBIT" = "yes"; then
+	# this is C++ header file
+	AC_LANG_PUSH([C++])
 	AC_CHECK_HEADER([fastbit/ibis.h], , 
 		[AC_MSG_ERROR([fastbit/ibis.h header not found])]
 	)
+	AC_LANG_POP([C++])
 fi
 
 if test "$with_openssl" != "no"; then
