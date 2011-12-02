@@ -11,7 +11,7 @@
 #include <signal.h>
 
 #include "nffile.h"
-#include "../../headers/storage.h"
+#include <ipfixcol.h>
 
 #define ARGUMENTS "hbi:w:v:p:P:r:V"
 #define VERSION "1.0"
