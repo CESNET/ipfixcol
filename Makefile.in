@@ -222,7 +222,7 @@ install-doc:
 clean:
 	rm -rf *.a *.so* $(OBJDIR) $(DOXYGEN_DIR)/
 	for i in $(INPUT_PLUGINS) $(STORAGE_PLUGINS); do \
-		$(MAKE) $@ -C src/$$i; \
+		$(MAKE) $@ -C $$i; \
 	done; \
 	for i in $(TESTS); do \
 		$(MAKE) $@ -C devel-tools/tests/$$i; \
