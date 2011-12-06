@@ -96,7 +96,7 @@ public:
 	/**
 	 * \brief Run query that filters data in this table
 	 *
-	 * @param select Set of column names to use in query
+	 * @param columnNames Set of column names to use in query
 	 * @param filter Filter to use
 	 */
 	void filter(stringSet columnNames, Filter &filter);

@@ -143,7 +143,6 @@
 		<default-value>0</default-value>
 		<value type="plain">
 			<element>e0id11</element>
-			<element>e0id32</element>
 		</value>
 	</column>
 	<column>
