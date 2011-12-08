@@ -172,7 +172,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
         }
         /* remove data manager from the list */
         if (prev_config == NULL) {
-            data_mngmts = NULL;
+        	data_mngmts = config->next;
         } else {
             prev_config->next = config->next;
         }
