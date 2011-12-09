@@ -53,7 +53,7 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %files
 %{_bindir}/ipfixcol
 /usr/lib64/pkgconfig/ipfixcol.pc
-#%{_mandir}/man1/ipfixcol.1*
+%{_mandir}/man1/ipfixcol.1.gz
 #%{_mandir}/man5/ipfixcol.conf.5*
 #input plugins
 /usr/lib64/ipfixcol_udp_input.so
