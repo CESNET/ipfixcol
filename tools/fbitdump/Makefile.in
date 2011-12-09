@@ -27,9 +27,14 @@ OBJDIR  = .obj
 SRCDIR  = src
 SRC3RD  = 3rdparty
 
+#documentation tools
+XSLTPROC = @XSLTPROC@
+XSLTMANSTYLE = @XSLTMANSTYLE@
 DOXYGEN = @DOXYGEN@
 DOXYGEN_CONFIG = doxyconf
 DOXYGEN_DIR = doc
+MANDIR = man
+MANSRC = fbitdump.dbk fbitdump.xml.dbk
 
 prefix = @prefix@
 exec_prefix = @exec_prefix@
@@ -52,7 +57,7 @@ TARGET_DATA = fbitdump.xml
 CONF = configure.in fbitdump.xml install-sh Makefile.in VERSION fbitdump.spec.in tools
 
 # scanner must be build before filter (filter includes scanner's header)
-OBJS    = $(OBJDIR)/scanner.o $(SRCS:%.cpp=$(OBJDIR)/%.o) $(OBJDIR)/pugi.o
+OBJS = $(OBJDIR)/scanner.o $(SRCS:%.cpp=$(OBJDIR)/%.o) $(OBJDIR)/pugi.o
 
 all: fbitdump
 
@@ -83,8 +88,8 @@ $(OBJDIR)/scanner.o: $(SRCDIR)/scanner.c
 $(SRCDIR)/scanner.c: $(SRCDIR)/scanner.l
 	$(FLEX) -o $(SRCDIR)/scanner.c --header-file=$(SRCDIR)/scanner.h $<
 
-.PHONY: doc
-doc: doxygen
+.PHONY: doc man
+doc: doxygen man
 
 doxygen: $(DOXYGEN_CONFIG) $(SRCS:%=$(SRCDIR)/%)
 	@[ -d $(DOXYGEN_DIR) ] || mkdir -p $(DOXYGEN_DIR); \
@@ -97,6 +102,27 @@ doxygen: $(DOXYGEN_CONFIG) $(SRCS:%=$(SRCDIR)/%)
 		exit 1; \
 	fi
 
+man: $(addprefix $(MANDIR)/, $(MANSRC))
+	@if [ -n "$(XSLTPROC)" ]; then \
+		if [ -f "$(XSLTMANSTYLE)" ]; then \
+			cd $(MANDIR); \
+			for i in $(MANSRC); do \
+				echo $(XSLTPROC) $(XSLTMANSTYLE) $$i; \
+				$(XSLTPROC) $(XSLTMANSTYLE) $$i; \
+			done; \
+			for i in `ls -1 | grep -v -E "*.dbk$$"`; do \
+				gzip $$i; \
+			done; \
+			cd - > /dev/null; \
+		else \
+			echo "Missing $(XSLTMANSTYLE)!"; \
+			exit 1; \
+		fi \
+	else \
+		echo "Missing xsltproc"; \
+	fi
+
+
 .PHONY: install
 install: $(TARGET_BIN) $(TARGET_DATA)
 	[ -d $(DESTDIR)$(bindir) ] || \
@@ -105,6 +131,14 @@ install: $(TARGET_BIN) $(TARGET_DATA)
 	[ -d $(DESTDIR)$(datadir)/$(NAME)/ ] || \
 		(mkdir -p $(DESTDIR)$(datadir)/$(NAME)/; chmod 755 $(DESTDIR)$(datadir)/$(NAME)/);
 	$(INSTALL_DATA) $(TARGET_DATA) $(DESTDIR)$(datadir)/$(NAME)/;
+	for i in 1 5; do \
+		[ -d $(DESTDIR)$(mandir)/man$$i/ ] || \
+			(mkdir -p $(DESTDIR)$(mandir)/man$$i/; chmod 755 $(DESTDIR)$(mandir)/man$$i/); \
+			cd $(MANDIR); \
+			$(INSTALL_DATA) `ls -1 | grep -E "*.$$i.gz$$"` $(DESTDIR)$(mandir)/man$$i/; \
+			cd - > /dev/null; \
+	done;
+
 
 .PHONY: tarball
 tarball: $(CONF) $(SRCDIR)
@@ -112,7 +146,7 @@ tarball: $(CONF) $(SRCDIR)
 	mkdir $(NAME)-$(VERSION); \
 	rm -rf $(RPMDIR)/SOURCES/; \
 	mkdir -p $(RPMDIR)/SOURCES/; \
-	for i in $(SRC3RD) $(SRCDIR) $(CONF); do \
+	for i in $(SRC3RD) $(SRCDIR) $(CONF) $(MANDIR); do \
 		[ "$$i" != "$${i%/*}" -a ! -d $(NAME)-$(VERSION)/$${i%/*} ] && mkdir -p $(NAME)-$(VERSION)/$${i%/*}; \
 		cp -r $$i $(NAME)-$(VERSION)/$$i; \
 	done;
@@ -126,9 +160,9 @@ rpm: tarball $(NAME).spec
 	$(RPMBUILD) -ba $(NAME).spec \
 		--define "_topdir `pwd`/$(RPMDIR)";
 
-
+.PHONY: clean
 clean:
 	rm -f fbitdump src/protocols.cpp src/scanner.h src/scanner.c
 	rm -fr doc $(OBJDIR)
-	rm -fr $(RPMDIR)
+	rm -fr $(RPMDIR) $(MANDIR)/*.gz
 
