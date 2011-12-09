@@ -146,7 +146,7 @@ tarball: $(CONF) $(SRCDIR)
 	mkdir $(NAME)-$(VERSION); \
 	rm -rf $(RPMDIR)/SOURCES/; \
 	mkdir -p $(RPMDIR)/SOURCES/; \
-	for i in $(SRC3RD) $(SRCDIR) $(CONF) $(MANDIR); do \
+	for i in $(SRC3RD) $(SRCDIR) $(CONF) $(MANDIR)/*.dbk; do \
 		[ "$$i" != "$${i%/*}" -a ! -d $(NAME)-$(VERSION)/$${i%/*} ] && mkdir -p $(NAME)-$(VERSION)/$${i%/*}; \
 		cp -r $$i $(NAME)-$(VERSION)/$$i; \
 	done;
