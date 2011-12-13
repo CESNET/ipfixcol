@@ -1,7 +1,7 @@
 /**
- * \file AST.h
+ * \file Values.h
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Header of struct for managing abstract syntax tree
+ * \brief Header of struct for managing values of different types
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,8 +37,8 @@
  *
  */
 
-#ifndef AST_H_
-#define AST_H_
+#ifndef VALUES_H_
+#define VALUES_H_
 
 #include "typedefs.h"
 
@@ -49,7 +49,7 @@ namespace fbitdump {
 /**
  * \brief structure for passing values of unknown type
  */
-struct values
+struct Values
 {
 	ibis::TYPE_T type;
 	union
@@ -92,49 +92,6 @@ struct values
 	std::string toString(bool plainNumbers);
 };
 
-/**
- * \brief types for AST structure
- */
-enum astTypes
-{
-	value,   //!< value
-	operation//!< operation
-};
-
-/**
- * \brief Abstract syntax tree structure
- *
- * Describes the way that column value is constructed from database columns
- */
-struct AST
-{
-	astTypes type; /**< AST type */
-	unsigned char operation; /**< one of '/', '*', '-', '+' */
-	std::string semantics; /**< semantics of the column */
-	std::string value; /**< value (column name) */
-	std::string aggregation; /**< how to aggregate this column */
-	int parts; /**< number of parts of column (ipv6 => e0id27p0 and e0id27p1)*/
-	AST *left; /**< left subtree */
-	AST *right; /**< right subtree */
-
-	stringSet astColumns; /**< Cached columns set (computed in Column::getColumns(AST*)) */
-	bool cached;
-
-	/**
-	 * \brief AST constructor - sets default values
-	 */
-	AST(): parts(1), left(NULL), right(NULL), cached(false) {}
-
-	/**
-	 * \brief AST destructor
-	 */
-	~AST()
-	{
-		delete left;
-		delete right;
-	}
-};
-
 } /* end of namespace fbitdump */
 
-#endif /* AST_H_ */
+#endif /* VALUES_H_ */

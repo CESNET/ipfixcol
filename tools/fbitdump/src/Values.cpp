@@ -1,7 +1,7 @@
 /**
- * \file AST.cpp
+ * \file Values.cpp
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Struct for managing abstract syntax tree
+ * \brief Struct for managing values of different types
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,7 +37,7 @@
  *
  */
 
-#include "AST.h"
+#include "Values.h"
 
 namespace fbitdump {
 
@@ -61,7 +61,7 @@ namespace fbitdump {
 		ss.precision(0); /* set zero precision for other numbers */
 
 
-int64_t values::toLong(int part)
+int64_t Values::toLong(int part)
 {
 	switch (type) {
 	case ibis::BYTE:
@@ -92,7 +92,7 @@ int64_t values::toLong(int part)
 	}
 }
 
-double values::toDouble(int part)
+double Values::toDouble(int part)
 {
 	switch (type) {
 	case ibis::FLOAT:
@@ -109,7 +109,7 @@ double values::toDouble(int part)
 	}
 }
 
-std::string values::toString(bool plainNumbers)
+std::string Values::toString(bool plainNumbers)
 {
 	std::string valStr;
 	/* this is static for performance reason */

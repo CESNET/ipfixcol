@@ -131,7 +131,7 @@ std::string Printer::printValue(Column *col, Cursor *cur)
 		return col->getName();
 	}
 
-	values *val = col->getValue(cur);
+	Values *val = col->getValue(cur);
 
 	/* check for missing column */
 	if (val == NULL) {

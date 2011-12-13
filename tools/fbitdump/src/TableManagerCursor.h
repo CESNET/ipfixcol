@@ -42,7 +42,7 @@
 
 #include <fastbit/ibis.h>
 #include <cstring>
-#include "AST.h"
+#include "Values.h"
 #include "Table.h"
 #include "TableManager.h"
 
@@ -114,7 +114,7 @@ public:
 	 * @param[in] part Number of part to write result to
 	 * @return true on success, false otherwise
 	 */
-	bool getColumn(const char *name, values &value, int part);
+	bool getColumn(const char *name, Values &value, int part);
 
 	/**
 	 * \brief Get cursor to the current row

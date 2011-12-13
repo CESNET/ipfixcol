@@ -41,7 +41,7 @@
 #define COLUMN_H_
 
 #include "typedefs.h"
-#include "AST.h"
+#include "Values.h"
 #include "Cursor.h"
 #include "TableManagerCursor.h"
 
@@ -132,7 +132,7 @@ public:
 	 * @param cur cursor pointing to current row
 	 * @return values structure containing required value
 	 */
-	values* getValue(Cursor *cur);
+	Values* getValue(Cursor *cur);
 
 	/**
 	 * \brief Can this column be used in aggregation?
@@ -146,13 +146,6 @@ public:
 	 * @return Set of table column names
 	 */
 	stringSet getColumns();
-
-	/**
-	 * \brief Set AST for this column
-	 *
-	 * @param ast AST for this column
-	 */
-	void setAST(AST *ast);
 
 	/**
 	 * \brief Sets columns aggregation mode
@@ -209,13 +202,56 @@ public:
 private:
 
 	/**
+	 * \brief Abstract syntax tree structure
+	 *
+	 * Describes the way that column value is constructed from database columns
+	 */
+	struct AST
+	{
+		/**
+		 * \brief types for AST structure
+		 */
+		enum astTypes
+		{
+			valueType,   //!< value
+			operationType//!< operation
+		};
+
+		astTypes type; /**< AST type */
+		unsigned char operation; /**< one of '/', '*', '-', '+' */
+		std::string semantics; /**< semantics of the column */
+		std::string value; /**< value (column name) */
+		std::string aggregation; /**< how to aggregate this column */
+		int parts; /**< number of parts of column (ipv6 => e0id27p0 and e0id27p1)*/
+		AST *left; /**< left subtree */
+		AST *right; /**< right subtree */
+
+		stringSet astColumns; /**< Cached columns set (computed in Column::getColumns(AST*)) */
+		bool cached;
+
+		/**
+		 * \brief AST constructor - sets default values
+		 */
+		AST(): parts(1), left(NULL), right(NULL), cached(false) {}
+
+		/**
+		 * \brief AST destructor
+		 */
+		~AST()
+		{
+			delete left;
+			delete right;
+		}
+	};
+
+	/**
 	 * \brief Evaluates AST against data in cursor
 	 *
 	 * @param ast AST to evaluate
 	 * @param cur Cursor with data
 	 * @return returns values structure
 	 */
-	values *evaluate(AST *ast, Cursor *cur);
+	Values *evaluate(AST *ast, Cursor *cur);
 
 		/**
 	 * \brief Performs operation on given data
@@ -227,7 +263,14 @@ private:
 	 * @param op one of '+', '-', '/', '*'
 	 * @return return resulting value of appropriate type
 	 */
-	values* performOperation(values *left, values *right, unsigned char op);
+	Values* performOperation(Values *left, Values *right, unsigned char op);
+
+	/**
+	 * \brief Set AST for this column
+	 *
+	 * @param ast AST for this column
+	 */
+	void setAST(AST *ast);
 
 	/**
 	 * \brief Create element of type value from XMLnode element

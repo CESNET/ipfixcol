@@ -100,7 +100,7 @@ bool Column::init(pugi::xml_document &doc, std::string alias, bool aggregate)
 	return true;
 }
 
-AST* Column::createValueElement(pugi::xml_node element, pugi::xml_document &doc)
+Column::AST* Column::createValueElement(pugi::xml_node element, pugi::xml_document &doc)
 {
 
 	/* when we have alias, go down one level */
@@ -115,7 +115,7 @@ AST* Column::createValueElement(pugi::xml_node element, pugi::xml_document &doc)
 	/* create the element */
 	AST *ast = new AST;
 
-	ast->type = fbitdump::value;
+	ast->type = fbitdump::Column::AST::valueType;
 	ast->value = element.child_value();
 	ast->semantics = element.attribute("semantics").value();
 	if (element.attribute("parts")) {
@@ -128,7 +128,7 @@ AST* Column::createValueElement(pugi::xml_node element, pugi::xml_document &doc)
 	return ast;
 }
 
-AST* Column::createOperationElement(pugi::xml_node operation, pugi::xml_document &doc)
+Column::AST* Column::createOperationElement(pugi::xml_node operation, pugi::xml_document &doc)
 {
 
 	AST *ast = new AST;
@@ -136,7 +136,7 @@ AST* Column::createOperationElement(pugi::xml_node operation, pugi::xml_document
 	std::string type;
 
 	/* set type and operation */
-	ast->type = fbitdump::operation;
+	ast->type = fbitdump::Column::AST::operationType;
 	ast->operation = operation.attribute("name").value()[0];
 	ast->semantics = operation.attribute("semantics").value();
 
@@ -209,14 +209,14 @@ void Column::setAlignLeft(bool alignLeft)
 	this->alignLeft = alignLeft;
 }
 
-values* Column::getValue(Cursor *cur)
+Values* Column::getValue(Cursor *cur)
 {
 	return evaluate(this->ast, cur);
 }
 
-values *Column::evaluate(AST *ast, Cursor *cur)
+Values *Column::evaluate(AST *ast, Cursor *cur)
 {
-	values *retVal = NULL;
+	Values *retVal = NULL;
 
 	/* check input AST */
 	if (ast == NULL) {
@@ -225,8 +225,8 @@ values *Column::evaluate(AST *ast, Cursor *cur)
 
 	/* evaluate AST */
 	switch (ast->type) {
-		case fbitdump::value:{
-			retVal = new values;
+		case fbitdump::Column::AST::valueType:{
+			retVal = new Values;
 			int part=0;
 			stringSet &tmpSet = this->getColumns(ast);
 
@@ -240,8 +240,8 @@ values *Column::evaluate(AST *ast, Cursor *cur)
 			}
 
 			break;}
-		case fbitdump::operation:
-			values *left, *right;
+		case fbitdump::Column::AST::operationType:
+			Values *left, *right;
 
 			left = evaluate(ast->left, cur);
 			right = evaluate(ast->right, cur);
@@ -262,9 +262,9 @@ values *Column::evaluate(AST *ast, Cursor *cur)
 	return retVal;
 }
 
-values* Column::performOperation(values *left, values *right, unsigned char op)
+Values* Column::performOperation(Values *left, Values *right, unsigned char op)
 {
-	values *result = new values;
+	Values *result = new Values;
 	/* TODO add some type checks maybe... */
 	switch (op) {
 				case '+':
@@ -301,7 +301,7 @@ stringSet& Column::getColumns(AST* ast)
 	/* use cached values if possible */
 	if (ast->cached) return ast->astColumns;
 
-	if (ast->type == fbitdump::value) {
+	if (ast->type == fbitdump::Column::AST::valueType) {
 		if (ast->semantics != "flows") {
 			if (ast->parts > 1) {
 				for (int i = 0; i < ast->parts; i++) {
@@ -358,12 +358,12 @@ bool Column::getAggregate(AST* ast)
 {
 
 	/* AST type must be 'value' and aggregation string must not be empty */
-	if (ast->type == fbitdump::value) {
+	if (ast->type == fbitdump::Column::AST::valueType) {
 		if (!ast->aggregation.empty()) {
 			return true;
 		}
 	/* or both sides of operation must be aggregable */
-	} else if (ast->type == fbitdump::operation) {
+	} else if (ast->type == fbitdump::Column::AST::operationType) {
 		return getAggregate(ast->left) && getAggregate(ast->right);
 	}
 
@@ -401,7 +401,7 @@ bool Column::isSeparator() {
 }
 
 bool Column::isOperation() {
-	if (this->ast != NULL && this->ast->type == fbitdump::operation) {
+	if (this->ast != NULL && this->ast->type == fbitdump::Column::AST::operationType) {
 		return true;
 	}
 

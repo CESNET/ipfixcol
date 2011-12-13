@@ -222,25 +222,6 @@ private:
 	 */
 	void parseFormat(std::string format);
 
-	/**
-	 * \brief Create element of type value from XMLnode element
-	 *
-	 * @param element XML node element
-	 * @param doc XML document with configuration
-	 * @return AST structure of created element
-	 */
-	AST* createValueElement(pugi::xml_node element, pugi::xml_document &doc);
-
-	/**
-	 * \brief Create element of type operation from XMLnode element
-	 *
-	 * @param operation XML node element
-	 * @param doc XML document with configuration
-	 * @return AST structure of created operation
-	 */
-	AST* createOperationElement(pugi::xml_node operation, pugi::xml_document &doc);
-
-
     /**
      * \brief Check whether argument is a directory
      *

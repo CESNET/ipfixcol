@@ -70,7 +70,7 @@ bool Cursor::next()
 	return true;
 }
 
-bool Cursor::getColumn(std::string name, values &value, int part)
+bool Cursor::getColumn(std::string name, Values &value, int part)
 {
 	int ret = 0, colNum = 0;
 	ibis::TYPE_T type;

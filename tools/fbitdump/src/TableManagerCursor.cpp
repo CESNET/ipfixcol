@@ -124,8 +124,8 @@ bool TableManagerCursor::getTableCursors()
 bool TableManagerCursor::next()
 {
 	bool ret_next;
-	struct values *minValue = NULL;
-	struct values *value = NULL;
+	struct Values *minValue = NULL;
+	struct Values *value = NULL;
 	Cursor *minCursor = NULL;
 	Cursor *cursor = NULL;
 	unsigned int minIndex = 0;
@@ -242,7 +242,7 @@ bool TableManagerCursor::next()
 }
 
 
-bool TableManagerCursor::getColumn(const char *name, values &value, int part)
+bool TableManagerCursor::getColumn(const char *name, Values &value, int part)
 {
 	bool ret;
 
