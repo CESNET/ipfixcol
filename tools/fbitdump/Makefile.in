@@ -21,7 +21,7 @@ SRCS    = fbitdump.cpp \
 		TableManager.cpp \
 		TableManagerCursor.cpp \
 		Cursor.cpp \
-		AST.cpp \
+		Values.cpp \
 		Resolver.cpp
 OBJDIR  = .obj
 SRCDIR  = src
@@ -67,6 +67,9 @@ fbitdump: $(OBJS) VERSION
 
 # Printer is specified extra with -fno-strict-aliasing for performance reasons
 $(OBJDIR)/Printer.o: $(SRCDIR)/Printer.cpp
+	$(CXX) $(CXXFLAGS) -fno-strict-aliasing -c $< -o $@
+
+$(OBJDIR)/Resolver.o: $(SRCDIR)/Resolver.cpp
 	$(CXX) $(CXXFLAGS) -fno-strict-aliasing -c $< -o $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
