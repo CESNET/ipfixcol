@@ -101,11 +101,12 @@ public:
 	 */
 	void filter(stringSet columnNames, Filter &filter);
 
+
 	/**
 	 * \brief Get number of rows
 	 * @return number of rows
 	 */
-	size_t nRows();
+	uint64_t nRows();
 
 	/**
 	 * \brief Returns ibis::table (mainly for cursor)

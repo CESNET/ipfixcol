@@ -72,15 +72,34 @@ bool Printer::print(TableManager &tm)
 		return true;
 	}
 
+	uint64_t numPrinted = 0;
 	while (tmc->next()) {
 		cursor = tmc->getCurrentCursor();
 		printRow(cursor);
+		numPrinted++;
 	}
 
 	delete(tmc);
 
 	/* TODO print nfdump-like statistics, maybe in main program */
+	/*
+	Date flow start          Duration Proto      Src IP Addr:Port          Dst IP Addr:Port   Packets    Bytes Flows
+	2010-03-31 16:55:39.790     0.000 UDP    147.250.240.133:43495 ->   24.177.165.251:42275        1       63     1
+	Summary: total flows: 1, total bytes: 63, total packets: 1, avg bps: 0, avg pps: 0, avg bpp: 0
+	Time window: 2010-03-31 16:55:39 - 2010-03-31 16:55:39
+	Total flows processed: 114447719, Blocks skipped: 0, Bytes read: 5951587764
+	Sys: 9.150s flows/second: 12507116.4 Wall: 87.665s flows/second: 1305499.5
+	*/
+	/* asi to budu scitat pri vypise, z tabulek to jen tak snadno nedostanu. vypis bude jen pokud k nemu mam data, desne to zpomali
+	 * total flows muzu zkusit jako nRows() na puvodni tabulky - tohle bude rychly
+	 * cas vynecham, to je docela slozity...
+	 * time window leda za predpokladu, ze k tomu mam data
+	 * zajimavejsi bude cislo o postu naloadovanych tabulek (parts) - tohle neni problem
+	 * tak nakonec asi jen parts a total flows, tohle si ulozim pri budovani table managera, pribude metoda getNRows do Table(zohledni Queue)*/
 
+	if (!conf.getQuiet()) {
+		printFooter(tm, numPrinted);
+	}
 
 	return true;
 }
@@ -104,6 +123,12 @@ void Printer::printHeader()
 	/* new line */
 	out << std::endl;
 
+}
+
+void Printer::printFooter(TableManager &tm, uint64_t numPrinted) const
+{
+	std::cout << "Total rows outputed: " << numPrinted << std::endl
+	<< "Processed " << tm.getNumParts() << " tables with " << tm.getInitRows() << " rows" << std::endl;
 }
 
 void Printer::printRow(Cursor *cur)

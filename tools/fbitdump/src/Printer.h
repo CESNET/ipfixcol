@@ -89,6 +89,13 @@ private:
 	void printHeader();
 
 	/**
+	 * \brief Print short summary after flows output
+	 * @param tm TableManager of printed tables
+	 * @param numPrinted Number of printed rows
+	 */
+	void printFooter(TableManager &tm, uint64_t numPrinted) const;
+
+	/**
 	 * \brief Return printable value of column on row specified by cursor
 	 *
 	 * Applies semantics and other formatting requirements

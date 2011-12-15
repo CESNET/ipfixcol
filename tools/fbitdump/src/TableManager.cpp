@@ -240,6 +240,20 @@ void TableManager::removeTable(tableVector::iterator &it)
 	tables.erase(it--);
 }
 
+uint64_t TableManager::getNumParts() const
+{
+	return this->parts.size();
+}
+
+uint64_t TableManager::getInitRows() const
+{
+	uint64_t ret = 0;
+	for (ibis::partList::const_iterator it = this->parts.begin(); it != this->parts.end(); it++) {
+		ret += (*it)->nRows();
+	}
+	return ret;
+}
+
 TableManager::TableManager(Configuration &conf): conf(conf)
 {
 	std::string tmp;

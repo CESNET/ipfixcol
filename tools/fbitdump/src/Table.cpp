@@ -124,7 +124,7 @@ void Table::filter(stringSet columnNames, Filter &filter)
 	queueQuery(colNames.c_str(), filter);
 }
 
-size_t Table::nRows()
+uint64_t Table::nRows()
 {
 	this->doQuery();
 	return this->table->nRows();

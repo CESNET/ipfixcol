@@ -114,14 +114,27 @@ public:
 	TableManagerCursor *createCursor();
 
 	/**
+	 * \brief Return number of managed parts
+	 *
+	 * @return number of managed parts
+	 */
+	uint64_t getNumParts() const;
+
+	/**
+	 * \brief Return number of rows present in the initial raw data
+	 * @return number of rows in initial data
+	 */
+	uint64_t getInitRows() const;
+
+	/**
 	 * \brief Class destructor
 	 */
 	~TableManager();
 
 private:
-	Configuration &conf;       /**< Program configuration */
-	ibis::partList parts;      /**< List of loaded table parts */
-	tableVector tables;        /**< List of managed tables */
+	Configuration &conf;		/**< Program configuration */
+	ibis::partList parts;		/**< List of loaded table parts */
+	tableVector tables;			/**< List of managed tables */
 };
 
 }  // namespace fbitdump
