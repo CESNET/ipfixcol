@@ -314,10 +314,11 @@ int Configuration::searchForTableParts(stringVector &tables)
 
 void Configuration::parseFormat(std::string format)
 {
-	Column *col;
-	regex_t reg;
-	int err;
-	regmatch_t matches[1];
+	Column *col; /* newly created column pointer */
+	regex_t reg; /* the regular expresion structure */
+	int err; /* check for regexec error */
+	regmatch_t matches[1]; /* array of regex matches (we need only one) */
+	bool removeNext = false; /* when removing column, remove the separator after it */
 
 	/* Open XML configuration file */
 	pugi::xml_document doc;
@@ -333,25 +334,51 @@ void Configuration::parseFormat(std::string format)
 		/* run regular expression match */
 		if ((err = regexec(&reg, format.c_str(), 1, matches, 0)) == 0) {
 			/* check for columns separator */
-			if (matches[0].rm_so != 0 ) {
+			if (matches[0].rm_so != 0 && !removeNext) {
 				col = new Column();
 				col->setName(format.substr(0, matches[0].rm_so));
 				this->columns.push_back(col);
 			}
 
 			col = new Column();
-			if (col->init(doc, format.substr(matches[0].rm_so, matches[0].rm_eo - matches[0].rm_so), this->aggregate)) {
-				this->columns.push_back(col);
-			} else {
-				delete col;
-			}
-
+			bool ok = true;
+			std::string alias = format.substr(matches[0].rm_so, matches[0].rm_eo - matches[0].rm_so);
 			/* discard processed part of the format string */
 			format = format.substr(matches[0].rm_eo);
+
+			do {
+				if ((ok = col->init(doc, alias, this->aggregate)) == false) break;
+
+				/* check that column is aggregable (is a summary column) or is aggregated */
+
+				if (!this->getAggregate()) break; /* not aggregating, no proglem here */
+				if (col->getAggregate()) break; /* collumn is a summary column, ok */
+
+				stringSet resultSet, aliasesSet = col->getAliases();
+				std::set_intersection(aliasesSet.begin(), aliasesSet.end(), this->aggregateColumnsAliases.begin(),
+						this->aggregateColumnsAliases.end(), std::inserter(resultSet, resultSet.begin()));
+
+				if (resultSet.empty()) { /* the column is not and aggregation column it will NOT have any value*/
+					ok = false;
+					break;
+				}
+
+
+			} while (false);
+
+			/* use the column only if everything was ok */
+			if (!ok) {
+				delete col;
+				removeNext = true;
+			}
+			else {
+				this->columns.push_back(col);
+				removeNext = false;
+			}
 		} else if ( err != REG_NOMATCH ) {
 			std::cerr << "Bad output format string" << std::endl;
 			break;
-		} else { /* rest is column separator */
+		} else if (!removeNext) { /* rest is column separator */
 			col = new Column();
 			col->setName(format.substr(0, matches[0].rm_so));
 			this->columns.push_back(col);
