@@ -64,7 +64,6 @@ private:
 	std::vector<Cursor *> cursorList;   /**< list of table specific cursors */
 	Cursor *currentCursor;              /**< current cursor with actual data */
 	tableVector::iterator currentTableIt;/**< index of current table */
-	Column *timestampColumn;            /**< column with timestamp information */
 
 	unsigned int cursorIndex;           /**< index of the current table cursor */
 	std::vector<bool> auxList;          /**< auxiliary list, true means that on
@@ -122,13 +121,6 @@ public:
 	 * @return current cursor
 	 */
 	Cursor *getCurrentCursor();
-
-	/**
-	 * \brief order tables by timestamp
-	 *
-	 * @return true if all went ok, false otherwise
-	 */
-	bool orderAllTables();
 };
 
 }

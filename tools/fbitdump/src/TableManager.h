@@ -132,9 +132,11 @@ public:
 	~TableManager();
 
 private:
+
 	Configuration &conf;		/**< Program configuration */
 	ibis::partList parts;		/**< List of loaded table parts */
 	tableVector tables;			/**< List of managed tables */
+	stringSet orderColumns; /**< String list of order by columns */
 };
 
 }  // namespace fbitdump

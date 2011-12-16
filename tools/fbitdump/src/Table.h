@@ -132,6 +132,17 @@ public:
 	Filter* getFilter();
 
 	/**
+	 * \brief Specify string set with columns names to order by
+	 *
+	 * More strings will be used when column has mutiple parts
+	 * Strings must be put through namesColumnsMap,
+	 * so this function is valid only after the map exists
+	 *
+	 * @param list of strings to order by
+	 */
+	void orderBy(stringSet orderColumns);
+
+	/**
 	 * \brief Table class destructor
 	 */
 	~Table();
@@ -155,6 +166,7 @@ private:
 	namesColumnsMap namesColumns; /**< Map of column names to column numbers */
 	bool queryDone; /**< Indicates that query was already preformed */
 	std::string select; /**< Select string to be used on next query */
+	stringSet orderColumns; /**< Set of columns to order by */
 };
 
 } /* end of namespace fbitdump */

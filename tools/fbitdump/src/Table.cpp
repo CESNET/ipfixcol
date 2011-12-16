@@ -37,7 +37,7 @@
  *
  */
 
-#include <exception>
+#include <stdexcept>
 #include "Table.h"
 
 namespace fbitdump {
@@ -148,6 +148,11 @@ Filter* Table::getFilter()
 	return this->usedFilter;
 }
 
+void Table::orderBy(stringSet orderColumns)
+{
+	this->orderColumns = orderColumns;
+}
+
 void Table::queueQuery(std::string select, Filter &filter)
 {
 	/* Run any previous query */
@@ -164,6 +169,23 @@ void Table::doQuery()
 		/* do select */
 		ibis::table *tmpTable = this->table;
 		this->table = this->table->select(this->select.c_str(), this->usedFilter->getFilter().c_str());
+
+		/* do order by only on valid result */
+		if (this->table && this->table->nRows() && !this->orderColumns.empty()) {
+			/* transform the column names to table names */
+			ibis::table::stringList orderByList;
+			for (stringSet::const_iterator it = this->orderColumns.begin(); it != this->orderColumns.end(); it++) {
+				try {
+					int i = this->namesColumns.at(*it);
+					const char *s = this->table->columnNames()[i];
+					orderByList.push_back(s);
+				} catch (std::out_of_range &e) {
+					std::cerr << "Cannot order by column '" << *it << "' (not present in the table)" << std::endl;
+				}
+			}
+			/* order the table */
+			this->table->orderby(orderByList);
+		}
 
 		/* delete original table */
 		delete tmpTable;

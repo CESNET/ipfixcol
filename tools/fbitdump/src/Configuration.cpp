@@ -62,6 +62,7 @@ int Configuration::init(int argc, char *argv[])
 	stringVector tables;
 	std::string filterFile;
 	std::string optionM;	/* optarg for option -M */
+	std::string optionm;	/* optarg value for option -m */
 
 	/* get program name without execute path */
 	this->appName = ((this->appName = strrchr (argv[0], '/')) != NULL) ? (this->appName + 1) : argv[0];
@@ -167,6 +168,9 @@ int Configuration::init(int argc, char *argv[])
 		}
 		case 'm':
 			this->optm = true;
+			if (optarg != NULL)
+				optionm = optarg;
+			else optionm = "%ts"; /* default is timestamp column */
 			break;
 
 		case 'R':
@@ -200,6 +204,9 @@ int Configuration::init(int argc, char *argv[])
 		processMOption(tables, optionM.c_str());
 	}
 
+	/* allways process option -m, we need to know  whether aggregate or not */
+	this->processmOption(optionm);
+
 	/* read filter */
 	if (optind < argc) {
 		this->filter = argv[optind];
@@ -221,9 +228,6 @@ int Configuration::init(int argc, char *argv[])
 		/* set default filter */
 		this->filter = "1=1";
 	}
-
-	/* set default order (by timestamp) */
-	this->order.push_back("%ts");
 
 	/* TODO add format to print everything */
 	if (this->format.empty() || this->format == "line") {
@@ -362,8 +366,6 @@ void Configuration::parseFormat(std::string format)
 					ok = false;
 					break;
 				}
-
-
 			} while (false);
 
 			/* use the column only if everything was ok */
@@ -437,9 +439,9 @@ stringSet Configuration::getSummaryColumns()
 	return summaryColumns;
 }
 
-stringVector Configuration::getOrder()
+Column *Configuration::getOrderByColumn()
 {
-	return this->order;
+	return this->orderColumn;
 }
 
 bool Configuration::getPlainNumbers()
@@ -525,6 +527,34 @@ void Configuration::sanitizePath(std::string &path)
 	}
 }
 
+void Configuration::processmOption(std::string order)
+{
+	/* Open XML configuration file */
+	pugi::xml_document doc;
+	doc.load_file(this->getXmlConfPath());
+
+	Column *col = new Column();
+	do {
+		if (!col->init(doc, order, this->getAggregate())) {
+			std::cerr << "Cannot find column '" << order << "' to order by" << std::endl;
+			break;
+		}
+
+		if (col->isOperation()) {
+			std::cerr << "Cannot sort by operation column '" << order << "'." << std::endl;
+			break;
+		}
+
+		this->orderColumn = col;
+		return;
+	} while (false);
+
+
+	/* no sorting unset option m and delete the column */
+	this->optm = false;
+	delete col;
+}
+
 void Configuration::help()
 {
 	/* lines with // at the beginning should be implemented sooner */
@@ -588,7 +618,7 @@ bool Configuration::getOptionm()
 }
 
 Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false),
-		optm(false)
+		optm(false), orderColumn(NULL)
 {
 	this->resolver = new Resolver();
 }
@@ -932,6 +962,7 @@ Configuration::~Configuration()
 	}
 
 	delete this->resolver;
+	delete this->orderColumn;
 }
 
 } /* end of fbitdump namespace */

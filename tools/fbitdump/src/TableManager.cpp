@@ -177,6 +177,7 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 
 		/* aggregate the table, use only present aggregation columns */
 		table->aggregate(*outerIter, summaryColumns, filter);
+		table->orderBy(this->orderColumns);
 		this->tables.push_back(table);
 
 		/* and clear the part list */
@@ -209,6 +210,7 @@ void TableManager::filter(Filter &filter)
 
 		/* add to managed tables */
 		table->filter(columnNames, filter);
+		table->orderBy(this->orderColumns);
 		this->tables.push_back(table);
 
 #ifdef DEBUG
@@ -274,6 +276,11 @@ TableManager::TableManager(Configuration &conf): conf(conf)
 		} else {
 			std::cerr << "Cannot open table part: " << tmp << std::endl;
 		}
+	}
+
+	/* create order by string list if necessary */
+	if (conf.getOptionm()) {
+		this->orderColumns = conf.getOrderByColumn()->getColumns();
 	}
 }
 

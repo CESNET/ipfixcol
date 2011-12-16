@@ -49,7 +49,7 @@
 namespace fbitdump {
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "hVaA:r:f:n:c:D:Ns:qIM:mR:o:v:Z:t:"
+#define OPTSTRING "hVaA:r:f:n:c:D:Ns:qIM:m::R:o:v:Z:t:"
 
 #define COLUMNS_XML "/usr/share/fbitdump/fbitdump.xml"
 
@@ -107,11 +107,13 @@ public:
     stringSet getSummaryColumns();
 
     /**
-     * \brief Returns vector of order by columns
+     * \brief Returns column to order by
      *
-     * @return Vector of order by column names
+     * Column might be null when order by is not set by -m option
+     *
+     * @return Column to order by
      */
-    stringVector getOrder();
+    Column* getOrderByColumn();
 
     /**
      * \brief Returns true when option for printing plain numbers was passed
@@ -264,6 +266,14 @@ private:
      */
     bool processROption(stringVector &tables, const char *optarg);
 
+    /**
+     * \brief Process optional param of -m option
+     *
+     * Create column to order by
+     *
+     * @param order name of the column to order by
+     */
+    void processmOption(std::string order);
 
 
     stringVector parts;                /**< Fastbit parts paths to be used*/
@@ -274,15 +284,15 @@ private:
 	bool aggregate;                    /**< Are we in aggreagate mode? */
 	bool quiet;                        /**< Don't print header and statistics */
 	std::string filter;                /**< User specified filter string */
-	stringVector order;                /**< Ordering columns aliases */
 	std::string format;                /**< Output format*/
 	columnVector columns;              /**< Vector of columns to print */
-	std::string firstdir;              /**< first table (directory) user wants to work with */
-	std::string lastdir;               /**< last table (directory) user wants to work with */
-	bool optm;                         /**< indicates whether user specified "-m" option or not */
-	std::string timeWindow;            /**< time window */
-	std::string rOptarg;               /**< optarg for -r option */
-	std::string ROptarg;               /**< optarg for -R option */
+	std::string firstdir;              /**< First table (directory) user wants to work with */
+	std::string lastdir;               /**< Last table (directory) user wants to work with */
+	bool optm;                         /**< Indicates whether user specified "-m" option or not */
+	Column *orderColumn;				   /**< Column specified using -m value, default is %ts */
+	std::string timeWindow;            /**< Time window */
+	std::string rOptarg;               /**< Optarg for -r option */
+	std::string ROptarg;               /**< Optarg for -R option */
 	Resolver *resolver;                /**< DNS resolver */
 }; /* end of Configuration class */
 
