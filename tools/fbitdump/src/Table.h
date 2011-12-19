@@ -90,8 +90,8 @@ public:
 	 * @param summaryColumns Set of columns to summarize
 	 * @param filter Filter to use
 	 */
-	void aggregate(stringSet &aggregateColumns, stringSet &summaryColumns,
-			Filter &filter);
+	void aggregate(const stringSet &aggregateColumns, const stringSet &summaryColumns,
+			const Filter &filter);
 
 	/**
 	 * \brief Run query that filters data in this table
@@ -113,7 +113,7 @@ public:
 	 *
 	 * @return ibis::table
 	 */
-	ibis::table* getFastbitTable();
+	const ibis::table* getFastbitTable();
 
 	/**
 	 * \brief Returns map of column names to column numbers
@@ -121,7 +121,7 @@ public:
 	 *
 	 * @return Map of column names to column numbers
 	 */
-	namesColumnsMap& getNamesColumns();
+	const namesColumnsMap& getNamesColumns();
 
 	/**
 	 * \brief Return pointer to used filter
@@ -129,7 +129,7 @@ public:
 	 *
 	 * @return Table filter reference
 	 */
-	Filter* getFilter();
+	const Filter* getFilter();
 
 	/**
 	 * \brief Specify string set with columns names to order by
@@ -159,10 +159,10 @@ private:
 	 * @param select Select part of the query
 	 * @param filter Where part of the query
 	 */
-	void queueQuery(std::string select, Filter &filter);
+	void queueQuery(std::string select, const Filter &filter);
 
 	ibis::table *table; /**< wrapped cursors table */
-	Filter *usedFilter; /**< Saved filter for cursor */
+	const Filter *usedFilter; /**< Saved filter for cursor */
 	namesColumnsMap namesColumns; /**< Map of column names to column numbers */
 	bool queryDone; /**< Indicates that query was already preformed */
 	std::string select; /**< Select string to be used on next query */

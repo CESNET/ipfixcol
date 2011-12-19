@@ -205,7 +205,9 @@ int Configuration::init(int argc, char *argv[])
 	}
 
 	/* allways process option -m, we need to know  whether aggregate or not */
-	this->processmOption(optionm);
+	if (this->optm) {
+		this->processmOption(optionm);
+	}
 
 	/* read filter */
 	if (optind < argc) {
@@ -390,17 +392,17 @@ void Configuration::parseFormat(std::string format)
 	regfree(&reg);
 }
 
-stringVector Configuration::getPartsNames()
+const stringVector Configuration::getPartsNames() const
 {
 	return this->parts;
 }
 
-std::string Configuration::getFilter()
+std::string Configuration::getFilter() const
 {
 	return this->filter;
 }
 
-stringSet Configuration::getAggregateColumns()
+const stringSet Configuration::getAggregateColumns() const
 {
 	stringSet aggregateColumns;
 	Column *col;
@@ -424,12 +426,12 @@ stringSet Configuration::getAggregateColumns()
 	return aggregateColumns;
 }
 
-stringSet Configuration::getSummaryColumns()
+const stringSet Configuration::getSummaryColumns() const
 {
 	stringSet summaryColumns, tmp;
 
 	/* go over all columns */
-	for (columnVector::iterator it = columns.begin(); it != columns.end(); it++) {
+	for (columnVector::const_iterator it = columns.begin(); it != columns.end(); it++) {
 		/* if column is aggregable (has summarizable columns) */
 		if ((*it)->getAggregate()) {
 			tmp = (*it)->getColumns();
@@ -439,37 +441,37 @@ stringSet Configuration::getSummaryColumns()
 	return summaryColumns;
 }
 
-Column *Configuration::getOrderByColumn()
+const Column *Configuration::getOrderByColumn() const
 {
 	return this->orderColumn;
 }
 
-bool Configuration::getPlainNumbers()
+bool Configuration::getPlainNumbers() const
 {
 	return this->plainNumbers;
 }
 
-size_t Configuration::getMaxRecords()
+size_t Configuration::getMaxRecords() const
 {
 	return this->maxRecords;
 }
 
-bool Configuration::getAggregate()
+bool Configuration::getAggregate() const
 {
 	return this->aggregate;
 }
 
-bool Configuration::getQuiet()
+bool Configuration::getQuiet() const
 {
 	return this->quiet;
 }
 
-columnVector& Configuration::getColumns()
+const columnVector& Configuration::getColumns() const
 {
 	return this->columns;
 }
 
-std::string Configuration::version()
+const std::string Configuration::version() const
 {
 	std::ifstream ifs;
 	ifs.open("VERSION");
@@ -482,17 +484,17 @@ std::string Configuration::version()
 	return version;
 }
 
-char* Configuration::getXmlConfPath()
+const char* Configuration::getXmlConfPath() const
 {
 	return (char*) COLUMNS_XML;
 }
 
-std::string Configuration::getTimeWindowStart()
+const std::string Configuration::getTimeWindowStart() const
 {
 	return this->timeWindow.substr(0, this->timeWindow.find('-'));
 }
 
-std::string Configuration::getTimeWindowEnd()
+const std::string Configuration::getTimeWindowEnd() const
 {
 	size_t pos = this->timeWindow.find('-');
 	if (pos == std::string::npos) {
@@ -501,7 +503,7 @@ std::string Configuration::getTimeWindowEnd()
 	return this->timeWindow.substr(pos+1);
 }
 
-bool Configuration::isDirectory(std::string dir)
+bool Configuration::isDirectory(std::string dir) const
 {
 	int ret;
 	struct stat st;
@@ -551,11 +553,11 @@ void Configuration::processmOption(std::string order)
 
 
 	/* no sorting unset option m and delete the column */
-	this->optm = false;
+	this->optm = false; /* just in case, should stay false */
 	delete col;
 }
 
-void Configuration::help()
+void Configuration::help() const
 {
 	/* lines with // at the beginning should be implemented sooner */
 	std::cout
@@ -612,7 +614,7 @@ void Configuration::help()
 	;
 }
 
-bool Configuration::getOptionm()
+bool Configuration::getOptionm() const
 {
 	return this->optm;
 }
@@ -950,7 +952,7 @@ bool Configuration::processROption(stringVector &tables, const char *optarg)
 	return true;
 }
 
-Resolver *Configuration::getResolver()
+Resolver *Configuration::getResolver() const
 {
 	return this->resolver;
 }

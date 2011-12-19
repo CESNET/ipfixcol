@@ -49,8 +49,9 @@ namespace fbitdump {
 /**
  * \brief structure for passing values of unknown type
  */
-struct Values
+class Values
 {
+public:
 	ibis::TYPE_T type;
 	union
 	{
@@ -73,7 +74,7 @@ struct Values
 	 * @param part which part to convert
 	 * @return int64_t converted value
 	 */
-	int64_t toLong(int part=0);
+	int64_t toLong(int part=0) const;
 
 	/**
 	 * \brief Convert value to double type
@@ -81,7 +82,7 @@ struct Values
 	 * @param part which part to convert
 	 * @return converted value of type double
 	 */
-	double toDouble(int part=0);
+	double toDouble(int part=0) const;
 
 	/**
 	 * \brief Return string representation of value
@@ -89,7 +90,31 @@ struct Values
 	 * @param plainNumbers Don't use M,G format for long numbers
 	 * @return String representation of value
 	 */
-	std::string toString(bool plainNumbers);
+	std::string toString(bool plainNumbers) const;
+
+	/* comparison operators overload */
+	friend bool operator==(const Values &lhs, const Values &rhs);
+	friend bool operator< (const Values &lhs, const Values &rhs);
+	friend bool operator!=(const Values &lhs, const Values &rhs);
+	friend bool operator> (const Values &lhs, const Values &rhs);
+	friend bool operator>= (const Values &lhs, const Values &rhs);
+	friend bool operator<= (const Values &lhs, const Values &rhs);
+
+private:
+	/**
+	 * \brief Formats number 'num' to ostringstream 'ss'
+	 *
+ 	 * Uses precision 1 if output has units and 0 otherwise
+ 	 * doesn't format if 'plainNumbers' is set
+ 	 *
+ 	 * When defined as macro, it can be a bit quicker
+ 	 *
+	 * @param num number to format
+	 * @param ss string strem to put result to
+	 * @param plainNumbers whether to format or not
+	 */
+	template<class T>
+	inline void formatNumber(T num, std::ostringstream &ss, bool plainNumbers) const;
 };
 
 } /* end of namespace fbitdump */

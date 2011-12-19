@@ -65,7 +65,7 @@ bool Printer::print(TableManager &tm)
 		printHeader();
 	}
 
-	Cursor *cursor;
+	const Cursor *cursor;
 	TableManagerCursor *tmc = tm.createCursor();
 	if (tmc == NULL) {
 		/* no tables, no rows */
@@ -88,7 +88,7 @@ bool Printer::print(TableManager &tm)
 	return true;
 }
 
-void Printer::printHeader()
+void Printer::printHeader() const
 {
 	/* print column names */
 	for (size_t i = 0; i < conf.getColumns().size(); i++) {
@@ -115,7 +115,7 @@ void Printer::printFooter(TableManager &tm, uint64_t numPrinted) const
 	<< "Processed " << tm.getNumParts() << " tables with " << tm.getInitRows() << " rows" << std::endl;
 }
 
-void Printer::printRow(Cursor *cur)
+void Printer::printRow(const Cursor *cur) const
 {
 	/* go over all defined columns */
 	for (size_t i = 0; i < conf.getColumns().size(); i++) {
@@ -134,13 +134,13 @@ void Printer::printRow(Cursor *cur)
 	out << "\n"; /* much faster then std::endl */
 }
 
-std::string Printer::printValue(Column *col, Cursor *cur)
+const std::string Printer::printValue(const Column *col, const Cursor *cur) const
 {
 	if (col->isSeparator()) {
 		return col->getName();
 	}
 
-	Values *val = col->getValue(cur);
+	const Values *val = col->getValue(cur);
 
 	/* check for missing column */
 	if (val == NULL) {
@@ -183,7 +183,7 @@ std::string Printer::printValue(Column *col, Cursor *cur)
 
 }
 
-std::string Printer::printIPv4(uint32_t address)
+const std::string Printer::printIPv4(uint32_t address) const
 {
 	char buf[INET_ADDRSTRLEN];
 	struct in_addr in_addr;
@@ -215,7 +215,7 @@ std::string Printer::printIPv4(uint32_t address)
 	return buf;
 }
 
-std::string Printer::printIPv6(uint64_t part1, uint64_t part2)
+const std::string Printer::printIPv6(uint64_t part1, uint64_t part2) const
 {
 	char buf[INET6_ADDRSTRLEN];
 	struct in6_addr in6_addr;
@@ -247,7 +247,7 @@ std::string Printer::printIPv6(uint64_t part1, uint64_t part2)
 	return buf;
 }
 
-std::string Printer::printTimestamp32(uint32_t timestamp)
+const std::string Printer::printTimestamp32(uint32_t timestamp) const
 {
 	time_t timesec = timestamp;
 	struct tm *tm = gmtime(&timesec);
@@ -255,7 +255,7 @@ std::string Printer::printTimestamp32(uint32_t timestamp)
 	return this->printTimestamp(tm, 0);
 }
 
-std::string Printer::printTimestamp64(uint64_t timestamp)
+const std::string Printer::printTimestamp64(uint64_t timestamp) const
 {
 	time_t timesec = timestamp/1000;
 	uint64_t msec = timestamp % 1000;
@@ -264,7 +264,7 @@ std::string Printer::printTimestamp64(uint64_t timestamp)
 	return this->printTimestamp(tm, msec);
 }
 
-std::string Printer::printTimestamp(struct tm *tm, uint64_t msec)
+const std::string Printer::printTimestamp(struct tm *tm, uint64_t msec) const
 {
 	char buff[23];
 
@@ -275,7 +275,7 @@ std::string Printer::printTimestamp(struct tm *tm, uint64_t msec)
 	return buff;
 }
 
-std::string Printer::printTCPFlags(unsigned char flags)
+const std::string Printer::printTCPFlags(unsigned char flags) const
 {
 	std::string result = "......";
 
@@ -301,7 +301,8 @@ std::string Printer::printTCPFlags(unsigned char flags)
 	return result;
 }
 
-std::string Printer::printDuration(uint64_t duration) {
+const std::string Printer::printDuration(uint64_t duration) const
+{
 	static std::ostringstream ss;
 	static std::string str;
 	ss << std::fixed;

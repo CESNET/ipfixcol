@@ -57,8 +57,8 @@ Cursor* Table::createCursor()
 	return new Cursor(*this);
 }
 
-void Table::aggregate(stringSet &aggregateColumns, stringSet &summaryColumns,
-		Filter &filter)
+void Table::aggregate(const stringSet &aggregateColumns, const stringSet &summaryColumns,
+		const Filter &filter)
 {
 	std::string colNames;
 	stringSet combined;
@@ -69,7 +69,7 @@ void Table::aggregate(stringSet &aggregateColumns, stringSet &summaryColumns,
 	if (namesColumns.size() > 0) { /* not first query */
 		for (stringSet::iterator it = summaryColumns.begin(); it != summaryColumns.end(); it++) {
 			/* get location of the column */
-			namesColumnsMap::iterator cit;
+			namesColumnsMap::const_iterator cit;
 			if ((cit = this->getNamesColumns().find(*it)) != this->getNamesColumns().end()) {
 				sColumns.insert(this->table->columnNames()[cit->second]);
 			} else {
@@ -130,19 +130,19 @@ uint64_t Table::nRows()
 	return this->table->nRows();
 }
 
-ibis::table* Table::getFastbitTable()
+const ibis::table* Table::getFastbitTable()
 {
 	this->doQuery();
 	return this->table;
 }
 
-namesColumnsMap& Table::getNamesColumns()
+const namesColumnsMap& Table::getNamesColumns()
 {
 	this->doQuery();
 	return this->namesColumns;
 }
 
-Filter* Table::getFilter()
+const Filter* Table::getFilter()
 {
 	this->doQuery();
 	return this->usedFilter;
@@ -153,7 +153,7 @@ void Table::orderBy(stringSet orderColumns)
 	this->orderColumns = orderColumns;
 }
 
-void Table::queueQuery(std::string select, Filter &filter)
+void Table::queueQuery(std::string select, const Filter &filter)
 {
 	/* Run any previous query */
 	this->doQuery();

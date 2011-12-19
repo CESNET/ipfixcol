@@ -70,12 +70,12 @@ bool Cursor::next()
 	return true;
 }
 
-bool Cursor::getColumn(std::string name, Values &value, int part)
+bool Cursor::getColumn(std::string name, Values &value, int part) const
 {
 	int ret = 0, colNum = 0;
 	ibis::TYPE_T type;
 	ibis::table::namesTypes::iterator it;
-	namesColumnsMap::iterator cit;
+	namesColumnsMap::const_iterator cit;
 
 	/* get location of the column */
 	if ((cit = this->table.getNamesColumns().find(name)) != this->table.getNamesColumns().end()) {

@@ -41,27 +41,7 @@
 
 namespace fbitdump {
 
-/**
- * \brief Formats number 'num' to ostringstream 'ss'
- * uses precision 1 if output has units and 'defPrec' otherwise
- * don't format if 'plainNumbers' is set
- */
-#define formatNumber(num, ss, plainNumbers) \
-		ss << std::fixed; \
-		if (num <= 1000000 || plainNumbers) { \
-			ss.precision(0); \
-			ss << num; \
-		} else if (num > 1000000000) {\
-			ss.precision(1); \
-			ss << (float) num/1000000000 << " G"; \
-		} else if (num > 1000000) { \
-			ss.precision(1); \
-			ss << (float) num/1000000 << " M"; \
-		} \
-		ss.precision(0); /* set zero precision for other numbers */
-
-
-int64_t Values::toLong(int part)
+int64_t Values::toLong(int part) const
 {
 	switch (type) {
 	case ibis::BYTE:
@@ -92,7 +72,7 @@ int64_t Values::toLong(int part)
 	}
 }
 
-double Values::toDouble(int part)
+double Values::toDouble(int part) const
 {
 	switch (type) {
 	case ibis::FLOAT:
@@ -109,7 +89,7 @@ double Values::toDouble(int part)
 	}
 }
 
-std::string Values::toString(bool plainNumbers)
+std::string Values::toString(bool plainNumbers) const
 {
 	std::string valStr;
 	/* this is static for performance reason */
@@ -172,6 +152,54 @@ std::string Values::toString(bool plainNumbers)
 	ss.str("");
 
 	return valStr;
+}
+
+template <class T>
+inline void Values::formatNumber(T num, std::ostringstream &ss, bool plainNumbers) const
+{
+	ss << std::fixed;
+	if (num <= 1000000 || plainNumbers) {
+		ss.precision(0);
+		ss << num;
+	} else if (num > 1000000000) {
+		ss.precision(1);
+		ss << (float) num/1000000000 << " G";
+	} else if (num > 1000000) {
+		ss.precision(1);
+		ss << (float) num/1000000 << " M";
+	}
+	ss.precision(0); /* set zero precision for other numbers */
+}
+
+inline bool operator== (const Values &lhs, const Values &rhs)
+{
+	/* if necessary, this could decide upon type. it could also take parts into consideration */
+	return lhs.toDouble(0) == rhs.toDouble(0);
+}
+
+inline bool operator< (const Values &lhs, const Values &rhs)
+{
+	return lhs.toDouble(0) < rhs.toDouble(0);
+}
+
+inline bool operator!=(const Values &lhs, const Values &rhs)
+{
+	return !operator==(lhs,rhs);
+}
+
+inline bool operator> (const Values &lhs, const Values &rhs)
+{
+	return  operator< (rhs,lhs);
+}
+
+inline bool operator>= (const Values &lhs, const Values &rhs)
+{
+	return !operator< (lhs,rhs);
+}
+
+inline bool operator<= (const Values &lhs, const Values &rhs)
+{
+	return !operator> (lhs,rhs);
 }
 
 } /* end of namespace fbitdump */

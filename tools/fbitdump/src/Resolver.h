@@ -77,14 +77,14 @@ public:
      *
      * @return object which provides DNS resolving functionality
      */
-	const char *getNameserver();
+	const char *getNameserver() const;
 
     /**
      * \brief Returns resolver
      *
      * @return true if DNS is configured, false otherwise
      */
-	bool isConfigured();
+	bool isConfigured() const;
 
 	/**
 	 * \brief reverse DNS lookup for IPv4 address
@@ -127,7 +127,7 @@ public:
 	 *
 	 * @return true, if caching is enabled. false otherwise
 	 */
-	bool cacheEnabled();
+	bool cacheEnabled() const;
 
 	/**
 	 * \brief Add entry to the hash table

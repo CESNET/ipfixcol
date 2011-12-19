@@ -103,7 +103,7 @@ int Resolver::setNameserver(char *nameserver)
 	return 0;
 }
 
-const char *Resolver::getNameserver()
+const char *Resolver::getNameserver() const
 {
 	if (this->nameserver.empty()) {
 		return NULL;
@@ -112,7 +112,7 @@ const char *Resolver::getNameserver()
 	return this->nameserver.c_str();
 }
 
-bool Resolver::isConfigured()
+bool Resolver::isConfigured() const
 {
 	return this->configured;
 }
@@ -261,7 +261,7 @@ void Resolver::disableCache()
 	this->cacheOn = false;
 }
 
-bool Resolver::cacheEnabled()
+bool Resolver::cacheEnabled() const
 {
 	return this->cacheOn;
 }

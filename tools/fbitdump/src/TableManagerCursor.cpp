@@ -110,14 +110,11 @@ bool TableManagerCursor::getTableCursors()
 bool TableManagerCursor::next()
 {
 	bool ret_next;
-	struct Values *minValue = NULL;
-	struct Values *value = NULL;
+	const Values *minValue = NULL;
+	const Values *value = NULL;
 	Cursor *minCursor = NULL;
 	Cursor *cursor = NULL;
 	uint64_t minIndex = 0, u;
-
-	double minValueLong;
-	double valueLong;
 
 	/* check whether we reached limit on number of printed rows */
 	if (this->conf->getMaxRecords() && this->rowCounter >= this->conf->getMaxRecords()) {
@@ -163,17 +160,13 @@ bool TableManagerCursor::next()
 				minValue = value;
 				minCursor = cursor;
 				minIndex = u;
+			} else if (value < minValue) {
+				minCursor = cursor;
+				delete(minValue);
+				minValue = value;
+				minIndex = u;
 			} else {
-					valueLong = value->toDouble();
-					minValueLong = minValue->toDouble();
-				if (valueLong < minValueLong) {
-					minCursor = cursor;
-					delete(minValue);
-					minValue = value;
-					minIndex = u;
-				} else {
-					delete(value);
-				}
+				delete(value);
 			}
 		}
 
@@ -240,7 +233,7 @@ bool TableManagerCursor::getColumn(const char *name, Values &value, int part)
 	return ret;
 }
 
-Cursor *TableManagerCursor::getCurrentCursor()
+const Cursor *TableManagerCursor::getCurrentCursor() const
 {
 	return this->currentCursor;
 }

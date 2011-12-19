@@ -83,7 +83,7 @@ public:
 	 *
 	 * @return Filter string
 	 */
-	std::string getFilter();
+	const std::string getFilter() const;
 
 	/**
 	 * \brief Decides whether row specified by cursor matches the filter
@@ -91,7 +91,7 @@ public:
 	 * @param cur Cursor pointing to table row
 	 * @return True when line specified by cursor matches the filter (passes)
 	 */
-	bool isValid(Cursor &cur);
+	bool isValid(Cursor &cur) const;
 
 private:
 	/**
@@ -100,7 +100,7 @@ private:
 	 * @param str String with text representation of the timestamp
 	 * @return Number of seconds in timestamp
 	 */
-	time_t parseTimestamp(std::string str);
+	time_t parseTimestamp(std::string str) const;
 
 	Configuration &conf; /**< Program configuration */
 	std::string filterString; /**< String for fastbit condition */

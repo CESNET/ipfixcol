@@ -82,7 +82,7 @@ public:
 	 * @param[in] part Number of part to write result to
 	 * @return true on success, false otherwise
 	 */
-	bool getColumn(std::string, Values &value, int part);
+	bool getColumn(std::string, Values &value, int part) const;
 
 	/**
 	 * \brief Cursor class destructor

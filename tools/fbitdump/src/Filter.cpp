@@ -52,12 +52,12 @@ extern YY_DECL;
 namespace fbitdump
 {
 
-std::string Filter::getFilter()
+const std::string Filter::getFilter() const
 {
 	return this->filterString;
 }
 
-bool Filter::isValid(Cursor &cur)
+bool Filter::isValid(Cursor &cur) const
 {
 	// TODO add this functiononality
 	return true;
@@ -196,7 +196,7 @@ int Filter::init()
 	return ret;
 }
 
-time_t Filter::parseTimestamp(std::string str)
+time_t Filter::parseTimestamp(std::string str) const
 {
 	struct tm ctime;
 

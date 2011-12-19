@@ -120,7 +120,7 @@ public:
 	 *
 	 * @return current cursor
 	 */
-	Cursor *getCurrentCursor();
+	const Cursor *getCurrentCursor() const;
 };
 
 }

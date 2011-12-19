@@ -81,12 +81,12 @@ private:
 	 *
 	 * @param cur cursor poiting to the row
 	 */
-	void printRow(Cursor *cur);
+	void printRow(const Cursor *cur) const;
 
 	/**
 	 * \brief Print table header
 	 */
-	void printHeader();
+	void printHeader() const;
 
 	/**
 	 * \brief Print short summary after flows output
@@ -104,7 +104,7 @@ private:
 	 * @param cur Cursor with values to print
 	 * @return String to print
 	 */
-	std::string printValue(Column *col, Cursor *cur);
+	const std::string printValue(const Column *col, const Cursor *cur) const;
 
 	/**
 	 * \brief Print formatted IPv4 address
@@ -112,7 +112,7 @@ private:
 	 * @param address integer format address
 	 * @return String with printable address
 	 */
-	std::string printIPv4(uint32_t address);
+	const std::string printIPv4(uint32_t address) const;
 
 	/**
 	 * \brief Print formatted IPv6 address
@@ -121,7 +121,7 @@ private:
 	 * @param part2 second half of ipv6 address
 	 * @return String with printable address
 	 */
-	std::string printIPv6(uint64_t part1, uint64_t part2);
+	const std::string printIPv6(uint64_t part1, uint64_t part2) const;
 
 	/**
 	 * \brief Print formatted timestamp
@@ -132,7 +132,7 @@ private:
 	 * @param msec miliseconds
 	 * @return String with printable timestamp
 	 */
-	std::string printTimestamp(struct tm *tm, uint64_t msec);
+	const std::string printTimestamp(struct tm *tm, uint64_t msec) const;
 
 	/**
 	 * \brief Print formatted timestamp from seconds
@@ -140,7 +140,7 @@ private:
 	 * @param timestamp uint32_t number of seconds
 	 * @return String with printable timestamp
 	 */
-	std::string printTimestamp32(uint32_t timestamp);
+	const std::string printTimestamp32(uint32_t timestamp) const;
 
 	/**
 	 * \brief Print formatted timestamp from miliseconds
@@ -148,7 +148,7 @@ private:
 	 * @param timestamp uint64_t number of miliseconds
 	 * @return String with printable timestamp
 	 */
-	std::string printTimestamp64(uint64_t timestamp);
+	const std::string printTimestamp64(uint64_t timestamp) const;
 
 	/**
 	 * \brief Print formatted TCP flags
@@ -156,7 +156,7 @@ private:
 	 * @param flags unsigned char value
 	 * @return String with printable flags
 	 */
-	std::string printTCPFlags(unsigned char flags);
+	const std::string printTCPFlags(unsigned char flags) const;
 
 	/**
 	 * \brief Print duration as decimal number
@@ -164,7 +164,7 @@ private:
 	 * @param duration
 	 * @return String with duration
 	 */
-	std::string printDuration(uint64_t duration);
+	const std::string printDuration(uint64_t duration) const;
 
 	std::ostream &out; /**< Stream to write to */
 	Configuration &conf; /**< program configuration */

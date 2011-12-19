@@ -74,7 +74,7 @@ public:
 	 *
 	 * @return Column name
 	 */
-	std::string getName();
+	const std::string getName() const;
 
 	/**
 	 * \brief Sets name to "name"
@@ -87,7 +87,7 @@ public:
 	 *
 	 * @return Set of column aliases
 	 */
-	stringSet getAliases();
+	const stringSet getAliases() const;
 
 	/**
 	 * \brief Add alias to current set of aliases
@@ -99,7 +99,7 @@ public:
 	 * \brief Returns width of the column (specified in XML)
 	 * @return width of the column
 	 */
-	int getWidth();
+	int getWidth() const;
 
 	/**
 	 * \brief Set column width to "width"
@@ -111,7 +111,7 @@ public:
 	 * \brief Returns true when column should be aligned to the left
 	 * @return true when column should be aligned to the left, false otherwise
 	 */
-	bool getAlignLeft();
+	bool getAlignLeft() const;
 
 	/**
 	 * \brief Set column alignment
@@ -132,20 +132,20 @@ public:
 	 * @param cur cursor pointing to current row
 	 * @return values structure containing required value
 	 */
-	Values* getValue(Cursor *cur);
+	const Values* getValue(const Cursor *cur) const;
 
 	/**
 	 * \brief Can this column be used in aggregation?
 	 * @return true when column is aggregatable
 	 */
-	bool getAggregate();
+	bool getAggregate() const;
 
 	/**
 	 * \brief Returns set of table column names that this column works with
 	 *
 	 * @return Set of table column names
 	 */
-	stringSet getColumns();
+	const stringSet getColumns() const;
 
 	/**
 	 * \brief Sets columns aggregation mode
@@ -162,7 +162,7 @@ public:
 	 *
 	 * @return string to print when value is not available
 	 */
-	std::string getNullStr();
+	const std::string getNullStr() const;
 
 	/**
 	 * \brief Returns semantics of the column
@@ -170,28 +170,28 @@ public:
 	 *
 	 * @return semantics of the column
 	 */
-	std::string getSemantics();
+	const std::string getSemantics() const;
 
 	/**
 	 * \brief Returns true if column is a separator column
 	 *
 	 * @return returns true if column is a separator column, false otherwise
 	 */
-	bool isSeparator();
+	bool isSeparator() const;
 
 	/**
 	 * \brief Returns true when column represents an operation
 	 *
 	 * @return true when column represents an operation
 	 */
-	bool isOperation();
+	bool isOperation() const;
 
 	/**
 	 * \brief Return name of the file, that contains data for this column
 	 *
 	 * @return this->element
 	 */
-	std::string getElement();
+	const std::string getElement() const;
 
 	/**
 	 * \brief Class destructor
@@ -251,7 +251,7 @@ private:
 	 * @param cur Cursor with data
 	 * @return returns values structure
 	 */
-	Values *evaluate(AST *ast, Cursor *cur);
+	const Values *evaluate(AST *ast, const Cursor *cur) const;
 
 		/**
 	 * \brief Performs operation on given data
@@ -263,7 +263,7 @@ private:
 	 * @param op one of '+', '-', '/', '*'
 	 * @return return resulting value of appropriate type
 	 */
-	Values* performOperation(Values *left, Values *right, unsigned char op);
+	const Values* performOperation(const Values *left, const Values *right, unsigned char op) const;
 
 	/**
 	 * \brief Set AST for this column
@@ -296,7 +296,7 @@ private:
 	 * @param ast to go through
 	 * @return Set of column names
 	 */
-	stringSet& getColumns(AST* ast);
+	const stringSet& getColumns(AST* ast) const;
 
 	/**
 	 * \brief Is AST aggregable?
@@ -304,7 +304,7 @@ private:
 	 * @param ast AST to check
 	 * @return true when AST is aggregable
 	 */
-	bool getAggregate(AST* ast);
+	bool getAggregate(AST* ast) const;
 
 
 	std::string nullStr;    /**< String to print when columns has no value */

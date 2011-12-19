@@ -79,14 +79,14 @@ public:
      *
      * @return Vector of strings with parts names
      */
-    stringVector getPartsNames();
+    const stringVector getPartsNames() const;
 
     /**
      * \brief Returns filter string as passed by user
      *
      * @return Strings containing filter from user
      */
-    std::string getFilter();
+    std::string getFilter() const;
 
     /**
      * \brief Returns set of fastbit column names containing columns
@@ -95,7 +95,7 @@ public:
      *
      * @return stringSet
      */
-    stringSet getAggregateColumns();
+    const stringSet getAggregateColumns() const;
 
     /**
      * \brief Returns set of column names containing columns
@@ -104,7 +104,7 @@ public:
      *
      * @return stringSet
      */
-    stringSet getSummaryColumns();
+    const stringSet getSummaryColumns() const;
 
     /**
      * \brief Returns column to order by
@@ -113,7 +113,7 @@ public:
      *
      * @return Column to order by
      */
-    Column* getOrderByColumn();
+    const Column* getOrderByColumn() const;
 
     /**
      * \brief Returns true when option for printing plain numbers was passed
@@ -121,20 +121,20 @@ public:
      * @return True when option for printing only plain numbers was passed,
      * else otherwise
      */
-    bool getPlainNumbers();
+    bool getPlainNumbers() const;
 
     /**
      * \brief Returns ceil limit of records to print
      * @return Maximum records number to print
      */
-    size_t getMaxRecords();
+    size_t getMaxRecords() const;
 
     /**
      * \brief Returns true when record aggregation is required
      *
      * @return True when agregation is on, false otherwise
      */
-    bool getAggregate();
+    bool getAggregate() const;
 
     /**
      * \brief Returns true when quiet mode is requested
@@ -142,7 +142,7 @@ public:
      *
      * @return True when quiet mode is requested
      */
-    bool getQuiet();
+    bool getQuiet() const;
 
     /**
      * \brief Returns vector of Columns
@@ -150,41 +150,41 @@ public:
      *
      * @return Vector of columns
      */
-    columnVector& getColumns();
+    const columnVector& getColumns() const;
 
     /**
      * \brief Returns path to configuration XML
      * @return Path to configuration XML
      */
-    char* getXmlConfPath();
+    const char* getXmlConfPath() const;
 
     /**
      * \brief This method returns true if user started application with -m option
      *
      * @return true if option "-m" was specified, false otherwise
      */
-    bool getOptionm();
+    bool getOptionm() const;
 
 	/**
      * \brief Returns string with time window start
      *
      * @return string with time window start, empty if none used
      */
-    std::string getTimeWindowStart();
+    const std::string getTimeWindowStart() const;
 
     /**
      * \brief Returns string with time window end
      *
      * @return string with time window end, empty if none used
      */
-    std::string getTimeWindowEnd();
+    const std::string getTimeWindowEnd() const;
 
     /**
      * \brief Returns resolver
      *
      * @return object which provides DNS resolving functionality
      */
-    Resolver *getResolver();
+    Resolver *getResolver() const;
 
 
     /**
@@ -197,7 +197,7 @@ private:
     /**
      * \brief Prints help to standard output
      */
-    void help();
+    void help() const;
 
     /**
      * \brief Return string with current version
@@ -206,7 +206,7 @@ private:
      *
      * @return string with current version
      */
-    std::string version();
+    const std::string version() const;
 
     /**
      * \brief Read parts from specified table directories
@@ -229,7 +229,7 @@ private:
      *
      * @return true if given argument is a directory, false otherwise
      */
-    bool isDirectory(std::string dir);
+    bool isDirectory(std::string dir) const;
 
     /**
      * \brief Sanitize path

@@ -170,7 +170,7 @@ Column::AST* Column::createOperationElement(pugi::xml_node operation, pugi::xml_
 	return ast;
 }
 
-std::string Column::getName()
+const std::string Column::getName() const
 {
 	return this->name;
 }
@@ -180,7 +180,8 @@ void Column::setName(std::string name)
 	this->name = name;
 }
 
-stringSet Column::getAliases() {
+const stringSet Column::getAliases() const
+{
 	return this->aliases;
 }
 
@@ -189,7 +190,7 @@ void Column::addAlias(std::string alias)
 	this->aliases.insert(alias);
 }
 
-int Column::getWidth()
+int Column::getWidth() const
 {
 	return this->width;
 }
@@ -199,7 +200,7 @@ void Column::setWidth(int width)
 	this->width = width;
 }
 
-bool Column::getAlignLeft()
+bool Column::getAlignLeft() const
 {
 	return this->alignLeft;
 }
@@ -209,14 +210,13 @@ void Column::setAlignLeft(bool alignLeft)
 	this->alignLeft = alignLeft;
 }
 
-Values* Column::getValue(Cursor *cur)
+const Values* Column::getValue(const Cursor *cur) const
 {
 	return evaluate(this->ast, cur);
 }
 
-Values *Column::evaluate(AST *ast, Cursor *cur)
+const Values *Column::evaluate(AST *ast, const Cursor *cur) const
 {
-	Values *retVal = NULL;
 
 	/* check input AST */
 	if (ast == NULL) {
@@ -226,9 +226,9 @@ Values *Column::evaluate(AST *ast, Cursor *cur)
 	/* evaluate AST */
 	switch (ast->type) {
 		case fbitdump::Column::AST::valueType:{
-			retVal = new Values;
+			Values *retVal = new Values;
 			int part=0;
-			stringSet &tmpSet = this->getColumns(ast);
+			const stringSet &tmpSet = this->getColumns(ast);
 
 			for (stringSet::iterator it = tmpSet.begin(); it != tmpSet.end(); it++) {
 				/* get value from table */
@@ -239,9 +239,10 @@ Values *Column::evaluate(AST *ast, Cursor *cur)
 				part++;
 			}
 
+			return retVal;
 			break;}
-		case fbitdump::Column::AST::operationType:
-			Values *left, *right;
+		case fbitdump::Column::AST::operationType:{
+			const Values *left, *right, *retVal = NULL;
 
 			left = evaluate(ast->left, cur);
 			right = evaluate(ast->right, cur);
@@ -253,16 +254,17 @@ Values *Column::evaluate(AST *ast, Cursor *cur)
 			delete left;
 			delete right;
 
-			break;
+			return retVal;
+			break;}
 		default:
 			std::cerr << "Unknown AST type" << std::endl;
 			break;
 	}
 
-	return retVal;
+	return NULL;
 }
 
-Values* Column::performOperation(Values *left, Values *right, unsigned char op)
+const Values* Column::performOperation(const Values *left, const Values *right, unsigned char op) const
 {
 	Values *result = new Values;
 	/* TODO add some type checks maybe... */
@@ -296,7 +298,7 @@ Column::~Column()
 	delete this->ast;
 }
 
-stringSet& Column::getColumns(AST* ast)
+const stringSet& Column::getColumns(AST* ast) const
 {
 	/* use cached values if possible */
 	if (ast->cached) return ast->astColumns;
@@ -333,7 +335,7 @@ stringSet& Column::getColumns(AST* ast)
 	return ast->astColumns;
 }
 
-stringSet Column::getColumns()
+const stringSet Column::getColumns() const
 {
 	/* check for name column */
 	if (this->ast == NULL) {
@@ -343,7 +345,7 @@ stringSet Column::getColumns()
 	return getColumns(this->ast);
 }
 
-bool Column::getAggregate()
+bool Column::getAggregate() const
 {
 
 	/* Name columns are not aggregable */
@@ -354,7 +356,7 @@ bool Column::getAggregate()
 	return false;
 }
 
-bool Column::getAggregate(AST* ast)
+bool Column::getAggregate(AST* ast) const
 {
 
 	/* AST type must be 'value' and aggregation string must not be empty */
@@ -381,12 +383,12 @@ void Column::setAggregation(bool aggregation)
 	this->aggregation = aggregation;
 }
 
-std::string Column::getNullStr()
+const std::string Column::getNullStr() const
 {
 	return this->nullStr;
 }
 
-std::string Column::getSemantics()
+const std::string Column::getSemantics() const
 {
 	if (this->ast == NULL) {
 		return "";
@@ -395,12 +397,14 @@ std::string Column::getSemantics()
 	return this->ast->semantics;
 }
 
-bool Column::isSeparator() {
+bool Column::isSeparator() const
+{
 	if (this->ast == NULL) return true;
 	return false;
 }
 
-bool Column::isOperation() {
+bool Column::isOperation() const
+{
 	if (this->ast != NULL && this->ast->type == fbitdump::Column::AST::operationType) {
 		return true;
 	}
@@ -408,7 +412,7 @@ bool Column::isOperation() {
 	return false;
 }
 
-std::string Column::getElement()
+const std::string Column::getElement() const
 {
 	return this->element;
 }
