@@ -203,7 +203,7 @@ void TableManager::filter(Filter &filter)
 	}
 
 	/* go over all parts */
-	for (ibis::partList::iterator it = this->parts.begin(); it != this->parts.end(); it++) {
+	for (ibis::partList::const_iterator it = this->parts.begin(); it != this->parts.end(); it++) {
 
 		/* create table for each part */
 		table = new Table(*it);
@@ -287,12 +287,12 @@ TableManager::TableManager(Configuration &conf): conf(conf)
 TableManager::~TableManager()
 {
 	/* delete all tables */
-	for (tableVector::iterator it = this->tables.begin(); it != this->tables.end(); it++) {
+	for (tableVector::const_iterator it = this->tables.begin(); it != this->tables.end(); it++) {
 		delete *it;
 	}
 
 	/* delete all table parts */
-	for (ibis::partList::iterator it = this->parts.begin(); it != this->parts.end(); it++) {
+	for (ibis::partList::const_iterator it = this->parts.begin(); it != this->parts.end(); it++) {
 		delete *it;
 	}
 }

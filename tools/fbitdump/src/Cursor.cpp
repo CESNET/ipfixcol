@@ -74,7 +74,7 @@ bool Cursor::getColumn(std::string name, Values &value, int part) const
 {
 	int ret = 0, colNum = 0;
 	ibis::TYPE_T type;
-	ibis::table::namesTypes::iterator it;
+	ibis::table::namesTypes::const_iterator it;
 	namesColumnsMap::const_iterator cit;
 
 	/* get location of the column */

@@ -79,7 +79,7 @@ TableManagerCursor::~TableManagerCursor()
 
 bool TableManagerCursor::getTableCursors()
 {
-	tableVector::iterator iter;
+	tableVector::const_iterator iter;
 	Cursor *cursor;
 
 	if (this->tableManager == NULL) {

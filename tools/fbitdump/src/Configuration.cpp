@@ -412,7 +412,7 @@ const stringSet Configuration::getAggregateColumns() const
 	doc.load_file(this->getXmlConfPath());
 
 	/* go over all aliases */
-	for (stringSet::iterator aliasIt = this->aggregateColumnsAliases.begin();
+	for (stringSet::const_iterator aliasIt = this->aggregateColumnsAliases.begin();
 			aliasIt != this->aggregateColumnsAliases.end(); aliasIt++) {
 
 		col = new Column();
@@ -959,7 +959,7 @@ Resolver *Configuration::getResolver() const
 
 Configuration::~Configuration()
 {
-	for (columnVector::iterator it = columns.begin(); it != columns.end(); it++) {
+	for (columnVector::const_iterator it = columns.begin(); it != columns.end(); it++) {
 		delete *it;
 	}
 

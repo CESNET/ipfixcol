@@ -67,7 +67,7 @@ void Table::aggregate(const stringSet &aggregateColumns, const stringSet &summar
 
 	/* later queries must be made with proper column names */
 	if (namesColumns.size() > 0) { /* not first query */
-		for (stringSet::iterator it = summaryColumns.begin(); it != summaryColumns.end(); it++) {
+		for (stringSet::const_iterator it = summaryColumns.begin(); it != summaryColumns.end(); it++) {
 			/* get location of the column */
 			namesColumnsMap::const_iterator cit;
 			if ((cit = this->getNamesColumns().find(*it)) != this->getNamesColumns().end()) {
@@ -84,7 +84,7 @@ void Table::aggregate(const stringSet &aggregateColumns, const stringSet &summar
 	combined.insert(aggregateColumns.begin(), aggregateColumns.end());
 	combined.insert(sColumns.begin(), sColumns.end());
 
-	for (stringSet::iterator it = combined.begin(); it != combined.end(); it++, i++) {
+	for (stringSet::const_iterator it = combined.begin(); it != combined.end(); it++, i++) {
 		colNames += *it;
 		this->namesColumns.insert(std::pair<std::string, int>(*it, i));
 		if (i != combined.size() - 1) {

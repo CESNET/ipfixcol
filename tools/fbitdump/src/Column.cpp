@@ -230,7 +230,7 @@ const Values *Column::evaluate(AST *ast, const Cursor *cur) const
 			int part=0;
 			const stringSet &tmpSet = this->getColumns(ast);
 
-			for (stringSet::iterator it = tmpSet.begin(); it != tmpSet.end(); it++) {
+			for (stringSet::const_iterator it = tmpSet.begin(); it != tmpSet.end(); it++) {
 				/* get value from table */
 				if (!cur->getColumn(*it, *retVal, part)) {
 					delete retVal;
