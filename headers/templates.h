@@ -124,19 +124,17 @@ struct ipfix_template_mgr {
  * \brief Function for adding new templates.
  *
  * \param[in]  tm Data Manager specific structure for storing Templates.
-<<<<<<< HEAD
  * \param[in]  template Pointer where new Template Record starts.
  * \param[in]  max_len Maximum length of the template. Typically length
  * to the end of the Template Set.
-=======
  * \param[in]  tmp Pointer where new Template Record starts.
->>>>>>> fastbit
  * \param[in]  type Type of the Template Record. TM_TEMPLATE = Template,
  * TM_OPTIONS_TEMPLATE = Options Template.
  * \return Pointer to new ipfix_template on success, NULL otherwise
  */
 struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm,
-										void *tmp, int max_len, int type);
+                                          void *tmp, int max_len, int type);
+
 /**
  * \brief Function for updating an existing templates.
  *
@@ -147,7 +145,7 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm,
  * \return updated ipfix_template on success, NULL if error occurs.
  */
 struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm,
-											void *tmp, int type);
+                                                       void *tmp, int type);
 
 /**
  * \brief Function for specific Template lookup.
@@ -158,7 +156,7 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm,
  * Template.
  */
 struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm,
-                                         uint16_t template_id);
+                                                      uint16_t template_id);
 
 /**
  * \brief Function for removing Temaplates.
@@ -167,8 +165,7 @@ struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm,
  * \param[in]  template_id ID of the Template that we want to remove.
  * \return 0 on success, negative value otherwise.
  */
-int tm_remove_template(struct ipfix_template_mgr *tm,
-                       uint16_t template_id);
+int tm_remove_template(struct ipfix_template_mgr *tm, uint16_t template_id);
 
 /**
  * \brief Function for removing all Temaplates of specific type.
