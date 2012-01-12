@@ -185,8 +185,6 @@ const std::string Printer::printValue(const Column *col, const Cursor *cur) cons
 
 const std::string Printer::printIPv4(uint32_t address) const
 {
-	char buf[INET_ADDRSTRLEN];
-	struct in_addr in_addr;
 	int ret;
 	Resolver *resolver;
 
@@ -194,9 +192,9 @@ const std::string Printer::printIPv4(uint32_t address) const
 
 	/* translate IP address to domain name, if user wishes so */
 	if (resolver->isConfigured()) {
-		char host[NI_MAXHOST];
+		std::string host;
 
-		ret = resolver->reverseLookup(address, host, NI_MAXHOST);
+		ret = resolver->reverseLookup(address, host);
 		if (ret == true) {
 			return host;
 		}
@@ -208,6 +206,9 @@ const std::string Printer::printIPv4(uint32_t address) const
 	 * user don't want to see domain names, or DNS is somehow broken.
 	 * print just IP address
 	 */
+	char buf[INET_ADDRSTRLEN];
+	struct in_addr in_addr;
+
 	in_addr.s_addr = htonl(address);
 	inet_ntop(AF_INET, &in_addr, buf, INET_ADDRSTRLEN);
 
@@ -217,8 +218,6 @@ const std::string Printer::printIPv4(uint32_t address) const
 
 const std::string Printer::printIPv6(uint64_t part1, uint64_t part2) const
 {
-	char buf[INET6_ADDRSTRLEN];
-	struct in6_addr in6_addr;
 	int ret;
 	Resolver *resolver;
 
@@ -226,9 +225,9 @@ const std::string Printer::printIPv6(uint64_t part1, uint64_t part2) const
 
 	/* translate IP address to domain name, if user wishes so */
 	if (resolver->isConfigured()) {
-		char host[NI_MAXHOST];
+		std::string host;
 
-		ret = resolver->reverseLookup6(part1, part2, host, NI_MAXHOST);
+		ret = resolver->reverseLookup6(part1, part2, host);
 		if (ret == true) {
 			return host;
 		}
@@ -240,6 +239,9 @@ const std::string Printer::printIPv6(uint64_t part1, uint64_t part2) const
 	 * user don't want to see domain names, or DNS is somehow broken.
 	 * print just IP address
 	 */
+	char buf[INET6_ADDRSTRLEN];
+	struct in6_addr in6_addr;
+
 	*((uint64_t*) &in6_addr.s6_addr) = htobe64(part1);
 	*(((uint64_t*) &in6_addr.s6_addr)+1) = htobe64(part2);
 	inet_ntop(AF_INET6, &in6_addr, buf, INET6_ADDRSTRLEN);

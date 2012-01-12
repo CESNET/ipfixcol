@@ -126,12 +126,7 @@ int Configuration::init(int argc, char *argv[])
 				char *nameserver;
 
 				nameserver = optarg;
-
-				this->resolver->setNameserver(nameserver);
-
-				/* enable DNS caching - table for 1000 entries */
-				this->resolver->enableCache(1000);
-
+				this->resolver = new Resolver(nameserver);
 			}
 			break;
 		case 'N': /* print plain numbers */
@@ -207,6 +202,11 @@ int Configuration::init(int argc, char *argv[])
 	/* allways process option -m, we need to know  whether aggregate or not */
 	if (this->optm) {
 		this->processmOption(optionm);
+	}
+
+	/* set unconfigured resolver if necessary */
+	if (this->resolver == NULL) {
+		this->resolver = new Resolver(NULL);
 	}
 
 	/* read filter */
@@ -574,7 +574,7 @@ void Configuration::help() const
 	<< "-f              read netflow filter from file" << std::endl
 //	<< "-n              Define number of top N. " << std::endl
 	<< "-c              Limit number of records to display" << std::endl
-	<< "-D <dns>        Use nameserver <dns> for host lookup." << std::endl
+	<< "-D <dns>        Use nameserver <dns> for host lookup. Does not support IPv6 addresses." << std::endl
 	<< "-N              Print plain numbers" << std::endl
 //	<< "-s <expr>[/<order>]     Generate statistics for <expr> any valid record element." << std::endl
 //	<< "                and ordered by <order>: packets, bytes, flows, bps pps and bpp." << std::endl
@@ -620,9 +620,8 @@ bool Configuration::getOptionm() const
 }
 
 Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false),
-		optm(false), orderColumn(NULL)
+		optm(false), orderColumn(NULL), resolver(NULL)
 {
-	this->resolver = new Resolver();
 }
 
 bool Configuration::processMOption(stringVector &tables, const char *optarg)

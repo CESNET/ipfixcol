@@ -43,7 +43,7 @@
 
 #include <iostream>
 #include <cstring>
-#include <search.h>
+#include <map>
 
 namespace fbitdump {
 
@@ -54,23 +54,22 @@ class Resolver {
 private:
 	std::string nameserver;
 	bool configured;
-	bool cacheOn;         /* indicates whether caching is on or off */
 
-	/* associative arrays that represent cache */
-	struct hsearch_data dnsHashTable;
-
-
-public:
-	Resolver();
-	Resolver(char *nameserver);
-	~Resolver();
+	std::map<uint32_t, std::string> dnsCache;
+	std::map<uint64_t, std::map<uint64_t, std::string>> dnsCache6;
 
     /**
-     * \brief Returns resolver
+     * \brief Initialise resolver to use nameserver
      *
-     * @return object which provides DNS resolving functionality
+     * sets configured flag if completed without error
+     *
+     * @param nameserver Nameserver address to be used
      */
-	int setNameserver(char *nameserver);
+	void setNameserver(char *nameserver);
+
+public:
+	Resolver(char *nameserver);
+	~Resolver();
 
     /**
      * \brief Returns resolver
@@ -91,10 +90,9 @@ public:
 	 *
 	 * @param[in] inaddr numeric presentation of IPv4 address
 	 * @param[out] result contains domain name corresponding to the IP address
-	 * @param[in] len maximum length of result
 	 * @return true on success, false otherwise
 	 */
-	bool reverseLookup(uint32_t inaddr, char *result, int len);
+	bool reverseLookup(uint32_t inaddr, std::string &result);
 
 	/**
 	 * \brief reverse DNS lookup for IPv6 address
@@ -102,52 +100,10 @@ public:
 	 * @param[in] inaddr_part1 numeric presentation of IPv6 address, first part of the address
 	 * @param[in] inaddr_part2 numeric presentation of IPv6 address, second part of the address
 	 * @param[out] result contains domain name corresponding to the IP address
-	 * @param[in] len maximum length of result
 	 * @return true on success, false otherwise
 	 */
-	bool reverseLookup6(uint64_t inaddr_part1, uint64_t inaddr_part2, char *result, int len);
+	bool reverseLookup6(uint64_t inaddr_part1, uint64_t inaddr_part2, std::string &result);
 
-	/**
-	 * \brief Enable DNS cache
-	 *
-	 * @param[in] cacheSize number of rows in hash table
-	 * @return nothing
-	 */
-	void enableCache(unsigned long int cacheSize);
-
-	/**
-	 * \brief Disable DNS cache
-	 *
-	 * @return nothing
-	 */
-	void disableCache();
-
-	/**
-	 * \brief Test whether cache is enabled or not
-	 *
-	 * @return true, if caching is enabled. false otherwise
-	 */
-	bool cacheEnabled() const;
-
-	/**
-	 * \brief Add entry to the hash table
-	 *
-	 * @param[in] key key
-	 * @param[in] data value
-	 *
-	 * @return true, if entry was successfully added. false otherwise
-	 */
-	bool addToCache(char *key, void *data);
-
-	/**
-	 * \brief Search in hash table
-	 *
-	 * @param[in] key key to search for
-	 *
-	 * @return if given key exists in table this method will return pointer to the
-	 * corresponding value. NULL otherwise
-	 */
-	void *cacheSearch(char *key);
 };
 
 } /* namespace fbitdump */

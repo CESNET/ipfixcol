@@ -45,24 +45,19 @@
 #include <resolv.h>
 #include <arpa/inet.h>
 
-
 #include "Resolver.h"
 
 namespace fbitdump {
 
-Resolver::Resolver() : configured(false), cacheOn(false)
-{
-}
-
-Resolver::Resolver(char *nameserver) : configured(false), cacheOn(false)
+Resolver::Resolver(char *nameserver) : configured(false)
 {
 	this->setNameserver(nameserver);
 }
 
-int Resolver::setNameserver(char *nameserver)
+void Resolver::setNameserver(char *nameserver)
 {
 	if (nameserver == NULL) {
-		return false;
+		return;
 	}
 
 	int ret;
@@ -71,26 +66,30 @@ int Resolver::setNameserver(char *nameserver)
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
-	hints.ai_protocol = SOCK_STREAM;
+	hints.ai_protocol = 0;
 
-	ret = getaddrinfo(nameserver, 0, &hints, &result);
+	ret = getaddrinfo(nameserver, "domain", &hints, &result);
 	if (ret != 0) {
-		std::cerr << "Unable to resolve address for " << nameserver << std::endl;
-		return -1;
+		std::cerr << "Unable to resolve address for " << nameserver << ": " << gai_strerror(ret) << std::endl;
+		return;
 	}
 
 	res_init();
 
-	struct sockaddr_in *sock4 = NULL;
-	struct sockaddr_in6 *sock6 = NULL;
 	if (result->ai_addr->sa_family == AF_INET) {
-		sock4 = (struct sockaddr_in *) result->ai_addr;
-		memcpy((void *)&_res.nsaddr_list[0].sin_addr, &(sock4->sin_addr), result->ai_addrlen);
+#ifdef DEBUG
+		std::cerr << "Setting up IPv4 DNS server with address " << nameserver << std::endl;
+#endif
+		struct sockaddr_in *sock4 = (struct sockaddr_in *) result->ai_addr;
+		memcpy((void *)&_res.nsaddr_list[0], sock4, result->ai_addrlen);
 		_res.nscount = 1;
 	} else if (result->ai_addr->sa_family == AF_INET6) {
-		sock6 = (struct sockaddr_in6 *) result->ai_addr;
-		memcpy((void *)&_res.nsaddr_list[0].sin_addr, &(sock6->sin6_addr), result->ai_addrlen);
+		std::cerr << "IPv6 addresses are not supported for DNS server." << std::endl;
+		/*
+		struct sockaddr_in6 *sock6 = (struct sockaddr_in6 *) result->ai_addr;
+		memcpy((void *)&_res.nsaddr_list[0], sock6, result->ai_addrlen);
 		_res.nscount = 1;
+		*/
 	} else {
 		std::cerr << "error: unknown address family" << std::endl;
 	}
@@ -99,8 +98,6 @@ int Resolver::setNameserver(char *nameserver)
 
 	this->nameserver = nameserver;
 	this->configured = true;
-
-	return 0;
 }
 
 const char *Resolver::getNameserver() const
@@ -117,205 +114,86 @@ bool Resolver::isConfigured() const
 	return this->configured;
 }
 
-bool Resolver::reverseLookup(uint32_t address, char *result, int len)
+bool Resolver::reverseLookup(uint32_t address, std::string &result)
 {
 	if (!this->isConfigured()) {
 		/* configure the resolver first */
-#ifdef DEBUG
 		std::cerr << "DNS resolver is not configured yet" << std::endl;
-#endif
-
 		return false;
 	}
 
-	char buf[INET_ADDRSTRLEN];
-	//memset(buf, 0, INET_ADDRSTRLEN);
-
-	/* try cache first */
-	if (this->cacheOn) {
-		char *cacheResult;
-		struct in_addr in_addr;
-
-		in_addr.s_addr = htonl(address);
-		inet_ntop(AF_INET, &in_addr, buf, INET_ADDRSTRLEN);
-
-		cacheResult = (char *) this->cacheSearch(buf);
-		if (cacheResult) {
-			/* cache hit */
-			strncpy(result, cacheResult, len);
-
-			return true;
-		}
+	/* look into cache */
+	std::map<uint32_t, std::string>::const_iterator it;
+	if ((it = this->dnsCache.find(address)) != this->dnsCache.end()) {
+		result = it->second;
+		return true;
 	}
 
+	/* lookup the address */
 	int ret;
 	struct sockaddr_in sock;
+	char host[NI_MAXHOST];
 
 	memset(&sock, 0, sizeof(sock));
 	sock.sin_family = AF_INET;
 	sock.sin_addr.s_addr = htonl(address);
 
-	ret = getnameinfo((const struct sockaddr *)&sock, sizeof(sock), result, len, NULL, 0, 0);
+	ret = getnameinfo((const struct sockaddr *)&sock, sizeof(sock), host, NI_MAXHOST, NULL, 0, 0);
 	if (ret != 0) {
 		return false;
 	}
+	result = host;
 
-	/* add this result to the cache, if enabled */
-	if (this->cacheOn) {
-		char *persistentResult = (char *) malloc(strlen(result)+1);
-		if (!persistentResult) {
-			std::cerr << "malloc() error (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;
-			return false;
-		}
-
-		strcpy(persistentResult, result);
-		this->addToCache(buf, persistentResult);
-	}
+	/* add the result to the cache */
+	this->dnsCache[address] = result;
 
 	return true;
 }
 
-bool Resolver::reverseLookup6(uint64_t in6_addr_part1, uint64_t in6_addr_part2, char *result, int len)
+bool Resolver::reverseLookup6(uint64_t in6_addr_part1, uint64_t in6_addr_part2, std::string &result)
 {
 	if (!this->isConfigured()) {
 		/* configure the resolver first */
-#ifdef DEBUG
 		std::cerr << "DNS resolver is not configured yet" << std::endl;
-#endif
-
 		return false;
 	}
 
-	char buf[INET6_ADDRSTRLEN];
+	/* look into cache */
+	std::map<uint64_t, std::map<uint64_t, std::string>>::const_iterator it;
+	std::map<uint64_t, std::string>::const_iterator it2;
+	if (((it = this->dnsCache6.find(in6_addr_part1)) != this->dnsCache6.end()) &&
+			((it2 = it->second.find(in6_addr_part2)) != it->second.end())) {
 
-	/* try cache first */
-	if (this->cacheOn) {
-		struct in6_addr in6_addr;
-		char *cacheResult;
-
-		*((uint64_t*) &in6_addr.s6_addr) = htobe64(in6_addr_part1);
-		*(((uint64_t*) &in6_addr.s6_addr)+1) = htobe64(in6_addr_part2);
-		inet_ntop(AF_INET6, &in6_addr, buf, INET6_ADDRSTRLEN);
-
-		cacheResult = (char *) this->cacheSearch(buf);
-		if (cacheResult) {
-			/* cache hit */
-			strncpy(result, cacheResult, len);
-			return true;
-		}
+		result = it2->second;
+		return true;
 	}
 
+	/* lookup the address */
 	int ret;
 	struct sockaddr_in6 sock6;
 	struct in6_addr *in6addr = &(sock6.sin6_addr);
+	char host[NI_MAXHOST];
 
 	memset(&sock6, 0, sizeof(sock6));
 	sock6.sin6_family = AF_INET6;
 	*((uint64_t *) in6addr->s6_addr) = htobe64(in6_addr_part1);
 	*(((uint64_t *) in6addr->s6_addr)+1) = htobe64(in6_addr_part2);
 
-	ret = getnameinfo((const struct sockaddr *)&sock6, sizeof(sock6), result, len, NULL, 0, 0);
+	ret = getnameinfo((const struct sockaddr *)&sock6, sizeof(sock6), host, NI_MAXHOST, NULL, 0, 0);
 	if (ret != 0) {
 		return false;
 	}
+	result = host;
 
-	/* add this result to the cache, if enabled */
-	if (this->cacheOn) {
-		char *persistentResult = (char *) malloc(strlen(result)+1);
-		if (!persistentResult) {
-			std::cerr << "malloc() error (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;
-			return false;
-		}
-
-		strcpy(persistentResult, result);
-		this->addToCache(buf, persistentResult);
-	}
+	/* add the result to the cache */
+	this->dnsCache6[in6_addr_part1][in6_addr_part2] = result;
 
 	return true;
-}
-
-void Resolver::enableCache(unsigned long int cacheSize)
-{
-	int ret;
-
-	/* this structure must be zeroed first */
-	memset(&(this->dnsHashTable), 0, sizeof(struct hsearch_data));
-
-	ret = hcreate_r(cacheSize, &(this->dnsHashTable));
-	if (ret == 0) {
-		std::cerr << "Error, DNS cache disabled" << std::endl;
-		return;
-	}
-
-	this->cacheOn = true;
-}
-
-void Resolver::disableCache()
-{
-	if (!this->cacheEnabled()) {
-		return;
-	}
-
-	hdestroy_r(&(this->dnsHashTable));
-
-	this->cacheOn = false;
-}
-
-bool Resolver::cacheEnabled() const
-{
-	return this->cacheOn;
-}
-
-bool Resolver::addToCache(char *key, void *data)
-{
-	ENTRY e;
-	int ret;
-	ENTRY *retval;
-
-	if (!key || !data) {
-		/* invalid input */
-		return false;
-	}
-
-	e.key = key;
-	e.data = data;
-
-
-	ret = hsearch_r(e, ENTER, &retval, &(this->dnsHashTable));
-	if (ret == 0) {
-		/* adding failed */
-		std::cerr << "Unable to add entry to the cache" << std::endl;
-		return false;
-	}
-
-	return true;
-}
-
-void *Resolver::cacheSearch(char *key)
-{
-	ENTRY e;
-	ENTRY *ep;
-	int ret;
-
-	if (!key) {
-		return NULL;
-	}
-
-	e.key = key;
-
-	ret = hsearch_r(e, FIND, &ep, &(this->dnsHashTable));
-	if (ret == 0) {
-		return NULL;
-	}
-
-	return ep->data;
 }
 
 Resolver::~Resolver()
 {
-	if (this->cacheEnabled()) {
-		this->disableCache();
-	}
+
 }
 
 } /* namespace fbitdump */
