@@ -590,7 +590,7 @@ void Configuration::help() const
 	<< "-M <expr>       Read input from multiple directories." << std::endl
 	<< "                /dir/dir1:dir2:dir3 Read the same files from '/dir/dir1' '/dir/dir2' and '/dir/dir3'." << std::endl
 	<< "                requests either -r filename or -R firstfile:lastfile without pathnames" << std::endl
-	<< "-m              Print netflow data date sorted." << std::endl
+	<< "-m [column]             Print netflow data date sorted. Takes optional parameter '%column' to sort by." << std::endl
 	<< "-R <expr>       Read input from sequence of files." << std::endl
 	<< "                /any/dir  Read all files in that directory." << std::endl
 //	<< "                /dir/file Read all files beginning with 'file'." << std::endl

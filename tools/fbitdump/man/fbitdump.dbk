@@ -111,9 +111,9 @@
 			</varlistentry>
 			
 			<varlistentry>
-				<term>-m Sort the netflow records according the date first seen. This requires column with %ds alias configured in <filename>fbitdump.xml</filename></term>
+				<term>-m [<replaceable class="parameter">column</replaceable>]</term>
 				<listitem>
-					<simpara>This tells plugin to create indexes for stored data (yes/no).</simpara>
+					<simpara>Sort the netflow records according to the specified column. Default is %ds column - the date first seen. This requires alias %column to be configured in <filename>fbitdump.xml</filename></simpara>
 				</listitem>
 			</varlistentry>
 			
