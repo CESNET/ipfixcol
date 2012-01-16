@@ -42,12 +42,12 @@
 
 namespace fbitdump {
 
-Table::Table(ibis::part *part): queryDone(true)
+Table::Table(ibis::part *part): queryDone(true), orderAsc(true)
 {
 	this->table = ibis::table::create(*part);
 }
 
-Table::Table(ibis::partList &partList): queryDone(true)
+Table::Table(ibis::partList &partList): queryDone(true), orderAsc(true)
 {
 	this->table = ibis::table::create(partList);
 }
@@ -148,9 +148,10 @@ const Filter* Table::getFilter()
 	return this->usedFilter;
 }
 
-void Table::orderBy(stringSet orderColumns)
+void Table::orderBy(stringSet orderColumns, bool orderAsc)
 {
 	this->orderColumns = orderColumns;
+	this->orderAsc = orderAsc;
 }
 
 void Table::queueQuery(std::string select, const Filter &filter)
@@ -174,17 +175,20 @@ void Table::doQuery()
 		if (this->table && this->table->nRows() && !this->orderColumns.empty()) {
 			/* transform the column names to table names */
 			ibis::table::stringList orderByList;
+			std::vector<bool> direc;
 			for (stringSet::const_iterator it = this->orderColumns.begin(); it != this->orderColumns.end(); it++) {
 				try {
 					int i = this->namesColumns.at(*it);
 					const char *s = this->table->columnNames()[i];
 					orderByList.push_back(s);
+					direc.push_back(this->orderAsc);
 				} catch (std::out_of_range &e) {
 					std::cerr << "Cannot order by column '" << *it << "' (not present in the table)" << std::endl;
 				}
 			}
+
 			/* order the table */
-			this->table->orderby(orderByList);
+			this->table->orderby(orderByList, direc);
 		}
 
 		/* delete original table */

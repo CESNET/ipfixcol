@@ -186,6 +186,26 @@ public:
      */
     Resolver *getResolver() const;
 
+    /**
+     * \brief Get order direction for fastbit order by function
+     *
+     * @return string "ASC" or "DESC"
+     */
+    bool getOrderAsc() const;
+
+    /**
+     * \brief Return true if statistics were requested
+     *
+     * @return true if statistics were requested
+     */
+    bool getStatistics() const;
+
+    /**
+     * \brief Provides access to aggregation columns aliases
+     *
+     * @return aggregation columns aliases
+     */
+    const stringSet& getAggregateColumnsAliases() const;
 
     /**
      * \brief Class destructor
@@ -275,25 +295,35 @@ private:
      */
     void processmOption(std::string order);
 
+    /**
+     * \brief Parse argument for aggregation
+     *
+     * @param arg comma separated list of aliases
+     * @return -2 on error, 0 otherwise
+     */
+    int parseAggregateArg(char *arg);
 
-    stringVector parts;                /**< Fastbit parts paths to be used*/
-    char *appName;                     /**< Application name, parsed from command line args*/
-    stringSet aggregateColumnsAliases; /**< Aggregate columns aliases set */
-	uint64_t maxRecords;               /**< Limit number of printed records */
-	bool plainNumbers;                 /**< Don't convert protocol numbers to strings*/
-	bool aggregate;                    /**< Are we in aggreagate mode? */
-	bool quiet;                        /**< Don't print header and statistics */
-	std::string filter;                /**< User specified filter string */
-	std::string format;                /**< Output format*/
-	columnVector columns;              /**< Vector of columns to print */
-	std::string firstdir;              /**< First table (directory) user wants to work with */
-	std::string lastdir;               /**< Last table (directory) user wants to work with */
-	bool optm;                         /**< Indicates whether user specified "-m" option or not */
-	Column *orderColumn;				   /**< Column specified using -m value, default is %ts */
-	std::string timeWindow;            /**< Time window */
-	std::string rOptarg;               /**< Optarg for -r option */
-	std::string ROptarg;               /**< Optarg for -R option */
-	Resolver *resolver;                /**< DNS resolver */
+
+    stringVector parts;                 /**< Fastbit parts paths to be used*/
+    char *appName;                      /**< Application name, parsed from command line args*/
+    stringSet aggregateColumnsAliases;  /**< Aggregate columns aliases set */
+	uint64_t maxRecords;                /**< Limit number of printed records */
+	bool plainNumbers;                  /**< Don't convert protocol numbers to strings*/
+	bool aggregate;                     /**< Are we in aggreagate mode? */
+	bool quiet;                         /**< Don't print header and statistics */
+	std::string filter;                 /**< User specified filter string */
+	std::string format;                 /**< Output format*/
+	columnVector columns;               /**< Vector of columns to print */
+	std::string firstdir;               /**< First table (directory) user wants to work with */
+	std::string lastdir;                /**< Last table (directory) user wants to work with */
+	bool optm;                          /**< Indicates whether user specified "-m" option or not */
+	Column *orderColumn;	 			   /**< Column specified using -m value, default is %ts */
+	std::string timeWindow;             /**< Time window */
+	std::string rOptarg;                /**< Optarg for -r option */
+	std::string ROptarg;                /**< Optarg for -R option */
+	Resolver *resolver;                 /**< DNS resolver */
+	bool statistics;					/**< Option to generate statistics was used */
+	bool orderAsc;						/**< Order column increasingly, default is true */
 }; /* end of Configuration class */
 
 } /* end of fbitdump namespace */

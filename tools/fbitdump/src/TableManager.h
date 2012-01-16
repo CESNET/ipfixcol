@@ -136,7 +136,8 @@ private:
 	Configuration &conf;		/**< Program configuration */
 	ibis::partList parts;		/**< List of loaded table parts */
 	tableVector tables;			/**< List of managed tables */
-	stringSet orderColumns; /**< String list of order by columns */
+	stringSet orderColumns; 	/**< String list of order by columns */
+	bool orderAsc;				/**< Same as in Configuration, true when columns are to be sorted in increasing order */
 };
 
 }  // namespace fbitdump

@@ -59,6 +59,7 @@ namespace fbitdump {
 int Configuration::init(int argc, char *argv[])
 {
 	char c;
+	bool maxCountSet = false;
 	stringVector tables;
 	std::string filterFile;
 	std::string optionM;	/* optarg for option -M */
@@ -97,30 +98,22 @@ int Configuration::init(int argc, char *argv[])
 				this->aggregateColumnsAliases.insert("%pr");
 			}
 			break;
-		case 'A': /* aggregate on specific columns */
-			char *token;
-			this->aggregate = true;
-			/* add aggregate columns to set */
-			this->aggregateColumnsAliases.clear();
-			token = strtok(optarg, ",");
-			if (token == NULL) {
-				help();
-				return -2;
-			} else {
-				this->aggregateColumnsAliases.insert(token);
-				while ((token = strtok(NULL, ",")) != NULL) {
-					this->aggregateColumnsAliases.insert(token);
-				}
-			}
-			break;
+		case 'A': {/* aggregate on specific columns */
+			int ret = parseAggregateArg(optarg);
+			if (ret != 0) return ret;
+			break;}
 		case 'f':
 				filterFile = optarg;
 			break;
 		case 'n':
-			NOT_SUPPORTED
+			/* same as -c, but -c takes precedence */
+			if (!maxCountSet)
+				this->maxRecords = atoi(optarg);
+			maxCountSet = true; /* so that statistics knows whether to change the value */
 			break;
 		case 'c': /* number of records to display */
-				this->maxRecords = atoi(optarg);
+			this->maxRecords = atoi(optarg);
+			maxCountSet = true; /* so that statistics knows whether to change the value */
 			break;
 		case 'D': {
 				char *nameserver;
@@ -130,11 +123,46 @@ int Configuration::init(int argc, char *argv[])
 			}
 			break;
 		case 'N': /* print plain numbers */
-				this->plainNumbers = true;
+			this->plainNumbers = true;
 			break;
-		case 's':
-			NOT_SUPPORTED
-			break;
+		case 's': {
+			/* Similar to -A option*/
+			this->statistics = true;
+
+			/* we support column/order for convenience */
+			std::string arg = optarg;
+			std::string::size_type pos;
+			char parseArg[250];
+			if ((pos = arg.find('/')) != std::string::npos) { /* ordering column specified */
+				if (pos > 250) { /* constant char array */
+					std::cerr << "Argument for option -s is too long" << std::endl;
+					return -3;
+				}
+				/* column name is before '/' */
+				strncpy(parseArg, optarg, pos);
+			} else { /* use whole optarg as column name */
+				strcpy(parseArg, optarg);
+			}
+
+			int ret = parseAggregateArg(parseArg);
+			if (ret != 0) return ret;
+
+			this->statistics = true;
+
+			/* sets default "-c 10", "-m %fl"*/
+			if (!maxCountSet) this->maxRecords = 10;
+			if (this->optm == false) {
+				if (pos != std::string::npos) /* '/' found in optarg -> we have ordering column */
+					optionm = optarg+pos+1;
+				else
+					optionm = "%fl DESC";
+
+				/* descending ordering for statistics */
+				this->orderAsc = false;
+				this->optm = true;
+			}
+			/* TODO imply parameter for better summarization */
+			break;}
 		case 'q':
 				this->quiet = true;
 			break;
@@ -143,10 +171,8 @@ int Configuration::init(int argc, char *argv[])
 			break;
 		case 'M':
 			optionM = optarg;
-			/* this option will be processed later (it depends on -r or -R */
-
+			/* this option will be processed later (it depends on -r or -R) */
 			break;
-
 		case 'r': {/* file to open */
                 if (optarg == std::string("")) {
                 	help();
@@ -471,6 +497,11 @@ const columnVector& Configuration::getColumns() const
 	return this->columns;
 }
 
+const stringSet& Configuration::getAggregateColumnsAliases() const
+{
+	return this->aggregateColumnsAliases;
+}
+
 const std::string Configuration::version() const
 {
 	std::ifstream ifs;
@@ -501,6 +532,16 @@ const std::string Configuration::getTimeWindowEnd() const
 		return "";
 	}
 	return this->timeWindow.substr(pos+1);
+}
+
+bool Configuration::getOrderAsc() const
+{
+	return this->orderAsc;
+}
+
+bool Configuration::getStatistics() const
+{
+	return this->statistics;
 }
 
 bool Configuration::isDirectory(std::string dir) const
@@ -534,6 +575,20 @@ void Configuration::processmOption(std::string order)
 	/* Open XML configuration file */
 	pugi::xml_document doc;
 	doc.load_file(this->getXmlConfPath());
+
+	std::string::size_type pos;
+	if ((pos = order.find("ASC")) != std::string::npos) {
+		order = order.substr(0, pos); /* trim! */
+		this->orderAsc = true;
+	} else if ((pos = order.find("DESC")) != std::string::npos) {
+		order = order.substr(0, pos);
+		this->orderAsc = false;
+	}
+
+	/* one more time to trim trailing whitespaces */
+	if ((pos = order.find(' ')) != std::string::npos) {
+		order = order.substr(0, pos);
+	}
 
 	Column *col = new Column();
 	do {
@@ -620,7 +675,7 @@ bool Configuration::getOptionm() const
 }
 
 Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false),
-		optm(false), orderColumn(NULL), resolver(NULL)
+		optm(false), orderColumn(NULL), resolver(NULL), statistics(false), orderAsc(true)
 {
 }
 
@@ -949,6 +1004,24 @@ bool Configuration::processROption(stringVector &tables, const char *optarg)
 	}
 
 	return true;
+}
+
+int Configuration::parseAggregateArg(char *arg) {
+	char *token;
+	this->aggregate = true;
+	/* add aggregate columns to set */
+	this->aggregateColumnsAliases.clear();
+	token = strtok(arg, ",");
+	if (token == NULL) {
+		help();
+		return -2;
+	} else {
+		this->aggregateColumnsAliases.insert(token);
+		while ((token = strtok(NULL, ",")) != NULL) {
+			this->aggregateColumnsAliases.insert(token);
+		}
+	}
+	return 0;
 }
 
 Resolver *Configuration::getResolver() const

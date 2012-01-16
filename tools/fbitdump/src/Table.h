@@ -138,9 +138,10 @@ public:
 	 * Strings must be put through namesColumnsMap,
 	 * so this function is valid only after the map exists
 	 *
-	 * @param list of strings to order by
+	 * @param orderColumns list of strings to order by
+	 * @param orderAsc true implies increasing order
 	 */
-	void orderBy(stringSet orderColumns);
+	void orderBy(stringSet orderColumns, bool orderAsc);
 
 	/**
 	 * \brief Table class destructor
@@ -167,6 +168,7 @@ private:
 	bool queryDone; /**< Indicates that query was already preformed */
 	std::string select; /**< Select string to be used on next query */
 	stringSet orderColumns; /**< Set of columns to order by */
+	bool orderAsc; /**< Same as in Configuration, true for increasing ordering */
 };
 
 } /* end of namespace fbitdump */

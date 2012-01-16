@@ -111,9 +111,13 @@
 			</varlistentry>
 			
 			<varlistentry>
-				<term>-m [<replaceable class="parameter">column</replaceable>]</term>
+				<term>-m [<replaceable class="parameter">column [DESC|ASC]</replaceable>]</term>
 				<listitem>
-					<simpara>Sort the netflow records according to the specified column. Default is %ds column - the date first seen. This requires alias %column to be configured in <filename>fbitdump.xml</filename></simpara>
+					<simpara>
+						Sort the netflow records according to the specified column. Default is %ds column - the date first seen. 
+						This requires alias %column to be configured in <filename>fbitdump.xml</filename>. 
+						Optional DESC or ASC parameter can be specified after column which controls ordering direction: DESC for descending, ASC for ascending (default). 
+					</simpara>
 				</listitem>
 			</varlistentry>
 			
@@ -137,7 +141,7 @@
 			<varlistentry>
 				<term>-c <replaceable class="parameter">num</replaceable></term>
 				<listitem>
-					<simpara>Limit number of records to output to the <replaceable class="parameter">num</replaceable> flows.</simpara>
+					<simpara>Limit number of records to output to the <replaceable class="parameter">num</replaceable> flows. Takes precedence over -n option.</simpara>
 				</listitem>
 			</varlistentry>
 			
@@ -160,6 +164,25 @@
 				<term>-o <replaceable class="parameter">format</replaceable></term>
 				<listitem>
 					<simpara>Selects the output format to print flows. Aggregated flows will have NULL or default value specified in non-aggregable columns.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-n <replaceable class="parameter">num</replaceable></term>
+				<listitem>
+					<simpara>Same as -c option, but with lower priority. Just so that nfdump users do not miss this.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-s <replaceable class="parameter">column[/order]</replaceable></term>
+				<listitem>
+					<simpara>
+						Provides statistics for specified column (starting with %). By default prints only top 10 records. Order can be any summarizable column, just as for -m option, with default DESC order.
+					</simpara>
+					<simpara>
+						This option is in fact only a shortcut for '-A column -m"order DESC" -c 10' with slightly modified output format. This also means that multiple -s options are currently not supported.
+					</simpara>
 				</listitem>
 			</varlistentry>
 		</variablelist>

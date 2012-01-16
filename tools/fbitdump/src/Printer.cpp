@@ -62,6 +62,7 @@ bool Printer::print(TableManager &tm)
 
 	/* print table header */
 	if (!conf.getQuiet()) {
+
 		printHeader();
 	}
 
@@ -90,6 +91,13 @@ bool Printer::print(TableManager &tm)
 
 void Printer::printHeader() const
 {
+	/* check for statistics header line */
+	if (conf.getStatistics()) {
+		out << "Top " << conf.getMaxRecords() << " "
+			<< *conf.getAggregateColumnsAliases().begin() <<  " ordered by "
+			<< *conf.getOrderByColumn()->getAliases().begin() << std::endl;
+	}
+
 	/* print column names */
 	for (size_t i = 0; i < conf.getColumns().size(); i++) {
 		/* set defined column width */
