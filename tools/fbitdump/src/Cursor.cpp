@@ -72,6 +72,11 @@ bool Cursor::next()
 
 bool Cursor::getColumn(std::string name, Values &value, int part) const
 {
+	if (this->cursor == NULL) {
+		std::cerr << "Call next() on Cursor before reading!" << std::endl;
+		return false;
+	}
+
 	int ret = 0, colNum = 0;
 	ibis::TYPE_T type;
 	ibis::table::namesTypes::const_iterator it;

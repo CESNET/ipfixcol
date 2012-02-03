@@ -44,11 +44,11 @@
 namespace fbitdump
 {
 
-bool Column::init(pugi::xml_document &doc, std::string alias, bool aggregate)
+bool Column::init(const pugi::xml_document &doc, const std::string alias, bool aggregate)
 {
 
 	/* search xml for an alias */
-	pugi::xpath_node column = doc.select_single_node(("/columns/column[alias='"+alias+"']").c_str());
+	pugi::xpath_node column = doc.select_single_node(("/configuration/columns/column[alias='"+alias+"']").c_str());
 	/* check what we found */
 	if (column == NULL) {
 		std::cerr << "Column '" << alias << "' not defined" << std::endl;
@@ -97,16 +97,26 @@ bool Column::init(pugi::xml_document &doc, std::string alias, bool aggregate)
 		this->element = column.node().child("value").child_value("element");
 	}
 
+	/* check whether this is a summary column */
+	pugi::xpath_node_set sumColumns = doc.select_nodes("/configuration/summary/column");
+	for (stringSet::const_iterator it = this->aliases.begin(); it != this->aliases.end(); it++) {
+		for (pugi::xpath_node_set::const_iterator i = sumColumns.begin(); i != sumColumns.end(); ++i) {
+			if (*it == i->node().child_value()) {
+				this->summary = true;
+			}
+		}
+	}
+
 	return true;
 }
 
-Column::AST* Column::createValueElement(pugi::xml_node element, pugi::xml_document &doc)
+Column::AST* Column::createValueElement(pugi::xml_node element, const pugi::xml_document &doc)
 {
 
 	/* when we have alias, go down one level */
 	if (element.child_value()[0] == '%') {
 		pugi::xpath_node el = doc.select_single_node(
-				("/columns/column[alias='"
+				("/configuration/columns/column[alias='"
 						+ std::string(element.child_value())
 						+ "']/value/element").c_str());
 		return createValueElement(el.node(), doc);
@@ -128,7 +138,7 @@ Column::AST* Column::createValueElement(pugi::xml_node element, pugi::xml_docume
 	return ast;
 }
 
-Column::AST* Column::createOperationElement(pugi::xml_node operation, pugi::xml_document &doc)
+Column::AST* Column::createOperationElement(pugi::xml_node operation, const pugi::xml_document &doc)
 {
 
 	AST *ast = new AST;
@@ -141,8 +151,8 @@ Column::AST* Column::createOperationElement(pugi::xml_node operation, pugi::xml_
 	ast->semantics = operation.attribute("semantics").value();
 
 	/* get argument nodes */
-	arg1 = doc.select_single_node(("/columns/column[alias='"+ std::string(operation.child_value("arg1"))+ "']").c_str());
-	arg2 = doc.select_single_node(("/columns/column[alias='"+ std::string(operation.child_value("arg2"))+ "']").c_str());
+	arg1 = doc.select_single_node(("/configuration/columns/column[alias='"+ std::string(operation.child_value("arg1"))+ "']").c_str());
+	arg2 = doc.select_single_node(("/configuration/columns/column[alias='"+ std::string(operation.child_value("arg2"))+ "']").c_str());
 
 	/* get argument type */
 	type = arg1.node().child("value").attribute("type").value();
@@ -417,6 +427,11 @@ const std::string Column::getElement() const
 	return this->element;
 }
 
-Column::Column(): nullStr("NULL"), width(0), alignLeft(false), ast(NULL), aggregation(false) {}
+bool Column::isSummary() const
+{
+	return this->summary;
+}
+
+Column::Column(): nullStr("NULL"), width(0), alignLeft(false), ast(NULL), aggregation(false), summary(false) {}
 
 }

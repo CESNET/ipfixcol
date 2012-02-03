@@ -93,7 +93,7 @@ private:
 	 * @param tm TableManager of printed tables
 	 * @param numPrinted Number of printed rows
 	 */
-	void printFooter(TableManager &tm, uint64_t numPrinted) const;
+	void printFooter(uint64_t numPrinted) const;
 
 	/**
 	 * \brief Return printable value of column on row specified by cursor
@@ -168,6 +168,7 @@ private:
 
 	std::ostream &out; /**< Stream to write to */
 	Configuration &conf; /**< program configuration */
+	TableManager *tableManager; /**< table manager used in print function (provide easy access to others) */
 };
 
 }  // namespace fbitdump

@@ -115,27 +115,27 @@ std::string Values::toString(bool plainNumbers) const
 		valStr = ss.str();
 		break;
 	case ibis::INT:
-		formatNumber(this->value[0].int32, ss, plainNumbers);
+		Utils::formatNumber(this->value[0].int32, ss, plainNumbers);
 		valStr = ss.str();
 		break;
 	case ibis::UINT:
-		formatNumber(this->value[0].uint32, ss, plainNumbers);
+		Utils::formatNumber(this->value[0].uint32, ss, plainNumbers);
 		valStr = ss.str();
 		break;
 	case ibis::LONG:
-		formatNumber(this->value[0].int64, ss, plainNumbers);
+		Utils::formatNumber(this->value[0].int64, ss, plainNumbers);
 		valStr = ss.str();
 		break;
 	case ibis::ULONG:
-		formatNumber(this->value[0].uint64, ss, plainNumbers);
+		Utils::formatNumber(this->value[0].uint64, ss, plainNumbers);
 		valStr = ss.str();
 		break;
 	case ibis::FLOAT:
-		formatNumber(this->value[0].flt, ss, plainNumbers);
+		Utils::formatNumber(this->value[0].flt, ss, plainNumbers);
 		valStr = ss.str();
 		break;
 	case ibis::DOUBLE:
-		formatNumber(this->value[0].dbl, ss, plainNumbers);
+		Utils::formatNumber(this->value[0].dbl, ss, plainNumbers);
 		valStr = ss.str();
 		break;
 	case ibis::TEXT:
@@ -152,23 +152,6 @@ std::string Values::toString(bool plainNumbers) const
 	ss.str("");
 
 	return valStr;
-}
-
-template <class T>
-inline void Values::formatNumber(T num, std::ostringstream &ss, bool plainNumbers) const
-{
-	ss << std::fixed;
-	if (num <= 1000000 || plainNumbers) {
-		ss.precision(0);
-		ss << num;
-	} else if (num > 1000000000) {
-		ss.precision(1);
-		ss << (float) num/1000000000 << " G";
-	} else if (num > 1000000) {
-		ss.precision(1);
-		ss << (float) num/1000000 << " M";
-	}
-	ss.precision(0); /* set zero precision for other numbers */
 }
 
 inline bool operator== (const Values &lhs, const Values &rhs)

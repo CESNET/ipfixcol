@@ -153,12 +153,6 @@ public:
     const columnVector& getColumns() const;
 
     /**
-     * \brief Returns path to configuration XML
-     * @return Path to configuration XML
-     */
-    const char* getXmlConfPath() const;
-
-    /**
      * \brief This method returns true if user started application with -m option
      *
      * @return true if option "-m" was specified, false otherwise
@@ -208,6 +202,20 @@ public:
     const stringSet& getAggregateColumnsAliases() const;
 
     /**
+     * \brief Returns XML configuration document
+     *
+     * @return XML configuration document
+     */
+    const pugi::xml_document& getXMLConfiguration() const;
+
+    /**
+     * \brief Returns columns that should be used as summary for statistics
+     *
+     * @return Columns that should be used as summary for statistics
+     */
+    columnVector getStatisticsColumns() const;
+
+    /**
      * \brief Class destructor
      */
     ~Configuration();
@@ -227,6 +235,12 @@ private:
      * @return string with current version
      */
     const std::string version() const;
+
+    /**
+     * \brief Returns path to configuration XML
+     * @return Path to configuration XML
+     */
+    const char* getXmlConfPath() const;
 
     /**
      * \brief Read parts from specified table directories
@@ -303,7 +317,6 @@ private:
      */
     int parseAggregateArg(char *arg);
 
-
     stringVector parts;                 /**< Fastbit parts paths to be used*/
     char *appName;                      /**< Application name, parsed from command line args*/
     stringSet aggregateColumnsAliases;  /**< Aggregate columns aliases set */
@@ -317,13 +330,14 @@ private:
 	std::string firstdir;               /**< First table (directory) user wants to work with */
 	std::string lastdir;                /**< Last table (directory) user wants to work with */
 	bool optm;                          /**< Indicates whether user specified "-m" option or not */
-	Column *orderColumn;	 			   /**< Column specified using -m value, default is %ts */
+	Column *orderColumn;	 			/**< Column specified using -m value, default is %ts */
 	std::string timeWindow;             /**< Time window */
 	std::string rOptarg;                /**< Optarg for -r option */
 	std::string ROptarg;                /**< Optarg for -R option */
 	Resolver *resolver;                 /**< DNS resolver */
 	bool statistics;					/**< Option to generate statistics was used */
 	bool orderAsc;						/**< Order column increasingly, default is true */
+	pugi::xml_document doc;				/**< XML configuration document */
 }; /* end of Configuration class */
 
 } /* end of fbitdump namespace */

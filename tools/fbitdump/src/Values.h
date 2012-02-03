@@ -101,20 +101,7 @@ public:
 	friend bool operator<= (const Values &lhs, const Values &rhs);
 
 private:
-	/**
-	 * \brief Formats number 'num' to ostringstream 'ss'
-	 *
- 	 * Uses precision 1 if output has units and 0 otherwise
- 	 * doesn't format if 'plainNumbers' is set
- 	 *
- 	 * When defined as macro, it can be a bit quicker
- 	 *
-	 * @param num number to format
-	 * @param ss string strem to put result to
-	 * @param plainNumbers whether to format or not
-	 */
-	template<class T>
-	inline void formatNumber(T num, std::ostringstream &ss, bool plainNumbers) const;
+
 };
 
 } /* end of namespace fbitdump */

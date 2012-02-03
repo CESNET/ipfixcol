@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 	if (ret != 0) return ret;
 
 	/* create filter */
-	Filter filter(conf);
+	Filter filter(&conf);
 	/* initialise filter and check correctness */
 	ret = filter.init();
 	if (ret != 0) return ret;

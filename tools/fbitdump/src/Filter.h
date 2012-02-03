@@ -67,7 +67,15 @@ public:
 	 *
 	 * @param conf Configuration class
 	 */
-	Filter(Configuration &conf);
+	Filter(Configuration *conf);
+
+	/**
+	 * \brief Empty Construtor
+	 *
+	 * Creates filter that does nothing.
+	 * init() does nothing with this setup
+	 */
+	Filter();
 
 	/**
 	 * \brief Initialise the filter
@@ -102,7 +110,7 @@ private:
 	 */
 	time_t parseTimestamp(std::string str) const;
 
-	Configuration &conf; /**< Program configuration */
+	Configuration *conf; /**< Program configuration */
 	std::string filterString; /**< String for fastbit condition */
 };
 

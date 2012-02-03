@@ -220,6 +220,12 @@ int Configuration::init(int argc, char *argv[])
 		}
 	}
 
+	/* open XML configuration file */
+	if (!this->doc.load_file(COLUMNS_XML)) {
+		std::cerr << "XML '"<< COLUMNS_XML << "' with columns configuration cannot be loaded!" << std::endl;
+		return -4;
+	}
+
 	if (!optionM.empty()) {
 		/* process -M option, this option depends on -r or -R */
 		processMOption(tables, optionM.c_str());
@@ -352,13 +358,7 @@ void Configuration::parseFormat(std::string format)
 	regmatch_t matches[1]; /* array of regex matches (we need only one) */
 	bool removeNext = false; /* when removing column, remove the separator after it */
 
-	/* Open XML configuration file */
-	pugi::xml_document doc;
-	if (!doc.load_file(COLUMNS_XML)) {
-		std::cerr << "XML '"<< COLUMNS_XML << "' with columns configuration cannot be loaded!" << std::endl;
-	}
-
-	/* prepare regular expresion */
+		/* prepare regular expresion */
 	regcomp(&reg, "%[a-zA-Z0-9]+", REG_EXTENDED);
 
 	/* go over whole format string */
@@ -379,7 +379,7 @@ void Configuration::parseFormat(std::string format)
 			format = format.substr(matches[0].rm_eo);
 
 			do {
-				if ((ok = col->init(doc, alias, this->aggregate)) == false) break;
+				if ((ok = col->init(this->doc, alias, this->aggregate)) == false) break;
 
 				/* check that column is aggregable (is a summary column) or is aggregated */
 
@@ -433,16 +433,12 @@ const stringSet Configuration::getAggregateColumns() const
 	stringSet aggregateColumns;
 	Column *col;
 
-	/* Open XML configuration file */
-	pugi::xml_document doc;
-	doc.load_file(this->getXmlConfPath());
-
 	/* go over all aliases */
 	for (stringSet::const_iterator aliasIt = this->aggregateColumnsAliases.begin();
 			aliasIt != this->aggregateColumnsAliases.end(); aliasIt++) {
 
 		col = new Column();
-		if (col->init(doc, *aliasIt, this->aggregate)) {
+		if (col->init(this->doc, *aliasIt, this->aggregate)) {
 			stringSet cols = col->getColumns();
 			aggregateColumns.insert(cols.begin(), cols.end());
 		}
@@ -502,6 +498,29 @@ const stringSet& Configuration::getAggregateColumnsAliases() const
 	return this->aggregateColumnsAliases;
 }
 
+const pugi::xml_document& Configuration::getXMLConfiguration() const
+{
+	return this->doc;
+}
+
+columnVector Configuration::getStatisticsColumns() const
+{
+	columnVector cols;
+
+	for (columnVector::const_iterator it = this->columns.begin(); it != this->columns.end(); it++) {
+		if ((*it)->isSummary()) {
+			cols.push_back(*it);
+		}
+	}
+
+	return cols;
+}
+
+bool Configuration::getStatistics() const
+{
+	return this->statistics;
+}
+
 const std::string Configuration::version() const
 {
 	std::ifstream ifs;
@@ -539,11 +558,6 @@ bool Configuration::getOrderAsc() const
 	return this->orderAsc;
 }
 
-bool Configuration::getStatistics() const
-{
-	return this->statistics;
-}
-
 bool Configuration::isDirectory(std::string dir) const
 {
 	int ret;
@@ -572,10 +586,6 @@ void Configuration::sanitizePath(std::string &path)
 
 void Configuration::processmOption(std::string order)
 {
-	/* Open XML configuration file */
-	pugi::xml_document doc;
-	doc.load_file(this->getXmlConfPath());
-
 	std::string::size_type pos;
 	if ((pos = order.find("ASC")) != std::string::npos) {
 		order = order.substr(0, pos); /* trim! */
@@ -627,12 +637,12 @@ void Configuration::help() const
 	<< "-r <dir>        read input tables from directory" << std::endl
 //	<< "-w <file>       write output to file" << std::endl
 	<< "-f              read netflow filter from file" << std::endl
-//	<< "-n              Define number of top N. " << std::endl
+	<< "-n              Define number of top N. -c option takes precedence over -n." << std::endl
 	<< "-c              Limit number of records to display" << std::endl
 	<< "-D <dns>        Use nameserver <dns> for host lookup. Does not support IPv6 addresses." << std::endl
 	<< "-N              Print plain numbers" << std::endl
-//	<< "-s <expr>[/<order>]     Generate statistics for <expr> any valid record element." << std::endl
-//	<< "                and ordered by <order>: packets, bytes, flows, bps pps and bpp." << std::endl
+	<< "-s <column>[/<order>]     Generate statistics for <column> any valid record element." << std::endl
+	<< "                and ordered by <order>. Order can be any summarizable column, just as for -m option." << std::endl
 	<< "-q              Quiet: Do not print the header and bottom stat lines." << std::endl
 	//<< "-H Add xstat histogram data to flow file.(default 'no')" << std::endl
 	//<< "-i <ident>      Change Ident to <ident> in file given by -r." << std::endl
@@ -1031,6 +1041,7 @@ Resolver *Configuration::getResolver() const
 
 Configuration::~Configuration()
 {
+	/* delete columns */
 	for (columnVector::const_iterator it = columns.begin(); it != columns.end(); it++) {
 		delete *it;
 	}

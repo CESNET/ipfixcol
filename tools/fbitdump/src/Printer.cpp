@@ -44,6 +44,7 @@
 #include <netdb.h>
 #include "protocols.h"
 #include "Column.h"
+#include "Values.h"
 #include "Printer.h"
 #include "Table.h"
 #include "Resolver.h"
@@ -58,6 +59,8 @@ bool Printer::print(TableManager &tm)
 	if (conf.getColumns().size() == 0) {
 		return true;
 	}
+
+	this->tableManager = &tm;
 
 
 	/* print table header */
@@ -83,7 +86,7 @@ bool Printer::print(TableManager &tm)
 	delete(tmc);
 
 	if (!conf.getQuiet()) {
-		printFooter(tm, numPrinted);
+		printFooter(numPrinted);
 	}
 
 	return true;
@@ -101,7 +104,12 @@ void Printer::printHeader() const
 	/* print column names */
 	for (size_t i = 0; i < conf.getColumns().size(); i++) {
 		/* set defined column width */
-		out.width(conf.getColumns()[i]->getWidth());
+		if (conf.getStatistics() && conf.getColumns()[i]->isSummary()) {
+			/* widen by 8 for percentage */
+			out.width(conf.getColumns()[i]->getWidth() + 8);
+		} else {
+			out.width(conf.getColumns()[i]->getWidth());
+		}
 
 		/* set defined column alignment */
 		if (conf.getColumns()[i]->getAlignLeft()) {
@@ -117,10 +125,23 @@ void Printer::printHeader() const
 
 }
 
-void Printer::printFooter(TableManager &tm, uint64_t numPrinted) const
+void Printer::printFooter(uint64_t numPrinted) const
 {
 	std::cout << "Total rows outputed: " << numPrinted << std::endl
-	<< "Processed " << tm.getNumParts() << " tables with " << tm.getInitRows() << " rows" << std::endl;
+	<< "Processed " << this->tableManager->getNumParts() << " tables with " << this->tableManager->getInitRows() << " rows" << std::endl;
+
+	if (conf.getStatistics()) { /* print summary statistics since we know the numbers */
+		const TableSummary *st = this->tableManager->getSummary();
+
+		columnVector stats = conf.getStatisticsColumns();
+
+		for (columnVector::const_iterator it = stats.begin(); it != stats.end(); it++) {
+			std::string s = "sum(" + *(*it)->getColumns().begin() + ")";
+			out << "Total " << (*it)->getName() << ": ";
+			Utils::formatNumber(st->getValue(s), out, false);
+			out << std::endl;
+		}
+	}
 }
 
 void Printer::printRow(const Cursor *cur) const
@@ -128,7 +149,12 @@ void Printer::printRow(const Cursor *cur) const
 	/* go over all defined columns */
 	for (size_t i = 0; i < conf.getColumns().size(); i++) {
 		/* set defined column width */
-		out.width(conf.getColumns()[i]->getWidth());
+		if (conf.getStatistics() && conf.getColumns()[i]->isSummary()) {
+			/* widen by 8 for percentage */
+			out.width(conf.getColumns()[i]->getWidth() + 8);
+		} else {
+			out.width(conf.getColumns()[i]->getWidth());
+		}
 
 		/* set defined column alignment */
 		if (conf.getColumns()[i]->getAlignLeft()) {
@@ -182,6 +208,18 @@ const std::string Printer::printValue(const Column *col, const Cursor *cur) cons
 		}
 	} else {
 		valueStr = val->toString(conf.getPlainNumbers());
+		/* when printing statistics, add percent part */
+		if (conf.getStatistics() && col->isSummary()) {
+			std::ostringstream ss;
+			double sum;
+			std::string name = std::string("sum(") + *col->getColumns().begin() + ")";
+
+			sum = this->tableManager->getSummary()->getValue(name);
+
+			ss.precision(1);
+			ss << std::fixed << " (" << 100*val->toDouble()/sum << "%)";
+			valueStr += ss.str();
+		}
 	}
 
 	/* clean value variable */

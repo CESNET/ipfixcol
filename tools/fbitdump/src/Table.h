@@ -50,10 +50,11 @@ namespace fbitdump {
 class Cursor;
 class Filter;
 
+typedef std::pair<std::string, std::string> stringPair;
+typedef std::vector<stringPair> stringPairVector;
+
 /**
  * \brief Class Table wrapping ibis::table
- *
- * TODO this class should accept filter to be used by cursor
  */
 class Table
 {
@@ -144,11 +145,32 @@ public:
 	void orderBy(stringSet orderColumns, bool orderAsc);
 
 	/**
+	 * \brief Returns pointer to table with same fastbit table as this one
+	 *
+	 * This can be used to run multiple queries on same table.
+	 * The queries on Table are destructive, so when there is need to preserve
+	 * the original table, run the query on the copy (for e.g. summary of the table)
+	 *
+	 * Note that original fastbit table will be destroyed by deleting or querying the original table.
+	 *
+	 * @return Table that works on same fastbit table as this one. Can return NULL when table is filtered out
+	 */
+	Table* createTableCopy();
+
+	/**
 	 * \brief Table class destructor
 	 */
 	~Table();
 
 private:
+
+	/**
+	 * \brief Constructor to create table from table
+	 *
+	 * @param table
+	 */
+	Table(Table *table);
+
 	/**
 	 * \brief Run query specified by queueQuery
 	 */
@@ -162,6 +184,18 @@ private:
 	 */
 	void queueQuery(std::string select, const Filter &filter);
 
+	/**
+	 * \brief Translate column names to table columns
+	 *
+	 * With summary columns strips the function from name, does translation
+	 * and puts the function back
+	 *
+	 * @param columns Set of column names to translate
+	 * @param summary True when given columns are summary, default is false
+	 * @return New set with translated columns
+	 */
+	stringPairVector translateColumns(const stringSet &columns, bool summary=false);
+
 	ibis::table *table; /**< wrapped cursors table */
 	const Filter *usedFilter; /**< Saved filter for cursor */
 	namesColumnsMap namesColumns; /**< Map of column names to column numbers */
@@ -169,6 +203,7 @@ private:
 	std::string select; /**< Select string to be used on next query */
 	stringSet orderColumns; /**< Set of columns to order by */
 	bool orderAsc; /**< Same as in Configuration, true for increasing ordering */
+	bool deleteTable;	/**< Is fastbit table managed by us? */
 };
 
 } /* end of namespace fbitdump */

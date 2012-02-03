@@ -67,7 +67,7 @@ public:
 	 * @param aggregate Aggregate mode
 	 * @return true when initialization completed, false on error
 	 */
-	bool init(pugi::xml_document &doc, std::string alias, bool aggregate);
+	bool init(const pugi::xml_document &doc, const std::string alias, bool aggregate);
 
 	/**
 	 * \brief Returns column name (that should be printed in header)
@@ -194,6 +194,13 @@ public:
 	const std::string getElement() const;
 
 	/**
+	 * \brief Returns true when column is configured as summary column
+	 *
+	 * @return true when column is configured as summary column
+	 */
+	bool isSummary() const;
+
+	/**
 	 * \brief Class destructor
 	 * Frees AST
 	 */
@@ -279,7 +286,7 @@ private:
 	 * @param doc XML document with configuration
 	 * @return AST structure of created element
 	 */
-	AST* createValueElement(pugi::xml_node element, pugi::xml_document &doc);
+	AST* createValueElement(pugi::xml_node element, const pugi::xml_document &doc);
 
 	/**
 	 * \brief Create element of type operation from XMLnode element
@@ -288,7 +295,7 @@ private:
 	 * @param doc XML document with configuration
 	 * @return AST structure of created operation
 	 */
-	AST* createOperationElement(pugi::xml_node operation, pugi::xml_document &doc);
+	AST* createOperationElement(pugi::xml_node operation, const pugi::xml_document &doc);
 
 	/**
 	 * \brief Return column names used in this AST
@@ -315,6 +322,7 @@ private:
 	stringSet aliases;      /**< Aliases of the column*/
 	bool aggregation;       /**< Determines whether column is in aggregation mode */
 	std::string element;    /**< name of the file, which contains actual data for this column */
+	bool summary;			/**< Is this a summary column? */
 
 }; /* end of Column class */
 

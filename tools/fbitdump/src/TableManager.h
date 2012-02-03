@@ -45,6 +45,7 @@
 #include "Filter.h"
 #include "Table.h"
 #include "TableManagerCursor.h"
+#include "TableSummary.h"
 
 /**
  * \brief Namespace of the fbitdump utility
@@ -103,7 +104,11 @@ public:
 	 */
 	tableVector& getTables();
 
-
+	/**
+	 * \brief Remove table referenced by iterator
+	 *
+	 * @param it Iterator pointing to the table to be removed
+	 */
 	void removeTable(tableVector::iterator &it);
 
 	/**
@@ -122,9 +127,19 @@ public:
 
 	/**
 	 * \brief Return number of rows present in the initial raw data
+	 *
 	 * @return number of rows in initial data
 	 */
 	uint64_t getInitRows() const;
+
+	/**
+	 * \brief Returns and possibly creates the summary for all managed tables
+	 *
+	 * Uses Summary columns returned by Configuration::getSummaryColumns()
+	 *
+	 * @return Pointer to TableSummary class
+	 */
+	const TableSummary* getSummary();
 
 	/**
 	 * \brief Class destructor
@@ -138,6 +153,7 @@ private:
 	tableVector tables;			/**< List of managed tables */
 	stringSet orderColumns; 	/**< String list of order by columns */
 	bool orderAsc;				/**< Same as in Configuration, true when columns are to be sorted in increasing order */
+	TableSummary *tableSummary;	/**< Table summary, created on demand */
 };
 
 }  // namespace fbitdump

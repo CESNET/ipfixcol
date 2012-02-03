@@ -75,6 +75,38 @@ typedef std::vector<Column*> columnVector;
 class Table;
 typedef std::vector<Table*> tableVector;
 
+namespace Utils {
+/**
+ * \brief Formats number 'num' to ostringstream 'ss'
+ *
+ * Uses precision 1 if output has units and 0 otherwise
+ * doesn't format if 'plainNumbers' is set
+ *
+ * When defined as macro, it can be a bit quicker
+ *
+ * @param num number to format
+ * @param ss string strem to put result to
+ * @param plainNumbers whether to format or not
+ */
+template <class T>
+inline void formatNumber(T num, std::ostream &ss, bool plainNumbers)
+{
+	ss << std::fixed;
+	if (num <= 1000000 || plainNumbers) {
+		ss.precision(0);
+		ss << num;
+	} else if (num > 1000000000) {
+		ss.precision(1);
+		ss << (float) num/1000000000 << " G";
+	} else if (num > 1000000) {
+		ss.precision(1);
+		ss << (float) num/1000000 << " M";
+	}
+	ss.precision(0); /* set zero precision for other numbers */
+}
+
+} /* end of namespace utils */
+
 }  /* end of namespace fbitdump */
 
 #endif /* TYPEDEFS_H_ */

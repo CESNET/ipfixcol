@@ -41,15 +41,25 @@
 #include "Table.h"
 
 namespace fbitdump {
+/* TODO !!! translate names on second query using namesColumnsMap
+ * Also take care of stripping the sum,avg,max and so on before searching and append it again after
+ * aggregate Columns should be translated too
+ * translation should also apply to filter */
 
-Table::Table(ibis::part *part): queryDone(true), orderAsc(true)
+Table::Table(ibis::part *part): queryDone(true), orderAsc(true), deleteTable(true)
 {
 	this->table = ibis::table::create(*part);
 }
 
-Table::Table(ibis::partList &partList): queryDone(true), orderAsc(true)
+Table::Table(ibis::partList &partList): queryDone(true), orderAsc(true), deleteTable(true)
 {
 	this->table = ibis::table::create(partList);
+}
+
+Table::Table(Table *table): queryDone(true), orderAsc(true), deleteTable(false)
+{
+	this->table = table->table;
+	this->namesColumns = table->namesColumns;
 }
 
 Cursor* Table::createCursor()
@@ -61,32 +71,30 @@ void Table::aggregate(const stringSet &aggregateColumns, const stringSet &summar
 		const Filter &filter)
 {
 	std::string colNames;
-	stringSet combined;
+	stringPairVector combined, sColumns, aColumns;
 	size_t i = 0;
-	stringSet sColumns;
 
 	/* later queries must be made with proper column names */
-	if (namesColumns.size() > 0) { /* not first query */
-		for (stringSet::const_iterator it = summaryColumns.begin(); it != summaryColumns.end(); it++) {
-			/* get location of the column */
-			namesColumnsMap::const_iterator cit;
-			if ((cit = this->getNamesColumns().find(*it)) != this->getNamesColumns().end()) {
-				sColumns.insert(this->table->columnNames()[cit->second]);
-			} else {
-				std::cerr << "Cannot find column '" << *it << "'" << std::endl;
-			}
+	if (!this->namesColumns.empty()) { /* not first query. translate columns  */
+		sColumns = translateColumns(summaryColumns, true);
+		aColumns = translateColumns(aggregateColumns);
+		combined.insert(combined.end(), aColumns.begin(), aColumns.end());
+		combined.insert(combined.end(), sColumns.begin(), sColumns.end());
+	} else { /* just copy all names to combined vector and make translations same as names */
+		for (stringSet::const_iterator it = aggregateColumns.begin(); it != aggregateColumns.end(); it++) {
+			combined.push_back(stringPair(*it, *it));
 		}
-	} else {
-		sColumns = summaryColumns;
+		for (stringSet::const_iterator it = summaryColumns.begin(); it != summaryColumns.end(); it++) {
+			combined.push_back(stringPair(*it, *it));
+		}
 	}
 
 	/* create select string and build namesColumns map */
-	combined.insert(aggregateColumns.begin(), aggregateColumns.end());
-	combined.insert(sColumns.begin(), sColumns.end());
+	this->namesColumns.clear(); /* Clear the map for new values */
 
-	for (stringSet::const_iterator it = combined.begin(); it != combined.end(); it++, i++) {
-		colNames += *it;
-		this->namesColumns.insert(std::pair<std::string, int>(*it, i));
+	for (stringPairVector::const_iterator it = combined.begin(); it != combined.end(); it++, i++) {
+		colNames += it->first;
+		this->namesColumns.insert(std::pair<std::string, int>(it->second, i));
 		if (i != combined.size() - 1) {
 			colNames += ",";
 		}
@@ -100,14 +108,30 @@ void Table::filter(stringSet columnNames, Filter &filter)
 {
 	std::string colNames;
 	size_t idx = 0;
+	stringPairVector columns;
+
+	/* names translation */
+	if (this->namesColumns.empty()) { /* first query, do not translate */
+		for (stringSet::const_iterator it = columnNames.begin(); it != columnNames.end(); it++) {
+			columns.push_back(stringPair(*it, *it));
+		}
+	} else { /* not first query, translate */
+		columns = translateColumns(columnNames);
+	}
+
+	this->namesColumns.clear(); /* Clear the map for new values */
 
 	/* create select string and build namesColumns map */
 	for (size_t i = 0; i < table->columnNames().size(); i++) {
 		/* ignore unused columns */
-		if (columnNames.find(table->columnNames()[i]) != columnNames.end()) {
-			colNames += table->columnNames()[i];
-			this->namesColumns.insert(std::pair<std::string, int>(table->columnNames()[i], idx++));
-			colNames += ",";
+		/* check whether current column from table is in the column vector */
+		for (stringPairVector::const_iterator it = columns.begin(); it != columns.end(); it++) {
+			if (it->first == table->columnNames()[i]) {
+				colNames += it->first;
+				this->namesColumns.insert(std::pair<std::string, int>(it->second, idx++));
+				colNames += ",";
+				continue; /* just to be sure that columns are not repeated */
+			}
 		}
 	}
 
@@ -154,6 +178,17 @@ void Table::orderBy(stringSet orderColumns, bool orderAsc)
 	this->orderAsc = orderAsc;
 }
 
+Table* Table::createTableCopy()
+{
+	this->doQuery();
+
+	if (this->table != NULL) {
+		return new Table(this);
+	} else {
+		return NULL;
+	}
+}
+
 void Table::queueQuery(std::string select, const Filter &filter)
 {
 	/* Run any previous query */
@@ -192,15 +227,53 @@ void Table::doQuery()
 		}
 
 		/* delete original table */
-		delete tmpTable;
+		if (this->deleteTable) {
+			delete tmpTable;
+		}
 
 		queryDone = true;
 	}
 }
 
+stringPairVector Table::translateColumns(const stringSet &columns, bool summary)
+{
+	stringPairVector result;
+
+	/* later queries must be made with proper column names */
+	for (stringSet::const_iterator it = columns.begin(); it != columns.end(); it++) {
+		std::string name, function;
+
+		if (summary) {
+			int begin = it->find_first_of('(') + 1;
+			int end = it->find_last_of(')');
+
+			name = it->substr(begin, end-begin);
+			function = it->substr(0, begin);
+		} else {
+			name = *it;
+		}
+
+		/* get location of the column */
+		namesColumnsMap::const_iterator cit;
+		if ((cit = this->getNamesColumns().find(name)) != this->getNamesColumns().end()) {
+			if (summary) {
+				result.push_back(stringPair(function + this->table->columnNames()[cit->second] + ")", *it));
+			} else {
+				result.push_back(stringPair(this->table->columnNames()[cit->second], *it));
+			}
+		} else {
+			std::cerr << "Cannot find column '" << name << "'" << std::endl;
+		}
+	}
+
+	return result;
+}
+
 Table::~Table()
 {
-	delete this->table;
+	if (this->deleteTable) { /* do not delete tables not managed by this class */
+		delete this->table;
+	}
 }
 
 } /* end namespace fbitdump */

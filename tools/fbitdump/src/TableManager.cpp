@@ -61,7 +61,7 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 
 		std::string tmp = it->substr(begin, end-begin);
 		if (tmp != "*") { /* ignore column * used for flows aggregation */
-			sCols.insert(it->substr(begin, end-begin));
+			sCols.insert(tmp);
 		}
 	}
 
@@ -256,7 +256,7 @@ uint64_t TableManager::getInitRows() const
 	return ret;
 }
 
-TableManager::TableManager(Configuration &conf): conf(conf)
+TableManager::TableManager(Configuration &conf): conf(conf), tableSummary(NULL)
 {
 	std::string tmp;
 	ibis::part *part;
@@ -285,6 +285,21 @@ TableManager::TableManager(Configuration &conf): conf(conf)
 	}
 }
 
+const TableSummary* TableManager::getSummary()
+{
+	if (this->tableSummary == NULL) { /* create summary if not already existing */
+		/* TODO read summary columns from somewhere else and possibly combine them */
+		stringSet columns, summaryColumns = conf.getSummaryColumns();
+
+		for (stringSet::const_iterator it = summaryColumns.begin(); it != summaryColumns.end(); it++) {
+			columns.insert("sum(" + *it + ")");
+		}
+		this->tableSummary = new TableSummary(this->tables, columns);
+	}
+
+	return this->tableSummary;
+}
+
 TableManager::~TableManager()
 {
 	/* delete all tables */
@@ -295,6 +310,10 @@ TableManager::~TableManager()
 	/* delete all table parts */
 	for (ibis::partList::const_iterator it = this->parts.begin(); it != this->parts.end(); it++) {
 		delete *it;
+	}
+
+	if (this->tableSummary != NULL) {
+		delete this->tableSummary;
 	}
 }
 
