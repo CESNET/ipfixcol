@@ -64,6 +64,7 @@ TableSummary::TableSummary(tableVector const &tables, stringSet const &summaryCo
 				}
 			}
 		}
+		delete cur;
 
 		delete sumTable;
 	}

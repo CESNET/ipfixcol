@@ -957,12 +957,13 @@ bool Configuration::processROption(stringVector &tables, const char *optarg)
 		 */
 
 		counter = 0;
+		bool onlyFreeDirs = false; /* call free on all dirents without adding the directories */
 
 		while(dirs_counter--) {
 			dent = namelist[counter++];
 
 			if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
-			  && strcmp(dent->d_name, "..")) {
+			  && strcmp(dent->d_name, "..") && !onlyFreeDirs) {
 				std::string tableDir;
 
 
@@ -983,8 +984,7 @@ bool Configuration::processROption(stringVector &tables, const char *optarg)
 
 					if (!strcmp(dent->d_name, lastDir.c_str())) {
 						/* this is last directory we are interested in */
-						free(namelist[counter-1]);
-						break;
+						onlyFreeDirs = true;
 					}
 				}
 			}

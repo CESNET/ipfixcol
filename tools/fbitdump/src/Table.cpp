@@ -241,6 +241,9 @@ void Table::doQuery()
 			delete tmpTable;
 		}
 
+		/* the new table is our responsibility */
+		this->deleteTable = true;
+
 		queryDone = true;
 	}
 }
