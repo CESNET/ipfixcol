@@ -70,6 +70,20 @@
 			</varlistentry>
 			
 			<varlistentry>
+				<term>-q</term>
+				<listitem>
+					<simpara>Quiet: Do not print the header and bottom stat lines.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-e</term>
+				<listitem>
+					<simpara>Extended bottom stats. Print summary of statistics columns.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
 				<term>-a</term>
 				<listitem>
 					<simpara>Aggregate netflow data by standard 5-tuple (source IP, destination IP, source port, destination port, protocol).</simpara>

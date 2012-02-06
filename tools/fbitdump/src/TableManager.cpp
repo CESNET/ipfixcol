@@ -288,7 +288,6 @@ TableManager::TableManager(Configuration &conf): conf(conf), tableSummary(NULL)
 const TableSummary* TableManager::getSummary()
 {
 	if (this->tableSummary == NULL) { /* create summary if not already existing */
-		/* TODO read summary columns from somewhere else and possibly combine them */
 		stringSet columns, summaryColumns = conf.getSummaryColumns();
 
 		for (stringSet::const_iterator it = summaryColumns.begin(); it != summaryColumns.end(); it++) {

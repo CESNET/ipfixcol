@@ -161,10 +161,16 @@ int Configuration::init(int argc, char *argv[])
 				this->orderAsc = false;
 				this->optm = true;
 			}
-			/* TODO imply parameter for better summarization */
+
+			/* Print extended bottom stats since we already have the values */
+			this->extendedStats = true;
+
 			break;}
 		case 'q':
 				this->quiet = true;
+			break;
+		case 'e':
+			this->extendedStats = true;
 			break;
 		case 'I':
 			NOT_SUPPORTED
@@ -521,6 +527,11 @@ bool Configuration::getStatistics() const
 	return this->statistics;
 }
 
+bool Configuration::getExtendedStats() const
+{
+	return this->extendedStats;
+}
+
 const std::string Configuration::version() const
 {
 	std::ifstream ifs;
@@ -644,6 +655,7 @@ void Configuration::help() const
 	<< "-s <column>[/<order>]     Generate statistics for <column> any valid record element." << std::endl
 	<< "                and ordered by <order>. Order can be any summarizable column, just as for -m option." << std::endl
 	<< "-q              Quiet: Do not print the header and bottom stat lines." << std::endl
+	<< "-e				Extended bottom stats. Print summary of statistics columns." << std::endl
 	//<< "-H Add xstat histogram data to flow file.(default 'no')" << std::endl
 	//<< "-i <ident>      Change Ident to <ident> in file given by -r." << std::endl
 	//<< "-j <file>       Compress/Uncompress file." << std::endl
@@ -685,7 +697,7 @@ bool Configuration::getOptionm() const
 }
 
 Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false),
-		optm(false), orderColumn(NULL), resolver(NULL), statistics(false), orderAsc(true)
+		optm(false), orderColumn(NULL), resolver(NULL), statistics(false), orderAsc(true), extendedStats(false)
 {
 }
 

@@ -70,6 +70,11 @@ Cursor* Table::createCursor()
 void Table::aggregate(const stringSet &aggregateColumns, const stringSet &summaryColumns,
 		const Filter &filter)
 {
+	/* check for empty table */
+	if (!this->table || this->table->nRows() == 0) {
+		return;
+	}
+
 	std::string colNames;
 	stringPairVector combined, sColumns, aColumns;
 	size_t i = 0;
@@ -106,6 +111,11 @@ void Table::aggregate(const stringSet &aggregateColumns, const stringSet &summar
 
 void Table::filter(stringSet columnNames, Filter &filter)
 {
+	/* check for empty table */
+	if (!this->table || this->table->nRows() == 0) {
+		return;
+	}
+
 	std::string colNames;
 	size_t idx = 0;
 	stringPairVector columns;
@@ -261,8 +271,11 @@ stringPairVector Table::translateColumns(const stringSet &columns, bool summary)
 			} else {
 				result.push_back(stringPair(this->table->columnNames()[cit->second], *it));
 			}
+		} else if (name == "count(*)") { /* we can always do count(*) */
+			/* this ignores the summary function, which cannot be used because the count does not exist yet */
+			result.push_back(stringPair("count(*)", *it));
 		} else {
-			std::cerr << "Cannot find column '" << name << "'" << std::endl;
+			std::cerr << "Cannot translate column name'" << name << "'" << std::endl;
 		}
 	}
 

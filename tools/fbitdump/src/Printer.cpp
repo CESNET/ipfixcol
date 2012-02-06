@@ -45,9 +45,9 @@
 #include "protocols.h"
 #include "Column.h"
 #include "Values.h"
-#include "Printer.h"
 #include "Table.h"
 #include "Resolver.h"
+#include "Printer.h"
 
 namespace fbitdump
 {
@@ -127,17 +127,18 @@ void Printer::printHeader() const
 
 void Printer::printFooter(uint64_t numPrinted) const
 {
-	std::cout << "Total rows outputed: " << numPrinted << std::endl
-	<< "Processed " << this->tableManager->getNumParts() << " tables with " << this->tableManager->getInitRows() << " rows" << std::endl;
+	out << "Total rows outputed: " << numPrinted << std::endl << "Processed " << this->tableManager->getNumParts() << " tables with ";
+	Utils::formatNumber(this->tableManager->getInitRows(), out, false);
+	out << " rows" << std::endl;
 
-	if (conf.getStatistics()) { /* print summary statistics since we know the numbers */
+	if (conf.getExtendedStats()) {
 		const TableSummary *st = this->tableManager->getSummary();
 
 		columnVector stats = conf.getStatisticsColumns();
 
 		for (columnVector::const_iterator it = stats.begin(); it != stats.end(); it++) {
-			std::string s = "sum(" + *(*it)->getColumns().begin() + ")";
 			out << "Total " << (*it)->getName() << ": ";
+			std::string s = "sum(" + *(*it)->getColumns().begin() + ")";
 			Utils::formatNumber(st->getValue(s), out, false);
 			out << std::endl;
 		}

@@ -49,7 +49,7 @@
 namespace fbitdump {
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "hVaA:r:f:n:c:D:Ns:qIM:m::R:o:v:Z:t:"
+#define OPTSTRING "hVaA:r:f:n:c:D:Ns:qeIM:m::R:o:v:Z:t:"
 
 #define COLUMNS_XML "/usr/share/fbitdump/fbitdump.xml"
 
@@ -216,6 +216,13 @@ public:
     columnVector getStatisticsColumns() const;
 
     /**
+     * \brief Returns true when extended bootm stats were requested
+     *
+     * @return true when extended bootm stats were requested
+     */
+    bool getExtendedStats() const;
+
+    /**
      * \brief Class destructor
      */
     ~Configuration();
@@ -338,6 +345,7 @@ private:
 	bool statistics;					/**< Option to generate statistics was used */
 	bool orderAsc;						/**< Order column increasingly, default is true */
 	pugi::xml_document doc;				/**< XML configuration document */
+	bool extendedStats;					/**< Print extended bottom stats */
 }; /* end of Configuration class */
 
 } /* end of fbitdump namespace */
