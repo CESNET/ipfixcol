@@ -112,7 +112,7 @@ bool TableManagerCursor::next()
 	bool ret_next;
 	const Values *minValue = NULL;
 	const Values *value = NULL;
-	Cursor *minCursor = NULL;
+	Cursor *minCursor = NULL; /* the name is accurate only when sording in ascending order */
 	Cursor *cursor = NULL;
 	uint64_t minIndex = 0, u;
 
@@ -160,7 +160,8 @@ bool TableManagerCursor::next()
 				minValue = value;
 				minCursor = cursor;
 				minIndex = u;
-			} else if (value < minValue) {
+			} else if ((conf->getOrderAsc() && *value < *minValue) || /* ascending order */
+					(!conf->getOrderAsc() && *value > *minValue)) { /* descending order */
 				minCursor = cursor;
 				delete(minValue);
 				minValue = value;

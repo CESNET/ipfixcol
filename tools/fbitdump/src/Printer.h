@@ -169,6 +169,7 @@ private:
 	std::ostream &out; /**< Stream to write to */
 	Configuration &conf; /**< program configuration */
 	TableManager *tableManager; /**< table manager used in print function (provide easy access to others) */
+	const int percentageWidth;	/**< Width of percentage printed after values in statistics mode */
 };
 
 }  // namespace fbitdump

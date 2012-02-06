@@ -104,6 +104,38 @@ private:
 
 };
 
+inline bool operator== (const Values &lhs, const Values &rhs)
+{
+	/* if necessary, this could decide upon type. it could also take parts into consideration */
+	return lhs.toDouble(0) == rhs.toDouble(0);
+}
+
+inline bool operator< (const Values &lhs, const Values &rhs)
+{
+	return lhs.toDouble(0) < rhs.toDouble(0);
+}
+
+inline bool operator!=(const Values &lhs, const Values &rhs)
+{
+	return !operator==(lhs,rhs);
+}
+
+inline bool operator> (const Values &lhs, const Values &rhs)
+{
+	return  operator< (rhs,lhs);
+}
+
+inline bool operator>= (const Values &lhs, const Values &rhs)
+{
+	return !operator< (lhs,rhs);
+}
+
+inline bool operator<= (const Values &lhs, const Values &rhs)
+{
+	return !operator> (lhs,rhs);
+}
+
+
 } /* end of namespace fbitdump */
 
 #endif /* VALUES_H_ */

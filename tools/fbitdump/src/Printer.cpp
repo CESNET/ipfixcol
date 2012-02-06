@@ -105,8 +105,8 @@ void Printer::printHeader() const
 	for (size_t i = 0; i < conf.getColumns().size(); i++) {
 		/* set defined column width */
 		if (conf.getStatistics() && conf.getColumns()[i]->isSummary()) {
-			/* widen by 8 for percentage */
-			out.width(conf.getColumns()[i]->getWidth() + 8);
+			/* widen for percentage */
+			out.width(conf.getColumns()[i]->getWidth() + this->percentageWidth);
 		} else {
 			out.width(conf.getColumns()[i]->getWidth());
 		}
@@ -150,8 +150,8 @@ void Printer::printRow(const Cursor *cur) const
 	for (size_t i = 0; i < conf.getColumns().size(); i++) {
 		/* set defined column width */
 		if (conf.getStatistics() && conf.getColumns()[i]->isSummary()) {
-			/* widen by 8 for percentage */
-			out.width(conf.getColumns()[i]->getWidth() + 8);
+			/* widen for percentage */
+			out.width(conf.getColumns()[i]->getWidth() + this->percentageWidth);
 		} else {
 			out.width(conf.getColumns()[i]->getWidth());
 		}
@@ -366,7 +366,7 @@ const std::string Printer::printDuration(uint64_t duration) const
 
 /* copy output stream and format */
 Printer::Printer(std::ostream &out, Configuration &conf):
-		out(out), conf(conf)
+		out(out), conf(conf), percentageWidth(8)
 {}
 
 
