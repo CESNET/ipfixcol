@@ -87,6 +87,7 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 	}
 
 	/* go over all parts and build vector of intersection between part columns and aggregation columns */
+	/* put together the parts that have same intersection - this ensures for example that ipv4 and ipv6 are aggregate separately by default */
 	for (size_t i = 0; i < parts.size(); i++) {
 
 		/* put part columns to set */
@@ -153,6 +154,30 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 
 			/* When sets are equal, difference is empty */
 			if (difference.empty()) {
+				/* check that parts have same column types for aggregate columns and issue a warning if not */
+				/* go over aggregate columns and check the types */ /* TODO check that this is not needed for summary columns */
+				for (stringSet::const_iterator strIter = (*outerIter).begin(); strIter != (*outerIter).end(); strIter++) {
+					int pos1 = -1, pos2 = -1; /* the column with given name always exists, no need to check for -1 value */
+					/* find index of the column in both parts */
+					for (unsigned int i = 0; i< parts.at(iterPos)->columnTypes().size(); i++) {
+						if (*strIter == parts.at(iterPos)->columnNames()[i]) {
+							pos1 = i;
+							break;
+						}
+					}
+					for (unsigned int i = 0; i< parts.at(curPos)->columnTypes().size(); i++) {
+						if (*strIter == parts.at(curPos)->columnNames()[i]) {
+							pos2 = i;
+							break;
+						}
+					}
+					/* test that data types are same */
+					if (parts.at(iterPos)->columnTypes()[pos1] != parts.at(curPos)->columnTypes()[pos2]) {
+						std::cerr << "Warning: column '" << *strIter << "' has different data types in different parts! ("
+								<< parts.at(iterPos)->name() << ", " << parts.at(curPos)->name() << ")" << std::endl;
+					}
+				}
+
 				/* add table to list */
 				pList.push_back(parts.at(curPos));
 				used[curPos] = true;
