@@ -55,7 +55,7 @@ class Cursor;
  * \brief Global cursor for all Tables
  *
  * It allows us to iterate over all rows in all tables with single cursor.
- * It can limit number of rows, sort output according to timestamp
+ * It can limit number of rows, sort output according to given column
  */
 class TableManagerCursor {
 private:

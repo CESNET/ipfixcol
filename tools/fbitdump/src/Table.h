@@ -55,6 +55,13 @@ typedef std::vector<stringPair> stringPairVector;
 
 /**
  * \brief Class Table wrapping ibis::table
+ *
+ * aggregate and filter functions do the main work, converting the names of columns to fastbit names
+ * and building the query
+ *
+ * The select operation on fastbit table is delayed with mechanism of queueQuery and doQuery
+ * Table can provide cursor to itself
+ * Table can provide copy of itself
  */
 class Table
 {

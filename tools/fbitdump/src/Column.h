@@ -43,17 +43,19 @@
 #include "typedefs.h"
 #include "Values.h"
 #include "Cursor.h"
-#include "TableManagerCursor.h"
 
 namespace fbitdump {
 
 /* Cursor depends on Column class */
 class Cursor;
 
-class TableManagerCursor;
-
 /**
  * \brief Class with information about one column
+ *
+ * The class can initialise itself from XML configuration.
+ * It is also used for column separators (like '->' or ': ' in output)
+ * Public methods allow to get values of individual properties
+ * Using getValue method an value from cursor can be accessed for this column
  */
 class Column
 {
@@ -90,34 +92,16 @@ public:
 	const stringSet getAliases() const;
 
 	/**
-	 * \brief Add alias to current set of aliases
-	 * @param alias Aliass to add
-	 */
-	void addAlias(std::string alias);
-
-	/**
 	 * \brief Returns width of the column (specified in XML)
 	 * @return width of the column
 	 */
 	int getWidth() const;
 
 	/**
-	 * \brief Set column width to "width"
-	 * @param width New width of the column
-	 */
-	void setWidth(int width);
-
-	/**
 	 * \brief Returns true when column should be aligned to the left
 	 * @return true when column should be aligned to the left, false otherwise
 	 */
 	bool getAlignLeft() const;
-
-	/**
-	 * \brief Set column alignment
-	 * @param alignLeft True when column should be aligned to the left
-	 */
-	void setAlignLeft(bool alignLeft);
 
 	/**
 	 * \brief Column class constructor
@@ -146,16 +130,6 @@ public:
 	 * @return Set of table column names
 	 */
 	const stringSet getColumns() const;
-
-	/**
-	 * \brief Sets columns aggregation mode
-	 *
-	 * This is important for function getColumns(), which should know
-	 * whether to return column names with aggregation function i.e. sum(e0id1)
-	 *
-	 * @param aggregation
-	 */
-	void setAggregation(bool aggregation);
 
 	/**
 	 * \brief Returns string to print when value is not available
@@ -312,6 +286,34 @@ private:
 	 * @return true when AST is aggregable
 	 */
 	bool getAggregate(AST* ast) const;
+
+	/**
+	 * \brief Add alias to current set of aliases
+	 * @param alias Aliass to add
+	 */
+	void addAlias(std::string alias);
+
+	/**
+	 * \brief Set column width to "width"
+	 * @param width New width of the column
+	 */
+	void setWidth(int width);
+
+	/**
+	 * \brief Set column alignment
+	 * @param alignLeft True when column should be aligned to the left
+	 */
+	void setAlignLeft(bool alignLeft);
+
+	/**
+	 * \brief Sets columns aggregation mode
+	 *
+	 * This is important for function getColumns(), which should know
+	 * whether to return column names with aggregation function i.e. sum(e0id1)
+	 *
+	 * @param aggregation
+	 */
+	void setAggregation(bool aggregation);
 
 
 	std::string nullStr;    /**< String to print when columns has no value */

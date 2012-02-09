@@ -53,6 +53,9 @@ class Table;
 /**
  * \brief Class Cursor wrapping ibis::table::cursor
  *
+ * The main purpose of this class is to wrap fastbit table cursor and
+ * provide method retreiving values from the cursor
+ *
  * This class should also implement filtering on composed columns
  */
 class Cursor
@@ -75,7 +78,7 @@ public:
 	bool next();
 
 	/**
-	 * \brief Get column value and return it as a string
+	 * \brief Get column value and store it to passed reference
 	 *
 	 * @param[in] name Name of the fastbit column to get value for
 	 * @param[out] value Values structure with column values

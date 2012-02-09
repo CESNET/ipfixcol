@@ -55,6 +55,10 @@ namespace fbitdump {
 
 /**
  * \brief Class handling command line configuration
+ *
+ * This class parses and processes command line configuration
+ * Based on the configuration it prepares Columns, list of fastbit parts to load, and other things
+ * This class is often passed to constructors of others
  */
 class Configuration
 {

@@ -47,7 +47,10 @@ namespace fbitdump {
 #define MAX_PARTS 2
 
 /**
- * \brief structure for passing values of unknown type
+ * \brief Structure for passing values of unknown type
+ *
+ * It is possible to compare the values with overloaded operators
+ * Contains functions to put value to long, double and string
  */
 class Values
 {

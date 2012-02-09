@@ -49,24 +49,11 @@ namespace fbitdump {
 
 /**
  * \brief Class for DNS lookups
+ *
+ * Uses given IPv4 nameserver to resolve addresses to hostnames
+ * The adresses are currently cached in std::map structure
  */
 class Resolver {
-private:
-	std::string nameserver;
-	bool configured;
-
-	std::map<uint32_t, std::string> dnsCache;
-	std::map<uint64_t, std::map<uint64_t, std::string>> dnsCache6;
-
-    /**
-     * \brief Initialise resolver to use nameserver
-     *
-     * sets configured flag if completed without error
-     *
-     * @param nameserver Nameserver address to be used
-     */
-	void setNameserver(char *nameserver);
-
 public:
 	Resolver(char *nameserver);
 	~Resolver();
@@ -103,6 +90,23 @@ public:
 	 * @return true on success, false otherwise
 	 */
 	bool reverseLookup6(uint64_t inaddr_part1, uint64_t inaddr_part2, std::string &result);
+
+private:
+	std::string nameserver;
+	bool configured;
+
+	std::map<uint32_t, std::string> dnsCache;
+	std::map<uint64_t, std::map<uint64_t, std::string>> dnsCache6;
+
+    /**
+     * \brief Initialise resolver to use nameserver
+     *
+     * Sets configured flag if completed without error
+     * Works only for IPv4 nameservers, it is difficult to enforce own IPv6 nameserver
+     *
+     * @param nameserver Nameserver address to be used
+     */
+	void setNameserver(char *nameserver);
 
 };
 

@@ -53,6 +53,8 @@ namespace fbitdump {
  * \brief Class printing tables
  *
  * Handles output formatting
+ * Retrieves statistics and prints them on demand
+ * Handles conversion of timestamps, IP addresses, etc.
  */
 class Printer
 {

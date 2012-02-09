@@ -47,6 +47,12 @@ namespace fbitdump {
 
 typedef std::map<std::string, double> valuesMap;
 
+/**
+ * \brief Computes table summary on given columns
+ *
+ * Creates copies of given tables, runs a query that sums  up given columns and combines the results
+ * When given table does not have required summary column, stores zero
+ */
 class TableSummary
 {
 public:
