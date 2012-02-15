@@ -129,8 +129,14 @@ int template_table::parse_template(struct ipfix_template * tmp){
 			case TEXT:
 			case UNKNOWN:
 			default:
-				std::cout << "UNKNOWN!" << std::endl;
-				new_element = new element(field->ie.length, en, field->ie.id & 0x7FFF);
+				//store unknown types as uint if possible
+				if(field->ie.length < 9){
+					new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF);
+					_tablex->addColumn(new_element->name(), new_element->type());
+				} else { //TODO blob ect
+					std::cout << "UNKNOWN! - blop:" << field->ie.length << std::endl;
+					new_element = new element(field->ie.length, en, field->ie.id & 0x7FFF);
+				}
 
 		}
 		if(!new_element){
