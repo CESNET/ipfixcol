@@ -38,8 +38,10 @@
 
 NAME = @PACKAGE_NAME@
 TARGETS = ipfixcol
-MANPAGES = ipfixcol.1
-MANSRCS = ipfixcol.dbk
+MANDIR = documentation/man
+MANSRC = ipfixcol.dbk
+#MANPAGES = ipfixcol.1
+#MANSRCS = ipfixcol.dbk
 SRCS =	src/ipfixcol.c \
 	src/config.c \
 	src/queues.c \
@@ -84,6 +86,8 @@ mandir = @mandir@
 
 CC = @CC@
 LN_S = @LN_S@
+XSLTPROC = @XSLTPROC@
+XSLTMANSTYLE = @XSLTMANSTYLE@
 DOXYGEN = @DOXYGEN@
 DOXYGEN_CONFIG = Doxyfile
 DOXYGEN_DIR = doxygen
@@ -104,13 +108,13 @@ RELEASE = @RELEASE@
 
 OBJS = $(SRCS:%.c=$(OBJDIR)/%.o)
 
-MANPATH=$(DESTDIR)$(mandir)/man$(subst .,,$(suffix $(1)))                                                                                                                                                                                    
-define MANINSTALL                                                                                                                                                                                                                            
-[ -d $(call MANPATH,$(1)) ] || \
-	(mkdir -p $(call MANPATH,$(1)); \
-	chmod 755 $(call MANPATH,$(1))); \
-$(INSTALL_DATA) $(1) $(call MANPATH,$(1))/;
-endef
+#MANPATH=$(DESTDIR)$(mandir)/man$(subst .,,$(suffix $(1)))                                                                                                                                                                                    
+#define MANINSTALL                                                                                                                                                                                                                            
+#[ -d $(call MANPATH,$(1)) ] || \
+#	(mkdir -p $(call MANPATH,$(1)); \
+#	chmod 755 $(call MANPATH,$(1))); \
+#$(INSTALL_DATA) $(1) $(call MANPATH,$(1))/;
+#endef
 
 all: ipfixcol
 
@@ -147,8 +151,29 @@ doxygen: $(DOXYGEN_CONFIG) $(HDRS) ipfixcol.h $(SRCS) $(PHDRS)
 		exit 1; \
 	fi
 
-.PHONY: doc
-doc: doxygen
+man: $(addprefix $(MANDIR)/, $(MANSRC))
+	@if [ -n "$(XSLTPROC)" ]; then \
+		if [ -f "$(XSLTMANSTYLE)" ]; then \
+			cd $(MANDIR); \
+			for i in $(MANSRC); do \
+				echo $(XSLTPROC) $(XSLTMANSTYLE) $$i; \
+				$(XSLTPROC) $(XSLTMANSTYLE) $$i; \
+			done; \
+			for i in `ls -1 | grep -v -E "*.dbk$$"`; do \
+				gzip $$i; \
+			done; \
+			cd - > /dev/null; \
+		else \
+			echo "Missing $(XSLTMANSTYLE)!"; \
+			exit 1; \
+		fi \
+	else \
+		echo "Missing xsltproc"; \
+	fi
+
+
+.PHONY: doc man
+doc: doxygen man
 
 .PHONY: dist
 dist: tarball rpm
@@ -159,10 +184,10 @@ tarball: $(SRCS) $(HDRS) $(PHDRS)
 	mkdir $(NAME)-$(VERSION); \
 	rm -rf $(RPMDIR)/SOURCES/; \
 	mkdir -p $(RPMDIR)/SOURCES/; \
-	for i in $(SRCS) $(HDRS) $(PHDRS) $(CONF) configure.in configure Makefile.in VERSION \
+	for i in $(SRCS) $(HDRS) $(PHDRS) $(CONF) $(MANDIR)/*.dbk configure.in configure Makefile.in VERSION \
 		Doxyfile $(NAME).spec.in $(NAME).pc.in install-sh ipfixcol.h headers/ipfixcol.h; do \
 		[ "$$i" != "$${i%/*}" -a ! -d $(NAME)-$(VERSION)/$${i%/*} ] && mkdir -p $(NAME)-$(VERSION)/$${i%/*}; \
-		cp $$i $(NAME)-$(VERSION)/$$i; \
+		cp -r $$i $(NAME)-$(VERSION)/$$i; \
 	done;
 	for i in $(STORAGE_PLUGINS) ; do $(MAKE) -C $$i tarball-prepare; done; \
 	for i in $(INPUT_PLUGINS) ; do $(MAKE) -C $$i tarball-prepare; done; \
@@ -195,6 +220,13 @@ install: install-devel install-doc $(TARGETS)
 	[ -d $(DESTDIR)/etc/ipfixcol ] || \
 	    (mkdir -p $(DESTDIR)/etc/ipfixcol; chmod 755 $(DESTDIR)/etc/ipfixcol)
 	$(INSTALL_DATA) $(CONF) $(DESTDIR)/etc/ipfixcol/;
+	for i in 1 5; do \
+		[ -d $(DESTDIR)$(mandir)/man$$i/ ] || \
+			(mkdir -p $(DESTDIR)$(mandir)/man$$i/; chmod 755 $(DESTDIR)$(mandir)/man$$i/); \
+			cd $(MANDIR); \
+			$(INSTALL_DATA) `ls -1 | grep -E "*.$$i.gz$$"` $(DESTDIR)$(mandir)/man$$i/; \
+			cd - > /dev/null; \
+	done;
 	#$(foreach man,$(MANPAGES),$(call MANINSTALL,$(man)))
 
 .PHONY: install-devel
@@ -220,7 +252,7 @@ install-doc:
 
 .PHONY: clean
 clean:
-	rm -rf *.a *.so* $(OBJDIR) $(DOXYGEN_DIR)/
+	rm -rf *.a *.so* $(OBJDIR) $(DOXYGEN_DIR) $(RPMDIR) $(MANDIR)/*.gz; \
 	for i in $(INPUT_PLUGINS) $(STORAGE_PLUGINS); do \
 		$(MAKE) $@ -C $$i; \
 	done; \

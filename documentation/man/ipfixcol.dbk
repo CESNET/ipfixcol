@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2008-2011</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>9 December 2011</date>
+		<authorgroup>
+			<author>
+				<personname>
+    				<firstname>Radek</firstname>
+	    			<surname>Krejčí</surname>
+                </personname>
+                <email>rkrejci@cesnet.cz</email>
+                <contrib>developer</contrib>
+			</author>
+			<author>
+                <personname>
+    				<firstname>Petr</firstname>
+	    			<surname>Velan</surname>
+                </personname>
+                <email>petr.velan@cesnet.cz</email>
+                <contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">IPFIXcol collector</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>ipfixcol</refname>
+		<refpurpose>Collector for capturing IPFIX NetFlow data</refpurpose>
+	</refnamediv>
+    
+    <refsynopsisdiv>
+        <cmdsynopsis>
+            <command>ipfixcol</command>
+            <arg>-c file</arg>
+            <arg>-dhV</arg>
+            <arg>-v level</arg>
+        </cmdsynopsis>
+    </refsynopsisdiv>
+
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+			The <command>ipfixcol</command> is an IPFIX collector, part of IPFIXcol framework. 
+			The collector uses input and output plugins to receive and store data.
+		</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Options</title>
+		<variablelist>
+			<varlistentry>
+				<term>-h</term>
+				<listitem>
+					<simpara>Print basic usage and options.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-V</term>
+				<listitem>
+					<simpara>Print version information and exit.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-c <replaceable class="parameter">file</replaceable></term>
+				<listitem>
+					<simpara>Read startup configuration from <replaceable class="parameter">file</replaceable>.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-d</term>
+				<listitem>
+					<simpara>Daemonize the tool after startup.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-v <replaceable class="parameter">level</replaceable></term>
+				<listitem>
+					<simpara>Set ipfixcol verbosity level to <replaceable class="parameter">level</replaceable>.</simpara>
+				</listitem>
+			</varlistentry>
+
+		</variablelist>
+	</refsect1>
+
+
+	<refsect1>
+		<title>Configuration</title>
+		<simpara>For details on ipfixcol startup configuration see <emphasis>/etc/ipfixcol/startup.xml</emphasis>.</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Examples</title>
+		<literallayout>ipfixcol -c /etc/ipfixcol/startup.xml
+Start ipfixcol with plugins configured in /etc/ipfixcol/startup.xml configuration file (the default).</literallayout>
+
+		<literallayout>ipfixcol -d
+Start ipfixcol daemonized, with default plugins configuration.</literallayout>
+	</refsect1>
+
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>fbitdump</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+						<citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
+						<citerefentry><refentrytitle>ipfixcol_fastbit_output</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>

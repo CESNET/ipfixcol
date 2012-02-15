@@ -99,7 +99,7 @@ void version (char* progname)
  */
 void help (char* progname)
 {
-	printf ("Usage: %s [-dhV] [-v level]\n", progname);
+	printf ("Usage: %s [-c file] [-dhV] [-v level]\n", progname);
 	printf ("  -c file   Path to configuration file (%s by default)\n", DEFAULT_CONFIG_FILE);
 	printf ("  -d        Daemonize\n");
 	printf ("  -h        Print this help\n");

@@ -199,7 +199,8 @@ private:
 
     /**
      * \brief Return string with current version
-     * Currently version is #define-d
+     *
+     * Currently version is in VERSION file
      *
      * @return string with current version
      */

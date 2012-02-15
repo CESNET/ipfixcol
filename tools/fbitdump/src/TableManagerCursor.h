@@ -122,6 +122,13 @@ public:
 	 * @return current cursor
 	 */
 	Cursor *getCurrentCursor();
+
+	/**
+	 * \brief order tables by timestamp
+	 *
+	 * @return true if all went ok, false otherwise
+	 */
+	bool orderAllTables();
 };
 
 }

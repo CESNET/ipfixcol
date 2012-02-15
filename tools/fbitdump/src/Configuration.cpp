@@ -47,6 +47,7 @@
 #include <resolv.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <netdb.h>
 
 
@@ -126,6 +127,9 @@ int Configuration::init(int argc, char *argv[])
 				nameserver = optarg;
 
 				this->resolver->setNameserver(nameserver);
+
+				/* enable DNS caching - table for 1000 entries */
+				this->resolver->enableCache(1000);
 
 			}
 			break;
@@ -235,7 +239,9 @@ int Configuration::init(int argc, char *argv[])
 	} else if (this->format.substr(0,4) == "fmt:") {
 		this->format = this->format.substr(4);
 		/* when aggregating, always add flows */
-		if (this->getAggregate() && (this->format.find("%fl") == std::string::npos)) {
+		size_t pos;
+		if (this->getAggregate() && ((pos = this->format.find("%fl")) == std::string::npos
+				|| isalnum(this->format[pos+3]))) {
 			this->format += " %fl";
 		}
 	} else if (this->format == "extra") {
@@ -379,9 +385,10 @@ stringSet Configuration::getAggregateColumns()
 			aliasIt != this->aggregateColumnsAliases.end(); aliasIt++) {
 
 		col = new Column();
-		col->init(doc, *aliasIt, this->aggregate);
-		stringSet cols = col->getColumns();
-		aggregateColumns.insert(cols.begin(), cols.end());
+		if (col->init(doc, *aliasIt, this->aggregate)) {
+			stringSet cols = col->getColumns();
+			aggregateColumns.insert(cols.begin(), cols.end());
+		}
 		delete col;
 	}
 

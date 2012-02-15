@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2008-2011</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>5 December 2011</date>
+		<authorgroup>
+			<author>
+                <personname>
+    				<firstname>Petr</firstname>
+	    			<surname>Velan</surname>
+                </personname>
+                <email>petr.velan@cesnet.cz</email>
+                <contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>fbitdump.xml</refentrytitle>
+		<manvolnum>5</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">fbitdump configuration file</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>fbitdump.xml</refname>
+		<refpurpose>XML configuration for fbitdump utility</refpurpose>
+	</refnamediv>
+    
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+			The <command>fbitdump.xml</command> is an XML configuration for <citerefentry><refentrytitle>fbitdump</refentrytitle><manvolnum>1</manvolnum></citerefentry> utility. 
+		</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Configuration</title>
+		<simpara>Configuraion of fbitdump columns is handled in the fbitdump.xml. Each column has its own <emphasis>&lt;column&gt;</emphasis> section which completely describes it.
+			Element <emphasis>&lt;column&gt;</emphasis> has following children:</simpara>
+		<simpara><emphasis>&lt;name&gt;</emphasis>: Name of the column. This is what fbitdump will output in the header line.</simpara>
+		<simpara><emphasis>&lt;width&gt;</emphasis>: Width of the column, default is 0.</simpara>
+		<simpara><emphasis>&lt;alias&gt;</emphasis>: Alias of the column including leading '%', used in filter and format. Can appear multiple times</simpara>
+		<simpara><emphasis>&lt;default-value&gt;</emphasis>: String to show when column value is not available. Default is NULL.</simpara>
+		<para>
+			<emphasis>&lt;value&gt;</emphasis>: Defines where to get data for this column. Has one of following children:
+			<itemizedlist >
+				<listitem>
+					<simpara><emphasis>&lt;element&gt;</emphasis>: The <emphasis>&lt;value&gt;</emphasis> must have attribute "type" set to "plain". The element specifies 
+					binding to FastBit column as its text value. The text value is composed as e[x]id[y], where [x] is an enterprise ID, [y] is element ID, it is the same as 
+					files in FastBit table.</simpara>
+					<simpara><emphasis>&lt;element&gt;</emphasis> can have an attribute "parts". This is used for values that are too large to fit into one column, like IPv6 address.
+					Specifying parts > 2 will make the element to search for solumn with name e[x]id[y]p[z] where [z] contains the part number, starting with 0.</simpara>
+					<simpara><emphasis>&lt;element&gt;</emphasis> can have an attribute "aggregation". This determines how the columns is aggregated. 
+					If the attribute is empty, column is not aggregated. Supported values are: 'min', 'max', 'sum', 'avg'</simpara>
+					<para><emphasis>&lt;element&gt;</emphasis> can have an attribute "semantics". It defines how the column is printed. There are several predefined
+				options to format output columns:
+						<itemizedlist>
+							<listitem><simpara><emphasis>ipv4</emphasis>: expects uint32 column and prints it as IPv4 address.</simpara></listitem>
+							<listitem><simpara><emphasis>ipv6</emphasis>: expects uint64 column and prints it as IPv6 address. 'parts' attribute must be set to 2.</simpara></listitem>
+							<listitem><simpara><emphasis>tmstmp64</emphasis>: expects uint64 column (with miliseconds since 1970) and prints it as a timestamp.</simpara></listitem>
+							<listitem><simpara><emphasis>tmstmp32</emphasis>: expects uint32 column (with seconds since 1970) and prints it as a timestamp.</simpara></listitem>
+							<listitem><simpara><emphasis>tcpflags</emphasis>: expects uint8 column and print it as TCP flags.</simpara></listitem>
+							<listitem><simpara><emphasis>flows</emphasis>: this is special column with no relation to the database. It is always computed as number of flows.</simpara></listitem>
+						</itemizedlist>
+					</para>
+				</listitem>
+				<listitem>
+					<simpara><emphasis>&lt;operation&gt;</emphasis>: The <emphasis>&lt;value&gt;</emphasis> must have attribute "type" set to "operation". 
+					Operation has two children, <emphasis>&lt;arg1&gt;</emphasis> and <emphasis>&lt;arg2&gt;</emphasis>. The "name" attribute of operation element is 
+					one of '+', '-', '/', '*' and specifies the arithmetic operation with usual meaning.</simpara>
+					<simpara><emphasis>&lt;operation&gt;</emphasis>: can have an attribute "semantics". Currently only allowed value is duration. This makes the column with miliseconds
+					to be formatted as seconds with precision 3.</simpara>
+				</listitem>
+			</itemizedlist>
+		</para>
+	</refsect1>
+
+	<refsect1>
+		<title>Examples</title>
+		<literallayout>
+<![CDATA[
+Bytes per packet column. The column value is computed from number of bytes (%byt) and number of packets (%pkt)
+<column>
+	<name>Bpp</name>
+	<width>8</width>
+	<alias>%bpp</alias>
+	<value type="operation">
+		<operation name="/">
+			<arg1>%byt</arg1>
+			<arg2>%pkt</arg2>
+		</operation>
+	</value>
+</column>]]>
+		</literallayout>
+		<literallayout>
+<![CDATA[Destination IPv6 address. Aliases usable in format and filter are %da6 and %dstip6. Width of IPv6 address is 39. Value is taken from table and has two parts, e0id28p0 and eoid28p1.
+<column>
+	<name>Dst IPv6</name>
+	<width>39</width>
+	<alias>%da6</alias>
+	<alias>%dstip6</alias>
+	<value type="plain">
+		<element semantics="ipv6" parts="2">e0id28</element>
+	</value>
+</column>
+]]>
+		</literallayout>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>fbitdump</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>

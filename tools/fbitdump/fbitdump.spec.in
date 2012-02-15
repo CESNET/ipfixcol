@@ -30,6 +30,7 @@ Tool for displaying captured ipfix data in fastbit database format.
 autoreconf
 %configure
 make
+make man
 
 %install
 make DESTDIR=%buildroot install
@@ -37,3 +38,5 @@ make DESTDIR=%buildroot install
 %files
 %_bindir/fbitdump
 %_datadir/fbitdump/fbitdump.xml
+%_mandir/man1/fbitdump.1.gz
+%_mandir/man5/fbitdump.xml.5.gz

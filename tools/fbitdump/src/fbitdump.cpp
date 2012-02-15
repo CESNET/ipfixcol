@@ -1,5 +1,5 @@
 /**
- * \file ipfixdump.cpp
+ * \file fbitdump.cpp
  * \author Petr Velan <petr.velan@cesnet.cz>
  * \brief Tool for ipfix fastbit format querying
  *
