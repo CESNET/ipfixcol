@@ -186,6 +186,20 @@ int el_ipv6::set_type(){
 }
 
 
+int el_var_size::fill(uint8_t * data){
+	//get size of data
+	if(data[0] < 255){
+		_size = data[0];
+	}else{
+		byte_reorder((uint8_t *) &(_size),&(data[1]),2);
+	}
+	return 0;
+}
+int el_var_size::set_type(){
+	_type=ibis::UBYTE;
+	return 0;
+}
+
 /*
 class el_uint : public element
 {

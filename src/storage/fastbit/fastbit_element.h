@@ -181,6 +181,31 @@ public:
 	void byte_reorder(uint8_t *dst,uint8_t *src, int size, int offset=0);
 };
 
+class el_var_size : public element
+{
+public:
+	void *data;
+	el_var_size(int size = 0, int en = 0, int id = 0){
+		_size = size;
+		sprintf( _name,"e%uid%hu", en, id);
+		this->set_type();
+	}
+	/* core methods */
+	/**
+	 * \brief fill internal element value according to given data
+	 *
+	 * This method transforms data from ipfix record to internal 
+	 * value usable by fastbit. Number of bytes to read is specified by _size 
+	 * variable. This method converts endianity. Data can be accesed by value pointer.
+	 *
+	 * @param data pointer to input data (usualy ipfix element)
+	 * @return 0 on succes 
+	 * @return 1 on failure
+	 */
+	virtual int fill(uint8_t * data);
+	virtual int set_type();
+};
+
 
 typedef union float_union 
 {

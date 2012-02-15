@@ -133,6 +133,9 @@ int template_table::parse_template(struct ipfix_template * tmp){
 				if(field->ie.length < 9){
 					new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF);
 					_tablex->addColumn(new_element->name(), new_element->type());
+				} else if(field->ie.length < 65535){ //variable size element
+					new_element = new el_var_size(field->ie.length, en, field->ie.id & 0x7FFF);
+					//_tablex->addColumn(new_element->name(), new_element->type());
 				} else { //TODO blob ect
 					std::cout << "UNKNOWN! - blop:" << field->ie.length << std::endl;
 					new_element = new element(field->ie.length, en, field->ie.id & 0x7FFF);
