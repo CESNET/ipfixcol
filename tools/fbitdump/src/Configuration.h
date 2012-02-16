@@ -49,7 +49,7 @@
 namespace fbitdump {
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "hVaA:r:f:n:c:D:Ns:qeIM:m::R:o:v:Z:t:"
+#define OPTSTRING "hVaA:r:f:n:c:D:Ns:qeIM:m::R:o:v:Z:t:i::d::"
 
 #define COLUMNS_XML "/usr/share/fbitdump/fbitdump.xml"
 
@@ -227,6 +227,27 @@ public:
     bool getExtendedStats() const;
 
     /**
+     * \brief Returns true when creation of indexes was requested
+     *
+     * @return true when creation of indexes was requested
+     */
+    bool getCreateIndexes() const;
+
+    /**
+     * \brief Returns true when deletion of indexes was requested
+     *
+     * @return true when deletion of indexes was requested
+     */
+    bool getDeleteIndexes() const;
+
+    /**
+     * \brief Returns set of index column names to work with
+     *
+     * @return set of index column names to work with
+     */
+    stringSet getColumnIndexes() const;
+
+    /**
      * \brief Class destructor
      */
     ~Configuration();
@@ -328,6 +349,13 @@ private:
      */
     int parseAggregateArg(char *arg);
 
+    /**
+     * \brief Get index columns names from columns specified by aliases
+     *
+     * @param arg string with comma separated column aliases
+     */
+    void parseIndexColumns(char *arg);
+
     stringVector parts;                 /**< Fastbit parts paths to be used*/
     char *appName;                      /**< Application name, parsed from command line args*/
     stringSet aggregateColumnsAliases;  /**< Aggregate columns aliases set */
@@ -350,6 +378,9 @@ private:
 	bool orderAsc;						/**< Order column increasingly, default is true */
 	pugi::xml_document doc;				/**< XML configuration document */
 	bool extendedStats;					/**< Print extended bottom stats */
+	bool createIndexes;					/**< Create indexes specified by indexColumns */
+	bool deleteIndexes;					/**< Delete indexes specified by indexColumns */
+	stringSet indexColumns;				/**< Indexes specified by -i or -d option. Empty means all */
 }; /* end of Configuration class */
 
 } /* end of fbitdump namespace */

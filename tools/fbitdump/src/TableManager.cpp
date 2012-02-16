@@ -82,7 +82,7 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 		if (difference.empty()) {
 			parts.push_back(this->parts[i]);
 		} else {
-			std::cerr << "Ommiting part [" << i << "], does not have column '" << *difference.begin() << "'" << std::endl;
+			std::cerr << "Ommiting part " << this->parts[i]->currentDataDir() << ", does not have column '" << *difference.begin() << "'" << std::endl;
 		}
 	}
 
@@ -322,6 +322,11 @@ const TableSummary* TableManager::getSummary()
 	}
 
 	return this->tableSummary;
+}
+
+ibis::partList TableManager::getParts()
+{
+	return this->parts;
 }
 
 TableManager::~TableManager()

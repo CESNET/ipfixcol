@@ -23,7 +23,9 @@ SRCS    = fbitdump.cpp \
 		Cursor.cpp \
 		Values.cpp \
 		Resolver.cpp \
-		TableSummary.cpp
+		TableSummary.cpp \
+		Utils.cpp \
+		IndexManager.cpp
 OBJDIR  = .obj
 SRCDIR  = src
 SRC3RD  = 3rdparty

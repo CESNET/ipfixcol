@@ -142,6 +142,13 @@ public:
 	const TableSummary* getSummary();
 
 	/**
+	 * \brief Returns list of all loaded parts
+	 *
+	 * @return list of all loaded parts
+	 */
+	ibis::partList getParts();
+
+	/**
 	 * \brief Class destructor
 	 */
 	~TableManager();

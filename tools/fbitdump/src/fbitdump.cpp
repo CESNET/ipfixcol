@@ -47,6 +47,7 @@
 #include "TableManager.h"
 #include "Printer.h"
 #include "Filter.h"
+#include "IndexManager.h"
 
 using namespace fbitdump;
 
@@ -67,6 +68,11 @@ int main(int argc, char *argv[])
 	ret = conf.init(argc, argv);
 	if (ret != 0) return ret;
 
+	/* check whether to delete indexes */
+	if (conf.getDeleteIndexes()) {
+		IndexManager::deleteIndexes(conf);
+	}
+
 	/* create filter */
 	Filter filter(&conf);
 	/* initialise filter and check correctness */
@@ -78,6 +84,11 @@ int main(int argc, char *argv[])
 
 	/* initialise tables */
 	TableManager tm(conf);
+
+	/* check whether to build indexes */
+	if (conf.getCreateIndexes()) {
+		IndexManager::createIndexes(conf, tm);
+	}
 
 	/* do some work */
 	if (conf.getAggregate()) {

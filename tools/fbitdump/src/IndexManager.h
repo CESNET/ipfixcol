@@ -1,7 +1,7 @@
 /**
- * \file typedefs.h
+ * \file IndexManager.h
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Header containing typedefs for fbitdump utility
+ * \brief Header of class that works with indexes
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,45 +37,37 @@
  *
  */
 
-#ifndef TYPEDEFS_H_
-#define TYPEDEFS_H_
+#ifndef INDEXMANAGER_H_
+#define INDEXMANAGER_H_
 
-#include <cstdio>
-#include <vector>
-#include <set>
-#include <map>
-#include <string>
-#include "fastbit/ibis.h"
+#include "Configuration.h"
+#include "TableManager.h"
 
 namespace fbitdump {
 
-/* this is needed for the lexer: new yylex function prototype */
-#define YY_DECL int yylex(std::string &arg)
-
-enum yytokentype
+class IndexManager
 {
-	COLUMN = 258,
-	NUMBER = 259,
-	CMP = 260,
-	RAWCOLUMN = 261,
-	OPERATOR = 262,
-	IPv4 = 263,
-	BRACKET = 264,
-	TIMESTAMP = 265,
-	OTHER = 300
+public:
+	/**
+	 * \brief Delete indexes from parts specified in configuration
+	 *
+	 * Uses system() function to call rm (not very portable)
+	 *
+	 * @param conf Configuration class with parts to remove indexes from
+	 */
+	static void deleteIndexes(Configuration &conf);
+
+	/**
+	 * \brief Create indexes specified in configuration on parts in TableManager
+	 *
+	 * Parts in table manager are already loaded, just use them
+	 *
+	 * @param conf Configuration class that specifies indexes to create
+	 * @param tm TableManager with created parts to process
+	 */
+	static void createIndexes(Configuration &conf, TableManager &tm);
 };
 
-typedef std::vector<std::string> stringVector;
-typedef std::set<std::string> stringSet;
-typedef std::map<std::string, int> namesColumnsMap;
+} /* end of fbitdump namespace */
 
-/* define these vectors with forward definitions of the classes */
-class Column;
-typedef std::vector<Column*> columnVector;
-class Table;
-typedef std::vector<Table*> tableVector;
-
-}  /* end of namespace fbitdump */
-
-#endif /* TYPEDEFS_H_ */
-
+#endif /* INDEXMANAGER_H_ */

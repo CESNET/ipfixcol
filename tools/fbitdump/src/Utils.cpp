@@ -1,7 +1,7 @@
 /**
- * \file typedefs.h
+ * \file Utils.cpp
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Header containing typedefs for fbitdump utility
+ * \brief Auxiliary functions definitions
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,45 +37,36 @@
  *
  */
 
-#ifndef TYPEDEFS_H_
-#define TYPEDEFS_H_
-
-#include <cstdio>
-#include <vector>
-#include <set>
-#include <map>
-#include <string>
-#include "fastbit/ibis.h"
+#include "Utils.h"
 
 namespace fbitdump {
+namespace Utils {
 
-/* this is needed for the lexer: new yylex function prototype */
-#define YY_DECL int yylex(std::string &arg)
 
-enum yytokentype
+/**
+ * \brief Splits string into different tokens by comma
+ *
+ * @param str string to split
+ * @param result stringSet to put result into
+ * @return true on success, false otherwise
+ */
+bool splitString(char *str, stringSet &result)
 {
-	COLUMN = 258,
-	NUMBER = 259,
-	CMP = 260,
-	RAWCOLUMN = 261,
-	OPERATOR = 262,
-	IPv4 = 263,
-	BRACKET = 264,
-	TIMESTAMP = 265,
-	OTHER = 300
-};
+	char *token;
 
-typedef std::vector<std::string> stringVector;
-typedef std::set<std::string> stringSet;
-typedef std::map<std::string, int> namesColumnsMap;
+	if (str == NULL) {
+		return false;
+	}
 
-/* define these vectors with forward definitions of the classes */
-class Column;
-typedef std::vector<Column*> columnVector;
-class Table;
-typedef std::vector<Table*> tableVector;
+	token = strtok(str, ",");
+	result.insert(token);
+	while ((token = strtok(NULL, ",")) != NULL) {
+		result.insert(token);
+	}
+
+	return true;
+}
+
+} /* end of namespace utils */
 
 }  /* end of namespace fbitdump */
-
-#endif /* TYPEDEFS_H_ */
-

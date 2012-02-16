@@ -38,6 +38,7 @@
  */
 
 #include "Values.h"
+#include "Utils.h"
 
 namespace fbitdump {
 

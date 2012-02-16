@@ -48,6 +48,7 @@
 #include "Table.h"
 #include "Resolver.h"
 #include "Printer.h"
+#include "Utils.h"
 
 namespace fbitdump
 {

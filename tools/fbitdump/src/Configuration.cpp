@@ -49,6 +49,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <netdb.h>
+#include "Utils.h"
 
 
 namespace fbitdump {
@@ -64,6 +65,7 @@ int Configuration::init(int argc, char *argv[])
 	std::string filterFile;
 	std::string optionM;	/* optarg for option -M */
 	std::string optionm;	/* optarg value for option -m */
+	char *indexes = NULL;	/* indexes optarg to be parsed later */
 
 	/* get program name without execute path */
 	this->appName = ((this->appName = strrchr (argv[0], '/')) != NULL) ? (this->appName + 1) : argv[0];
@@ -219,6 +221,18 @@ int Configuration::init(int argc, char *argv[])
 		case 't':
 				this->timeWindow = optarg;
 			break;
+		case 'i': /* create indexes */
+			this->createIndexes = true;
+			if (optarg != NULL) {
+				indexes = strdup(optarg);
+			}
+			break;
+		case 'd': /* delete indexes */
+			this->deleteIndexes = true;
+			if (optarg != NULL) {
+				indexes = strdup(optarg);
+			}
+			break;
 		default:
 			help ();
 			return -1;
@@ -227,8 +241,8 @@ int Configuration::init(int argc, char *argv[])
 	}
 
 	/* open XML configuration file */
-	if (!this->doc.load_file(COLUMNS_XML)) {
-		std::cerr << "XML '"<< COLUMNS_XML << "' with columns configuration cannot be loaded!" << std::endl;
+	if (!this->doc.load_file(this->getXmlConfPath())) {
+		std::cerr << "XML '"<< this->getXmlConfPath() << "' with columns configuration cannot be loaded!" << std::endl;
 		return -4;
 	}
 
@@ -246,6 +260,10 @@ int Configuration::init(int argc, char *argv[])
 	if (this->resolver == NULL) {
 		this->resolver = new Resolver(NULL);
 	}
+
+	/* parse indexes line */
+	this->parseIndexColumns(indexes);
+	free(indexes);
 
 	/* read filter */
 	if (optind < argc) {
@@ -569,6 +587,23 @@ bool Configuration::getOrderAsc() const
 	return this->orderAsc;
 }
 
+bool Configuration::getCreateIndexes() const
+{
+	return this->createIndexes;
+}
+
+
+bool Configuration::getDeleteIndexes() const
+{
+	return this->deleteIndexes;
+}
+
+
+stringSet Configuration::getColumnIndexes() const
+{
+	return this->indexColumns;
+}
+
 bool Configuration::isDirectory(std::string dir) const
 {
 	int ret;
@@ -697,7 +732,8 @@ bool Configuration::getOptionm() const
 }
 
 Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false),
-		optm(false), orderColumn(NULL), resolver(NULL), statistics(false), orderAsc(true), extendedStats(false)
+		optm(false), orderColumn(NULL), resolver(NULL), statistics(false), orderAsc(true), extendedStats(false),
+		createIndexes(false), deleteIndexes(false)
 {
 }
 
@@ -1029,21 +1065,29 @@ bool Configuration::processROption(stringVector &tables, const char *optarg)
 }
 
 int Configuration::parseAggregateArg(char *arg) {
-	char *token;
 	this->aggregate = true;
+
 	/* add aggregate columns to set */
 	this->aggregateColumnsAliases.clear();
-	token = strtok(arg, ",");
-	if (token == NULL) {
+	if (!Utils::splitString(arg, this->aggregateColumnsAliases)) {
 		help();
 		return -2;
-	} else {
-		this->aggregateColumnsAliases.insert(token);
-		while ((token = strtok(NULL, ",")) != NULL) {
-			this->aggregateColumnsAliases.insert(token);
-		}
 	}
 	return 0;
+}
+
+void Configuration::parseIndexColumns(char *arg)
+{
+	if (arg != NULL) {
+		stringSet aliases;
+		Utils::splitString(arg, aliases);
+		for (stringSet::const_iterator it = aliases.begin(); it != aliases.end(); it++) {
+			Column col;
+			col.init(this->getXMLConfiguration(), *it, false);
+			stringSet columns = col.getColumns();
+			this->indexColumns.insert(columns.begin(), columns.end());
+		}
+	}
 }
 
 Resolver *Configuration::getResolver() const

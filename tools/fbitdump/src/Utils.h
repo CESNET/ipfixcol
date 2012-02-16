@@ -1,7 +1,7 @@
 /**
- * \file typedefs.h
+ * \file Utils.h
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Header containing typedefs for fbitdump utility
+ * \brief Header containing some auxiliary functions declarations
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,45 +37,55 @@
  *
  */
 
-#ifndef TYPEDEFS_H_
-#define TYPEDEFS_H_
+#ifndef UTILS_H_
+#define UTILS_H_
 
-#include <cstdio>
-#include <vector>
-#include <set>
-#include <map>
-#include <string>
-#include "fastbit/ibis.h"
+#include "typedefs.h"
 
 namespace fbitdump {
 
-/* this is needed for the lexer: new yylex function prototype */
-#define YY_DECL int yylex(std::string &arg)
-
-enum yytokentype
+namespace Utils {
+/**
+ * \brief Formats number 'num' to ostringstream 'ss'
+ *
+ * Uses precision 1 if output has units and 0 otherwise
+ * doesn't format if 'plainNumbers' is set
+ *
+ * When defined as macro, it can be a bit quicker
+ *
+ * @param num number to format
+ * @param ss string strem to put result to
+ * @param plainNumbers whether to format or not
+ */
+template <class T>
+inline void formatNumber(T num, std::ostream &ss, bool plainNumbers)
 {
-	COLUMN = 258,
-	NUMBER = 259,
-	CMP = 260,
-	RAWCOLUMN = 261,
-	OPERATOR = 262,
-	IPv4 = 263,
-	BRACKET = 264,
-	TIMESTAMP = 265,
-	OTHER = 300
-};
+	ss << std::fixed;
+	if (num <= 1000000 || plainNumbers) {
+		ss.precision(0);
+		ss << num;
+	} else if (num > 1000000000) {
+		ss.precision(1);
+		ss << (float) num/1000000000 << " G";
+	} else if (num > 1000000) {
+		ss.precision(1);
+		ss << (float) num/1000000 << " M";
+	}
+	ss.precision(0); /* set zero precision for other numbers */
+}
 
-typedef std::vector<std::string> stringVector;
-typedef std::set<std::string> stringSet;
-typedef std::map<std::string, int> namesColumnsMap;
+/**
+ * \brief Splits string into different tokens by comma
+ *
+ * @param str string to split
+ * @param result stringSet to put result into
+ * @return true on success, false otherwise
+ */
+bool splitString(char *str, stringSet &result);
 
-/* define these vectors with forward definitions of the classes */
-class Column;
-typedef std::vector<Column*> columnVector;
-class Table;
-typedef std::vector<Table*> tableVector;
+} /* end of namespace utils */
 
 }  /* end of namespace fbitdump */
 
-#endif /* TYPEDEFS_H_ */
+#endif /* UTILS_H_ */
 
