@@ -1,7 +1,7 @@
 /**
- * \file fbitdump.cpp
+ * \file IndexManager.h
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Tool for ipfix fastbit format querying
+ * \brief Header of class that works with indexes
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,68 +37,37 @@
  *
  */
 
-/**
- * \mainpage IPFIX Dump Developer's Documentation
- *
- * This documents provides documentation of IPFIX Dump utility (ipfixdump).
- */
+#ifndef INDEXMANAGER_H_
+#define INDEXMANAGER_H_
 
 #include "Configuration.h"
 #include "TableManager.h"
-#include "Printer.h"
-#include "Filter.h"
-#include "IndexManager.h"
 
-using namespace fbitdump;
+namespace fbitdump {
 
-int main(int argc, char *argv[])
+class IndexManager
 {
-	int ret;
+public:
+	/**
+	 * \brief Delete indexes from parts specified in configuration
+	 *
+	 * Uses system() function to call rm (not very portable)
+	 *
+	 * @param conf Configuration class with parts to remove indexes from
+	 */
+	static void deleteIndexes(Configuration &conf);
 
-	/* raise limit for cache size, when there is more memory available */
-	ibis::fileManager::adjustCacheSize(2048000000);
+	/**
+	 * \brief Create indexes specified in configuration on parts in TableManager
+	 *
+	 * Parts in table manager are already loaded, just use them
+	 *
+	 * @param conf Configuration class that specifies indexes to create
+	 * @param tm TableManager with created parts to process
+	 */
+	static void createIndexes(Configuration &conf, TableManager &tm);
+};
 
-//	ibis::gVerbose = 7;
-	ibis::gParameters().add("fileManager.minMapSize", "50");
+} /* end of fbitdump namespace */
 
-	/* create configuration to work with */
-	Configuration conf;
-
-	/* process configuration and check whether to end the program */
-	ret = conf.init(argc, argv);
-	if (ret != 0) return ret;
-
-	/* check whether to delete indexes */
-	if (conf.getDeleteIndexes()) {
-		IndexManager::deleteIndexes(conf);
-	}
-
-	/* create filter */
-	Filter filter(&conf);
-	/* initialise filter and check correctness */
-	ret = filter.init();
-	if (ret != 0) return ret;
-
-	/* initialise printer */
-	Printer print(std::cout, conf);
-
-	/* initialise tables */
-	TableManager tm(conf);
-
-	/* check whether to build indexes */
-	if (conf.getCreateIndexes()) {
-		IndexManager::createIndexes(conf, tm);
-	}
-
-	/* do some work */
-	if (conf.getAggregate()) {
-		tm.aggregate(conf.getAggregateColumns(), conf.getSummaryColumns(), filter);
-	} else {
-		tm.filter(filter);
-	}
-
-	/* print tables */
-	print.print(tm);
-
-	return 0;
-}
+#endif /* INDEXMANAGER_H_ */

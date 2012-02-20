@@ -43,25 +43,18 @@
 
 #include <iostream>
 #include <cstring>
-#include <search.h>
+#include <map>
 
 namespace fbitdump {
 
 /**
  * \brief Class for DNS lookups
+ *
+ * Uses given IPv4 nameserver to resolve addresses to hostnames
+ * The adresses are currently cached in std::map structure
  */
 class Resolver {
-private:
-	std::string nameserver;
-	bool configured;
-	bool cacheOn;         /* indicates whether caching is on or off */
-
-	/* associative arrays that represent cache */
-	struct hsearch_data dnsHashTable;
-
-
 public:
-	Resolver();
 	Resolver(char *nameserver);
 	~Resolver();
 
@@ -70,21 +63,14 @@ public:
      *
      * @return object which provides DNS resolving functionality
      */
-	int setNameserver(char *nameserver);
-
-    /**
-     * \brief Returns resolver
-     *
-     * @return object which provides DNS resolving functionality
-     */
-	const char *getNameserver();
+	const char *getNameserver() const;
 
     /**
      * \brief Returns resolver
      *
      * @return true if DNS is configured, false otherwise
      */
-	bool isConfigured();
+	bool isConfigured() const;
 
 	/**
 	 * \brief reverse DNS lookup for IPv4 address
@@ -93,7 +79,7 @@ public:
 	 * @param[out] result contains domain name corresponding to the IP address
 	 * @return true on success, false otherwise
 	 */
-	bool reverseLookup(uint32_t inaddr, char *result, int len);
+	bool reverseLookup(uint32_t inaddr, std::string &result);
 
 	/**
 	 * \brief reverse DNS lookup for IPv6 address
@@ -103,49 +89,25 @@ public:
 	 * @param[out] result contains domain name corresponding to the IP address
 	 * @return true on success, false otherwise
 	 */
-	bool reverseLookup6(uint64_t inaddr_part1, uint64_t inaddr_part2, char *result, int len);
+	bool reverseLookup6(uint64_t inaddr_part1, uint64_t inaddr_part2, std::string &result);
 
-	/**
-	 * \brief Enable DNS cache
-	 *
-	 * @param[in] cacheSize number of rows in hash table
-	 * @return nothing
-	 */
-	void enableCache(unsigned long int cacheSize);
+private:
+	std::string nameserver;
+	bool configured;
 
-	/**
-	 * \brief Disable DNS cache
-	 *
-	 * @return nothing
-	 */
-	void disableCache();
+	std::map<uint32_t, std::string> dnsCache;
+	std::map<uint64_t, std::map<uint64_t, std::string>> dnsCache6;
 
-	/**
-	 * \brief Test whether cache is enabled or not
-	 *
-	 * @return true, if caching is enabled. false otherwise
-	 */
-	bool cacheEnabled();
+    /**
+     * \brief Initialise resolver to use nameserver
+     *
+     * Sets configured flag if completed without error
+     * Works only for IPv4 nameservers, it is difficult to enforce own IPv6 nameserver
+     *
+     * @param nameserver Nameserver address to be used
+     */
+	void setNameserver(char *nameserver);
 
-	/**
-	 * \brief Add entry to the hash table
-	 *
-	 * @param[in] key key
-	 * @param[in] data value
-	 *
-	 * @return true, if entry was successfully added. false otherwise
-	 */
-	bool addToCache(char *key, void *data);
-
-	/**
-	 * \brief Search in hash table
-	 *
-	 * @param[in] key key to search for
-	 *
-	 * @return if given key exists in table this method will return pointer to the
-	 * corresponding value. NULL otherwise
-	 */
-	void *cacheSearch(char *key);
 };
 
 } /* namespace fbitdump */

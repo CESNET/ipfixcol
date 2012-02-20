@@ -55,13 +55,13 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 	/* omit parts that don't have necessary summary columns */
 	/* strip summary columns of aggregation functions to get plain names */
 	stringSet sCols;
-	for (stringSet::iterator it = summaryColumns.begin(); it != summaryColumns.end(); it++) {
+	for (stringSet::const_iterator it = summaryColumns.begin(); it != summaryColumns.end(); it++) {
 		int begin = it->find_first_of('(') + 1;
 		int end = it->find_first_of(')');
 
 		std::string tmp = it->substr(begin, end-begin);
 		if (tmp != "*") { /* ignore column * used for flows aggregation */
-			sCols.insert(it->substr(begin, end-begin));
+			sCols.insert(tmp);
 		}
 	}
 
@@ -82,11 +82,12 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 		if (difference.empty()) {
 			parts.push_back(this->parts[i]);
 		} else {
-			std::cerr << "Ommiting part [" << i << "], does not have column '" << *difference.begin() << "'" << std::endl;
+			std::cerr << "Ommiting part " << this->parts[i]->currentDataDir() << ", does not have column '" << *difference.begin() << "'" << std::endl;
 		}
 	}
 
 	/* go over all parts and build vector of intersection between part columns and aggregation columns */
+	/* put together the parts that have same intersection - this ensures for example that ipv4 and ipv6 are aggregate separately by default */
 	for (size_t i = 0; i < parts.size(); i++) {
 
 		/* put part columns to set */
@@ -105,7 +106,7 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 		std::cerr << "Intersection has " << colIntersect[i].size() << " columns" << std::endl;
 
 		std::cerr << "Intersect columns: ";
-		for (stringSet::iterator it = colIntersect[i].begin(); it != colIntersect[i].end(); it++) {
+		for (stringSet::const_iterator it = colIntersect[i].begin(); it != colIntersect[i].end(); it++) {
 			std::cerr << *it << ", ";
 		}
 		std::cerr << std::endl;
@@ -127,7 +128,7 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 	}
 
 	/* go over all parts (theirs intersections), empty intersections are ignored */
-	for (std::vector<stringSet>::iterator outerIter = colIntersect.begin(); outerIter != colIntersect.end(); outerIter++) {
+	for (std::vector<stringSet>::const_iterator outerIter = colIntersect.begin(); outerIter != colIntersect.end(); outerIter++) {
 		/* work with current intersection only if it has not been used before and if it is not empty */
 		if (used[iterPos] || outerIter->size() == 0	) {
 			iterPos++;
@@ -140,7 +141,7 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 		int curPos = iterPos;
 
 		/* add all parts that have same columns as current part and are not already used */
-		for (std::vector<stringSet>::iterator it = outerIter; it != colIntersect.end(); it++) {
+		for (std::vector<stringSet>::const_iterator it = outerIter; it != colIntersect.end(); it++) {
 			if (used[curPos]) {
 				curPos++;
 				continue;
@@ -153,6 +154,30 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 
 			/* When sets are equal, difference is empty */
 			if (difference.empty()) {
+				/* check that parts have same column types for aggregate columns and issue a warning if not */
+				/* go over aggregate columns and check the types */ /* TODO check that this is not needed for summary columns */
+				for (stringSet::const_iterator strIter = (*outerIter).begin(); strIter != (*outerIter).end(); strIter++) {
+					int pos1 = -1, pos2 = -1; /* the column with given name always exists, no need to check for -1 value */
+					/* find index of the column in both parts */
+					for (unsigned int i = 0; i< parts.at(iterPos)->columnTypes().size(); i++) {
+						if (*strIter == parts.at(iterPos)->columnNames()[i]) {
+							pos1 = i;
+							break;
+						}
+					}
+					for (unsigned int i = 0; i< parts.at(curPos)->columnTypes().size(); i++) {
+						if (*strIter == parts.at(curPos)->columnNames()[i]) {
+							pos2 = i;
+							break;
+						}
+					}
+					/* test that data types are same */
+					if (parts.at(iterPos)->columnTypes()[pos1] != parts.at(curPos)->columnTypes()[pos2]) {
+						std::cerr << "Warning: column '" << *strIter << "' has different data types in different parts! ("
+								<< parts.at(iterPos)->name() << ", " << parts.at(curPos)->name() << ")" << std::endl;
+					}
+				}
+
 				/* add table to list */
 				pList.push_back(parts.at(curPos));
 				used[curPos] = true;
@@ -166,7 +191,7 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 		std::cerr << "Creating table from " << pList.size() << " part(s)" << std::endl;
 
 		std::cerr << "[" << iterPos << "]Aggregate columns: ";
-		for (stringSet::iterator it = outerIter->begin(); it != outerIter->end(); it++) {
+		for (stringSet::const_iterator it = outerIter->begin(); it != outerIter->end(); it++) {
 			std::cerr << *it << ", ";
 		}
 		std::cerr << std::endl;
@@ -177,6 +202,7 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 
 		/* aggregate the table, use only present aggregation columns */
 		table->aggregate(*outerIter, summaryColumns, filter);
+		table->orderBy(this->orderColumns, this->orderAsc);
 		this->tables.push_back(table);
 
 		/* and clear the part list */
@@ -190,7 +216,7 @@ void TableManager::filter(Filter &filter)
 	Table *table;
 
 	stringSet columnNames;
-	for (columnVector::iterator it = conf.getColumns().begin(); it != conf.getColumns().end(); it++) {
+	for (columnVector::const_iterator it = conf.getColumns().begin(); it != conf.getColumns().end(); it++) {
 		/* don't add flows as count(*) */
 		if (!(*it)->isSeparator() && (*it)->getSemantics() == "flows") {
 			continue;
@@ -202,13 +228,14 @@ void TableManager::filter(Filter &filter)
 	}
 
 	/* go over all parts */
-	for (ibis::partList::iterator it = this->parts.begin(); it != this->parts.end(); it++) {
+	for (ibis::partList::const_iterator it = this->parts.begin(); it != this->parts.end(); it++) {
 
 		/* create table for each part */
 		table = new Table(*it);
 
 		/* add to managed tables */
 		table->filter(columnNames, filter);
+		table->orderBy(this->orderColumns, this->orderAsc);
 		this->tables.push_back(table);
 
 #ifdef DEBUG
@@ -240,7 +267,21 @@ void TableManager::removeTable(tableVector::iterator &it)
 	tables.erase(it--);
 }
 
-TableManager::TableManager(Configuration &conf): conf(conf)
+uint64_t TableManager::getNumParts() const
+{
+	return this->parts.size();
+}
+
+uint64_t TableManager::getInitRows() const
+{
+	uint64_t ret = 0;
+	for (ibis::partList::const_iterator it = this->parts.begin(); it != this->parts.end(); it++) {
+		ret += (*it)->nRows();
+	}
+	return ret;
+}
+
+TableManager::TableManager(Configuration &conf): conf(conf), tableSummary(NULL)
 {
 	std::string tmp;
 	ibis::part *part;
@@ -261,18 +302,47 @@ TableManager::TableManager(Configuration &conf): conf(conf)
 			std::cerr << "Cannot open table part: " << tmp << std::endl;
 		}
 	}
+
+	/* create order by string list if necessary */
+	if (conf.getOptionm()) {
+		this->orderColumns = conf.getOrderByColumn()->getColumns();
+		this->orderAsc = conf.getOrderAsc();
+	}
+}
+
+const TableSummary* TableManager::getSummary()
+{
+	if (this->tableSummary == NULL) { /* create summary if not already existing */
+		stringSet columns, summaryColumns = conf.getSummaryColumns();
+
+		for (stringSet::const_iterator it = summaryColumns.begin(); it != summaryColumns.end(); it++) {
+			columns.insert("sum(" + *it + ")");
+		}
+		this->tableSummary = new TableSummary(this->tables, columns);
+	}
+
+	return this->tableSummary;
+}
+
+ibis::partList TableManager::getParts()
+{
+	return this->parts;
 }
 
 TableManager::~TableManager()
 {
 	/* delete all tables */
-	for (tableVector::iterator it = this->tables.begin(); it != this->tables.end(); it++) {
+	for (tableVector::const_iterator it = this->tables.begin(); it != this->tables.end(); it++) {
 		delete *it;
 	}
 
 	/* delete all table parts */
-	for (ibis::partList::iterator it = this->parts.begin(); it != this->parts.end(); it++) {
+	for (ibis::partList::const_iterator it = this->parts.begin(); it != this->parts.end(); it++) {
 		delete *it;
+	}
+
+	if (this->tableSummary != NULL) {
+		delete this->tableSummary;
 	}
 }
 

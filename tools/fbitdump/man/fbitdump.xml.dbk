@@ -45,7 +45,8 @@
 
 	<refsect1>
 		<title>Configuration</title>
-		<simpara>Configuraion of fbitdump columns is handled in the fbitdump.xml. Each column has its own <emphasis>&lt;column&gt;</emphasis> section which completely describes it.
+		<simpara>Configuraion of fbitdump columns is handled in the fbitdump.xml. Root element for column configuration is <emphasis>&lt;columns&gt;</emphasis>. 
+			Each column has its own <emphasis>&lt;column&gt;</emphasis> section which completely describes it.
 			Element <emphasis>&lt;column&gt;</emphasis> has following children:</simpara>
 		<simpara><emphasis>&lt;name&gt;</emphasis>: Name of the column. This is what fbitdump will output in the header line.</simpara>
 		<simpara><emphasis>&lt;width&gt;</emphasis>: Width of the column, default is 0.</simpara>
@@ -83,6 +84,10 @@
 				</listitem>
 			</itemizedlist>
 		</para>
+		<simpara>
+			Section <emphasis>&lt;summary&gt;</emphasis> is used to specify which columns are considered summary columns. Each column is specified by its alias inside element <emphasis>&lt;column&gt;</emphasis>.
+			Summary columns are used in statistics mode to provide percentage information and also in total summary below the printed records.
+		</simpara>
 	</refsect1>
 
 	<refsect1>

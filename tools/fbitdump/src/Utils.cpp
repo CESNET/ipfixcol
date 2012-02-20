@@ -1,7 +1,7 @@
 /**
- * \file fbitdump.cpp
+ * \file Utils.cpp
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Tool for ipfix fastbit format querying
+ * \brief Auxiliary functions definitions
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,68 +37,36 @@
  *
  */
 
+#include "Utils.h"
+
+namespace fbitdump {
+namespace Utils {
+
+
 /**
- * \mainpage IPFIX Dump Developer's Documentation
+ * \brief Splits string into different tokens by comma
  *
- * This documents provides documentation of IPFIX Dump utility (ipfixdump).
+ * @param str string to split
+ * @param result stringSet to put result into
+ * @return true on success, false otherwise
  */
-
-#include "Configuration.h"
-#include "TableManager.h"
-#include "Printer.h"
-#include "Filter.h"
-#include "IndexManager.h"
-
-using namespace fbitdump;
-
-int main(int argc, char *argv[])
+bool splitString(char *str, stringSet &result)
 {
-	int ret;
+	char *token;
 
-	/* raise limit for cache size, when there is more memory available */
-	ibis::fileManager::adjustCacheSize(2048000000);
-
-//	ibis::gVerbose = 7;
-	ibis::gParameters().add("fileManager.minMapSize", "50");
-
-	/* create configuration to work with */
-	Configuration conf;
-
-	/* process configuration and check whether to end the program */
-	ret = conf.init(argc, argv);
-	if (ret != 0) return ret;
-
-	/* check whether to delete indexes */
-	if (conf.getDeleteIndexes()) {
-		IndexManager::deleteIndexes(conf);
+	if (str == NULL) {
+		return false;
 	}
 
-	/* create filter */
-	Filter filter(&conf);
-	/* initialise filter and check correctness */
-	ret = filter.init();
-	if (ret != 0) return ret;
-
-	/* initialise printer */
-	Printer print(std::cout, conf);
-
-	/* initialise tables */
-	TableManager tm(conf);
-
-	/* check whether to build indexes */
-	if (conf.getCreateIndexes()) {
-		IndexManager::createIndexes(conf, tm);
+	token = strtok(str, ",");
+	result.insert(token);
+	while ((token = strtok(NULL, ",")) != NULL) {
+		result.insert(token);
 	}
 
-	/* do some work */
-	if (conf.getAggregate()) {
-		tm.aggregate(conf.getAggregateColumns(), conf.getSummaryColumns(), filter);
-	} else {
-		tm.filter(filter);
-	}
-
-	/* print tables */
-	print.print(tm);
-
-	return 0;
+	return true;
 }
+
+} /* end of namespace utils */
+
+}  /* end of namespace fbitdump */

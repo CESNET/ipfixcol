@@ -1,7 +1,7 @@
 /**
- * \file fbitdump.cpp
+ * \file TableSummary.cpp
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Tool for ipfix fastbit format querying
+ * \brief Class handling summary for TableManager
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,68 +37,47 @@
  *
  */
 
-/**
- * \mainpage IPFIX Dump Developer's Documentation
- *
- * This documents provides documentation of IPFIX Dump utility (ipfixdump).
- */
-
-#include "Configuration.h"
-#include "TableManager.h"
-#include "Printer.h"
+#include "TableSummary.h"
 #include "Filter.h"
-#include "IndexManager.h"
 
-using namespace fbitdump;
+namespace fbitdump {
 
-int main(int argc, char *argv[])
+TableSummary::TableSummary(tableVector const &tables, stringSet const &summaryColumns)
 {
-	int ret;
+	Table *sumTable;
+	Filter filter;
 
-	/* raise limit for cache size, when there is more memory available */
-	ibis::fileManager::adjustCacheSize(2048000000);
+	for (tableVector::const_iterator it = tables.begin(); it != tables.end(); it++) {
+		sumTable = (*it)->createTableCopy();
 
-//	ibis::gVerbose = 7;
-	ibis::gParameters().add("fileManager.minMapSize", "50");
+		if (sumTable == NULL) continue;
 
-	/* create configuration to work with */
-	Configuration conf;
+		sumTable->aggregate(stringSet(), summaryColumns, filter);
 
-	/* process configuration and check whether to end the program */
-	ret = conf.init(argc, argv);
-	if (ret != 0) return ret;
+		Cursor *cur = sumTable->createCursor();
+		if (cur->next()) { /* summary table has some lines (is not filtered out) */
+			for (stringSet::const_iterator iter = summaryColumns.begin(); iter != summaryColumns.end(); iter++) {
 
-	/* check whether to delete indexes */
-	if (conf.getDeleteIndexes()) {
-		IndexManager::deleteIndexes(conf);
+				Values val;
+				if (cur->getColumn(*iter, val, 0)) { /* add value if available  */
+					this->values[*iter] += val.toDouble(0);
+				}
+			}
+		}
+		delete cur;
+
+		delete sumTable;
 	}
+}
 
-	/* create filter */
-	Filter filter(&conf);
-	/* initialise filter and check correctness */
-	ret = filter.init();
-	if (ret != 0) return ret;
-
-	/* initialise printer */
-	Printer print(std::cout, conf);
-
-	/* initialise tables */
-	TableManager tm(conf);
-
-	/* check whether to build indexes */
-	if (conf.getCreateIndexes()) {
-		IndexManager::createIndexes(conf, tm);
+double TableSummary::getValue(std::string &column) const
+{
+	valuesMap::const_iterator it;
+	if ((it = this->values.find(column)) != this->values.end()) {
+		return it->second;
 	}
-
-	/* do some work */
-	if (conf.getAggregate()) {
-		tm.aggregate(conf.getAggregateColumns(), conf.getSummaryColumns(), filter);
-	} else {
-		tm.filter(filter);
-	}
-
-	/* print tables */
-	print.print(tm);
 
 	return 0;
+}
+
 }

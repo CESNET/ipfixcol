@@ -49,12 +49,16 @@
 namespace fbitdump {
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "hVaA:r:f:n:c:D:Ns:qIM:mR:o:v:Z:t:"
+#define OPTSTRING "hVaA:r:f:n:c:D:Ns:qeIM:m::R:o:v:Z:t:i::d::"
 
 #define COLUMNS_XML "/usr/share/fbitdump/fbitdump.xml"
 
 /**
  * \brief Class handling command line configuration
+ *
+ * This class parses and processes command line configuration
+ * Based on the configuration it prepares Columns, list of fastbit parts to load, and other things
+ * This class is often passed to constructors of others
  */
 class Configuration
 {
@@ -79,14 +83,14 @@ public:
      *
      * @return Vector of strings with parts names
      */
-    stringVector getPartsNames();
+    const stringVector getPartsNames() const;
 
     /**
      * \brief Returns filter string as passed by user
      *
      * @return Strings containing filter from user
      */
-    std::string getFilter();
+    std::string getFilter() const;
 
     /**
      * \brief Returns set of fastbit column names containing columns
@@ -95,7 +99,7 @@ public:
      *
      * @return stringSet
      */
-    stringSet getAggregateColumns();
+    const stringSet getAggregateColumns() const;
 
     /**
      * \brief Returns set of column names containing columns
@@ -104,14 +108,16 @@ public:
      *
      * @return stringSet
      */
-    stringSet getSummaryColumns();
+    const stringSet getSummaryColumns() const;
 
     /**
-     * \brief Returns vector of order by columns
+     * \brief Returns column to order by
      *
-     * @return Vector of order by column names
+     * Column might be null when order by is not set by -m option
+     *
+     * @return Column to order by
      */
-    stringVector getOrder();
+    const Column* getOrderByColumn() const;
 
     /**
      * \brief Returns true when option for printing plain numbers was passed
@@ -119,20 +125,20 @@ public:
      * @return True when option for printing only plain numbers was passed,
      * else otherwise
      */
-    bool getPlainNumbers();
+    bool getPlainNumbers() const;
 
     /**
      * \brief Returns ceil limit of records to print
      * @return Maximum records number to print
      */
-    size_t getMaxRecords();
+    size_t getMaxRecords() const;
 
     /**
      * \brief Returns true when record aggregation is required
      *
      * @return True when agregation is on, false otherwise
      */
-    bool getAggregate();
+    bool getAggregate() const;
 
     /**
      * \brief Returns true when quiet mode is requested
@@ -140,7 +146,7 @@ public:
      *
      * @return True when quiet mode is requested
      */
-    bool getQuiet();
+    bool getQuiet() const;
 
     /**
      * \brief Returns vector of Columns
@@ -148,42 +154,98 @@ public:
      *
      * @return Vector of columns
      */
-    columnVector& getColumns();
-
-    /**
-     * \brief Returns path to configuration XML
-     * @return Path to configuration XML
-     */
-    char* getXmlConfPath();
+    const columnVector& getColumns() const;
 
     /**
      * \brief This method returns true if user started application with -m option
      *
      * @return true if option "-m" was specified, false otherwise
      */
-    bool getOptionm();
+    bool getOptionm() const;
 
 	/**
      * \brief Returns string with time window start
      *
      * @return string with time window start, empty if none used
      */
-    std::string getTimeWindowStart();
+    const std::string getTimeWindowStart() const;
 
     /**
      * \brief Returns string with time window end
      *
      * @return string with time window end, empty if none used
      */
-    std::string getTimeWindowEnd();
+    const std::string getTimeWindowEnd() const;
 
     /**
      * \brief Returns resolver
      *
      * @return object which provides DNS resolving functionality
      */
-    Resolver *getResolver();
+    Resolver *getResolver() const;
 
+    /**
+     * \brief Get order direction for fastbit order by function
+     *
+     * @return string "ASC" or "DESC"
+     */
+    bool getOrderAsc() const;
+
+    /**
+     * \brief Return true if statistics were requested
+     *
+     * @return true if statistics were requested
+     */
+    bool getStatistics() const;
+
+    /**
+     * \brief Provides access to aggregation columns aliases
+     *
+     * @return aggregation columns aliases
+     */
+    const stringSet& getAggregateColumnsAliases() const;
+
+    /**
+     * \brief Returns XML configuration document
+     *
+     * @return XML configuration document
+     */
+    const pugi::xml_document& getXMLConfiguration() const;
+
+    /**
+     * \brief Returns columns that should be used as summary for statistics
+     *
+     * @return Columns that should be used as summary for statistics
+     */
+    columnVector getStatisticsColumns() const;
+
+    /**
+     * \brief Returns true when extended bootm stats were requested
+     *
+     * @return true when extended bootm stats were requested
+     */
+    bool getExtendedStats() const;
+
+    /**
+     * \brief Returns true when creation of indexes was requested
+     *
+     * @return true when creation of indexes was requested
+     */
+    bool getCreateIndexes() const;
+
+    /**
+     * \brief Returns true when deletion of indexes was requested
+     *
+     * @return true when deletion of indexes was requested
+     */
+    bool getDeleteIndexes() const;
+
+    /**
+     * \brief Returns set of index column names to work with
+     *
+     * @return set of index column names to work with
+     */
+    stringSet getColumnIndexes() const;
 
     /**
      * \brief Class destructor
@@ -195,7 +257,7 @@ private:
     /**
      * \brief Prints help to standard output
      */
-    void help();
+    void help() const;
 
     /**
      * \brief Return string with current version
@@ -204,7 +266,13 @@ private:
      *
      * @return string with current version
      */
-    std::string version();
+    const std::string version() const;
+
+    /**
+     * \brief Returns path to configuration XML
+     * @return Path to configuration XML
+     */
+    const char* getXmlConfPath() const;
 
     /**
      * \brief Read parts from specified table directories
@@ -222,31 +290,12 @@ private:
 	 */
 	void parseFormat(std::string format);
 
-	/**
-	 * \brief Create element of type value from XMLnode element
-	 *
-	 * @param element XML node element
-	 * @param doc XML document with configuration
-	 * @return AST structure of created element
-	 */
-	AST* createValueElement(pugi::xml_node element, pugi::xml_document &doc);
-
-	/**
-	 * \brief Create element of type operation from XMLnode element
-	 *
-	 * @param operation XML node element
-	 * @param doc XML document with configuration
-	 * @return AST structure of created operation
-	 */
-	AST* createOperationElement(pugi::xml_node operation, pugi::xml_document &doc);
-
-
     /**
      * \brief Check whether argument is a directory
      *
      * @return true if given argument is a directory, false otherwise
      */
-    bool isDirectory(std::string dir);
+    bool isDirectory(std::string dir) const;
 
     /**
      * \brief Sanitize path
@@ -283,26 +332,55 @@ private:
      */
     bool processROption(stringVector &tables, const char *optarg);
 
+    /**
+     * \brief Process optional param of -m option
+     *
+     * Create column to order by
+     *
+     * @param order name of the column to order by
+     */
+    void processmOption(std::string order);
 
+    /**
+     * \brief Parse argument for aggregation
+     *
+     * @param arg comma separated list of aliases
+     * @return -2 on error, 0 otherwise
+     */
+    int parseAggregateArg(char *arg);
 
-    stringVector parts;                /**< Fastbit parts paths to be used*/
-    char *appName;                     /**< Application name, parsed from command line args*/
-    stringSet aggregateColumnsAliases; /**< Aggregate columns aliases set */
-	uint64_t maxRecords;               /**< Limit number of printed records */
-	bool plainNumbers;                 /**< Don't convert protocol numbers to strings*/
-	bool aggregate;                    /**< Are we in aggreagate mode? */
-	bool quiet;                        /**< Don't print header and statistics */
-	std::string filter;                /**< User specified filter string */
-	stringVector order;                /**< Ordering columns aliases */
-	std::string format;                /**< Output format*/
-	columnVector columns;              /**< Vector of columns to print */
-	std::string firstdir;              /**< first table (directory) user wants to work with */
-	std::string lastdir;               /**< last table (directory) user wants to work with */
-	bool optm;                         /**< indicates whether user specified "-m" option or not */
-	std::string timeWindow;            /**< time window */
-	std::string rOptarg;               /**< optarg for -r option */
-	std::string ROptarg;               /**< optarg for -R option */
-	Resolver *resolver;                /**< DNS resolver */
+    /**
+     * \brief Get index columns names from columns specified by aliases
+     *
+     * @param arg string with comma separated column aliases
+     */
+    void parseIndexColumns(char *arg);
+
+    stringVector parts;                 /**< Fastbit parts paths to be used*/
+    char *appName;                      /**< Application name, parsed from command line args*/
+    stringSet aggregateColumnsAliases;  /**< Aggregate columns aliases set */
+	uint64_t maxRecords;                /**< Limit number of printed records */
+	bool plainNumbers;                  /**< Don't convert protocol numbers to strings*/
+	bool aggregate;                     /**< Are we in aggreagate mode? */
+	bool quiet;                         /**< Don't print header and statistics */
+	std::string filter;                 /**< User specified filter string */
+	std::string format;                 /**< Output format*/
+	columnVector columns;               /**< Vector of columns to print */
+	std::string firstdir;               /**< First table (directory) user wants to work with */
+	std::string lastdir;                /**< Last table (directory) user wants to work with */
+	bool optm;                          /**< Indicates whether user specified "-m" option or not */
+	Column *orderColumn;	 			/**< Column specified using -m value, default is %ts */
+	std::string timeWindow;             /**< Time window */
+	std::string rOptarg;                /**< Optarg for -r option */
+	std::string ROptarg;                /**< Optarg for -R option */
+	Resolver *resolver;                 /**< DNS resolver */
+	bool statistics;					/**< Option to generate statistics was used */
+	bool orderAsc;						/**< Order column increasingly, default is true */
+	pugi::xml_document doc;				/**< XML configuration document */
+	bool extendedStats;					/**< Print extended bottom stats */
+	bool createIndexes;					/**< Create indexes specified by indexColumns */
+	bool deleteIndexes;					/**< Delete indexes specified by indexColumns */
+	stringSet indexColumns;				/**< Indexes specified by -i or -d option. Empty means all */
 }; /* end of Configuration class */
 
 } /* end of fbitdump namespace */

@@ -52,12 +52,12 @@ extern YY_DECL;
 namespace fbitdump
 {
 
-std::string Filter::getFilter()
+const std::string Filter::getFilter() const
 {
 	return this->filterString;
 }
 
-bool Filter::isValid(Cursor &cur)
+bool Filter::isValid(Cursor &cur) const
 {
 	// TODO add this functiononality
 	return true;
@@ -65,13 +65,17 @@ bool Filter::isValid(Cursor &cur)
 
 int Filter::init()
 {
-	std::string input = this->conf.getFilter(), filter, tw;
+	if (conf == NULL) {
+		return -5;
+	}
+
+	std::string input = this->conf->getFilter(), filter, tw;
 
 	/* incorporate time windows argument in filter */
-	if (!conf.getTimeWindowStart().empty()) {
-		tw = "(%ts >= " + conf.getTimeWindowStart();
-		if (!conf.getTimeWindowEnd().empty()) {
-			tw += "AND %te <= " + conf.getTimeWindowEnd();
+	if (!conf->getTimeWindowStart().empty()) {
+		tw = "(%ts >= " + conf->getTimeWindowStart();
+		if (!conf->getTimeWindowEnd().empty()) {
+			tw += "AND %te <= " + conf->getTimeWindowEnd();
 		}
 		tw += ") AND ";
 	input = tw + input;
@@ -84,16 +88,12 @@ int Filter::init()
 	bp = yy_scan_string(input.c_str());
 	yy_switch_to_buffer(bp);
 
-	/* Open XML configuration file */
-	pugi::xml_document doc;
-	doc.load_file(conf.getXmlConfPath());
-
 	while ((c = yylex(arg)) != 0) {
 		switch (c) {
 		case COLUMN: {
 			/* get real columns */
 			Column *col = new Column();
-			if (col->init(doc, arg, false)) {
+			if (col->init(this->conf->getXMLConfiguration(), arg, false)) {
 				stringSet cols = col->getColumns();
 				if (!col->isOperation()) { /* plain value */
 					filter += *cols.begin() + " ";
@@ -196,7 +196,7 @@ int Filter::init()
 	return ret;
 }
 
-time_t Filter::parseTimestamp(std::string str)
+time_t Filter::parseTimestamp(std::string str) const
 {
 	struct tm ctime;
 
@@ -208,6 +208,11 @@ time_t Filter::parseTimestamp(std::string str)
 	return mktime(&ctime);
 }
 
-Filter::Filter(Configuration &conf): conf(conf) {}
+Filter::Filter(Configuration *conf): conf(conf) {}
+
+Filter::Filter(): conf(NULL)
+{
+	this->filterString = "1 = 1";
+}
 
 } /* end of namespace fbitdump */

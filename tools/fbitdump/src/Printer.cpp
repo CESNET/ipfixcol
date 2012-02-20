@@ -44,9 +44,11 @@
 #include <netdb.h>
 #include "protocols.h"
 #include "Column.h"
-#include "Printer.h"
+#include "Values.h"
 #include "Table.h"
 #include "Resolver.h"
+#include "Printer.h"
+#include "Utils.h"
 
 namespace fbitdump
 {
@@ -59,38 +61,56 @@ bool Printer::print(TableManager &tm)
 		return true;
 	}
 
+	this->tableManager = &tm;
+
 
 	/* print table header */
 	if (!conf.getQuiet()) {
+
 		printHeader();
 	}
 
-	Cursor *cursor;
+	const Cursor *cursor;
 	TableManagerCursor *tmc = tm.createCursor();
 	if (tmc == NULL) {
 		/* no tables, no rows */
 		return true;
 	}
 
+	uint64_t numPrinted = 0;
 	while (tmc->next()) {
 		cursor = tmc->getCurrentCursor();
 		printRow(cursor);
+		numPrinted++;
 	}
 
 	delete(tmc);
 
-	/* TODO print nfdump-like statistics, maybe in main program */
-
+	if (!conf.getQuiet()) {
+		printFooter(numPrinted);
+	}
 
 	return true;
 }
 
-void Printer::printHeader()
+void Printer::printHeader() const
 {
+	/* check for statistics header line */
+	if (conf.getStatistics()) {
+		out << "Top " << conf.getMaxRecords() << " "
+			<< *conf.getAggregateColumnsAliases().begin() <<  " ordered by "
+			<< *conf.getOrderByColumn()->getAliases().begin() << std::endl;
+	}
+
 	/* print column names */
 	for (size_t i = 0; i < conf.getColumns().size(); i++) {
 		/* set defined column width */
-		out.width(conf.getColumns()[i]->getWidth());
+		if (conf.getStatistics() && conf.getColumns()[i]->isSummary()) {
+			/* widen for percentage */
+			out.width(conf.getColumns()[i]->getWidth() + this->percentageWidth);
+		} else {
+			out.width(conf.getColumns()[i]->getWidth());
+		}
 
 		/* set defined column alignment */
 		if (conf.getColumns()[i]->getAlignLeft()) {
@@ -106,12 +126,37 @@ void Printer::printHeader()
 
 }
 
-void Printer::printRow(Cursor *cur)
+void Printer::printFooter(uint64_t numPrinted) const
+{
+	out << "Total rows outputed: " << numPrinted << std::endl << "Processed " << this->tableManager->getNumParts() << " tables with ";
+	Utils::formatNumber(this->tableManager->getInitRows(), out, false);
+	out << " rows" << std::endl;
+
+	if (conf.getExtendedStats()) {
+		const TableSummary *st = this->tableManager->getSummary();
+
+		columnVector stats = conf.getStatisticsColumns();
+
+		for (columnVector::const_iterator it = stats.begin(); it != stats.end(); it++) {
+			out << "Total " << (*it)->getName() << ": ";
+			std::string s = "sum(" + *(*it)->getColumns().begin() + ")";
+			Utils::formatNumber(st->getValue(s), out, false);
+			out << std::endl;
+		}
+	}
+}
+
+void Printer::printRow(const Cursor *cur) const
 {
 	/* go over all defined columns */
 	for (size_t i = 0; i < conf.getColumns().size(); i++) {
 		/* set defined column width */
-		out.width(conf.getColumns()[i]->getWidth());
+		if (conf.getStatistics() && conf.getColumns()[i]->isSummary()) {
+			/* widen for percentage */
+			out.width(conf.getColumns()[i]->getWidth() + this->percentageWidth);
+		} else {
+			out.width(conf.getColumns()[i]->getWidth());
+		}
 
 		/* set defined column alignment */
 		if (conf.getColumns()[i]->getAlignLeft()) {
@@ -125,13 +170,13 @@ void Printer::printRow(Cursor *cur)
 	out << "\n"; /* much faster then std::endl */
 }
 
-std::string Printer::printValue(Column *col, Cursor *cur)
+const std::string Printer::printValue(const Column *col, const Cursor *cur) const
 {
 	if (col->isSeparator()) {
 		return col->getName();
 	}
 
-	values *val = col->getValue(cur);
+	const Values *val = col->getValue(cur);
 
 	/* check for missing column */
 	if (val == NULL) {
@@ -165,6 +210,18 @@ std::string Printer::printValue(Column *col, Cursor *cur)
 		}
 	} else {
 		valueStr = val->toString(conf.getPlainNumbers());
+		/* when printing statistics, add percent part */
+		if (conf.getStatistics() && col->isSummary()) {
+			std::ostringstream ss;
+			double sum;
+			std::string name = std::string("sum(") + *col->getColumns().begin() + ")";
+
+			sum = this->tableManager->getSummary()->getValue(name);
+
+			ss.precision(1);
+			ss << std::fixed << " (" << 100*val->toDouble()/sum << "%)";
+			valueStr += ss.str();
+		}
 	}
 
 	/* clean value variable */
@@ -174,10 +231,8 @@ std::string Printer::printValue(Column *col, Cursor *cur)
 
 }
 
-std::string Printer::printIPv4(uint32_t address)
+const std::string Printer::printIPv4(uint32_t address) const
 {
-	char buf[INET_ADDRSTRLEN];
-	struct in_addr in_addr;
 	int ret;
 	Resolver *resolver;
 
@@ -185,9 +240,9 @@ std::string Printer::printIPv4(uint32_t address)
 
 	/* translate IP address to domain name, if user wishes so */
 	if (resolver->isConfigured()) {
-		char host[NI_MAXHOST];
+		std::string host;
 
-		ret = resolver->reverseLookup(address, host, NI_MAXHOST);
+		ret = resolver->reverseLookup(address, host);
 		if (ret == true) {
 			return host;
 		}
@@ -199,6 +254,9 @@ std::string Printer::printIPv4(uint32_t address)
 	 * user don't want to see domain names, or DNS is somehow broken.
 	 * print just IP address
 	 */
+	char buf[INET_ADDRSTRLEN];
+	struct in_addr in_addr;
+
 	in_addr.s_addr = htonl(address);
 	inet_ntop(AF_INET, &in_addr, buf, INET_ADDRSTRLEN);
 
@@ -206,10 +264,8 @@ std::string Printer::printIPv4(uint32_t address)
 	return buf;
 }
 
-std::string Printer::printIPv6(uint64_t part1, uint64_t part2)
+const std::string Printer::printIPv6(uint64_t part1, uint64_t part2) const
 {
-	char buf[INET6_ADDRSTRLEN];
-	struct in6_addr in6_addr;
 	int ret;
 	Resolver *resolver;
 
@@ -217,9 +273,9 @@ std::string Printer::printIPv6(uint64_t part1, uint64_t part2)
 
 	/* translate IP address to domain name, if user wishes so */
 	if (resolver->isConfigured()) {
-		char host[NI_MAXHOST];
+		std::string host;
 
-		ret = resolver->reverseLookup6(part1, part2, host, NI_MAXHOST);
+		ret = resolver->reverseLookup6(part1, part2, host);
 		if (ret == true) {
 			return host;
 		}
@@ -231,6 +287,9 @@ std::string Printer::printIPv6(uint64_t part1, uint64_t part2)
 	 * user don't want to see domain names, or DNS is somehow broken.
 	 * print just IP address
 	 */
+	char buf[INET6_ADDRSTRLEN];
+	struct in6_addr in6_addr;
+
 	*((uint64_t*) &in6_addr.s6_addr) = htobe64(part1);
 	*(((uint64_t*) &in6_addr.s6_addr)+1) = htobe64(part2);
 	inet_ntop(AF_INET6, &in6_addr, buf, INET6_ADDRSTRLEN);
@@ -238,7 +297,7 @@ std::string Printer::printIPv6(uint64_t part1, uint64_t part2)
 	return buf;
 }
 
-std::string Printer::printTimestamp32(uint32_t timestamp)
+const std::string Printer::printTimestamp32(uint32_t timestamp) const
 {
 	time_t timesec = timestamp;
 	struct tm *tm = gmtime(&timesec);
@@ -246,7 +305,7 @@ std::string Printer::printTimestamp32(uint32_t timestamp)
 	return this->printTimestamp(tm, 0);
 }
 
-std::string Printer::printTimestamp64(uint64_t timestamp)
+const std::string Printer::printTimestamp64(uint64_t timestamp) const
 {
 	time_t timesec = timestamp/1000;
 	uint64_t msec = timestamp % 1000;
@@ -255,7 +314,7 @@ std::string Printer::printTimestamp64(uint64_t timestamp)
 	return this->printTimestamp(tm, msec);
 }
 
-std::string Printer::printTimestamp(struct tm *tm, uint64_t msec)
+const std::string Printer::printTimestamp(struct tm *tm, uint64_t msec) const
 {
 	char buff[23];
 
@@ -266,7 +325,7 @@ std::string Printer::printTimestamp(struct tm *tm, uint64_t msec)
 	return buff;
 }
 
-std::string Printer::printTCPFlags(unsigned char flags)
+const std::string Printer::printTCPFlags(unsigned char flags) const
 {
 	std::string result = "......";
 
@@ -292,7 +351,8 @@ std::string Printer::printTCPFlags(unsigned char flags)
 	return result;
 }
 
-std::string Printer::printDuration(uint64_t duration) {
+const std::string Printer::printDuration(uint64_t duration) const
+{
 	static std::ostringstream ss;
 	static std::string str;
 	ss << std::fixed;
@@ -308,7 +368,7 @@ std::string Printer::printDuration(uint64_t duration) {
 
 /* copy output stream and format */
 Printer::Printer(std::ostream &out, Configuration &conf):
-		out(out), conf(conf)
+		out(out), conf(conf), percentageWidth(8)
 {}
 
 

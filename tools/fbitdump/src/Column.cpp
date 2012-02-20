@@ -44,11 +44,11 @@
 namespace fbitdump
 {
 
-bool Column::init(pugi::xml_document &doc, std::string alias, bool aggregate)
+bool Column::init(const pugi::xml_document &doc, const std::string alias, bool aggregate)
 {
 
 	/* search xml for an alias */
-	pugi::xpath_node column = doc.select_single_node(("/columns/column[alias='"+alias+"']").c_str());
+	pugi::xpath_node column = doc.select_single_node(("/configuration/columns/column[alias='"+alias+"']").c_str());
 	/* check what we found */
 	if (column == NULL) {
 		std::cerr << "Column '" << alias << "' not defined" << std::endl;
@@ -97,16 +97,26 @@ bool Column::init(pugi::xml_document &doc, std::string alias, bool aggregate)
 		this->element = column.node().child("value").child_value("element");
 	}
 
+	/* check whether this is a summary column */
+	pugi::xpath_node_set sumColumns = doc.select_nodes("/configuration/summary/column");
+	for (stringSet::const_iterator it = this->aliases.begin(); it != this->aliases.end(); it++) {
+		for (pugi::xpath_node_set::const_iterator i = sumColumns.begin(); i != sumColumns.end(); ++i) {
+			if (*it == i->node().child_value()) {
+				this->summary = true;
+			}
+		}
+	}
+
 	return true;
 }
 
-AST* Column::createValueElement(pugi::xml_node element, pugi::xml_document &doc)
+Column::AST* Column::createValueElement(pugi::xml_node element, const pugi::xml_document &doc)
 {
 
 	/* when we have alias, go down one level */
 	if (element.child_value()[0] == '%') {
 		pugi::xpath_node el = doc.select_single_node(
-				("/columns/column[alias='"
+				("/configuration/columns/column[alias='"
 						+ std::string(element.child_value())
 						+ "']/value/element").c_str());
 		return createValueElement(el.node(), doc);
@@ -115,7 +125,7 @@ AST* Column::createValueElement(pugi::xml_node element, pugi::xml_document &doc)
 	/* create the element */
 	AST *ast = new AST;
 
-	ast->type = fbitdump::value;
+	ast->type = fbitdump::Column::AST::valueType;
 	ast->value = element.child_value();
 	ast->semantics = element.attribute("semantics").value();
 	if (element.attribute("parts")) {
@@ -128,7 +138,7 @@ AST* Column::createValueElement(pugi::xml_node element, pugi::xml_document &doc)
 	return ast;
 }
 
-AST* Column::createOperationElement(pugi::xml_node operation, pugi::xml_document &doc)
+Column::AST* Column::createOperationElement(pugi::xml_node operation, const pugi::xml_document &doc)
 {
 
 	AST *ast = new AST;
@@ -136,13 +146,13 @@ AST* Column::createOperationElement(pugi::xml_node operation, pugi::xml_document
 	std::string type;
 
 	/* set type and operation */
-	ast->type = fbitdump::operation;
+	ast->type = fbitdump::Column::AST::operationType;
 	ast->operation = operation.attribute("name").value()[0];
 	ast->semantics = operation.attribute("semantics").value();
 
 	/* get argument nodes */
-	arg1 = doc.select_single_node(("/columns/column[alias='"+ std::string(operation.child_value("arg1"))+ "']").c_str());
-	arg2 = doc.select_single_node(("/columns/column[alias='"+ std::string(operation.child_value("arg2"))+ "']").c_str());
+	arg1 = doc.select_single_node(("/configuration/columns/column[alias='"+ std::string(operation.child_value("arg1"))+ "']").c_str());
+	arg2 = doc.select_single_node(("/configuration/columns/column[alias='"+ std::string(operation.child_value("arg2"))+ "']").c_str());
 
 	/* get argument type */
 	type = arg1.node().child("value").attribute("type").value();
@@ -170,7 +180,7 @@ AST* Column::createOperationElement(pugi::xml_node operation, pugi::xml_document
 	return ast;
 }
 
-std::string Column::getName()
+const std::string Column::getName() const
 {
 	return this->name;
 }
@@ -180,7 +190,8 @@ void Column::setName(std::string name)
 	this->name = name;
 }
 
-stringSet Column::getAliases() {
+const stringSet Column::getAliases() const
+{
 	return this->aliases;
 }
 
@@ -189,7 +200,7 @@ void Column::addAlias(std::string alias)
 	this->aliases.insert(alias);
 }
 
-int Column::getWidth()
+int Column::getWidth() const
 {
 	return this->width;
 }
@@ -199,7 +210,7 @@ void Column::setWidth(int width)
 	this->width = width;
 }
 
-bool Column::getAlignLeft()
+bool Column::getAlignLeft() const
 {
 	return this->alignLeft;
 }
@@ -209,14 +220,13 @@ void Column::setAlignLeft(bool alignLeft)
 	this->alignLeft = alignLeft;
 }
 
-values* Column::getValue(Cursor *cur)
+const Values* Column::getValue(const Cursor *cur) const
 {
 	return evaluate(this->ast, cur);
 }
 
-values *Column::evaluate(AST *ast, Cursor *cur)
+const Values *Column::evaluate(AST *ast, const Cursor *cur) const
 {
-	values *retVal = NULL;
 
 	/* check input AST */
 	if (ast == NULL) {
@@ -225,12 +235,12 @@ values *Column::evaluate(AST *ast, Cursor *cur)
 
 	/* evaluate AST */
 	switch (ast->type) {
-		case fbitdump::value:{
-			retVal = new values;
+		case fbitdump::Column::AST::valueType:{
+			Values *retVal = new Values;
 			int part=0;
-			stringSet &tmpSet = this->getColumns(ast);
+			const stringSet &tmpSet = this->getColumns(ast);
 
-			for (stringSet::iterator it = tmpSet.begin(); it != tmpSet.end(); it++) {
+			for (stringSet::const_iterator it = tmpSet.begin(); it != tmpSet.end(); it++) {
 				/* get value from table */
 				if (!cur->getColumn(*it, *retVal, part)) {
 					delete retVal;
@@ -239,9 +249,10 @@ values *Column::evaluate(AST *ast, Cursor *cur)
 				part++;
 			}
 
+			return retVal;
 			break;}
-		case fbitdump::operation:
-			values *left, *right;
+		case fbitdump::Column::AST::operationType:{
+			const Values *left, *right, *retVal = NULL;
 
 			left = evaluate(ast->left, cur);
 			right = evaluate(ast->right, cur);
@@ -253,18 +264,19 @@ values *Column::evaluate(AST *ast, Cursor *cur)
 			delete left;
 			delete right;
 
-			break;
+			return retVal;
+			break;}
 		default:
 			std::cerr << "Unknown AST type" << std::endl;
 			break;
 	}
 
-	return retVal;
+	return NULL;
 }
 
-values* Column::performOperation(values *left, values *right, unsigned char op)
+const Values* Column::performOperation(const Values *left, const Values *right, unsigned char op) const
 {
-	values *result = new values;
+	Values *result = new Values;
 	/* TODO add some type checks maybe... */
 	switch (op) {
 				case '+':
@@ -296,12 +308,12 @@ Column::~Column()
 	delete this->ast;
 }
 
-stringSet& Column::getColumns(AST* ast)
+const stringSet& Column::getColumns(AST* ast) const
 {
 	/* use cached values if possible */
 	if (ast->cached) return ast->astColumns;
 
-	if (ast->type == fbitdump::value) {
+	if (ast->type == fbitdump::Column::AST::valueType) {
 		if (ast->semantics != "flows") {
 			if (ast->parts > 1) {
 				for (int i = 0; i < ast->parts; i++) {
@@ -333,7 +345,7 @@ stringSet& Column::getColumns(AST* ast)
 	return ast->astColumns;
 }
 
-stringSet Column::getColumns()
+const stringSet Column::getColumns() const
 {
 	/* check for name column */
 	if (this->ast == NULL) {
@@ -343,7 +355,7 @@ stringSet Column::getColumns()
 	return getColumns(this->ast);
 }
 
-bool Column::getAggregate()
+bool Column::getAggregate() const
 {
 
 	/* Name columns are not aggregable */
@@ -354,16 +366,16 @@ bool Column::getAggregate()
 	return false;
 }
 
-bool Column::getAggregate(AST* ast)
+bool Column::getAggregate(AST* ast) const
 {
 
 	/* AST type must be 'value' and aggregation string must not be empty */
-	if (ast->type == fbitdump::value) {
+	if (ast->type == fbitdump::Column::AST::valueType) {
 		if (!ast->aggregation.empty()) {
 			return true;
 		}
 	/* or both sides of operation must be aggregable */
-	} else if (ast->type == fbitdump::operation) {
+	} else if (ast->type == fbitdump::Column::AST::operationType) {
 		return getAggregate(ast->left) && getAggregate(ast->right);
 	}
 
@@ -381,12 +393,12 @@ void Column::setAggregation(bool aggregation)
 	this->aggregation = aggregation;
 }
 
-std::string Column::getNullStr()
+const std::string Column::getNullStr() const
 {
 	return this->nullStr;
 }
 
-std::string Column::getSemantics()
+const std::string Column::getSemantics() const
 {
 	if (this->ast == NULL) {
 		return "";
@@ -395,24 +407,31 @@ std::string Column::getSemantics()
 	return this->ast->semantics;
 }
 
-bool Column::isSeparator() {
+bool Column::isSeparator() const
+{
 	if (this->ast == NULL) return true;
 	return false;
 }
 
-bool Column::isOperation() {
-	if (this->ast != NULL && this->ast->type == fbitdump::operation) {
+bool Column::isOperation() const
+{
+	if (this->ast != NULL && this->ast->type == fbitdump::Column::AST::operationType) {
 		return true;
 	}
 
 	return false;
 }
 
-std::string Column::getElement()
+const std::string Column::getElement() const
 {
 	return this->element;
 }
 
-Column::Column(): nullStr("NULL"), width(0), alignLeft(false), ast(NULL), aggregation(false) {}
+bool Column::isSummary() const
+{
+	return this->summary;
+}
+
+Column::Column(): nullStr("NULL"), width(0), alignLeft(false), ast(NULL), aggregation(false), summary(false) {}
 
 }

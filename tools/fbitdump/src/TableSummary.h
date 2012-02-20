@@ -1,7 +1,7 @@
 /**
- * \file fbitdump.cpp
+ * \file TableSummary.h
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Tool for ipfix fastbit format querying
+ * \brief Header of class handling summary for TableManager
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,68 +37,46 @@
  *
  */
 
+#ifndef TABLESUMMARY_H_
+#define TABLESUMMARY_H_
+
+#include "typedefs.h"
+#include "Values.h"
+
+namespace fbitdump {
+
+typedef std::map<std::string, double> valuesMap;
+
 /**
- * \mainpage IPFIX Dump Developer's Documentation
+ * \brief Computes table summary on given columns
  *
- * This documents provides documentation of IPFIX Dump utility (ipfixdump).
+ * Creates copies of given tables, runs a query that sums  up given columns and combines the results
+ * When given table does not have required summary column, stores zero
  */
-
-#include "Configuration.h"
-#include "TableManager.h"
-#include "Printer.h"
-#include "Filter.h"
-#include "IndexManager.h"
-
-using namespace fbitdump;
-
-int main(int argc, char *argv[])
+class TableSummary
 {
-	int ret;
+public:
 
-	/* raise limit for cache size, when there is more memory available */
-	ibis::fileManager::adjustCacheSize(2048000000);
+	/**
+	 * \brief Constructor takes Tables in vector and reads summary data from them
+	 *
+	 * @param tables Tables to create summary data for
+	 * @param summaryColumns set of columns to create summaries for
+	 */
+	TableSummary(tableVector const &tables, stringSet const &summaryColumns);
 
-//	ibis::gVerbose = 7;
-	ibis::gParameters().add("fileManager.minMapSize", "50");
+	/**
+	 * \brief Returns summary value for specified column
+	 * @param column Column to return the summary value for
+	 * @return double summary value
+	 */
+	double getValue(std::string &column) const;
 
-	/* create configuration to work with */
-	Configuration conf;
+private:
+	valuesMap values; /**< Map of column names and Values */
+};
 
-	/* process configuration and check whether to end the program */
-	ret = conf.init(argc, argv);
-	if (ret != 0) return ret;
+} /* end of fbitdump namespace */
 
-	/* check whether to delete indexes */
-	if (conf.getDeleteIndexes()) {
-		IndexManager::deleteIndexes(conf);
-	}
 
-	/* create filter */
-	Filter filter(&conf);
-	/* initialise filter and check correctness */
-	ret = filter.init();
-	if (ret != 0) return ret;
-
-	/* initialise printer */
-	Printer print(std::cout, conf);
-
-	/* initialise tables */
-	TableManager tm(conf);
-
-	/* check whether to build indexes */
-	if (conf.getCreateIndexes()) {
-		IndexManager::createIndexes(conf, tm);
-	}
-
-	/* do some work */
-	if (conf.getAggregate()) {
-		tm.aggregate(conf.getAggregateColumns(), conf.getSummaryColumns(), filter);
-	} else {
-		tm.filter(filter);
-	}
-
-	/* print tables */
-	print.print(tm);
-
-	return 0;
-}
+#endif /* TABLESUMMARY_H_ */

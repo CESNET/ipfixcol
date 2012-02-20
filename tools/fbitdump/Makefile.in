@@ -21,8 +21,11 @@ SRCS    = fbitdump.cpp \
 		TableManager.cpp \
 		TableManagerCursor.cpp \
 		Cursor.cpp \
-		AST.cpp \
-		Resolver.cpp
+		Values.cpp \
+		Resolver.cpp \
+		TableSummary.cpp \
+		Utils.cpp \
+		IndexManager.cpp
 OBJDIR  = .obj
 SRCDIR  = src
 SRC3RD  = 3rdparty
@@ -67,6 +70,9 @@ fbitdump: $(OBJS) VERSION
 
 # Printer is specified extra with -fno-strict-aliasing for performance reasons
 $(OBJDIR)/Printer.o: $(SRCDIR)/Printer.cpp
+	$(CXX) $(CXXFLAGS) -fno-strict-aliasing -c $< -o $@
+
+$(OBJDIR)/Resolver.o: $(SRCDIR)/Resolver.cpp
 	$(CXX) $(CXXFLAGS) -fno-strict-aliasing -c $< -o $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
@@ -146,7 +152,7 @@ tarball: $(CONF) $(SRCDIR)
 	mkdir $(NAME)-$(VERSION); \
 	rm -rf $(RPMDIR)/SOURCES/; \
 	mkdir -p $(RPMDIR)/SOURCES/; \
-	for i in $(SRC3RD) $(SRCDIR) $(CONF) $(MANDIR); do \
+	for i in $(SRC3RD) $(SRCDIR) $(CONF) $(MANDIR)/*.dbk; do \
 		[ "$$i" != "$${i%/*}" -a ! -d $(NAME)-$(VERSION)/$${i%/*} ] && mkdir -p $(NAME)-$(VERSION)/$${i%/*}; \
 		cp -r $$i $(NAME)-$(VERSION)/$$i; \
 	done;
