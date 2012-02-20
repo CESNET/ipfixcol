@@ -99,17 +99,7 @@
 			<name>Store data using ipfix file format</name>
 			<fileWriter>
 				<fileFormat>ipfix</fileFormat>
-				<path>storagePath</path>
-				<dumpInterval>
-					<timeWindow>300</timeWindow>
-					<timeAlignment>yes</timeAlignment>
-					<recordLimit>no</recordLimit>
-				</dumpInterval>
-				<namingStrategy>
-					<type>time</type>
-					<prefix>ic</prefix>
-				</namingStrategy>
-				<onTheFlightIndexes>yes</onTheFlightIndexes>
+				<file>file://tmp/collected-records-sctp.ipfix</file>
 			</fileWriter>
 		</destination>
 	</exportingProcess>
