@@ -1,7 +1,7 @@
 /**
- * \file AST.h
+ * \file Values.h
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Header of struct for managing abstract syntax tree
+ * \brief Header of struct for managing values of different types
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,8 +37,8 @@
  *
  */
 
-#ifndef AST_H_
-#define AST_H_
+#ifndef VALUES_H_
+#define VALUES_H_
 
 #include "typedefs.h"
 
@@ -47,10 +47,14 @@ namespace fbitdump {
 #define MAX_PARTS 2
 
 /**
- * \brief structure for passing values of unknown type
+ * \brief Structure for passing values of unknown type
+ *
+ * It is possible to compare the values with overloaded operators
+ * Contains functions to put value to long, double and string
  */
-struct values
+class Values
 {
+public:
 	ibis::TYPE_T type;
 	union
 	{
@@ -73,7 +77,7 @@ struct values
 	 * @param part which part to convert
 	 * @return int64_t converted value
 	 */
-	int64_t toLong(int part=0);
+	int64_t toLong(int part=0) const;
 
 	/**
 	 * \brief Convert value to double type
@@ -81,7 +85,7 @@ struct values
 	 * @param part which part to convert
 	 * @return converted value of type double
 	 */
-	double toDouble(int part=0);
+	double toDouble(int part=0) const;
 
 	/**
 	 * \brief Return string representation of value
@@ -89,52 +93,52 @@ struct values
 	 * @param plainNumbers Don't use M,G format for long numbers
 	 * @return String representation of value
 	 */
-	std::string toString(bool plainNumbers);
+	std::string toString(bool plainNumbers) const;
+
+	/* comparison operators overload */
+	friend bool operator==(const Values &lhs, const Values &rhs);
+	friend bool operator< (const Values &lhs, const Values &rhs);
+	friend bool operator!=(const Values &lhs, const Values &rhs);
+	friend bool operator> (const Values &lhs, const Values &rhs);
+	friend bool operator>= (const Values &lhs, const Values &rhs);
+	friend bool operator<= (const Values &lhs, const Values &rhs);
+
+private:
+
 };
 
-/**
- * \brief types for AST structure
- */
-enum astTypes
+inline bool operator== (const Values &lhs, const Values &rhs)
 {
-	value,   //!< value
-	operation//!< operation
-};
+	/* if necessary, this could decide upon type. it could also take parts into consideration */
+	return lhs.toDouble(0) == rhs.toDouble(0);
+}
 
-/**
- * \brief Abstract syntax tree structure
- *
- * Describes the way that column value is constructed from database columns
- */
-struct AST
+inline bool operator< (const Values &lhs, const Values &rhs)
 {
-	astTypes type; /**< AST type */
-	unsigned char operation; /**< one of '/', '*', '-', '+' */
-	std::string semantics; /**< semantics of the column */
-	std::string value; /**< value (column name) */
-	std::string aggregation; /**< how to aggregate this column */
-	int parts; /**< number of parts of column (ipv6 => e0id27p0 and e0id27p1)*/
-	AST *left; /**< left subtree */
-	AST *right; /**< right subtree */
+	return lhs.toDouble(0) < rhs.toDouble(0);
+}
 
-	stringSet astColumns; /**< Cached columns set (computed in Column::getColumns(AST*)) */
-	bool cached;
+inline bool operator!=(const Values &lhs, const Values &rhs)
+{
+	return !operator==(lhs,rhs);
+}
 
-	/**
-	 * \brief AST constructor - sets default values
-	 */
-	AST(): parts(1), left(NULL), right(NULL), cached(false) {}
+inline bool operator> (const Values &lhs, const Values &rhs)
+{
+	return  operator< (rhs,lhs);
+}
 
-	/**
-	 * \brief AST destructor
-	 */
-	~AST()
-	{
-		delete left;
-		delete right;
-	}
-};
+inline bool operator>= (const Values &lhs, const Values &rhs)
+{
+	return !operator< (lhs,rhs);
+}
+
+inline bool operator<= (const Values &lhs, const Values &rhs)
+{
+	return !operator> (lhs,rhs);
+}
+
 
 } /* end of namespace fbitdump */
 
-#endif /* AST_H_ */
+#endif /* VALUES_H_ */

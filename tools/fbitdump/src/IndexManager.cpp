@@ -1,7 +1,7 @@
 /**
- * \file fbitdump.cpp
+ * \file IndexManager.cpp
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Tool for ipfix fastbit format querying
+ * \brief Class that works with indexes
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,68 +37,54 @@
  *
  */
 
-/**
- * \mainpage IPFIX Dump Developer's Documentation
- *
- * This documents provides documentation of IPFIX Dump utility (ipfixdump).
- */
-
-#include "Configuration.h"
-#include "TableManager.h"
-#include "Printer.h"
-#include "Filter.h"
 #include "IndexManager.h"
 
-using namespace fbitdump;
+namespace fbitdump {
 
-int main(int argc, char *argv[])
+void IndexManager::deleteIndexes(Configuration &conf)
 {
-	int ret;
-
-	/* raise limit for cache size, when there is more memory available */
-	ibis::fileManager::adjustCacheSize(2048000000);
-
-//	ibis::gVerbose = 7;
-	ibis::gParameters().add("fileManager.minMapSize", "50");
-
-	/* create configuration to work with */
-	Configuration conf;
-
-	/* process configuration and check whether to end the program */
-	ret = conf.init(argc, argv);
-	if (ret != 0) return ret;
-
-	/* check whether to delete indexes */
-	if (conf.getDeleteIndexes()) {
-		IndexManager::deleteIndexes(conf);
+	stringVector parts = conf.getPartsNames();
+	stringSet indexes = conf.getColumnIndexes();
+	std::string rmString = "rm -f ";
+	for (stringVector::const_iterator it = parts.begin(); it != parts.end(); it++) {
+		rmString += *it + "/";
+		if (indexes.size() == 0) {
+			rmString += "*";
+		} else {
+			if (indexes.size() > 1) rmString += "{";
+			for (stringSet::const_iterator stringIt = indexes.begin(); stringIt != indexes.end(); stringIt++) {
+				rmString += *stringIt;
+				if (indexes.size() > 1)	rmString += ",";
+			}
+			/* change last comma to right curly bracket */
+			if (indexes.size() > 1) rmString[rmString.size()-1] = '}';
+		}
+		rmString += ".idx ";
 	}
-
-	/* create filter */
-	Filter filter(&conf);
-	/* initialise filter and check correctness */
-	ret = filter.init();
-	if (ret != 0) return ret;
-
-	/* initialise printer */
-	Printer print(std::cout, conf);
-
-	/* initialise tables */
-	TableManager tm(conf);
-
-	/* check whether to build indexes */
-	if (conf.getCreateIndexes()) {
-		IndexManager::createIndexes(conf, tm);
-	}
-
-	/* do some work */
-	if (conf.getAggregate()) {
-		tm.aggregate(conf.getAggregateColumns(), conf.getSummaryColumns(), filter);
-	} else {
-		tm.filter(filter);
-	}
-
-	/* print tables */
-	print.print(tm);
-
-	return 0;
+	std::cout << "Deleting indexes" << std::endl;
+	std::cout << rmString << std::endl;
+	system(rmString.c_str());
 }
+
+void IndexManager::createIndexes(Configuration &conf, TableManager &tm)
+{
+	ibis::partList parts = tm.getParts();
+	stringSet indexes = conf.getColumnIndexes();
+	for (ibis::partList::iterator partIt = parts.begin(); partIt != parts.end(); partIt++) {
+		std::cout << "Building indexes on part " << (*partIt)->currentDataDir() << " ... ";
+		if (indexes.size() == 0) {
+			(*partIt)->buildIndexes(NULL, 0);
+			std::cout << std::endl;
+		} else {
+			ibis::table *table = ibis::table::create(**partIt);
+			for (stringSet::const_iterator stringIt = indexes.begin(); stringIt != indexes.end(); stringIt++) {
+				table->buildIndex(stringIt->c_str(), NULL);
+				std::cout << *stringIt << " ";
+			}
+			std::cout << std::endl;
+			delete table;
+		}
+	}
+}
+
+} /* end of fbitdump namespace */

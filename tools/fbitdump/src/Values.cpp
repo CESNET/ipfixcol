@@ -1,7 +1,7 @@
 /**
- * \file AST.cpp
+ * \file Values.cpp
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Struct for managing abstract syntax tree
+ * \brief Struct for managing values of different types
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,31 +37,12 @@
  *
  */
 
-#include "AST.h"
+#include "Values.h"
+#include "Utils.h"
 
 namespace fbitdump {
 
-/**
- * \brief Formats number 'num' to ostringstream 'ss'
- * uses precision 1 if output has units and 'defPrec' otherwise
- * don't format if 'plainNumbers' is set
- */
-#define formatNumber(num, ss, plainNumbers) \
-		ss << std::fixed; \
-		if (num <= 1000000 || plainNumbers) { \
-			ss.precision(0); \
-			ss << num; \
-		} else if (num > 1000000000) {\
-			ss.precision(1); \
-			ss << (float) num/1000000000 << " G"; \
-		} else if (num > 1000000) { \
-			ss.precision(1); \
-			ss << (float) num/1000000 << " M"; \
-		} \
-		ss.precision(0); /* set zero precision for other numbers */
-
-
-int64_t values::toLong(int part)
+int64_t Values::toLong(int part) const
 {
 	switch (type) {
 	case ibis::BYTE:
@@ -92,7 +73,7 @@ int64_t values::toLong(int part)
 	}
 }
 
-double values::toDouble(int part)
+double Values::toDouble(int part) const
 {
 	switch (type) {
 	case ibis::FLOAT:
@@ -109,7 +90,7 @@ double values::toDouble(int part)
 	}
 }
 
-std::string values::toString(bool plainNumbers)
+std::string Values::toString(bool plainNumbers) const
 {
 	std::string valStr;
 	/* this is static for performance reason */
@@ -135,27 +116,27 @@ std::string values::toString(bool plainNumbers)
 		valStr = ss.str();
 		break;
 	case ibis::INT:
-		formatNumber(this->value[0].int32, ss, plainNumbers);
+		Utils::formatNumber(this->value[0].int32, ss, plainNumbers);
 		valStr = ss.str();
 		break;
 	case ibis::UINT:
-		formatNumber(this->value[0].uint32, ss, plainNumbers);
+		Utils::formatNumber(this->value[0].uint32, ss, plainNumbers);
 		valStr = ss.str();
 		break;
 	case ibis::LONG:
-		formatNumber(this->value[0].int64, ss, plainNumbers);
+		Utils::formatNumber(this->value[0].int64, ss, plainNumbers);
 		valStr = ss.str();
 		break;
 	case ibis::ULONG:
-		formatNumber(this->value[0].uint64, ss, plainNumbers);
+		Utils::formatNumber(this->value[0].uint64, ss, plainNumbers);
 		valStr = ss.str();
 		break;
 	case ibis::FLOAT:
-		formatNumber(this->value[0].flt, ss, plainNumbers);
+		Utils::formatNumber(this->value[0].flt, ss, plainNumbers);
 		valStr = ss.str();
 		break;
 	case ibis::DOUBLE:
-		formatNumber(this->value[0].dbl, ss, plainNumbers);
+		Utils::formatNumber(this->value[0].dbl, ss, plainNumbers);
 		valStr = ss.str();
 		break;
 	case ibis::TEXT:

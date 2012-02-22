@@ -88,14 +88,18 @@
 			<varlistentry>
 				<term>-d</term>
 				<listitem>
-					<simpara>Daemonize the tool after startup.</simpara>
+					<simpara>
+						Daemonize the tool after startup. To terminate daemonized process, send SIGINT, SIGQUIT or SIGTERM signal. 
+						When multiple ipfixcol processes are running, parent process waits for childs after first signal. 
+						Send the signal again or kill the childs to end the process.
+					</simpara>
 				</listitem>
 			</varlistentry>
 			
 			<varlistentry>
 				<term>-v <replaceable class="parameter">level</replaceable></term>
 				<listitem>
-					<simpara>Set ipfixcol verbosity level to <replaceable class="parameter">level</replaceable>.</simpara>
+					<simpara>Set ipfixcol verbosity level to <replaceable class="parameter">level</replaceable>. The higher the number, the more information is printed.</simpara>
 				</listitem>
 			</varlistentry>
 
@@ -106,6 +110,10 @@
 	<refsect1>
 		<title>Configuration</title>
 		<simpara>For details on ipfixcol startup configuration see <emphasis>/etc/ipfixcol/startup.xml</emphasis>.</simpara>
+		<simpara>
+			Each input plugin starts up its own process.
+			When using only one protocol, disable other input plugins by removing their &lt;collectingProcess&gt; configuration.
+		</simpara>
 	</refsect1>
 
 	<refsect1>

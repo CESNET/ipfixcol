@@ -49,6 +49,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <netdb.h>
+#include "Utils.h"
 
 
 namespace fbitdump {
@@ -59,9 +60,12 @@ namespace fbitdump {
 int Configuration::init(int argc, char *argv[])
 {
 	char c;
+	bool maxCountSet = false;
 	stringVector tables;
 	std::string filterFile;
 	std::string optionM;	/* optarg for option -M */
+	std::string optionm;	/* optarg value for option -m */
+	char *indexes = NULL;	/* indexes optarg to be parsed later */
 
 	/* get program name without execute path */
 	this->appName = ((this->appName = strrchr (argv[0], '/')) != NULL) ? (this->appName + 1) : argv[0];
@@ -96,61 +100,87 @@ int Configuration::init(int argc, char *argv[])
 				this->aggregateColumnsAliases.insert("%pr");
 			}
 			break;
-		case 'A': /* aggregate on specific columns */
-			char *token;
-			this->aggregate = true;
-			/* add aggregate columns to set */
-			this->aggregateColumnsAliases.clear();
-			token = strtok(optarg, ",");
-			if (token == NULL) {
-				help();
-				return -2;
-			} else {
-				this->aggregateColumnsAliases.insert(token);
-				while ((token = strtok(NULL, ",")) != NULL) {
-					this->aggregateColumnsAliases.insert(token);
-				}
-			}
-			break;
+		case 'A': {/* aggregate on specific columns */
+			int ret = parseAggregateArg(optarg);
+			if (ret != 0) return ret;
+			break;}
 		case 'f':
 				filterFile = optarg;
 			break;
 		case 'n':
-			NOT_SUPPORTED
+			/* same as -c, but -c takes precedence */
+			if (!maxCountSet)
+				this->maxRecords = atoi(optarg);
+			maxCountSet = true; /* so that statistics knows whether to change the value */
 			break;
 		case 'c': /* number of records to display */
-				this->maxRecords = atoi(optarg);
+			this->maxRecords = atoi(optarg);
+			maxCountSet = true; /* so that statistics knows whether to change the value */
 			break;
 		case 'D': {
 				char *nameserver;
 
 				nameserver = optarg;
-
-				this->resolver->setNameserver(nameserver);
-
-				/* enable DNS caching - table for 1000 entries */
-				this->resolver->enableCache(1000);
-
+				this->resolver = new Resolver(nameserver);
 			}
 			break;
 		case 'N': /* print plain numbers */
-				this->plainNumbers = true;
+			this->plainNumbers = true;
 			break;
-		case 's':
-			NOT_SUPPORTED
-			break;
+		case 's': {
+			/* Similar to -A option*/
+			this->statistics = true;
+
+			/* we support column/order for convenience */
+			std::string arg = optarg;
+			std::string::size_type pos;
+			char parseArg[250];
+			if ((pos = arg.find('/')) != std::string::npos) { /* ordering column specified */
+				if (pos > 250) { /* constant char array */
+					std::cerr << "Argument for option -s is too long" << std::endl;
+					return -3;
+				}
+				/* column name is before '/' */
+				strncpy(parseArg, optarg, pos);
+			} else { /* use whole optarg as column name */
+				strcpy(parseArg, optarg);
+			}
+
+			int ret = parseAggregateArg(parseArg);
+			if (ret != 0) return ret;
+
+			this->statistics = true;
+
+			/* sets default "-c 10", "-m %fl"*/
+			if (!maxCountSet) this->maxRecords = 10;
+			if (this->optm == false) {
+				if (pos != std::string::npos) /* '/' found in optarg -> we have ordering column */
+					optionm = optarg+pos+1;
+				else
+					optionm = "%fl DESC";
+
+				/* descending ordering for statistics */
+				this->orderAsc = false;
+				this->optm = true;
+			}
+
+			/* Print extended bottom stats since we already have the values */
+			this->extendedStats = true;
+
+			break;}
 		case 'q':
 				this->quiet = true;
+			break;
+		case 'e':
+			this->extendedStats = true;
 			break;
 		case 'I':
 			NOT_SUPPORTED
 			break;
 		case 'M':
 			optionM = optarg;
-			/* this option will be processed later (it depends on -r or -R */
-
+			/* this option will be processed later (it depends on -r or -R) */
 			break;
-
 		case 'r': {/* file to open */
                 if (optarg == std::string("")) {
                 	help();
@@ -167,6 +197,9 @@ int Configuration::init(int argc, char *argv[])
 		}
 		case 'm':
 			this->optm = true;
+			if (optarg != NULL)
+				optionm = optarg;
+			else optionm = "%ts"; /* default is timestamp column */
 			break;
 
 		case 'R':
@@ -188,6 +221,18 @@ int Configuration::init(int argc, char *argv[])
 		case 't':
 				this->timeWindow = optarg;
 			break;
+		case 'i': /* create indexes */
+			this->createIndexes = true;
+			if (optarg != NULL) {
+				indexes = strdup(optarg);
+			}
+			break;
+		case 'd': /* delete indexes */
+			this->deleteIndexes = true;
+			if (optarg != NULL) {
+				indexes = strdup(optarg);
+			}
+			break;
 		default:
 			help ();
 			return -1;
@@ -195,10 +240,30 @@ int Configuration::init(int argc, char *argv[])
 		}
 	}
 
+	/* open XML configuration file */
+	if (!this->doc.load_file(this->getXmlConfPath())) {
+		std::cerr << "XML '"<< this->getXmlConfPath() << "' with columns configuration cannot be loaded!" << std::endl;
+		return -4;
+	}
+
 	if (!optionM.empty()) {
 		/* process -M option, this option depends on -r or -R */
 		processMOption(tables, optionM.c_str());
 	}
+
+	/* allways process option -m, we need to know  whether aggregate or not */
+	if (this->optm) {
+		this->processmOption(optionm);
+	}
+
+	/* set unconfigured resolver if necessary */
+	if (this->resolver == NULL) {
+		this->resolver = new Resolver(NULL);
+	}
+
+	/* parse indexes line */
+	this->parseIndexColumns(indexes);
+	free(indexes);
 
 	/* read filter */
 	if (optind < argc) {
@@ -221,9 +286,6 @@ int Configuration::init(int argc, char *argv[])
 		/* set default filter */
 		this->filter = "1=1";
 	}
-
-	/* set default order (by timestamp) */
-	this->order.push_back("%ts");
 
 	/* TODO add format to print everything */
 	if (this->format.empty() || this->format == "line") {
@@ -314,18 +376,13 @@ int Configuration::searchForTableParts(stringVector &tables)
 
 void Configuration::parseFormat(std::string format)
 {
-	Column *col;
-	regex_t reg;
-	int err;
-	regmatch_t matches[1];
+	Column *col; /* newly created column pointer */
+	regex_t reg; /* the regular expresion structure */
+	int err; /* check for regexec error */
+	regmatch_t matches[1]; /* array of regex matches (we need only one) */
+	bool removeNext = false; /* when removing column, remove the separator after it */
 
-	/* Open XML configuration file */
-	pugi::xml_document doc;
-	if (!doc.load_file(COLUMNS_XML)) {
-		std::cerr << "XML '"<< COLUMNS_XML << "' with columns configuration cannot be loaded!" << std::endl;
-	}
-
-	/* prepare regular expresion */
+		/* prepare regular expresion */
 	regcomp(&reg, "%[a-zA-Z0-9]+", REG_EXTENDED);
 
 	/* go over whole format string */
@@ -333,25 +390,49 @@ void Configuration::parseFormat(std::string format)
 		/* run regular expression match */
 		if ((err = regexec(&reg, format.c_str(), 1, matches, 0)) == 0) {
 			/* check for columns separator */
-			if (matches[0].rm_so != 0 ) {
+			if (matches[0].rm_so != 0 && !removeNext) {
 				col = new Column();
 				col->setName(format.substr(0, matches[0].rm_so));
 				this->columns.push_back(col);
 			}
 
 			col = new Column();
-			if (col->init(doc, format.substr(matches[0].rm_so, matches[0].rm_eo - matches[0].rm_so), this->aggregate)) {
-				this->columns.push_back(col);
-			} else {
-				delete col;
-			}
-
+			bool ok = true;
+			std::string alias = format.substr(matches[0].rm_so, matches[0].rm_eo - matches[0].rm_so);
 			/* discard processed part of the format string */
 			format = format.substr(matches[0].rm_eo);
+
+			do {
+				if ((ok = col->init(this->doc, alias, this->aggregate)) == false) break;
+
+				/* check that column is aggregable (is a summary column) or is aggregated */
+
+				if (!this->getAggregate()) break; /* not aggregating, no proglem here */
+				if (col->getAggregate()) break; /* collumn is a summary column, ok */
+
+				stringSet resultSet, aliasesSet = col->getAliases();
+				std::set_intersection(aliasesSet.begin(), aliasesSet.end(), this->aggregateColumnsAliases.begin(),
+						this->aggregateColumnsAliases.end(), std::inserter(resultSet, resultSet.begin()));
+
+				if (resultSet.empty()) { /* the column is not and aggregation column it will NOT have any value*/
+					ok = false;
+					break;
+				}
+			} while (false);
+
+			/* use the column only if everything was ok */
+			if (!ok) {
+				delete col;
+				removeNext = true;
+			}
+			else {
+				this->columns.push_back(col);
+				removeNext = false;
+			}
 		} else if ( err != REG_NOMATCH ) {
 			std::cerr << "Bad output format string" << std::endl;
 			break;
-		} else { /* rest is column separator */
+		} else if (!removeNext) { /* rest is column separator */
 			col = new Column();
 			col->setName(format.substr(0, matches[0].rm_so));
 			this->columns.push_back(col);
@@ -361,31 +442,27 @@ void Configuration::parseFormat(std::string format)
 	regfree(&reg);
 }
 
-stringVector Configuration::getPartsNames()
+const stringVector Configuration::getPartsNames() const
 {
 	return this->parts;
 }
 
-std::string Configuration::getFilter()
+std::string Configuration::getFilter() const
 {
 	return this->filter;
 }
 
-stringSet Configuration::getAggregateColumns()
+const stringSet Configuration::getAggregateColumns() const
 {
 	stringSet aggregateColumns;
 	Column *col;
 
-	/* Open XML configuration file */
-	pugi::xml_document doc;
-	doc.load_file(this->getXmlConfPath());
-
 	/* go over all aliases */
-	for (stringSet::iterator aliasIt = this->aggregateColumnsAliases.begin();
+	for (stringSet::const_iterator aliasIt = this->aggregateColumnsAliases.begin();
 			aliasIt != this->aggregateColumnsAliases.end(); aliasIt++) {
 
 		col = new Column();
-		if (col->init(doc, *aliasIt, this->aggregate)) {
+		if (col->init(this->doc, *aliasIt, this->aggregate)) {
 			stringSet cols = col->getColumns();
 			aggregateColumns.insert(cols.begin(), cols.end());
 		}
@@ -395,12 +472,12 @@ stringSet Configuration::getAggregateColumns()
 	return aggregateColumns;
 }
 
-stringSet Configuration::getSummaryColumns()
+const stringSet Configuration::getSummaryColumns() const
 {
 	stringSet summaryColumns, tmp;
 
 	/* go over all columns */
-	for (columnVector::iterator it = columns.begin(); it != columns.end(); it++) {
+	for (columnVector::const_iterator it = columns.begin(); it != columns.end(); it++) {
 		/* if column is aggregable (has summarizable columns) */
 		if ((*it)->getAggregate()) {
 			tmp = (*it)->getColumns();
@@ -410,37 +487,70 @@ stringSet Configuration::getSummaryColumns()
 	return summaryColumns;
 }
 
-stringVector Configuration::getOrder()
+const Column *Configuration::getOrderByColumn() const
 {
-	return this->order;
+	return this->orderColumn;
 }
 
-bool Configuration::getPlainNumbers()
+bool Configuration::getPlainNumbers() const
 {
 	return this->plainNumbers;
 }
 
-size_t Configuration::getMaxRecords()
+size_t Configuration::getMaxRecords() const
 {
 	return this->maxRecords;
 }
 
-bool Configuration::getAggregate()
+bool Configuration::getAggregate() const
 {
 	return this->aggregate;
 }
 
-bool Configuration::getQuiet()
+bool Configuration::getQuiet() const
 {
 	return this->quiet;
 }
 
-columnVector& Configuration::getColumns()
+const columnVector& Configuration::getColumns() const
 {
 	return this->columns;
 }
 
-std::string Configuration::version()
+const stringSet& Configuration::getAggregateColumnsAliases() const
+{
+	return this->aggregateColumnsAliases;
+}
+
+const pugi::xml_document& Configuration::getXMLConfiguration() const
+{
+	return this->doc;
+}
+
+columnVector Configuration::getStatisticsColumns() const
+{
+	columnVector cols;
+
+	for (columnVector::const_iterator it = this->columns.begin(); it != this->columns.end(); it++) {
+		if ((*it)->isSummary()) {
+			cols.push_back(*it);
+		}
+	}
+
+	return cols;
+}
+
+bool Configuration::getStatistics() const
+{
+	return this->statistics;
+}
+
+bool Configuration::getExtendedStats() const
+{
+	return this->extendedStats;
+}
+
+const std::string Configuration::version() const
 {
 	std::ifstream ifs;
 	ifs.open("VERSION");
@@ -453,17 +563,17 @@ std::string Configuration::version()
 	return version;
 }
 
-char* Configuration::getXmlConfPath()
+const char* Configuration::getXmlConfPath() const
 {
 	return (char*) COLUMNS_XML;
 }
 
-std::string Configuration::getTimeWindowStart()
+const std::string Configuration::getTimeWindowStart() const
 {
 	return this->timeWindow.substr(0, this->timeWindow.find('-'));
 }
 
-std::string Configuration::getTimeWindowEnd()
+const std::string Configuration::getTimeWindowEnd() const
 {
 	size_t pos = this->timeWindow.find('-');
 	if (pos == std::string::npos) {
@@ -472,7 +582,29 @@ std::string Configuration::getTimeWindowEnd()
 	return this->timeWindow.substr(pos+1);
 }
 
-bool Configuration::isDirectory(std::string dir)
+bool Configuration::getOrderAsc() const
+{
+	return this->orderAsc;
+}
+
+bool Configuration::getCreateIndexes() const
+{
+	return this->createIndexes;
+}
+
+
+bool Configuration::getDeleteIndexes() const
+{
+	return this->deleteIndexes;
+}
+
+
+stringSet Configuration::getColumnIndexes() const
+{
+	return this->indexColumns;
+}
+
+bool Configuration::isDirectory(std::string dir) const
 {
 	int ret;
 	struct stat st;
@@ -498,7 +630,45 @@ void Configuration::sanitizePath(std::string &path)
 	}
 }
 
-void Configuration::help()
+void Configuration::processmOption(std::string order)
+{
+	std::string::size_type pos;
+	if ((pos = order.find("ASC")) != std::string::npos) {
+		order = order.substr(0, pos); /* trim! */
+		this->orderAsc = true;
+	} else if ((pos = order.find("DESC")) != std::string::npos) {
+		order = order.substr(0, pos);
+		this->orderAsc = false;
+	}
+
+	/* one more time to trim trailing whitespaces */
+	if ((pos = order.find(' ')) != std::string::npos) {
+		order = order.substr(0, pos);
+	}
+
+	Column *col = new Column();
+	do {
+		if (!col->init(doc, order, this->getAggregate())) {
+			std::cerr << "Cannot find column '" << order << "' to order by" << std::endl;
+			break;
+		}
+
+		if (col->isOperation()) {
+			std::cerr << "Cannot sort by operation column '" << order << "'." << std::endl;
+			break;
+		}
+
+		this->orderColumn = col;
+		return;
+	} while (false);
+
+
+	/* no sorting unset option m and delete the column */
+	this->optm = false; /* just in case, should stay false */
+	delete col;
+}
+
+void Configuration::help() const
 {
 	/* lines with // at the beginning should be implemented sooner */
 	std::cout
@@ -513,15 +683,17 @@ void Configuration::help()
 	<< "-r <dir>        read input tables from directory" << std::endl
 //	<< "-w <file>       write output to file" << std::endl
 	<< "-f              read netflow filter from file" << std::endl
-//	<< "-n              Define number of top N. " << std::endl
+	<< "-n              Define number of top N. -c option takes precedence over -n." << std::endl
 	<< "-c              Limit number of records to display" << std::endl
-	<< "-D <dns>        Use nameserver <dns> for host lookup." << std::endl
+	<< "-D <dns>        Use nameserver <dns> for host lookup. Does not support IPv6 addresses." << std::endl
 	<< "-N              Print plain numbers" << std::endl
-//	<< "-s <expr>[/<order>]     Generate statistics for <expr> any valid record element." << std::endl
-//	<< "                and ordered by <order>: packets, bytes, flows, bps pps and bpp." << std::endl
+	<< "-s <column>[/<order>]     Generate statistics for <column> any valid record element." << std::endl
+	<< "                and ordered by <order>. Order can be any summarizable column, just as for -m option." << std::endl
 	<< "-q              Quiet: Do not print the header and bottom stat lines." << std::endl
+	<< "-e				Extended bottom stats. Print summary of statistics columns." << std::endl
 	//<< "-H Add xstat histogram data to flow file.(default 'no')" << std::endl
-	//<< "-i <ident>      Change Ident to <ident> in file given by -r." << std::endl
+	<< "-i [column1[,column2,...]]	Build indexes for given columns (or all) for specified data." << std::endl
+	<< "-d [column1[,column2,...]]	Delete indexes for given columns (or all) for specified data." << std::endl
 	//<< "-j <file>       Compress/Uncompress file." << std::endl
 	//<< "-z              Compress flows in output file. Used in combination with -w." << std::endl
 	//<< "-l <expr>       Set limit on packets for line and packed output format." << std::endl
@@ -531,7 +703,7 @@ void Configuration::help()
 	<< "-M <expr>       Read input from multiple directories." << std::endl
 	<< "                /dir/dir1:dir2:dir3 Read the same files from '/dir/dir1' '/dir/dir2' and '/dir/dir3'." << std::endl
 	<< "                requests either -r filename or -R firstfile:lastfile without pathnames" << std::endl
-	<< "-m              Print netflow data date sorted." << std::endl
+	<< "-m [column]             Print netflow data date sorted. Takes optional parameter '%column' to sort by." << std::endl
 	<< "-R <expr>       Read input from sequence of files." << std::endl
 	<< "                /any/dir  Read all files in that directory." << std::endl
 //	<< "                /dir/file Read all files beginning with 'file'." << std::endl
@@ -555,15 +727,15 @@ void Configuration::help()
 	;
 }
 
-bool Configuration::getOptionm()
+bool Configuration::getOptionm() const
 {
 	return this->optm;
 }
 
 Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false),
-		optm(false)
+		optm(false), orderColumn(NULL), resolver(NULL), statistics(false), orderAsc(true), extendedStats(false),
+		createIndexes(false), deleteIndexes(false)
 {
-	this->resolver = new Resolver();
 }
 
 bool Configuration::processMOption(stringVector &tables, const char *optarg)
@@ -822,12 +994,13 @@ bool Configuration::processROption(stringVector &tables, const char *optarg)
 		 */
 
 		counter = 0;
+		bool onlyFreeDirs = false; /* call free on all dirents without adding the directories */
 
 		while(dirs_counter--) {
 			dent = namelist[counter++];
 
 			if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
-			  && strcmp(dent->d_name, "..")) {
+			  && strcmp(dent->d_name, "..") && !onlyFreeDirs) {
 				std::string tableDir;
 
 
@@ -848,8 +1021,7 @@ bool Configuration::processROption(stringVector &tables, const char *optarg)
 
 					if (!strcmp(dent->d_name, lastDir.c_str())) {
 						/* this is last directory we are interested in */
-						free(namelist[counter-1]);
-						break;
+						onlyFreeDirs = true;
 					}
 				}
 			}
@@ -893,18 +1065,46 @@ bool Configuration::processROption(stringVector &tables, const char *optarg)
 	return true;
 }
 
-Resolver *Configuration::getResolver()
+int Configuration::parseAggregateArg(char *arg) {
+	this->aggregate = true;
+
+	/* add aggregate columns to set */
+	this->aggregateColumnsAliases.clear();
+	if (!Utils::splitString(arg, this->aggregateColumnsAliases)) {
+		help();
+		return -2;
+	}
+	return 0;
+}
+
+void Configuration::parseIndexColumns(char *arg)
+{
+	if (arg != NULL) {
+		stringSet aliases;
+		Utils::splitString(arg, aliases);
+		for (stringSet::const_iterator it = aliases.begin(); it != aliases.end(); it++) {
+			Column col;
+			col.init(this->getXMLConfiguration(), *it, false);
+			stringSet columns = col.getColumns();
+			this->indexColumns.insert(columns.begin(), columns.end());
+		}
+	}
+}
+
+Resolver *Configuration::getResolver() const
 {
 	return this->resolver;
 }
 
 Configuration::~Configuration()
 {
-	for (columnVector::iterator it = columns.begin(); it != columns.end(); it++) {
+	/* delete columns */
+	for (columnVector::const_iterator it = columns.begin(); it != columns.end(); it++) {
 		delete *it;
 	}
 
 	delete this->resolver;
+	delete this->orderColumn;
 }
 
 } /* end of fbitdump namespace */

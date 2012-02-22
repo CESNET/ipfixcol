@@ -42,7 +42,7 @@
 
 #include <fastbit/ibis.h>
 #include <cstring>
-#include "AST.h"
+#include "Values.h"
 #include "Table.h"
 #include "TableManager.h"
 
@@ -55,7 +55,7 @@ class Cursor;
  * \brief Global cursor for all Tables
  *
  * It allows us to iterate over all rows in all tables with single cursor.
- * It can limit number of rows, sort output according to timestamp
+ * It can limit number of rows, sort output according to given column
  */
 class TableManagerCursor {
 private:
@@ -64,7 +64,6 @@ private:
 	std::vector<Cursor *> cursorList;   /**< list of table specific cursors */
 	Cursor *currentCursor;              /**< current cursor with actual data */
 	tableVector::iterator currentTableIt;/**< index of current table */
-	Column *timestampColumn;            /**< column with timestamp information */
 
 	unsigned int cursorIndex;           /**< index of the current table cursor */
 	std::vector<bool> auxList;          /**< auxiliary list, true means that on
@@ -114,21 +113,14 @@ public:
 	 * @param[in] part Number of part to write result to
 	 * @return true on success, false otherwise
 	 */
-	bool getColumn(const char *name, values &value, int part);
+	bool getColumn(const char *name, Values &value, int part);
 
 	/**
 	 * \brief Get cursor to the current row
 	 *
 	 * @return current cursor
 	 */
-	Cursor *getCurrentCursor();
-
-	/**
-	 * \brief order tables by timestamp
-	 *
-	 * @return true if all went ok, false otherwise
-	 */
-	bool orderAllTables();
+	const Cursor *getCurrentCursor() const;
 };
 
 }

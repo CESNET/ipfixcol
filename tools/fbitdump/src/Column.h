@@ -41,19 +41,21 @@
 #define COLUMN_H_
 
 #include "typedefs.h"
-#include "AST.h"
+#include "Values.h"
 #include "Cursor.h"
-#include "TableManagerCursor.h"
 
 namespace fbitdump {
 
 /* Cursor depends on Column class */
 class Cursor;
 
-class TableManagerCursor;
-
 /**
  * \brief Class with information about one column
+ *
+ * The class can initialise itself from XML configuration.
+ * It is also used for column separators (like '->' or ': ' in output)
+ * Public methods allow to get values of individual properties
+ * Using getValue method an value from cursor can be accessed for this column
  */
 class Column
 {
@@ -67,14 +69,14 @@ public:
 	 * @param aggregate Aggregate mode
 	 * @return true when initialization completed, false on error
 	 */
-	bool init(pugi::xml_document &doc, std::string alias, bool aggregate);
+	bool init(const pugi::xml_document &doc, const std::string alias, bool aggregate);
 
 	/**
 	 * \brief Returns column name (that should be printed in header)
 	 *
 	 * @return Column name
 	 */
-	std::string getName();
+	const std::string getName() const;
 
 	/**
 	 * \brief Sets name to "name"
@@ -87,37 +89,19 @@ public:
 	 *
 	 * @return Set of column aliases
 	 */
-	stringSet getAliases();
-
-	/**
-	 * \brief Add alias to current set of aliases
-	 * @param alias Aliass to add
-	 */
-	void addAlias(std::string alias);
+	const stringSet getAliases() const;
 
 	/**
 	 * \brief Returns width of the column (specified in XML)
 	 * @return width of the column
 	 */
-	int getWidth();
-
-	/**
-	 * \brief Set column width to "width"
-	 * @param width New width of the column
-	 */
-	void setWidth(int width);
+	int getWidth() const;
 
 	/**
 	 * \brief Returns true when column should be aligned to the left
 	 * @return true when column should be aligned to the left, false otherwise
 	 */
-	bool getAlignLeft();
-
-	/**
-	 * \brief Set column alignment
-	 * @param alignLeft True when column should be aligned to the left
-	 */
-	void setAlignLeft(bool alignLeft);
+	bool getAlignLeft() const;
 
 	/**
 	 * \brief Column class constructor
@@ -132,44 +116,27 @@ public:
 	 * @param cur cursor pointing to current row
 	 * @return values structure containing required value
 	 */
-	values* getValue(Cursor *cur);
+	const Values* getValue(const Cursor *cur) const;
 
 	/**
 	 * \brief Can this column be used in aggregation?
 	 * @return true when column is aggregatable
 	 */
-	bool getAggregate();
+	bool getAggregate() const;
 
 	/**
 	 * \brief Returns set of table column names that this column works with
 	 *
 	 * @return Set of table column names
 	 */
-	stringSet getColumns();
-
-	/**
-	 * \brief Set AST for this column
-	 *
-	 * @param ast AST for this column
-	 */
-	void setAST(AST *ast);
-
-	/**
-	 * \brief Sets columns aggregation mode
-	 *
-	 * This is important for function getColumns(), which should know
-	 * whether to return column names with aggregation function i.e. sum(e0id1)
-	 *
-	 * @param aggregation
-	 */
-	void setAggregation(bool aggregation);
+	const stringSet getColumns() const;
 
 	/**
 	 * \brief Returns string to print when value is not available
 	 *
 	 * @return string to print when value is not available
 	 */
-	std::string getNullStr();
+	const std::string getNullStr() const;
 
 	/**
 	 * \brief Returns semantics of the column
@@ -177,28 +144,35 @@ public:
 	 *
 	 * @return semantics of the column
 	 */
-	std::string getSemantics();
+	const std::string getSemantics() const;
 
 	/**
 	 * \brief Returns true if column is a separator column
 	 *
 	 * @return returns true if column is a separator column, false otherwise
 	 */
-	bool isSeparator();
+	bool isSeparator() const;
 
 	/**
 	 * \brief Returns true when column represents an operation
 	 *
 	 * @return true when column represents an operation
 	 */
-	bool isOperation();
+	bool isOperation() const;
 
 	/**
 	 * \brief Return name of the file, that contains data for this column
 	 *
 	 * @return this->element
 	 */
-	std::string getElement();
+	const std::string getElement() const;
+
+	/**
+	 * \brief Returns true when column is configured as summary column
+	 *
+	 * @return true when column is configured as summary column
+	 */
+	bool isSummary() const;
 
 	/**
 	 * \brief Class destructor
@@ -209,13 +183,56 @@ public:
 private:
 
 	/**
+	 * \brief Abstract syntax tree structure
+	 *
+	 * Describes the way that column value is constructed from database columns
+	 */
+	struct AST
+	{
+		/**
+		 * \brief types for AST structure
+		 */
+		enum astTypes
+		{
+			valueType,   //!< value
+			operationType//!< operation
+		};
+
+		astTypes type; /**< AST type */
+		unsigned char operation; /**< one of '/', '*', '-', '+' */
+		std::string semantics; /**< semantics of the column */
+		std::string value; /**< value (column name) */
+		std::string aggregation; /**< how to aggregate this column */
+		int parts; /**< number of parts of column (ipv6 => e0id27p0 and e0id27p1)*/
+		AST *left; /**< left subtree */
+		AST *right; /**< right subtree */
+
+		stringSet astColumns; /**< Cached columns set (computed in Column::getColumns(AST*)) */
+		bool cached;
+
+		/**
+		 * \brief AST constructor - sets default values
+		 */
+		AST(): parts(1), left(NULL), right(NULL), cached(false) {}
+
+		/**
+		 * \brief AST destructor
+		 */
+		~AST()
+		{
+			delete left;
+			delete right;
+		}
+	};
+
+	/**
 	 * \brief Evaluates AST against data in cursor
 	 *
 	 * @param ast AST to evaluate
 	 * @param cur Cursor with data
 	 * @return returns values structure
 	 */
-	values *evaluate(AST *ast, Cursor *cur);
+	const Values *evaluate(AST *ast, const Cursor *cur) const;
 
 		/**
 	 * \brief Performs operation on given data
@@ -227,7 +244,14 @@ private:
 	 * @param op one of '+', '-', '/', '*'
 	 * @return return resulting value of appropriate type
 	 */
-	values* performOperation(values *left, values *right, unsigned char op);
+	const Values* performOperation(const Values *left, const Values *right, unsigned char op) const;
+
+	/**
+	 * \brief Set AST for this column
+	 *
+	 * @param ast AST for this column
+	 */
+	void setAST(AST *ast);
 
 	/**
 	 * \brief Create element of type value from XMLnode element
@@ -236,7 +260,7 @@ private:
 	 * @param doc XML document with configuration
 	 * @return AST structure of created element
 	 */
-	AST* createValueElement(pugi::xml_node element, pugi::xml_document &doc);
+	AST* createValueElement(pugi::xml_node element, const pugi::xml_document &doc);
 
 	/**
 	 * \brief Create element of type operation from XMLnode element
@@ -245,7 +269,7 @@ private:
 	 * @param doc XML document with configuration
 	 * @return AST structure of created operation
 	 */
-	AST* createOperationElement(pugi::xml_node operation, pugi::xml_document &doc);
+	AST* createOperationElement(pugi::xml_node operation, const pugi::xml_document &doc);
 
 	/**
 	 * \brief Return column names used in this AST
@@ -253,7 +277,7 @@ private:
 	 * @param ast to go through
 	 * @return Set of column names
 	 */
-	stringSet& getColumns(AST* ast);
+	const stringSet& getColumns(AST* ast) const;
 
 	/**
 	 * \brief Is AST aggregable?
@@ -261,7 +285,35 @@ private:
 	 * @param ast AST to check
 	 * @return true when AST is aggregable
 	 */
-	bool getAggregate(AST* ast);
+	bool getAggregate(AST* ast) const;
+
+	/**
+	 * \brief Add alias to current set of aliases
+	 * @param alias Aliass to add
+	 */
+	void addAlias(std::string alias);
+
+	/**
+	 * \brief Set column width to "width"
+	 * @param width New width of the column
+	 */
+	void setWidth(int width);
+
+	/**
+	 * \brief Set column alignment
+	 * @param alignLeft True when column should be aligned to the left
+	 */
+	void setAlignLeft(bool alignLeft);
+
+	/**
+	 * \brief Sets columns aggregation mode
+	 *
+	 * This is important for function getColumns(), which should know
+	 * whether to return column names with aggregation function i.e. sum(e0id1)
+	 *
+	 * @param aggregation
+	 */
+	void setAggregation(bool aggregation);
 
 
 	std::string nullStr;    /**< String to print when columns has no value */
@@ -272,6 +324,7 @@ private:
 	stringSet aliases;      /**< Aliases of the column*/
 	bool aggregation;       /**< Determines whether column is in aggregation mode */
 	std::string element;    /**< name of the file, which contains actual data for this column */
+	bool summary;			/**< Is this a summary column? */
 
 }; /* end of Column class */
 

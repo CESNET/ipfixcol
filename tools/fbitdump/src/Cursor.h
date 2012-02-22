@@ -42,7 +42,7 @@
 
 #include <fastbit/ibis.h>
 #include <string>
-#include "AST.h"
+#include "Values.h"
 #include "Table.h"
 
 namespace fbitdump {
@@ -52,6 +52,9 @@ class Table;
 
 /**
  * \brief Class Cursor wrapping ibis::table::cursor
+ *
+ * The main purpose of this class is to wrap fastbit table cursor and
+ * provide method retreiving values from the cursor
  *
  * This class should also implement filtering on composed columns
  */
@@ -75,14 +78,14 @@ public:
 	bool next();
 
 	/**
-	 * \brief Get column value and return it as a string
+	 * \brief Get column value and store it to passed reference
 	 *
 	 * @param[in] name Name of the fastbit column to get value for
 	 * @param[out] value Values structure with column values
 	 * @param[in] part Number of part to write result to
 	 * @return true on success, false otherwise
 	 */
-	bool getColumn(std::string, values &value, int part);
+	bool getColumn(std::string, Values &value, int part) const;
 
 	/**
 	 * \brief Cursor class destructor

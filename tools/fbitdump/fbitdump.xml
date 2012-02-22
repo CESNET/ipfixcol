@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<configuration>
 <!-- 
 	This is configuration XML for fbitdump utility
 	
@@ -263,3 +264,12 @@
 		</value>
 	</column>
 </columns>
+
+<!-- summary section contain aliases of columns that can be used for statistics summary, i.e. totals
+	only plain columns can be used -->
+<summary>
+	<column>%pkt</column>
+	<column>%byt</column>
+	<column>%fl</column>
+</summary>
+</configuration>

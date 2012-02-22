@@ -1,7 +1,7 @@
 /**
- * \file fbitdump.cpp
+ * \file Utils.h
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Tool for ipfix fastbit format querying
+ * \brief Header containing some auxiliary functions declarations
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -37,68 +37,55 @@
  *
  */
 
+#ifndef UTILS_H_
+#define UTILS_H_
+
+#include "typedefs.h"
+
+namespace fbitdump {
+
+namespace Utils {
 /**
- * \mainpage IPFIX Dump Developer's Documentation
+ * \brief Formats number 'num' to ostringstream 'ss'
  *
- * This documents provides documentation of IPFIX Dump utility (ipfixdump).
+ * Uses precision 1 if output has units and 0 otherwise
+ * doesn't format if 'plainNumbers' is set
+ *
+ * When defined as macro, it can be a bit quicker
+ *
+ * @param num number to format
+ * @param ss string strem to put result to
+ * @param plainNumbers whether to format or not
  */
-
-#include "Configuration.h"
-#include "TableManager.h"
-#include "Printer.h"
-#include "Filter.h"
-#include "IndexManager.h"
-
-using namespace fbitdump;
-
-int main(int argc, char *argv[])
+template <class T>
+inline void formatNumber(T num, std::ostream &ss, bool plainNumbers)
 {
-	int ret;
-
-	/* raise limit for cache size, when there is more memory available */
-	ibis::fileManager::adjustCacheSize(2048000000);
-
-//	ibis::gVerbose = 7;
-	ibis::gParameters().add("fileManager.minMapSize", "50");
-
-	/* create configuration to work with */
-	Configuration conf;
-
-	/* process configuration and check whether to end the program */
-	ret = conf.init(argc, argv);
-	if (ret != 0) return ret;
-
-	/* check whether to delete indexes */
-	if (conf.getDeleteIndexes()) {
-		IndexManager::deleteIndexes(conf);
+	ss << std::fixed;
+	if (num <= 1000000 || plainNumbers) {
+		ss.precision(0);
+		ss << num;
+	} else if (num > 1000000000) {
+		ss.precision(1);
+		ss << (float) num/1000000000 << " G";
+	} else if (num > 1000000) {
+		ss.precision(1);
+		ss << (float) num/1000000 << " M";
 	}
-
-	/* create filter */
-	Filter filter(&conf);
-	/* initialise filter and check correctness */
-	ret = filter.init();
-	if (ret != 0) return ret;
-
-	/* initialise printer */
-	Printer print(std::cout, conf);
-
-	/* initialise tables */
-	TableManager tm(conf);
-
-	/* check whether to build indexes */
-	if (conf.getCreateIndexes()) {
-		IndexManager::createIndexes(conf, tm);
-	}
-
-	/* do some work */
-	if (conf.getAggregate()) {
-		tm.aggregate(conf.getAggregateColumns(), conf.getSummaryColumns(), filter);
-	} else {
-		tm.filter(filter);
-	}
-
-	/* print tables */
-	print.print(tm);
-
-	return 0;
+	ss.precision(0); /* set zero precision for other numbers */
 }
+
+/**
+ * \brief Splits string into different tokens by comma
+ *
+ * @param str string to split
+ * @param result stringSet to put result into
+ * @return true on success, false otherwise
+ */
+bool splitString(char *str, stringSet &result);
+
+} /* end of namespace utils */
+
+}  /* end of namespace fbitdump */
+
+#endif /* UTILS_H_ */
+
