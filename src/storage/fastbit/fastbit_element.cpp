@@ -193,6 +193,7 @@ int el_var_size::fill(uint8_t * data){
 	}else{
 		byte_reorder((uint8_t *) &(_size),&(data[1]),2);
 	}
+	std::cout << "variable(" << _name << ") size:" << _size << std::endl;
 	return 0;
 }
 int el_var_size::set_type(){
