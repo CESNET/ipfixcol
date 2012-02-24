@@ -65,6 +65,8 @@ enum name_type{TIME,INCREMENTAL};
 
 /* fastbit configuration structure */
 struct fastbit_config{
+	//std::map<uint32_t,(std::map<uint16_t,template_table*>*)> *ob_dom;
+	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom;
         std::map<uint16_t,template_table*> *templates; /* map with template id / template_table pairs */
         int time_window; 		/* specifies time interval for storage direcotry rotation (0 = no time based rotation ) */
         int records_window;		/* specifies record count for storage direcotry rotation (0 = no record based rotation ) */
@@ -93,6 +95,8 @@ int storage_init (char *params, void **config){
 	((struct fastbit_config*)(*config))->templates = new std::map<uint16_t,template_table*>;
 
 	struct fastbit_config* c = (struct fastbit_config*)(*config);
+	
+	c->ob_dom = new std::map<uint32_t,std::map<uint16_t,template_table*>* >;
 
 	/* parse configuratin xml and upated configure structure accorging to it */
 	pugi::xml_document doc;
@@ -153,17 +157,31 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	std::map<uint16_t,template_table*>::iterator table;
 	struct fastbit_config *conf = (struct fastbit_config *) config;
 	std::map<uint16_t,template_table*> *templates = conf->templates;
+	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom = conf->ob_dom;
+	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
 	static int rcnt = 0;
 	static int flushed = 1;
 	std::stringstream ss;
+	std::string domain_name;
 	time_t rawtime;
 	struct tm * timeinfo;
 	char formated_time[15];
 	ibis::table *index_table;
+	uint32_t oid = 0;
 
 	int i;
 	int flush=0;
 
+	oid = ntohl(ipfix_msg->pkt_header->observation_domain_id);
+	if((dom_id = ob_dom->find(oid)) == ob_dom->end()){
+		std::cout << "NEW DOMAIN ID: " << oid << std::endl;
+		std::map<uint16_t,template_table*> *new_dom_id = new std::map<uint16_t,template_table*>;
+		ob_dom->insert(std::make_pair(oid, new_dom_id));
+		dom_id = ob_dom->find(oid);
+	}
+
+	templates = (*dom_id).second; 
+	
 	/* message from ipfixcol have maximum of 1023 data records */
 	for(i = 0 ; i < 1023; i++){ //TODO magic number! add constant to storage.h 
 		if(ipfix_msg->data_couple[i].data_set == NULL){
@@ -209,17 +227,20 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 
 		if(flush){
 			flushed ++;
-			
-
 			std::cout << "FLUSH" << std::endl;
 			/* flush all templates! */
-			for(table = templates->begin(); table!=templates->end();table++){
-				(*table).second->flush(conf->sys_dir + conf->window_dir);
-				if(conf->indexes){
-					std::cout << "Creating indexes: "<< conf->sys_dir + conf->window_dir << (*table).second->name()<< std::endl;
-					index_table = ibis::table::create((conf->sys_dir + conf->window_dir+(*table).second->name()).c_str());
-					index_table->buildIndexes();
-					delete index_table;
+			for(dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++){
+				templates = (*dom_id).second; 
+				ss << (*dom_id).first;
+				domain_name = ss.str() + "/";
+				for(table = templates->begin(); table!=templates->end();table++){
+					(*table).second->flush(conf->sys_dir + domain_name + conf->window_dir);
+					if(conf->indexes){
+						std::cout << "Creating indexes: "<< conf->sys_dir + conf->window_dir << (*table).second->name()<< std::endl;
+						index_table = ibis::table::create((conf->sys_dir + conf->window_dir+(*table).second->name()).c_str());
+						index_table->buildIndexes();
+						delete index_table;
+					}
 				}
 			}
 			/* change window directory name! */
@@ -254,21 +275,32 @@ int storage_close (void **config){
 	struct fastbit_config *conf = (struct fastbit_config *) (*config);
 	std::map<uint16_t,template_table*> *templates = conf->templates;
 	ibis::table *index_table;
+	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom = conf->ob_dom;
+	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
+	std::stringstream ss;
+	std::string domain_name;
 
 	/* flush data to hdd */
 	std::cout << "FLUSH" << std::endl;
-	for(table = templates->begin(); table!=templates->end();table++){
-		(*table).second->flush(conf->sys_dir + conf->window_dir);
-		if(conf->indexes){
-			std::cout << "Creating indexes: "<< conf->sys_dir + conf->window_dir + (*table).second->name() << std::endl;
-			index_table = ibis::table::create((conf->sys_dir + conf->window_dir + (*table).second->name()).c_str());
-			index_table->buildIndexes();
-			delete index_table;
+
+	for(dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++){
+		templates = (*dom_id).second; 
+		ss << (*dom_id).first;
+		domain_name = ss.str() + "/";
+		for(table = templates->begin(); table!=templates->end();table++){
+			(*table).second->flush(conf->sys_dir + domain_name + conf->window_dir);
+			if(conf->indexes){
+				std::cout << "Creating indexes: "<< conf->sys_dir + conf->window_dir + (*table).second->name() << std::endl;
+				index_table = ibis::table::create((conf->sys_dir + conf->window_dir + (*table).second->name()).c_str());
+				index_table->buildIndexes();
+				delete index_table;
+			}
+			delete (*table).second;
 		}
-		delete (*table).second;
+		delete (*dom_id).second;
 	}
 	
-	delete templates;
+	delete ob_dom;
 	return 0;
 }
 

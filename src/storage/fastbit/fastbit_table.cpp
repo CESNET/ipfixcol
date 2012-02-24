@@ -79,8 +79,10 @@ int template_table::store(ipfix_data_set * data_set, std::string path){
 int template_table::parse_template(struct ipfix_template * tmp){
 	int i;
 	int en = 0; // enterprise number (0 = IANA elements)
+	int en_offset = 0;
 	template_ie *field;
 	element *new_element;
+	std::cout << "PARSE TEMPLATE" << std::endl;
 	//Is there anything to parse?
 	if(tmp == NULL){
 		return 1;
@@ -93,14 +95,17 @@ int template_table::parse_template(struct ipfix_template * tmp){
 	_record_size = tmp->data_length;
 
 	//Find elements
-	for(i=0;i<tmp->field_count;i++){
+	for(i=0;i<tmp->field_count + en_offset;i++){
 		field = &(tmp->fields[i]);
 		
 		//Is this an enterprise element?
+		en = 0;
 		if(field->ie.id & 0x8000){
 			i++;
+			en_offset++;
 			en = tmp->fields[i].enterprise_number;
 		}
+		std::cout << "element size:" << field->ie.length << " id:" << (field->ie.id & 0x7FFF) << " en:" << en << std::endl;
 		switch(get_type_from_xml(en, field->ie.id & 0x7FFF)){
 			case UINT:
 				new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF);
@@ -129,8 +134,19 @@ int template_table::parse_template(struct ipfix_template * tmp){
 			case TEXT:
 			case UNKNOWN:
 			default:
-				std::cout << "UNKNOWN!" << std::endl;
-				new_element = new element(field->ie.length, en, field->ie.id & 0x7FFF);
+				//store unknown types as uint if possible
+				//std::cout << "UNKNOWN! size:" << field->ie.length << std::endl;
+				if(field->ie.length < 9){
+					new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF);
+					_tablex->addColumn(new_element->name(), new_element->type());
+				} else if(field->ie.length == 65535){ //variable size element
+					//std::cout << "UNKNOWN! - variable size (skip:" << field->ie.length << std::endl;
+					new_element = new el_var_size(field->ie.length, en, field->ie.id & 0x7FFF);
+					//_tablex->addColumn(new_element->name(), new_element->type());
+				} else { //TODO blob ect
+					//std::cout << "UNKNOWN! - blop:" << field->ie.length << std::endl;
+					new_element = new element(field->ie.length, en, field->ie.id & 0x7FFF);
+				}
 
 		}
 		if(!new_element){
