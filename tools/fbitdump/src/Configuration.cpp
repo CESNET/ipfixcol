@@ -57,7 +57,7 @@ namespace fbitdump {
 /* temporary macro that should be removed in full implementation */
 #define NOT_SUPPORTED std::cerr << "Not supported" << std::endl; return -2;
 
-int Configuration::init(int argc, char *argv[])
+int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 {
 	char c;
 	bool maxCountSet = false;
@@ -73,7 +73,7 @@ int Configuration::init(int argc, char *argv[])
 
 	if (argc == 1) {
 		help();
-		return -1;
+		return 1;
 	}
 
 	/* parse command line parameters */
@@ -101,8 +101,7 @@ int Configuration::init(int argc, char *argv[])
 			}
 			break;
 		case 'A': {/* aggregate on specific columns */
-			int ret = parseAggregateArg(optarg);
-			if (ret != 0) return ret;
+			parseAggregateArg(optarg);
 			break;}
 		case 'f':
 				filterFile = optarg;
@@ -118,10 +117,7 @@ int Configuration::init(int argc, char *argv[])
 			maxCountSet = true; /* so that statistics knows whether to change the value */
 			break;
 		case 'D': {
-				char *nameserver;
-
-				nameserver = optarg;
-				this->resolver = new Resolver(nameserver);
+				this->resolver = new Resolver(optarg);
 			}
 			break;
 		case 'N': /* print plain numbers */
@@ -137,8 +133,7 @@ int Configuration::init(int argc, char *argv[])
 			char parseArg[250];
 			if ((pos = arg.find('/')) != std::string::npos) { /* ordering column specified */
 				if (pos > 250) { /* constant char array */
-					std::cerr << "Argument for option -s is too long" << std::endl;
-					return -3;
+					throw std::invalid_argument("Argument for option -s is too long");
 				}
 				/* column name is before '/' */
 				strncpy(parseArg, optarg, pos);
@@ -146,8 +141,7 @@ int Configuration::init(int argc, char *argv[])
 				strcpy(parseArg, optarg);
 			}
 
-			int ret = parseAggregateArg(parseArg);
-			if (ret != 0) return ret;
+			parseAggregateArg(parseArg);
 
 			this->statistics = true;
 
@@ -183,8 +177,7 @@ int Configuration::init(int argc, char *argv[])
 			break;
 		case 'r': {/* file to open */
                 if (optarg == std::string("")) {
-                	help();
-                	return -2;
+                	throw std::invalid_argument("-r requires an file to open, empty string given");
                 }
 
                 this->rOptarg = optarg;
@@ -235,15 +228,15 @@ int Configuration::init(int argc, char *argv[])
 			break;
 		default:
 			help ();
-			return -1;
+			return 1;
 			break;
 		}
 	}
 
 	/* open XML configuration file */
 	if (!this->doc.load_file(this->getXmlConfPath())) {
-		std::cerr << "XML '"<< this->getXmlConfPath() << "' with columns configuration cannot be loaded!" << std::endl;
-		return -4;
+		std::string err = std::string("XML '") + this->getXmlConfPath() + "' with columns configuration cannot be loaded!";
+		throw std::invalid_argument(err);
 	}
 
 	if (!optionM.empty()) {
@@ -254,11 +247,6 @@ int Configuration::init(int argc, char *argv[])
 	/* allways process option -m, we need to know  whether aggregate or not */
 	if (this->optm) {
 		this->processmOption(optionm);
-	}
-
-	/* set unconfigured resolver if necessary */
-	if (this->resolver == NULL) {
-		this->resolver = new Resolver(NULL);
 	}
 
 	/* parse indexes line */
@@ -272,8 +260,7 @@ int Configuration::init(int argc, char *argv[])
 		std::ifstream t(filterFile, std::ifstream::in | std::ifstream::ate);
 
 		if (!t.good()) {
-			std::cerr << "Cannot open file '" << filterFile << "'" << std::endl;
-			return  -2;
+			throw std::invalid_argument("Cannot open file '" + filterFile + "'");
 		}
 
 		this->filter.reserve((unsigned int) t.tellg());
@@ -325,39 +312,34 @@ int Configuration::init(int argc, char *argv[])
 	} else if (this->format == "extra6") {
 		this->format = "%ts %td %pr %sa6:%sp -> %da6:%dp %flg %tos %pkt %byt %bps %pps %bpp %icmptype %sas %das %in %out %fl";
 	} else {
-		std::cerr << "Unknown ouput mode: '" << this->format << "'" << std::endl;
-		return -1;
+		throw std::invalid_argument("Unknown ouput mode: '" + this->format + "'");
 	}
 
 	/* parse output format string */
 	this->parseFormat(this->format);
 
 	/* search for table parts in specified directories */
-	if (this->searchForTableParts(tables) < 0) {
-		return -1;
-	}
+	this->searchForTableParts(tables);
 
 	return 0;
 }
 
 
-int Configuration::searchForTableParts(stringVector &tables)
+void Configuration::searchForTableParts(stringVector &tables) throw (std::invalid_argument)
 {
 	DIR *d;
 	struct dirent *dent;
 
 	/* do we have any tables (directories) specified? */
 	if (tables.size() < 1) {
-		std::cerr << "Input file(s) must be specified" << std::endl;
-		return -1;
+		throw std::invalid_argument("Input file(s) must be specified");
 	}
 
 	/* read tables subdirectories(templates) */
 	for (size_t i = 0; i < tables.size(); i++) {
 		d = opendir(tables[i].c_str());
 		if (d == NULL) {
-			std::cerr << "Cannot open directory \"" << tables[i] << "\"" << std::endl;
-			return -1;
+			throw std::invalid_argument("Cannot open directory \"" + tables[i] + "\"");
 		}
 
 		while((dent = readdir(d)) != NULL) {
@@ -370,8 +352,6 @@ int Configuration::searchForTableParts(stringVector &tables)
 
 		closedir(d);
 	}
-
-	return 0;
 }
 
 void Configuration::parseFormat(std::string format)
@@ -391,50 +371,50 @@ void Configuration::parseFormat(std::string format)
 		if ((err = regexec(&reg, format.c_str(), 1, matches, 0)) == 0) {
 			/* check for columns separator */
 			if (matches[0].rm_so != 0 && !removeNext) {
-				col = new Column();
-				col->setName(format.substr(0, matches[0].rm_so));
+				col = new Column(format.substr(0, matches[0].rm_so));
 				this->columns.push_back(col);
 			}
 
-			col = new Column();
 			bool ok = true;
 			std::string alias = format.substr(matches[0].rm_so, matches[0].rm_eo - matches[0].rm_so);
 			/* discard processed part of the format string */
 			format = format.substr(matches[0].rm_eo);
 
-			do {
-				if ((ok = col->init(this->doc, alias, this->aggregate)) == false) break;
+			try {
+				col = new Column(this->doc, alias, this->aggregate);
 
 				/* check that column is aggregable (is a summary column) or is aggregated */
+				do {
+					if (!this->getAggregate()) break; /* not aggregating, no problem here */
+					if (col->getAggregate()) break; /* column is a summary column, ok */
 
-				if (!this->getAggregate()) break; /* not aggregating, no proglem here */
-				if (col->getAggregate()) break; /* collumn is a summary column, ok */
+					stringSet resultSet, aliasesSet = col->getAliases();
+					std::set_intersection(aliasesSet.begin(), aliasesSet.end(), this->aggregateColumnsAliases.begin(),
+							this->aggregateColumnsAliases.end(), std::inserter(resultSet, resultSet.begin()));
 
-				stringSet resultSet, aliasesSet = col->getAliases();
-				std::set_intersection(aliasesSet.begin(), aliasesSet.end(), this->aggregateColumnsAliases.begin(),
-						this->aggregateColumnsAliases.end(), std::inserter(resultSet, resultSet.begin()));
+					if (resultSet.empty()) { /* the column is not and aggregation column it will NOT have any value */
+						ok = false;
+						break;
+					}
+				} while (false);
 
-				if (resultSet.empty()) { /* the column is not and aggregation column it will NOT have any value*/
-					ok = false;
-					break;
+				/* use the column only if everything was ok */
+				if (!ok) {
+					delete col;
+					removeNext = true;
 				}
-			} while (false);
-
-			/* use the column only if everything was ok */
-			if (!ok) {
-				delete col;
-				removeNext = true;
-			}
-			else {
-				this->columns.push_back(col);
-				removeNext = false;
+				else {
+					this->columns.push_back(col);
+					removeNext = false;
+				}
+			} catch (std::exception &e) {
+				std::cerr << e.what() << std::endl;
 			}
 		} else if ( err != REG_NOMATCH ) {
 			std::cerr << "Bad output format string" << std::endl;
 			break;
 		} else if (!removeNext) { /* rest is column separator */
-			col = new Column();
-			col->setName(format.substr(0, matches[0].rm_so));
+			col = new Column(format.substr(0, matches[0].rm_so));
 			this->columns.push_back(col);
 		}
 	}
@@ -455,18 +435,18 @@ std::string Configuration::getFilter() const
 const stringSet Configuration::getAggregateColumns() const
 {
 	stringSet aggregateColumns;
-	Column *col;
 
 	/* go over all aliases */
 	for (stringSet::const_iterator aliasIt = this->aggregateColumnsAliases.begin();
 			aliasIt != this->aggregateColumnsAliases.end(); aliasIt++) {
 
-		col = new Column();
-		if (col->init(this->doc, *aliasIt, this->aggregate)) {
-			stringSet cols = col->getColumns();
+		try {
+			Column col = Column(this->doc, *aliasIt, this->aggregate);
+			stringSet cols = col.getColumns();
 			aggregateColumns.insert(cols.begin(), cols.end());
+		} catch (std::exception &e) {
+			std::cerr << e.what() << std::endl;
 		}
-		delete col;
 	}
 
 	return aggregateColumns;
@@ -646,26 +626,20 @@ void Configuration::processmOption(std::string order)
 		order = order.substr(0, pos);
 	}
 
-	Column *col = new Column();
-	do {
-		if (!col->init(doc, order, this->getAggregate())) {
-			std::cerr << "Cannot find column '" << order << "' to order by" << std::endl;
-			break;
+	try {
+		Column *col = new Column(doc, order, this->getAggregate());
+
+		if (!col->isOperation()) { /* column is not an operation, it is ok to sort by it */
+			this->orderColumn = col;
+			return;
 		}
+	} catch (std::exception &e) {
+		std::cerr << e.what() << std::endl;
+		std::cerr << "Cannot find column '" << order << "' to order by" << std::endl;
+	}
 
-		if (col->isOperation()) {
-			std::cerr << "Cannot sort by operation column '" << order << "'." << std::endl;
-			break;
-		}
-
-		this->orderColumn = col;
-		return;
-	} while (false);
-
-
-	/* no sorting unset option m and delete the column */
-	this->optm = false; /* just in case, should stay false */
-	delete col;
+	std::cerr << "Cannot sort by operation column '" << order << "'." << std::endl;
+	this->optm = false;
 }
 
 void Configuration::help() const
@@ -1065,16 +1039,15 @@ bool Configuration::processROption(stringVector &tables, const char *optarg)
 	return true;
 }
 
-int Configuration::parseAggregateArg(char *arg) {
+void Configuration::parseAggregateArg(char *arg) throw (std::invalid_argument)
+{
 	this->aggregate = true;
 
 	/* add aggregate columns to set */
 	this->aggregateColumnsAliases.clear();
 	if (!Utils::splitString(arg, this->aggregateColumnsAliases)) {
-		help();
-		return -2;
+		throw std::invalid_argument(std::string("Ivalid input string ") + arg);
 	}
-	return 0;
 }
 
 void Configuration::parseIndexColumns(char *arg)
@@ -1083,8 +1056,7 @@ void Configuration::parseIndexColumns(char *arg)
 		stringSet aliases;
 		Utils::splitString(arg, aliases);
 		for (stringSet::const_iterator it = aliases.begin(); it != aliases.end(); it++) {
-			Column col;
-			col.init(this->getXMLConfiguration(), *it, false);
+			Column col = Column(this->getXMLConfiguration(), *it, false);
 			stringSet columns = col.getColumns();
 			this->indexColumns.insert(columns.begin(), columns.end());
 		}

@@ -74,9 +74,9 @@ public:
 	 *
 	 * @param argc number of arguments
 	 * @param argv array of arguments
-	 * @return 0 on success, negative value otherwise (program should end)
+	 * @return 0 on success, 1 when help was printed and program should stop
 	 */
-    int init(int argc, char *argv[]);
+    int init(int argc, char *argv[]) throw (std::invalid_argument);
 
     /**
      * \brief Returns vector of table parts names
@@ -280,9 +280,8 @@ private:
      * Writes parts to instance variable "parts"
      *
      * @param tables fastbit tables to be used
-     * @return 0 on success, negative value on failure
      */
-    int searchForTableParts(stringVector &tables);
+    void searchForTableParts(stringVector &tables) throw (std::invalid_argument);
 
 	/**
 	 * \brief Parse output format string
@@ -345,9 +344,8 @@ private:
      * \brief Parse argument for aggregation
      *
      * @param arg comma separated list of aliases
-     * @return -2 on error, 0 otherwise
      */
-    int parseAggregateArg(char *arg);
+    void parseAggregateArg(char *arg) throw (std::invalid_argument);
 
     /**
      * \brief Get index columns names from columns specified by aliases

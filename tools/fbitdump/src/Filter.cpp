@@ -63,100 +63,99 @@ bool Filter::isValid(Cursor &cur) const
 	return true;
 }
 
-int Filter::init()
+void Filter::init(Configuration &conf) throw (std::invalid_argument)
 {
-	if (conf == NULL) {
-		return -5;
-	}
-
-	std::string input = this->conf->getFilter(), filter, tw;
+	std::string input = conf.getFilter(), filter, tw;
 
 	/* incorporate time windows argument in filter */
-	if (!conf->getTimeWindowStart().empty()) {
-		tw = "(%ts >= " + conf->getTimeWindowStart();
-		if (!conf->getTimeWindowEnd().empty()) {
-			tw += "AND %te <= " + conf->getTimeWindowEnd();
+	if (!conf.getTimeWindowStart().empty()) {
+		tw = "(%ts >= " + conf.getTimeWindowStart();
+		if (!conf.getTimeWindowEnd().empty()) {
+			tw += "AND %te <= " + conf.getTimeWindowEnd();
 		}
 		tw += ") AND ";
 	input = tw + input;
 	}
 
 	YY_BUFFER_STATE bp;
-	int c, ret = 0;
+	int c;
 	std::string arg;
+	Column *col = NULL;
 
 	bp = yy_scan_string(input.c_str());
 	yy_switch_to_buffer(bp);
 
-	while ((c = yylex(arg)) != 0) {
-		switch (c) {
-		case COLUMN: {
-			/* get real columns */
-			Column *col = new Column();
-			if (col->init(this->conf->getXMLConfiguration(), arg, false)) {
+	try {
+		while ((c = yylex(arg)) != 0) {
+			switch (c) {
+			case COLUMN: {
+				/* get real columns */
+				try {
+					col = new Column(conf.getXMLConfiguration(), arg, false);
+				} catch (std::exception &e) {
+					/* rethrow the exception */
+					std::string err = std::string("Filter column '") + arg + "' not found!";
+					throw std::invalid_argument(err);
+				}
 				stringSet cols = col->getColumns();
 				if (!col->isOperation()) { /* plain value */
 					filter += *cols.begin() + " ";
 				} else { /* operation */
 					/* \TODO  save for post-filtering */
-					std::cerr << "Computed column '" << arg << "' cannot be used for filtering." << std::endl;
-					ret = -1;
+					std::string err = std::string("Computed column '") + arg + "' cannot be used for filtering.";
+					/* delete column before throwing an exception */
+					delete col;
+					throw std::invalid_argument(err);
 				}
-			} else {
-				std::cerr << "Filter column '" << arg << "' not found!" << std::endl;
-				ret = -2;
-			}
-			delete col;
-			break;}
-		case IPv4:{
-			/* convert ipv4 address to uint32_t */
-			struct in_addr addr;
-			std::stringstream ss;
-			/* convert ipv4 address, returns network byte order */
-			inet_pton(AF_INET, arg.c_str(), &addr);
-			/* convert to host byte order */
-			uint32_t addrNum = ntohl(addr.s_addr);
-			/* integer to string */
-			ss << addrNum;
-			filter += ss.str() + " ";
-			break;}
-		case NUMBER:
-			switch (arg[arg.length()-1]) {
-			case 'k':
-			case 'K':
-				filter += arg.substr(0, arg.length()-1) + "000";
+				delete col;
+
+				break;}
+			case IPv4:{
+				/* convert ipv4 address to uint32_t */
+				struct in_addr addr;
+				std::stringstream ss;
+				/* convert ipv4 address, returns network byte order */
+				inet_pton(AF_INET, arg.c_str(), &addr);
+				/* convert to host byte order */
+				uint32_t addrNum = ntohl(addr.s_addr);
+				/* integer to string */
+				ss << addrNum;
+				filter += ss.str() + " ";
+				break;}
+			case NUMBER:
+				switch (arg[arg.length()-1]) {
+				case 'k':
+				case 'K':
+					filter += arg.substr(0, arg.length()-1) + "000";
+					break;
+				case 'm':
+				case 'M':
+					filter += arg.substr(0, arg.length()-1) + "000000";
+					break;
+				case 'g':
+				case 'G':
+					filter += arg.substr(0, arg.length()-1) + "000000000";
+					break;
+				case 't':
+				case 'T':
+					filter += arg.substr(0, arg.length()-1) + "000000000000";
+					break;
+				default:
+					filter += arg;
+					break;
+				}
+				filter += " ";
 				break;
-			case 'm':
-			case 'M':
-				filter += arg.substr(0, arg.length()-1) + "000000";
-				break;
-			case 'g':
-			case 'G':
-				filter += arg.substr(0, arg.length()-1) + "000000000";
-				break;
-			case 't':
-			case 'T':
-				filter += arg.substr(0, arg.length()-1) + "000000000000";
-				break;
-			default:
-				filter += arg;
-				break;
-			}
-			filter += " ";
-			break;
-			case TIMESTAMP: {
-				time_t ntime = parseTimestamp(arg);
-				if (ntime == -1) { /* parsing error */
-					ret = -3;
-				} else {
+				case TIMESTAMP: {
+					time_t ntime = parseTimestamp(arg);
+
 					std::ostringstream ss;
 					ss << ntime*1000; /* \TODO use ms only for miliseconds timetamp columns */
 
 					filter += ss.str() + " ";
-				}
 
-				break;}
-			/*		case RAWCOLUMN:
+					break;}
+				/*		case RAWCOLUMN:
 				std::cout << "raw column: ";
 				break;
 			case OPERATOR:
@@ -165,17 +164,26 @@ int Filter::init()
 			case CMP:
 				std::cout << "comparison: ";
 				break;*/
-			case BRACKET:
-				filter += arg + " ";
-				break;
-			case OTHER:
-				std::cerr << "Wrong filter string: '"<< arg << "'" << std::endl;
-				ret = -3;
-				break;
-			default:
-				filter += arg + " ";
-				break;
+				case BRACKET:
+					filter += arg + " ";
+					break;
+				case OTHER:
+					throw std::invalid_argument(std::string("Wrong filter string: '") + arg + "'");
+					break;
+				default:
+					filter += arg + " ";
+					break;
+			}
 		}
+
+	} catch (std::invalid_argument &e) {
+		/* free flex allocated resources */
+		yy_flush_buffer(bp);
+		yy_delete_buffer(bp);
+		yylex_destroy();
+
+		/* send the exception up */
+		throw;
 	}
 
 	/* free flex allocated resources */
@@ -183,34 +191,29 @@ int Filter::init()
 	yy_delete_buffer(bp);
 	yylex_destroy();
 
-	/* Don't show debug message with filter on error */
-	if (ret != 0) {
-		return ret;
-	}
-
 #ifdef DEBUG
 	std::cerr << "Using filter: '" << filter << "'" << std::endl;
 #endif
 	this->filterString = filter;
-
-	return ret;
 }
 
-time_t Filter::parseTimestamp(std::string str) const
+time_t Filter::parseTimestamp(std::string str) const throw (std::invalid_argument)
 {
 	struct tm ctime;
 
 	if (strptime(str.c_str(), "%Y/%m/%d.%H:%M:%S", &ctime) == NULL) {
-		std::cerr << "Cannot parse timestamp '" << str << "'" << std::endl;
-		return -1;
+		throw std::invalid_argument(std::string("Cannot parse timestamp '") + str + "'");
 	}
 
 	return mktime(&ctime);
 }
 
-Filter::Filter(Configuration *conf): conf(conf) {}
+Filter::Filter(Configuration &conf) throw (std::invalid_argument)
+{
+	init(conf);
+}
 
-Filter::Filter(): conf(NULL)
+Filter::Filter()
 {
 	this->filterString = "1 = 1";
 }

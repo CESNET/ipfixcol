@@ -45,6 +45,7 @@
 #include <set>
 #include <map>
 #include <string>
+#include <stdexcept>
 #include "fastbit/ibis.h"
 
 namespace fbitdump {

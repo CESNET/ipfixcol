@@ -44,15 +44,14 @@
 namespace fbitdump
 {
 
-bool Column::init(const pugi::xml_document &doc, const std::string alias, bool aggregate)
+void Column::init(const pugi::xml_document &doc, const std::string &alias, bool aggregate) throw(std::invalid_argument)
 {
 
 	/* search xml for an alias */
 	pugi::xpath_node column = doc.select_single_node(("/configuration/columns/column[alias='"+alias+"']").c_str());
 	/* check what we found */
 	if (column == NULL) {
-		std::cerr << "Column '" << alias << "' not defined" << std::endl;
-		return false;
+		throw std::invalid_argument(std::string("Column '") + alias + "' not defined");
 	}
 
 	/* set default value */
@@ -106,8 +105,6 @@ bool Column::init(const pugi::xml_document &doc, const std::string alias, bool a
 			}
 		}
 	}
-
-	return true;
 }
 
 Column::AST* Column::createValueElement(pugi::xml_node element, const pugi::xml_document &doc)
@@ -432,6 +429,12 @@ bool Column::isSummary() const
 	return this->summary;
 }
 
-Column::Column(): nullStr("NULL"), width(0), alignLeft(false), ast(NULL), aggregation(false), summary(false) {}
+Column::Column(const pugi::xml_document &doc, const std::string &alias, bool aggregate) throw(std::invalid_argument):
+		nullStr("NULL"), width(0), alignLeft(false), ast(NULL), aggregation(false), summary(false)
+{
+	this->init(doc, alias, aggregate);
+}
+
+Column::Column(const std::string &name): nullStr("NULL"), name(name), width(0), alignLeft(false), ast(NULL), aggregation(false), summary(false) {}
 
 }

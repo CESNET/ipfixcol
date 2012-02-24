@@ -239,7 +239,7 @@ const std::string Printer::printIPv4(uint32_t address) const
 	resolver = this->conf.getResolver();
 
 	/* translate IP address to domain name, if user wishes so */
-	if (resolver->isConfigured()) {
+	if (resolver != NULL) {
 		std::string host;
 
 		ret = resolver->reverseLookup(address, host);
@@ -272,7 +272,7 @@ const std::string Printer::printIPv6(uint64_t part1, uint64_t part2) const
 	resolver = this->conf.getResolver();
 
 	/* translate IP address to domain name, if user wishes so */
-	if (resolver->isConfigured()) {
+	if (resolver != NULL) {
 		std::string host;
 
 		ret = resolver->reverseLookup6(part1, part2, host);

@@ -67,7 +67,7 @@ public:
 	 *
 	 * @param conf Configuration class
 	 */
-	Filter(Configuration *conf);
+	Filter(Configuration &conf) throw (std::invalid_argument);
 
 	/**
 	 * \brief Empty Construtor
@@ -79,10 +79,8 @@ public:
 
 	/**
 	 * \brief Initialise the filter
-	 *
-	 * @return Zero on success, non-zero otherwise
 	 */
-	int init();
+	void init(Configuration &conf) throw (std::invalid_argument);
 
 	/**
 	 * \brief Build and return filter string for fastbit query
@@ -108,9 +106,8 @@ private:
 	 * @param str String with text representation of the timestamp
 	 * @return Number of seconds in timestamp
 	 */
-	time_t parseTimestamp(std::string str) const;
+	time_t parseTimestamp(std::string str) const throw (std::invalid_argument);
 
-	Configuration *conf; /**< Program configuration */
 	std::string filterString; /**< String for fastbit condition */
 };
 

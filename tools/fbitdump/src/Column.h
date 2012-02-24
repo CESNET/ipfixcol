@@ -62,16 +62,6 @@ class Column
 public:
 
 	/**
-	 * \brief Initialise column from xml configuration
-	 *
-	 * @param doc pugi xml document
-	 * @param alias alias of the new column
-	 * @param aggregate Aggregate mode
-	 * @return true when initialization completed, false on error
-	 */
-	bool init(const pugi::xml_document &doc, const std::string alias, bool aggregate);
-
-	/**
 	 * \brief Returns column name (that should be printed in header)
 	 *
 	 * @return Column name
@@ -104,9 +94,23 @@ public:
 	bool getAlignLeft() const;
 
 	/**
-	 * \brief Column class constructor
+	 * \brief Class constructor, initialise column from xml configuration
+	 *
+	 * @param doc pugi xml document
+	 * @param alias alias of the new column
+	 * @param aggregate Aggregate mode
+	 * @return true when initialization completed, false on error
 	 */
-	Column();
+	Column(const pugi::xml_document &doc, const std::string &alias, bool aggregate) throw(std::invalid_argument);
+
+	/**
+	 * \brief Class constructor, initialises only column name
+	 *
+	 * This is used for column separators (spaces, "->", ":", etc ...)
+	 *
+	 * @param name Name of the column (to be diplayed in header)
+	 */
+	Column(const std::string &name);
 
 	/**
 	 * \brief Returns value of current column in row specified by cursor
@@ -224,6 +228,15 @@ private:
 			delete right;
 		}
 	};
+
+	/**
+	 * \brief Initialise column from xml configuration
+	 *
+	 * @param doc pugi xml document
+	 * @param alias alias of the new column
+	 * @param aggregate Aggregate mode
+	 */
+	void init(const pugi::xml_document &doc, const std::string &alias, bool aggregate) throw(std::invalid_argument);
 
 	/**
 	 * \brief Evaluates AST against data in cursor

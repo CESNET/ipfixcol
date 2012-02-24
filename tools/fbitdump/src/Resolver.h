@@ -44,6 +44,7 @@
 #include <iostream>
 #include <cstring>
 #include <map>
+#include <stdexcept>
 
 namespace fbitdump {
 
@@ -55,7 +56,7 @@ namespace fbitdump {
  */
 class Resolver {
 public:
-	Resolver(char *nameserver);
+	Resolver(char *nameserver) throw (std::invalid_argument);
 	~Resolver();
 
     /**
@@ -64,13 +65,6 @@ public:
      * @return object which provides DNS resolving functionality
      */
 	const char *getNameserver() const;
-
-    /**
-     * \brief Returns resolver
-     *
-     * @return true if DNS is configured, false otherwise
-     */
-	bool isConfigured() const;
 
 	/**
 	 * \brief reverse DNS lookup for IPv4 address
@@ -106,7 +100,7 @@ private:
      *
      * @param nameserver Nameserver address to be used
      */
-	void setNameserver(char *nameserver);
+	void setNameserver(char *nameserver) throw (std::invalid_argument);
 
 };
 

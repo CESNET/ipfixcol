@@ -53,8 +53,6 @@ using namespace fbitdump;
 
 int main(int argc, char *argv[])
 {
-	int ret;
-
 	/* raise limit for cache size, when there is more memory available */
 	ibis::fileManager::adjustCacheSize(2048000000);
 
@@ -65,40 +63,49 @@ int main(int argc, char *argv[])
 	Configuration conf;
 
 	/* process configuration and check whether to end the program */
-	ret = conf.init(argc, argv);
-	if (ret != 0) return ret;
+	try {
+		if (conf.init(argc, argv))
+			return 0; /* standard program end (help requested, ...) */
+	} catch (std::exception &e) {
+		/* inicialization error: print it and exit */
+		std::cerr << e.what() << std::endl;
+		return 1;
+	}
 
 	/* check whether to delete indexes */
 	if (conf.getDeleteIndexes()) {
 		IndexManager::deleteIndexes(conf);
 	}
 
-	/* create filter */
-	Filter filter(&conf);
-	/* initialise filter and check correctness */
-	ret = filter.init();
-	if (ret != 0) return ret;
+	try {
+		/* create filter */
+		Filter filter(conf);
 
-	/* initialise printer */
-	Printer print(std::cout, conf);
+		/* initialise printer */
+		Printer print(std::cout, conf);
 
-	/* initialise tables */
-	TableManager tm(conf);
+		/* initialise tables */
+		TableManager tm(conf);
 
-	/* check whether to build indexes */
-	if (conf.getCreateIndexes()) {
-		IndexManager::createIndexes(conf, tm);
+		/* check whether to build indexes */
+		if (conf.getCreateIndexes()) {
+			IndexManager::createIndexes(conf, tm);
+		}
+
+		/* do some work */
+		if (conf.getAggregate()) {
+			tm.aggregate(conf.getAggregateColumns(), conf.getSummaryColumns(), filter);
+		} else {
+			tm.filter(filter);
+		}
+
+		/* print tables */
+		print.print(tm);
+
+	} catch (std::exception &e) {
+		std::cerr << e.what() << std::endl;
+		return 2;
 	}
-
-	/* do some work */
-	if (conf.getAggregate()) {
-		tm.aggregate(conf.getAggregateColumns(), conf.getSummaryColumns(), filter);
-	} else {
-		tm.filter(filter);
-	}
-
-	/* print tables */
-	print.print(tm);
 
 	return 0;
 }

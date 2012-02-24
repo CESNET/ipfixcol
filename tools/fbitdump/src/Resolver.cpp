@@ -44,20 +44,21 @@
 #include <netdb.h>
 #include <resolv.h>
 #include <arpa/inet.h>
+#include <stdexcept>
 
 #include "Resolver.h"
 
 namespace fbitdump {
 
-Resolver::Resolver(char *nameserver) : configured(false)
+Resolver::Resolver(char *nameserver) throw (std::invalid_argument): configured(false)
 {
 	this->setNameserver(nameserver);
 }
 
-void Resolver::setNameserver(char *nameserver)
+void Resolver::setNameserver(char *nameserver) throw (std::invalid_argument)
 {
 	if (nameserver == NULL) {
-		return;
+		throw std::invalid_argument("Cannot use empty nameserver");
 	}
 
 	int ret;
@@ -70,8 +71,8 @@ void Resolver::setNameserver(char *nameserver)
 
 	ret = getaddrinfo(nameserver, "domain", &hints, &result);
 	if (ret != 0) {
-		std::cerr << "Unable to resolve address for " << nameserver << ": " << gai_strerror(ret) << std::endl;
-		return;
+		std::string err = std::string("Unable to resolve address '") + nameserver + "': " + gai_strerror(ret);
+		throw std::invalid_argument(err);
 	}
 
 	res_init();
@@ -91,13 +92,13 @@ void Resolver::setNameserver(char *nameserver)
 		_res.nscount = 1;
 		*/
 	} else {
-		std::cerr << "error: unknown address family" << std::endl;
+		std::string err = std::string("Unable to resolve address for ") + nameserver + ": " + "Unknown address family";
+		throw std::invalid_argument(err);
 	}
 
 	freeaddrinfo(result);
 
 	this->nameserver = nameserver;
-	this->configured = true;
 }
 
 const char *Resolver::getNameserver() const
@@ -109,19 +110,8 @@ const char *Resolver::getNameserver() const
 	return this->nameserver.c_str();
 }
 
-bool Resolver::isConfigured() const
-{
-	return this->configured;
-}
-
 bool Resolver::reverseLookup(uint32_t address, std::string &result)
 {
-	if (!this->isConfigured()) {
-		/* configure the resolver first */
-		std::cerr << "DNS resolver is not configured yet" << std::endl;
-		return false;
-	}
-
 	/* look into cache */
 	std::map<uint32_t, std::string>::const_iterator it;
 	if ((it = this->dnsCache.find(address)) != this->dnsCache.end()) {
@@ -152,12 +142,6 @@ bool Resolver::reverseLookup(uint32_t address, std::string &result)
 
 bool Resolver::reverseLookup6(uint64_t in6_addr_part1, uint64_t in6_addr_part2, std::string &result)
 {
-	if (!this->isConfigured()) {
-		/* configure the resolver first */
-		std::cerr << "DNS resolver is not configured yet" << std::endl;
-		return false;
-	}
-
 	/* look into cache */
 	std::map<uint64_t, std::map<uint64_t, std::string>>::const_iterator it;
 	std::map<uint64_t, std::string>::const_iterator it2;
