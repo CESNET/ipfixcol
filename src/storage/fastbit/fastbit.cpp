@@ -56,6 +56,7 @@ extern "C" {
 
 #include <map>
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include "pugixml/pugixml.hpp"
 

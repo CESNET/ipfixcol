@@ -317,7 +317,7 @@ int main (int argc, char* argv[])
 
 	/* prepare storage xml_conf(s) */
 	for (aux_plugins = storage_plugins; aux_plugins != NULL; aux_plugins = aux_plugins->next) {
-		VERBOSE(CL_VERBOSE_ADVANCED, "[%d] Opening storage xml_conf: %s", proc_id, storage_plugins->config.file);
+		VERBOSE(CL_VERBOSE_ADVANCED, "[%d] Opening storage xml_conf: %s", proc_id, aux_plugins->config.file);
 
 		storage_plugin_handler = dlopen (aux_plugins->config.file, RTLD_LAZY);
 		if (storage_plugin_handler == NULL) {
