@@ -143,6 +143,14 @@ Start ipfixcol daemonized, with default plugins configuration.</literallayout>
 				</varlistentry>
 				<varlistentry>
 					<term>
+						<link xlink:href="https://homeproj.cesnet.cz/projects/ipfixcol/">https://homeproj.cesnet.cz/projects/ipfixcol/</link>
+					</term>
+					<listitem>
+						<para>Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
 						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
 					</term>
 					<listitem>
