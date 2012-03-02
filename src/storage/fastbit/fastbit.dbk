@@ -94,12 +94,13 @@
           <command>dumpInterval - timeAlignment</command>
         </term>
         <listitem>
-          <simpara>Align flush time according to timeWindow. (yes/no)</simpara>
+          <simpara>Align flush time according to timeWindow. For example when is collector started at 12:43 with 5 min
+                   timeWindow than next flush time is 12:48 but with alignment next flush time is 12:45. (yes/no)</simpara>
         </listitem>
       </varlistentry>
       <varlistentry>
         <term>
-          <command>rdumpInterval - ecordLimit</command>
+          <command>dumpInterval - recordLimit</command>
         </term>
         <listitem>
           <simpara>this preventing data storage direcotry to become too huge when is fastbit plugin used for parsing offline data (yes/no)</simpara>
