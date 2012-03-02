@@ -17,17 +17,17 @@
     </authorgroup>
   </refentryinfo>
   <refmeta>
-    <refentrytitle>fastbit_output</refentrytitle>
+    <refentrytitle>ipfixcol-fastbit-output</refentrytitle>
     <manvolnum>1</manvolnum>
   </refmeta>
   <refnamediv>
-    <refname>ipfixcol_fastbit_output</refname>
+    <refname>ipfixcol-fastbit-output</refname>
     <refpurpose>storage plugin for ipfixcol based on fastbit.
     </refpurpose>
   </refnamediv>
   <refsect1>
     <title>Description</title>
-    <para>The <command>fastbit_output.so</command> is output plugin for 
+    <para>The <command>ipfixcol-fastbit-output.so</command> is output plugin for
     ipfixcol (ipfix collector). The plugin uses fastbit library to store 
     and index data.
     </para>
@@ -45,7 +45,7 @@
     <![CDATA[
 	<storagePlugin>
 		<fileFormat>fastbit</fileFormat>
-		<file>path/to/fastbit_output.so</file>
+		<file>path/to/ipfixcol-fastbit-output.so</file>
 	</storagePlugin>
     ]]>
     </programlisting>

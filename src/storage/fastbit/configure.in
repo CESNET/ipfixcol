@@ -39,7 +39,7 @@
 AC_PREREQ([2.60])
 AC_LANG([C++])
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol_fastbit_output], m4_esyscmd([cut -f1 ./VERSION | tr -d '\n']))
+AC_INIT([ipfixcol-fastbit-output], m4_esyscmd([cut -f1 ./VERSION | tr -d '\n']))
 
 PACKAGE_VERSION=`cut -f1 ./VERSION | tr -d '\n'`
 AC_SUBST(PACKAGE_VERSION)
@@ -282,7 +282,7 @@ fi
 
 # generate output
 AC_CONFIG_FILES(Makefile)
-AC_CONFIG_FILES(ipfixcol_fastbit_output.spec)
+AC_CONFIG_FILES(ipfixcol-fastbit-output.spec)
 
 # tools makefiles
 

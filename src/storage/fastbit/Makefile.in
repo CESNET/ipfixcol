@@ -12,7 +12,7 @@ includedir = @includedir@
 libdir =  @libdir@
 mandir = @mandir@
 
-TARGETS = ipfixcol_fastbit_output.so
+TARGETS = ipfixcol-fastbit-output.so
 TOPDIR = @CONFIGURE_PWD@
 NAME = @PACKAGE_NAME@
 RELEASE = @RELEASE@
@@ -30,13 +30,13 @@ SRCS = fastbit.cpp fastbit_element.cpp fastbit_table.cpp pugixml/pugixml.cpp
 OBJ = fastbit.o fastbit_element.o fastbit_table.o pugixml.o
 HDRS = fastbit_table.h fastbit_element.h pugixml/pugiconfig.hpp pugixml/pugixml.hpp
 DOC = fastbit.dbk 
-MANPAGES = ipfixcol_fastbit_output.1
+MANPAGES = ipfixcol-fastbit-output.1
 
-all: ipfixcol_fastbit_output.so $(MANPAGES)
+all: ipfixcol-fastbit-output.so $(MANPAGES)
 doc: $(MANPAGES)
 
-ipfixcol_fastbit_output.so: $(OBJ)
-	$(CC) $(CFLAGS) $(LIBS) -lfastbit -L/usr/local/lib -shared -Wl,-soname,ipfixcol_fastbit_output.so.1 -o $@ $(OBJ) -lc
+ipfixcol-fastbit-output.so: $(OBJ)
+	$(CC) $(CFLAGS) $(LIBS) -lfastbit -L/usr/local/lib -shared -Wl,-soname,ipfixcol-fastbit-output.so.1 -o $@ $(OBJ) -lc
 
 $(OBJ): $(SRCS)
 	@for i in $(SRCS); do \
