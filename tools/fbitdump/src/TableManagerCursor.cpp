@@ -202,8 +202,10 @@ bool TableManagerCursor::next()
 	while (!this->currentCursor->next()) {
 		/* delete the cursor (not in list) */
 		delete this->currentCursor;
-		/* delete the table to save some memory, might become optional */
-		tableManager->removeTable(this->currentTableIt);
+		/* delete the table to save some memory if the tables are not needed for further processing (like statistics) */
+		if (!conf->getExtendedStats()) {
+			tableManager->removeTable(this->currentTableIt);
+		}
 
 		/* error during fetching new row, try next table */
 		this->currentTableIt++;

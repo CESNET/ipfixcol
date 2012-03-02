@@ -78,11 +78,6 @@ public:
 	Filter();
 
 	/**
-	 * \brief Initialise the filter
-	 */
-	void init(Configuration &conf) throw (std::invalid_argument);
-
-	/**
 	 * \brief Build and return filter string for fastbit query
 	 *
 	 * This should take specified time  windows into consideration
@@ -100,6 +95,16 @@ public:
 	bool isValid(Cursor &cur) const;
 
 private:
+
+	/**
+	 * \brief Initialise the filter
+	 *
+	 * Uses filter string and XML source from configuration
+	 *
+	 * @param conf Configuration passed to constructor
+	 */
+	void init(Configuration &conf) throw (std::invalid_argument);
+
 	/**
 	 * \brief Parse timestamp to number of seconds
 	 *

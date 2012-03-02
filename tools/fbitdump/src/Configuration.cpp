@@ -305,7 +305,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		this->format = "%ts %td %pr %sa4:%sp -> %da4:%dp %flg %tos %pkt %byt %bps %pps %bpp %icmptype %sas %das %in %out %fl";
 	} else if (this->format == "line6") {
 		this->format = "%ts %td %pr %sa6:%sp -> %da6:%dp %pkt %byt %fl";
-	} else if (this->format == "long4") {
+	} else if (this->format == "long6") {
 		this->format = "%ts %td %pr %sa6:%sp -> %da6:%dp %flg %tos %pkt %byt %fl";
 	} else if (this->format == "extended6") {
 		this->format = "%ts %td %pr %sa6:%sp -> %da6:%dp %flg %tos %pkt %byt %bps %pps %bpp %fl";

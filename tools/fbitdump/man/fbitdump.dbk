@@ -79,7 +79,7 @@
 			<varlistentry>
 				<term>-e</term>
 				<listitem>
-					<simpara>Extended bottom stats. Print summary of statistics columns.</simpara>
+					<simpara>Extended bottom stats. Print summary of statistics columns. The flow that were filtered out are not included.</simpara>
 				</listitem>
 			</varlistentry>
 			
