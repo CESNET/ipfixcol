@@ -92,7 +92,6 @@
 		</destination>
 	</exportingProcess>
 
-
 	<exportingProcess>
 		<name>File writer SCTP</name>
 		<destination>
@@ -100,28 +99,6 @@
 			<fileWriter>
 				<fileFormat>ipfix</fileFormat>
 				<file>file://tmp/collected-records-sctp.ipfix</file>
-			</fileWriter>
-		</destination>
-	</exportingProcess>
-
-	<exportingProcess>
-		<name>Postgres</name>
-		<destination>
-			<name>store data records in PostgreSQL database</name>
-		    <fileWriter>
-                <fileFormat>postgres</fileFormat>
-				<!--## Name of host to connect to -->
-				<host>localhost</host>
-				<!--## IP address of host to connect to -->
-				<hostaddr>localhost</hostaddr>
-				<!--## Port number to connect to at the server host -->
-				<port>5432</port>
-				<!--## Name of the database -->
-				<dbname>test</dbname>
-				<!--## PostgreSQL user name to connect as -->
-				<user>username</user>
-				<!--## Password to be used if the server demands password authentication -->
-				<pass>password</pass>
 			</fileWriter>
 		</destination>
 	</exportingProcess>
