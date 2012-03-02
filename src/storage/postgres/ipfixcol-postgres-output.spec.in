@@ -1,5 +1,5 @@
 Summary: Postgres storage plugin for ipfixcol.
-Name: ipfixcol_postgres_output
+Name: ipfixcol-postgres-output
 Version: %(cut -f1 ./VERSION | tr -d '\n')
 Release: @RELEASE@
 URL: http://www.liberouter.org/
@@ -43,4 +43,4 @@ make DESTDIR=$RPM_BUILD_ROOT install
 
 %files
 #storage plugins
-/usr/lib64/ipfixcol_postgres_output.so
+/usr/lib64/ipfixcol-postgres-output.so

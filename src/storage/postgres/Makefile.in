@@ -12,7 +12,7 @@ includedir = @includedir@
 libdir =  @libdir@
 mandir = @mandir@
 
-TARGETS = ipfixcol_postgres_output.so
+TARGETS = ipfixcol-postgres-output.so
 TOPDIR = @CONFIGURE_PWD@
 NAME = @PACKAGE_NAME@
 RELEASE = @RELEASE@
@@ -27,10 +27,10 @@ SRCS = postgres_output.c
 OBJ = postgres_output.o
 HDRS = ipfix_entities.h ipfix_postgres_types.h
 
-all: ipfixcol_postgres_output.so
+all: ipfixcol-postgres-output.so
 
-ipfixcol_postgres_output.so: $(OBJ)
-	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfixcol_postgres_output.so.1 -o $@ $< -lc
+ipfixcol-postgres-output.so: $(OBJ)
+	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfixcol-postgres-output.so.1 -o $@ $< -lc
 
 $(OBJ): $(SRCS)
 	@for i in $(SRCS); do \

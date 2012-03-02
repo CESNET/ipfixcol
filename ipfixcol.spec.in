@@ -56,12 +56,12 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %{_mandir}/man1/ipfixcol.1.gz
 #%{_mandir}/man5/ipfixcol.conf.5*
 #input plugins
-/usr/lib64/ipfixcol_udp_input.so
-/usr/lib64/ipfixcol_tcp_input.so
-/usr/lib64/ipfixcol_sctp_input.so
-/usr/lib64/ipfixcol_ipfix_input.so
+/usr/lib64/ipfixcol-udp-input.so
+/usr/lib64/ipfixcol-tcp-input.so
+/usr/lib64/ipfixcol-sctp-input.so
+/usr/lib64/ipfixcol-ipfix-input.so
 #storage plugins
-/usr/lib64/ipfixcol_ipfix_output.so
+/usr/lib64/ipfixcol-ipfix-output.so
 #config files
 /etc/ipfixcol/internalcfg.xml
 /etc/ipfixcol/ipfix-elements.xml

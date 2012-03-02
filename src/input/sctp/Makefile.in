@@ -12,7 +12,7 @@ includedir = @includedir@
 libdir =  @libdir@
 mandir = @mandir@
 
-TARGETS = ipfixcol_sctp_input.so
+TARGETS = ipfixcol-sctp-input.so
 TOPDIR = @CONFIGURE_PWD@
 NAME = @PACKAGE_NAME@
 RELEASE = @RELEASE@
@@ -24,10 +24,10 @@ DIR = "src/input/sctp"
 SRCS = sctp_input.c
 OBJ = sctp_input.o
 
-all: ipfixcol_sctp_input.so
+all: ipfixcol-sctp-input.so
 
-ipfixcol_sctp_input.so: $(OBJ)
-	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfixcol_sctp_input.so.1 -o $@ $< -lc
+ipfixcol-sctp-input.so: $(OBJ)
+	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfixcol-sctp-input.so.1 -o $@ $< -lc
 	
 $(OBJ): $(SRCS)
 	@for i in $(SRCS); do \

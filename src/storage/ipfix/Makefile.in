@@ -12,7 +12,7 @@ includedir = @includedir@
 libdir =  @libdir@
 mandir = @mandir@
 
-TARGETS = ipfixcol_ipfix_output.so
+TARGETS = ipfixcol-ipfix-output.so
 TOPDIR = @CONFIGURE_PWD@
 NAME = @PACKAGE_NAME@
 RELEASE = @RELEASE@
@@ -24,10 +24,10 @@ DIR = "src/storage/ipfix"
 SRCS = ipfix_file.c
 OBJ = ipfix_file.o
 
-all: ipfixcol_ipfix_output.so
+all: ipfixcol-ipfix-output.so
 
-ipfixcol_ipfix_output.so: ipfix_file.o
-	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfixcol_ipfix_output.so.1 -o $@ $< -lc
+ipfixcol-ipfix-output.so: ipfix_file.o
+	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfixcol-ipfix-output.so.1 -o $@ $< -lc
         
 $(OBJ): $(SRCS)
 	@for i in $(SRCS); do \

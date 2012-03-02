@@ -17,7 +17,7 @@ includedir = @includedir@
 libdir =  @libdir@
 mandir = @mandir@
 
-TARGETS = ipfixcol_udp_input.so
+TARGETS = ipfixcol-udp-input.so
 TOPDIR = @CONFIGURE_PWD@
 NAME = @PACKAGE_NAME@
 RELEASE = @RELEASE@
@@ -30,10 +30,10 @@ SRCS = udp_input.c
 OBJ = udp_input.o
 
 
-all: ipfixcol_udp_input.so
+all: ipfixcol-udp-input.so
 
-ipfixcol_udp_input.so: udp_input.o
-	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfixcol_udp_input.so.1 -o $@ $< -lc
+ipfixcol-udp-input.so: udp_input.o
+	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfixcol-udp-input.so.1 -o $@ $< -lc
 	
 $(OBJ): $(SRCS)
 	@for i in $(SRCS); do \

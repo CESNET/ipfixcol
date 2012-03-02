@@ -25,7 +25,7 @@ includedir = @includedir@
 libdir =  @libdir@
 mandir = @mandir@
 
-TARGETS = ipfixcol_tcp_input.so
+TARGETS = ipfixcol-tcp-input.so
 TOPDIR = @CONFIGURE_PWD@
 NAME = @PACKAGE_NAME@
 RELEASE = @RELEASE@
@@ -37,10 +37,10 @@ DIR = "src/input/tcp"
 SRCS = tcp_input.c
 OBJ = tcp_input.o
 
-all: ipfixcol_tcp_input.so
+all: ipfixcol-tcp-input.so
 
-ipfixcol_tcp_input.so: tcp_input.o
-	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfixcol_tcp_input.so.1 -o $@ $< -lc
+ipfixcol-tcp-input.so: tcp_input.o
+	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfixcol-tcp-input.so.1 -o $@ $< -lc
 	
 $(OBJ): $(SRCS)
 	@for i in $(SRCS); do \
