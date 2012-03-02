@@ -17,19 +17,19 @@
 		<!--## Name must match one of the <supportedCollectors> -->
 		<name>udpCollector</name>
 		<!--## Path of the plugin module -->
-		<file>/usr/lib64/ipfixcol_udp_input.so</file>
+		<file>/usr/lib64/ipfixcol-udp-input.so</file>
 	</inputPlugin>
 	<inputPlugin>
 		<name>tcpCollector</name>
-		<file>/usr/lib64/ipfixcol_tcp_input.so</file>
+		<file>/usr/lib64/ipfixcol-tcp-input.so</file>
 	</inputPlugin>
 	<inputPlugin>
 		<name>fileReader</name>
-		<file>/usr/lib64/ipfixcol_ipfix_input.so</file>
+		<file>/usr/lib64/ipfixcol-ipfix-input.so</file>
 	</inputPlugin>
 	<inputPlugin>
 		<name>sctpCollector</name>
-		<file>/usr/lib64/ipfixcol_sctp_input.so</file>
+		<file>/usr/lib64/ipfixcol-sctp-input.so</file>
 	</inputPlugin>
 
 	<!--## Storage plugin internal configuration -->
@@ -39,6 +39,6 @@
 		    ##   match this element -->
 		<fileFormat>ipfix</fileFormat>
 		<!--## Path of the storage module  -->
-		<file>/usr/lib64/ipfixcol_ipfix_output.so</file>
+		<file>/usr/lib64/ipfixcol-ipfix-output.so</file>
 	</storagePlugin>
 </ipfixcol>
