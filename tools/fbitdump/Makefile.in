@@ -115,9 +115,7 @@ man: $(addprefix $(MANDIR)/, $(MANSRC))
 			for i in $(MANSRC); do \
 				echo $(XSLTPROC) $(XSLTMANSTYLE) $$i; \
 				$(XSLTPROC) $(XSLTMANSTYLE) $$i; \
-			done; \
-			for i in `ls -1 | grep -v -E "*.dbk$$"`; do \
-				gzip $$i; \
+				gzip `ls | grep "$(basename $i).[1-7]$$"`; \
 			done; \
 			cd - > /dev/null; \
 		else \
@@ -170,5 +168,11 @@ rpm: tarball $(NAME).spec
 clean:
 	rm -f fbitdump src/protocols.cpp src/scanner.h src/scanner.c
 	rm -fr doc $(OBJDIR)
-	rm -fr $(RPMDIR) $(MANDIR)/*.gz
+	rm -fr $(RPMDIR)
+	@ echo "removing man pages";
+	@ cd $(MANDIR); \
+	for i in $(MANSRC); do \
+		rm -f `ls | grep "$(basename $i).[1-7].gz$$"`; \
+	done; \
+	cd - >/dev/null; \
 
