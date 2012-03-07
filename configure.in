@@ -270,9 +270,12 @@ if test "$SCTP" = "yes"; then
 fi
 
 if test "$POSTGRES" = "yes"; then
-	AC_CHECK_HEADER([libpq-fe.h], , 
-		[AC_MSG_ERROR([libpq-fe.h header not found])]
-	)
+	if test "$DISTRO" = "suse"; then 
+		AC_CHECK_HEADER([pgsql/libpq-fe.h], ,[AC_MSG_ERROR([libpq-fe.h header not found])])
+		CFLAGS="$CFLAGS -I/usr/include/pgsql" 
+	else
+		AC_CHECK_HEADER([libpq-fe.h], ,[AC_MSG_ERROR([libpq-fe.h header not found])])
+	fi
 fi
 
 if test "$FASTBIT" = "yes"; then

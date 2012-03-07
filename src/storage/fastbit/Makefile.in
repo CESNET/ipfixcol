@@ -44,7 +44,7 @@ $(OBJ): $(SRCS)
 	done;
 
 clean:
-	-rm -f $(TARGETS) $(OBJ)
+	-rm -f $(TARGETS) $(OBJ) $(MANPAGES)
 
 
 $(MANPAGES): $(DOC)

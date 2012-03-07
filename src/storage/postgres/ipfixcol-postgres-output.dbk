@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2008-2011</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>6 March 2012</date>
+		<authorgroup>
+			<author>
+                <personname>
+    				<firstname>Michal</firstname>
+	    			<surname>Srb</surname>
+                </personname>
+                <email>michal.srb@cesnet.cz</email>
+                <contrib>developer</contrib>
+			</author>
+			<author>
+                <personname>
+    				<firstname>Petr</firstname>
+	    			<surname>Velan</surname>
+                </personname>
+                <email>petr.velan@cesnet.cz</email>
+                <contrib>documentation</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol-postgres-output</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">PostgreSQL output plugin for IPFIXcol.</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>ipfixcol-postgres-output</refname>
+		<refpurpose>PostgreSQL output plugin for IPFIXcol.</refpurpose>
+	</refnamediv>
+    
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+			The <command>ipfix-postgres-output</command> plugin is a part of IPFIXcol (IPFIX collector). 
+			It provides means to store flow data info PostgreSQL database.
+		</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Configuration</title>
+		<simpara>There are two configuration XML files for ipfixcol that affects plugin usage.
+		First one is internal configuration XML (<filename>/etc/ipfixcol/internalcfg.xml</filename>) where are list of all available plugins for the collecor. 
+    	Postgres plugin must be specified here to be usable.
+    	</simpara>
+    	<simpara><filename>internalcfg.xml</filename> postgres example</simpara>
+    	<programlisting>
+    <![CDATA[
+	<storagePlugin>
+		<fileFormat>postgres</fileFormat>
+		<file>/usr/lib64/ipfixcol-postgres-output.so</file>
+	</storagePlugin>
+    ]]>
+    	</programlisting>
+    	<para></para>
+    	
+    	<simpara>The collector must be configured to use postgres output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
+    	The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves. 
+    	</simpara>
+    	<simpara><filename>startup.xml</filename> postgres example</simpara>
+    	<programlisting>
+    <![CDATA[
+	<destination>
+		<name>store data records in PostgreSQL database</name>
+		<fileWriter>
+			<fileFormat>postgres</fileFormat>
+			<host>localhost</host>
+			<hostaddr>localhost</hostaddr>
+			<port>5432</port>
+			<dbname>test</dbname>
+			<user>username</user>
+			<pass>password</pass>
+		</fileWriter>
+	</destination>
+    ]]>
+    	</programlisting>
+    
+    	<para>
+			<variablelist>
+				<varlistentry>
+					<term><command>fileFormat</command></term>
+					<listitem>
+						<simpara>Same as in <filename>internalcfg.xml</filename> file.</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>host</command></term>
+					<listitem>
+						<simpara>Name of host to connect to.</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>hostaddr</command></term>
+					<listitem>
+						<simpara>IP address of host to connect to.</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>port</command></term>
+					<listitem>
+						<simpara>Port number to connect to at the server host.</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>dbname</command></term>
+					<listitem>
+						<simpara>Name of the database.</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>user</command></term>
+					<listitem>
+						<simpara>PostgreSQL user name to use for connection.</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>pass</command></term>
+					<listitem>
+						<simpara>Password to be used if the server demands password authentication.</simpara>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="https://homeproj.cesnet.cz/projects/ipfixcol/">https://homeproj.cesnet.cz/projects/ipfixcol/</link>
+					</term>
+					<listitem>
+						<para>IPFIXCOL Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>

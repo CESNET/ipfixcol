@@ -18,7 +18,6 @@ BuildRequires: libxml2-devel
 Requires: ipfixcol
 BuildRequires: libcommlbr-devel >= 2.0.0 , libcommlbr-devel < 3.0.0
 Requires: libcommlbr >= 2.0.0 , libcommlbr < 3.0.0
-BuildRequires: libcombo-devel >= 1.4.0 , libcombo-devel < 2.0.0
 
 %description
 Postgres storage plugin for ipfixcol.
@@ -44,3 +43,4 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %files
 #storage plugins
 /usr/lib64/ipfixcol-postgres-output.so
+%{_mandir}/man1/ipfixcol-postgres-output.1.gz

@@ -27,6 +27,14 @@ SRCS = postgres_output.c
 OBJ = postgres_output.o
 HDRS = ipfix_entities.h ipfix_postgres_types.h
 
+#documentation tools
+XSLTPROC = @XSLTPROC@
+XSLTMANSTYLE = @XSLTMANSTYLE@
+MANDIR = .
+# expect the page name to be same as source name, with trailing man page number
+MANSRC = ipfixcol-postgres-output.dbk
+
+
 all: ipfixcol-postgres-output.so
 
 ipfixcol-postgres-output.so: $(OBJ)
@@ -38,21 +46,30 @@ $(OBJ): $(SRCS)
 	done;
 
 clean:
-	-rm -f $(TARGETS) $(OBJ)
+	-rm -rf $(TARGETS) $(OBJ) $(RPMDIR)
+	@for i in $(MANSRC); do \
+		rm -f `ls | grep "$(basename $i).[1-7].gz$$"`; \
+	done; \
+	
 
 .PHONY: tarball-prepare
 tarball-prepare:
-	@for i in Makefile.in $(SRCS) $(HDRS) $(MANSRCS) $(DOC); do \
+	@for i in Makefile.in $(SRCS) $(HDRS) $(MANSRC) $(DOC); do \
 		[ -d $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) ] || \
 		mkdir -p $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) -p; \
 		cp $$i $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR)/$$i; \
 	done;
 
 .PHONY: install
-install: $(TARGETS)
+install: $(TARGETS) man
 	[ -d $(DESTDIR)/$(libdir) ] || \
 		(mkdir -p $(DESTDIR)/$(libdir); chmod 755 $(DESTDIR)/$(libdir));
 	$(INSTALL_PROGRAM) $(TARGETS) $(DESTDIR)/$(libdir)/;
+	[ -d $(DESTDIR)/$(mandir) ] || \
+		(mkdir -p $(DESTDIR)/$(mandir); chmod 755 $(DESTDIR)/$(mandir));
+	for i in $(MANSRC); do \
+		$(INSTALL_PROGRAM) `ls | grep "$(basename $i).[1-7].gz$$"` $(DESTDIR)/$(mandir)/; \
+	done; \
 
 .PHONY: dist
 dist: tarball rpm
@@ -64,7 +81,7 @@ tarball: $(SRCS) $(HDRS) $(PHDRS)
 	rm -rf $(RPMDIR)/SOURCES/; \
 	mkdir -p $(RPMDIR)/SOURCES/; \
 	for i in $(SRCS) $(HDRS) $(CONF) configure.in configure Makefile.in VERSION \
-		$(NAME).spec.in install-sh; do \
+		$(NAME).spec.in install-sh $(addprefix $(MANDIR)/, $(MANSRC)); do \
 		[ "$$i" != "$${i%/*}" -a ! -d $(NAME)-$(VERSION)/$${i%/*} ] && mkdir -p $(NAME)-$(VERSION)/$${i%/*}; \
 		cp $$i $(NAME)-$(VERSION)/$$i; \
 	done;
@@ -86,5 +103,24 @@ cleanall: clean distclean
 .PHONY: distclean
 distclean:
 	rm -rf $(RPMDIR)
+
+man: $(addprefix $(MANDIR)/, $(MANSRC))
+	@if [ -n "$(XSLTPROC)" ]; then \
+		if [ -f "$(XSLTMANSTYLE)" ]; then \
+			cd $(MANDIR); \
+			for i in $(MANSRC); do \
+				echo $(XSLTPROC) $(XSLTMANSTYLE) $$i; \
+				$(XSLTPROC) $(XSLTMANSTYLE) $$i; \
+				gzip `ls | grep "$(basename $i).[1-7]$$"`; \
+			done; \
+			cd - > /dev/null; \
+		else \
+			echo "Missing $(XSLTMANSTYLE)!"; \
+			exit 1; \
+		fi \
+	else \
+		echo "Missing xsltproc"; \
+	fi
+
 
 

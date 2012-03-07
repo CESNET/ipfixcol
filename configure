@@ -4159,7 +4159,6 @@ installed software in a non-standard prefix.
 Alternatively, you may set the environment variables LIBCOMMLBR_CFLAGS
 and LIBCOMMLBR_LIBS to avoid the need to call pkg-config.
 See the pkg-config man page for more details." "$LINENO" 5
-
 elif test $pkg_failed = untried; then
      	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
@@ -4175,7 +4174,6 @@ See the pkg-config man page for more details.
 
 To get pkg-config, see <http://pkg-config.freedesktop.org/>.
 See \`config.log' for more details" "$LINENO" 5; }
-
 else
 	LIBCOMMLBR_CFLAGS=$pkg_cv_LIBCOMMLBR_CFLAGS
 	LIBCOMMLBR_LIBS=$pkg_cv_LIBCOMMLBR_LIBS
@@ -4742,15 +4740,26 @@ fi
 fi
 
 if test "$POSTGRES" = "yes"; then
-	ac_fn_c_check_header_mongrel "$LINENO" "libpq-fe.h" "ac_cv_header_libpq_fe_h" "$ac_includes_default"
+	if test "$DISTRO" = "suse"; then
+		ac_fn_c_check_header_mongrel "$LINENO" "pgsql/libpq-fe.h" "ac_cv_header_pgsql_libpq_fe_h" "$ac_includes_default"
+if test "x$ac_cv_header_pgsql_libpq_fe_h" = xyes; then :
+
+else
+  as_fn_error $? "libpq-fe.h header not found" "$LINENO" 5
+fi
+
+
+		CFLAGS="$CFLAGS -I/usr/include/pgsql"
+	else
+		ac_fn_c_check_header_mongrel "$LINENO" "libpq-fe.h" "ac_cv_header_libpq_fe_h" "$ac_includes_default"
 if test "x$ac_cv_header_libpq_fe_h" = xyes; then :
 
 else
   as_fn_error $? "libpq-fe.h header not found" "$LINENO" 5
-
 fi
 
 
+	fi
 fi
 
 if test "$FASTBIT" = "yes"; then
