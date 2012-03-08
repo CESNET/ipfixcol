@@ -79,6 +79,23 @@ struct fastbit_config{
         int indexes;			/* if this variable holds true value indexes are created on storage direcotry flush*/
 };
 
+
+std::string dir_hierarchy(){
+	time_t raw_time;
+	struct tm * timeinfo;
+
+	const int ft_size = 15;
+	char formated_time[ft_size];
+
+	time(&raw_time);
+	timeinfo = localtime(&raw_time);
+
+	strftime(formated_time,ft_size,"%Y/%m/%d/",timeinfo);
+
+	std::cout << "TIME DIR: " << formated_time << std::endl; 
+	return std::string(formated_time);
+}
+
 /* plugin inicialization */
 extern "C"
 int storage_init (char *params, void **config){
@@ -235,7 +252,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 				ss << (*dom_id).first;
 				domain_name = ss.str() + "/";
 				for(table = templates->begin(); table!=templates->end();table++){
-					(*table).second->flush(conf->sys_dir + domain_name + conf->window_dir);
+					(*table).second->flush(conf->sys_dir + domain_name + dir_hierarchy() + conf->window_dir);
 					if(conf->indexes){
 						std::cout << "Creating indexes: "<< conf->sys_dir + conf->window_dir << (*table).second->name()<< std::endl;
 						index_table = ibis::table::create((conf->sys_dir + conf->window_dir+(*table).second->name()).c_str());
@@ -289,7 +306,7 @@ int storage_close (void **config){
 		ss << (*dom_id).first;
 		domain_name = ss.str() + "/";
 		for(table = templates->begin(); table!=templates->end();table++){
-			(*table).second->flush(conf->sys_dir + domain_name + conf->window_dir);
+			(*table).second->flush(conf->sys_dir + domain_name + dir_hierarchy() + conf->window_dir);
 			if(conf->indexes){
 				std::cout << "Creating indexes: "<< conf->sys_dir + conf->window_dir + (*table).second->name() << std::endl;
 				index_table = ibis::table::create((conf->sys_dir + conf->window_dir + (*table).second->name()).c_str());
