@@ -105,7 +105,7 @@ int template_table::parse_template(struct ipfix_template * tmp){
 			en_offset++;
 			en = tmp->fields[i].enterprise_number;
 		}
-		std::cout << "element size:" << field->ie.length << " id:" << (field->ie.id & 0x7FFF) << " en:" << en << std::endl;
+		//TODO std::cout << "element size:" << field->ie.length << " id:" << (field->ie.id & 0x7FFF) << " en:" << en << std::endl;
 		switch(get_type_from_xml(en, field->ie.id & 0x7FFF)){
 			case UINT:
 				new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF);
