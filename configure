@@ -6226,13 +6226,7 @@ cd -;
 
 
 ############################# Check for tools ##################################
-cd tools/;
-for dir in *; do
-    if test -d "$dir" -a -f "$dir"/Makefile.in; then
-        TOOLS="$TOOLS $dir";
-    fi;
-done;
-cd -;
+TOOLS="tools/ipfixviewer";
 
 
 
@@ -6265,17 +6259,11 @@ ac_config_files="$ac_config_files ipfixcol.spec"
 
 ac_config_files="$ac_config_files ipfixcol.pc"
 
-# plugins makefiles
-for i in $INPUT_PLUGINS $STORAGE_PLUGINS; do
+# plugins and tools makefiles
+for i in $INPUT_PLUGINS $STORAGE_PLUGINS $TOOLS; do
     ac_config_files="$ac_config_files $i/Makefile"
 
 done;
-# tests makefiles
-for i in $TESTS; do
-    ac_config_files="$ac_config_files devel-tools/tests/$i/Makefile"
-
-done;
-# tools makefiles
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6999,7 +6987,6 @@ do
     "ipfixcol.spec") CONFIG_FILES="$CONFIG_FILES ipfixcol.spec" ;;
     "ipfixcol.pc") CONFIG_FILES="$CONFIG_FILES ipfixcol.pc" ;;
     "$i/Makefile") CONFIG_FILES="$CONFIG_FILES $i/Makefile" ;;
-    "devel-tools/tests/$i/Makefile") CONFIG_FILES="$CONFIG_FILES devel-tools/tests/$i/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

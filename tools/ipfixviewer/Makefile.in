@@ -1,0 +1,47 @@
+CC      = @CC@
+CFLAGS  = @CFLAGS@
+LIBS    = @LIBS@
+INCLUDE = "-I../../headers/"
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+datarootdir = @datarootdir@
+datadir = @datadir@
+bindir = @bindir@
+includedir = @includedir@
+bindir =  @bindir@
+mandir = @mandir@
+
+TARGETS = ipfixviewer
+TOPDIR = @CONFIGURE_PWD@
+NAME = @PACKAGE_NAME@
+RELEASE = @RELEASE@
+INSTALL = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+VERSION = $(shell cut -f1 $(TOPDIR)/VERSION | tr -d '\n')
+DIR = "/tools/ipfixviewer"
+
+SRCS = ipfix-viewer.c templates.c
+
+all: ipfixviewer
+
+ipfixviewer: $(SRCS)
+	$(CC) $(CFLAGS) $(INCLUDE) -o $@ $(SRCS)
+
+clean:
+	-rm -f $(TARGETS)
+
+.PHONY: tarball-prepare
+tarball-prepare:
+	@for i in Makefile.in $(SRCS) $(MANSRCS) $(DOC); do \
+		[ -d $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) ] || \
+		mkdir -p $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) -p; \
+		cp $$i $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR)/$$i; \
+	done;
+
+.PHONY: install
+install: $(TARGETS)
+	[ -d $(DESTDIR)/$(bindir) ] || \
+		(mkdir -p $(DESTDIR)/$(bindir); chmod 755 $(DESTDIR)/$(bindir));
+	$(INSTALL_PROGRAM) $(TARGETS) $(DESTDIR)/$(bindir)/;
+

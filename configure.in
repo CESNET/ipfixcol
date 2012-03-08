@@ -353,13 +353,7 @@ cd -;
 AC_SUBST(TESTS)
 
 ############################# Check for tools ##################################
-cd tools/;
-for dir in *; do
-    if test -d "$dir" -a -f "$dir"/Makefile.in; then
-        TOOLS="$TOOLS $dir";
-    fi;
-done;
-cd -;
+TOOLS="tools/ipfixviewer";
 
 AC_SUBST(TOOLS)
 
@@ -386,14 +380,9 @@ fi
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(ipfixcol.spec)
 AC_CONFIG_FILES(ipfixcol.pc)
-# plugins makefiles
-for i in $INPUT_PLUGINS $STORAGE_PLUGINS; do
+# plugins and tools makefiles
+for i in $INPUT_PLUGINS $STORAGE_PLUGINS $TOOLS; do
     AC_CONFIG_FILES([$i/Makefile])
 done;
-# tests makefiles
-for i in $TESTS; do
-    AC_CONFIG_FILES([devel-tools/tests/$i/Makefile])
-done;
-# tools makefiles
 
 AC_OUTPUT
