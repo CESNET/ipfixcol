@@ -4408,14 +4408,27 @@ fi
 
 done
 
-ac_fn_c_check_header_mongrel "$LINENO" "libpq-fe.h" "ac_cv_header_libpq_fe_h" "$ac_includes_default"
-if test "x$ac_cv_header_libpq_fe_h" = xyes; then :
+
+if test "$DISTRO" = "suse"; then
+	ac_fn_c_check_header_mongrel "$LINENO" "pgsql/libpq-fe.h" "ac_cv_header_pgsql_libpq_fe_h" "$ac_includes_default"
+if test "x$ac_cv_header_pgsql_libpq_fe_h" = xyes; then :
 
 else
-  as_fn_error $? "libpq-fe.h header not found, Postgres library is needed." "$LINENO" 5
+  as_fn_error $? "libpq-fe.h header not found" "$LINENO" 5
 fi
 
 
+	CFLAGS="$CFLAGS -I/usr/include/pgsql"
+else
+	ac_fn_c_check_header_mongrel "$LINENO" "libpq-fe.h" "ac_cv_header_libpq_fe_h" "$ac_includes_default"
+if test "x$ac_cv_header_libpq_fe_h" = xyes; then :
+
+else
+  as_fn_error $? "libpq-fe.h header not found" "$LINENO" 5
+fi
+
+
+fi
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for stdbool.h that conforms to C99" >&5
