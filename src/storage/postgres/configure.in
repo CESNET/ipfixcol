@@ -230,8 +230,13 @@ AC_ARG_ENABLE([debug],
         
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h syslog.h unistd.h])
-AC_CHECK_HEADER([libpq-fe.h], ,
-                [AC_MSG_ERROR([libpq-fe.h header not found, Postgres library is needed.])])
+
+if test "$DISTRO" = "suse"; then 
+	AC_CHECK_HEADER([pgsql/libpq-fe.h], ,[AC_MSG_ERROR([libpq-fe.h header not found])])
+	CFLAGS="$CFLAGS -I/usr/include/pgsql" 
+else
+	AC_CHECK_HEADER([libpq-fe.h], ,[AC_MSG_ERROR([libpq-fe.h header not found])])
+fi
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 AC_HEADER_STDBOOL
