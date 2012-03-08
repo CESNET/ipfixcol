@@ -92,7 +92,6 @@ std::string dir_hierarchy(){
 
 	strftime(formated_time,ft_size,"%Y/%m/%d/",timeinfo);
 
-	std::cout << "TIME DIR: " << formated_time << std::endl; 
 	return std::string(formated_time);
 }
 
@@ -199,6 +198,9 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	}
 
 	templates = (*dom_id).second; 
+	ss << (*dom_id).first;
+	domain_name = ss.str() + "/";
+	ss.str("");
 	
 	/* message from ipfixcol have maximum of 1023 data records */
 	for(i = 0 ; i < 1023; i++){ //TODO magic number! add constant to storage.h 
@@ -226,7 +228,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 		}
 
 		/* store this data record */	
-		rcnt += (*table).second->store(ipfix_msg->data_couple[i].data_set, conf->sys_dir + conf->window_dir);
+		rcnt += (*table).second->store(ipfix_msg->data_couple[i].data_set, conf->sys_dir + domain_name + dir_hierarchy() +conf->window_dir);
 
 		
 		//should we create new window? 
@@ -251,6 +253,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 				templates = (*dom_id).second; 
 				ss << (*dom_id).first;
 				domain_name = ss.str() + "/";
+				ss.str("");
 				for(table = templates->begin(); table!=templates->end();table++){
 					(*table).second->flush(conf->sys_dir + domain_name + dir_hierarchy() + conf->window_dir);
 					if(conf->indexes){
@@ -265,6 +268,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 			if (conf->dump_name == INCREMENTAL){
 				ss << std::setw(12) << std::setfill('0') << flushed;
 				conf->window_dir = conf->prefix + ss.str() + "/";
+				ss.str("");
 			}else{
 				timeinfo = localtime ( &(conf->last_flush));
 
