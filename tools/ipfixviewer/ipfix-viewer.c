@@ -404,7 +404,7 @@ static uint8_t *process_sets(uint8_t *message, void *tm, uint8_t print)
 					ptr += 4; /* 4=size of template record header */
 				} else {
 					/* add new template */
-					templ = tm_add_template(tm, template_record, TM_TEMPLATE);
+					templ = tm_add_template(tm, template_record,0, TM_TEMPLATE);
 					ptr += templ->template_length;
 				}
 			}
@@ -450,7 +450,7 @@ static uint8_t *process_sets(uint8_t *message, void *tm, uint8_t print)
 					ptr += 6; /* 4=size of opt. template record header */
 				} else {
 					/* add new opt. template */
-					templ = tm_add_template(tm, template_record, TM_OPTIONS_TEMPLATE);
+					templ = tm_add_template(tm, template_record,0, TM_OPTIONS_TEMPLATE);
 					ptr += templ->template_length;
 				}
 			}

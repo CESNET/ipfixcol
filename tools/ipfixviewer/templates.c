@@ -87,7 +87,7 @@ void tm_destroy(struct ipfix_template_mgr *tm)
 
 
 
-struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *template,
+struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *template, int max_len,
                     int type)
 {
 	struct ipfix_template *templ;
@@ -100,6 +100,7 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 	size_t fields_offset;
 	int templ_index;
 	int i;
+	max_len = 0;
 
 	rec = (struct ipfix_template_record *) template;
 	
