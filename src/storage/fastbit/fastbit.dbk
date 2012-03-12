@@ -45,7 +45,7 @@
     <![CDATA[
 	<storagePlugin>
 		<fileFormat>fastbit</fileFormat>
-		<file>path/to/ipfixcol-fastbit-output.so</file>
+		<file>/usr/lib64/ipfixcol-fastbit-output.so</file>
 	</storagePlugin>
     ]]>
     </programlisting>
@@ -55,20 +55,23 @@
     <title>Fastbit plugin configuration</title>
     <programlisting>
     <![CDATA[
-	<fileWriter>
-		<fileFormat>fastbit</fileFormat>
-		<path>storagePath</path>
-		<dumpInterval>
-			<timeWindow>300</timeWindow>
-			<timeAlignment>yes</timeAlignment>
-			<recordLimit>no</recordLimit>
-		</dumpInterval>
-		<namingStrategy>
-			<type>time</type>
-			<prefix>ic</prefix>
-		</namingStrategy>
-		<onTheFlightIndexes>yes</onTheFlightIndexes>
-	</fileWriter>
+    <destination>
+    	<name>Store data records in FastBit database</name>
+		<fileWriter>
+			<fileFormat>fastbit</fileFormat>
+			<path>storagePath</path>
+			<dumpInterval>
+				<timeWindow>300</timeWindow>
+				<timeAlignment>yes</timeAlignment>
+				<recordLimit>no</recordLimit>
+			</dumpInterval>
+			<namingStrategy>
+				<type>time</type>
+				<prefix>ic</prefix>
+			</namingStrategy>
+			<onTheFlightIndexes>yes</onTheFlightIndexes>
+		</fileWriter>
+	</destination>
     ]]>
     </programlisting>
 
