@@ -39,8 +39,8 @@
 
 #include "Utils.h"
 #include <unistd.h>
-#include <sys/stat.h>
 #include <dirent.h>
+#include <errno.h>
 
 namespace fbitdump {
 namespace Utils {
@@ -83,6 +83,7 @@ void sanitizePath(std::string &path)
 }
 
 void loadDirRange(std::string &dir, std::string &firstDir, std::string &lastDir, stringVector &tables)
+	throw (std::invalid_argument)
 {
 	/* remove slash, if any */
 	if (firstDir[firstDir.length()-1] == '/') {
@@ -92,38 +93,29 @@ void loadDirRange(std::string &dir, std::string &firstDir, std::string &lastDir,
 		lastDir.resize(lastDir.length()-1);
 	}
 
-	/* dirty hack, see below for more information */
-	bool sameLength = (firstDir.length() == lastDir.length()) ? true : false;
-
-	/* indicates whether we already found first specified dir */
-	bool firstDirFound = false;
+	/* check that first dir comes before last dir */
+	if (strverscmp(firstDir.c_str(), lastDir.c_str()) > 0) {
+		throw std::invalid_argument(lastDir + " comes before " + firstDir);
+	}
 
 	struct dirent **namelist;
 	int dirs_counter;
-	int counter;
 
 	/* scan for subdirectories */
-	dirs_counter = scandir(dir.c_str(), &namelist, NULL, alphasort);
+	dirs_counter = scandir(dir.c_str(), &namelist, NULL, versionsort);
 	if (dirs_counter < 0) {
+#ifdef DEBUG
+		std::cerr << "Cannot scan directory " << dir << ": " << strerror(errno) << std::endl;
+#endif
 		return;
 	}
 	/*
 	 * namelist now contains dirent structure for every entry in directory.
-	 * the structures are sorted alphabetically, but there is one problem:
-	 * ...
-	 * data2/
-	 * data20/  <== ****! not good for us, if user specifies "data2:data3", he only
-	 * data21/            wants data2 and data3 directory, not data20/
-	 * ...
-	 * data29/
-	 * data3/
-	 * data30/
-	 * ...
-	 *
-	 * so we will use auxiliary variable sameLength as workaround for this issue
+	 * the structures are sorted according to versionsort, which is ok for most cases
 	 */
 
-	counter = 0;
+	bool firstDirFound = false; /* indicates whether we already found first specified dir */
+	int counter = 0;
 	struct dirent *dent;
 	bool onlyFreeDirs = false; /* call free on all dirents without adding the directories */
 
@@ -132,17 +124,12 @@ void loadDirRange(std::string &dir, std::string &firstDir, std::string &lastDir,
 
 		if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
 		&& strcmp(dent->d_name, "..") && !onlyFreeDirs) {
-			std::string tableDir;
-
-
 			if (firstDirFound || !strcmp(dent->d_name, firstDir.c_str())) {
 
-				if ((sameLength && strlen(dent->d_name) == firstDir.length()) || (!sameLength)) {
-					firstDirFound = true;
-					tableDir = dir + dent->d_name;
-					Utils::sanitizePath(tableDir);
-					tables.push_back(std::string(tableDir));
-				}
+				firstDirFound = true;
+				std::string tableDir = dir + dent->d_name;
+				Utils::sanitizePath(tableDir);
+				tables.push_back(std::string(tableDir));
 
 				if (!strcmp(dent->d_name, lastDir.c_str())) {
 					/* this is last directory we are interested in */

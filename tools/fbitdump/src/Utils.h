@@ -114,7 +114,8 @@ void sanitizePath(std::string &path);
  * @param lastDir Last directory to take
  * @param tables String set with full pathnames of loaded directories
  */
-void loadDirRange(std::string &basedir, std::string &firstDir, std::string &lastDir, stringVector &tables);
+void loadDirRange(std::string &basedir, std::string &firstDir, std::string &lastDir, stringVector &tables)
+	throw (std::invalid_argument);
 
 } /* end of namespace utils */
 
