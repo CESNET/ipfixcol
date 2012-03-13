@@ -47,8 +47,6 @@
 #include <resolv.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
-#include <netdb.h>
 #include "Utils.h"
 
 
@@ -65,6 +63,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	std::string filterFile;
 	std::string optionM;	/* optarg for option -M */
 	std::string optionm;	/* optarg value for option -m */
+	std::string optionr;	/* optarg value for option -r */
 	char *indexes = NULL;	/* indexes optarg to be parsed later */
 
 	/* get program name without execute path */
@@ -175,17 +174,13 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			optionM = optarg;
 			/* this option will be processed later (it depends on -r or -R) */
 			break;
-		case 'r': {/* file to open */
+		case 'r': {/* -M help argument */
                 if (optarg == std::string("")) {
-                	throw std::invalid_argument("-r requires an file to open, empty string given");
+                	throw std::invalid_argument("-r requires a path to open, empty string given");
                 }
 
-                this->rOptarg = optarg;
-                this->sanitizePath(this->rOptarg);
-#ifdef DEBUG
-                std::cerr << "Adding table " << this->rOptarg << std::endl;
-#endif
-				tables.push_back(this->rOptarg);
+                optionr = optarg;
+                Utils::sanitizePath(optionr);
 			break;
 		}
 		case 'm':
@@ -196,7 +191,9 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			break;
 
 		case 'R':
-			this->ROptarg = optarg;
+			if (optarg == std::string("")) {
+				throw std::invalid_argument("-R requires a path to open, empty string given");
+			}
 
 			this->processROption(tables, optarg);
 
@@ -241,10 +238,10 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 
 	if (!optionM.empty()) {
 		/* process -M option, this option depends on -r or -R */
-		processMOption(tables, optionM.c_str());
+		processMOption(tables, optionM.c_str(), optionr);
 	}
 
-	/* allways process option -m, we need to know  whether aggregate or not */
+	/* allways process option -m, we need to know whether aggregate or not */
 	if (this->optm) {
 		this->processmOption(optionm);
 	}
@@ -274,7 +271,6 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		this->filter = "1=1";
 	}
 
-	/* TODO add format to print everything */
 	if (this->format.empty() || this->format == "line") {
 		this->format = "%ts %td %pr %sa4:%sp -> %da4:%dp %sa6:%sp -> %da6:%dp %pkt %byt %fl";
 	} else if (this->format == "long") {
@@ -327,26 +323,41 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 
 void Configuration::searchForTableParts(stringVector &tables) throw (std::invalid_argument)
 {
-	DIR *d;
-	struct dirent *dent;
-
 	/* do we have any tables (directories) specified? */
 	if (tables.size() < 1) {
 		throw std::invalid_argument("Input file(s) must be specified");
 	}
 
-	/* read tables subdirectories(templates) */
+	/* go over all requested directories */
 	for (size_t i = 0; i < tables.size(); i++) {
+		/* check whether it is fastbit part */
+		if (Utils::isFastbitPart(tables[i])) {
+			this->parts.push_back(tables[i]);
+			continue;
+		}
+
+
+		/* read tables subdirectories, uses BFS */
+		DIR *d;
+		struct dirent *dent;
+
 		d = opendir(tables[i].c_str());
 		if (d == NULL) {
 			throw std::invalid_argument("Cannot open directory \"" + tables[i] + "\"");
 		}
 
 		while((dent = readdir(d)) != NULL) {
-			if (dent->d_type == DT_DIR && atoi(dent->d_name) != 0) {
+			if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".") && strcmp(dent->d_name, "..")) {
+				/* construct directory path */
 				std::string tablePath = tables[i] + std::string(dent->d_name);
-				this->sanitizePath(tablePath);
-				this->parts.push_back(tablePath);
+				Utils::sanitizePath(tablePath);
+
+				/* test whether the directory is fastbit part */
+				if (Utils::isFastbitPart(tablePath)) {
+					this->parts.push_back(tablePath); /* add the part */
+				} else {
+					tables.push_back(tablePath); /* add the directory for further processing */
+				}
 			}
 		}
 
@@ -584,32 +595,6 @@ stringSet Configuration::getColumnIndexes() const
 	return this->indexColumns;
 }
 
-bool Configuration::isDirectory(std::string dir) const
-{
-	int ret;
-	struct stat st;
-
-	ret = stat(dir.c_str(), &st);
-	if (ret != 0) {
-		/* it's definitely not a directory */
-		return false;
-	}
-
-	if (!S_ISDIR(st.st_mode)) {
-		return false;
-	}
-
-	/* it is a directory */
-	return true;
-}
-
-void Configuration::sanitizePath(std::string &path)
-{
-	if (path[path.length()-1] != '/') {
-		path += "/";
-	}
-}
-
 void Configuration::processmOption(std::string order)
 {
 	std::string::size_type pos;
@@ -654,7 +639,6 @@ void Configuration::help() const
 	<< "                or subnet aggregation: srcip4/24, srcip6/64." << std::endl
 	//<< "-b              Aggregate netflow records as bidirectional flows." << std::endl
 	//<< "-B              Aggregate netflow records as bidirectional flows - Guess direction." << std::endl
-	<< "-r <dir>        read input tables from directory" << std::endl
 //	<< "-w <file>       write output to file" << std::endl
 	<< "-f              read netflow filter from file" << std::endl
 	<< "-n              Define number of top N. -c option takes precedence over -n." << std::endl
@@ -676,12 +660,14 @@ void Configuration::help() const
 //	<< "-I              Print netflow summary statistics info from file, specified by -r." << std::endl
 	<< "-M <expr>       Read input from multiple directories." << std::endl
 	<< "                /dir/dir1:dir2:dir3 Read the same files from '/dir/dir1' '/dir/dir2' and '/dir/dir3'." << std::endl
-	<< "                requests either -r filename or -R firstfile:lastfile without pathnames" << std::endl
+	<< "                requests -r dir or -r firstdir:lastdir without pathnames." << std::endl
+	<< "-r <expr>       Specifies subdirectory or subdirectories for -M, usable only with -M." << std::endl
+	<< "                expr can be dir, which loads the dir from all directories specified in -M," << std::endl
+	<< "				or dir1:dir2, which reads data from subdirectories 'dir1' to 'dir2', in directories from -M." << std::endl
 	<< "-m [column]             Print netflow data date sorted. Takes optional parameter '%column' to sort by." << std::endl
-	<< "-R <expr>       Read input from sequence of files." << std::endl
-	<< "                /any/dir  Read all files in that directory." << std::endl
-//	<< "                /dir/file Read all files beginning with 'file'." << std::endl
-	<< "                /dir/file1:file2: Read all files from 'file1' to file2." << std::endl
+	<< "-R <expr>       Read input from directory (and subdirectories recursively). Can be repeated." << std::endl
+	<< "                /any/dir  Read all data from directory 'dir'." << std::endl
+	<< "                /dir/dir1:dir2: Read all data from directories 'dir1' to 'dir2'." << std::endl
 	<< "-o <mode>       Use <mode> to print out netflow records:" << std::endl
 //	<< "                 raw      Raw record dump." << std::endl
 	<< "                 line     Standard output line format." << std::endl
@@ -712,15 +698,19 @@ Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(fa
 {
 }
 
-bool Configuration::processMOption(stringVector &tables, const char *optarg)
+void Configuration::processMOption(stringVector &tables, const char *optarg, std::string &optionr)
 {
+	if (optionr.empty()) {
+		throw std::invalid_argument("Option -M requires -r to specify subdirectories!");
+	}
+
 	char *optarg_copy = strdup(optarg);
 	if (!optarg_copy) {
 		std::cerr << "Not enough memory (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;
 	}
 
 	std::string dname = dirname(optarg_copy);
-	this->sanitizePath(dname);
+	Utils::sanitizePath(dname);
 	free(optarg_copy);
 	optarg_copy = NULL;
 
@@ -739,153 +729,47 @@ bool Configuration::processMOption(stringVector &tables, const char *optarg)
 	/* separate directories (dir1:dir2:dir3) */
 	while ((found = bname.rfind(':')) != std::string::npos) {
 		std::string dir(dname);
-
 		dir += bname.substr(found + 1, last_pos - found);
-
-		this->sanitizePath(dir);
-
+		Utils::sanitizePath(dir);
 		dirs.push_back(dir);
-
 		bname.resize(found);
 
 		last_pos = found - 1;
 	}
 	/* don't forget last directory */
 	dirs.push_back(dname + bname.substr(0, found));
-	this->sanitizePath(dirs[dirs.size()-1]);
+	Utils::sanitizePath(dirs[dirs.size()-1]);
 
-	/* add filename from -r option */
-	if (this->rOptarg.empty() == false) {
-		char *crOptarg = (char *) malloc (strlen(this->rOptarg.c_str())+1);
-		if (!crOptarg) {
-			std::cerr << "Not enough memory (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;
-			return false;
-		}
-		memset(crOptarg, 0, strlen(this->rOptarg.c_str())+1);
 
-		this->rOptarg.copy(crOptarg, this->rOptarg.length());
+	/* process the -r option */
+	found = optionr.find(':');
+
+	if (found != std::string::npos) {
+		/* rOptarg contains colon */
+
+		/*
+		 * "file1:file2 so:
+		 * firstOpt = file1
+		 * secondOpt = file2
+		 */
+		std::string firstOpt = optionr.substr(0, found);
+		std::string secondOpt = optionr.substr(found+1, optionr.length()-found);
 
 		for (unsigned int u = 0; u < dirs.size(); u++) {
-			std::string table(dirs[u] + crOptarg);
-
-#ifdef DEBUG
-			std::cerr << "Adding table " << table << std::endl;
-#endif
+			Utils::loadDirRange(dirs[u], firstOpt, secondOpt, tables);
+		}
+	} else {
+		/* no colon */
+		for (unsigned int u = 0; u < dirs.size(); u++) {
+			std::string table(dirs[u] + optionr);
+			Utils::sanitizePath(table);
 			tables.push_back(table);
 		}
-
-		free(crOptarg);
-
-		std::vector<std::string>::iterator iter;
-
-		/* if -M is specified, -r is only auxiliary option. erase table specified by this option */
-		for (iter = tables.begin(); iter != tables.end(); iter++) {
-			if (!(*iter).compare(this->rOptarg)) {
-				/* found it */
-				tables.erase(iter);
-				return false;
-			}
-		}
-	} else if (this->ROptarg.empty() == false) {
-		/* -r option is missing, try -R instead */
-		size_t found = this->ROptarg.find(':');
-
-		if (found != std::string::npos) {
-			/* ROptarg contains colon */
-
-			/*
-			 * "file1:file2 so:
-			 * firstOpt = file1
-			 * secondOpt = file2
-			 */
-			std::string firstOpt = this->ROptarg.substr(0, found);
-			std::string secondOpt = this->ROptarg.substr(found+1, this->ROptarg.length()-found);
-
-			/* remove trailing slash, if any */
-			if (firstOpt[firstOpt.length()-1] == '/') {
-				firstOpt.resize(firstOpt.length()-1);
-			}
-			if (secondOpt[secondOpt.length()-1] == '/') {
-				secondOpt.resize(secondOpt.length()-1);
-			}
-
-			struct dirent **namelist;
-
-			/* indicates whether we already found first specified dir */
-			bool firstDirFound = false;
-			int counter;
-			struct dirent *dent;
-			bool sameLength;
-
-
-			for (unsigned int u = 0; u < dirs.size(); u++) {
-
-				int dirs_counter = scandir(dirs[u].c_str(), &namelist, NULL, alphasort);
-				if (dirs_counter < 0) {
-					break;
-				}
-
-				if (firstOpt.length() == secondOpt.length()) {
-					sameLength = true;
-				}
-
-				counter = 0;
-				firstDirFound = false;
-
-				while(dirs_counter--) {
-					dent = namelist[counter++];
-
-					if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
-					  && strcmp(dent->d_name, "..")) {
-						std::string tableDir(dirs[u].c_str());
-
-
-						if (firstDirFound || !strcmp(dent->d_name, firstOpt.c_str())) {
-
-							if ((sameLength && strlen(dent->d_name) == firstOpt.length())
-							  || (!sameLength)) {
-								firstDirFound = true;
-								tableDir += dent->d_name;
-								this->sanitizePath(tableDir);
-
-#ifdef DEBUG
-								std::cerr << "Adding table " << tableDir << std::endl;
-#endif
-
-								tables.push_back(std::string(tableDir));
-							}
-
-							if (!strcmp(dent->d_name, secondOpt.c_str())) {
-								/* this is last directory we are interested in */
-								free(namelist[counter-1]);
-								break;
-							}
-						}
-					}
-
-					free(namelist[counter-1]);
-				}
-				free(namelist);
-
-			}
-		} else {
-			/* no colon */
-			for (unsigned int u = 0; u < dirs.size(); u++) {
-				std::string table(dirs[u] + this->ROptarg);
-				this->sanitizePath(table);
-
-#ifdef DEBUG
-				std::cerr << "Adding table " << table << std::endl;
-#endif
-				tables.push_back(table);
-			}
-		}
 	}
-
-	return true;	/* all ok */
+	/* all done */
 }
 
-bool Configuration::processROption(stringVector &tables, const char *optarg)
+void Configuration::processROption(stringVector &tables, const char *optarg)
 {
 
 	/* find dirname() */
@@ -900,7 +784,7 @@ bool Configuration::processROption(stringVector &tables, const char *optarg)
 	optarg_copy = NULL;
 
 	/* add slash on the end */
-	this->sanitizePath(dname);
+	Utils::sanitizePath(dname);
 
 	/* find basename() */
 	optarg_copy = strdup(optarg);
@@ -913,130 +797,24 @@ bool Configuration::processROption(stringVector &tables, const char *optarg)
 	free(optarg_copy);
 	optarg_copy = NULL;
 
-	/* add slash on the end */
-	this->sanitizePath(bname);
-
 	/* check whether user specified region defined like fromDirX:toDirY */
 	/* NOTE: this will not work correctly if directory name contains colon */
 	size_t found = bname.find(':');
-	DIR *dir;
-	struct dirent *dent;
 
 	if (found != std::string::npos) {
 		/* yep, user specified region */
 		std::string firstDir = bname.substr(0, found);
-		/* remove slash, if any */
-		if (firstDir[firstDir.length()-1] == '/') {
-			firstDir.resize(firstDir.length()-1);
-		}
-
 		std::string lastDir = bname.substr(found+1, bname.length()-(found+1));
-		/* remove slash, if any */
-		if (lastDir[lastDir.length()-1] == '/') {
-			lastDir.resize(lastDir.length()-1);
-		}
 
-		/* dirty hack, see below for more information */
-		bool sameLength = (firstDir.length() == lastDir.length()) ? true : false;
-
-		/* indicates whether we already found first specified dir */
-		bool firstDirFound = false;
-
-		struct dirent **namelist;
-		int dirs_counter;
-		int counter;
-
-		/* scan for subdirectories */
-		dirs_counter = scandir(dname.c_str(), &namelist, NULL, alphasort);
-		if (dirs_counter < 0) {
-			return false;
-		}
-		/*
-		 * namelist now contains dirent structure for every entry in directory.
-		 * the structures are sorted alphabetically, but there is one problem:
-		 * ...
-		 * data2/
-		 * data20/  <== ****! not good for us, if user specifies "data2:data3", he only
-		 * data21/            wants data2 and data3 directory, not data20/
-		 * ...
-		 * data29/
-		 * data3/
-		 * data30/
-		 * ...
-		 *
-		 * so we will use auxiliary variable sameLength as workaround for this issue
-		 */
-
-		counter = 0;
-		bool onlyFreeDirs = false; /* call free on all dirents without adding the directories */
-
-		while(dirs_counter--) {
-			dent = namelist[counter++];
-
-			if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
-			  && strcmp(dent->d_name, "..") && !onlyFreeDirs) {
-				std::string tableDir;
-
-
-				if (firstDirFound || !strcmp(dent->d_name, firstDir.c_str())) {
-
-					if ((sameLength && strlen(dent->d_name) == firstDir.length())
-					  || (!sameLength)) {
-						firstDirFound = true;
-						tableDir = dname + dent->d_name;
-						this->sanitizePath(tableDir);
-
-#ifdef DEBUG
-						std::cerr << "Adding table " << tableDir << std::endl;
-#endif
-
-						tables.push_back(std::string(tableDir));
-					}
-
-					if (!strcmp(dent->d_name, lastDir.c_str())) {
-						/* this is last directory we are interested in */
-						onlyFreeDirs = true;
-					}
-				}
-			}
-
-			free(namelist[counter-1]);
-		}
-		free(namelist);
-
+		Utils::loadDirRange(dname, firstDir, lastDir, tables);
 	} else {
 		/* user specified parent directory only, so he wants to include
 		 * all subdirectories */
 
 		std::string parentDir(optarg);
-		this->sanitizePath(parentDir);
-
-		dir = opendir(parentDir.c_str());
-		if (dir == NULL) {
-			std::cerr << "Cannot open directory \"" << parentDir << "\"" << std::endl;
-			return false;
-		}
-
-		while((dent = readdir(dir)) != NULL) {
-			if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
-			  && strcmp(dent->d_name, "..")) {
-				std::string tableDir;
-
-				tableDir = parentDir + dent->d_name;
-				this->sanitizePath(tableDir);
-
-#ifdef DEBUG
-				std::cerr << "Adding table " << tableDir << std::endl;
-#endif
-
-				tables.push_back(std::string(tableDir));
-			}
-		}
-
-		closedir(dir);
+		Utils::sanitizePath(parentDir);
+		tables.push_back(std::string(parentDir));
 	}
-
-	return true;
 }
 
 void Configuration::parseAggregateArg(char *arg) throw (std::invalid_argument)

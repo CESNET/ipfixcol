@@ -38,6 +38,9 @@
  */
 
 #include "Utils.h"
+#include <unistd.h>
+#include <sys/stat.h>
+#include <dirent.h>
 
 namespace fbitdump {
 namespace Utils {
@@ -65,6 +68,92 @@ bool splitString(char *str, stringSet &result)
 	}
 
 	return true;
+}
+
+bool isFastbitPart(std::string dir)
+{
+	return !access((dir + "-part.txt").c_str(), F_OK);
+}
+
+void sanitizePath(std::string &path)
+{
+	if (path[path.length()-1] != '/') {
+		path += "/";
+	}
+}
+
+void loadDirRange(std::string &dir, std::string &firstDir, std::string &lastDir, stringVector &tables)
+{
+	/* remove slash, if any */
+	if (firstDir[firstDir.length()-1] == '/') {
+		firstDir.resize(firstDir.length()-1);
+	}
+	if (lastDir[lastDir.length()-1] == '/') {
+		lastDir.resize(lastDir.length()-1);
+	}
+
+	/* dirty hack, see below for more information */
+	bool sameLength = (firstDir.length() == lastDir.length()) ? true : false;
+
+	/* indicates whether we already found first specified dir */
+	bool firstDirFound = false;
+
+	struct dirent **namelist;
+	int dirs_counter;
+	int counter;
+
+	/* scan for subdirectories */
+	dirs_counter = scandir(dir.c_str(), &namelist, NULL, alphasort);
+	if (dirs_counter < 0) {
+		return;
+	}
+	/*
+	 * namelist now contains dirent structure for every entry in directory.
+	 * the structures are sorted alphabetically, but there is one problem:
+	 * ...
+	 * data2/
+	 * data20/  <== ****! not good for us, if user specifies "data2:data3", he only
+	 * data21/            wants data2 and data3 directory, not data20/
+	 * ...
+	 * data29/
+	 * data3/
+	 * data30/
+	 * ...
+	 *
+	 * so we will use auxiliary variable sameLength as workaround for this issue
+	 */
+
+	counter = 0;
+	struct dirent *dent;
+	bool onlyFreeDirs = false; /* call free on all dirents without adding the directories */
+
+	while(dirs_counter--) {
+		dent = namelist[counter++];
+
+		if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
+		&& strcmp(dent->d_name, "..") && !onlyFreeDirs) {
+			std::string tableDir;
+
+
+			if (firstDirFound || !strcmp(dent->d_name, firstDir.c_str())) {
+
+				if ((sameLength && strlen(dent->d_name) == firstDir.length()) || (!sameLength)) {
+					firstDirFound = true;
+					tableDir = dir + dent->d_name;
+					Utils::sanitizePath(tableDir);
+					tables.push_back(std::string(tableDir));
+				}
+
+				if (!strcmp(dent->d_name, lastDir.c_str())) {
+					/* this is last directory we are interested in */
+					onlyFreeDirs = true;
+				}
+			}
+		}
+
+		free(namelist[counter-1]);
+	}
+	free(namelist);
 }
 
 } /* end of namespace utils */

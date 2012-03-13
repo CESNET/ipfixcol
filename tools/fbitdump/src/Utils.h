@@ -86,6 +86,36 @@ inline void formatNumber(T num, std::ostream &ss, bool plainNumbers)
  */
 bool splitString(char *str, stringSet &result);
 
+/**
+ * \brief Checks whether specified directory is fastbit part
+ *
+ * Expects dir ending with '/'
+ * Checks the existence of fastbit "-part.txt" file
+ *
+ * @param dir Directory to check
+ * @return true when specified directory is fastbit part
+ */
+bool isFastbitPart(std::string dir);
+
+/**
+ * \brief Sanitize path
+ *
+ * Add slash on the end of the path
+ *
+ * @return nothing
+ */
+void sanitizePath(std::string &path);
+
+/**
+ * \brief Reads all subdirectories of basedir in range between firstDir and lastDir and saves the paths to tables
+ *
+ * @param basedir Basic path to directories in range
+ * @param firstDir First directory to take
+ * @param lastDir Last directory to take
+ * @param tables String set with full pathnames of loaded directories
+ */
+void loadDirRange(std::string &basedir, std::string &firstDir, std::string &lastDir, stringVector &tables);
+
 } /* end of namespace utils */
 
 }  /* end of namespace fbitdump */
