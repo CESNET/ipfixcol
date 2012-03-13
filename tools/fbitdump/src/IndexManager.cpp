@@ -41,29 +41,23 @@
 
 namespace fbitdump {
 
-void IndexManager::deleteIndexes(Configuration &conf)
+void IndexManager::deleteIndexes(Configuration &conf, TableManager &tm)
 {
-	stringVector parts = conf.getPartsNames();
+	ibis::partList parts = tm.getParts();
 	stringSet indexes = conf.getColumnIndexes();
-	std::string rmString = "rm -f ";
-	for (stringVector::const_iterator it = parts.begin(); it != parts.end(); it++) {
-		rmString += *it + "/";
-		if (indexes.size() == 0) {
-			rmString += "*";
-		} else {
-			if (indexes.size() > 1) rmString += "{";
-			for (stringSet::const_iterator stringIt = indexes.begin(); stringIt != indexes.end(); stringIt++) {
-				rmString += *stringIt;
-				if (indexes.size() > 1)	rmString += ",";
-			}
-			/* change last comma to right curly bracket */
-			if (indexes.size() > 1) rmString[rmString.size()-1] = '}';
-		}
-		rmString += ".idx ";
-	}
+
 	std::cout << "Deleting indexes" << std::endl;
-	std::cout << rmString << std::endl;
-	system(rmString.c_str());
+
+	for (ibis::partList::iterator partIt = parts.begin(); partIt != parts.end(); partIt++) {
+		if (indexes.size() == 0) {
+			(*partIt)->purgeIndexFiles();
+		} else {
+			for (stringSet::const_iterator stringIt = indexes.begin(); stringIt != indexes.end(); stringIt++) {
+				std::string indexPath = std::string((*partIt)->currentDataDir()) + "/" + *stringIt + ".idx";
+				unlink(indexPath.c_str());
+			}
+		}
+	}
 }
 
 void IndexManager::createIndexes(Configuration &conf, TableManager &tm)

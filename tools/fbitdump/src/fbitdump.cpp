@@ -75,11 +75,6 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	/* check whether to delete indexes */
-	if (conf.getDeleteIndexes()) {
-		IndexManager::deleteIndexes(conf);
-	}
-
 	try {
 		/* create filter */
 		Filter filter(conf);
@@ -89,6 +84,11 @@ int main(int argc, char *argv[])
 
 		/* initialise tables */
 		TableManager tm(conf);
+
+		/* check whether to delete indexes */
+		if (conf.getDeleteIndexes()) {
+			IndexManager::deleteIndexes(conf, tm);
+		}
 
 		/* check whether to build indexes */
 		if (conf.getCreateIndexes()) {
