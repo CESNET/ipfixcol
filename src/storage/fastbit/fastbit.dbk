@@ -57,7 +57,7 @@
     <![CDATA[
 	<fileWriter>
 		<fileFormat>fastbit</fileFormat>
-		<path>storagePath</path>
+		<path>storagePath/%o/%Y/%m/%d/</path>
 		<dumpInterval>
 			<timeWindow>300</timeWindow>
 			<timeAlignment>yes</timeAlignment>
@@ -78,7 +78,196 @@
           <command>path</command>
         </term>
         <listitem>
-          <simpara>the path element specifies storage direcotry for data collected by plugin </simpara>
+          <simpara>the path element specifies storage direcotry for data collected by fastbit plugin. Path can contain
+                   format tokens for day, month, obervation id ect. This allows you to create direcotry hierarchy based
+	   on format tokens.</simpara>
+          <variablelist>
+            <varlistentry>
+              <term>
+                <command>%a</command>
+              </term>
+              <listitem>
+               <simpara>Abbreviated weekday name (local-depended). Example: Thu</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%A</command>
+              </term>
+              <listitem>
+               <simpara>Full weekday name (local-depended). Example: Thursday</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%b</command>
+              </term>
+              <listitem>
+               <simpara>Abbreviated month name (local-depended). Example: Aug</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%B</command>
+              </term>
+              <listitem>
+               <simpara>Full month name (local-depended). Example: August</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%c</command>
+              </term>
+              <listitem>
+               <simpara>Date and time representation (local-depended). Example: Thu Aug 23 14:55:02 2001</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%d</command>
+              </term>
+              <listitem>
+               <simpara>Day of the month (01-31). Example: 23</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%H</command>
+              </term>
+              <listitem>
+               <simpara>Hour in 24h format (00-23). Example: 14</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%I</command>
+              </term>
+              <listitem>
+               <simpara>Hour in 12h format (01-12). Example: 02</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%j</command>
+              </term>
+              <listitem>
+               <simpara>Day of the year (001-366). Example: 235</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%m</command>
+              </term>
+              <listitem>
+               <simpara>Month as a decimal number (01-12). Example: 08</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%M</command>
+              </term>
+              <listitem>
+               <simpara>Minute (00-59). Example: 55</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%o</command>
+              </term>
+              <listitem>
+               <simpara>Observation Domain Id. Example: 1</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%p</command>
+              </term>
+              <listitem>
+               <simpara>AM or PM designation. Example: PM</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%S</command>
+              </term>
+              <listitem>
+               <simpara>Second (00-61). Example: 02</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%U</command>
+              </term>
+              <listitem>
+               <simpara>Week number with the first Sunday as the first day of week one (00-53). Example: 33</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%w</command>
+              </term>
+              <listitem>
+               <simpara>Weekday as a decimal number with Sunday as 0 (0-6). Example: 4</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%W</command>
+              </term>
+              <listitem>
+               <simpara>Week number with the first Monday as the first day of week one (00-53). Example: 34</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%x</command>
+              </term>
+              <listitem>
+               <simpara>Date representation (local-depended). Example: 08/23/01</simpara>
+               <note>This creates 3 subdirectories!</note>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%X</command>
+              </term>
+              <listitem>
+               <simpara>Time representation (local-depended). Example: 14:55:02</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%y</command>
+              </term>
+              <listitem>
+               <simpara>Year, last two digits (00-99). Example: 01</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%Y</command>
+              </term>
+              <listitem>
+               <simpara>Year. Example: 2001</simpara>
+             </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>
+                <command>%Z</command>
+              </term>
+              <listitem>
+               <simpara>Timezone name or abbreviation. Example: CDT</simpara>
+             </listitem>
+            <varlistentry>
+              <term>
+                <command>%%</command>
+              </term>
+              <listitem>
+               <simpara>A % sign. Example: %</simpara>
+             </listitem>
+            </varlistentry>
+            </varlistentry>
+          </variablelist>
         </listitem>
       </varlistentry>
       <varlistentry>
