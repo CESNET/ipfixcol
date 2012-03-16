@@ -260,7 +260,7 @@ static int create_table(struct postgres_config *config, struct ipfix_template *t
 	sql_len += snprintf(sql_command+sql_len, sql_command_len-sql_len, ")");
 
 	/* DEBUG */
-	/* fprintf(stderr, "DEBUG: %s\n", sql_command); */
+	// fprintf(stderr, "DEBUG: %s\n", sql_command);
 
 	/* execute the command */
 	res = PQexec(config->conn, sql_command);
@@ -732,7 +732,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 		                    "%s", ")");
 
 		/* DEBUG */
-		/* fprintf(stderr, "\nDEBUG: SQL command to execute:\n %s\n", sql_command); */
+		// fprintf(stderr, "\nDEBUG: SQL command to execute:\n %s\n", sql_command);
 
 		res = PQexec(conf->conn, sql_command);
 		if (PQresultStatus(res) != PGRES_COMMAND_OK) {
@@ -835,6 +835,7 @@ static int process_data_records(struct postgres_config *conf, const struct ipfix
 	while ((data_set = ipfix_msg->data_couple[set_index].data_set) != NULL) {
 		if (ipfix_msg->data_couple[set_index].data_template == NULL) {
 			/* no template for data record, skip */
+			set_index++;
 			continue;
 		}
 		snprintf(table_name, TABLE_NAME_LEN, TABLE_NAME_PREFIX "%u", ipfix_msg->data_couple[set_index].data_template->template_id);
@@ -1047,7 +1048,7 @@ int storage_init(char *params, void **config)
 	}
 
 	/* DEBUG */
-	/* fprintf(stderr, "DEBUG: connection string: %s\n", connection_string+1); */
+	// fprintf(stderr, "DEBUG: connection string: %s\n", connection_string+1);
 
 	/* try to connect to the database */
 	conn = PQconnectdb(connection_string+1);
@@ -1158,10 +1159,10 @@ int storage_close(void **config)
 #ifdef POSTGRES_PLUGIN_DEBUG
 
 char *xml_configuration =
-		"<postgres>"
+		"<fileWriter>"
 		"<user>username</user>"
 		"<dbname>test</dbname>"
-		"</postgres>";
+		"</fileWriter>";
 
 
 int main(int argc, char **argv)
@@ -1176,10 +1177,21 @@ int main(int argc, char **argv)
 		fprintf(stderr, "DEBUG: storage_init() failed with return code %d.\n", ret);
 	}
 
-	message.data_set[0].template = &template;
+	message.data_couple[0].data_template = &template;
 	template.template_id = 333;
 	template.field_count = 1;
 
+	/* 
+ 	// test some create table command 
+	char *sql_command = "CREATE TABLE TestTable (id integer, str varchar(40));";
+	PGresult   *res = PQexec(config->conn, sql_command);
+	if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+                VERBOSE(CL_VERBOSE_OFF, "PostgreSQL: %s", PQerrorMessage(config->conn));
+        } else {
+		VERBOSE(CL_VERBOSE_OFF, "COMMAND OK");
+	}
+        PQclear(res);
+	*/
 	process_new_templates(config, &message);
 	process_data_records(config, &message);
 

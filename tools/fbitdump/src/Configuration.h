@@ -290,33 +290,16 @@ private:
 	void parseFormat(std::string format);
 
     /**
-     * \brief Check whether argument is a directory
-     *
-     * @return true if given argument is a directory, false otherwise
-     */
-    bool isDirectory(std::string dir) const;
-
-    /**
-     * \brief Sanitize path
-     *
-     * Add slash on the end of the path
-     *
-     * @return nothing
-     */
-    void sanitizePath(std::string &path);
-
-    /**
      * \brief Process -M option from getopt()
      *
      * @param tables vector containing names of input directories
      * @param optarg optarg for -M option
+     * @param optionr optarg for -r option
      *
      * Local variable "tables", specified in init() method, will contain input
      * directories specified by -M option.
-     *
-     * @return true, if no error occurred, false otherwise
      */
-    bool processMOption(stringVector &tables, const char *optarg);
+    void processMOption(stringVector &tables, const char *optarg, std::string &optionr);
 
     /**
      * \brief Process -R option from getopt()
@@ -326,10 +309,8 @@ private:
      *
      * Local variable "tables", specified in init() method, will contain input
      * directories specified by -R option.
-     *
-     * @return true, if no error occurred, false otherwise
      */
-    bool processROption(stringVector &tables, const char *optarg);
+    void processROption(stringVector &tables, const char *optarg);
 
     /**
      * \brief Process optional param of -m option
@@ -369,8 +350,6 @@ private:
 	bool optm;                          /**< Indicates whether user specified "-m" option or not */
 	Column *orderColumn;	 			/**< Column specified using -m value, default is %ts */
 	std::string timeWindow;             /**< Time window */
-	std::string rOptarg;                /**< Optarg for -r option */
-	std::string ROptarg;                /**< Optarg for -R option */
 	Resolver *resolver;                 /**< DNS resolver */
 	bool statistics;					/**< Option to generate statistics was used */
 	bool orderAsc;						/**< Order column increasingly, default is true */

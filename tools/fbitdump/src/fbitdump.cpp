@@ -54,9 +54,12 @@ using namespace fbitdump;
 int main(int argc, char *argv[])
 {
 	/* raise limit for cache size, when there is more memory available */
-	ibis::fileManager::adjustCacheSize(2048000000);
+	/* default is half of available physical memory */
+	//ibis::fileManager::adjustCacheSize(2048000000);
 
-//	ibis::gVerbose = 7;
+//	ibis::fileManager::instance().printStatus(std::cout);
+
+	//ibis::gVerbose = 7;
 	ibis::gParameters().add("fileManager.minMapSize", "50");
 
 	/* create configuration to work with */
@@ -72,11 +75,6 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	/* check whether to delete indexes */
-	if (conf.getDeleteIndexes()) {
-		IndexManager::deleteIndexes(conf);
-	}
-
 	try {
 		/* create filter */
 		Filter filter(conf);
@@ -86,6 +84,11 @@ int main(int argc, char *argv[])
 
 		/* initialise tables */
 		TableManager tm(conf);
+
+		/* check whether to delete indexes */
+		if (conf.getDeleteIndexes()) {
+			IndexManager::deleteIndexes(conf, tm);
+		}
 
 		/* check whether to build indexes */
 		if (conf.getCreateIndexes()) {
@@ -101,7 +104,6 @@ int main(int argc, char *argv[])
 
 		/* print tables */
 		print.print(tm);
-
 	} catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
 		return 2;

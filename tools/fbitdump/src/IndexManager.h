@@ -53,9 +53,10 @@ public:
 	 *
 	 * Uses system() function to call rm (not very portable)
 	 *
-	 * @param conf Configuration class with parts to remove indexes from
+	 * @param conf Configuration class that specifies indexes to remove
+	 * @param tm TableManager with created parts to process
 	 */
-	static void deleteIndexes(Configuration &conf);
+	static void deleteIndexes(Configuration &conf, TableManager &tm);
 
 	/**
 	 * \brief Create indexes specified in configuration on parts in TableManager

@@ -342,13 +342,11 @@ AC_SUBST(STORAGE_PLUGINS)
 
 ############################# Check for tests ##################################
 # tests are located in devel-tools/tests/
-cd devel-tools/tests/;
-for dir in *; do
+for dir in devel-tools/tests/*; do
     if test -d "$dir" -a -f "$dir"/Makefile.in; then
         TESTS="$TESTS $dir";
     fi;
 done;
-cd -;
 
 AC_SUBST(TESTS)
 
@@ -381,7 +379,7 @@ AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(ipfixcol.spec)
 AC_CONFIG_FILES(ipfixcol.pc)
 # plugins and tools makefiles
-for i in $INPUT_PLUGINS $STORAGE_PLUGINS $TOOLS; do
+for i in $INPUT_PLUGINS $STORAGE_PLUGINS $TOOLS $TESTS; do
     AC_CONFIG_FILES([$i/Makefile])
 done;
 

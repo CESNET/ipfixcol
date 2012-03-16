@@ -258,10 +258,10 @@ clean:
 		$(MAKE) $@ -C $$i; \
 	done; \
 	for i in $(TESTS); do \
-		$(MAKE) $@ -C devel-tools/tests/$$i; \
+		$(MAKE) $@ -C $$i; \
 	done;
 
 test:
 	for i in $(TESTS); do \
-		$(MAKE) -C devel-tools/tests/$$i; \
+		$(MAKE) -C $$i; \
 	done;
