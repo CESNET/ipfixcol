@@ -48,7 +48,7 @@
 		<title>Description</title>
 		<simpara>
 			The <command>ipfix-postgres-output</command> plugin is a part of IPFIXcol (IPFIX collector). 
-			It provides means to store flow data info PostgreSQL database.
+			It provides means to store flow data info PostgreSQL database. Recommended PostgreSQL version is at least 8.4.9.
 		</simpara>
 	</refsect1>
 
