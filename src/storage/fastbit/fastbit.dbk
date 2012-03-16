@@ -67,7 +67,7 @@
 			<type>time</type>
 			<prefix>ic</prefix>
 		</namingStrategy>
-		<onTheFlightIndexes>yes</onTheFlightIndexes>
+		<onTheFlyIndexes>yes</onTheFlyIndexes>
 	</fileWriter>
     ]]>
     </programlisting>
@@ -313,7 +313,7 @@
       </varlistentry>
       <varlistentry>
         <term>
-          <command>onTheFlightIndexes</command>
+          <command>onTheFlyIndexes</command>
         </term>
         <listitem>
           <simpara>This tells plugin to create indexes for stored data (yes/no).</simpara>
