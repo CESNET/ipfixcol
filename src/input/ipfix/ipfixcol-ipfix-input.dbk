@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2008-2012</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>16 March 2012</date>
+		<authorgroup>
+			<author>
+                <personname>
+    				<firstname>Michal</firstname>
+	    			<surname>Srb</surname>
+                </personname>
+                <email>michal.srb@cesnet.cz</email>
+                <contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol-ipfix-input</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">IPFIX file input plugin for IPFIXcol.</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>ipfixcol-ipfix-input</refname>
+		<refpurpose>IPFIX file input plugin for IPFIXcol.</refpurpose>
+	</refnamediv>
+    
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+			The <command>ipfixcol-ipfix-input</command> plugin is a part of IPFIXcol (IPFIX collector). 
+			It provides means to read flow data from files in IPFIX file format.
+		</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Configuration</title>
+		<simpara>There are two configuration XML files for ipfixcol that affects plugin usage.
+		First one is internal configuration XML (<filename>/etc/ipfixcol/internalcfg.xml</filename>) where are list of all available plugins for the collecor. 
+    	The plugin must be specified here to be usable.
+    	</simpara>
+    	<simpara><filename>internalcfg.xml</filename> IPFIX file input example</simpara>
+    	<programlisting>
+    <![CDATA[
+	<inputPlugin>
+		<name>fileReader</name>
+		<file>/usr/lib64/ipfixcol-ipfix-input.so</file>
+	</inputPlugin>
+    ]]>
+    	</programlisting>
+    	<para></para>
+    	
+    	<simpara>The collector must be configured to use IPFIX file input plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
+    	The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves.
+    	</simpara>
+    	<simpara><filename>startup.xml</filename> IPFIX file input example</simpara>
+    	<programlisting>
+    <![CDATA[
+	<name>read IPFIX data from IPFIX file</name>
+	<fileReader>
+		<file>file://tmp/filename.ipfix</file>
+	</fileReader>
+	<exportingProcess>File writer IPFIX</exportingProcess>
+    ]]>
+    	</programlisting>
+    
+    	<para>
+			<variablelist>
+				<varlistentry>
+					<term><command>file</command></term>
+					<listitem>
+						<simpara>Path to a file in IPFIX file format. It is possible to use asterisk instead of filename. In such a case, all files in specified path will be processed. Another way is to use asterisk within filename, so only files that match the regular expression will be processed.</simpara>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="https://homeproj.cesnet.cz/projects/ipfixcol/">https://homeproj.cesnet.cz/projects/ipfixcol/</link>
+					</term>
+					<listitem>
+						<para>IPFIXCOL Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>
