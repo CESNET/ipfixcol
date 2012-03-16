@@ -143,7 +143,7 @@ int storage_init (char *params, void **config){
 			c->sys_dir = path;
 		}
 
-		indexes=ie.node().child_value("onTheFlyghtIndexes");
+		indexes=ie.node().child_value("onTheFlyIndexes");
 		if(indexes == "yes"){
 			c->indexes = 1;
 		} else {
