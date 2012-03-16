@@ -125,7 +125,7 @@ int storage_init (char *params, void **config){
         	path=ie.node().child_value("path");
 		c->sys_dir = path + "/";
 
-        	indexes=ie.node().child_value("onTheFlightIndexes");
+		indexes=ie.node().child_value("onTheFlyghtIndexes");
 		if(indexes == "yes"){
 			c->indexes = 1;
 		} else {
