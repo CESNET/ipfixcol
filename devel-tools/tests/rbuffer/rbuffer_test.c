@@ -44,12 +44,12 @@
 #include <unistd.h>
 
 #define THREAD_NUM 2 // Number of threads to use
-#define BUFFER_SIZE 10 // Size of the ring buffer
-#define WRITE_COUNT 1000 // How many items should be written
+#define BUFFER_SIZE 128 // Size of the ring buffer
+#define WRITE_COUNT 100000 // How many items should be written
 #define READ_COUNT WRITE_COUNT // How many items should each thread dread
 
 struct ring_buffer *rb;
-int delays[THREAD_NUM] = {0, 0}; // Delays for each thread
+int delays[THREAD_NUM] = {50, 50}; // Delays for each thread
 
 void *reader_thread(void *arg)
 {
@@ -71,9 +71,9 @@ void *reader_thread(void *arg)
 			return (NULL);
 		}
 
-		if (msg == NULL || msg->pkt_header == NULL || msg->pkt_header->observation_domain_id != 1000) {
+		if ( msg->pkt_header->observation_domain_id != i) {
+            printf("Error: ODID does not match\n");
 			printf("Thread num: %i iteration: %i read from index: %i\n", num, i, index);
-			printf("Error: data freed too early\n");
 			printf("buffer size: %i buffer count: %i read offset: %i write offset: %i\n\n",
                 rb->size, rb->count, rb->read_offset, rb->write_offset);
 		}
@@ -107,7 +107,7 @@ int main()
 
 		struct ipfix_message *record = malloc(sizeof(struct ipfix_message));
 		record->pkt_header = malloc(sizeof(struct ipfix_header));
-		record->pkt_header->observation_domain_id = 1000;
+		record->pkt_header->observation_domain_id = i;
 		rbuffer_write(rb, record, THREAD_NUM);
 //		usleep(600);
 	}
