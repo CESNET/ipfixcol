@@ -53,8 +53,8 @@
 #include <arpa/inet.h>
 #include <inttypes.h>
 #include <endian.h>
+#include <commlbr.h>
 
-#include "commlbr.h"
 #include "ipfixcol.h"
 #include "ipfix_entities.h"
 #include "ipfix_postgres_types.h"
@@ -63,12 +63,13 @@
 /* default database name, used if not specified otherwise */
 #define DEFAULT_CONFIG_DBNAME "ipfix_data"
 /* prefix for every table that will be created in database */
-#define TABLE_NAME_PREFIX	"Template"
+#define TABLE_NAME_PREFIX "Template"
 /* table name length */
 #define TABLE_NAME_LEN 128
 /* default length of the SQL commands */
-#define SQL_COMMAND_LENGTH 2048;
-
+#define SQL_COMMAND_LENGTH 2048
+/* number of store packet call in one transaction */
+#define TRANSACTION_MAX 1000
 
 /**
  * \struct postgres_config
@@ -80,7 +81,73 @@ struct postgres_config {
 	uint16_t *table_names;		/** list of tables in database, every table corresponds to a template */
 	uint16_t table_counter;		/** number of known tables in database */
 	uint16_t table_size;		/** size of the table_names member */
+	uint32_t transaction_counter;	/**< Number of store_packet calls in current transaction */
 };
+
+
+/**
+ * \brief Begin SQL transaction if necessary
+ *
+ * Transaction is used for TRANSACTION_MAX store_packet calls.
+ * This should be used only in store_packet function
+ * Transaction can be cancelled on error by calling restart_transaction
+ *
+ * \param[in] conf
+ */
+inline static void begin_transaction(struct postgres_config *conf)
+{
+	PGresult *res;
+
+	/* when transaction counter is zero, begin new transaction */
+	if (conf->transaction_counter == 0) {
+		res = PQexec(conf->conn, "BEGIN;");
+		if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+			VERBOSE(CL_VERBOSE_OFF, "PostgreSQL: %s", PQerrorMessage(conf->conn));
+		}
+		PQclear(res);
+	}
+
+	/* increase the counter. When TRASNSACTION_MAX is reached, 
+	 * counter is zero and transaction is commited */
+	conf->transaction_counter = (conf->transaction_counter + 1) % TRANSACTION_MAX;
+}
+
+
+/**
+ * \brief Commit SQL transaction if necessary
+ *
+ * Transaction is used for TRANSACTION_MAX store_packet calls.
+ *
+ * \param[in] conf
+ */
+inline static void commit_transaction(struct postgres_config *conf)
+{
+	PGresult *res;
+
+	/* when transaction counter is zero, it's time to commit */
+	if (conf->transaction_counter == 0) {
+		res = PQexec(conf->conn, "COMMIT;");
+		if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+			VERBOSE(CL_VERBOSE_OFF, "PostgreSQL: %s", PQerrorMessage(conf->conn));
+		}
+		PQclear(res);
+	}
+}
+
+
+/**
+ * \brief Restart SQL transaction
+ *
+ * Use on error to cancel the transaction and start a new one.
+ *
+ * \param[in] conf
+ */
+inline static void restart_transaction(struct postgres_config *conf)
+{
+	conf->transaction_counter = 0;
+	commit_transaction(conf);
+	begin_transaction(conf);
+}
 
 
 /**
@@ -267,6 +334,7 @@ static int create_table(struct postgres_config *config, struct ipfix_template *t
 	if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 		VERBOSE(CL_VERBOSE_OFF, "PostgreSQL: %s", PQerrorMessage(config->conn));
 		PQclear(res);
+		restart_transaction(config);
 		goto err_sql_command;
 	}
 	PQclear(res);
@@ -339,11 +407,23 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 
 	data_index = 0;
 	template_index = 0;
-
+	sql_len = 0;
+	
 	while (data_index < (ntohs(data_set->header.length) - (template->data_length & 0x7fffffff)-1)) {
-		sql_len = 0;
-		sql_len += snprintf(sql_command, sql_command_max_len,
-			"INSERT INTO \"%s\" VALUES (", table_name);
+		if (sql_len == 0) {
+			sql_len += snprintf(sql_command, sql_command_max_len,
+				"INSERT INTO \"%s\" VALUES (", table_name);
+		} else {
+			sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, ",(");
+
+			/* enlarge the memory for command */
+			sql_command_max_len += SQL_COMMAND_LENGTH;
+			sql_command = realloc(sql_command, sql_command_max_len);
+			if (!sql_command) {
+				VERBOSE(CL_VERBOSE_OFF, "Out of memory (%s:%d)", __FILE__, __LINE__);
+				return -1;
+			}
+		}
 		for (u = 0; u < template->field_count; u++) {
 
 			ie_id = *((uint16_t *) (fields+template_index));
@@ -624,9 +704,9 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 
 					data_index += 6;
 					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-					              "'%x:%x:%x:%x:%x:%x'", mac_addr[0], mac_addr[1],
-					              mac_addr[2], mac_addr[3], mac_addr[4],
-					              mac_addr[5]);
+						"'%x:%x:%x:%x:%x:%x'", mac_addr[0], mac_addr[1],
+						mac_addr[2], mac_addr[3], mac_addr[4],
+						mac_addr[5]);
 
 					break;
 
@@ -635,7 +715,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 
 					/* escape binary data for use within an SQL command */
 					bytea_str = (char *) PQescapeByteaConn(conf->conn,
-					        (unsigned char *) (data_set->records+data_index), length, &to_length);
+						(unsigned char *) (data_set->records+data_index), length, &to_length);
 					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "%s", bytea_str);
 
 					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "'");
@@ -703,7 +783,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 
 					/* escape binary data for use within an SQL command */
 					bytea_str = (char *) PQescapeByteaConn(conf->conn,
-					        (unsigned char *) (data_set->records+data_index), length, &to_length);
+						(unsigned char *) (data_set->records+data_index), length, &to_length);
 					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "%s", bytea_str);
 
 					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "'");
@@ -716,29 +796,25 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 			}
 		}
 
-
-
 		sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "%s", ")");
-
-		/* DEBUG */
-		// fprintf(stderr, "\nDEBUG: SQL command to execute:\n %s\n", sql_command);
-
-		res = PQexec(conf->conn, sql_command);
-		if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-			VERBOSE(CL_VERBOSE_OFF, "PostgreSQL: %s", PQerrorMessage(conf->conn));
-			PQclear(res);
-			goto err_sql_command;
-		}
-		PQclear(res);
-
 		template_index = 0;
-		sql_len = 0;
 	}
 
+	/* DEBUG */
+	//fprintf(stderr, "\nDEBUG: SQL command to execute:\n %s\n", sql_command);
+
+	res = PQexec(conf->conn, sql_command);
+	if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+		VERBOSE(CL_VERBOSE_OFF, "PostgreSQL: %s", PQerrorMessage(conf->conn));
+		PQclear(res);
+		restart_transaction(conf);
+		goto err_sql_command;
+	}
+	PQclear(res);
+	
 	free(sql_command);
 
 	return 0;
-
 
 err_sql_command:
 	free(sql_command);
@@ -769,7 +845,7 @@ static int process_new_templates(struct postgres_config *conf, const struct ipfi
 
 	while ((template = ipfix_msg->data_couple[template_index].data_template) != NULL) {
 
-		flag = 1;     /* create table if list is empty */
+		flag = 1;	/* create table if list is empty */
 		/* check whether table for the template exists */
 		for (u = 0; u < conf->table_counter; u++) {
 			if (conf->table_names[u] == template->template_id) {
@@ -1024,7 +1100,7 @@ int storage_init(char *params, void **config)
 	/* user specified */
 	if (user) {
 		str_len += snprintf(connection_string+str_len, connection_string_len-str_len,
-		                   " %s=%s", "user", user);
+			" %s=%s", "user", user);
 		free(user);
 	}
 
@@ -1049,7 +1125,7 @@ int storage_init(char *params, void **config)
 	/* we don't need this XML configuration anymore */
 	xmlFreeDoc(doc);
 
-	conf->table_size = 128;       /* default value, just guess */
+	conf->table_size = 128;	/* default value, just guess */
 	conf->table_names = (uint16_t *) malloc(conf->table_size * sizeof(uint16_t));
 
 	conf->conn = conn;
@@ -1094,8 +1170,10 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 
 	conf = (struct postgres_config *) config;
 
+	begin_transaction(conf);
 	process_new_templates(conf, ipfix_msg);
 	process_data_records(conf, ipfix_msg);
+	commit_transaction(conf);
 
 	return 0;
 }
@@ -1111,7 +1189,12 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
  */
 int store_now(const void *config)
 {
-	/* nothing to do */
+	struct postgres_config *conf = (struct postgres_config *) config;
+
+	/* commit transaction */
+	conf->transaction_counter = 0;
+	commit_transaction(conf);
+
 	return 0;
 }
 
