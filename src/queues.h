@@ -44,7 +44,7 @@
 
 #include "../ipfixcol.h"
 
-#define RING_BUFFER_SIZE 128
+#define RING_BUFFER_SIZE 4096
 
 /* WARNING
  * This implementation works ONLY when there is just ONE writer and ONE reader!

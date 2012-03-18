@@ -130,8 +130,8 @@ int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, un
 		return (EXIT_FAILURE);
 	}
 	/* it will be never more than ring buffer size, but just to be sure I'm checking it 
-     * leave one position in buffer free, so that faster thread cannot read 
-     * data yet not procees by slower one */
+	 * leave one position in buffer free, so that faster thread cannot read 
+	 * data yet not procees by slower one */
 	while (rbuffer->count + 1 >= rbuffer->size) {
 		if (pthread_cond_wait (&(rbuffer->cond), &(rbuffer->mutex)) != 0) {
 			VERBOSE (CL_VERBOSE_OFF, "Condition wait failed (%s:%d)", __FILE__, __LINE__);
@@ -179,9 +179,9 @@ struct ipfix_message* rbuffer_read (struct ring_buffer* rbuffer, unsigned int *i
 		VERBOSE (CL_VERBOSE_OFF, "Mutex lock failed (%s:%d)", __FILE__, __LINE__);
 		return (NULL);
 	}
-    /* wait when trying to read from write_offset - no data here yer
-     * otherwise it's ok, reading tread connot outrun the writing one,
-     * unles it demands indexes nonlinearly */
+	/* wait when trying to read from write_offset - no data here yer
+	 * otherwise it's ok, reading tread connot outrun the writing one,
+	 * unles it demands indexes nonlinearly */
 	while (rbuffer->write_offset == *index) {
 		if (pthread_cond_wait (&(rbuffer->cond), &(rbuffer->mutex)) != 0) {
 			VERBOSE (CL_VERBOSE_OFF, "Condition wait failed (%s:%d)", __FILE__, __LINE__);

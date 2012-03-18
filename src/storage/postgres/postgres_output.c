@@ -63,7 +63,7 @@
 /* default database name, used if not specified otherwise */
 #define DEFAULT_CONFIG_DBNAME "ipfix_data"
 /* prefix for every table that will be created in database */
-#define TABLE_NAME_PREFIX     "Template"
+#define TABLE_NAME_PREFIX	"Template"
 /* table name length */
 #define TABLE_NAME_LEN 128
 /* default length of the SQL commands */
@@ -76,10 +76,10 @@
  * \brief PostgreSQL storage plugin specific "config" structure
  */
 struct postgres_config {
-	PGconn *conn;                   /** database connection */
-	uint16_t *table_names;          /** list of tables in database, every table corresponds to a template */
-	uint16_t table_counter;         /** number of known tables in database */
-	uint16_t table_size;            /** size of the table_names member */
+	PGconn *conn;				/** database connection */
+	uint16_t *table_names;		/** list of tables in database, every table corresponds to a template */
+	uint16_t table_counter;		/** number of known tables in database */
+	uint16_t table_size;		/** size of the table_names member */
 };
 
 
@@ -190,7 +190,7 @@ static int create_table(struct postgres_config *config, struct ipfix_template *t
 	char *postgres_type;
 	char *ipfix_type;
 	char *column_name;
-	uint16_t ie_id;           /* enterprise element */
+	uint16_t ie_id;		 /* enterprise element */
 	uint32_t pen;
 	char ie_id_str[15];
 	uint8_t *fields;
@@ -225,7 +225,7 @@ static int create_table(struct postgres_config *config, struct ipfix_template *t
 			 * of type "bytea" (array of bytes without specific meaning) */
 			postgres_type = "bytea";
 			ie_id = *((uint16_t *) (fields+index));
-			ie_id &= 0x7fff;       /* drop most significant bit */
+			ie_id &= 0x7fff;	/* drop most significant bit */
 			pen = *((uint32_t *) (fields+index+4));
 
 			sprintf(ie_id_str, "ie%hupen%u", ie_id, pen);
@@ -343,7 +343,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 	while (data_index < (ntohs(data_set->header.length) - (template->data_length & 0x7fffffff)-1)) {
 		sql_len = 0;
 		sql_len += snprintf(sql_command, sql_command_max_len,
-		                 "INSERT INTO \"%s\" VALUES (", table_name);
+			"INSERT INTO \"%s\" VALUES (", table_name);
 		for (u = 0; u < template->field_count; u++) {
 
 			ie_id = *((uint16_t *) (fields+template_index));
@@ -362,22 +362,19 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 
 			/* next column value -> put comma in SQL command */
 			if (u > 0) {
-				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-				                    "%c", ',');
+				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "%c", ',');
 			}
 
 			if (ie_id >> 15) {
 				/* it is Enterprise Element */
-				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-				                    "E'");
+				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "E'");
 
 				/* escape binary data for use within an SQL command */
 				bytea_str = (char *) PQescapeByteaConn(conf->conn,
-				        (unsigned char *) (data_set->records+data_index), length, &to_length);
+					(unsigned char *) (data_set->records+data_index), length, &to_length);
 				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "%s", bytea_str);
 
-				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-				                    "'");
+				sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "'");
 
 				PQfreemem(bytea_str);
 
@@ -396,8 +393,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 
 
 					data_index += length;
-					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-					                    "%u", uint8);
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "%u", uint8);
 					break;
 
 				case (UINT16):
@@ -420,8 +416,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 
 					data_index += length;
 
-					sql_len += snprintf(sql_command+sql_len,
-					        sql_command_max_len-sql_len, "%u", uint16);
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "%u", uint16);
 					break;
 
 				case (UINT32):
@@ -446,8 +441,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 					}
 
 					data_index += length;
-					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-					                    "%u", uint32);
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "%u", uint32);
 					break;
 
 				case (UINT64):
@@ -477,14 +471,14 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 					data_index += length;
 
 					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-					                    "%"PRIu64, uint64);
+						"%"PRIu64, uint64);
 					break;
 
 				case (INT8):
 					int8 = (int8_t) *((uint8_t *) (data_set->records+data_index));
 					data_index += length;
 					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-					                    "%d", int8);
+						"%d", int8);
 					break;
 
 				case (INT16):
@@ -507,7 +501,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 
 					data_index += length;
 					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-					                    "%d", int16);
+						"%d", int16);
 					break;
 
 				case (INT32):
@@ -533,7 +527,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 
 					data_index += length;
 					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-					                    "%d", int32);
+						"%d", int32);
 					break;
 
 				case (INT64):
@@ -562,7 +556,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 
 					data_index += length;
 					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-					                    "%"PRId64, int64);
+						"%"PRId64, int64);
 					break;
 
 				case (STRING):
@@ -578,7 +572,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 					memcpy(string, data_set->records+data_index, length);
 
 					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-					                    "%s", string);
+						"%s", string);
 					free(string);
 					string = NULL;
 					break;
@@ -600,7 +594,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 					data_index += length;
 
 					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-					                    "%s", string);
+						"%s", string);
 					break;
 
 				case (IPV4ADDR):
@@ -610,14 +604,14 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 
 					data_index += length;
 					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-					                    "'%s'", ip_addr);
+						"'%s'", ip_addr);
 					break;
 
 				case (IPV6ADDR):
 					inet_ntop(AF_INET6, data_set->records+data_index, ip_addr, INET6_ADDRSTRLEN);
 					data_index += length;
 					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-					                    "'%s'", ip_addr);
+						"'%s'", ip_addr);
 					break;
 
 				case (MACADDR):
@@ -637,16 +631,14 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 					break;
 
 				case (OCTETARRAY):
-					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-					                    "E'");
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "E'");
 
 					/* escape binary data for use within an SQL command */
 					bytea_str = (char *) PQescapeByteaConn(conf->conn,
 					        (unsigned char *) (data_set->records+data_index), length, &to_length);
 					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "%s", bytea_str);
 
-					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-					                    "'");
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "'");
 
 					PQfreemem(bytea_str);
 
@@ -691,7 +683,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 					data_index += length;
 
 					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-					                    "%f", float32);
+						"%f", float32);
 
 					break;
 
@@ -707,16 +699,14 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 				default:
 					/* we don't know nothing about this data type, so we just store the data in hex format */
 
-					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-					                    "E'");
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "E'");
 
 					/* escape binary data for use within an SQL command */
 					bytea_str = (char *) PQescapeByteaConn(conf->conn,
 					        (unsigned char *) (data_set->records+data_index), length, &to_length);
 					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "%s", bytea_str);
 
-					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-					                    "'");
+					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "'");
 
 					PQfreemem(bytea_str);
 
@@ -728,8 +718,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 
 
 
-		sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
-		                    "%s", ")");
+		sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len, "%s", ")");
 
 		/* DEBUG */
 		// fprintf(stderr, "\nDEBUG: SQL command to execute:\n %s\n", sql_command);
@@ -869,8 +858,7 @@ int storage_init(char *params, void **config)
 	char *hostaddr = NULL;
 	char *port = NULL;
 	char *dbname = NULL;
-	uint8_t dbname_allocated = 0; /* indicates whether dbname was allocated
-	                               * via malloc() */
+	uint8_t dbname_allocated = 0; /* indicates whether dbname was allocated via malloc() */
 	char *user = NULL;
 	char *pass = NULL;
 	size_t connection_string_len;
@@ -1003,28 +991,28 @@ int storage_init(char *params, void **config)
 	/* host specified */
 	if (host) {
 		str_len += snprintf(connection_string+str_len, connection_string_len-str_len,
-		                    " %s=%s", "host", host);
+			" %s=%s", "host", host);
 		free(host);
 	}
 
 	/* hostaddr specified */
 	if (hostaddr) {
 		str_len += snprintf(connection_string+str_len, connection_string_len-str_len,
-		                    " %s=%s", "hostaddr", hostaddr);
+			" %s=%s", "hostaddr", hostaddr);
 		free(hostaddr);
 	}
 
 	/* port specified */
 	if (port) {
 		str_len += snprintf(connection_string+str_len, connection_string_len-str_len,
-		                    " %s=%s", "port", port);
+			" %s=%s", "port", port);
 		free(port);
 	}
 
 	/* dbname specified */
 	if (dbname) {
 		str_len += snprintf(connection_string+str_len, connection_string_len-str_len,
-		                    " %s=%s", "dbname", dbname);
+			" %s=%s", "dbname", dbname);
 
 		/* do not try to free statically allocated memory */
 		if (dbname_allocated) {
@@ -1043,7 +1031,7 @@ int storage_init(char *params, void **config)
 	/* pass specified */
 	if (pass) {
 		str_len += snprintf(connection_string+str_len, connection_string_len-str_len,
-		                    " %s=%s", "pass", pass);
+			" %s=%s", "pass", pass);
 		free(pass);
 	}
 
@@ -1096,7 +1084,7 @@ err_init:
  * \return 0 on success, negative value otherwise
  */
 int store_packet(void *config, const struct ipfix_message *ipfix_msg,
-                           const struct ipfix_template_mgr *template_mgr)
+	const struct ipfix_template_mgr *template_mgr)
 {
 	struct postgres_config *conf;
 
@@ -1186,11 +1174,11 @@ int main(int argc, char **argv)
 	char *sql_command = "CREATE TABLE TestTable (id integer, str varchar(40));";
 	PGresult   *res = PQexec(config->conn, sql_command);
 	if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-                VERBOSE(CL_VERBOSE_OFF, "PostgreSQL: %s", PQerrorMessage(config->conn));
-        } else {
+		VERBOSE(CL_VERBOSE_OFF, "PostgreSQL: %s", PQerrorMessage(config->conn));
+	} else {
 		VERBOSE(CL_VERBOSE_OFF, "COMMAND OK");
 	}
-        PQclear(res);
+		PQclear(res);
 	*/
 	process_new_templates(config, &message);
 	process_data_records(config, &message);

@@ -109,7 +109,6 @@ int main()
 		record->pkt_header = malloc(sizeof(struct ipfix_header));
 		record->pkt_header->observation_domain_id = i;
 		rbuffer_write(rb, record, THREAD_NUM);
-//		usleep(600);
 	}
 
 	for (int i = 0; i < THREAD_NUM; i++) {
