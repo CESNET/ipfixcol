@@ -41,4 +41,8 @@
 		<!--## Path of the storage module  -->
 		<file>/usr/lib64/ipfixcol-ipfix-output.so</file>
 	</storagePlugin>
+	<storagePlugin>
+		<fileFormat>dummy</fileFormat>
+		<file>/usr/lib64/ipfixcol-dummy-output.so</file>
+	</storagePlugin>
 </ipfixcol>
