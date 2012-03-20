@@ -44,11 +44,7 @@
 
 #include "../ipfixcol.h"
 
-#define RING_BUFFER_SIZE 4096
-
-/* WARNING
- * This implementation works ONLY when there is just ONE writer and ONE reader!
- */
+#define RING_BUFFER_SIZE 8192
 
 /**
  * \brief Simple ring buffer for passing data between one write thread and one
@@ -63,6 +59,10 @@
  *
  * This way data are freed by rbuffer_remove_reference() when all reading
  * threads already read them.
+ *
+ * Thread calling rbuffer_read() must specify which index it wants to read and
+ * the index must be incremented continuously.
+ *
  */
 struct ring_buffer {
 	unsigned int read_offset;
