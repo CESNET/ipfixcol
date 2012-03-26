@@ -191,7 +191,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	        config_ctxt = NULL, exporter_ctxt = NULL;
 	xmlXPathObjectPtr xpath_obj_expprocnames = NULL, xpath_obj_expproc = NULL,
 	        xpath_obj_destinations = NULL, xpath_obj_plugin_desc = NULL;
-	xmlChar *file_format, *file_format_inter, *plugin_file, *odid;
+	xmlChar *file_format, *file_format_inter, *plugin_file, *odid, *thread_name;
 	struct plugin_xml_conf_list* plugins = NULL, *aux_plugin = NULL;
 	char *odidptr;
 
@@ -328,6 +328,8 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 										VERBOSE(CL_VERBOSE_BASIC, "Unable to detect path to storage plugin file for %s format in the internal configuration!", file_format_inter);
 										break;
 									}
+									/* load thread name from internalcfg.xml */
+									thread_name = get_children_content (xpath_obj_plugin_desc->nodesetval->nodeTab[l], BAD_CAST "threadName");
 									odid = get_children_content (xpath_obj_destinations->nodesetval->nodeTab[k], BAD_CAST "observationDomainId");
 									/* prepare plugin info structure for return list */
 									aux_plugin = (struct plugin_xml_conf_list*) calloc (1, sizeof(struct plugin_xml_conf_list));
@@ -342,6 +344,8 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 									}
 									aux_plugin->config.file = (char*) malloc (sizeof(char) * (xmlStrlen (plugin_file) + 1));
 									strncpy (aux_plugin->config.file, (char*) plugin_file, xmlStrlen (plugin_file) + 1);
+									/* copy thread name to prepared string */
+									strncpy (aux_plugin->config.name, (char*) thread_name, 16);
 									aux_plugin->config.xmldata = xmlNewDoc (BAD_CAST "1.0");
 									xmlDocSetRootElement (aux_plugin->config.xmldata, xmlCopyNode (node_filewriter, 1));
 									/* link new plugin item into the return list */
@@ -416,7 +420,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node)
 {
 	int i, j;
 	xmlChar *collector_name;
-	xmlNodePtr auxNode = NULL, children1 = NULL, children2 = NULL;
+	xmlNodePtr auxNode = NULL, children1 = NULL, children2 = NULL, children3 = NULL;
 	xmlXPathContextPtr internal_ctxt = NULL;
 	xmlXPathObjectPtr xpath_obj_suppcolls = NULL, xpath_obj_file = NULL;
 	struct plugin_xml_conf_list *retval = NULL;
@@ -491,10 +495,18 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node)
 	}
 	/* and now select the one with required name element */
 	for (i = 0; i < xpath_obj_file->nodesetval->nodeNr; i++) {
-		children1 = children2  = xpath_obj_file->nodesetval->nodeTab[i]->children;
+		children1 = children2 = children3 = xpath_obj_file->nodesetval->nodeTab[i]->children;
 		while (children1) {
 			if ((!strncmp ((char*) children1->name, "name", strlen ("name") + 1))
 			        && (!xmlStrncmp (children1->children->content, collector_name, xmlStrlen (collector_name) + 1))) {
+				/* find the processName of specified inputPlugin in internalcfg.xml */
+				while (children3) {
+					if (!xmlStrncmp (children3->name, BAD_CAST "processName", strlen ("processName") + 1)) {
+						strncpy(retval->config.name, (char*) children3->children->content, 16);
+					}
+					children3 = children3->next;
+				}
+				/* find the file of specified inputPLugin in internalcfg.xml */
 				while (children2) {
 					if (!xmlStrncmp (children2->name, BAD_CAST "file", strlen ("file") + 1)) {
 						retval->config.file = (char*) malloc (sizeof(char) * (strlen ((char*) children2->children->content) + 1));

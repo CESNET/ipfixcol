@@ -42,6 +42,7 @@
 #include <commlbr.h>
 #include <pthread.h>
 #include <libxml/tree.h>
+#include <sys/prctl.h>
 
 #include "../ipfixcol.h"
 #include "data_manager.h"
@@ -378,6 +379,10 @@ static void* data_manager_thread (void* cfg)
 	unsigned int index;
 	uint32_t sequence_number = 0, msg_counter = 0;
 
+	/* set the thread name to reflect the configuration */
+	snprintf(config->thread_name, 16, "ipfixcol DM %d", config->observation_domain_id);
+	prctl(PR_SET_NAME, config->thread_name, 0, 0, 0);
+
 	/* initialise UDP timeouts */
 	data_manager_udp_init((struct input_info_network*) config->input_info, &udp_conf);
 
@@ -449,6 +454,9 @@ static void* storage_plugin_thread (void* cfg)
     struct storage *config = (struct storage*) cfg; 
 	struct ipfix_message* msg;
 	unsigned int index = config->thread_config->queue->read_offset;
+
+	/* set the thread name to reflect the configuration */
+	prctl(PR_SET_NAME, config->thread_name, 0, 0, 0);
 
     /* loop will break upon receiving NULL from buffer */
 	while (1) {

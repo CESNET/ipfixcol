@@ -52,6 +52,7 @@
 #include <syslog.h>
 #include <sys/wait.h>
 #include <pthread.h>
+#include <sys/prctl.h>
 
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
@@ -124,6 +125,7 @@ int main (int argc, char* argv[])
 	pid_t pid = 0;
 	bool daemonize = false;
 	char *progname, *config_file = NULL;
+	char process_name[16]; /* name of the process for ps auxc */
 	struct plugin_xml_conf_list* input_plugins = NULL, *storage_plugins = NULL,
 	        *aux_plugins = NULL;
 	struct input input;
@@ -305,6 +307,10 @@ int main (int argc, char* argv[])
 			dlclose(input.dll_handler);
 			continue;
 		}
+
+		/* extend the process name variable by input name */
+		snprintf(process_name, 16, "%s:%s", progname, aux_plugins->config.name);
+
         /* get the first one we can */
         break;
 	}
@@ -314,6 +320,9 @@ int main (int argc, char* argv[])
 		retval = EXIT_FAILURE;
 		goto cleanup;
 	}
+
+	/* set the process name to reflect the input name */
+    prctl(PR_SET_NAME, process_name, 0, 0, 0);
 
 	/* prepare storage xml_conf(s) */
 	for (aux_plugins = storage_plugins; aux_plugins != NULL; aux_plugins = aux_plugins->next) {
@@ -336,6 +345,8 @@ int main (int argc, char* argv[])
 		memset(storage_list, 0, sizeof(struct storage_list));
 
 		storage_list->storage.dll_handler = storage_plugin_handler;
+		/* set storage thread name */
+		snprintf(storage_list->storage.thread_name, 16, "ipfixc:%s", aux_plugins->config.name);
 
 		/* prepare Input API routines */
 		storage_list->storage.init = dlsym (storage_plugin_handler, "storage_init");
@@ -378,6 +389,7 @@ int main (int argc, char* argv[])
 			dlclose(storage_plugin_handler);
 			continue;
 		}
+
 		storage_list->storage.xml_conf = &aux_plugins->config;
 		storage_list->next = aux_storage_list;
 		continue;
