@@ -205,8 +205,8 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 	tmpl_length = tm_template_length(template, max_len, type, &data_length);
 	if (tmpl_length == 0) {
 		/* template->count probably points beyond current set area */
-		MSG_WARNING(msg_module, "Malformed template detected (bad template count), "
-		                           "skipping.");
+		MSG_WARNING(msg_module, "Template %d is malformed (bad template count), skipping.",
+				ntohs(((struct ipfix_template_record *) template)->template_id));
 		return NULL;
 	}
 

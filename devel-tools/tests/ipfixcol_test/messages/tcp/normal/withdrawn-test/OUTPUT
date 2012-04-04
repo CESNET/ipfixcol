@@ -1,2 +1,2 @@
-ADVANCED VERBOSE: Got template withdrawal message. Waiting for storage packets.
-VERBOSE: Template withdraw message received for unknown Template ID: 256
+NOTICE: data manager: Got template withdrawal message. Waiting for storage packets.
+WARNING: data manager: Template withdraw message received for unknown Template ID: 256

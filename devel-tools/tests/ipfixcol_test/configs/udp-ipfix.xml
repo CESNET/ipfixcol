@@ -22,7 +22,7 @@
 		<!--## Specification of storage plugin -->
 		<destination>
 			<!--## Arbitrary name -->
-			<name>Write to /tmp folder</name>
+			<name>Write to /tmp/ipfixcol-test/ folder</name>
 			<!--## Observation domain ID valid for this storage plugin 
 			       Only packets with this ODID will be passed to the plugin
 			       If unspecified, plugin is used for unknown ODIDs 
@@ -34,7 +34,7 @@
 				<!--## fileFormat must be configured in internalcfg.xml -->
 				<fileFormat>ipfix</fileFormat>
 				<!--## Storage plugin specific element -->
-				<file>file://tmp/test-udp-output.ipfix</file>
+				<file>file://tmp/ipfixcol-test/test-udp-output.ipfix</file>
 			</fileWriter>
 		</destination>
 	</exportingProcess>

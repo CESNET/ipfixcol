@@ -53,7 +53,7 @@ VERSION=0.9
 COLLECTOR_GRACEFUL_KILL="kill -s 2 "
 COLLECTOR_VIOLENT_KILL="kill -s 9 "
 PROGNAME=${0}
-OUTPUT_FILE=/tmp/
+OUTPUT_DIR="/tmp/ipfixcol-test/"
 CORRECT_OUTPUT=
 NETCAT=
 DESIRED_OUTPUT_HASH=
@@ -79,16 +79,14 @@ fi
 
 case "$1" in
 	tcp) COLLECTOR_CONFIG="-c ${PWD}/configs/tcp-ipfix.xml"
-	     OUTPUT_FILE="${OUTPUT_FILE}/test-tcp-output.ipfix"
 		 NETCAT="nc localhost 4739" ;;
 	udp) COLLECTOR_CONFIG="-c ${PWD}/configs/udp-ipfix.xml"
-	     OUTPUT_FILE="${OUTPUT_FILE}/test-udp-output.ipfix"
 		 NETCAT="nc -u localhost 4739" ;;
 	  *) echo "ERROR: unknown protocol $1"
 	     print_usage
 		 die ;;
 esac
-echo "output file: $OUTPUT_FILE"
+echo "output dir: $OUTPUT_DIR"
 
 
 # check for presence of collector executable
@@ -104,8 +102,11 @@ if [ ! -d ${TEST_MSGS_DIR} ]; then
 	die "$TEST_MSGS_DIR - no such directory"
 fi
 
-# delete old output file
-rm -f $OUTPUT_FILE
+# delete old output dir
+rm -fr $OUTPUT_DIR
+
+# create new output dir
+mkdir $OUTPUT_DIR
 
 MESSAGES=`ls $TEST_MSGS_DIR`
 # find all test files and combine them into single file
@@ -164,6 +165,9 @@ echo "all data sent"
 # we don't need big test file anymore
 rm ${TMP_BIG_MESSAGE}
 
+# wait a second before killing the collector
+sleep 1
+
 # time to kill collector
 COLLECTOR_GRACEFUL_KILL="$COLLECTOR_GRACEFUL_KILL $COLLECTOR_PID"
 echo "sending SIGINT to the collector"
@@ -221,7 +225,8 @@ if [ ! -z $CORRECT_OUTPUT ]; then
 	ok=0
 	for lineno in ${!actual_output[*]}; do
 		line=${actual_output[$lineno]}
-	
+
+
 		if [ "${actual_output[$lineno]}" == "${wanted_output[$i]}" ]; then
 			echo -n "[OK]      $line"
 			wanted_output[$i]=""
@@ -256,9 +261,12 @@ else
 	echo "test PASSED"
 fi
 
-
 echo
-echo "checking output file..."
+
+# get output full file name, the newest file in the OUTPUT_DIR
+OUTPUT_FILE=$OUTPUT_DIR`ls $OUTPUT_DIR | head -1`
+
+echo "checking output file ${OUTPUT_DIR}${OUTPUT_FILE} ..."
 if [ -f "${TEST_MSGS_DIR}/HASH" ]; then
 	read -r DESIRED_OUTPUT_HASH < "${TEST_MSGS_DIR}/HASH"
 
