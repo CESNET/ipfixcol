@@ -214,23 +214,6 @@ AS_IF([test "x$with_openssl" != xno],
        AC_MSG_FAILURE([Required library openssl is missing])
   )], [AC_SUBST([TLS_SUPPORT], [no])])
 
-### libcommlbr ###
-AC_ARG_WITH([libcommlbr],
-    	AC_HELP_STRING([--with-libcommlbr=PATH],[Set the path to libcommlbr (usually local GIT repository)]),
-	[# local copy of libcommlbr GIT repo with headers and binaries
- 	CONFIGURE_PARAMS="$CONFIGURE_PARAMS --with-libcommlbr=`cd $withval;pwd`"
-	LIBCOMMLBR_CFLAGS="-I$withval"
-	LIBCOMMLBR_LIBS="-L$withval -lcommlbr"],
-	[# get info from pkg-config about installed package
- 	PKG_CHECK_MODULES(LIBCOMMLBR, libcommlbr >= 2.0.0)]
-)
-CPPFLAGS="$CPPFLAGS $LIBCOMMLBR_CFLAGS"
-LIBS="$LIBS $LIBCOMMLBR_LIBS"
-AC_SUBST([LIBCOMMLBR_LIBS])
-AC_SUBST([LIBCOMMLBR_CFLAGS])
-BUILDREQS="$BUILDREQS libcommlbr-devel >= 2.0.0"
-REQS="$REQS libcommlbr >= 2.0.0"
-
 ### pthread ###
 AC_CHECK_LIB([pthread], [pthread_create], 
         [CFLAGS="$CFLAGS -pthread"],

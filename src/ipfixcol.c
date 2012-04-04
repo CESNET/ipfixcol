@@ -47,7 +47,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <dlfcn.h>
-#include <commlbr.h>
 #include <signal.h>
 #include <syslog.h>
 #include <sys/wait.h>
@@ -77,11 +76,11 @@
 /** Acceptable command-line parameters */
 #define OPTSTRING "c:dhv:V"
 
-/* verbose from libcommlbr */
-extern int verbose;
-
 /* main loop indicator */
 volatile int done = 0;
+
+/** Identifier to MSG_* macros */
+static char *msg_module = "main";
 
 /**
  * \brief Print program version information
@@ -111,10 +110,10 @@ void help (char* progname)
 void term_signal_handler(int sig)
 {
 	if (done) {
-		VERBOSE(CL_VERBOSE_OFF, "Another termination signal (%i) detected - quiting without cleanup.", sig);
+		MSG_COMMON(ICMSG_ERROR, "Another termination signal (%i) detected - quiting without cleanup.", sig);
 		exit (EXIT_FAILURE);
 	} else {
-		VERBOSE(CL_VERBOSE_OFF, "Signal: %i detected, will exit as soon as possible", sig);
+		MSG_COMMON(ICMSG_ERROR, "Signal: %i detected, will exit as soon as possible", sig);
 		done = 1;
 	}
 }
@@ -169,7 +168,7 @@ int main (int argc, char* argv[])
 			exit (EXIT_SUCCESS);
 			break;
 		default:
-			VERBOSE(CL_VERBOSE_OFF, "Unknown parameter %c", c);
+			MSG_ERROR(msg_module, "Unknown parameter %c", c);
 			help (progname);
 			exit (EXIT_FAILURE);
 			break;
@@ -187,12 +186,11 @@ int main (int argc, char* argv[])
 
 	/* daemonize */
 	if (daemonize) {
-		debug_init(progname, 1);
 		closelog();
-		openlog(progname, LOG_PID, 0);
+		MSG_SYSLOG_INIT(progname);
 		/* and send all following messages to the syslog */
 		if (daemon (1, 0)) {
-			VERBOSE(CL_VERBOSE_OFF, "%s", strerror(errno));
+			MSG_ERROR(msg_module, "%s", strerror(errno));
 		}
 	}
 
@@ -210,18 +208,18 @@ int main (int argc, char* argv[])
 	if (config_file == NULL) {
 		/* and use default if not specified */
 		config_file = DEFAULT_CONFIG_FILE;
-		VERBOSE(CL_VERBOSE_BASIC, "Using default configuration file %s.", config_file);
+		MSG_NOTICE(msg_module, "Using default configuration file %s.", config_file);
 	}
 
 	/* TODO: this part should be in the future replaced by NETCONF configuration */
 	fd = open (config_file, O_RDONLY);
 	if (fd == -1) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to open configuration file %s (%s)", config_file, strerror(errno));
+		MSG_ERROR(msg_module, "Unable to open configuration file %s (%s)", config_file, strerror(errno));
 		exit (EXIT_FAILURE);
 	}
 	xml_config = xmlReadFd (fd, NULL, NULL, XML_PARSE_NOERROR | XML_PARSE_NOWARNING | XML_PARSE_NOBLANKS);
 	if (xml_config == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to parse configuration file %s", config_file);
+		MSG_ERROR(msg_module, "Unable to parse configuration file %s", config_file);
 		close (fd);
 		exit (EXIT_FAILURE);
 	}
@@ -231,7 +229,7 @@ int main (int argc, char* argv[])
 	collectors = get_collectors (xml_config);
 	if (collectors == NULL) {
 		/* no collectingProcess configured */
-		VERBOSE(CL_VERBOSE_OFF, "No collectingProcess configured - nothing to do.");
+		MSG_ERROR(msg_module, "No collectingProcess configured - nothing to do.");
 		retval = EXIT_FAILURE;
 		goto cleanup;
 	}
@@ -249,12 +247,12 @@ int main (int argc, char* argv[])
                 proc_count++;
 				continue;
 			} else if (pid < 0) { /* error occured, fork failed */
-				VERBOSE(CL_VERBOSE_OFF, "Forking collector process failed (%s), skipping collector %d.", strerror(errno), i);
+				MSG_ERROR(msg_module, "Forking collector process failed (%s), skipping collector %d.", strerror(errno), i);
 				continue;
 			}
 			/* else child - just continue to handle plugins */
             proc_id = i;
-			VERBOSE(CL_VERBOSE_BASIC, "[%d] New collector process started.", proc_id);
+            MSG_NOTICE(msg_module, "[%d] New collector process started.", proc_id);
 		}
 		collector_node = collectors->nodesetval->nodeTab[i];
 		break;
@@ -280,10 +278,10 @@ int main (int argc, char* argv[])
 	/* prepare input plugin */
 	for (aux_plugins = input_plugins; aux_plugins != NULL; aux_plugins = aux_plugins->next) {
 		input.xml_conf = &aux_plugins->config;
-		VERBOSE(CL_VERBOSE_ADVANCED, "[%d] Opening input plugin: %s", proc_id, aux_plugins->config.file);
+		MSG_NOTICE(msg_module, "[%d] Opening input plugin: %s", proc_id, aux_plugins->config.file);
 		input_plugin_handler = dlopen (input_plugins->config.file, RTLD_LAZY);
 		if (input_plugin_handler == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input xml_conf (%s)", proc_id, dlerror());
+			MSG_ERROR(msg_module, "[%d] Unable to load input xml_conf (%s)", proc_id, dlerror());
 			continue;
 		}
 		input.dll_handler = input_plugin_handler;
@@ -291,19 +289,19 @@ int main (int argc, char* argv[])
 		/* prepare Input API routines */
 		input.init = dlsym (input_plugin_handler, "input_init");
 		if (input.init == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input xml_conf (%s)", proc_id, dlerror());
+			MSG_ERROR(msg_module, "[%d] Unable to load input xml_conf (%s)", proc_id, dlerror());
 			dlclose(input.dll_handler);
 			continue;
 		}
 		input.get = dlsym (input_plugin_handler, "get_packet");
 		if (input.get == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input xml_conf (%s)", proc_id, dlerror());
+			MSG_ERROR(msg_module, "[%d] Unable to load input xml_conf (%s)", proc_id, dlerror());
 			dlclose(input.dll_handler);
 			continue;
 		}
 		input.close = dlsym (input_plugin_handler, "input_close");
 		if (input.close == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load input xml_conf (%s)", proc_id, dlerror());
+			MSG_ERROR(msg_module, "[%d] Unable to load input xml_conf (%s)", proc_id, dlerror());
 			dlclose(input.dll_handler);
 			continue;
 		}
@@ -316,7 +314,7 @@ int main (int argc, char* argv[])
 	}
 	/* check if we have found any input xml_conf */
 	if (!input.dll_handler || !input.init || !input.get || !input.close) {
-		VERBOSE(CL_VERBOSE_OFF, "[%d] Loading input xml_conf failed.", proc_id);
+		MSG_ERROR(msg_module, "[%d] Loading input xml_conf failed.", proc_id);
 		retval = EXIT_FAILURE;
 		goto cleanup;
 	}
@@ -326,18 +324,18 @@ int main (int argc, char* argv[])
 
 	/* prepare storage xml_conf(s) */
 	for (aux_plugins = storage_plugins; aux_plugins != NULL; aux_plugins = aux_plugins->next) {
-		VERBOSE(CL_VERBOSE_ADVANCED, "[%d] Opening storage xml_conf: %s", proc_id, aux_plugins->config.file);
+		MSG_NOTICE(msg_module, "[%d] Opening storage xml_conf: %s", proc_id, aux_plugins->config.file);
 
 		storage_plugin_handler = dlopen (aux_plugins->config.file, RTLD_LAZY);
 		if (storage_plugin_handler == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage xml_conf (%s)", proc_id, dlerror());
+			MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", proc_id, dlerror());
 			continue;
 		}
 
 		aux_storage_list = storage_list;
 		storage_list = (struct storage_list*) malloc (sizeof(struct storage_list));
 		if (storage_list == NULL) {
-			VERBOSE (CL_VERBOSE_OFF, "[%d] Memory allocation failed (%s:%d)", proc_id, __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "[%d] Memory allocation failed (%s:%d)", proc_id, __FILE__, __LINE__);
 			storage_list = aux_storage_list;
 			dlclose(storage_plugin_handler);
 			continue;
@@ -351,7 +349,7 @@ int main (int argc, char* argv[])
 		/* prepare Input API routines */
 		storage_list->storage.init = dlsym (storage_plugin_handler, "storage_init");
 		if (storage_list->storage.init == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage xml_conf (%s)", proc_id, dlerror());
+			MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", proc_id, dlerror());
 			dlclose (storage_plugin_handler);
 			storage_plugin_handler = NULL;
 			free (storage_list);
@@ -361,7 +359,7 @@ int main (int argc, char* argv[])
 		}
 		storage_list->storage.store = dlsym (storage_plugin_handler, "store_packet");
 		if (storage_list->storage.store == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage xml_conf (%s)", proc_id, dlerror());
+			MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", proc_id, dlerror());
 			dlclose (storage_plugin_handler);
 			storage_plugin_handler = NULL;
 			free (storage_list);
@@ -371,7 +369,7 @@ int main (int argc, char* argv[])
 		}
 		storage_list->storage.store_now = dlsym (storage_plugin_handler, "store_now");
 		if (storage_list->storage.store_now == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage xml_conf (%s)", proc_id, dlerror());
+			MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", proc_id, dlerror());
 			dlclose (storage_plugin_handler);
 			storage_plugin_handler = NULL;
 			free (storage_list);
@@ -381,7 +379,7 @@ int main (int argc, char* argv[])
 		}
 		storage_list->storage.close = dlsym (storage_plugin_handler, "storage_close");
 		if (storage_list->storage.close == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "[%d] Unable to load storage xml_conf (%s)", proc_id, dlerror());
+			MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", proc_id, dlerror());
 			dlclose (storage_plugin_handler);
 			storage_plugin_handler = NULL;
 			free (storage_list);
@@ -396,7 +394,7 @@ int main (int argc, char* argv[])
 	}
 	/* check if we have found at least one storage plugin */
 	if (!storage_list) {
-		VERBOSE(CL_VERBOSE_OFF, "[%d] Loading storage xml_conf(s) failed.", proc_id);
+		MSG_ERROR(msg_module, "[%d] Loading storage xml_conf(s) failed.", proc_id);
 		retval = EXIT_FAILURE;
 		goto cleanup;
 	}
@@ -410,7 +408,7 @@ int main (int argc, char* argv[])
 	retval = input.init ((char*) plugin_params, &(input.config));
 	xmlFree (plugin_params);
 	if (retval != 0) {
-		VERBOSE(CL_VERBOSE_OFF, "[%d] Initiating input xml_conf failed.", proc_id);
+		MSG_ERROR(msg_module, "[%d] Initiating input xml_conf failed.", proc_id);
 		goto cleanup;
 	}
 
@@ -419,7 +417,7 @@ int main (int argc, char* argv[])
 		/* get data to process */
 		if ((get_retval = input.get (input.config, &input_info, &packet)) < 0) {
 			if (!done || get_retval != INPUT_INTR) { /* if interrupted and closing, it's ok */
-				VERBOSE(CL_VERBOSE_OFF, "[%d] Getting IPFIX data failed!", proc_id);
+				MSG_WARNING(msg_module, "[%d] Getting IPFIX data failed!", proc_id);
 			}
 			continue;
 		} else if (get_retval == INPUT_CLOSED) {
@@ -503,9 +501,9 @@ cleanup:
     if (pid > 0) {
         for (i=0; i<proc_count; i++) {
             pid = wait(NULL);
-            VERBOSE(CL_VERBOSE_BASIC, "[%d] Collector child process %d terminated", proc_id, pid);
+            MSG_NOTICE(msg_module, "[%d] Collector child process %d terminated", proc_id, pid);
         }
-        VERBOSE(CL_VERBOSE_BASIC, "[%d] Closing collector.", proc_id);
+        MSG_NOTICE(msg_module, "[%d] Closing collector.", proc_id);
     }
 
 	return (retval);

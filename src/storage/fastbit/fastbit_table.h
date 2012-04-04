@@ -53,7 +53,6 @@
 #include "fastbit_element.h"
 
 extern "C" {
-	//#include <commlbr.h>
 	#include "../../../headers/storage.h"
 }
 

@@ -1,10 +1,9 @@
-/*
- * Author: Radek Krejci <rkrejci@cesnet.cz>
- * The main devel header for IPFIX Collector.
+/**
+ * \file verbose.c
+ * \author Petr Velan <petr.velan@cesnet.cz>
+ * \brief Main body of the ipfixcol
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
- *
- * LICENSE TERMS
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,7 +23,7 @@
  * License (GPL) version 2 or later, in which case the provisions
  * of the GPL apply INSTEAD OF those given above.
  *
- * This software is provided ``as is'', and any express or implied
+ * This software is provided ``as is, and any express or implied
  * warranties, including, but not limited to, the implied warranties of
  * merchantability and fitness for a particular purpose are disclaimed.
  * In no event shall the company or contributors be liable for any
@@ -38,31 +37,36 @@
  *
  */
 
-#ifndef IPFIXCOL_H_
-#define IPFIXCOL_H_
+#include "../headers/verbose.h"
+#include <stdio.h>
+#include <stdarg.h>
+#include <syslog.h>
 
-/**
- * \mainpage IPFIX Collector Developer's Documentation
- *
- * This documents provides documentation of IPFIX Collector (ipfixcol). We
- * provides public API of the collector's input plugins as well as its storage
- * (output) plugins.
- */
+/* Default is to print only errors */
+int verbose = ICMSG_ERROR;
 
-/**
- * \defgroup publicAPIs Public ipfixcol's APIs
- * \brief APIs for connecting plugins into the ipfixcol.
- */
+/* Do not use syslog unless specified otherwise */
+int use_syslog = 0;
 
-/**
- * \defgroup inputPlugins ipficol's Input Plugins
- * \brief Input plugins for the ipfixcol.
- */
+void icmsg_print(ICMSG_LEVEL lvl, const char *format, ...)
+{
+	va_list ap;
+	int priority;
 
-#include <ipfixcol/input.h>
-#include <ipfixcol/storage.h>
-#include <ipfixcol/ipfix.h>
-#include <ipfixcol/templates.h>
-#include <ipfixcol/verbose.h>
+	va_start(ap, format);
+	vprintf(format, ap);
+	va_end(ap);
 
-#endif /* IPFIXCOL_H_ */
+	if (use_syslog) {
+		va_start(ap, format);
+		switch (lvl) {
+		case ICMSG_ERROR: priority = LOG_ERR; break;
+		case ICMSG_WARNING: priority = LOG_WARNING; break;
+		case ICMSG_NOTICE: priority = LOG_NOTICE; break;
+		case ICMSG_DEBUG: priority = LOG_DEBUG; break;
+		default: priority = LOG_INFO; break;
+		}
+		vsyslog(priority, format, ap);
+		va_end(ap);
+	}
+}

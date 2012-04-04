@@ -62,9 +62,11 @@
 #include <libxml/parser.h>
 #include <time.h>
 
-#include "commlbr.h"
 #include "ipfixcol.h"
 
+
+/** Identifier to MSG_* macros */
+static char *msg_module = "ipfix storage";
 
 /**
  * \struct ipfix_config
@@ -101,7 +103,7 @@ static int prepare_output_file(struct ipfix_config *config)
 	          S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (fd == -1) {
 		config->fcounter -= 1;
-		VERBOSE(CL_VERBOSE_OFF, "Unable to open output file");
+		MSG_ERROR(msg_module, "Unable to open output file");
 		return -1;
 	}
 
@@ -122,7 +124,7 @@ static int close_output_file(struct ipfix_config *config)
 
 	ret = close(config->fd);
 	if (ret == -1) {
-		VERBOSE(CL_VERBOSE_OFF, "Error when closing output file");
+		MSG_ERROR(msg_module, "Error when closing output file");
 		return -1;
 	}
 
@@ -160,7 +162,7 @@ int storage_init(char *params, void **config)
  	/* allocate space for config structure */
 	conf = (struct ipfix_config *) malloc(sizeof(*conf));
 	if (conf == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
 	memset(conf, '\0', sizeof(*conf));
@@ -168,16 +170,16 @@ int storage_init(char *params, void **config)
 	/* try to parse configuration file */
 	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
 	if (doc == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Plugin configuration not parsed successfully");
+		MSG_ERROR(msg_module, "Plugin configuration not parsed successfully");
 		goto err_init;
 	}
 	cur = xmlDocGetRootElement(doc);
 	if (cur == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Empty configuration");
+		MSG_ERROR(msg_module, "Empty configuration");
 		goto err_init;
 	}
 	if (xmlStrcmp(cur->name, (const xmlChar *) "fileWriter")) {
-		VERBOSE(CL_VERBOSE_OFF, "Root node != fileWriter");
+		MSG_ERROR(msg_module, "Root node != fileWriter");
 		goto err_init;
 	}
 	cur = cur->xmlChildrenNode;
@@ -192,7 +194,7 @@ int storage_init(char *params, void **config)
 
 	/* check whether we have found "file" element in configuration file */
 	if (conf->xml_file == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Configuration file doesn't specify where "
+		MSG_ERROR(msg_module, "Configuration file doesn't specify where "
 		                        "to store output files (\"file\" element "
 								"is missing)");
 		goto err_init;
@@ -200,7 +202,7 @@ int storage_init(char *params, void **config)
 
 	/* we only support local files */
 	if (strncmp((char *) conf->xml_file, "file:", 5)) {
-		VERBOSE(CL_VERBOSE_OFF, "Element \"file\": invalid URI - "
+		MSG_ERROR(msg_module, "Element \"file\": invalid URI - "
 		                        "only allowed scheme is \"file:\"");
 		goto err_init;
 	}
@@ -208,7 +210,7 @@ int storage_init(char *params, void **config)
 	/* output file path + timestamp */
 	conf->file = (char *) malloc(strlen((char *) conf->xml_file)+12);
 	if (conf->file == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		goto err_init;
 	}
 	memset(conf->file, 0, strlen((char *) conf->xml_file)+14);
@@ -270,7 +272,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 				break;
 			} else {
 				/* serious error occurs */
-				VERBOSE(CL_VERBOSE_OFF, "Error while writing into the "
+				MSG_ERROR(msg_module, "Error while writing into the "
 				                        "output file");
 				return -1;
 			}

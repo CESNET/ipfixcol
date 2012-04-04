@@ -40,13 +40,15 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <arpa/inet.h>
-
-#include <commlbr.h>
+#include <string.h>
 
 #include "preprocessor.h"
 #include "data_manager.h"
 #include "queues.h"
 #include "../ipfixcol.h"
+
+/** Identifier to MSG_* macros */
+static char *msg_module = "preprocessor";
 
 /**
  * \brief List of data manager configurations
@@ -158,7 +160,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 	struct data_manager_config *config = NULL, *prev_config = NULL;
 
 	if (input_info == NULL || storage_plugins == NULL) {
-		VERBOSE (CL_VERBOSE_OFF, "Invalid parameters in function preprocessor_parse_msg().");
+		MSG_WARNING(msg_module, "Invalid parameters in function preprocessor_parse_msg().");
 		return;
 	}
 
@@ -167,7 +169,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
         config = get_data_mngmt_by_input_info (input_info, &prev_config);
 
         if (!config) {
-        	VERBOSE(CL_VERBOSE_BASIC, "Data manager NOT found, probably more exporters with same OID.");
+        	MSG_WARNING(msg_module, "Data manager NOT found, probably more exporters with same OID.");
         	return;
         }
         /* remove data manager from the list */
@@ -185,12 +187,12 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 	msg = (struct ipfix_message*) calloc (1, sizeof (struct ipfix_message));
 	msg->pkt_header = (struct ipfix_header*) packet;
 	msg->input_info = input_info;
-	MSG (CL_VERBOSE_BASIC, "Processing data for Observation domain ID %d.",
+	MSG_DEBUG(msg_module, "Processing data for Observation domain ID %d.",
 			ntohl(msg->pkt_header->observation_domain_id));
 
 	/* check IPFIX version */
 	if (msg->pkt_header->version != htons(IPFIX_VERSION)) {
-		VERBOSE (CL_VERBOSE_BASIC, "Unexpected IPFIX version detected (%X), skipping packet.",
+		MSG_WARNING(msg_module, "Unexpected IPFIX version detected (%X), skipping packet.",
 				msg->pkt_header->version);
 		free (msg);
 		free (packet);
@@ -199,7 +201,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 
 	/* check whether message is not shorter than header says */
 	if ((uint16_t) len < ntohs(msg->pkt_header->length)) {
-		VERBOSE (CL_VERBOSE_BASIC, "Malformed IPFIX message detected (bad length), skipping packet.");
+		MSG_WARNING(msg_module, "Malformed IPFIX message detected (bad length), skipping packet.");
 		free (msg);
 		free (packet);
 		return;
@@ -215,7 +217,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		 */
 		config = data_manager_create (ntohl(msg->pkt_header->observation_domain_id), storage_plugins, input_info);
 		if (config == NULL) {
-			VERBOSE (CL_VERBOSE_BASIC, "Unable to create data manager for Observation Domain ID %d, skipping data.",
+			MSG_WARNING(msg_module, "Unable to create data manager for Observation Domain ID %d, skipping data.",
 					ntohl(msg->pkt_header->observation_domain_id));
 			free (msg);
 			/* free packet here, it was not passed anywhere */
@@ -246,7 +248,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
                 break;
             default:
                 if (ntohs(set_header->flowset_id) < IPFIX_MIN_RECORD_FLOWSET_ID) {
-                    VERBOSE (CL_VERBOSE_BASIC, "Unknown Set ID %d", ntohs(set_header->flowset_id));
+                	MSG_WARNING(msg_module, "Unknown Set ID %d", ntohs(set_header->flowset_id));
                 } else {
                     msg->data_couple[d_set_count++].data_set = (struct ipfix_data_set*) set_header;
                 }
@@ -263,7 +265,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 
 
 	if (rbuffer_write (config->in_queue, msg, 1) != 0) {
-		VERBOSE (CL_VERBOSE_BASIC, "Unable to write into Data manager's input queue, skipping data.");
+		MSG_WARNING(msg_module, "Unable to write into Data manager's input queue, skipping data.");
 		free (packet);
 	}
 }

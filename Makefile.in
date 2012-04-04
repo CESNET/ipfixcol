@@ -47,7 +47,8 @@ SRCS =	src/ipfixcol.c \
 	src/queues.c \
 	src/preprocessor.c \
 	src/data_manager.c \
-	src/template_manager.c
+	src/template_manager.c \
+	src/verbose.c
 
 PHDRS = src/config.h \
 	src/data_manager.h \
@@ -58,6 +59,7 @@ HDRS =	headers/ipfix.h \
 	headers/input.h \
 	headers/storage.h \
 	headers/templates.h \
+	headers/verbose.h
 
 CONF=	config/internalcfg.xml \
 	config/ipfix-elements.xml \
@@ -96,8 +98,10 @@ INSTALL = @INSTALL@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_DATA = @INSTALL_DATA@
 RPMDIR = RPMBUILD
-LIBS = @LIBS@
+LIBS = @LIBS@ 
 CFLAGS = @CFLAGS@
+# -rdynamic ensures that symbols from ipfixcol are accessible from shared libraries
+ipfixcol_CFLAGS = -rdynamic
 CPPFLAGS = @CPPFLAGS@
 @SET_MAKE@
 
@@ -120,7 +124,7 @@ all: ipfixcol
 
 ipfixcol: $(OBJS)
 	@rm -f $@;
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(DBG) $(LIBS) $(OBJS) -o $@
+	$(CC) $(CFLAGS) $(ipfixcol_CFLAGS) $(CPPFLAGS) $(DBG) $(LIBS) $(OBJS) -o $@
 
 $(OBJDIR)/%.o: %.c
 	@[ -d $$(dirname $@) ] || \
@@ -139,6 +143,8 @@ $(INPUT_PLUGINS):
 
 $(STORAGE_PLUGINS):
 	$(MAKE) -C src/storage/${@F}
+
+
 
 doxygen: $(DOXYGEN_CONFIG) $(HDRS) ipfixcol.h $(SRCS) $(PHDRS)
 	@[ -d $(DOXYGEN_DIR) ] || mkdir -p $(DOXYGEN_DIR); \
@@ -253,7 +259,7 @@ install-doc:
 
 .PHONY: clean
 clean:
-	rm -rf *.a *.so* $(OBJDIR) $(DOXYGEN_DIR) $(RPMDIR) $(MANDIR)/*.gz; \
+	rm -rf *.a *.so* $(OBJDIR) $(DOXYGEN_DIR) $(RPMDIR) $(MANDIR)/*.gz $(LDADD); \
 	for i in $(INPUT_PLUGINS) $(STORAGE_PLUGINS); do \
 		$(MAKE) $@ -C $$i; \
 	done; \

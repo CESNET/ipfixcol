@@ -56,7 +56,6 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <commlbr.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
@@ -66,6 +65,9 @@
 #define BUFF_LEN 10000
 /* default port for udp collector */
 #define DEFAULT_PORT "4739"
+
+/** Identifier to MSG_* macros */
+static char *msg_module = "UDP input";
 
 /**
  * \struct input_info_list
@@ -111,7 +113,7 @@ int input_init(char *params, void **config)
     /* allocate plugin_conf structure */
     conf = calloc(1, sizeof(struct plugin_conf));
     if (conf == NULL) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory for config structure: %s", strerror(errno));
+        MSG_ERROR(msg_module, "Cannot allocate memory for config structure: %s", strerror(errno));
         retval = 1;
         goto out;
     }
@@ -125,21 +127,21 @@ int input_init(char *params, void **config)
     doc = xmlParseDoc(BAD_CAST params);
     if (doc == NULL) {
         printf("%s", params);
-        VERBOSE(CL_VERBOSE_OFF, "Cannot parse config xml");
+        MSG_ERROR(msg_module, "Cannot parse config xml");
         retval = 1;
         goto out;
     }
     /* get the root element node */
     root_element = xmlDocGetRootElement(doc);
     if (root_element == NULL) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot get document root element");
+    	MSG_ERROR(msg_module, "Cannot get document root element");
         retval = 1;
         goto out;
     }
 
     /* check that we have the right config xml, BAD_CAST is (xmlChar *) cast defined by libxml */
     if (!xmlStrEqual(root_element->name, BAD_CAST "udpCollector")) {
-        VERBOSE(CL_VERBOSE_OFF, "Expecting udpCollector root element, got %s", root_element->name);
+    	MSG_ERROR(msg_module, "Expecting udpCollector root element, got %s", root_element->name);
         retval = 1;
         goto out;
     }
@@ -152,7 +154,7 @@ int input_init(char *params, void **config)
             /* this is not a preferred cast, but we really want to use plain chars here */
             strcpy(tmp_val, (char *)cur_node->children->content);
             if (tmp_val == NULL) {
-                VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory: %s", strerror(errno));
+            	MSG_ERROR(msg_module, "Cannot allocate memory: %s", strerror(errno));
                 retval = 1;
                 goto out;
             }
@@ -193,7 +195,7 @@ int input_init(char *params, void **config)
 
     /* get server address */
     if ((ret = getaddrinfo(address, port, &hints, &addrinfo)) != 0) {
-        VERBOSE(CL_VERBOSE_OFF, "getaddrinfo failed: %s", gai_strerror(ret));
+    	MSG_ERROR(msg_module, "getaddrinfo failed: %s", gai_strerror(ret));
         retval = 1;
         goto out;
     }
@@ -201,7 +203,7 @@ int input_init(char *params, void **config)
     /* create socket */
     conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
     if (conf->socket == -1) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot create socket: %s", strerror(errno));
+    	MSG_ERROR(msg_module, "Cannot create socket: %s", strerror(errno));
         retval = 1;
         goto out;
     }
@@ -209,12 +211,12 @@ int input_init(char *params, void **config)
     /* allow IPv4 connections on IPv6 */
     if ((addrinfo->ai_family == AF_INET6) &&
         (setsockopt(conf->socket, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_only, sizeof(ipv6_only)) == -1)) {
-        VERBOSE(CL_VERBOSE_BASIC, "Cannot turn off socket option IPV6_V6ONLY. Plugin might not accept IPv4 connections");
+    	MSG_WARNING(msg_module, "Cannot turn off socket option IPV6_V6ONLY. Plugin might not accept IPv4 connections");
     }
 
     /* bind socket to address */
     if (bind(conf->socket, addrinfo->ai_addr, addrinfo->ai_addrlen) != 0) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot bind socket: %s", strerror(errno));
+    	MSG_ERROR(msg_module, "Cannot bind socket: %s", strerror(errno));
         retval = 1;
         goto out;
     }
@@ -243,13 +245,13 @@ int input_init(char *params, void **config)
         inet_ntop(AF_INET6, &conf->info.dst_addr.ipv6, dst_addr, INET6_ADDRSTRLEN);
     }
     /* print info */
-    VERBOSE(CL_VERBOSE_BASIC, "UDP input plugin listening on address %s, port %s", dst_addr, port);
+    MSG_NOTICE(msg_module, "UDP input plugin listening on address %s, port %s", dst_addr, port);
 
     /* and pass it to the collector */
     *config = (void*) conf;
 
     /* normal exit, all OK */
-    VERBOSE(CL_VERBOSE_BASIC, "Plugin initialization completed successfully");
+    MSG_NOTICE(msg_module, "Plugin initialization completed successfully");
 
 out:
     if (def_port == 0 && port != NULL) { /* free when memory was actually allocated*/
@@ -327,7 +329,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
     	if (errno == EINTR) {
     		return INPUT_INTR;
     	}
-        VERBOSE(CL_VERBOSE_OFF, "Failed to receive packet: %s", strerror(errno));
+    	MSG_ERROR(msg_module, "Failed to receive packet: %s", strerror(errno));
         return INPUT_ERROR;
     }
 
@@ -352,7 +354,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
     }
     /* check whether we found the input_info */
     if (info_list == NULL) {
-    	VERBOSE(CL_VERBOSE_ADVANCED, "New UDP exporter connected (unique port and address)");
+    	MSG_NOTICE(msg_module, "New UDP exporter connected (unique port and address)");
     	/* create new input_info */
     	info_list = malloc(sizeof(struct input_info_list));
     	memcpy(&info_list->info, &conf->info, sizeof(struct input_info_list));
@@ -401,7 +403,7 @@ int input_close(void **config)
     /* close socket */
     int sock = ((struct plugin_conf*) *config)->socket;
     if ((ret = close(sock)) == -1) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot close socket: %s", strerror(errno));
+    	MSG_ERROR(msg_module, "Cannot close socket: %s", strerror(errno));
     }
 
     /* free input_info list */
@@ -428,7 +430,7 @@ int input_close(void **config)
     /* free allocated structures */
     free(*config);
 
-    VERBOSE(CL_VERBOSE_BASIC, "All allocated resources have been freed");
+    MSG_NOTICE(msg_module, "All allocated resources have been freed");
 
     return 0;
 }

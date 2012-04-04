@@ -46,11 +46,14 @@
 
 #include <unistd.h>
 #include <stdio.h>
+#include <string.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
-#include <commlbr.h>
 
 #include "ipfixcol.h"
+
+/** Identifier to MSG_* macros */
+static char *msg_module = "dummy storage";
 
 struct dummy_config {
 	int delay;	  /**< how long should store_packet sleep in us */
@@ -65,7 +68,7 @@ struct dummy_config {
  */
 int storage_init(char *params, void **config)
 {
-	VERBOSE(CL_VERBOSE_BASIC, "Dummy plugin: storage_init called");
+	MSG_NOTICE(msg_module, "Dummy plugin: storage_init called");
 
 	struct dummy_config *conf;
 	xmlDocPtr doc;
@@ -74,23 +77,23 @@ int storage_init(char *params, void **config)
 	/* allocate space for config structure */
 	conf = (struct dummy_config *) malloc(sizeof(*conf));
 	if (conf == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
 
 	/* try to parse configuration file */
 	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
 	if (doc == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Plugin configuration parsing failed");
+		MSG_ERROR(msg_module, "Plugin configuration parsing failed");
 		goto err_read_conf;
 	}
 	cur = xmlDocGetRootElement(doc);
 	if (cur == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Empty configuration");
+		MSG_ERROR(msg_module, "Empty configuration");
 		goto err_init;
 	}
 	if (xmlStrcmp(cur->name, (const xmlChar *) "fileWriter")) {
-		VERBOSE(CL_VERBOSE_OFF, "Root node != fileWriter");
+		MSG_ERROR(msg_module, "Root node != fileWriter");
 		goto err_init;
 	}
 	
@@ -107,7 +110,7 @@ int storage_init(char *params, void **config)
 		cur = cur->next;
 	}
 
-	VERBOSE(CL_VERBOSE_BASIC, "Dummy plugin: delay set to %ius", conf->delay);
+	MSG_NOTICE(msg_module, "Dummy plugin: delay set to %ius", conf->delay);
 
 	/* we don't need this xml tree anymore */
 	xmlFreeDoc(doc);
@@ -149,7 +152,7 @@ int store_now(const void *config)
  */
 int storage_close(void **config)
 {
-	VERBOSE(CL_VERBOSE_BASIC, "Dummy plugin: storage_close called\n");
+	MSG_NOTICE(msg_module, "Dummy plugin: storage_close called\n");
 
 	free(*config);
 	*config = NULL;

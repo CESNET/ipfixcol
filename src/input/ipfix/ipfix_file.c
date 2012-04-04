@@ -61,13 +61,15 @@
 #include <libgen.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
-#include <commlbr.h>
 
 #include "ipfixcol.h"
 
 
 #define NUMBER_OF_INPUT_FILES 100
 #define NO_INPUT_FILE         (-2)
+
+/** Identifier to MSG_* macros */
+static char *msg_module = "ipfix input";
 
 /**
  * \struct ipfix_config
@@ -120,7 +122,7 @@ static int regexp_asterisk(char *regexp, char *string)
 	/* make copy of original string */
 	aux_regexp = (char *) malloc(strlen(regexp) + 1);
 	if (aux_regexp == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Not enough memory");
+		MSG_ERROR(msg_module, "Not enough memory");
 		return -1;
 	}
 
@@ -198,12 +200,12 @@ static int prepare_input_file(struct ipfix_config *conf)
 		return -1;
 	}
 
-	VERBOSE(CL_VERBOSE_BASIC, "Opening input file: %s", conf->input_files[conf->findex]);
+	MSG_NOTICE(msg_module, "Opening input file: %s", conf->input_files[conf->findex]);
 
 	fd = open(conf->input_files[conf->findex], O_RDONLY);
 	if (fd == -1) {
 		/* input file doesn't exist or we don't have read permission */
-		VERBOSE(CL_VERBOSE_OFF, "Unable to open input file: %s", conf->input_files[conf->findex]);
+		MSG_ERROR(msg_module, "Unable to open input file: %s", conf->input_files[conf->findex]);
 		ret = -1;
 	}
 
@@ -226,11 +228,11 @@ static int close_input_file(struct ipfix_config *conf)
 
 	ret = close(conf->fd);
 	if (ret == -1) {
-		VERBOSE(CL_VERBOSE_OFF, "Error when closing output file");
+		MSG_ERROR(msg_module, "Error when closing output file");
 		return -1;
 	}
 
-	VERBOSE(CL_VERBOSE_BASIC, "Input file closed");
+	MSG_NOTICE(msg_module, "Input file closed");
 
 	conf->fd = -1;
 
@@ -304,7 +306,7 @@ int input_init(char *params, void **config)
 	/* allocate memory for config structure */
 	conf = (struct ipfix_config *) malloc(sizeof(*conf));
 	if (!conf) {
-		VERBOSE(CL_VERBOSE_OFF, "Not enough memory");
+		MSG_ERROR(msg_module, "Not enough memory");
 		return -1;
 	}
 	memset(conf, '\0', sizeof(*conf));
@@ -313,16 +315,16 @@ int input_init(char *params, void **config)
 	/* try to parse configuration file */
 	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
 	if (doc == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Plugin configuration not parsed successfully");
+		MSG_ERROR(msg_module, "Plugin configuration not parsed successfully");
 		goto err_init;
 	}
 	cur = xmlDocGetRootElement(doc);
 	if (cur == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Empty configuration");
+		MSG_ERROR(msg_module, "Empty configuration");
 		goto err_xml;
 	}
 	if (xmlStrcmp(cur->name, (const xmlChar *) "fileReader")) {
-		VERBOSE(CL_VERBOSE_OFF, "root node != fileReader");
+		MSG_ERROR(msg_module, "root node != fileReader");
 		goto err_init;
 	}
 	cur = cur->xmlChildrenNode;
@@ -336,14 +338,14 @@ int input_init(char *params, void **config)
 
 	/* check whether we have found "file" element in configuration file */
 	if (conf->xml_file == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "\"file\" element is missing. No input, "
+		MSG_ERROR(msg_module, "\"file\" element is missing. No input, "
 		                        "nothing to do");
 		goto err_xml;
 	}
 
 	/* we only support local files */
 	if (strncmp((char *) conf->xml_file, "file:", 5)) {
-		VERBOSE(CL_VERBOSE_OFF, "element \"file\": invalid URI - "
+		MSG_ERROR(msg_module, "element \"file\": invalid URI - "
 		                        "only allowed scheme is \"file:\"");
 		goto err_xml;
 	}
@@ -356,7 +358,7 @@ int input_init(char *params, void **config)
 	conf->in_info = (struct input_info_file *) malloc(sizeof(*(conf->in_info)));
 	if (!conf->in_info) {
 		/* out of memory */
-		VERBOSE(CL_VERBOSE_OFF, "Not enough memory");
+		MSG_ERROR(msg_module, "Not enough memory");
 		goto err_file;
 	}
 
@@ -369,7 +371,7 @@ int input_init(char *params, void **config)
 	/* get directory without filename */
 	conf->dir = (char *) malloc(strlen(conf->file) + 1);
 	if (conf->dir == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Not enough memory");
+		MSG_ERROR(msg_module, "Not enough memory");
 		goto err_file;
 	}
 	strcpy(conf->dir, conf->file);
@@ -378,7 +380,7 @@ int input_init(char *params, void **config)
 	/* get filename without directory */
 	conf->file_copy = (char *) malloc(strlen(conf->file) + 1);
 	if (conf->file_copy == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Not enough memory");
+		MSG_ERROR(msg_module, "Not enough memory");
 		goto err_file;
 	}
 	strcpy(conf->file_copy, conf->file);
@@ -386,7 +388,7 @@ int input_init(char *params, void **config)
 
 	dir = opendir(conf->dir);
 	if (dir == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to open input file(s)\n");
+		MSG_ERROR(msg_module, "Unable to open input file(s)\n");
 		goto err_file;
 	}
 
@@ -395,14 +397,14 @@ int input_init(char *params, void **config)
 
 	entry = (struct dirent *) malloc(len);
 	if (entry == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "not enough memory");
+		MSG_ERROR(msg_module, "Not enough memory");
 		goto err_file;
 	}
 
 	int array_length = NUMBER_OF_INPUT_FILES;
 	input_files = (char **) malloc(array_length * sizeof(char *));
 	if (input_files == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Not enough memory");
+		MSG_ERROR(msg_module, "Not enough memory");
 		goto err_file;
 	}
 	memset(input_files, 0, NUMBER_OF_INPUT_FILES);
@@ -410,7 +412,7 @@ int input_init(char *params, void **config)
 	do {
 		ret = readdir_r(dir, entry, &result);
 		if (ret != 0) {
-			VERBOSE(CL_VERBOSE_OFF, "Error while reading directory %s\n", conf->dir);
+			MSG_ERROR(msg_module, "Error while reading directory %s\n", conf->dir);
 			goto err_file;
 		}
 		
@@ -430,7 +432,7 @@ int input_init(char *params, void **config)
 			if (fcounter >= array_length) {
 				input_files = realloc(input_files, array_length * 2);
 				if (input_files == NULL) {
-					VERBOSE(CL_VERBOSE_OFF, "Not enough memory");
+					MSG_ERROR(msg_module, "Not enough memory");
 					goto err_file;
 				}
 				array_length *= 2;
@@ -438,7 +440,7 @@ int input_init(char *params, void **config)
 
 			input_files[inputf_index] = (char *) malloc(strlen(entry->d_name) + strlen(conf->dir) + 2); /* 2 because of "/" and NULL*/
 			if (input_files[inputf_index] == NULL) {
-				VERBOSE(CL_VERBOSE_OFF, "Not enough memory");
+				MSG_ERROR(msg_module, "Not enough memory");
 				goto err_file;
 			}
 			/* create path+filename string */
@@ -450,7 +452,7 @@ int input_init(char *params, void **config)
 				/* well, it is... damn */
 				free(input_files[inputf_index]);
 				input_files[inputf_index] = NULL;
-				VERBOSE(CL_VERBOSE_BASIC, "Input file %s is a directory. Skipping.", entry->d_name);
+				MSG_WARNING(msg_module, "Input file %s is a directory. Skipping.", entry->d_name);
 				continue;
 			}
 
@@ -462,16 +464,16 @@ int input_init(char *params, void **config)
 
 	/* print all input files */
 	if (inputf_index) {
-		VERBOSE(CL_VERBOSE_BASIC, "List of input files:");
+		MSG_NOTICE(msg_module, "List of input files:");
 		for (i = 0; input_files[i] != NULL; i++) {
-			VERBOSE(CL_VERBOSE_BASIC, "\t%s", input_files[i]);
+			MSG_NOTICE(msg_module, "\t%s", input_files[i]);
 		}
 	}
 
 	ret = next_file(conf);
 	if (ret == -1) {
 		/* no input files */
-		VERBOSE(CL_VERBOSE_BASIC, "No input files, nothing to do");
+		MSG_ERROR(msg_module, "No input files, nothing to do");
 		goto err_file;
 	}
 
@@ -522,7 +524,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
 
 	header = (struct ipfix_header *) malloc(sizeof(*header));
 	if (!header) {
-		VERBOSE(CL_VERBOSE_OFF, "Not enough memory");
+		MSG_ERROR(msg_module, "Not enough memory");
 		return INPUT_ERROR;
 	}
 
@@ -534,7 +536,7 @@ read_header:
 			ret = INPUT_INTR;
 			goto err_header;
 		}
-	    VERBOSE(CL_VERBOSE_OFF, "Failed to read IPFIX packet header: %s", strerror(errno));
+		MSG_ERROR(msg_module, "Failed to read IPFIX packet header: %s", strerror(errno));
 	    ret = INPUT_ERROR;
 		goto err_header;
 	}
@@ -553,10 +555,10 @@ read_header:
 	/* check magic number */
 	if (ntohs(header->version) != IPFIX_VERSION) {
 		/* not an IPFIX file */
-		VERBOSE(CL_VERBOSE_OFF, "Bad magic number. Expected %x, got %x", IPFIX_VERSION, ntohs(header->version));
+		MSG_ERROR(msg_module, "Bad magic number. Expected %x, got %x", IPFIX_VERSION, ntohs(header->version));
 		/* we don't know how big is this message. It's not IPFIX message or
 		 * header is corrupted. skip whole file */
-		VERBOSE(CL_VERBOSE_OFF, "Input file may be corrupted. Skipping");
+		MSG_ERROR(msg_module, "Input file may be corrupted. Skipping");
 
 		/* try to open next input file */
 		ret = next_file(conf);
@@ -573,7 +575,7 @@ read_header:
 	packet_len = ntohs(header->length);
 	if (packet_len < sizeof(*header)) {
 		/* invalid length of the IPFIX message */
-		VERBOSE(CL_VERBOSE_OFF, "Input file has invalid length (too short)");
+		MSG_ERROR(msg_module, "Input file has invalid length (too short)");
 		goto err_header;
 	}
 
@@ -581,7 +583,7 @@ read_header:
 		/* allocate memory for whole IPFIX message */
 		*packet = (char *) malloc(packet_len);
 		if (*packet == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "Not enough memory");
+			MSG_ERROR(msg_module, "Not enough memory");
 			goto err_header;
 		}
 	}
@@ -596,7 +598,7 @@ read_header:
 			ret = INPUT_INTR;
 			goto err_info;
 		}
-	    VERBOSE(CL_VERBOSE_OFF, "Error while reading from input file: %s", strerror(errno));
+		MSG_ERROR(msg_module, "Error while reading from input file: %s", strerror(errno));
 	    ret = INPUT_ERROR;
 		goto err_info;
 	}
