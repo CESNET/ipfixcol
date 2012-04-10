@@ -42,10 +42,11 @@ basic_system_check()
 {
 	local ret
 
-	type nc > /dev/null 2>&1 # do we have netcat?
+	type $SENDDATA > /dev/null 2>&1 # do we have src/senddata built?
 	ret=$?
 	if [ $ret -ne 0 ]; then
-		echo "command 'nc' missing"
+		echo "Please build the 'src/senddata' utility using make"
+        return ${ret}
 	fi
 
 	type hexdump > /dev/null 2>&1 # do we have hexdump?

@@ -16,24 +16,12 @@
 	</collectingProcess>
 
 
-	<!--## Exporting process configuration -->
 	<exportingProcess>
 		<name>File writer UDP</name>
-		<!--## Specification of storage plugin -->
 		<destination>
-			<!--## Arbitrary name -->
 			<name>Write to /tmp/ipfixcol-test/ folder</name>
-			<!--## Observation domain ID valid for this storage plugin 
-			       Only packets with this ODID will be passed to the plugin
-			       If unspecified, plugin is used for unknown ODIDs 
-			         (and not for any of specified)
-			-->
-			<observationDomainId>1</observationDomainId>
-			<!--## This element is passed to storage plugin -->
 			<fileWriter>
-				<!--## fileFormat must be configured in internalcfg.xml -->
 				<fileFormat>ipfix</fileFormat>
-				<!--## Storage plugin specific element -->
 				<file>file://tmp/ipfixcol-test/test-udp-output.ipfix</file>
 			</fileWriter>
 		</destination>

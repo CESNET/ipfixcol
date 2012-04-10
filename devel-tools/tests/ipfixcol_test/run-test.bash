@@ -46,8 +46,6 @@ COLLECTOR_CONFIG="-c ${PWD}/config/tcp-ipfix.xml"
 # dir where the test messages are stored
 TEST_MSGS_DIR="${2}"
 MESSAGES=
-# all input files combined into the single file
-TMP_BIG_MESSAGE="/tmp/ipfixcol_test_tool_message-$RANDOM"
 COLLECTOR_OUTPUT_LOG="collector_output.log"
 VERSION=0.9
 COLLECTOR_GRACEFUL_KILL="kill -s 2 "
@@ -55,7 +53,7 @@ COLLECTOR_VIOLENT_KILL="kill -s 9 "
 PROGNAME=${0}
 OUTPUT_DIR="/tmp/ipfixcol-test/"
 CORRECT_OUTPUT=
-NETCAT=
+SENDDATA="./src/senddata"
 DESIRED_OUTPUT_HASH=
 ACTUAL_OUTPUT_HASH=
 
@@ -78,14 +76,14 @@ if [ $# -le 1 ]; then
 fi
 
 case "$1" in
-	tcp) COLLECTOR_CONFIG="-c ${PWD}/configs/tcp-ipfix.xml"
-		 NETCAT="nc localhost 4739" ;;
-	udp) COLLECTOR_CONFIG="-c ${PWD}/configs/udp-ipfix.xml"
-		 NETCAT="nc -u localhost 4739" ;;
+	tcp) COLLECTOR_CONFIG="-c ${PWD}/configs/tcp-ipfix.xml";;
+	udp) COLLECTOR_CONFIG="-c ${PWD}/configs/udp-ipfix.xml";;
 	  *) echo "ERROR: unknown protocol $1"
 	     print_usage
 		 die ;;
 esac
+# set protocol for senddata
+SENDDATA="$SENDDATA -p 4739 -t $1"
 echo "output dir: $OUTPUT_DIR"
 
 
@@ -108,27 +106,23 @@ rm -fr $OUTPUT_DIR
 # create new output dir
 mkdir $OUTPUT_DIR
 
-MESSAGES=`ls $TEST_MSGS_DIR`
+FILES=`ls $TEST_MSGS_DIR`
 # find all test files and combine them into single file
 echo "input files:"
-for i in $MESSAGES; do
+for i in $FILES; do
 	TEST_FILE="${TEST_MSGS_DIR}/${i}"
 	check_ipfix_file $TEST_FILE
 	if [ $? -eq 0 ]; then
-		M="${M} $TEST_FILE"
+		MESSAGES="${MESSAGES} $TEST_FILE"
 		echo "    `basename $TEST_FILE`"
 	else
 		# echo "$i is not a valid IPFIX file, skipping"
 		echo -n    # bash the bash error
 	fi
 done
-if [ -z "$M" ]; then
+if [ -z "$MESSAGES" ]; then
 	die "no IPFIX file, nothing to do"
-else
-	cat $M > $TMP_BIG_MESSAGE
 fi
-
-BIG_MESSAGE_HASH=`md5sum $TMP_BIG_MESSAGE | awk '{ print $1; }'`
 
 if [ -f "$TEST_MSGS_DIR/OUTPUT" ]; then
 	CORRECT_OUTPUT="$TEST_MSGS_DIR/OUTPUT"
@@ -152,18 +146,8 @@ cd - > /dev/null
 echo "sleeping 1 second (waiting for collector to initialize)"
 sleep 1
 echo "sending data to the collector"
-if [ $1 == "tcp" ]; then
-	${NETCAT} < ${TMP_BIG_MESSAGE}
-else
-	${NETCAT} < ${TMP_BIG_MESSAGE} &
-	# netcat in udp mode doesn't exit on EOF(?) 
-	sleep 1          # hope this will be enough
-	kill -s 2 $!
-fi
+${SENDDATA} ${MESSAGES}
 echo "all data sent"
-
-# we don't need big test file anymore
-rm ${TMP_BIG_MESSAGE}
 
 # wait a second before killing the collector
 sleep 1
