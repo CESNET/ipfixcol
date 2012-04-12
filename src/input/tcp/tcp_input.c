@@ -1005,6 +1005,18 @@ int input_close(void **config)
 	if (conf->info.options_template_life_packet != NULL) {
 		free(conf->info.options_template_life_packet);
 	}
+#ifdef TLS_SUPPORT
+	/* free strings that are not default (thus static) */
+	if (conf->ca_cert_file != NULL && conf->ca_cert_file != DEFAULT_CA_FILE) {
+		free(conf->ca_cert_file);
+	}
+	if (conf->server_cert_file != NULL && conf->server_cert_file != DEFAULT_CA_FILE) {
+		free(conf->server_cert_file);
+	}
+	if (conf->server_pkey_file != NULL && conf->server_pkey_file != DEFAULT_CA_FILE) {
+		free(conf->server_pkey_file);
+	}
+#endif
 
     /* free allocated structures */
     FD_ZERO(&conf->master);
