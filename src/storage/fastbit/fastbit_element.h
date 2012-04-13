@@ -50,7 +50,7 @@
 #include <iostream>
 #include <string>
 #include "pugixml/pugixml.hpp"
-#include "fastbit_table.h"
+//#include "fastbit_table.h"
 
 extern "C" {
 	//#include <commlbr.h>
@@ -95,12 +95,19 @@ protected:
 	   combination of id and elterprise number
 	   exp: e0id16, e20id50.... */
 	char _name[IE_NAME_LENGTH];
+
+	int _filled;
+	int _buf_max;
+	char *_buffer;
+
 public:
 	/* points to elements data after fill() */
 	void *value;
-	element(): _size(0), value(0) {sprintf(_name,"e0id0");};
+	element(): _size(0), _filled(0), _buffer(NULL), value(0) {sprintf(_name,"e0id0");};
 	element(int size, int en, int id){
 		_size = size;
+                _filled = 0;
+                _buffer = NULL;
 		sprintf( _name,"e%iid%hi", en, id);
 	}
 
@@ -144,7 +151,7 @@ public:
 	 * \brief Set element type
 	 *
 	 * This sets which fastbit data type
-	 * is used for this element when its 
+	 * is used for this element when its
 	 * stored to fastbit data base.
 	 *
 	 * @param type value of one fastbit data type for enum ibis::TYPE_T
@@ -156,12 +163,12 @@ public:
 	/**
 	 * \brief fill internal element value according to given data
 	 *
-	 * This method transforms data from ipfix record to internal 
-	 * value usable by fastbit. Number of bytes to read is specified by _size 
+	 * This method transforms data from ipfix record to internal
+	 * value usable by fastbit. Number of bytes to read is specified by _size
 	 * variable. This method converts endianity. Data can be accesed by value pointer.
 	 *
 	 * @param data pointer to input data (usualy ipfix element)
-	 * @return 0 on succes 
+	 * @return 0 on succes
 	 * @return 1 on failure
 	 */
 	virtual int fill(uint8_t * data) {std::cout<<"STORE_DEF"<<std::endl;return 0;}
@@ -173,12 +180,58 @@ public:
 	 * in oposite byte order.
 	 *
 	 *
-	 * @param dst pointer to destination memory where data should be writen (the memory MUST be preallocated) 
+	 * @param dst pointer to destination memory where data should be writen (the memory MUST be preallocated)
 	 * @param src pointer to source data for byte reorder
 	 * @param size size of memory to copy & reorder from source data
 	 * @param offset offset for destination memory (useful when reordering int16_t to int32_t etc)
 	 */
 	void byte_reorder(uint8_t *dst,uint8_t *src, int size, int offset=0);
+
+	/**
+	 * \brief allocate memory for buffer
+	 */
+	void allocate_buffer(int count){
+		_buf_max = count;
+		_buffer = (char *) realloc(_buffer,_size*count);
+		if(_buffer == NULL){
+			fprintf(stderr,"Memory allocation failed!\n");
+		}
+	}
+
+	int append(void *data){
+		if(_filled >= _buf_max){
+			return 1;
+		}
+		memcpy(&(_buffer[_size*_filled]),data,_size);
+		_filled++;
+		return 0;
+	}
+
+	int flush(std::string path){
+		FILE *f;
+		size_t check;
+		if(_filled > 0){
+			std::cout << "FLUSH ELEMENT:" << path << "/x" << _name << std::endl;
+			std::cout << "FLUSH BUFFER: size:" << _size << " filled:" << _filled << " max" << _buf_max << std::endl;
+			f = fopen((path +"/x"+_name).c_str(),"a+");
+			if( f == NULL){
+				std::cout << "FILE NULL!" <<std::endl;
+				return 1;
+			}
+			std::cout << "FILE OPEN" << std::endl;
+			if(_buffer == NULL){
+				std::cout << "BUFFER NULL!" <<std::endl;
+				return 1;
+			}
+			check = fwrite( _buffer, _size , _filled, f);
+			if(check != (size_t) _filled){
+				fprintf(stderr, "Error while writing data!\n");
+				return 1;
+			}
+			_filled = 0;
+		}
+		return 0;
+	}
 };
 
 class el_var_size : public element
@@ -187,6 +240,8 @@ public:
 	void *data;
 	el_var_size(int size = 0, int en = 0, int id = 0){
 		_size = size;
+                _filled = 0;
+                _buffer = NULL;
 		sprintf( _name,"e%uid%hu", en, id);
 		this->set_type();
 	}
@@ -194,12 +249,12 @@ public:
 	/**
 	 * \brief fill internal element value according to given data
 	 *
-	 * This method transforms data from ipfix record to internal 
-	 * value usable by fastbit. Number of bytes to read is specified by _size 
+	 * This method transforms data from ipfix record to internal
+	 * value usable by fastbit. Number of bytes to read is specified by _size
 	 * variable. This method converts endianity. Data can be accesed by value pointer.
 	 *
 	 * @param data pointer to input data (usualy ipfix element)
-	 * @return 0 on succes 
+	 * @return 0 on succes
 	 * @return 1 on failure
 	 */
 	virtual int fill(uint8_t * data);
@@ -207,7 +262,7 @@ public:
 };
 
 
-typedef union float_union 
+typedef union float_union
 {
 	float float32;
 	double float64;
@@ -219,15 +274,18 @@ public:
 	float_u float_value;
 	el_float(int size = 1, int en = 0, int id = 0){
 		_size = size;
+                _filled = 0;
+                _buffer = NULL;
 		sprintf( _name,"e%uid%hu", en, id);
 		this->set_type();
+		allocate_buffer(RESERVED_SPACE);
 	}
 	/* core methods */
 	/**
 	 * \brief fill internal element value according to given data
 	 *
-	 * This method transforms data from ipfix record to internal 
-	 * value usable by fastbit. Number of bytes to read is specified by _size 
+	 * This method transforms data from ipfix record to internal
+	 * value usable by fastbit. Number of bytes to read is specified by _size
 	 * variable. This method converts endianity. Data can be accesed by value pointer.
 	 *
 	 * @param data pointer to input data (usualy ipfix element)
@@ -271,26 +329,29 @@ public:
 	uint64_t ipv6_value;
 	el_ipv6(int size = 1, int en = 0, int id = 0,  int part = 0){
 		_size = size;
+                _filled = 0;
+                _buffer = NULL;
 		sprintf( _name,"e%uid%hup%u", en, id, part);
 		this->set_type();
+		allocate_buffer(RESERVED_SPACE);
 	}
 	/* core methods */
 	/**
 	 * \brief fill internal element value according to given data
 	 *
-	 * This method transforms data from ipfix record to internal 
-	 * value usable by fastbit. Number of bytes to read is specified by _size 
+	 * This method transforms data from ipfix record to internal
+	 * value usable by fastbit. Number of bytes to read is specified by _size
 	 * variable. This method converts endianity. Data can be accesed by value pointer.
 	 *
 	 * @param data pointer to input data (usualy ipfix element)
-	 * @return 0 on succes 
+	 * @return 0 on succes
 	 * @return 1 on failure
 	 */
 	virtual int fill(uint8_t * data);
 	virtual int set_type();
 };
 
-typedef union uinteger_union 
+typedef union uinteger_union
 {
 	uint8_t ubyte;
 	uint16_t ushort;
@@ -304,19 +365,22 @@ public:
 	uint_u uint_value;
 	el_uint(int size = 1, int en = 0, int id = 0){
 		_size = size;
+                _filled = 0;
+                _buffer = NULL;
 		sprintf( _name,"e%iid%hi", en, id);
 		this->set_type();
+		allocate_buffer(RESERVED_SPACE);
 	}
 	/* core methods */
 	/**
 	 * \brief fill internal element value according to given data
 	 *
-	 * This method transforms data from ipfix record to internal 
-	 * value usable by fastbit. Number of bytes to read is specified by _size 
+	 * This method transforms data from ipfix record to internal
+	 * value usable by fastbit. Number of bytes to read is specified by _size
 	 * variable. This method converts endianity. Data can be accesed by value pointer.
 	 *
 	 * @param data pointer to input data (usualy ipfix element)
-	 * @return 0 on succes 
+	 * @return 0 on succes
 	 * @return 1 on failure
 	 */
 	virtual int fill(uint8_t * data);
@@ -329,8 +393,11 @@ class el_sint : public el_uint
 public:
 	el_sint(int size = 1, int en = 0, int id = 0){
 		_size = size;
+                _filled = 0;
+                _buffer = NULL;
 		sprintf( _name,"e%iid%hi", en, id);
 		this->set_type();
+		allocate_buffer(RESERVED_SPACE);
 	}
 	virtual int set_type();
 };
