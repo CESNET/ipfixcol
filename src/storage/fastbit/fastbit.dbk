@@ -1,365 +1,403 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd">
-<refentry id="fastbit">
-  <refentryinfo>
-    <title>Ipfixcol plugin</title>
-    <copyright>
-      <year>2008-2011</year>
-      <holder>CESNET, z.s.p.o.</holder>
-    </copyright>
-    <date>29 August 2011</date>
-    <authorgroup>
-      <author>
-        <firstname>Petr</firstname>
-        <surname>Kramolis</surname>
-        <orgname>The Liberouter Project</orgname>
-      </author>
-    </authorgroup>
-  </refentryinfo>
-  <refmeta>
-    <refentrytitle>ipfixcol-fastbit-output</refentrytitle>
-    <manvolnum>1</manvolnum>
-  </refmeta>
-  <refnamediv>
-    <refname>ipfixcol-fastbit-output</refname>
-    <refpurpose>storage plugin for ipfixcol based on fastbit.
-    </refpurpose>
-  </refnamediv>
-  <refsect1>
-    <title>Description</title>
-    <para>The <command>ipfixcol-fastbit-output.so</command> is output plugin for
-    ipfixcol (ipfix collector). The plugin uses fastbit library to store 
-    and index data.
-    </para>
-  </refsect1>
-  <refsect1>
-    <title>Configuration</title>
-    <para>There are two configuration xml files for ipfixcol that affects plugin usage.</para>
-    <para>First one is internal configuration xml (/etc/ipfixcol/internalcfg.xml)
-    where are list of all available plugins for the collecor. If you want to
-    use fastbit output plugin just make sure it's specified in the configuration xml.
-    (it should be there from installation of ipfixcol).
-    </para>
-    <title>Fastbit in internal configuration xml</title>
-    <programlisting>
-    <![CDATA[
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2008-2011</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>13 April 2012</date>
+		<authorgroup>
+			<author>
+				<personname>
+					<firstname>Petr</firstname>
+					<surname>Kramolis</surname>
+				</personname>
+				<email>kramolis@cesnet.cz</email>
+				<contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol-fastbit-output</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">FastBit output plugin for IPFIXcol.</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>ipfixcol-fastbit-output</refname>
+		<refpurpose>FastBit output plugin for IPFIXcol.</refpurpose>
+	</refnamediv>
+	
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+			The <command>ipfixcol-fastbit-output.so</command> is output plugin for ipfixcol (ipfix collector). 
+			The plugin uses FastBit library to store and index data.
+		</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Configuration</title>
+		<simpara>There are two configuration XML files for ipfixcol that affects plugin usage.
+		First one is internal configuration XML (<filename>/etc/ipfixcol/internalcfg.xml</filename>) where are list of all available plugins for the collecor. 
+		To use fastbit output plugin, make sure it is properly specified in the configuration XMLs.
+		</simpara>
+		<simpara><filename>internalcfg.xml</filename> postgres example</simpara>
+		<programlisting>
+	<![CDATA[
 	<storagePlugin>
 		<fileFormat>fastbit</fileFormat>
 		<file>/usr/lib64/ipfixcol-fastbit-output.so</file>
+		<threadName>fastbit</threadName>
 	</storagePlugin>
-    ]]>
-    </programlisting>
-    <para>Second one defines plugins for ipfixcol startup (/etc/ipfixcol/startup.xml). It tells which plugins are loaded on start of
-    ipfixcol. It also holds plugins configuration and it's currently the only way how to change plugin behavior.
-    </para>
-    <title>Fastbit plugin configuration</title>
-    <programlisting>
-    <![CDATA[
-	<fileWriter>
-		<fileFormat>fastbit</fileFormat>
-		<path>storagePath/%o/%Y/%m/%d/</path>
-		<dumpInterval>
-			<timeWindow>300</timeWindow>
-			<timeAlignment>yes</timeAlignment>
-			<recordLimit>no</recordLimit>
-		</dumpInterval>
-		<namingStrategy>
-			<type>time</type>
-			<prefix>ic</prefix>
-		</namingStrategy>
-		<onTheFlyIndexes>yes</onTheFlyIndexes>
-	</fileWriter>
-    ]]>
-    </programlisting>
+	]]>
+		</programlisting>
+		<para></para>
+		
+		<simpara>The collector must be configured to use fastbit output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
+		The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves. 
+		</simpara>
+		<simpara><filename>startup.xml</filename> fastbit example</simpara>
+		<programlisting>
+	<![CDATA[
+	<destination>
+		<name>store data records in FastBit database</name>
+		<fileWriter>
+			<fileFormat>fastbit</fileFormat>
+			<path>storagePath/%o/%Y/%m/%d/</path>
+			<dumpInterval>
+				<timeWindow>300</timeWindow>
+				<timeAlignment>yes</timeAlignment>
+				<recordLimit>no</recordLimit>
+			</dumpInterval>
+			<namingStrategy>
+				<type>time</type>
+				<prefix>ic</prefix>
+			</namingStrategy>
+			<onTheFlyIndexes>yes</onTheFlyIndexes>
+		</fileWriter>
+	</destination>
+	]]>
+		</programlisting>
 
-    <variablelist>
-      <varlistentry>
-        <term>
-          <command>path</command>
-        </term>
-        <listitem>
-          <simpara>the path element specifies storage direcotry for data collected by fastbit plugin. Path can contain
-                   format tokens for day, month, obervation id ect. This allows you to create direcotry hierarchy based
-	   on format tokens.</simpara>
-          <variablelist>
-            <varlistentry>
-              <term>
-                <command>%a</command>
-              </term>
-              <listitem>
-               <simpara>Abbreviated weekday name (local-depended). Example: Thu</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%A</command>
-              </term>
-              <listitem>
-               <simpara>Full weekday name (local-depended). Example: Thursday</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%b</command>
-              </term>
-              <listitem>
-               <simpara>Abbreviated month name (local-depended). Example: Aug</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%B</command>
-              </term>
-              <listitem>
-               <simpara>Full month name (local-depended). Example: August</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%c</command>
-              </term>
-              <listitem>
-               <simpara>Date and time representation (local-depended). Example: Thu Aug 23 14:55:02 2001</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%d</command>
-              </term>
-              <listitem>
-               <simpara>Day of the month (01-31). Example: 23</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%H</command>
-              </term>
-              <listitem>
-               <simpara>Hour in 24h format (00-23). Example: 14</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%I</command>
-              </term>
-              <listitem>
-               <simpara>Hour in 12h format (01-12). Example: 02</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%j</command>
-              </term>
-              <listitem>
-               <simpara>Day of the year (001-366). Example: 235</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%m</command>
-              </term>
-              <listitem>
-               <simpara>Month as a decimal number (01-12). Example: 08</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%M</command>
-              </term>
-              <listitem>
-               <simpara>Minute (00-59). Example: 55</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%o</command>
-              </term>
-              <listitem>
-               <simpara>Observation Domain Id. Example: 1</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%p</command>
-              </term>
-              <listitem>
-               <simpara>AM or PM designation. Example: PM</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%S</command>
-              </term>
-              <listitem>
-               <simpara>Second (00-61). Example: 02</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%U</command>
-              </term>
-              <listitem>
-               <simpara>Week number with the first Sunday as the first day of week one (00-53). Example: 33</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%w</command>
-              </term>
-              <listitem>
-               <simpara>Weekday as a decimal number with Sunday as 0 (0-6). Example: 4</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%W</command>
-              </term>
-              <listitem>
-               <simpara>Week number with the first Monday as the first day of week one (00-53). Example: 34</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%x</command>
-              </term>
-              <listitem>
-               <simpara>Date representation (local-depended). Example: 08/23/01</simpara>
-               <note>This creates 3 subdirectories!</note>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%X</command>
-              </term>
-              <listitem>
-               <simpara>Time representation (local-depended). Example: 14:55:02</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%y</command>
-              </term>
-              <listitem>
-               <simpara>Year, last two digits (00-99). Example: 01</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%Y</command>
-              </term>
-              <listitem>
-               <simpara>Year. Example: 2001</simpara>
-             </listitem>
-            </varlistentry>
-            <varlistentry>
-              <term>
-                <command>%Z</command>
-              </term>
-              <listitem>
-               <simpara>Timezone name or abbreviation. Example: CDT</simpara>
-             </listitem>
-            <varlistentry>
-              <term>
-                <command>%%</command>
-              </term>
-              <listitem>
-               <simpara>A % sign. Example: %</simpara>
-             </listitem>
-            </varlistentry>
-            </varlistentry>
-          </variablelist>
-        </listitem>
-      </varlistentry>
-      <varlistentry>
-        <term>
-          <command>dumpInterval - timeWindow</command>
-        </term>
-        <listitem>
-          <simpara>timeWindow is interval for rotation of data storage direcotry (seconds)</simpara>
-        </listitem>
-      </varlistentry>
-      <varlistentry>
-        <term>
-          <command>dumpInterval - timeAlignment</command>
-        </term>
-        <listitem>
-          <simpara>Align flush time according to timeWindow. For example when is collector started at 12:43 with 5 min
-                   timeWindow than next flush time is 12:48 but with alignment next flush time is 12:45. (yes/no)</simpara>
-        </listitem>
-      </varlistentry>
-      <varlistentry>
-        <term>
-          <command>dumpInterval - recordLimit</command>
-        </term>
-        <listitem>
-          <simpara>this preventing data storage direcotry to become too huge when is fastbit plugin used for parsing offline data (yes/no)</simpara>
-        </listitem>
-      </varlistentry>
-      <varlistentry>
-        <term>
-          <command>namingStrategy - type</command>
-        </term>
-        <listitem>
-          <simpara>Specifies how are asigned names to data dumps. (time/incremental)</simpara>
-        </listitem>
-      </varlistentry>
-      <varlistentry>
-        <term>
-          <command>namingStrategy - prefix</command>
-        </term>
-        <listitem>
-          <simpara>Specifies prefix to data dumps names.</simpara>
-        </listitem>
-      </varlistentry>
-      <varlistentry>
-        <term>
-          <command>onTheFlyIndexes</command>
-        </term>
-        <listitem>
-          <simpara>This tells plugin to create indexes for stored data (yes/no).</simpara>
-        </listitem>
-      </varlistentry>
-    </variablelist>
-  </refsect1>
+	<para>
+		<variablelist>
+			<varlistentry>
+				<term>
+					<command>path</command>
+				</term>
+				<listitem>
+					<simpara>the path element specifies storage direcotry for data
+						collected by fastbit plugin. Path can contain
+						format tokens for day, month, obervation id ect. This allows you to
+						create direcotry hierarchy basedon format tokens.
+					</simpara>
 
-  <refsect1>
-    <title>See Also</title>
-    <para></para>
-    <para>
-      <variablelist>
-        <varlistentry>
-          <term>
-            <citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
-          </term>
-          <listitem>
-            <para>ipfixcol man page</para>
-          </listitem>
-        </varlistentry>
-        <varlistentry>
-			<term>
-				<ulink url="https://homeproj.cesnet.cz/projects/ipfixcol/">https://homeproj.cesnet.cz/projects/ipfixcol/</ulink>
-			</term>
-			<listitem>
-				<para>Project Homepage</para>
-			</listitem>
-		</varlistentry>
-        <varlistentry>
-          <term>
-            <ulink url="http://www.liberouter.org">http://www.liberouter.org</ulink>
-          </term>
-          <listitem>
-            <para>Liberouter web page</para>
-          </listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>
-            <ulink>tmc-support@cesnet.cz</ulink>
-          </term>
-          <listitem>
-            <para>Support mailing list</para>
-          </listitem>
-        </varlistentry>
-      </variablelist>
-    </para>
-  </refsect1>
+					<variablelist>
+						<varlistentry>
+							<term>
+								<command>%a</command>
+							</term>
+							<listitem>
+								<simpara>Abbreviated weekday name (local-depended). Example: Thu
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%A</command>
+							</term>
+							<listitem>
+								<simpara>Full weekday name (local-depended). Example: Thursday
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%b</command>
+							</term>
+							<listitem>
+								<simpara>Abbreviated month name (local-depended). Example: Aug
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%B</command>
+							</term>
+							<listitem>
+								<simpara>Full month name (local-depended). Example: August
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%c</command>
+							</term>
+							<listitem>
+								<simpara>Date and time representation (local-depended). Example:
+									Thu Aug 23 14:55:02 2001</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%d</command>
+							</term>
+							<listitem>
+								<simpara>Day of the month (01-31). Example: 23</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%H</command>
+							</term>
+							<listitem>
+								<simpara>Hour in 24h format (00-23). Example: 14</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%I</command>
+							</term>
+							<listitem>
+								<simpara>Hour in 12h format (01-12). Example: 02</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%j</command>
+							</term>
+							<listitem>
+								<simpara>Day of the year (001-366). Example: 235</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%m</command>
+							</term>
+							<listitem>
+								<simpara>Month as a decimal number (01-12). Example: 08
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%M</command>
+							</term>
+							<listitem>
+								<simpara>Minute (00-59). Example: 55</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%o</command>
+							</term>
+							<listitem>
+								<simpara>Observation Domain Id. Example: 1</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%p</command>
+							</term>
+							<listitem>
+								<simpara>AM or PM designation. Example: PM</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%S</command>
+							</term>
+							<listitem>
+								<simpara>Second (00-61). Example: 02</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%U</command>
+							</term>
+							<listitem>
+								<simpara>Week number with the first Sunday as the first day of
+									week one (00-53). Example: 33</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%w</command>
+							</term>
+							<listitem>
+								<simpara>Weekday as a decimal number with Sunday as 0 (0-6).
+									Example: 4</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%W</command>
+							</term>
+							<listitem>
+								<simpara>Week number with the first Monday as the first day of
+									week one (00-53). Example: 34</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%x</command>
+							</term>
+							<listitem>
+								<simpara>Date representation (local-depended). Example: '08/23/01'. This creates 3 subdirectories.
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%X</command>
+							</term>
+							<listitem>
+								<simpara>Time representation (local-depended). Example: 14:55:02</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%y</command>
+							</term>
+							<listitem>
+								<simpara>Year, last two digits (00-99). Example: 01</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%Y</command>
+							</term>
+							<listitem>
+								<simpara>Year. Example: 2001</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%Z</command>
+							</term>
+							<listitem>
+								<simpara>Timezone name or abbreviation. Example: CDT</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%%</command>
+							</term>
+							<listitem>
+								<simpara>A % sign. Example: %</simpara>
+							</listitem>
+						</varlistentry>
+					</variablelist>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>dumpInterval - timeWindow</command>
+				</term>
+				<listitem>
+					<simpara>timeWindow is interval for rotation of data storage
+						direcotry (seconds)</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>dumpInterval - timeAlignment</command>
+				</term>
+				<listitem>
+					<simpara>Align flush time according to timeWindow. For example when
+						is collector started at 12:43 with 5 min
+						timeWindow than next flush time is 12:48 but with alignment next flush time
+						is 12:45. (yes/no)
+					</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>dumpInterval - recordLimit</command>
+				</term>
+				<listitem>
+					<simpara>this preventing data storage direcotry to become too huge
+						when is fastbit plugin used for parsing offline data (yes/no)
+					</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>namingStrategy - type</command>
+				</term>
+				<listitem>
+					<simpara>Specifies how are asigned names to data dumps.
+						(time/incremental)</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>namingStrategy - prefix</command>
+				</term>
+				<listitem>
+					<simpara>Specifies prefix to data dumps names.</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>onTheFlyIndexes</command>
+				</term>
+				<listitem>
+					<simpara>This tells plugin to create indexes for stored data
+						(yes/no).</simpara>
+				</listitem>
+			</varlistentry>
+		</variablelist>
+	</para>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="https://homeproj.cesnet.cz/projects/ipfixcol/">https://homeproj.cesnet.cz/projects/ipfixcol/</link>
+					</term>
+					<listitem>
+						<para>IPFIXcol Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
 </refentry>
