@@ -228,6 +228,7 @@ public:
 				return 1;
 			}
 			_filled = 0;
+			fclose(f);
 		}
 		return 0;
 	}
