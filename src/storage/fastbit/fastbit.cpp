@@ -77,6 +77,7 @@ struct fastbit_config{
         std::string prefix;		/* user prefix for storage direcotry */
         time_t last_flush;		/* time of last flush (used for time based rotation, name is based on start of interval not its end!) */
         int indexes;			/* if this variable holds true value indexes are created on storage direcotry flush*/
+	int buff_size;			/* size of buffer (number of values)*/
 };
 
 
@@ -104,7 +105,7 @@ std::string dir_hierarchy(struct fastbit_config *config, uint32_t oid){
 	}
 
 	dir+= config->window_dir;
-	std::cout << "Final hierarchy: " << dir << std::endl;
+	//std::cout << "Final hierarchy: " << dir << std::endl;
 	return dir;
 }
 
@@ -156,6 +157,9 @@ int storage_init (char *params, void **config){
 
         	recordLimit=ie.node().child_value("recordLimit");
 		c->records_window = atoi(recordLimit.c_str());
+
+        	recordLimit=ie.node().child_value("bufferSize");
+		c->buff_size = atoi(recordLimit.c_str());
 
         	timeAligment=ie.node().child_value("timeAlignment");
 
@@ -238,7 +242,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 		/* if there is unknow template parse it and add it to template map */
 		if((table = templates->find(template_id)) == templates->end()){
 			std::cout << "NEW TEMPLATE: " << template_id << std::endl;
-			template_table *table_tmp = new template_table(template_id);
+			template_table *table_tmp = new template_table(template_id, conf->buff_size);
 			table_tmp->parse_template(ipfix_msg->data_couple[i].data_template);
 			templates->insert(std::pair<uint16_t,template_table*>(template_id,table_tmp));
 			table = templates->find(template_id);
@@ -271,6 +275,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 				dir = dir_hierarchy(conf,(*dom_id).first);
 				for(table = templates->begin(); table!=templates->end();table++){
 					(*table).second->flush(dir);
+					(*table).second->reset_rows();
 					if(conf->indexes){
 						std::cout << "Creating indexes: "<< dir << std::endl;
 						index_table = ibis::table::create(dir.c_str());

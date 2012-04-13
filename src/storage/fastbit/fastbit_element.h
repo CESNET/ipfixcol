@@ -104,7 +104,7 @@ public:
 	/* points to elements data after fill() */
 	void *value;
 	element(): _size(0), _filled(0), _buffer(NULL), value(0) {sprintf(_name,"e0id0");};
-	element(int size, int en, int id){
+	element(int size, int en, int id, uint32_t buf_size = RESERVED_SPACE){
 		_size = size;
                 _filled = 0;
                 _buffer = NULL;
@@ -211,26 +211,33 @@ public:
 		FILE *f;
 		size_t check;
 		if(_filled > 0){
-			std::cout << "FLUSH ELEMENT:" << path << "/x" << _name << std::endl;
-			std::cout << "FLUSH BUFFER: size:" << _size << " filled:" << _filled << " max" << _buf_max << std::endl;
-			f = fopen((path +"/x"+_name).c_str(),"a+");
-			if( f == NULL){
-				std::cout << "FILE NULL!" <<std::endl;
+			//std::cout << "FLUSH ELEMENT:" << path << "/" << _name << std::endl;
+			//std::cout << "FLUSH BUFFER: size:" << _size << " filled:" << _filled << " max" << _buf_max << std::endl;
+			f = fopen((path +"/"+_name).c_str(),"a+");
+			if(f == NULL){
+				fprintf(stderr, "Error while writing data (fopen)!\n");
 				return 1;
 			}
-			std::cout << "FILE OPEN" << std::endl;
+			//std::cout << "FILE OPEN" << std::endl;
 			if(_buffer == NULL){
-				std::cout << "BUFFER NULL!" <<std::endl;
+				fprintf(stderr, "Error while writing data! (buffer)\n");
 				return 1;
 			}
 			check = fwrite( _buffer, _size , _filled, f);
 			if(check != (size_t) _filled){
-				fprintf(stderr, "Error while writing data!\n");
+				fprintf(stderr, "Error while writing data! (fwrite)\n");
 				return 1;
 			}
 			_filled = 0;
 		}
 		return 0;
+	}
+
+	std::string get_part_info(){
+		return  std::string("\nBegin Column") + \
+			"\nname = " + std::string(this->_name) + \
+			"\ndata_type = " + ibis::TYPESTRING[(int)this->_type] + \
+			"\nEnd Column\n";
 	}
 };
 
@@ -238,7 +245,7 @@ class el_var_size : public element
 {
 public:
 	void *data;
-	el_var_size(int size = 0, int en = 0, int id = 0){
+	el_var_size(int size = 0, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE){
 		_size = size;
                 _filled = 0;
                 _buffer = NULL;
@@ -272,13 +279,13 @@ class el_float : public element
 {
 public:
 	float_u float_value;
-	el_float(int size = 1, int en = 0, int id = 0){
+	el_float(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE){
 		_size = size;
                 _filled = 0;
                 _buffer = NULL;
 		sprintf( _name,"e%uid%hu", en, id);
 		this->set_type();
-		allocate_buffer(RESERVED_SPACE);
+		allocate_buffer(buf_size);
 	}
 	/* core methods */
 	/**
@@ -327,13 +334,13 @@ class el_ipv6 : public element
 {
 public:
 	uint64_t ipv6_value;
-	el_ipv6(int size = 1, int en = 0, int id = 0,  int part = 0){
+	el_ipv6(int size = 1, int en = 0, int id = 0,  int part = 0, uint32_t buf_size = RESERVED_SPACE){
 		_size = size;
                 _filled = 0;
                 _buffer = NULL;
 		sprintf( _name,"e%uid%hup%u", en, id, part);
 		this->set_type();
-		allocate_buffer(RESERVED_SPACE);
+		allocate_buffer(buf_size);
 	}
 	/* core methods */
 	/**
@@ -363,13 +370,13 @@ class el_uint : public element
 {
 public:
 	uint_u uint_value;
-	el_uint(int size = 1, int en = 0, int id = 0){
+	el_uint(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE){
 		_size = size;
                 _filled = 0;
                 _buffer = NULL;
 		sprintf( _name,"e%iid%hi", en, id);
 		this->set_type();
-		allocate_buffer(RESERVED_SPACE);
+		allocate_buffer(buf_size);
 	}
 	/* core methods */
 	/**
@@ -391,13 +398,13 @@ public:
 class el_sint : public el_uint
 {
 public:
-	el_sint(int size = 1, int en = 0, int id = 0){
+	el_sint(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE){
 		_size = size;
                 _filled = 0;
                 _buffer = NULL;
 		sprintf( _name,"e%iid%hi", en, id);
 		this->set_type();
-		allocate_buffer(RESERVED_SPACE);
+		allocate_buffer(buf_size);
 	}
 	virtual int set_type();
 };
