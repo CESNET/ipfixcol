@@ -64,6 +64,7 @@
 	<storagePlugin>
 		<fileFormat>postgres</fileFormat>
 		<file>/usr/lib64/ipfixcol-postgres-output.so</file>
+		<threadName>postgres</threadName>
 	</storagePlugin>
 	]]>
 		</programlisting>
@@ -156,7 +157,7 @@
 						<link xlink:href="https://homeproj.cesnet.cz/projects/ipfixcol/">https://homeproj.cesnet.cz/projects/ipfixcol/</link>
 					</term>
 					<listitem>
-						<para>IPFIXCOL Project Homepage</para>
+						<para>IPFIXcol Project Homepage</para>
 					</listitem>
 				</varlistentry>
 				<varlistentry>

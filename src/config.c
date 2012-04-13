@@ -346,7 +346,9 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 									aux_plugin->config.file = (char*) malloc (sizeof(char) * (xmlStrlen (plugin_file) + 1));
 									strncpy (aux_plugin->config.file, (char*) plugin_file, xmlStrlen (plugin_file) + 1);
 									/* copy thread name to prepared string */
-									strncpy (aux_plugin->config.name, (char*) thread_name, 16);
+									if (thread_name != NULL) {
+										strncpy (aux_plugin->config.name, (char*) thread_name, 16);
+									}
 									aux_plugin->config.xmldata = xmlNewDoc (BAD_CAST "1.0");
 									xmlDocSetRootElement (aux_plugin->config.xmldata, xmlCopyNode (node_filewriter, 1));
 									/* link new plugin item into the return list */

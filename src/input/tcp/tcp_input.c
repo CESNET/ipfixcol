@@ -515,15 +515,15 @@ int input_init(char *params, void **config)
 	if (conf->tls) {
 		/* use default options if not specified in configuration file */
 		if (conf->ca_cert_file == NULL) {
-			conf->ca_cert_file = DEFAULT_CA_FILE;
+			conf->ca_cert_file = strdup(DEFAULT_CA_FILE);
 		}
 	
 		if (conf->server_cert_file == NULL) {
-			conf->server_cert_file = DEFAULT_SERVER_CERT_FILE;
+			conf->server_cert_file = strdup(DEFAULT_SERVER_CERT_FILE);
 		}
 	
 		if (conf->server_pkey_file == NULL) {
-			conf->server_pkey_file = DEFAULT_SERVER_PKEY_FILE;
+			conf->server_pkey_file = strdup(DEFAULT_SERVER_PKEY_FILE);
 		}
 	}
 #endif
@@ -1007,13 +1007,13 @@ int input_close(void **config)
 	}
 #ifdef TLS_SUPPORT
 	/* free strings that are not default (thus static) */
-	if (conf->ca_cert_file != NULL && conf->ca_cert_file != DEFAULT_CA_FILE) {
+	if (conf->ca_cert_file != NULL) {
 		free(conf->ca_cert_file);
 	}
-	if (conf->server_cert_file != NULL && conf->server_cert_file != DEFAULT_CA_FILE) {
+	if (conf->server_cert_file != NULL) {
 		free(conf->server_cert_file);
 	}
-	if (conf->server_pkey_file != NULL && conf->server_pkey_file != DEFAULT_CA_FILE) {
+	if (conf->server_pkey_file != NULL) {
 		free(conf->server_pkey_file);
 	}
 #endif
