@@ -77,6 +77,7 @@
 				<timeWindow>300</timeWindow>
 				<timeAlignment>yes</timeAlignment>
 				<recordLimit>no</recordLimit>
+				<bufferSize>50000</bufferSize>
 			</dumpInterval>
 			<namingStrategy>
 				<type>time</type>
@@ -327,6 +328,15 @@
 				<listitem>
 					<simpara>this preventing data storage direcotry to become too huge
 						when is fastbit plugin used for parsing offline data (yes/no)
+					</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>dumpInterval - bufferSize</command>
+				</term>
+				<listitem>
+					<simpara>Specifies how many elements can be stored in buffer per row.
 					</simpara>
 				</listitem>
 			</varlistentry>
