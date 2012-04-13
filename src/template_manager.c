@@ -39,7 +39,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <commlbr.h>
 #include <pthread.h>
 #include <libxml/tree.h>
 
@@ -50,11 +49,14 @@
 /**TEMPLATE_ENT_FIELD_LEN length of template enterprise number */
 #define TEMPLATE_ENT_NUM_LEN 4
 
+/** Identifier to MSG_* macros */
+static char *msg_module = "template manager";
+
 struct ipfix_template_mgr *tm_create() {
 	struct ipfix_template_mgr *template_mgr;
 
 	if ((template_mgr = malloc(sizeof(struct ipfix_template_mgr))) == NULL) {
-		VERBOSE (CL_VERBOSE_OFF, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 	}
 	template_mgr->counter = 0;
 	template_mgr->max_length = 32;
@@ -123,7 +125,7 @@ static int tm_fill_template(struct ipfix_template *template, void *template_reco
 	} else { /* option template */
 		template->scope_field_count = ntohs(((struct ipfix_options_template_record*) template_record)->scope_field_count);
 		if (template->scope_field_count == 0) {
-			VERBOSE (CL_VERBOSE_OFF, "Option template scope field count is 0");
+			MSG_WARNING(msg_module, "Option template scope field count is 0");
 			return 1;
 		}
 		tm_copy_fields((uint8_t*)template->fields,
@@ -203,14 +205,14 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 	tmpl_length = tm_template_length(template, max_len, type, &data_length);
 	if (tmpl_length == 0) {
 		/* template->count probably points beyond current set area */
-		VERBOSE (CL_VERBOSE_BASIC, "Malformed template detected (bad template count), "
-		                           "skipping.");
+		MSG_WARNING(msg_module, "Template %d is malformed (bad template count), skipping.",
+				ntohs(((struct ipfix_template_record *) template)->template_id));
 		return NULL;
 	}
 
 	/* allocate memory for new template */
 	if ((new_tmpl = malloc(tmpl_length)) == NULL) {
-		VERBOSE (CL_VERBOSE_OFF, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 	}
 
 	if (tm_fill_template(new_tmpl, template, tmpl_length, data_length, type) == 1) {
@@ -222,7 +224,7 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 	if (tm->counter == tm->max_length) {
 		new_templates = realloc(tm->templates, tm->max_length*2);
 		if (new_templates == NULL) {
-			VERBOSE (CL_VERBOSE_OFF, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			free(new_tmpl);
 			return NULL;
 		}

@@ -47,13 +47,13 @@
 #include <stdio.h>
 #include <libpq-fe.h>
 #include <unistd.h>
+#include <string.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
 #include <assert.h>
 #include <arpa/inet.h>
 #include <inttypes.h>
 #include <endian.h>
-#include <commlbr.h>
 
 #include "ipfixcol.h"
 #include "ipfix_entities.h"
@@ -70,6 +70,9 @@
 #define SQL_COMMAND_LENGTH 2048
 /* number of store packet call in one transaction */
 #define TRANSACTION_MAX 1000
+
+/** Identifier to MSG_* macros */
+static char *msg_module = "postgres storage";
 
 /**
  * \struct postgres_config
@@ -102,7 +105,7 @@ inline static void begin_transaction(struct postgres_config *conf)
 	if (conf->transaction_counter == 0) {
 		res = PQexec(conf->conn, "BEGIN;");
 		if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-			VERBOSE(CL_VERBOSE_OFF, "PostgreSQL: %s", PQerrorMessage(conf->conn));
+			MSG_ERROR(msg_module, "PostgreSQL: %s", PQerrorMessage(conf->conn));
 		}
 		PQclear(res);
 	}
@@ -128,7 +131,7 @@ inline static void commit_transaction(struct postgres_config *conf)
 	if (conf->transaction_counter == 0) {
 		res = PQexec(conf->conn, "COMMIT;");
 		if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-			VERBOSE(CL_VERBOSE_OFF, "PostgreSQL: %s", PQerrorMessage(conf->conn));
+			MSG_ERROR(msg_module, "PostgreSQL: %s", PQerrorMessage(conf->conn));
 		}
 		PQclear(res);
 	}
@@ -270,7 +273,7 @@ static int create_table(struct postgres_config *config, struct ipfix_template *t
 
 	sql_command = (char *) malloc(sql_command_len);
 	if (!sql_command) {
-		VERBOSE(CL_VERBOSE_OFF, "Out of memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Out of memory (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
 	memset(sql_command, 0, sql_command_len);
@@ -332,7 +335,7 @@ static int create_table(struct postgres_config *config, struct ipfix_template *t
 	/* execute the command */
 	res = PQexec(config->conn, sql_command);
 	if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-		VERBOSE(CL_VERBOSE_OFF, "PostgreSQL: %s", PQerrorMessage(config->conn));
+		MSG_ERROR(msg_module, "PostgreSQL: %s", PQerrorMessage(config->conn));
 		PQclear(res);
 		restart_transaction(config);
 		goto err_sql_command;
@@ -396,7 +399,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 
 	sql_command = (char *) malloc(sql_command_max_len);
 	if (!sql_command) {
-		VERBOSE(CL_VERBOSE_OFF, "Out of memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Out of memory (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
 	memset(sql_command, 0, sql_command_max_len);
@@ -420,7 +423,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 			sql_command_max_len += SQL_COMMAND_LENGTH;
 			sql_command = realloc(sql_command, sql_command_max_len);
 			if (!sql_command) {
-				VERBOSE(CL_VERBOSE_OFF, "Out of memory (%s:%d)", __FILE__, __LINE__);
+				MSG_ERROR(msg_module, "Out of memory (%s:%d)", __FILE__, __LINE__);
 				return -1;
 			}
 		}
@@ -642,7 +645,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 				case (STRING):
 					string = (char *) malloc(length + 1);
 					if (!string) {
-						VERBOSE(CL_VERBOSE_OFF, "Out of memory (%s:%d)", __FILE__, __LINE__);
+						MSG_ERROR(msg_module, "Out of memory (%s:%d)", __FILE__, __LINE__);
 						goto err_sql_command;
 					}
 					memset(string, 0, length + 1);
@@ -805,7 +808,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 
 	res = PQexec(conf->conn, sql_command);
 	if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-		VERBOSE(CL_VERBOSE_OFF, "PostgreSQL: %s", PQerrorMessage(conf->conn));
+		MSG_ERROR(msg_module, "PostgreSQL: %s", PQerrorMessage(conf->conn));
 		PQclear(res);
 		restart_transaction(conf);
 		goto err_sql_command;
@@ -862,7 +865,7 @@ static int process_new_templates(struct postgres_config *conf, const struct ipfi
 			if (conf->table_counter >= conf->table_size) {
 				/* we have to reallocate array of table names */
 				if (realloc(conf->table_names, conf->table_size * 2) == NULL) {
-					VERBOSE(CL_VERBOSE_OFF, "Out of memory (%s:%d)", __FILE__, __LINE__);
+					MSG_ERROR(msg_module, "Out of memory (%s:%d)", __FILE__, __LINE__);
 				} else {
 					conf->table_size *= 2;
 				}
@@ -942,7 +945,7 @@ int storage_init(char *params, void **config)
 
 	conf = (struct postgres_config *) malloc(sizeof(*conf));
 	if (!conf) {
-		VERBOSE(CL_VERBOSE_OFF, "Out of memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Out of memory (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
 	memset(conf, 0, sizeof(*conf));
@@ -950,18 +953,18 @@ int storage_init(char *params, void **config)
 
 	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
 	if (doc == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Plugin configuration not parsed successfully");
+		MSG_ERROR(msg_module, "Plugin configuration not parsed successfully");
 		goto err_init;
 	}
 
 	cur = xmlDocGetRootElement(doc);
 	if (cur == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Empty configuration");
+		MSG_ERROR(msg_module, "Empty configuration");
 		goto err_xml;
 	}
 
 	if (xmlStrcmp(cur->name, (const xmlChar *) "fileWriter")) {
-		VERBOSE(CL_VERBOSE_OFF, "root node != fileWriter");
+		MSG_ERROR(msg_module, "root node != fileWriter");
 		goto err_xml;
 	}
 
@@ -1057,7 +1060,7 @@ int storage_init(char *params, void **config)
 
 	connection_string = (char *) malloc(connection_string_len);
 	if (connection_string == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Out of memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Out of memory (%s:%d)", __FILE__, __LINE__);
 		goto err_xml;
 	}
 	memset(connection_string, 0, connection_string_len);
@@ -1117,7 +1120,7 @@ int storage_init(char *params, void **config)
 	/* try to connect to the database */
 	conn = PQconnectdb(connection_string+1);
 	if (PQstatus(conn) != CONNECTION_OK) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to create connection to the database: %s", PQerrorMessage(conn));
+		MSG_ERROR(msg_module, "Unable to create connection to the database: %s", PQerrorMessage(conn));
 		goto err_connection_string;
 	}
 
@@ -1215,7 +1218,7 @@ int storage_close(void **config)
 	conf = (struct postgres_config *) *config;
 
 	PQfinish(conf->conn);
-	VERBOSE(CL_VERBOSE_OFF, "Connection to the database has been closed.");
+	MSG_NOTICE(msg_module, "Connection to the database has been closed.");
 
 	free(conf->table_names);
 	free(conf);
@@ -1257,9 +1260,9 @@ int main(int argc, char **argv)
 	char *sql_command = "CREATE TABLE TestTable (id integer, str varchar(40));";
 	PGresult   *res = PQexec(config->conn, sql_command);
 	if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-		VERBOSE(CL_VERBOSE_OFF, "PostgreSQL: %s", PQerrorMessage(config->conn));
+		MSG_COMMON(ICMSG_ERROR, "PostgreSQL: %s", PQerrorMessage(config->conn));
 	} else {
-		VERBOSE(CL_VERBOSE_OFF, "COMMAND OK");
+		MSG_COMMON(ICMSG_ERROR, "PostgreSQL: COMMAND OK");
 	}
 		PQclear(res);
 	*/

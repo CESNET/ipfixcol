@@ -99,7 +99,10 @@
 			<varlistentry>
 				<term>-v <replaceable class="parameter">level</replaceable></term>
 				<listitem>
-					<simpara>Set ipfixcol verbosity level to <replaceable class="parameter">level</replaceable>. The higher the number, the more information is printed.</simpara>
+					<simpara>
+						Set ipfixcol verbosity level to <replaceable class="parameter">level</replaceable>. The higher the number, the more information is printed.
+						Level 0 shows only errors, level 1 shows warnings, level 2 shows notices, level 3 shows debug messages.
+					</simpara>
 				</listitem>
 			</varlistentry>
 

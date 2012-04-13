@@ -16,6 +16,9 @@ HASH - expected hash of the output file.
 
 Standard output of the collector is redirected to the collector_output.log file.
 
+The src/senddata utility is used by these scripts. Build it using make before
+running the tests.
+
 
 Example:
 ./run-test.bash tcp messages/tcp/malformed/no-templates/

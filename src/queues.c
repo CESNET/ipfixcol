@@ -39,9 +39,12 @@
 
 #include <unistd.h>
 #include <errno.h>
+#include <stdlib.h>
 
 #include "queues.h"
-#include "commlbr.h"
+
+/** Identifier to MSG_* macros */
+static char *msg_module = "queue";
 
 /**
  * \brief Initiate ring buffer structure with specified size.
@@ -54,13 +57,13 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 	struct ring_buffer* retval = NULL;
 
 	if (size == 0) {
-		VERBOSE (CL_VERBOSE_BASIC, "Size of the ring buffer set to zero.");
+		MSG_ERROR(msg_module, "Size of the ring buffer set to zero.");
 		return (NULL);
 	}
 
 	retval = (struct ring_buffer*) malloc (sizeof(struct ring_buffer));
 	if (retval == NULL) {
-		VERBOSE (CL_VERBOSE_OFF, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return (NULL);
 	}
 
@@ -70,27 +73,27 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 	retval->size = size;
 	retval->data = (struct ipfix_message**) malloc (size * sizeof(struct ipfix_message*));
 	if (retval->data == NULL) {
-		VERBOSE (CL_VERBOSE_OFF, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		free (retval);
 		return (NULL);
 	}
 	retval->data_references = (unsigned int*) calloc (size, sizeof(unsigned int));
 	if (retval->data_references == NULL) {
-		VERBOSE (CL_VERBOSE_OFF, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		free (retval->data);
 		free (retval);
 		return (NULL);
 	}
 
 	if (pthread_mutex_init (&(retval->mutex), NULL) != 0) {
-		VERBOSE (CL_VERBOSE_OFF, "Condition variable init failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Condition variable init failed (%s:%d)", __FILE__, __LINE__);
 		free (retval->data_references);
 		free (retval->data);
 		free (retval);
 	}
 
 	if (pthread_cond_init (&(retval->cond), NULL) != 0) {
-		VERBOSE (CL_VERBOSE_OFF, "Condition variable init failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Condition variable init failed (%s:%d)", __FILE__, __LINE__);
 		pthread_mutex_destroy (&(retval->mutex));
 		free (retval->data_references);
 		free (retval->data);
@@ -99,7 +102,7 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 	}
 
 	if (pthread_cond_init (&(retval->cond_empty), NULL) != 0) {
-		VERBOSE (CL_VERBOSE_OFF, "Condition variable init failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Condition variable init failed (%s:%d)", __FILE__, __LINE__);
 		pthread_mutex_destroy (&(retval->mutex));
 		free (retval->data_references);
 		free (retval->data);
@@ -121,12 +124,12 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, unsigned int refcount)
 {
 	if (rbuffer == NULL || refcount == 0) {
-		VERBOSE (CL_VERBOSE_OFF, "Invalid ring buffer's write parameters.");
+		MSG_ERROR(msg_module, "Invalid ring buffer's write parameters.");
 		return (EXIT_FAILURE);
 	}
 
 	if (pthread_mutex_lock (&(rbuffer->mutex)) != 0) {
-		VERBOSE (CL_VERBOSE_OFF, "Mutex lock failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Mutex lock failed (%s:%d)", __FILE__, __LINE__);
 		return (EXIT_FAILURE);
 	}
 	/* it will be never more than ring buffer size, but just to be sure I'm checking it 
@@ -134,7 +137,7 @@ int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, un
 	 * data yet not procees by slower one */
 	while (rbuffer->count + 1 >= rbuffer->size) {
 		if (pthread_cond_wait (&(rbuffer->cond), &(rbuffer->mutex)) != 0) {
-			VERBOSE (CL_VERBOSE_OFF, "Condition wait failed (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Condition wait failed (%s:%d)", __FILE__, __LINE__);
 			return (EXIT_FAILURE);
 		}
 	}
@@ -146,12 +149,12 @@ int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, un
 
 	/* I did change of rbuffer->count so inform about it other threads (read threads) */
 	if (pthread_cond_signal (&(rbuffer->cond)) != 0) {
-		VERBOSE (CL_VERBOSE_OFF, "Condition signal failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Condition signal failed (%s:%d)", __FILE__, __LINE__);
 		return (EXIT_FAILURE);
 	}
 
 	if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
-		VERBOSE (CL_VERBOSE_OFF, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
 		return (EXIT_FAILURE);
 	}
 
@@ -176,7 +179,7 @@ struct ipfix_message* rbuffer_read (struct ring_buffer* rbuffer, unsigned int *i
 
 	/* check if the ring buffer is full enough, if not wait (and block) for it */
 	if (pthread_mutex_lock (&(rbuffer->mutex)) != 0) {
-		VERBOSE (CL_VERBOSE_OFF, "Mutex lock failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Mutex lock failed (%s:%d)", __FILE__, __LINE__);
 		return (NULL);
 	}
 	/* wait when trying to read from write_offset - no data here yer
@@ -184,12 +187,12 @@ struct ipfix_message* rbuffer_read (struct ring_buffer* rbuffer, unsigned int *i
 	 * unles it demands indexes nonlinearly */
 	while (rbuffer->write_offset == *index) {
 		if (pthread_cond_wait (&(rbuffer->cond), &(rbuffer->mutex)) != 0) {
-			VERBOSE (CL_VERBOSE_OFF, "Condition wait failed (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Condition wait failed (%s:%d)", __FILE__, __LINE__);
 			return (NULL);
 		}
 	}
 	if (pthread_mutex_unlock(&(rbuffer->mutex)) != 0) {
-		VERBOSE (CL_VERBOSE_OFF, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
 		return (NULL);
 	}
 
@@ -223,7 +226,7 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
 	}
 
 	if (pthread_mutex_lock (&(rbuffer->mutex)) != 0) {
-		VERBOSE (CL_VERBOSE_OFF, "Mutex lock failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Mutex lock failed (%s:%d)", __FILE__, __LINE__);
 		return (EXIT_FAILURE);
 	}
 	/* it will be never less than zero, but just to be sure I'm checking it */
@@ -245,18 +248,18 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
 			/* signal to write thread waiting for empty queue */
 			if (rbuffer->count == 0) {
 				if (pthread_cond_signal (&(rbuffer->cond_empty)) != 0) {
-					VERBOSE (CL_VERBOSE_OFF, "Condition signal failed (%s:%d)", __FILE__, __LINE__);
+					MSG_ERROR(msg_module, "Condition signal failed (%s:%d)", __FILE__, __LINE__);
 					return (EXIT_FAILURE);
 				}
 			}
 		}
 		if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
-			VERBOSE (CL_VERBOSE_OFF, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
 			return (EXIT_FAILURE);
 		}
 	} else {
 		if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
-			VERBOSE (CL_VERBOSE_OFF, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
 			return (EXIT_FAILURE);
 		}
 		/* only reference decrease was done, moving rbuffer->read_offset not */
@@ -265,7 +268,7 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
 
 	/* I did change of rbuffer->count so inform about it other threads (mainly write thread) */
 	if (pthread_cond_signal (&(rbuffer->cond)) != 0) {
-		VERBOSE (CL_VERBOSE_OFF, "Condition signal failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Condition signal failed (%s:%d)", __FILE__, __LINE__);
 		return (EXIT_FAILURE);
 	}
 
@@ -280,19 +283,19 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
  */
 int rbuffer_wait_empty(struct ring_buffer* rbuffer) {
 	if (pthread_mutex_lock (&(rbuffer->mutex)) != 0) {
-		VERBOSE (CL_VERBOSE_OFF, "Mutex lock failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Mutex lock failed (%s:%d)", __FILE__, __LINE__);
 		return (EXIT_FAILURE);
 	}
 
 	while (rbuffer->count > 0) {
 		if (pthread_cond_wait (&(rbuffer->cond_empty), &(rbuffer->mutex)) != 0) {
-			VERBOSE (CL_VERBOSE_OFF, "Condition wait failed (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Condition wait failed (%s:%d)", __FILE__, __LINE__);
 			return (EXIT_FAILURE);
 		}
 	}
 
 	if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
-		VERBOSE (CL_VERBOSE_OFF, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
 		return (EXIT_FAILURE);
 	}
 	return (EXIT_SUCCESS);

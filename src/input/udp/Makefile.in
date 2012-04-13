@@ -1,5 +1,5 @@
 ################################################
-# Makefile for the ipfixcol input plugin test  #
+# Makefile for the ipfixcol UDP input plugin   #
 ################################################
 
 CC      = @CC@
@@ -33,7 +33,7 @@ OBJ = udp_input.o
 all: ipfixcol-udp-input.so
 
 ipfixcol-udp-input.so: udp_input.o
-	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfixcol-udp-input.so.1 -o $@ $< -lc
+	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfixcol-udp-input.so.1 -o $@ $< -lc 
 	
 $(OBJ): $(SRCS)
 	@for i in $(SRCS); do \

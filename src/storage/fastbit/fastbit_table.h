@@ -54,7 +54,6 @@
 #include <sys/stat.h>
 
 extern "C" {
-	//#include <commlbr.h>
 	#include "../../../headers/storage.h"
 }
 

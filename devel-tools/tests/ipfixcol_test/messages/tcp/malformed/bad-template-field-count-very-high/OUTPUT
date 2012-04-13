@@ -1,5 +1,5 @@
-VERBOSE: Malformed template detected (bad template count), skipping.
-VERBOSE: Cannot parse template set, skipping to next set 
-NOTICE: Data template with ID 258 not found!
-NOTICE: Data template with ID 264 not found!
-NOTICE: Data template with ID 267 not found!
+WARNING: template manager: Template 256 is malformed (bad template count), skipping.
+WARNING: data manager: Cannot parse template set, skipping to next set
+WARNING: data manager: Data template with ID 258 not found!
+WARNING: data manager: Data template with ID 264 not found!
+WARNING: data manager: Data template with ID 267 not found!

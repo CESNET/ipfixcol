@@ -40,8 +40,8 @@
 
 
 extern "C" {
-	#include <commlbr.h>
 	#include "../../../headers/storage.h"
+	#include "../../../headers/verbose.h"
 }
 #include <netinet/in.h>
 #include <stdio.h>
@@ -60,6 +60,8 @@ extern "C" {
 #include <string>
 #include "pugixml/pugixml.hpp"
 
+/** Identifier to MSG_* macros */
+static const char *msg_module = "fastbit storage";
 
 /* this enum specifies types of file naming strategy */
 enum name_type{TIME,INCREMENTAL};
@@ -112,7 +114,7 @@ std::string dir_hierarchy(struct fastbit_config *config, uint32_t oid){
 /* plugin inicialization */
 extern "C"
 int storage_init (char *params, void **config){
-	VERBOSE(CL_VERBOSE_BASIC,"Fastbit plugin: initialization");
+	MSG_NOTICE(msg_module, "Fastbit plugin: initialization");
 
 	struct tm * timeinfo;
 	char formated_time[15];
@@ -183,7 +185,7 @@ int storage_init (char *params, void **config){
 			c->window_dir = c->prefix + "000000000001/";
 		}
 	} else {
-		VERBOSE(CL_ERROR,"Fastbit plugin: ERROR Unable to parse configuration xml!");
+		MSG_ERROR(msg_module, "Fastbit plugin: ERROR Unable to parse configuration xml!");
 	}
 
 	return 0;
