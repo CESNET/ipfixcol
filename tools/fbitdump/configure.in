@@ -47,7 +47,7 @@ CXX="g++"
 
 AC_LANG(C++)
 
-RELEASE=1
+RELEASE=2
 AC_SUBST(RELEASE)
 
 USERNAME=`git config --get user.name`
