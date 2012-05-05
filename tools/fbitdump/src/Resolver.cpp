@@ -1,6 +1,6 @@
 /**
  * \file Resolver.cpp
- * \author Michal Srb <michal.srb@cesnet.cz>
+ * \author Petr Velan <petr.velan@cesnet.cz>
  * \brief DNS resolver
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.

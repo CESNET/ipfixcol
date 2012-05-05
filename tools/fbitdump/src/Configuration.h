@@ -40,7 +40,7 @@
 #ifndef CONFIGURATION_H_
 #define CONFIGURATION_H_
 
-#include "../3rdparty/pugixml.hpp"
+#include "pugixml.hpp"
 #include "typedefs.h"
 #include "Column.h"
 #include "Resolver.h"
@@ -260,15 +260,6 @@ private:
     void help() const;
 
     /**
-     * \brief Return string with current version
-     *
-     * Currently version is in VERSION file
-     *
-     * @return string with current version
-     */
-    const std::string version() const;
-
-    /**
      * \brief Returns path to configuration XML
      * @return Path to configuration XML
      */
@@ -336,7 +327,6 @@ private:
     void parseIndexColumns(char *arg);
 
     stringVector parts;                 /**< Fastbit parts paths to be used*/
-    char *appName;                      /**< Application name, parsed from command line args*/
     stringSet aggregateColumnsAliases;  /**< Aggregate columns aliases set */
 	uint64_t maxRecords;                /**< Limit number of printed records */
 	bool plainNumbers;                  /**< Don't convert protocol numbers to strings*/

@@ -38,6 +38,9 @@
  */
 
 #include "Configuration.h"
+#if HAVE_CONFIG_H
+#include <config.h>
+#endif
 #include <getopt.h>
 #include <regex.h>
 #include <dirent.h>
@@ -66,9 +69,6 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	std::string optionr;	/* optarg value for option -r */
 	char *indexes = NULL;	/* indexes optarg to be parsed later */
 
-	/* get program name without execute path */
-	this->appName = ((this->appName = strrchr (argv[0], '/')) != NULL) ? (this->appName + 1) : argv[0];
-	argv[0] = this->appName;
 
 	if (argc == 1) {
 		help();
@@ -83,7 +83,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			return 1;
 			break;
 		case 'V': /* print version */
-			std::cout << this->appName << ": Version: " << version() << std::endl;
+			std::cout << PACKAGE << ": Version: " << VERSION << std::endl;
 			return 1;
 			break;
 		case 'a': /* aggregate */
@@ -541,19 +541,6 @@ bool Configuration::getExtendedStats() const
 	return this->extendedStats;
 }
 
-const std::string Configuration::version() const
-{
-	std::ifstream ifs;
-	ifs.open("VERSION");
-
-	std::string version;
-	if (ifs.is_open()) {
-		getline (ifs, version);
-	}
-
-	return version;
-}
-
 const char* Configuration::getXmlConfPath() const
 {
 	return (char*) COLUMNS_XML;
@@ -631,7 +618,7 @@ void Configuration::help() const
 {
 	/* lines with // at the beginning should be implemented sooner */
 	std::cout
-	<< "usage "<< this->appName <<" [options] [\"filter\"]" << std::endl
+	<< "usage "<< PACKAGE <<" [options] [\"filter\"]" << std::endl
 	<< "-h              this text you see right here" << std::endl
 	<< "-V              Print version and exit." << std::endl
 	<< "-a              Aggregate netflow data." << std::endl

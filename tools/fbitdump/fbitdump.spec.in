@@ -27,7 +27,6 @@ Tool for displaying captured ipfix data in fastbit database format.
 %postun
 
 %build
-autoreconf
 %configure
 make
 make man
