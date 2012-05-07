@@ -807,7 +807,8 @@ int get_packet(void *config, struct input_info **info, char **packet)
 			}
 		}
 	} else {
-#else   /* TLS disabled */
+#endif
+		/* receive without TLS */
 	    length = recv(sock, *packet, IPFIX_HEADER_LENGTH, MSG_WAITALL);
 	    if (length == -1) {
 	    	if (errno == EINTR) {
@@ -816,7 +817,6 @@ int get_packet(void *config, struct input_info **info, char **packet)
 	    	MSG_ERROR(msg_module, "Failed to receive IPFIX packet header: %s", strerror(errno));
 	        return INPUT_ERROR;
 		}
-#endif
 #ifdef TLS_SUPPORT
     }
 #endif

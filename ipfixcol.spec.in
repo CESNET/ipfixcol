@@ -66,9 +66,9 @@ make DESTDIR=$RPM_BUILD_ROOT install
 /etc/ipfixcol/internalcfg.xml
 /etc/ipfixcol/ipfix-elements.xml
 /etc/ipfixcol/startup.xml
-#doxygen
-/usr/share/ipfixcol/doxygen/*
 
 %files devel
 %{_prefix}/include/ipfixcol.h
 %{_prefix}/include/ipfixcol/*.h
+#doxygen
+/usr/share/ipfixcol/doxygen/*
