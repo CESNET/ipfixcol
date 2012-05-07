@@ -223,6 +223,12 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 				indexes = strdup(optarg);
 			}
 			break;
+		case 'C': /* Configuration file */
+			if (optarg == std::string("")) {
+				throw std::invalid_argument("-C requires a path to configuration file, empty string given");
+			}
+			this->configFile = optarg;
+			break;
 		default:
 			help ();
 			return 1;
@@ -543,7 +549,7 @@ bool Configuration::getExtendedStats() const
 
 const char* Configuration::getXmlConfPath() const
 {
-	return (char*) COLUMNS_XML;
+	return this->configFile.c_str();
 }
 
 const std::string Configuration::getTimeWindowStart() const
@@ -671,6 +677,7 @@ void Configuration::help() const
 //	<< "-Z              Check filter syntax and exit." << std::endl
 	<< "-t <time>       time window for filtering packets" << std::endl
 	<< "                yyyy/MM/dd.hh:mm:ss[-yyyy/MM/dd.hh:mm:ss]" << std::endl
+	<< "-C <path>       path to configuration file. Default is "CONFIG_XML << std::endl
 	;
 }
 
@@ -681,7 +688,7 @@ bool Configuration::getOptionm() const
 
 Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false),
 		optm(false), orderColumn(NULL), resolver(NULL), statistics(false), orderAsc(true), extendedStats(false),
-		createIndexes(false), deleteIndexes(false)
+		createIndexes(false), deleteIndexes(false), configFile(CONFIG_XML)
 {
 }
 

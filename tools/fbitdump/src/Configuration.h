@@ -49,9 +49,9 @@
 namespace fbitdump {
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "hVaA:r:f:n:c:D:Ns:qeIM:m::R:o:v:Z:t:i::d::"
+#define OPTSTRING "hVaA:r:f:n:c:D:Ns:qeIM:m::R:o:v:Z:t:i::d::C:"
 
-#define COLUMNS_XML "/usr/share/fbitdump/fbitdump.xml"
+#define CONFIG_XML "/usr/share/fbitdump/fbitdump.xml"
 
 /**
  * \brief Class handling command line configuration
@@ -348,6 +348,7 @@ private:
 	bool createIndexes;					/**< Create indexes specified by indexColumns */
 	bool deleteIndexes;					/**< Delete indexes specified by indexColumns */
 	stringSet indexColumns;				/**< Indexes specified by -i or -d option. Empty means all */
+	std::string configFile;				/**< Configuration file path */
 }; /* end of Configuration class */
 
 } /* end of fbitdump namespace */
