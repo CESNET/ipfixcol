@@ -1,0 +1,53 @@
+CC      = @CC@
+CFLAGS  = @CFLAGS@
+LIBS    = @LIBS@
+INCLUDE = "-I../../../"
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+datarootdir = @datarootdir@
+datadir = @datadir@
+bindir = @bindir@
+includedir = @includedir@
+libdir =  @libdir@
+mandir = @mandir@
+
+TARGETS = ipfixcol-ipfixviewer-output.so
+TOPDIR = @CONFIGURE_PWD@
+NAME = @PACKAGE_NAME@
+RELEASE = @RELEASE@
+INSTALL = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+VERSION = $(shell cut -f1 $(TOPDIR)/VERSION | tr -d '\n')
+DIR = "src/storage/ipfixviewer"
+
+SRCS = ipfixviewer.c
+OBJ = ipfixviewer.o
+
+all: ipfixcol-ipfixviewer-output.so
+
+ipfixcol-ipfixviewer-output.so: ipfixviewer.o
+	$(CC) $(CFLAGS) $(LIBS) -shared -Wl,-soname,ipfixcol-ipfixviewer-output.so.1 -o $@ $< -lc
+        
+$(OBJ): $(SRCS)
+	@for i in $(SRCS); do \
+		$(CC) $(CFLAGS) $(INCLUDE) -fPIC -c $$i; \
+	done;
+
+clean:
+	-rm -f $(TARGETS) $(OBJ)
+
+.PHONY: tarball-prepare
+tarball-prepare:
+	@for i in Makefile.in ipfixviewer $(SRCS) $(MANSRCS) $(DOC); do \
+		[ -d $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) ] || \
+		mkdir -p $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR) -p; \
+		cp $$i $(TOPDIR)/$(NAME)-$(VERSION)/$(DIR)/$$i; \
+	done;
+
+.PHONY: install
+install: $(TARGETS)
+	[ -d $(DESTDIR)/$(libdir) ] || \
+		(mkdir -p $(DESTDIR)/$(libdir); chmod 755 $(DESTDIR)/$(libdir));
+	$(INSTALL_PROGRAM) $(TARGETS) $(DESTDIR)/$(libdir)/;
+
