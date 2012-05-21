@@ -55,7 +55,7 @@
 	<![CDATA[
 	<storagePlugin>
 		<fileFormat>fastbit</fileFormat>
-		<file>/usr/lib64/ipfixcol-fastbit-output.so</file>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-fastbit-output.so</file>
 		<threadName>fastbit</threadName>
 	</storagePlugin>
 	]]>

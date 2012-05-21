@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4
 
-pluginsdir = $(pkgdatadir)/plugins
+pluginsdir = $(datadir)/ipfixcol/plugins
 
 plugins_LTLIBRARIES = ipfixcol-postgres-output.la
 ipfixcol_postgres_output_la_LDFLAGS = -module -avoid-version -shared

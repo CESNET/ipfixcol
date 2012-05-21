@@ -120,7 +120,7 @@ int main (int argc, char* argv[])
 	int c, i, fd, retval = 0, get_retval, proc_count = 0, proc_id = 0;
 	pid_t pid = 0;
 	bool daemonize = false;
-	char *progname, *config_file = NULL;
+	char *config_file = NULL;
 	char process_name[16]; /* name of the process for ps auxc */
 	struct plugin_xml_conf_list* input_plugins = NULL, *storage_plugins = NULL,
 	        *aux_plugins = NULL;
@@ -301,7 +301,7 @@ int main (int argc, char* argv[])
 		}
 
 		/* extend the process name variable by input name */
-		snprintf(process_name, 16, "%s:%s", progname, aux_plugins->config.name);
+		snprintf(process_name, 16, "%s:%s", PACKAGE, aux_plugins->config.name);
 
         /* get the first one we can */
         break;

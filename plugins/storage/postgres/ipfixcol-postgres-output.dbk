@@ -63,7 +63,7 @@
 	<![CDATA[
 	<storagePlugin>
 		<fileFormat>postgres</fileFormat>
-		<file>/usr/lib64/ipfixcol-postgres-output.so</file>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-postgres-output.so</file>
 		<threadName>postgres</threadName>
 	</storagePlugin>
 	]]>

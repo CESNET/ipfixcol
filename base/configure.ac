@@ -39,7 +39,7 @@
 AC_PREREQ([2.60])
 
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol], [0.2.2])
+AC_INIT([ipfixcol], [0.5.0])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 LT_PREREQ([2.2])
 LT_INIT([dlopen disable-static])
@@ -102,11 +102,27 @@ AC_CHECK_LIB([xml2], [main],
 ### TLS support ###
 AS_IF([test "x$with_openssl" != xno],
   [AC_CHECK_LIB([ssl], [SSL_library_init],
-    [TLS_SUPPORT="yes"],
+    [TLS_SUPPORT="yes"
+    # Check for pkg-config
+	AC_CHECK_PROG([PKG_CONFIG], [pkg-config], ["yes"], ["no"])
+	AS_IF([test "x$PKG_CONFIG" = xno], [AC_MSG_ERROR([pkg-config is required])])
+	TLS_CPPFLAGS="-DTLS_SUPPORT"
+	TLS_CFLAGS="`pkg-config --cflags libssl`"
+	TLS_LIBS="`pkg-config --libs libssl`"],
     AC_MSG_ERROR([Required library openssl is missing])
   )], 
   [TLS_SUPPORT="no"])
-AC_SUBST([TLS_SUPPORT])
+AC_SUBST([TLS_CPPFLAGS])
+AC_SUBST([TLS_CFLAGS])
+AC_SUBST([TLS_LIBS])
+
+### libsctp ###
+# empty command on if-found-action is to prevent -lsctp to be added to LIBS
+AM_COND_IF(HAVE_SCTP,
+	[AC_CHECK_LIB([sctp], [sctp_bindx], [echo -n ""], 
+		[AC_MSG_ERROR([sctp library not found, run with --disable-sctp to build without SCTP support or install libsctp package])]
+	)]
+)
 
 ### pthread ###
 AC_CHECK_LIB([pthread], [pthread_create], 

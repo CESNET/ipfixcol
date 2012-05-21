@@ -17,23 +17,23 @@
 		<!--## Name must match one of the <supportedCollectors> -->
 		<name>udpCollector</name>
 		<!--## Path of the plugin module -->
-		<file>/usr/lib64/ipfixcol-udp-input.so</file>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-udp-input.so</file>
 		<!--## Process name suffix (ipfixcol:UDP) -->
 		<processName>UDP</processName>
 	</inputPlugin>
 	<inputPlugin>
 		<name>tcpCollector</name>
-		<file>/usr/lib64/ipfixcol-tcp-input.so</file>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-tcp-input.so</file>
 		<processName>TCP</processName>
 	</inputPlugin>
 	<inputPlugin>
 		<name>fileReader</name>
-		<file>/usr/lib64/ipfixcol-ipfix-input.so</file>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-ipfix-input.so</file>
 		<processName>file</processName>
 	</inputPlugin>
 	<inputPlugin>
 		<name>sctpCollector</name>
-		<file>/usr/lib64/ipfixcol-sctp-input.so</file>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-sctp-input.so</file>
 		<processName>SCTP</processName>
 	</inputPlugin>
 
@@ -44,18 +44,19 @@
 		    ##   match this element -->
 		<fileFormat>ipfix</fileFormat>
 		<!--## Path of the storage module  -->
-		<file>/usr/lib64/ipfixcol-ipfix-output.so</file>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-ipfix-output.so</file>
 		<!--## Thread name suffix (storage:ipfix) -->
 		<threadName>ipfix</threadName>
 	</storagePlugin>
 	<storagePlugin>
 		<fileFormat>dummy</fileFormat>
-		<file>/usr/lib64/ipfixcol-dummy-output.so</file>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-dummy-output.so</file>
 		<threadName>dummy</threadName>
 	</storagePlugin>
         <!--## ipfixviewer storage plugin -->
-        <storagePlugin>
-                <fileFormat>view</fileFormat>
-                <file>/usr/lib64/ipfixcol-ipfixviewer-output.so</file>
-        </storagePlugin>
+	<storagePlugin>
+		<fileFormat>view</fileFormat>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-ipfixviewer-output.so</file>
+		<threadName>view</threadName>
+	</storagePlugin>
 </ipfixcol>

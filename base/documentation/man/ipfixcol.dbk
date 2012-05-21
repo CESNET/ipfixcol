@@ -138,7 +138,7 @@ Start ipfixcol daemonized, with default plugins configuration.</literallayout>
 					<term>
 						<citerefentry><refentrytitle>fbitdump</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
 						<citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
-						<citerefentry><refentrytitle>ipfixcol_fastbit_output</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+						<citerefentry><refentrytitle>ipfixcol-fastbit-output</refentrytitle><manvolnum>1</manvolnum></citerefentry>
 					</term>
 					<listitem>
 						<simpara>Man pages</simpara>

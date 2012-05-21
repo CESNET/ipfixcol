@@ -55,7 +55,7 @@
     <![CDATA[
 	<inputPlugin>
 		<name>fileReader</name>
-		<file>/usr/lib64/ipfixcol-ipfix-input.so</file>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-ipfix-input.so</file>
 	</inputPlugin>
     ]]>
     	</programlisting>

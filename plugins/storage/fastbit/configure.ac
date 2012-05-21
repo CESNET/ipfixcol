@@ -69,7 +69,6 @@ LBR_CHECK_XSLTPROC
 AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
-AC_PROG_RANLIB
 
 AC_LANG([C++])
 ############################ Check for libraries ###############################

@@ -37,9 +37,9 @@
 #
 
 # TODO generate this script by configure (@exec_prefix@/bin/ipfixcol?)
-IPFIXCOL_EXEC="/usr/local/bin/ipfixcol"
+IPFIXCOL_EXEC="@bindir@/ipfixcol"
 IPFIXCOL_PARAMS="-c "
-IPFIXCOL_CONFIG="/etc/ipfixcol/ipfixviewer_startup.xml"
+IPFIXCOL_CONFIG="@pkgdatadir@/ipfixviewer_startup.xml"
 
 usage()
 {
