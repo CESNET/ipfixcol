@@ -216,6 +216,13 @@
 					<simpara>Delete indexes for specified data. If %columns are specified, delete indexes only for them. Delete indexes for all columns otherwise.</simpara>
 				</listitem>
 			</varlistentry>
+			
+			<varlistentry>
+				<term>-C <replaceable class="parameter">path</replaceable></term>
+				<listitem>
+					<simpara>Path to configuration file. Default is /usr/share/fbitdump/fbitdump.xml</simpara>
+				</listitem>
+			</varlistentry>
 		</variablelist>
 	</refsect1>
 

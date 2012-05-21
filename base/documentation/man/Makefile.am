@@ -1,13 +1,12 @@
-
-MANSRC = fbitdump.dbk fbitdump.xml.dbk
+MANSRC = ipfixcol.dbk
 
 EXTRA_DIST = $(MANSRC)
 
-man_MANS = fbitdump.1 fbitdump.xml.5
+man_MANS = ipfixcol.1
 
-CLEANFILES = fbitdump.1 fbitdump.xml.5
+CLEANFILES = ipfixcol.1
 
-%.1 %.5 : %.dbk
+%.1 : %.dbk
 	@if [ -n "$(XSLTPROC)" ]; then \
 		if [ -f "$(XSLTMANSTYLE)" ]; then \
 			echo $(XSLTPROC) $(XSLTMANSTYLE) $<; \

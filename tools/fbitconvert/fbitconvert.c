@@ -1,10 +1,12 @@
 
 
+#if HAVE_CONFIG_H
+#include <config.h>
+#endif
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <commlbr.h>
-//#include <sys/types.h>
 #include <unistd.h>
 #include <dlfcn.h>
 #include <time.h>
@@ -13,17 +15,20 @@
 #include "nffile.h"
 #include <ipfixcol.h>
 
+#define PLUGIN_PATH "/usr/share/ipfixcol/plugins/ipfixcol-fastbit-output.so"
+
 #define ARGUMENTS "hbi:w:v:p:P:r:V"
-#define VERSION "1.0"
+
+char *msg_str = "fbitconvert";
 
 volatile int stop = 0;
 static int ctrl_c = 0;
 void signal_handler(int signal_id){
 	if(ctrl_c){
-		VERBOSE(CL_WARNING,"Forced quit");
+		MSG_WARNING(msg_str, "Forced quit");
 		exit(1);
 	} else {
-		VERBOSE(CL_WARNING,"I'll end as soon as possible");
+		MSG_WARNING(msg_str, "I'll end as soon as possible");
 		stop = 1;
 		ctrl_c++;
 	}
@@ -73,7 +78,7 @@ struct storage{
 
 //EXTENSION 0 -- not a real extension its just pading ect
 void ext0_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tZERO EXTENSION");
+	MSG_NOTICE(msg_str, "\tZERO EXTENSION");
 }
 
 
@@ -107,20 +112,20 @@ void ext0_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 //EXTENSION 1	
 void ext1_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
 	if(TestFlag(flags, FLAG_IPV6_ADDR)){
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tIPv6-SRC: hight:%lu low:%lu",*((uint64_t *) &data[*offset]), \
+		MSG_NOTICE(msg_str, "\tIPv6-SRC: hight:%lu low:%lu",*((uint64_t *) &data[*offset]), \
 			*((uint64_t *) &data[(*offset)+2]));
 		
 		CONVERT_IPv6();
 
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tIPv6-DST: hight:%lu low:%lu",*((uint64_t *) &data[*offset]), \
+		MSG_NOTICE(msg_str, "\tIPv6-DST: hight:%lu low:%lu",*((uint64_t *) &data[*offset]), \
 			*((uint64_t *) &data[(*offset)+2]));
 		CONVERT_IPv6();
 
 	} else {
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tIPv4-SRC: %u", *((uint32_t *) &data[*offset]));
+		MSG_NOTICE(msg_str, "\tIPv4-SRC: %u", *((uint32_t *) &data[*offset]));
 		CONVERT_32();
 
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tIPv4-DST: %u", *((uint32_t *) &data[*offset]));
+		MSG_NOTICE(msg_str, "\tIPv4-DST: %u", *((uint32_t *) &data[*offset]));
 		CONVERT_32();
 	}
 }
@@ -128,10 +133,10 @@ void ext1_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 //EXTENSION 2
 void ext2_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
 	if(TestFlag(flags, FLAG_PKG_64)){
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tPACKET COUNTER: %lu", *((uint64_t *) &data[*offset]));
+		MSG_NOTICE(msg_str, "\tPACKET COUNTER: %lu", *((uint64_t *) &data[*offset]));
 		CONVERT_64();
 	} else {
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tPACKET COUNTER: %u", *((uint32_t *) &data[*offset]));
+		MSG_NOTICE(msg_str, "\tPACKET COUNTER: %u", *((uint32_t *) &data[*offset]));
 		//32b to 64b!
 		*((uint64_t *) &(data_set->records[data_set->header.length])) =  htobe64((uint64_t) *((uint32_t *) &data[*offset]));
 		data_set->header.length += 8;
@@ -142,10 +147,10 @@ void ext2_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 //EXTENSION 3
 void ext3_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
 	if(TestFlag(flags, FLAG_BYTES_64)){
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tBYTE COUNTER: %lu", *((uint64_t *) &data[*offset]));
+		MSG_NOTICE(msg_str, "\tBYTE COUNTER: %lu", *((uint64_t *) &data[*offset]));
 		CONVERT_64();
 	} else {
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tBYTE COUNTER: %u", *((uint32_t *) &data[*offset]));
+		MSG_NOTICE(msg_str, "\tBYTE COUNTER: %u", *((uint32_t *) &data[*offset]));
 		//32b to 64b!
 		*((uint64_t *) &(data_set->records[data_set->header.length])) =  htobe64((uint64_t)*((uint32_t *) &data[*offset]));
 		data_set->header.length += 8;
@@ -156,44 +161,44 @@ void ext3_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 //OPTIONAL EXTENSIONS
 //EXTENSION 4 - interface record (16b ints)
 void ext4_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tINTERFACE RECORD INPUT: %hu (16b)", *((uint16_t *) &data[*offset]));
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tINTERFACE RECORD OUTPUT: %hu (16b)", *(((uint16_t *) &data[*offset])+1));
+	MSG_NOTICE(msg_str, "\tINTERFACE RECORD INPUT: %hu (16b)", *((uint16_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tINTERFACE RECORD OUTPUT: %hu (16b)", *(((uint16_t *) &data[*offset])+1));
 	CONVERT_2x16();
 	
 }
 
 //EXTENSION 5 - interface record (32b ints)
 void ext5_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tINTERFACE RECORD INPUT: %u (32b)", *((uint32_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tINTERFACE RECORD INPUT: %u (32b)", *((uint32_t *) &data[*offset]));
 	CONVERT_32();
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tINTERFACE RECORD OUTPUT: %u (32b)", *((uint32_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tINTERFACE RECORD OUTPUT: %u (32b)", *((uint32_t *) &data[*offset]));
 	CONVERT_32();
 }
 
 //OPTIONAL EXTENSIONS
 //EXTENSION 6 - AS record (16b ints)
 void ext6_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tAS-SRC: %hu (16b)", *((uint16_t *) &data[*offset]));
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tAS-DST: %hu (16b)", *(((uint16_t *) &data[*offset])+1));
+	MSG_NOTICE(msg_str, "\tAS-SRC: %hu (16b)", *((uint16_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tAS-DST: %hu (16b)", *(((uint16_t *) &data[*offset])+1));
 	CONVERT_2x16();
 	
 }
 
 //EXTENSION 7 - AS record (32b ints)
 void ext7_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tAS-SRC: %u (32b)", *((uint32_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tAS-SRC: %u (32b)", *((uint32_t *) &data[*offset]));
 	CONVERT_32();
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tAS-DST: %u (32b)", *((uint32_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tAS-DST: %u (32b)", *((uint32_t *) &data[*offset]));
 	CONVERT_32();
 	
 }
 
 //EXTENSION 8 - dst tos, dir, srcmask, dstmask in one32b int
 void ext8_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tDST-TOS: %hhu (8b)", *((uint8_t *) &data[*offset]));
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tDIR: %hhu (8b)", *(((uint8_t *) &data[*offset])+1));
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tSRC-MASK: %hhu (8b)", *(((uint8_t *) &data[*offset])+2));
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tDST-MASK: %hhu (8b)", *(((uint8_t *) &data[*offset])+3));
+	MSG_NOTICE(msg_str, "\tDST-TOS: %hhu (8b)", *((uint8_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tDIR: %hhu (8b)", *(((uint8_t *) &data[*offset])+1));
+	MSG_NOTICE(msg_str, "\tSRC-MASK: %hhu (8b)", *(((uint8_t *) &data[*offset])+2));
+	MSG_NOTICE(msg_str, "\tDST-MASK: %hhu (8b)", *(((uint8_t *) &data[*offset])+3));
 	*((uint32_t *) &(data_set->records[data_set->header.length])) = *((uint32_t *) &data[*offset]);
 	data_set->header.length += 4;
 	(*offset)++;
@@ -202,7 +207,7 @@ void ext8_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 
 //EXTENSION 9 - next hop ipv4
 void ext9_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tNEXT-HOP: %u (ipv4)", *((uint32_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tNEXT-HOP: %u (ipv4)", *((uint32_t *) &data[*offset]));
 	CONVERT_32();
 	
 }
@@ -211,7 +216,7 @@ void ext9_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 //EXTENSION 10 - next hop ipv6
 void ext10_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
 	
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tNEXT-HOP: hight:%lu low:%lu (ipv6)",*((uint64_t *) &data[*offset]), \
+	MSG_NOTICE(msg_str, "\tNEXT-HOP: hight:%lu low:%lu (ipv6)",*((uint64_t *) &data[*offset]), \
 		*((uint64_t *) &data[(*offset)+8]));
 
 	CONVERT_IPv6();
@@ -220,7 +225,7 @@ void ext10_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_s
 
 //EXTENSION 11 - BGP next hop ipv4
 void ext11_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tBGP-NEXT-HOP: %u (ipv4)", *((uint32_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tBGP-NEXT-HOP: %u (ipv4)", *((uint32_t *) &data[*offset]));
 	CONVERT_32();
 	
 }
@@ -228,55 +233,55 @@ void ext11_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_s
 
 //EXTENSION 12 - BGP next hop ipv6
 void ext12_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tBGP-NEXT-HOP: hight:%lu low:%lu (ipv6)",*((uint64_t *) &data[*offset]), \
+	MSG_NOTICE(msg_str, "\tBGP-NEXT-HOP: hight:%lu low:%lu (ipv6)",*((uint64_t *) &data[*offset]), \
 		*((uint64_t *) &data[(*offset)+8]));
 	CONVERT_IPv6();
 }
 
 //EXTENSION 13 - VLAN record (16b ints)
 void ext13_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tVLAN-SRC: %hu (16b)", *((uint16_t *) &data[*offset]));
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tVLAN-DST: %hu (16b)", *(((uint16_t *) &data[*offset])+1));
+	MSG_NOTICE(msg_str, "\tVLAN-SRC: %hu (16b)", *((uint16_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tVLAN-DST: %hu (16b)", *(((uint16_t *) &data[*offset])+1));
 	CONVERT_2x16();
 }
 
 //EXTENSION 14 - Out packet count (32b int)
 void ext14_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tOUT-PACKETS: %u (32b)", *((uint32_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tOUT-PACKETS: %u (32b)", *((uint32_t *) &data[*offset]));
 	CONVERT_32();
 	
 }
 
 //EXTENSION 15 - Out packet count (64b int)
 void ext15_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tOUT-PACKETS: %lu (64b)", *((uint64_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tOUT-PACKETS: %lu (64b)", *((uint64_t *) &data[*offset]));
 	CONVERT_64();
 	
 }
 
 //EXTENSION 16 - Out bytes count (32b int)
 void ext16_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tOUT-BYTES: %u (32b)", *((uint32_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tOUT-BYTES: %u (32b)", *((uint32_t *) &data[*offset]));
 	CONVERT_32();
 }
 
 //EXTENSION 17 - Out bytes count (64b int)
 void ext17_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tOUT-BYTES: %lu (64b)", *((uint64_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tOUT-BYTES: %lu (64b)", *((uint64_t *) &data[*offset]));
 	CONVERT_64();
 	
 }
 
 //EXTENSION 18 - Aggr flows (32b int)
 void ext18_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tAGGR-FLOWS: %u (32b)", *((uint32_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tAGGR-FLOWS: %u (32b)", *((uint32_t *) &data[*offset]));
 	CONVERT_32();
 	
 }
 
 //EXTENSION 19 - Aggr flows (64b int)
 void ext19_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tAGGR-FLOWS: %lu (64b)", *((uint64_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tAGGR-FLOWS: %lu (64b)", *((uint64_t *) &data[*offset]));
 	CONVERT_64();
 	
 }
@@ -284,12 +289,12 @@ void ext19_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_s
 //EXTENSION 20 - in src mac, out dst mac (64b int)
 void ext20_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
 	uint64_t buf;
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tIN-SRC-MAC: %lu (48b - 64 aling)", *((uint64_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tIN-SRC-MAC: %lu (48b - 64 aling)", *((uint64_t *) &data[*offset]));
 	buf = htobe64(data[*offset]);
 	memcpy(&(data_set->records[data_set->header.length]), &buf, 3);
 	data_set->header.length += 3;
 	(*offset)+=2;
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tOUT-DST-MAC: %lu (48b - 64 aling)", *((uint64_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tOUT-DST-MAC: %lu (48b - 64 aling)", *((uint64_t *) &data[*offset]));
 	buf = htobe64(data[*offset]);
 	memcpy(&(data_set->records[data_set->header.length]), &buf, 3);
 	data_set->header.length += 3;
@@ -300,12 +305,12 @@ void ext20_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_s
 //EXTENSION 21 - in dst mac, out src mac (64b int)
 void ext21_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
 	uint64_t buf;
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tIN-DST-MAC: %lu (48b - 64 aling)", *((uint64_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tIN-DST-MAC: %lu (48b - 64 aling)", *((uint64_t *) &data[*offset]));
 	buf = htobe64(data[*offset]);
 	memcpy(&(data_set->records[data_set->header.length]), &buf, 3);
 	data_set->header.length += 3;
 	(*offset)+=2;
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tOUT-SRC-MAC: %lu (48b - 64 aling)", *((uint64_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tOUT-SRC-MAC: %lu (48b - 64 aling)", *((uint64_t *) &data[*offset]));
 	buf = htobe64(data[*offset]);
 	memcpy(&(data_set->records[data_set->header.length]), &buf, 3);
 	data_set->header.length += 3;
@@ -317,10 +322,10 @@ void ext21_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_s
 void ext22_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
 	int i=0;
 	for(i=0;i<10;i++){
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tMPLS-LABEL-%i: %u (32b)",i, *((uint32_t *) &data[*offset+1]));
+		MSG_NOTICE(msg_str, "\tMPLS-LABEL-%i: %u (32b)",i, *((uint32_t *) &data[*offset+1]));
 		*((uint32_t *) &(data_set->records[data_set->header.length])) = htonl(*((uint32_t *) &data[*offset+1]));
 		data_set->header.length += 4;
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tMPLS-LABEL-%i: %u (32b)",(i++), *((uint32_t *) &data[*offset]));
+		MSG_NOTICE(msg_str, "\tMPLS-LABEL-%i: %u (32b)",(i++), *((uint32_t *) &data[*offset]));
 		*((uint32_t *) &(data_set->records[data_set->header.length])) = htonl(*((uint32_t *) &data[*offset]));
 		data_set->header.length += 4;
 		(*offset)+=2;
@@ -329,14 +334,14 @@ void ext22_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_s
 
 //EXTENSION 23 - Router ipv4
 void ext23_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tROUTER-IP: %u (ipv4)", *((uint32_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tROUTER-IP: %u (ipv4)", *((uint32_t *) &data[*offset]));
 	CONVERT_32();
 }
 
 
 //EXTENSION 24 - Router ipv6
 void ext24_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tROUTER-IP: hight:%lu low:%lu (ipv6)",*((uint64_t *) &data[*offset]), \
+	MSG_NOTICE(msg_str, "\tROUTER-IP: hight:%lu low:%lu (ipv6)",*((uint64_t *) &data[*offset]), \
 		*((uint64_t *) &data[(*offset)+8]));
 	CONVERT_IPv6();
 	
@@ -344,11 +349,11 @@ void ext24_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_s
 
 //EXTENSION 25 - Router source id
 void ext25_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tROUTER-ID-FILL: %hu ", *((uint16_t *) &data[*offset]));
+	MSG_NOTICE(msg_str, "\tROUTER-ID-FILL: %hu ", *((uint16_t *) &data[*offset]));
 	*((uint16_t *) &(data_set->records[data_set->header.length])) = htons(*((uint16_t *) &data[*offset])+1);
 	data_set->header.length += 2;
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tROUTER-ID-ENGINE-TYPE: %hhu ", *(((uint8_t *) &data[*offset])+2));
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tROUTER-ID-ENGINE-ID: %hhu ", *(((uint8_t *) &data[*offset])+3));
+	MSG_NOTICE(msg_str, "\tROUTER-ID-ENGINE-TYPE: %hhu ", *(((uint8_t *) &data[*offset])+2));
+	MSG_NOTICE(msg_str, "\tROUTER-ID-ENGINE-ID: %hhu ", *(((uint8_t *) &data[*offset])+3));
 	*((uint16_t *) &(data_set->records[data_set->header.length])) = *((uint16_t *) &data[*offset])+1;
 	data_set->header.length += 2;
 	(*offset)++;
@@ -387,7 +392,7 @@ void (*ext_parse[26]) (uint32_t *data, int *offset, uint8_t flags, struct ipfix_
 
 //EXTENSION 0 -- not a real extension its just pading ect
 void ext0_fill_tm(uint8_t flags, struct ipfix_template * template){
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tZERO EXTENSION");
+	MSG_NOTICE(msg_str, "\tZERO EXTENSION");
 }
 
 //EXTENSION 1	
@@ -678,18 +683,18 @@ void ext22_fill_tm(uint8_t flags, struct ipfix_template * template){
 
 //EXTENSION 23 - Router ipv4
 void ext23_fill_tm(uint8_t flags, struct ipfix_template * template){
-	VERBOSE(CL_WARNING,"There is no element for router ip (this extension is ignored)");
+	MSG_WARNING(msg_str, "There is no element for router ip (this extension is ignored)");
 }
 
 
 //EXTENSION 24 - Router ipv6
 void ext24_fill_tm(uint8_t flags, struct ipfix_template * template){
-	VERBOSE(CL_WARNING,"There is no element for router ip (this extension is ignored)");
+	MSG_WARNING(msg_str, "There is no element for router ip (this extension is ignored)");
 }
 
 //EXTENSION 25 - Router source id
 void ext25_fill_tm(uint8_t flags, struct ipfix_template * template){	
-	VERBOSE(CL_VERBOSE_ADVANCED,"There is no element for router sourc id (filled as reserved 38 and 39 elements)");
+	MSG_NOTICE(msg_str, "There is no element for router sourc id (filled as reserved 38 and 39 elements)");
 	template->fields[template->field_count].ie.id = 38;
 	template->fields[template->field_count].ie.length = 1;
 	template->field_count++;
@@ -746,36 +751,36 @@ int header_elements[][2] = {
 
 void fill_basic_data(struct ipfix_data_set *data_set, struct common_record_s *record){
 	
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tTYPE: %hu", record->type);
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tSIZE: %hu", record->size);
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tEXPORTER-REF: %hhu", record->exporter_ref);
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tFLAGS: %hhu", record->flags);
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tEXT-MAP: %hu", record->ext_map);
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tMSEC-FIRST: %hu", record->msec_first);
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tMSEC-LAST: %hu", record->msec_last);
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tFIRST: %u", record->first);
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tLAST: %u", record->last);
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tFWD-STATUS: %hhu", record->fwd_status); //TODO?
+	MSG_NOTICE(msg_str, "\tTYPE: %hu", record->type);
+	MSG_NOTICE(msg_str, "\tSIZE: %hu", record->size);
+	MSG_NOTICE(msg_str, "\tEXPORTER-REF: %hhu", record->exporter_ref);
+	MSG_NOTICE(msg_str, "\tFLAGS: %hhu", record->flags);
+	MSG_NOTICE(msg_str, "\tEXT-MAP: %hu", record->ext_map);
+	MSG_NOTICE(msg_str, "\tMSEC-FIRST: %hu", record->msec_first);
+	MSG_NOTICE(msg_str, "\tMSEC-LAST: %hu", record->msec_last);
+	MSG_NOTICE(msg_str, "\tFIRST: %u", record->first);
+	MSG_NOTICE(msg_str, "\tLAST: %u", record->last);
+	MSG_NOTICE(msg_str, "\tFWD-STATUS: %hhu", record->fwd_status); //TODO?
 	*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64((uint64_t)record->first*1000+record->msec_first); //sec 2 msec
 	data_set->header.length += 8;
 	*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64((uint64_t)record->last*1000+record->msec_last); //sec 2 msec
 	data_set->header.length += 8;
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tTCP-FLAGS: %hhu", record->tcp_flags);
+	MSG_NOTICE(msg_str, "\tTCP-FLAGS: %hhu", record->tcp_flags);
 	data_set->records[data_set->header.length] =record->tcp_flags;
 	data_set->header.length += 1;
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tPROTOCOL: %hhu", record->prot);
+	MSG_NOTICE(msg_str, "\tPROTOCOL: %hhu", record->prot);
 	data_set->records[data_set->header.length] =record->prot;
 	data_set->header.length += 1;
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tTOS: %hhu", record->tos);
+	MSG_NOTICE(msg_str, "\tTOS: %hhu", record->tos);
 	data_set->records[data_set->header.length] =record->tos;
 	data_set->header.length += 1;
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tSRC-PORT: %hu", record->srcport);
+	MSG_NOTICE(msg_str, "\tSRC-PORT: %hu", record->srcport);
 	*((uint16_t *) &(data_set->records[data_set->header.length])) = htons(record->srcport);
 	data_set->header.length += 2;
-	VERBOSE(CL_VERBOSE_ADVANCED,"\tDST-PORT: %hu", record->dstport);
+	MSG_NOTICE(msg_str, "\tDST-PORT: %hu", record->dstport);
 	*((uint16_t *) &(data_set->records[data_set->header.length])) = htons(record->dstport);
 	data_set->header.length += 2;
-	VERBOSE(CL_VERBOSE_ADVANCED,"DATA HEADER FILLED: %i", data_set->header.length);
+	MSG_NOTICE(msg_str, "DATA HEADER FILLED: %i", data_set->header.length);
 
 }
 
@@ -785,14 +790,14 @@ int iim =0;
 void fill_basic_template(uint8_t flags, struct ipfix_template **template){
 	static int template_id_counter = 1;
 
-	VERBOSE(CL_VERBOSE_ADVANCED,"TEMPLATE pointer  temp:%p", template);
+	MSG_NOTICE(msg_str, "TEMPLATE pointer  temp:%p", template);
 	(*template) = (struct ipfix_template *) malloc(sizeof(struct ipfix_template) + \
 		ALLOC_FIELDS_SIZE * sizeof(template_ie));
 	fbt++;
 	if(*template == NULL){
-		VERBOSE(CL_ERROR,"Malloc faild to get space for ipfix template");
+		MSG_ERROR(msg_str, "Malloc faild to get space for ipfix template");
 	}
-	VERBOSE(CL_VERBOSE_ADVANCED,"TEMPLATE-a pointer addr:%p temp:%p", *template, template);
+	MSG_NOTICE(msg_str, "TEMPLATE-a pointer addr:%p temp:%p", *template, template);
 
 	(*template)->template_type = TM_TEMPLATE;
 	(*template)->last_transmission = time(NULL);
@@ -813,7 +818,7 @@ void fill_basic_template(uint8_t flags, struct ipfix_template **template){
 		(*template)->fields[(*template)->field_count].ie.id = header_elements[i][0];
 
 
-		VERBOSE(CL_VERBOSE_ADVANCED,"FILL %i - %p",i,&((*template)->fields[(*template)->field_count].ie.length));
+		MSG_NOTICE(msg_str, "FILL %i - %p",i,&((*template)->fields[(*template)->field_count].ie.length));
 		(*template)->fields[(*template)->field_count].ie.length = header_elements[i][1];
 		(*template)->field_count++;
 		(*template)->data_length += header_elements[i][1];  
@@ -821,7 +826,7 @@ void fill_basic_template(uint8_t flags, struct ipfix_template **template){
 	}
 
 	//add mandatory extensions elements 
-	VERBOSE(CL_VERBOSE_ADVANCED,"PRE BASIC TEMPLATE: 'field count - %i' template_length - %i DATA-LENGTH - %i" \
+	MSG_NOTICE(msg_str, "PRE BASIC TEMPLATE: 'field count - %i' template_length - %i DATA-LENGTH - %i" \
 		,(*template)->field_count, (*template)->template_length, (*template)->data_length);
 	//Extension 1
 	ext_fill_tm[1] (flags, *template);
@@ -829,7 +834,7 @@ void fill_basic_template(uint8_t flags, struct ipfix_template **template){
 	ext_fill_tm[2] (flags, *template);
 	//Extension 3
 	ext_fill_tm[3] (flags, *template);
-	VERBOSE(CL_VERBOSE_ADVANCED,"BASIC TEMPLATE: 'field count - %i' template_length - %i DATA-LENGTH - %i" \
+	MSG_NOTICE(msg_str, "BASIC TEMPLATE: 'field count - %i' template_length - %i DATA-LENGTH - %i" \
 		,(*template)->field_count, (*template)->template_length, (*template)->data_length);
 
 }
@@ -913,7 +918,7 @@ void add_template(struct ipfix_message *ipfix_msg, struct ipfix_template * templ
 
 void clean_tmp_manager(struct ipfix_template_mgr *manager){
 	int i;
-	VERBOSE(CL_VERBOSE_ADVANCED,"CLEAN COUNT: %i",manager->counter);
+	MSG_NOTICE(msg_str, "CLEAN COUNT: %i",manager->counter);
 	for(i = 0; i <= manager->counter; i++ ){
 		if(manager->templates[i]!=NULL){
 			free(manager->templates[i]);
@@ -924,7 +929,7 @@ void clean_tmp_manager(struct ipfix_template_mgr *manager){
 }
 
 int usage(){
-	printf("Usage: %s -i input_file -w output_dir [-p prefix] [-P path] [-r limit] [-v level] [-hVb]\n",getprogname());
+	printf("Usage: %s -i input_file -w output_dir [-p prefix] [-P path] [-r limit] [-v level] [-hVb]\n", PACKAGE);
 	printf(" -i input_file	path to nfdump file for conversion\n");
 	printf(" -w output_dir	output direcotry for fastbit files\n");
 	printf(" -b		build indexes\n");
@@ -965,7 +970,7 @@ int main(int argc, char *argv[]){
 	char indexes[4] = "no";
 	char def_prefix[] = "";
 	char *prefix = def_prefix;
-	char def_plugin[] = "./fastbit_output.so";
+	char def_plugin[] = PLUGIN_PATH;
 	char *plugin = def_plugin;
 	char def_record_limit[] = "8000000";
 	char *record_limit = def_record_limit;
@@ -987,12 +992,12 @@ int main(int argc, char *argv[]){
 			break;
 		case 'P':
 			if(optarg[0]=='/'){
-				VERBOSE(CL_VERBOSE_BASIC,"plugin absolut path: %s\n",optarg);
+				MSG_NOTICE(msg_str, "plugin absolut path: %s\n",optarg);
 				plugin = optarg;
 			}else{
 				plugin = (char *) malloc(strlen(optarg)+2);
 				sprintf(plugin,"./%s",optarg);
-				VERBOSE(CL_VERBOSE_BASIC,"plugin relative path: %s\n", plugin);
+				MSG_NOTICE(msg_str, "plugin relative path: %s\n", plugin);
 			}
 			break;
 		case 'r':
@@ -1009,11 +1014,11 @@ int main(int argc, char *argv[]){
 			verbose = atoi(optarg);
 			break;
 		case 'V':
-			printf("%s - version %s\n",getprogname(),VERSION);
+			printf("%s - version %s\n", PACKAGE, VERSION);
 			return 1;
 			break;
 		default:
-			VERBOSE(CL_ERROR,"unknown option!\n\n");
+			MSG_ERROR(msg_str, "unknown option!\n\n");
 			usage();
 			return 1;
 			break;
@@ -1021,11 +1026,11 @@ int main(int argc, char *argv[]){
 	}
 
 	if(input_file == 0){
-		VERBOSE(CL_ERROR,"no input file specified (option '-i')")
+		MSG_ERROR(msg_str, "no input file specified (option '-i')");
 		return 1;
 	}
 	if(output_dir == 0){
-		VERBOSE(CL_ERROR,"no ouput direcotry specified (option '-w')")
+		MSG_ERROR(msg_str, "no ouput direcotry specified (option '-w')");
 		return 1;
 	}
 
@@ -1085,16 +1090,16 @@ int main(int argc, char *argv[]){
 	//inital space for extension map
 	ext.map = (struct extension *) calloc(ext.size,sizeof(struct extension));
 	if(ext.map == NULL){
-		VERBOSE(CL_ERROR,"Can't read allocate memory for extension map");
+		MSG_ERROR(msg_str, "Can't read allocate memory for extension map");
 		return 1;
 	}
 	
 	template_mgr.templates = (struct ipfix_template **) calloc(ext.size,sizeof(struct ipfix_template *));
 	if(ext.map == NULL){
-		VERBOSE(CL_ERROR,"Can't read allocate memory for templates");
+		MSG_ERROR(msg_str, "Can't read allocate memory for templates");
 		return 1;
 	}
-	VERBOSE(CL_VERBOSE_ADVANCED,"TEMP-ARRAY: %p - %p",template_mgr.templates, &(template_mgr.templates[ext.size-1]));
+	MSG_NOTICE(msg_str, "TEMP-ARRAY: %p - %p",template_mgr.templates, &(template_mgr.templates[ext.size-1]));
 	template_mgr.max_length = ext.size;
 	template_mgr.counter = 0;
 
@@ -1104,51 +1109,51 @@ int main(int argc, char *argv[]){
 		//read header of nffile
 		read_size = fread(&header, sizeof(struct file_header_s), 1,f);
 		if (read_size != 1){
-			VERBOSE(CL_ERROR,"Can't read file header: %s",input_file);
+			MSG_ERROR(msg_str, "Can't read file header: %s",input_file);
 			fclose(f);
 			return 1;
 		}
-		VERBOSE(CL_VERBOSE_ADVANCED,"Parsed header from: '%s'",input_file);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tMAGIC: %x", header.magic);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tVERSION: %i", header.version);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tFLAGS: %i", header.flags);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tNUMBER OF BLOCKS: %i", header.NumBlocks);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tIDENT: '%s'", header.ident);
+		MSG_NOTICE(msg_str, "Parsed header from: '%s'",input_file);
+		MSG_NOTICE(msg_str, "\tMAGIC: %x", header.magic);
+		MSG_NOTICE(msg_str, "\tVERSION: %i", header.version);
+		MSG_NOTICE(msg_str, "\tFLAGS: %i", header.flags);
+		MSG_NOTICE(msg_str, "\tNUMBER OF BLOCKS: %i", header.NumBlocks);
+		MSG_NOTICE(msg_str, "\tIDENT: '%s'", header.ident);
 
 
 		read_size = fread(&stats, sizeof(struct stat_record_s), 1,f);
 		if (read_size != 1){
-			VERBOSE(CL_ERROR,"Can't read file statistics: %s",input_file);
+			MSG_ERROR(msg_str, "Can't read file statistics: %s",input_file);
 			fclose(f);
 			return 1;
 		}
 		
-		VERBOSE(CL_VERBOSE_ADVANCED,"Parsed statistics from: '%s'",input_file);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tFLOWS: %lu", stats.numflows);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tBYTES: %lu", stats.numbytes);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tPACKTES: %lu", stats.numpackets);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tFLOWS-TCP: %lu", stats.numflows_tcp);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tFLOWS-UDP: %lu", stats.numflows_udp);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tFLOWS-ICMP: %lu", stats.numflows_icmp);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tFLOWS-OTHER: %lu", stats.numflows_other);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tBYTES-TCP: %lu", stats.numbytes_tcp);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tBYTES-UDP: %lu", stats.numbytes_udp);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tBYTES-ICMP: %lu", stats.numbytes_icmp);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tBYTES-OTHER: %lu", stats.numbytes_other);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tPACKETS-TCP: %lu", stats.numpackets_tcp);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tPACKETS-UDP: %lu", stats.numpackets_udp);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tPACKETS-ICMP: %lu", stats.numpackets_icmp);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tPACKETS-OTHER: %lu", stats.numpackets_other);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tFIRST-SEEN: %u", stats.first_seen);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tLAST-SEEN: %u", stats.last_seen);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tMSEC-FIRST: %hu", stats.msec_first);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tMSEC-LAST: %hu", stats.msec_last);
-		VERBOSE(CL_VERBOSE_ADVANCED,"\tSEQUENCE-FAIULURE: %u", stats.sequence_failure);
+		MSG_NOTICE(msg_str, "Parsed statistics from: '%s'",input_file);
+		MSG_NOTICE(msg_str, "\tFLOWS: %lu", stats.numflows);
+		MSG_NOTICE(msg_str, "\tBYTES: %lu", stats.numbytes);
+		MSG_NOTICE(msg_str, "\tPACKTES: %lu", stats.numpackets);
+		MSG_NOTICE(msg_str, "\tFLOWS-TCP: %lu", stats.numflows_tcp);
+		MSG_NOTICE(msg_str, "\tFLOWS-UDP: %lu", stats.numflows_udp);
+		MSG_NOTICE(msg_str, "\tFLOWS-ICMP: %lu", stats.numflows_icmp);
+		MSG_NOTICE(msg_str, "\tFLOWS-OTHER: %lu", stats.numflows_other);
+		MSG_NOTICE(msg_str, "\tBYTES-TCP: %lu", stats.numbytes_tcp);
+		MSG_NOTICE(msg_str, "\tBYTES-UDP: %lu", stats.numbytes_udp);
+		MSG_NOTICE(msg_str, "\tBYTES-ICMP: %lu", stats.numbytes_icmp);
+		MSG_NOTICE(msg_str, "\tBYTES-OTHER: %lu", stats.numbytes_other);
+		MSG_NOTICE(msg_str, "\tPACKETS-TCP: %lu", stats.numpackets_tcp);
+		MSG_NOTICE(msg_str, "\tPACKETS-UDP: %lu", stats.numpackets_udp);
+		MSG_NOTICE(msg_str, "\tPACKETS-ICMP: %lu", stats.numpackets_icmp);
+		MSG_NOTICE(msg_str, "\tPACKETS-OTHER: %lu", stats.numpackets_other);
+		MSG_NOTICE(msg_str, "\tFIRST-SEEN: %u", stats.first_seen);
+		MSG_NOTICE(msg_str, "\tLAST-SEEN: %u", stats.last_seen);
+		MSG_NOTICE(msg_str, "\tMSEC-FIRST: %hu", stats.msec_first);
+		MSG_NOTICE(msg_str, "\tMSEC-LAST: %hu", stats.msec_last);
+		MSG_NOTICE(msg_str, "\tSEQUENCE-FAIULURE: %u", stats.sequence_failure);
 
 		//no optional extension templates
 
 
-		VERBOSE(CL_VERBOSE_ADVANCED,"TMP COUNTER: %i", template_mgr.counter);
+		MSG_NOTICE(msg_str, "TMP COUNTER: %i", template_mgr.counter);
 		fill_basic_template(0, &(template_mgr.templates[template_mgr.counter])); //template for this record with ipv4
 		ext.map[ext.filled].tmp4_index = template_mgr.counter;
 
@@ -1162,16 +1167,16 @@ int main(int argc, char *argv[]){
 		for(i = 0; i < header.NumBlocks && !stop ; i++){
 			read_size = fread(&block_header, sizeof(struct data_block_header_s), 1,f);
 			if (read_size != 1){
-				VERBOSE(CL_ERROR,"Can't read block header: %s",input_file);
+				MSG_ERROR(msg_str, "Can't read block header: %s",input_file);
 				fclose(f);
 				return 1;
 			}
 
-			VERBOSE(CL_VERBOSE_ADVANCED,"BLOCK: %u",i);
-			VERBOSE(CL_VERBOSE_ADVANCED,"\tRECORDS: %u", block_header.NumRecords);
-			VERBOSE(CL_VERBOSE_ADVANCED,"\tSIZE: %u", block_header.size);
-			VERBOSE(CL_VERBOSE_ADVANCED,"\tID (block type): %u", block_header.id);
-			VERBOSE(CL_VERBOSE_ADVANCED,"\tPADDING: %u", block_header.pad);
+			MSG_NOTICE(msg_str, "BLOCK: %u",i);
+			MSG_NOTICE(msg_str, "\tRECORDS: %u", block_header.NumRecords);
+			MSG_NOTICE(msg_str, "\tSIZE: %u", block_header.size);
+			MSG_NOTICE(msg_str, "\tID (block type): %u", block_header.id);
+			MSG_NOTICE(msg_str, "\tPADDING: %u", block_header.pad);
 
 			//force buffer realocation if is too small for record
 			if(buffer_start != NULL && buffer_size < block_header.size){
@@ -1184,28 +1189,28 @@ int main(int argc, char *argv[]){
 			if(buffer_start == NULL){
 				buffer_start = (char *) malloc(block_header.size);
 				if(buffer_start == NULL){
-					VERBOSE(CL_ERROR,"Can't alocate memory for record data");
+					MSG_ERROR(msg_str, "Can't alocate memory for record data");
 					return 1;
 				}
 				buffer_size = block_header.size;
 				buffer = buffer_start;
 			}
-			VERBOSE(CL_VERBOSE_ADVANCED,"RECORDS OFFSET in file: %lu",ftell(f));
+			MSG_NOTICE(msg_str, "RECORDS OFFSET in file: %lu",ftell(f));
 
 			buffer = buffer_start;
 			read_size = fread(buffer, block_header.size, 1,f);
 			if (read_size != 1){
 				perror("file read:");
-				VERBOSE(CL_ERROR,"Can't read record data: %s",input_file);
+				MSG_ERROR(msg_str, "Can't read record data: %s",input_file);
 				fclose(f);
 				return 1;
 			}
-			//VERBOSE(CL_VERBOSE_ADVANCED,"---------BLOCK---------");
+			//MSG_NOTICE(msg_str, "---------BLOCK---------");
 			//hex(buffer, block_header.size);
 		
 			size = 0;
 			while (size < block_header.size && !stop){
-				VERBOSE(CL_VERBOSE_ADVANCED,"OFFSET: %u - %p",size,buffer);
+				MSG_NOTICE(msg_str, "OFFSET: %u - %p",size,buffer);
 				record = (struct common_record_s *) buffer;
 
 				if(record->type == CommonRecordType){
@@ -1215,21 +1220,21 @@ int main(int argc, char *argv[]){
 					unsigned j;
 
 					//check id -> most extensions should be on its index
-					VERBOSE(CL_VERBOSE_ADVANCED,"\tMAPP: %hu - filled %i", record->ext_map,ext.filled);
-					VERBOSE(CL_VERBOSE_ADVANCED,"\tMAPP size: %i",ext.size);
-					VERBOSE(CL_VERBOSE_ADVANCED,"\tMAPP extension size: %li",sizeof(struct extension));
-					VERBOSE(CL_VERBOSE_ADVANCED,"\tMAPP START: %p",ext.map);
-					VERBOSE(CL_VERBOSE_ADVANCED,"\tMAPP END : %p",&(ext.map[ext.size-1]));
-					VERBOSE(CL_VERBOSE_ADVANCED,"\tMAPP addr: %p", &(ext.map[record->ext_map]));
-					VERBOSE(CL_VERBOSE_ADVANCED,"\tMAPP: %hu - ID %i", record->ext_map,ext.map[record->ext_map].id);
+					MSG_NOTICE(msg_str, "\tMAPP: %hu - filled %i", record->ext_map,ext.filled);
+					MSG_NOTICE(msg_str, "\tMAPP size: %i",ext.size);
+					MSG_NOTICE(msg_str, "\tMAPP extension size: %li",sizeof(struct extension));
+					MSG_NOTICE(msg_str, "\tMAPP START: %p",ext.map);
+					MSG_NOTICE(msg_str, "\tMAPP END : %p",&(ext.map[ext.size-1]));
+					MSG_NOTICE(msg_str, "\tMAPP addr: %p", &(ext.map[record->ext_map]));
+					MSG_NOTICE(msg_str, "\tMAPP: %hu - ID %i", record->ext_map,ext.map[record->ext_map].id);
 					if(ext.map[record->ext_map].id == record->ext_map){
 						id = record->ext_map;
-						VERBOSE(CL_VERBOSE_ADVANCED,"\tMAP-INDEX-MATCH: %hu", record->ext_map);
+						MSG_NOTICE(msg_str, "\tMAP-INDEX-MATCH: %hu", record->ext_map);
 					} else { //index does NOT match map id.. we have to find it
 						for(j=0;j<ext.filled;j++){
 							if(ext.map[j].id == record->ext_map){
 								id = j;
-								VERBOSE(CL_VERBOSE_ADVANCED,"\tMAP-INDEX-NOT-MATCH: %hu - %hu",j, record->ext_map);
+								MSG_NOTICE(msg_str, "\tMAP-INDEX-NOT-MATCH: %hu - %hu",j, record->ext_map);
 							}
 						}
 					}
@@ -1238,22 +1243,22 @@ int main(int argc, char *argv[]){
 					struct ipfix_template *tmp= NULL;
 					struct ipfix_data_set *set= NULL;
 					if(TestFlag(record->flags, FLAG_IPV6_ADDR)){
-						VERBOSE(CL_VERBOSE_ADVANCED,"MANAGER SIZE: %i; COUNT: %i; INDEX: %i",template_mgr.max_length,template_mgr.counter,ext.map[id].tmp6_index);
+						MSG_NOTICE(msg_str, "MANAGER SIZE: %i; COUNT: %i; INDEX: %i",template_mgr.max_length,template_mgr.counter,ext.map[id].tmp6_index);
 						tmp = template_mgr.templates[ext.map[id].tmp6_index];
 					} else {
-						VERBOSE(CL_VERBOSE_ADVANCED,"MANAGER SIZE: %i; COUNT: %i; INDEX: %i",template_mgr.max_length,template_mgr.counter,ext.map[id].tmp6_index);
+						MSG_NOTICE(msg_str, "MANAGER SIZE: %i; COUNT: %i; INDEX: %i",template_mgr.max_length,template_mgr.counter,ext.map[id].tmp6_index);
 						tmp = template_mgr.templates[ext.map[id].tmp4_index];
 						//hex(template_mgr.templates,template_mgr.counter* sizeof(struct ipfix_template *));
 					}
 					s++;
 					set = (struct ipfix_data_set *) malloc(sizeof(struct ipfix_data_set)+ tmp->data_length);
 					if(set == NULL){
-						VERBOSE(CL_ERROR,"Malloc faild getting memory for data set");
+						MSG_ERROR(msg_str, "Malloc faild getting memory for data set");
 					}
 					memset(set,0,sizeof(struct ipfix_data_set)+ tmp->data_length);
 					set->header.flowset_id = htons(tmp->template_id);
 		
-					//VERBOSE(CL_VERBOSE_ADVANCED,"-----------------PRE------------------------");
+					//MSG_NOTICE(msg_str, "-----------------PRE------------------------");
 				//	hex(set,sizeof(struct ipfix_data_set)+ tmp->data_length);
 
 					fill_basic_data(set,record);
@@ -1262,24 +1267,24 @@ int main(int argc, char *argv[]){
 					ext_parse[2](record->data, &data_offset, record->flags, set); 
 					ext_parse[3](record->data, &data_offset, record->flags, set); 
 
-					VERBOSE(CL_VERBOSE_ADVANCED,"3EXP HEADER FILLED: %i", set->header.length);
+					MSG_NOTICE(msg_str, "3EXP HEADER FILLED: %i", set->header.length);
 
 					for(eid=0;eid<ext.map[id].values_count;eid++){
-						VERBOSE(CL_VERBOSE_ADVANCED,"\tMAP: %hu EXT-ID %hu",id ,ext.map[id].value[eid]);
+						MSG_NOTICE(msg_str, "\tMAP: %hu EXT-ID %hu",id ,ext.map[id].value[eid]);
 						ext_parse[ext.map[id].value[eid]](record->data, &data_offset, record->flags, set); 
-						VERBOSE(CL_VERBOSE_ADVANCED,"EXP:%i HEADER FILLED: %i",eid, set->header.length);
+						MSG_NOTICE(msg_str, "EXP:%i HEADER FILLED: %i",eid, set->header.length);
 					}
-					//VERBOSE(CL_VERBOSE_ADVANCED,"-----------------POST------------------------");
+					//MSG_NOTICE(msg_str, "-----------------POST------------------------");
 					//hex(set,sizeof(struct ipfix_data_set)+ tmp->data_length);
-					VERBOSE(CL_VERBOSE_ADVANCED,"ALL EXP HEADER FILLED: %i", set->header.length);
+					MSG_NOTICE(msg_str, "ALL EXP HEADER FILLED: %i", set->header.length);
 
 					set->header.length += sizeof(struct ipfix_set_header);
 					ipfix_msg.pkt_header->length += set->header.length;
 					add_data_set(&ipfix_msg, set, tmp);
 					chagne_endianity(&ipfix_msg);
-					VERBOSE(CL_VERBOSE_ADVANCED,"STORE IT FASTBIT!");
+					MSG_NOTICE(msg_str, "STORE IT FASTBIT!");
 					plugin_store (config, &ipfix_msg, &template_mgr);
-					VERBOSE(CL_VERBOSE_ADVANCED,"FASTBIT STORED IT!");
+					MSG_NOTICE(msg_str, "FASTBIT STORED IT!");
 					clean_ipfix_msg(&ipfix_msg);
 
 				} else if(record->type == ExtensionMapType){
@@ -1290,16 +1295,16 @@ int main(int argc, char *argv[]){
 						//double the size of extension map array
 						ext.map=(struct extension *) realloc(ext.map,(ext.size * 2)*sizeof(struct extension));
 						if(ext.map==NULL){
-							VERBOSE(CL_ERROR,"Can't realloc extension map array");
+							MSG_ERROR(msg_str, "Can't realloc extension map array");
 							fclose(f);
 							return 1;
 						}
-						VERBOSE(CL_VERBOSE_ADVANCED,"EXT REALOC! SIZE NEW: %i OLD: %i, ADDR %p - %p", ext.size*2, ext.size, ext.map,&(ext.map[(ext.size*2)-1]));
+						MSG_NOTICE(msg_str, "EXT REALOC! SIZE NEW: %i OLD: %i, ADDR %p - %p", ext.size*2, ext.size, ext.map,&(ext.map[(ext.size*2)-1]));
 						ext.size*=2;
 					}
-					VERBOSE(CL_VERBOSE_ADVANCED,"FILLED  %i - size: %i", ext.filled,ext.size);
+					MSG_NOTICE(msg_str, "FILLED  %i - size: %i", ext.filled,ext.size);
 					ext.map[ext.filled].value = (uint16_t *) malloc(extension_map->extension_size);
-					VERBOSE(CL_VERBOSE_ADVANCED,"EXT ADDED %i",ext.filled);
+					MSG_NOTICE(msg_str, "EXT ADDED %i",ext.filled);
 					ext.map[ext.filled].values_count = 0;
 					ext.map[ext.filled].id = extension_map->map_id;
 
@@ -1307,15 +1312,15 @@ int main(int argc, char *argv[]){
 					if(template_mgr.counter == template_mgr.max_length){
 						//double the size of extension map array
 						if((template_mgr.templates = (struct ipfix_template **)realloc(template_mgr.templates,sizeof(struct ipfix_template *)*(template_mgr.max_length*2)))==NULL){
-							VERBOSE(CL_ERROR,"Can't realloc extension map array");
+							MSG_ERROR(msg_str, "Can't realloc extension map array");
 							fclose(f);
 							return 1;
 						}
 						template_mgr.max_length*=2;
-						VERBOSE(CL_VERBOSE_ADVANCED,"REALOC TEMP-ARRAY: %p - %p",template_mgr.templates, &(template_mgr.templates[template_mgr.max_length-1]));
+						MSG_NOTICE(msg_str, "REALOC TEMP-ARRAY: %p - %p",template_mgr.templates, &(template_mgr.templates[template_mgr.max_length-1]));
 					}
 					struct ipfix_template *template1;
-					VERBOSE(CL_VERBOSE_ADVANCED,"TMP COUNTER: %i - %p", template_mgr.counter,&(template_mgr.templates[template_mgr.counter]));
+					MSG_NOTICE(msg_str, "TMP COUNTER: %i - %p", template_mgr.counter,&(template_mgr.templates[template_mgr.counter]));
 					fill_basic_template(0, &(template_mgr.templates[template_mgr.counter])); //template for this record with ipv4
 					template1 = template_mgr.templates[template_mgr.counter];
 					ext.map[ext.filled].tmp4_index = template_mgr.counter;
@@ -1324,36 +1329,36 @@ int main(int argc, char *argv[]){
 					if(template_mgr.counter == template_mgr.max_length){
 						//double the size of extension map array
 						if((template_mgr.templates= (struct ipfix_template **) realloc(template_mgr.templates,sizeof(struct ipfix_template *)*(template_mgr.max_length*2)))==NULL){
-							VERBOSE(CL_ERROR,"Can't realloc extension map array");
+							MSG_ERROR(msg_str, "Can't realloc extension map array");
 							fclose(f);
 							return 1;
 						}
 						template_mgr.max_length*=2;
-						VERBOSE(CL_VERBOSE_ADVANCED," REALOC TEMP-ARRAY: %p - %p",template_mgr.templates, &(template_mgr.templates[template_mgr.max_length-1]));
+						MSG_NOTICE(msg_str, " REALOC TEMP-ARRAY: %p - %p",template_mgr.templates, &(template_mgr.templates[template_mgr.max_length-1]));
 					}
 					struct ipfix_template *template2;
-					VERBOSE(CL_VERBOSE_ADVANCED,"TMP COUNTER2: %i", template_mgr.counter);
+					MSG_NOTICE(msg_str, "TMP COUNTER2: %i", template_mgr.counter);
 					fill_basic_template(1, &(template_mgr.templates[template_mgr.counter])); //template for this record with ipv6
 					template2 = template_mgr.templates[template_mgr.counter];
 					ext.map[ext.filled].id = extension_map->map_id;
 					ext.map[ext.filled].tmp6_index = template_mgr.counter;
 
 
-					VERBOSE(CL_VERBOSE_ADVANCED,"RECORD = EXTENSION MAP");
-					VERBOSE(CL_VERBOSE_ADVANCED,"\tTYPE: %hu", extension_map->type);
-					VERBOSE(CL_VERBOSE_ADVANCED,"\tSIZE: %hu", extension_map->size);
-					VERBOSE(CL_VERBOSE_ADVANCED,"\tMAP ID: %hu", extension_map->map_id);
-					VERBOSE(CL_VERBOSE_ADVANCED,"\tEXTENSION_SIZE: %hu", extension_map->extension_size);
+					MSG_NOTICE(msg_str, "RECORD = EXTENSION MAP");
+					MSG_NOTICE(msg_str, "\tTYPE: %hu", extension_map->type);
+					MSG_NOTICE(msg_str, "\tSIZE: %hu", extension_map->size);
+					MSG_NOTICE(msg_str, "\tMAP ID: %hu", extension_map->map_id);
+					MSG_NOTICE(msg_str, "\tEXTENSION_SIZE: %hu", extension_map->extension_size);
 
 					int eid=0;
 					for(eid = 0; eid < extension_map->extension_size/2;eid++){ // extension id is 2 byte
-						VERBOSE(CL_VERBOSE_ADVANCED,"\tEXTENSION_ID: %hu - %p -inedx: %i", extension_map->ex_id[eid],&extension_map->ex_id[eid],eid);
+						MSG_NOTICE(msg_str, "\tEXTENSION_ID: %hu - %p -inedx: %i", extension_map->ex_id[eid],&extension_map->ex_id[eid],eid);
 						ext.map[ext.filled].value[eid] = extension_map->ex_id[eid]; 
 						ext.map[ext.filled].values_count++;
 						ext_fill_tm[extension_map->ex_id[eid]] (0, template1);
-						VERBOSE(CL_VERBOSE_ADVANCED,"\tTEMPLATE1->DATA_LENGHT: %u",template1->data_length);
+						MSG_NOTICE(msg_str, "\tTEMPLATE1->DATA_LENGHT: %u",template1->data_length);
 						ext_fill_tm[extension_map->ex_id[eid]] (1, template2);
-						VERBOSE(CL_VERBOSE_ADVANCED,"\tTEMPLATE2->DATA_LENGHT: %u",template2->data_length);
+						MSG_NOTICE(msg_str, "\tTEMPLATE2->DATA_LENGHT: %u",template2->data_length);
 					}
 					
 					
@@ -1365,18 +1370,18 @@ int main(int argc, char *argv[]){
 					clean_ipfix_msg(&ipfix_msg);
 
 				} else if(record->type == ExporterType){
-					VERBOSE(CL_VERBOSE_ADVANCED,"RECORD = EXPORTER TYPE");
-					VERBOSE(CL_VERBOSE_ADVANCED,"\tTYPE: %hu", record->type);
-					VERBOSE(CL_VERBOSE_ADVANCED,"\tSIZE: %hu", record->size);
+					MSG_NOTICE(msg_str, "RECORD = EXPORTER TYPE");
+					MSG_NOTICE(msg_str, "\tTYPE: %hu", record->type);
+					MSG_NOTICE(msg_str, "\tSIZE: %hu", record->size);
 				} else {
-					VERBOSE(CL_VERBOSE_ADVANCED,"UNKNOWN RECORD TYPE");
-					VERBOSE(CL_VERBOSE_ADVANCED,"\tTYPE: %hu", record->type);
-					VERBOSE(CL_VERBOSE_ADVANCED,"\tSIZE: %hu", record->size);
+					MSG_NOTICE(msg_str, "UNKNOWN RECORD TYPE");
+					MSG_NOTICE(msg_str, "\tTYPE: %hu", record->type);
+					MSG_NOTICE(msg_str, "\tSIZE: %hu", record->size);
 				}
 
 				size += record->size;
 				if(size >= block_header.size){
-					VERBOSE(CL_VERBOSE_ADVANCED,"------- SIZE: %u - %u",size,block_header.size);
+					MSG_NOTICE(msg_str, "------- SIZE: %u - %u",size,block_header.size);
 					break;
 				}
 				buffer+= record->size;
@@ -1384,13 +1389,13 @@ int main(int argc, char *argv[]){
 			//clean_tmp_manager(&template_mgr);
 		}	
 
-		VERBOSE(CL_VERBOSE_ADVANCED,"fill tmp: %i; set: %i; iim: %i",fbt,s,iim);
+		MSG_NOTICE(msg_str, "fill tmp: %i; set: %i; iim: %i",fbt,s,iim);
 		dlclose(dlhandle);	
 		if(buffer_start!=NULL){
  			free(buffer_start);
 		}
 		
-		VERBOSE(CL_VERBOSE_ADVANCED,"ext count: %i",ext.filled);
+		MSG_NOTICE(msg_str, "ext count: %i",ext.filled);
 		for(i=0;i<=ext.filled;i++){
 			free(ext.map[i].value);
 		}
@@ -1400,7 +1405,7 @@ int main(int argc, char *argv[]){
 		fclose(f);
 		plugin_close(&config);
 	} else {
-		VERBOSE(CL_ERROR,"Can't open file: %s",input_file);
+		MSG_ERROR(msg_str, "Can't open file: %s",input_file);
 	}
 	return 0;
 }

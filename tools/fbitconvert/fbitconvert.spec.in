@@ -1,6 +1,6 @@
 Summary: Fbitconvert converts nfcapd file format to ipfixcol fastbit file format.
-Name: fbitconvert
-Version: %(cut -f1 ./VERSION | tr -d '\n')
+Name: @PACKAGE_NAME@
+Version: @PACKAGE_VERSION@
 Release: @RELEASE@
 URL: http://www.liberouter.org/
 Source: http://homeproj.cesnet.cz/rpm/liberouter/stable/SOURCES/%{name}-%{version}-%{release}.tar.gz
@@ -11,8 +11,6 @@ Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 
 BuildRequires: gcc make
-BuildRequires: libcommlbr-devel >= 2.0.0 , libcommlbr-devel < 3.0.0
-Requires: libcommlbr >= 2.0.0 , libcommlbr < 3.0.0
 BuildRequires: ipfixcol-devel
 Requires: ipfixcol-fastbit-output
 
@@ -31,7 +29,7 @@ Fbitconvert converts nfcapd file format to ipfixcol fastbit file format.
 
 
 %build
-./configure --with-distro=@DISTRO@ --prefix=%{_prefix} @CONFIGURE_PARAMS@;
+%configure --with-distro=@DISTRO@
 make
 
 %install

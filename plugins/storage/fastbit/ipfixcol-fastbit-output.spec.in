@@ -1,4 +1,4 @@
-Summary: Tool for displaying captured ipfix data in fastbit database format.
+Summary: Fastbit storage plugin for ipfixcol.
 Name: @PACKAGE_NAME@
 Version: @PACKAGE_VERSION@
 Release: @RELEASE@
@@ -10,12 +10,14 @@ Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 
-BuildRequires: gcc-c++ flex bison make doxygen graphviz pkgconfig fastbit-liberouter 
+BuildRequires: gcc make doxygen
 Requires: fastbit-liberouter
-BuildRequires: fastbit-liberouter-devel
+BuildRequires: fastbit-liberouter-devel ipfixcol-devel
+Requires: ipfixcol
 
 %description
-Tool for displaying captured ipfix data in fastbit database format.
+Fastbit storage plugin for ipfixcol.
+
 
 %prep
 %setup
@@ -26,16 +28,15 @@ Tool for displaying captured ipfix data in fastbit database format.
 
 %postun
 
+
 %build
 %configure --with-distro=@DISTRO@
 make
-make man
 
 %install
-make DESTDIR=%buildroot install
+make DESTDIR=$RPM_BUILD_ROOT install
 
 %files
-%_bindir/fbitdump
-%_datadir/fbitdump/fbitdump.xml
-%_mandir/man1/fbitdump.1.gz
-%_mandir/man5/fbitdump.xml.5.gz
+#storage plugins
+%{_datadir}/%{name}/plugins/ipfixcol-fastbit-output.*
+%{_mandir}/man1/ipfixcol-fastbit-output.1*

@@ -1,9 +1,0 @@
-prefix = @prefix@
-includedir = @includedir@
-datarootdir = @datarootdir@
-datadir = @datadir@
-
-Name: ipfixcol
-Version: @PACKAGE_VERSION@
-Description: IPFIX Collector Toolset
-Cflags: -I${includedir}

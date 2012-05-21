@@ -1,0 +1,15 @@
+Use 
+$ autoreconf -i 
+to generate configure script from configure.ac, Makefile.in from Makefile.am and install missing files.
+
+Use
+$ ./configure
+to configure packages in subdirectories and generate Makefiles. 
+
+Run 
+$ make
+to build all projects
+
+
+The projects that depend on ipfixcol headers check the reltive path to base/header directory to use headers. 
+When project is separated from the structure, it needs to have the headrs installed (ipfixcol-devel package).
