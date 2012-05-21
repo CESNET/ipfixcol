@@ -112,7 +112,8 @@ static int regexp_asterisk(char *regexp, char *string)
 
 	if ((asterisk_pos = strchr(regexp, asterisk)) == NULL) {
 		/* this string doesn't contain asterisk... */
-		if (strcmp(regexp, string)) {
+		if (!strcmp(regexp, string)) {
+			/* we've found a match! */
 			return 1;
 		} else {
 			return 0;

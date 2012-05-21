@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+
+# ipfixviewer
+#
+# Copyright (C) 2012 CESNET, z.s.p.o.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with the
+#    distribution.
+# 3. Neither the name of the Company nor the names of its contributors
+#    may be used to endorse or promote products derived from this
+#    software without specific prior written permission.
+#
+# ALTERNATIVELY, provided that this notice is retained in full, this
+# product may be distributed under the terms of the GNU General Public
+# License (GPL) version 2 or later, in which case the provisions
+# of the GPL apply INSTEAD OF those given above.
+#
+# This software is provided ``as is, and any express or implied
+# warranties, including, but not limited to, the implied warranties of
+# merchantability and fitness for a particular purpose are disclaimed.
+# In no event shall the company or contributors be liable for any
+# direct, indirect, incidental, special, exemplary, or consequential
+# damages (including, but not limited to, procurement of substitute
+# goods or services; loss of use, data, or profits; or business
+# interruption) however caused and on any theory of liability, whether
+# in contract, strict liability, or tort (including negligence or
+# otherwise) arising in any way out of the use of this software, even
+# if advised of the possibility of such damage.
+#
+#
+
+# TODO generate this script by configure (@exec_prefix@/bin/ipfixcol?)
+IPFIXCOL_EXEC="/usr/local/bin/ipfixcol"
+IPFIXCOL_PARAMS="-c "
+IPFIXCOL_CONFIG="/etc/ipfixcol/ipfixviewer_startup.xml"
+
+usage()
+{
+	echo "Usage: $0 IPFIX_FILE"
+}
+
+sanity_check()
+{
+	# check whether ipfixcol is installed
+	if [ ! -f ${IPFIXCOL_EXEC} ]; then
+		echo "$IPFIXCOL_EXEC: ipfixcol not found"
+		exit 1
+	fi
+}
+
+main()
+{
+	if [ $# -eq 0 ]; then
+		usage
+		exit 1
+	fi
+	
+	sanity_check
+
+	# check whether input file exists
+	if [ ! -f "$1" ]; then
+		echo "$1: no such file"
+		exit 1
+	fi
+
+	# get absolute path of the input file
+	INPUT_FILE_PATH=`readlink -f ${1}`
+
+	# load config file
+	CONFIG=`cat ${IPFIXCOL_CONFIG}`
+
+	# use given input file
+	CONFIG=${CONFIG/__REPLACE_WITH_INPUT_FILE__/$INPUT_FILE_PATH}
+
+	# create our modified config file in /tmp
+	TMP_CONFIG=`mktemp`
+	chmod 600 ${TMP_CONFIG}
+
+	# save new config
+	echo "$CONFIG" > $TMP_CONFIG
+
+	# execute ipfixcol with our config
+	${IPFIXCOL_EXEC} ${IPFIXCOL_PARAMS} ${TMP_CONFIG}
+
+	# remove config file
+	rm -f ${TMP_CONFIG}
+	
+	exit 0
+}
+
+
+# invoke main function
+main $*
+

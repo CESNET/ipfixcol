@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
+
+	<collectingProcess>
+		<name>view</name>
+		<fileReader>
+			<file>file:__REPLACE_WITH_INPUT_FILE__</file>
+		</fileReader>
+		<exportingProcess>File viewer</exportingProcess>
+	</collectingProcess>
+
+	
+	<exportingProcess>
+		<name>File viewer</name>
+		<destination>
+			<name>View IPFIX message</name>
+			<fileWriter>
+				<fileFormat>view</fileFormat>
+			</fileWriter>
+		</destination>
+	</exportingProcess>
+</ipfix>
