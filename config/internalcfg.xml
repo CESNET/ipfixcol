@@ -53,4 +53,9 @@
 		<file>/usr/lib64/ipfixcol-dummy-output.so</file>
 		<threadName>dummy</threadName>
 	</storagePlugin>
+        <!--## ipfixviewer storage plugin -->
+        <storagePlugin>
+                <fileFormat>view</fileFormat>
+                <file>/usr/lib64/ipfixcol-ipfixviewer-output.so</file>
+        </storagePlugin>
 </ipfixcol>
