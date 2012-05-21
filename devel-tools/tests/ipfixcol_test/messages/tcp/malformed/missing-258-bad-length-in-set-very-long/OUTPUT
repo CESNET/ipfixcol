@@ -1,1 +1,1 @@
-VERBOSE: Malformed IPFIX message detected (bad length), skipping packet.
+WARNING: preprocessor: Malformed IPFIX message detected (bad length), skipping packet.

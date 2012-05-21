@@ -39,12 +39,15 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <commlbr.h>
 #include <pthread.h>
 #include <libxml/tree.h>
+#include <sys/prctl.h>
 
 #include "../ipfixcol.h"
 #include "data_manager.h"
+
+/** Identifier to MSG_* macros */
+static char *msg_module = "data manager";
 
 /**
  * \brief
@@ -125,7 +128,7 @@ static int data_manager_process_one_template(struct ipfix_template_mgr *template
 	/* these templates are no longer used (checked in data_manager_withdraw_templates()) */
 	if (input_info->type == SOURCE_TYPE_UDP && ntohs(template_record->count) == 0) {
 		/* got withdrawal message with UDP -> this is wrong */
-		VERBOSE(CL_VERBOSE_BASIC, "Got template withdraw message on UDP. Ignoring.");
+		MSG_WARNING(msg_module, "Got template withdraw message on UDP. Ignoring.");
 		return TM_TEMPLATE_WITHDRAW_LEN;
 	} else if (ntohs(template_record->template_id) == IPFIX_TEMPLATE_FLOWSET_ID &&
 			ntohs(template_record->count) == 0) {
@@ -137,23 +140,28 @@ static int data_manager_process_one_template(struct ipfix_template_mgr *template
 		ret = tm_remove_template(template_mgr, ntohs(template_record->template_id));
 		/* Log error when removing unknown template */
 		if (ret == 1) {
-			VERBOSE(CL_VERBOSE_BASIC, "%s withdraw message received for unknown Template ID: %u",
+			MSG_WARNING(msg_module, "%s withdraw message received for unknown Template ID: %u",
 					(type==TM_TEMPLATE)?"Template":"Options template", ntohs(template_record->template_id));
 		}
 		return TM_TEMPLATE_WITHDRAW_LEN;
 		/* check whether template exists */
 	} else if ((template = tm_get_template(template_mgr, ntohs(template_record->template_id))) == NULL) {
 		/* add template */
-		MSG(0, "New %s ID %i", (type==TM_TEMPLATE)?"template":"options template", ntohs(template_record->template_id));
-		template = tm_add_template(template_mgr, tmpl, max_len, type);
+		/* check that the template has valid ID ( < 256 ) */
+		if (ntohs(template_record->template_id) < 256) {
+			MSG_WARNING(msg_module, "%s ID %i is reserved and not valid for data set!", (type==TM_TEMPLATE)?"Template":"Options template", ntohs(template_record->template_id));
+		} else {
+			MSG_NOTICE(msg_module, "New %s ID %i", (type==TM_TEMPLATE)?"template":"options template", ntohs(template_record->template_id));
+			template = tm_add_template(template_mgr, tmpl, max_len, type);
+		}
 	} else {
 		/* template already exists */
-		VERBOSE(CL_VERBOSE_BASIC, "%s ID %i already exists. Rewriting.",
-				(type==TM_TEMPLATE)?"template":"options template", template->template_id);
+		MSG_WARNING(msg_module, "%s ID %i already exists. Rewriting.",
+				(type==TM_TEMPLATE)?"Template":"Options template", template->template_id);
 		template = tm_update_template(template_mgr, tmpl, type);
 	}
 	if (template == NULL) {
-		VERBOSE(CL_VERBOSE_BASIC, "Cannot parse %s set, skipping to next set",
+		MSG_WARNING(msg_module, "Cannot parse %s set, skipping to next set",
 				(type==TM_TEMPLATE)?"template":"options template");
 		return 0;
 		/* update UDP timeouts */
@@ -235,13 +243,13 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 	for (i=0; msg->data_couple[i].data_set != NULL && i<1023; i++) {
 		msg->data_couple[i].data_template = tm_get_template(template_mgr, ntohs(msg->data_couple[i].data_set->header.flowset_id));
 		if (msg->data_couple[i].data_template == NULL) {
-			VERBOSE(CL_VERBOSE_OFF, "Data template with ID %i not found!", ntohs(msg->data_couple[i].data_set->header.flowset_id));
+			MSG_WARNING(msg_module, "Data template with ID %i not found!", ntohs(msg->data_couple[i].data_set->header.flowset_id));
 		} else {
 			if ((msg->input_info->type == SOURCE_TYPE_UDP) && /* source UDP */
 					((time(NULL) - msg->data_couple[i].data_template->last_transmission > udp_conf->template_life_time) || /* lifetime expired */
 					(udp_conf->template_life_packet > 0 && /* life packet should be checked */
 					(uint32_t) (msg_counter - msg->data_couple[i].data_template->last_message) > udp_conf->template_life_packet))) {
-				VERBOSE(CL_VERBOSE_BASIC, "Data template ID %i expired! Using old template.",
+				MSG_WARNING(msg_module, "Data template ID %i expired! Using old template.",
 				                                               msg->data_couple[i].data_template->template_id);
 			}
 
@@ -378,6 +386,10 @@ static void* data_manager_thread (void* cfg)
 	unsigned int index;
 	uint32_t sequence_number = 0, msg_counter = 0;
 
+	/* set the thread name to reflect the configuration */
+	snprintf(config->thread_name, 16, "ipfixcol DM %d", config->observation_domain_id);
+	prctl(PR_SET_NAME, config->thread_name, 0, 0, 0);
+
 	/* initialise UDP timeouts */
 	data_manager_udp_init((struct input_info_network*) config->input_info, &udp_conf);
 
@@ -393,14 +405,14 @@ static void* data_manager_thread (void* cfg)
 			/* check sequence number */
 			/* \todo handle out of order messages */
 			if (sequence_number != ntohl(msg->pkt_header->sequence_number)) {
-				VERBOSE(CL_VERBOSE_ADVANCED, "Sequence number does not match: expected %u, got %u",
+				MSG_WARNING(msg_module, "Sequence number does not match: expected %u, got %u",
 						sequence_number, ntohl(msg->pkt_header->sequence_number));
 				sequence_number = ntohl(msg->pkt_header->sequence_number);
 			}
 
 			/* Check whether there are withdraw templates (not for UDP) */
 			if (config->input_info->type != SOURCE_TYPE_UDP &&  data_manager_withdraw_templates(msg)) {
-				VERBOSE(CL_VERBOSE_ADVANCED, "Got template withdrawal message. Waiting for storage packets.");
+				MSG_NOTICE(msg_module, "Got template withdrawal message. Waiting for storage packets.");
 				/* wait for storage plugins to consume all pending messages */
 				while (rbuffer_wait_empty(config->store_queue));
 			}
@@ -411,7 +423,7 @@ static void* data_manager_thread (void* cfg)
 
 		/* pass data into the storage plugins */
 		if (rbuffer_write (config->store_queue, msg, config->plugins_count) != 0) {
-			VERBOSE (CL_VERBOSE_BASIC, "ODID %d: Unable to pass data into the Storage plugins' queue.",
+			MSG_WARNING(msg_module, "ODID %d: Unable to pass data into the Storage plugins' queue.",
 					config->observation_domain_id);
 			rbuffer_remove_reference (config->in_queue, index, 1);
 			continue;
@@ -425,7 +437,7 @@ static void* data_manager_thread (void* cfg)
 
         /* passing NULL message means closing */
         if (msg == NULL) {
-			VERBOSE (CL_VERBOSE_ADVANCED, "ODID %d: No more data from IPFIX preprocessor.",
+        	MSG_NOTICE(msg_module, "ODID %d: No more data from IPFIX preprocessor.",
 					config->observation_domain_id);
 			break;
 		}
@@ -437,7 +449,7 @@ static void* data_manager_thread (void* cfg)
         aux_storage = aux_storage->next;
     }
 
-	VERBOSE (CL_VERBOSE_ADVANCED, "ODID %d: Closing Data manager's thread.",
+	MSG_NOTICE(msg_module, "ODID %d: Closing Data manager's thread.",
 			config->observation_domain_id);
 
 	return (NULL);
@@ -450,12 +462,15 @@ static void* storage_plugin_thread (void* cfg)
 	struct ipfix_message* msg;
 	unsigned int index = config->thread_config->queue->read_offset;
 
+	/* set the thread name to reflect the configuration */
+	prctl(PR_SET_NAME, config->thread_name, 0, 0, 0);
+
     /* loop will break upon receiving NULL from buffer */
 	while (1) {
 		/* get next data */
 		msg = rbuffer_read (config->thread_config->queue, &index);
 		if (msg == NULL) {
-			VERBOSE (CL_VERBOSE_BASIC, "No more data from Data manager.");
+			MSG_NOTICE("storage plugin thread", "No more data from Data manager.");
             break;
 		}
 
@@ -469,7 +484,7 @@ static void* storage_plugin_thread (void* cfg)
 		index = (index + 1) % config->thread_config->queue->size;
 	}
 
-	VERBOSE (CL_VERBOSE_ADVANCED, "Closing storage plugin's thread.");
+	MSG_NOTICE("storage plugin thread", "Closing storage plugin's thread.");
 	return (NULL);
 }
 
@@ -513,21 +528,21 @@ struct data_manager_config* data_manager_create (
 	/* prepare Data manager's config structure */
 	config = (struct data_manager_config*) calloc (1, sizeof(struct data_manager_config));
 	if (config == NULL) {
-		VERBOSE (CL_VERBOSE_OFF, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return (NULL);
 	}
 
 	/* initiate queue to communicate with IPFIX preprocessor */
 	config->in_queue = rbuffer_init(RING_BUFFER_SIZE);
 	if (config->in_queue == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to initiate queue for communication with IPFIX preprocessor.");
+		MSG_ERROR(msg_module, "Unable to initiate queue for communication with IPFIX preprocessor.");
 		data_manager_free (config);
 		return (NULL);
 	}
 	/* initiate queue to communicate with storage plugins' threads */
 	config->store_queue = rbuffer_init(RING_BUFFER_SIZE);
 	if (config->store_queue == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to initiate queue for communication with Storage plugins.");
+		MSG_ERROR(msg_module, "Unable to initiate queue for communication with Storage plugins.");
 		data_manager_free (config);
 		return (NULL);
 	}
@@ -562,7 +577,7 @@ struct data_manager_config* data_manager_create (
 		/* allocate memory for copy of storage structure for description of storage plugin */
 		aux_storage = (struct storage_list*) malloc (sizeof(struct storage_list));
 		if (aux_storage == NULL) {
-			VERBOSE (CL_VERBOSE_OFF, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			storage_plugins = storage_plugins->next;
 			continue;
 		}
@@ -574,7 +589,7 @@ struct data_manager_config* data_manager_create (
 		xmlDocDumpMemory (aux_storage->storage.xml_conf->xmldata, &plugin_params, NULL);
 		retval = aux_storage->storage.init ((char*) plugin_params, &(aux_storage->storage.config));
 		if (retval != 0) {
-			VERBOSE(CL_VERBOSE_OFF, "Initiating storage plugin failed.");
+			MSG_WARNING(msg_module, "Initiating storage plugin failed.");
 			xmlFree (plugin_params);
 			storage_plugins = storage_plugins->next;
 			continue;
@@ -591,7 +606,7 @@ struct data_manager_config* data_manager_create (
 		/* create storage plugin thread */
 		plugin_cfg = (struct storage_thread_conf*) malloc (sizeof (struct storage_thread_conf));
 		if (plugin_cfg == NULL) {
-			VERBOSE (CL_VERBOSE_OFF, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			aux_storage->storage.close (&(aux_storage->storage.config));
 			storage_plugins = storage_plugins->next;
 			continue;
@@ -600,7 +615,7 @@ struct data_manager_config* data_manager_create (
 		plugin_cfg->template_mgr = config->template_mgr;
 		aux_storage->storage.thread_config = plugin_cfg;
 		if (pthread_create(&(plugin_cfg->thread_id), NULL, &storage_plugin_thread, (void*) &aux_storage->storage) != 0) {
-			VERBOSE(CL_VERBOSE_OFF, "Unable to create storage plugin thread.");
+			MSG_ERROR(msg_module, "Unable to create storage plugin thread.");
 			aux_storage->storage.close (&(aux_storage->storage.config));
 			free (plugin_cfg);
 			aux_storage->storage.thread_config = NULL;
@@ -618,14 +633,14 @@ struct data_manager_config* data_manager_create (
 
 	/* check if at least one storage plugin initiated */
 	if (config->plugins_count == 0) {
-		VERBOSE(CL_VERBOSE_OFF, "No storage plugin for the Data manager initiated.");
+		MSG_WARNING(msg_module, "No storage plugin for the Data manager initiated.");
 		data_manager_free (config);
 		return (NULL);
 	}
 
 	/* create new thread of data manager */
 	if (pthread_create(&(config->thread_id), NULL, &data_manager_thread, (void*)config) != 0) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to create data manager thread.");
+		MSG_ERROR(msg_module, "Unable to create data manager thread.");
 		data_manager_free (config);
 		return (NULL);
 	}

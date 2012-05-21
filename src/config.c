@@ -43,14 +43,15 @@
 #include <fcntl.h>
 #include <string.h>
 #include <errno.h>
-#include <commlbr.h>
-
 #include <libxml/xpathInternals.h>
 
 #include "../ipfixcol.h"
 #include "config.h"
 
 #define DEFAULT_STORAGE_PLUGIN "ipfix"
+
+/** Identifier to MSG_* macros */
+static char *msg_module = "config";
 
 /**
  * \addtogroup internalConfig
@@ -143,11 +144,11 @@ static xmlXPathContextPtr ic_init (xmlChar* ns_name)
 
 	/* open and prepare internal XML configuration file */
 	if ((fd = open (INTERNAL_CONFIG_FILE, O_RDONLY)) == -1) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to open internal configuration file %s (%s)", INTERNAL_CONFIG_FILE, strerror(errno));
+		MSG_ERROR(msg_module, "Unable to open internal configuration file %s (%s)", INTERNAL_CONFIG_FILE, strerror(errno));
 		return (NULL);
 	}
 	if ((doc = xmlReadFd (fd, NULL, NULL, XML_PARSE_NOERROR | XML_PARSE_NOWARNING | XML_PARSE_NOBLANKS)) == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to parse internal configuration file %s", INTERNAL_CONFIG_FILE);
+		MSG_ERROR(msg_module, "Unable to parse internal configuration file %s", INTERNAL_CONFIG_FILE);
 		close (fd);
 		return (NULL);
 	}
@@ -155,13 +156,13 @@ static xmlXPathContextPtr ic_init (xmlChar* ns_name)
 
 	/* create xpath evaluation context of internal configuration file */
 	if ((ctxt = xmlXPathNewContext (doc)) == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to create XPath context for internal configuration (%s:%d).", __FILE__, __LINE__)
+		MSG_ERROR(msg_module, "Unable to create XPath context for internal configuration (%s:%d).", __FILE__, __LINE__);
 		xmlFreeDoc (doc);
 		return (NULL);
 	}
 	/* register namespace for the context of internal configuration file */
 	if (xmlXPathRegisterNs (ctxt, ns_name, BAD_CAST "urn:cesnet:params:xml:ns:yang:ipfixcol-internals") != 0) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to register namespace for internal configuration file (%s:%d).", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Unable to register namespace for internal configuration file (%s:%d).", __FILE__, __LINE__);
 		xmlXPathFreeContext (ctxt);
 		xmlFreeDoc (doc);
 		return (NULL);
@@ -191,7 +192,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	        config_ctxt = NULL, exporter_ctxt = NULL;
 	xmlXPathObjectPtr xpath_obj_expprocnames = NULL, xpath_obj_expproc = NULL,
 	        xpath_obj_destinations = NULL, xpath_obj_plugin_desc = NULL;
-	xmlChar *file_format, *file_format_inter, *plugin_file, *odid;
+	xmlChar *file_format, *file_format_inter, *plugin_file, *odid, *thread_name;
 	struct plugin_xml_conf_list* plugins = NULL, *aux_plugin = NULL;
 	char *odidptr;
 
@@ -204,7 +205,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	xpath_obj_plugin_desc = xmlXPathEvalExpression (BAD_CAST "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:storagePlugin", internal_ctxt);
 	if (xpath_obj_plugin_desc != NULL) {
 		if (xmlXPathNodeSetIsEmpty (xpath_obj_plugin_desc->nodesetval)) {
-			VERBOSE(CL_VERBOSE_OFF, "No list of supported Storage formats found in internal configuration!");
+			MSG_ERROR(msg_module, "No list of supported Storage formats found in internal configuration!");
 			goto cleanup;
 		}
 	}
@@ -215,13 +216,13 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 
 	/* create xpath evaluation context of collector node */
 	if ((collector_ctxt = xmlXPathNewContext (collector_doc)) == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to create XPath context for collectingProcess (%s:%d).", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Unable to create XPath context for collectingProcess (%s:%d).", __FILE__, __LINE__);
 		goto cleanup;
 	}
 
 	/* register namespace for the context of internal configuration file */
 	if (xmlXPathRegisterNs (collector_ctxt, BAD_CAST "ietf-ipfix", BAD_CAST "urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp") != 0) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to register namespace for collectingProcess (%s:%d).", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Unable to register namespace for collectingProcess (%s:%d).", __FILE__, __LINE__);
 		return (NULL);
 	}
 
@@ -229,20 +230,20 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	xpath_obj_expprocnames = xmlXPathEvalExpression (BAD_CAST "/ietf-ipfix:collectingProcess/ietf-ipfix:exportingProcess", collector_ctxt);
 	if (xpath_obj_expprocnames != NULL) {
 		if (xmlXPathNodeSetIsEmpty (xpath_obj_expprocnames->nodesetval)) {
-			VERBOSE(CL_VERBOSE_BASIC, "No exportingProcess defined in the collectingProcess!");
+			MSG_ERROR(msg_module, "No exportingProcess defined in the collectingProcess!");
 			goto cleanup;
 		}
 	}
 
 	/* create xpath evaluation context of user configuration */
 	if ((config_ctxt = xmlXPathNewContext (config)) == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to create XPath context for user configuration (%s:%d).", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Unable to create XPath context for user configuration (%s:%d).", __FILE__, __LINE__);
 		goto cleanup;
 	}
 
 	/* register namespace for the context of internal configuration file */
 	if (xmlXPathRegisterNs (config_ctxt, BAD_CAST "ietf-ipfix", BAD_CAST "urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp") != 0) {
-		VERBOSE(CL_VERBOSE_OFF, "Unable to register namespace for user configuration (%s:%d).", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Unable to register namespace for user configuration (%s:%d).", __FILE__, __LINE__);
 		goto cleanup;
 	}
 
@@ -251,7 +252,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	xpath_obj_expproc = xmlXPathEvalExpression (BAD_CAST "/ietf-ipfix:ipfix/ietf-ipfix:exportingProcess", config_ctxt);
 	if (xpath_obj_expproc != NULL) {
 		if (xmlXPathNodeSetIsEmpty (xpath_obj_expproc->nodesetval)) {
-			VERBOSE(CL_VERBOSE_OFF, "No exporting process defined in user configuration!");
+			MSG_ERROR(msg_module, "No exporting process defined in user configuration!");
 			goto cleanup;
 		}
 	}
@@ -273,13 +274,13 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 						/* create xpath evaluation context of <exportingProcess> node */
 						exporter_ctxt = xmlXPathNewContext (exporter_doc);
 						if (exporter_ctxt == NULL) {
-							VERBOSE(CL_VERBOSE_OFF, "Unable to create XPath context for exportingProcess (%s:%d).", __FILE__, __LINE__);
+							MSG_ERROR(msg_module, "Unable to create XPath context for exportingProcess (%s:%d).", __FILE__, __LINE__);
 							goto cleanup;
 						}
 
 						/* register namespace for the context of <exportingProcess> in user config file */
 						if (xmlXPathRegisterNs (exporter_ctxt, BAD_CAST "ietf-ipfix", BAD_CAST "urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp") != 0) {
-							VERBOSE(CL_VERBOSE_OFF, "Unable to register namespace for exportingProcess (%s:%d).", __FILE__, __LINE__);
+							MSG_ERROR(msg_module, "Unable to register namespace for exportingProcess (%s:%d).", __FILE__, __LINE__);
 							goto cleanup;
 						}
 
@@ -311,13 +312,13 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 								file_format_inter = get_children_content (xpath_obj_plugin_desc->nodesetval->nodeTab[l], BAD_CAST "fileFormat");
 								if (file_format_inter == NULL) {
 									/* this plugin description node is invalid, there is no fileFormat element */
-									VERBOSE(CL_VERBOSE_BASIC, "storagePlugin with missing fileFormat detected!");
+									MSG_WARNING(msg_module, "storagePlugin with missing fileFormat detected!");
 									continue;
 								}
 								file_format = get_children_content (node_filewriter, BAD_CAST "fileFormat");
 								if (file_format == NULL) {
 									/* this fileWriter has no fileFormat element - use default format */
-									VERBOSE(CL_VERBOSE_BASIC, "User configuration contain fileWriter without specified format - using %s.", DEFAULT_STORAGE_PLUGIN);
+									MSG_WARNING(msg_module, "User configuration contain fileWriter without specified format - using %s.", DEFAULT_STORAGE_PLUGIN);
 									/* do not allocate memory since we always use strings allocated at other places or static strings */
 									file_format = BAD_CAST DEFAULT_STORAGE_PLUGIN;
 								}
@@ -325,9 +326,11 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 									/* now we are almost done - prepare an item of the plugin list for return */
 									plugin_file = get_children_content (xpath_obj_plugin_desc->nodesetval->nodeTab[l], BAD_CAST "file");
 									if (plugin_file == NULL) {
-										VERBOSE(CL_VERBOSE_BASIC, "Unable to detect path to storage plugin file for %s format in the internal configuration!", file_format_inter);
+										MSG_WARNING(msg_module, "Unable to detect path to storage plugin file for %s format in the internal configuration!", file_format_inter);
 										break;
 									}
+									/* load thread name from internalcfg.xml */
+									thread_name = get_children_content (xpath_obj_plugin_desc->nodesetval->nodeTab[l], BAD_CAST "threadName");
 									odid = get_children_content (xpath_obj_destinations->nodesetval->nodeTab[k], BAD_CAST "observationDomainId");
 									/* prepare plugin info structure for return list */
 									aux_plugin = (struct plugin_xml_conf_list*) calloc (1, sizeof(struct plugin_xml_conf_list));
@@ -337,11 +340,15 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 											aux_plugin->config.observation_domain_id = (char*) malloc (sizeof(char) * (xmlStrlen (odid) + 1));
 											strncpy (aux_plugin->config.observation_domain_id, (char*) odid, xmlStrlen (odid) + 1);
 										} else {
-											VERBOSE(CL_VERBOSE_BASIC, "observationDomainId element '%s' not valid. Ignoring...", (char*) odid);
+											MSG_WARNING(msg_module, "observationDomainId element '%s' not valid. Ignoring...", (char*) odid);
 										}
 									}
 									aux_plugin->config.file = (char*) malloc (sizeof(char) * (xmlStrlen (plugin_file) + 1));
 									strncpy (aux_plugin->config.file, (char*) plugin_file, xmlStrlen (plugin_file) + 1);
+									/* copy thread name to prepared string */
+									if (thread_name != NULL) {
+										strncpy (aux_plugin->config.name, (char*) thread_name, 16);
+									}
 									aux_plugin->config.xmldata = xmlNewDoc (BAD_CAST "1.0");
 									xmlDocSetRootElement (aux_plugin->config.xmldata, xmlCopyNode (node_filewriter, 1));
 									/* link new plugin item into the return list */
@@ -361,7 +368,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	}
 	/* inform that everything was done but no valid plugin has been found */
 	if (plugins == NULL) {
-		VERBOSE(CL_VERBOSE_BASIC, "No valid storage plugin specification for the collector found.");
+		MSG_WARNING(msg_module, "No valid storage plugin specification for the collector found.");
 	}
 
 	cleanup:
@@ -416,7 +423,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node)
 {
 	int i, j;
 	xmlChar *collector_name;
-	xmlNodePtr auxNode = NULL, children1 = NULL, children2 = NULL;
+	xmlNodePtr auxNode = NULL, children1 = NULL, children2 = NULL, children3 = NULL;
 	xmlXPathContextPtr internal_ctxt = NULL;
 	xmlXPathObjectPtr xpath_obj_suppcolls = NULL, xpath_obj_file = NULL;
 	struct plugin_xml_conf_list *retval = NULL;
@@ -424,7 +431,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node)
 	/* prepare return structure */
 	retval = (struct plugin_xml_conf_list*) malloc (sizeof(struct plugin_xml_conf_list));
 	if (retval == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return (NULL);
 	}
 	retval->next = NULL;
@@ -445,7 +452,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node)
 	xpath_obj_suppcolls = xmlXPathEvalExpression (BAD_CAST "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:supportedCollectors/cesnet-ipfixcol-int:name", internal_ctxt);
 	if (xpath_obj_suppcolls != NULL) {
 		if (xmlXPathNodeSetIsEmpty (xpath_obj_suppcolls->nodesetval)) {
-			VERBOSE(CL_VERBOSE_BASIC, "No list of supportedCollectors found in internal configuration!");
+			MSG_ERROR(msg_module, "No list of supportedCollectors found in internal configuration!");
 			free (retval);
 			retval = NULL;
 			goto cleanup;
@@ -463,7 +470,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node)
 	}
 	/* if we didn't found any valid collector description, we have to quit */
 	if (!auxNode) {
-		VERBOSE(CL_VERBOSE_OFF, "No valid collectingProcess description found!;");
+		MSG_ERROR(msg_module, "No valid collectingProcess description found!;");
 		free (retval);
 		retval = NULL;
 		goto cleanup;
@@ -483,7 +490,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node)
 	xpath_obj_file = xmlXPathEvalExpression (BAD_CAST "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:inputPlugin", internal_ctxt);
 	if (xpath_obj_file != NULL) {
 		if (xmlXPathNodeSetIsEmpty (xpath_obj_file->nodesetval)) {
-			VERBOSE(CL_VERBOSE_BASIC, "No inputPlugin definition found in internal configuration!");
+			MSG_ERROR(msg_module, "No inputPlugin definition found in internal configuration!");
 			free (retval);
 			retval = NULL;
 			goto cleanup;
@@ -491,10 +498,18 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node)
 	}
 	/* and now select the one with required name element */
 	for (i = 0; i < xpath_obj_file->nodesetval->nodeNr; i++) {
-		children1 = children2  = xpath_obj_file->nodesetval->nodeTab[i]->children;
+		children1 = children2 = children3 = xpath_obj_file->nodesetval->nodeTab[i]->children;
 		while (children1) {
 			if ((!strncmp ((char*) children1->name, "name", strlen ("name") + 1))
 			        && (!xmlStrncmp (children1->children->content, collector_name, xmlStrlen (collector_name) + 1))) {
+				/* find the processName of specified inputPlugin in internalcfg.xml */
+				while (children3) {
+					if (!xmlStrncmp (children3->name, BAD_CAST "processName", strlen ("processName") + 1)) {
+						strncpy(retval->config.name, (char*) children3->children->content, 16);
+					}
+					children3 = children3->next;
+				}
+				/* find the file of specified inputPLugin in internalcfg.xml */
 				while (children2) {
 					if (!xmlStrncmp (children2->name, BAD_CAST "file", strlen ("file") + 1)) {
 						retval->config.file = (char*) malloc (sizeof(char) * (strlen ((char*) children2->children->content) + 1));
@@ -510,7 +525,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node)
 
 found_input_plugin_file:
 	if (retval->config.file == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "No definition for collector found.")
+		MSG_ERROR(msg_module, "No definition for collector found.");
 		free (retval);
 		retval = NULL;
 	}

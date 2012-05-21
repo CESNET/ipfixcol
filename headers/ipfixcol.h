@@ -63,5 +63,6 @@
 #include <ipfixcol/storage.h>
 #include <ipfixcol/ipfix.h>
 #include <ipfixcol/templates.h>
+#include <ipfixcol/verbose.h>
 
 #endif /* IPFIXCOL_H_ */

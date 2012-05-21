@@ -58,6 +58,7 @@
 struct data_manager_config {
 	uint32_t observation_domain_id;
 	pthread_t thread_id;
+	char thread_name[16];	/**< Name of the thread for SET_PROCESS_NAME*/
 	unsigned int plugins_count;
 	struct ring_buffer *in_queue;
 	struct ring_buffer *store_queue;

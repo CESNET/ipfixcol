@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2008-2011</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>20 March 2012</date>
+		<authorgroup>
+			<author>
+				<personname>
+					<firstname>Petr</firstname>
+					<surname>Velan</surname>
+				</personname>
+				<email>petr.velan@cesnet.cz</email>
+				<contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol-dummy-output</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">Dummy output plugin for IPFIXcol.</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>ipfixcol-dummy-output</refname>
+		<refpurpose>Dummy output plugin for IPFIXcol that does not store any data.</refpurpose>
+	</refnamediv>
+	
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+			The <command>ipfix-dummy-output</command> plugin is a part of IPFIXcol (IPFIX collector). 
+			It provides means to test the collector without actually storing any data. Every call of store_packet function can have specified delay,
+			so that the throughput of the collector can be tested and required performance of storage plugins can be determined.
+		</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Configuration</title>
+		<simpara>The collector must be configured to use dummy output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
+		The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves. 
+		</simpara>
+		<simpara><filename>startup.xml</filename> dummy example</simpara>
+		<programlisting>
+	<![CDATA[
+	<destination>
+		<name>process data records dummy plugin</name>
+		<fileWriter>
+			<fileFormat>dummy</fileFormat>
+			<delay>number of microsecond</delay>
+		</fileWriter>
+	</destination>
+	]]>
+		</programlisting>
+	
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term><command>fileFormat</command></term>
+					<listitem>
+						<simpara>Same as in <filename>internalcfg.xml</filename> file.</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>delay</command></term>
+					<listitem>
+						<simpara>Number of microseconds that store_data function should take. This function is called once per every input packet with data.</simpara>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="https://homeproj.cesnet.cz/projects/ipfixcol/">https://homeproj.cesnet.cz/projects/ipfixcol/</link>
+					</term>
+					<listitem>
+						<para>IPFIXCOL Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>

@@ -57,7 +57,6 @@
 #include <netinet/sctp.h>
 #include <sys/epoll.h>
 #include <pthread.h>
-#include <commlbr.h>
 #include <errno.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
@@ -86,6 +85,8 @@
  * will be reallocated */
 #define DEFAULT_NUMBER_OF_ADDRESSES 20
 
+/** Identifier to MSG_* macros */
+static char *msg_module = "sctp input";
 
 /**
  * \struct input_info_node
@@ -151,7 +152,7 @@ void *listen_worker(void *data) {
 				pthread_testcancel();
 			}
 
-			VERBOSE(CL_VERBOSE_BASIC, "accept() - %s", strerror(errno));
+			MSG_ERROR(msg_module, "accept() - %s", strerror(errno));
 			continue;
 		}
 
@@ -161,7 +162,7 @@ void *listen_worker(void *data) {
 		/* input_info - fill out information about input */
 		node = (struct input_info_node *) malloc(sizeof(*node));
 		if (!node) {
-			VERBOSE(CL_VERBOSE_BASIC, "Not enough memory (%s:%d)", 
+			MSG_ERROR(msg_module, "Not enough memory (%s:%d)",
 			                 __FILE__, __LINE__);
 			goto err_assoc;
 		}
@@ -190,13 +191,13 @@ void *listen_worker(void *data) {
 		ev.data.fd = conn_socket;
 		ret = epoll_ctl(conf->epollfd, EPOLL_CTL_ADD, conn_socket, &ev);
 		if (ret == -1) {
-			VERBOSE(CL_VERBOSE_OFF, "epoll_ctl() error");
+			MSG_ERROR(msg_module, "epoll_ctl() error");
 			goto err_assoc;
 		}
 
 		inet_ntop(AF_INET6, &(src_addr6->sin6_addr), printable_ip, 
 		                             INET6_ADDRSTRLEN);
-		VERBOSE(CL_VERBOSE_BASIC, "New SCTP association from %s", 
+		MSG_NOTICE(msg_module, "New SCTP association from %s",
 		                             printable_ip);
 
 		continue;
@@ -261,14 +262,14 @@ int input_init(char *params, void **config)
 
 
 	if (params == NULL) {
-		VERBOSE(CL_VERBOSE_BASIC, "SCTP input plugin: No configuration data");
+		MSG_ERROR(msg_module, "SCTP input plugin: No configuration data");
 		return -1;
 	}
 
 	/* allocate memory for config structure */
 	conf = (struct sctp_config *) malloc(sizeof(*conf));
 	if (!conf) {
-		VERBOSE(CL_VERBOSE_OFF, "Not enough memory (%s:%d)", 
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)",
 		                         __FILE__, __LINE__);
 		return -1;
 	}
@@ -279,7 +280,7 @@ int input_init(char *params, void **config)
 	sockaddr6_listen = (struct sockaddr_in6 **) 
 	      malloc(DEFAULT_NUMBER_OF_ADDRESSES * sizeof(*(sockaddr6_listen)));
 	if (sockaddr6_listen == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Not enough memory (%s:%d)", 
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)",
 		                        __FILE__, __LINE__);
 		goto err_sockaddr6;
 	}
@@ -292,7 +293,7 @@ int input_init(char *params, void **config)
 	sockaddr_listen = (struct sockaddr_in **) 
 	       malloc(DEFAULT_NUMBER_OF_ADDRESSES * sizeof(*(sockaddr_listen)));
 	if (sockaddr_listen == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Not enough memory (%s:%d)", 
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)",
 		                        __FILE__, __LINE__);
 		goto err_sockaddr;
 	}
@@ -303,19 +304,19 @@ int input_init(char *params, void **config)
 	/* try to parse XML configuration */
 	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
 	if (doc == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "SCTP input plugin configuration not "
+		MSG_ERROR(msg_module, "SCTP input plugin configuration not "
 		                        "parsed successfully");
 		goto err_xml;
 	}
 
 	cur = xmlDocGetRootElement(doc);
 	if (cur == NULL) {
-		VERBOSE(CL_VERBOSE_OFF, "Empty configuration");
+		MSG_ERROR(msg_module, "Empty configuration");
 		goto err_xml;
 	}
 
 	if (xmlStrcmp(cur->name, (const xmlChar *) "sctpCollector")) {
-		VERBOSE(CL_VERBOSE_OFF, "SCTP input plugin: Bad configuration "
+		MSG_ERROR(msg_module, "SCTP input plugin: Bad configuration "
 		                        "(root node != sctpCollector)");
 		goto err_xml;
 	}
@@ -345,7 +346,7 @@ int input_init(char *params, void **config)
 				/* add new IPv4 address */
 				sockaddr = (struct sockaddr_in *) malloc(sizeof(*sockaddr));
 				if (!sockaddr) {
-					VERBOSE(CL_VERBOSE_OFF, "Not enough "
+					MSG_ERROR(msg_module, "Not enough "
 					   "memory (%s:%d)", __FILE__, __LINE__);
 					goto err_sockaddr_case;
 				}
@@ -356,7 +357,7 @@ int input_init(char *params, void **config)
 				ret = inet_pton(AF_INET, ip_str, &(sockaddr->sin_addr));
 				if (ret != 1) {
 					/* invalid address */
-					VERBOSE(CL_VERBOSE_BASIC, "SCTP init: "
+					MSG_ERROR(msg_module, "SCTP init: "
 					  "%s is not valid IP address", ip_str);
 					goto err_sockaddr_case;
 				}
@@ -373,8 +374,8 @@ int input_init(char *params, void **config)
 						/* realloc fails, discard this 
 						 * address and continue */
 						sockaddr_listen = sockaddr_listen_old;
-						VERBOSE(CL_VERBOSE_BASIC, "Realloc fails (%s:%d)", __FILE__, __LINE__);
-						VERBOSE(CL_VERBOSE_BASIC, "Address %s cannot be added "
+						MSG_ERROR(msg_module, "Realloc fails (%s:%d)", __FILE__, __LINE__);
+						MSG_ERROR(msg_module, "Address %s cannot be added "
 						                          "- system error", ip_str);
 						goto err_sockaddr_case;
 					}
@@ -386,7 +387,7 @@ int input_init(char *params, void **config)
 				sockaddr_listen[sockaddr_listen_counter] = sockaddr;
 				sockaddr_listen_counter += 1;
 				
-				VERBOSE(CL_VERBOSE_BASIC, "SCTP listen address: %s", ip_str);
+				MSG_NOTICE(msg_module, "SCTP listen address: %s", ip_str);
 
 				break;
 
@@ -404,7 +405,7 @@ err_sockaddr_case:
 				/* add new IPv6 address */
 				sockaddr6 = (struct sockaddr_in6 *) malloc(sizeof(*sockaddr6));
 				if (!sockaddr6) {
-					VERBOSE(CL_VERBOSE_OFF, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+					MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 					goto err_sockaddr6_case;
 				}
 				memset(sockaddr6, 0, sizeof(*sockaddr6));
@@ -414,7 +415,7 @@ err_sockaddr_case:
 				ret = inet_pton(AF_INET6, ip_str, &(sockaddr6->sin6_addr));
 				if (ret != 1) {
 					/* invalid address */
-					VERBOSE(CL_VERBOSE_BASIC, "SCTP init: %s is not valid IP "
+					MSG_ERROR(msg_module, "SCTP init: %s is not valid IP "
 					                          "address", ip_str);
 					goto err_sockaddr6_case;
 				}
@@ -431,8 +432,8 @@ err_sockaddr_case:
 						/* realloc fails, discard this 
 						 * address and continue */
 						sockaddr6_listen = (struct sockaddr_in6 **) sockaddr_listen_old;
-						VERBOSE(CL_VERBOSE_BASIC, "Realloc fails (%s:%d)", __FILE__, __LINE__);
-						VERBOSE(CL_VERBOSE_BASIC, "Address %s cannot be added "
+						MSG_ERROR(msg_module, "Realloc fails (%s:%d)", __FILE__, __LINE__);
+						MSG_ERROR(msg_module, "Address %s cannot be added "
 						                          "- system error", ip_str);
 						goto err_sockaddr6_case;
 					}
@@ -444,7 +445,7 @@ err_sockaddr_case:
 				sockaddr6_listen[sockaddr6_listen_counter] = sockaddr6;
 				sockaddr6_listen_counter += 1;
 				
-				VERBOSE(CL_VERBOSE_BASIC, "SCTP listen address: %s", ip_str);
+				MSG_NOTICE(msg_module, "SCTP listen address: %s", ip_str);
 
 				break;
 
@@ -460,7 +461,7 @@ err_sockaddr6_case:
 			default:
 				/* unknown address family, we should never 
 				 * reach this point */
-				VERBOSE(CL_VERBOSE_BASIC, "Unknown address family, this should never happen (%s, %d)", __FILE__, __LINE__);
+				MSG_ERROR(msg_module, "Unknown address family, this should never happen (%s, %d)", __FILE__, __LINE__);
 				break;
 			} /* switch */
 
@@ -474,12 +475,12 @@ err_sockaddr6_case:
 			if (port_set != 0) {
 				/* damn, port is specified multiple times. this 
 				 * might be a bug in configuration */
-				VERBOSE(CL_VERBOSE_BASIC, "SCTP input plugin: Warning, listen port is specified multiple times in configuration file");
+				MSG_WARNING(msg_module, "SCTP input plugin: Warning, listen port is specified multiple times in configuration file");
 			}
 			listen_port_str = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
 
 			conf->listen_port = atoi((char *) listen_port_str);
-			VERBOSE(CL_VERBOSE_BASIC, "SCTP listen port: %s", (char *) listen_port_str);
+			MSG_NOTICE(msg_module, "SCTP listen port: %s", (char *) listen_port_str);
 			port_set = 1;
 
 			xmlFree(listen_port_str);
@@ -493,7 +494,7 @@ err_sockaddr6_case:
 	if ((sockaddr6_listen_counter == 0) && (sockaddr_listen_counter == 0)) {
 		sockaddr6 = (struct sockaddr_in6 *) malloc(sizeof(*sockaddr6));
 		if (!sockaddr6) {
-			VERBOSE(CL_VERBOSE_OFF, "Not enough memory (%s:%d)", 
+			MSG_ERROR(msg_module, "Not enough memory (%s:%d)",
 			                        __FILE__, __LINE__);
 			goto err;
 		}
@@ -526,8 +527,8 @@ err_sockaddr6_case:
 	 * SOCK_SEQPACKET would create one-to-many style socket. for our 
 	 * purpose, one-to-one is just fine */
 	conf->listen_socket = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP);
-	if (conf->listen_socket == -1) {
-		VERBOSE(CL_VERBOSE_BASIC, "socket() - %s", strerror(errno));
+	if (conf->listen_socket == (uint16_t) -1) {
+		MSG_ERROR(msg_module, "socket() - %s", strerror(errno));
 		goto err;
 	}
 
@@ -536,7 +537,7 @@ err_sockaddr6_case:
 		ret = sctp_bindx(conf->listen_socket, 
 		                 (struct sockaddr *) sockaddr6_listen[i], 1, SCTP_BINDX_ADD_ADDR);
 		if (ret == -1) {
-			VERBOSE(CL_VERBOSE_BASIC, "sctp_bindx() - %s", strerror(errno));
+			MSG_ERROR(msg_module, "sctp_bindx() - %s", strerror(errno));
 		}
 	}
 
@@ -544,7 +545,7 @@ err_sockaddr6_case:
 	for (i = 0; i < sockaddr_listen_counter; i++) {
 		ret = sctp_bindx(conf->listen_socket, (struct sockaddr *) sockaddr_listen[i], 1, SCTP_BINDX_ADD_ADDR);
 		if (ret == -1) {
-			VERBOSE(CL_VERBOSE_BASIC, "sctp_bindx() - %s", strerror(errno));
+			MSG_ERROR(msg_module, "sctp_bindx() - %s", strerror(errno));
 		}
 	}
 
@@ -555,7 +556,7 @@ err_sockaddr6_case:
 
 	ret = setsockopt(conf->listen_socket, IPPROTO_SCTP, SCTP_INITMSG, &initmsg, sizeof(initmsg));
 	if (ret == -1) {
-		VERBOSE(CL_VERBOSE_BASIC, "setsockopt(initmsg) - %s", strerror(errno));
+		MSG_ERROR(msg_module, "setsockopt(initmsg) - %s", strerror(errno));
 		goto err;
 	}
 
@@ -568,25 +569,25 @@ err_sockaddr6_case:
 
 	ret = setsockopt(conf->listen_socket, IPPROTO_SCTP, SCTP_EVENTS, &sctp_events, sizeof(sctp_events));
 	if (ret == -1) {
-		VERBOSE(CL_VERBOSE_BASIC, "setsockopt(event subscription) - %s", strerror(errno));
+		MSG_ERROR(msg_module, "setsockopt(event subscription) - %s", strerror(errno));
 		goto err;
 	}
 
 	/* enable incoming associations */
 	ret = listen(conf->listen_socket, LISTEN_BACKLOG);
 	if (ret == -1) {
-		VERBOSE(CL_VERBOSE_BASIC, "listen() - %s", strerror(errno));
+		MSG_ERROR(msg_module, "listen() - %s", strerror(errno));
 		goto err;
 	}
 
 	/* set up epoll. parameter is ignored anyway, so it means nothing */
 	epollfd = epoll_create(10);
 	if (epollfd == -1) {
-		VERBOSE(CL_VERBOSE_BASIC, "epoll_create() - %s", strerror(errno));
+		MSG_ERROR(msg_module, "epoll_create() - %s", strerror(errno));
 		goto err_listen;
 	}
 
-	VERBOSE(CL_VERBOSE_BASIC, "SCTP input plugin listening for incoming "
+	MSG_NOTICE(msg_module, "SCTP input plugin listening for incoming "
 	                          "associations");
 
 	conf->epollfd = epollfd;
@@ -594,7 +595,7 @@ err_sockaddr6_case:
 	/* create listen worker */
 	ret = pthread_create(&(conf->listen_thread), NULL, listen_worker, conf);
 	if (ret != 0) {
-		VERBOSE(CL_VERBOSE_BASIC, "Unable to create listen_worker thread");
+		MSG_ERROR(msg_module, "Unable to create listen_worker thread");
 		goto err_listen;
 	}
 
@@ -675,12 +676,12 @@ wait_for_data:
 			goto out;
 		} else {
 			/* serious error occurs */
-			VERBOSE(CL_VERBOSE_OFF, "epoll_wait() - %s", strerror(errno));
+			MSG_ERROR(msg_module, "epoll_wait() - %s", strerror(errno));
 			ret = INPUT_ERROR;
 			goto out;
 		}
 	} else if (nfds == 0) {
-		VERBOSE(CL_VERBOSE_OFF, "epoll_wait() wakes up, but no "
+		MSG_ERROR(msg_module, "epoll_wait() wakes up, but no "
 		                  "descriptors are ready- %s", strerror(errno));
 		goto wait_for_data;
 	}
@@ -701,7 +702,7 @@ wait_for_data:
 	}
 	if (info_node == NULL) {
 		/* no such input_info (!?) */
-		VERBOSE(CL_VERBOSE_BASIC, "Something is horribly wrong. "
+		MSG_ERROR(msg_module, "Something is horribly wrong. "
 		                          "Missing input_info for SCTP "
 		                          "association. This should never "
 		                          "happen");
@@ -714,7 +715,7 @@ wait_for_data:
 		/* TODO - we can check how big the message is from its header */
 		*packet = (char *) malloc(IPFIX_MESSAGE_TOTAL_LENGTH);
 		if (*packet == NULL) {
-			VERBOSE(CL_VERBOSE_BASIC, "Not enough memory (%s:%d)", 
+			MSG_ERROR(msg_module, "Not enough memory (%s:%d)",
 			                          __FILE__, __LINE__);
 			ret = INPUT_ERROR;
 			goto out;
@@ -727,7 +728,7 @@ wait_for_data:
 	msg_length = sctp_recvmsg(socket, *packet, IPFIX_MESSAGE_TOTAL_LENGTH, 
 	                                            NULL, NULL, &sinfo, &flags);
 	if (msg_length == -1) {
-		VERBOSE(CL_VERBOSE_OFF, "sctp_recvmsg()");
+		MSG_ERROR(msg_module, "sctp_recvmsg()");
 		ret = INPUT_ERROR;
 		goto out;
 	}
@@ -752,13 +753,13 @@ wait_for_data:
 		notification_type = *((uint16_t *) *packet);   /* damn bugs! */
 
 		if (notification_type == SCTP_SHUTDOWN_EVENT) {
-			VERBOSE(CL_VERBOSE_BASIC, "SCTP input plugin: Exporter disconnected");
+			MSG_NOTICE(msg_module, "SCTP input plugin: Exporter disconnected");
 
 			/* remove disconnected socket from event poll */
 			ret = epoll_ctl(conf->epollfd, EPOLL_CTL_DEL, socket, NULL);
 			if (ret == -1) {
 				/* damn... what can i do */
-				VERBOSE(CL_VERBOSE_BASIC, "epoll_ctl(...,"
+				MSG_ERROR(msg_module, "epoll_ctl(...,"
 				"EPOLL_CTL_DEL,...) error (%s:%d)", __FILE__,
 				__LINE__);
 			}
@@ -767,7 +768,7 @@ wait_for_data:
 			/* \todo free input info structure now (in near future) */
 			return INPUT_CLOSED;
 		} else {
-			VERBOSE(CL_VERBOSE_BASIC, "Unsupported SCTP event "
+			MSG_WARNING(msg_module, "Unsupported SCTP event "
 			                          "occured");
 			goto wait_for_data;
 		}
@@ -776,7 +777,7 @@ wait_for_data:
 		/* we can't return yet. user expects some data */
 		goto wait_for_data;
 	} else if (!(flags & MSG_EOR)) {
-		VERBOSE(CL_VERBOSE_BASIC, "SCTP input plugin: message is too "
+		MSG_WARNING(msg_module, "SCTP input plugin: message is too "
 		                          "long");
 	}
 
@@ -826,7 +827,7 @@ int input_close(void **config)
 		/* graceful association shutdown */
 		ret = close(node->socket);
 		if (ret == -1) {
-			VERBOSE(CL_VERBOSE_BASIC, "Error while closing "
+			MSG_ERROR(msg_module, "Error while closing "
 			                          "association");
 		}
 		

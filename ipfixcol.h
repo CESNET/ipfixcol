@@ -69,5 +69,6 @@
 #include "headers/storage.h"
 #include "headers/ipfix.h"
 #include "headers/templates.h"
+#include "headers/verbose.h"
 
 #endif /* IPFIXCOL_H_ */

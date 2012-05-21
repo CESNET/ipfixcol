@@ -87,6 +87,7 @@ void element::byte_reorder(uint8_t *dst,uint8_t *src, int size, int offset){
 	}
 }
 
+
 /*
 class el_float : public element
 {
@@ -103,11 +104,13 @@ int el_float::fill(uint8_t * data){
 		//flat32
 		byte_reorder((uint8_t *) &(float_value.float32),data,_size);
 		value = &(float_value.float32);
+		this->append(&(float_value.float32));
 		break;
 	case 8:
 		//float64
 		byte_reorder((uint8_t *) &(float_value.float64),data,_size);
 		value = &(float_value.float64);
+		this->append(&(float_value.float64));
 		break;
 	default:
 		std::cerr << "Wrong float size!" << std::endl;
@@ -175,6 +178,7 @@ int el_ipv6::fill(uint8_t * data){
 	//ulong
 	byte_reorder((uint8_t *) &(ipv6_value),data,_size, 0);
 	value = &(ipv6_value);
+	this->append(&(ipv6_value));
 	//std::cout << "FILLED_IPV6" << std::endl;
 	return 0;
 }
@@ -218,11 +222,13 @@ int el_uint::fill(uint8_t * data){
 		//ubyte
 		uint_value.ubyte = data[0];
 		value = &(uint_value.ubyte);
+		this->append(&(uint_value.ubyte));
 		break;
 	case 2:
 		//ushort
 		byte_reorder((uint8_t *) &(uint_value.ushort),data,_size);
 		value = &(uint_value.ubyte);
+		this->append(&(uint_value.ushort));
 		break;
 	case 3:
 		offset++;
@@ -231,6 +237,7 @@ int el_uint::fill(uint8_t * data){
 		byte_reorder((uint8_t *) &(uint_value.uint),data,_size, offset);
 		//std::cout << _name << " v: " << uint_value.uint << "|" << *((uint32_t *)data) << std::endl;
 		value = &(uint_value.ubyte);
+		this->append(&(uint_value.uint));
 		break;
 	case 6: //mec addres
 		offset++;
@@ -240,6 +247,7 @@ int el_uint::fill(uint8_t * data){
 		//ulong
 		byte_reorder((uint8_t *) &(uint_value.ulong),data,_size, offset);
 		value = &(uint_value.ubyte);
+		this->append(&(uint_value.ulong));
 		break;
 	default:
 		return 1;

@@ -122,8 +122,10 @@ int send_data(char *port, int socktype, char **error_msg)
     }
 
     /* send data to plugin */
-    char *msg = "message";
-    if (sendto(sock, msg, strlen(msg), 0, addrinfo->ai_addr, addrinfo->ai_addrlen) == -1)
+    struct ipfix_header msg;
+    msg.length = sizeof(struct ipfix_header);
+    msg.observation_domain_id = 1;
+    if (sendto(sock, (void *) &msg, sizeof(struct ipfix_header), 0, addrinfo->ai_addr, addrinfo->ai_addrlen) == -1)
     {
         *error_msg = "Cannot send data to plugin";
         return 1;
@@ -200,15 +202,18 @@ int test_get_packet(func_type function, char *udp_port, char *tcp_port)
     /* try to call the function */
     ret = function(config, &input_info, &packet);
 
-    if (ret < 0) error++;
+    if (ret <= 0) error++;
 
     if (packet == NULL) 
     {
         if (data_sent == 1) error++; /* data sent but not received => error */
         printf("  %s: plugin did not return any packet data\n", (data_sent!=0)? "ERROR": "INFO");
-    } else 
+    } else if (ret > 0) 
     {
         printf("  Expecting some data from plugin... Got %d bytes... OK\n", ret);
+    } else 
+    {
+        printf("  Error: Expected some data from plugin, got return code %d\n", ret);
     }
 
     if (input_info == NULL) 
@@ -229,7 +234,7 @@ int test_get_packet(func_type function, char *udp_port, char *tcp_port)
     }
 
     printf("  get_packet function returned %d ... ", ret);
-    printf("%s\n", (ret>=0)? "OK":"ERROR");
+    printf("%s\n", (ret>0)? "OK":"ERROR");
 
     /* test whether function returns INPUT_CLOSE, TCP only */
     if (data_sent && tcp_port != NULL) {
@@ -269,15 +274,15 @@ int test_input_close(func_type function)
 void usage(char *name)
 {
     printf("Usage:\n");
-    printf("  %s [-t num] -f input_plugin\n\n", name);
+    printf("  %s [-s num] -f input_plugin\n\n", name);
     printf("Options:\n");
-    printf("  -f input_module  specify input plugin to test\n");
+    printf("  -f input_plugin  specify input plugin to test\n");
     printf("  -s num           set timeout to num seconds for plugin functions. Default is %ds\n", TIMEOUT);
-    printf("  -p plugin_config file with xml plugin configurationpassed to the plugin input_init function\n");
+    printf("  -p plugin_config file with xml plugin configuration passed to the plugin input_init function\n");
     printf("  -u udp_port      send test data to UDP port udp_port [4739]. Cannot be used with -t\n");
     printf("  -t tcp_port      send test data to TCP port tcp_port [4739]. Cannot be used with -u\n");
-    printf("  -6               use IPv6 to send test data");
-    printf("  -4               use IPv4 to send test data (default)");
+    printf("  -6               use IPv6 to send test data\n");
+    printf("  -4               use IPv4 to send test data (default)\n");
     printf("  -h               print usage info\n");
     printf("\nWithout -f option print this help\n\n");
 }

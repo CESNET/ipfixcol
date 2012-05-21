@@ -40,8 +40,8 @@
 
 
 extern "C" {
-	#include <commlbr.h>
 	#include "../../../headers/storage.h"
+	#include "../../../headers/verbose.h"
 }
 #include <netinet/in.h>
 #include <stdio.h>
@@ -60,6 +60,8 @@ extern "C" {
 #include <string>
 #include "pugixml/pugixml.hpp"
 
+/** Identifier to MSG_* macros */
+static const char *msg_module = "fastbit storage";
 
 /* this enum specifies types of file naming strategy */
 enum name_type{TIME,INCREMENTAL};
@@ -73,32 +75,46 @@ struct fastbit_config{
         int records_window;		/* specifies record count for storage direcotry rotation (0 = no record based rotation ) */
         enum name_type dump_name; 	/* hold type of name strategy for storage direcotry rotation */
         std::string sys_dir;		/* path to direcotry where should be storage direcotry flushed */
-        std::string window_dir;		/* current sotrage direcotry */
+        std::string window_dir;		/* current window direcotry */
         std::string prefix;		/* user prefix for storage direcotry */
         time_t last_flush;		/* time of last flush (used for time based rotation, name is based on start of interval not its end!) */
         int indexes;			/* if this variable holds true value indexes are created on storage direcotry flush*/
+	int buff_size;			/* size of buffer (number of values)*/
 };
 
 
-std::string dir_hierarchy(){
-	time_t raw_time;
+std::string dir_hierarchy(struct fastbit_config *config, uint32_t oid){
 	struct tm * timeinfo;
 
-	const int ft_size = 15;
+	const int ft_size = 1000;
 	char formated_time[ft_size];
+	std::string dir;
+	size_t o_loc = 0; //observation id location in str
 
-	time(&raw_time);
-	timeinfo = localtime(&raw_time);
+	std::stringstream ss;
+	std::string domain_id;
 
-	strftime(formated_time,ft_size,"%Y/%m/%d/",timeinfo);
+	timeinfo = localtime(&(config->last_flush));
 
-	return std::string(formated_time);
+	ss << oid;
+	domain_id = ss.str();
+
+	strftime(formated_time,ft_size,(config->sys_dir).c_str(),timeinfo);
+
+	dir = std::string(formated_time);
+	while ((o_loc = dir.find ( "%o", o_loc)) != std::string::npos){
+		dir.replace (o_loc, 2, domain_id);
+	}
+
+	dir+= config->window_dir;
+	//std::cout << "Final hierarchy: " << dir << std::endl;
+	return dir;
 }
 
 /* plugin inicialization */
 extern "C"
 int storage_init (char *params, void **config){
-	VERBOSE(CL_VERBOSE_BASIC,"Fastbit plugin: initialization");
+	MSG_NOTICE(msg_module, "Fastbit plugin: initialization");
 
 	struct tm * timeinfo;
 	char formated_time[15];
@@ -123,9 +139,14 @@ int storage_init (char *params, void **config){
 	if(doc){
 	        pugi::xpath_node ie = doc.select_single_node("fileWriter");
         	path=ie.node().child_value("path");
-		c->sys_dir = path + "/";
+		//make sure path ends with "/" character
+		if(path.at(path.size() -1) != '/'){
+			c->sys_dir = path + "/";
+		} else {
+			c->sys_dir = path;
+		}
 
-        	indexes=ie.node().child_value("onTheFlightIndexes");
+		indexes=ie.node().child_value("onTheFlyIndexes");
 		if(indexes == "yes"){
 			c->indexes = 1;
 		} else {
@@ -138,6 +159,9 @@ int storage_init (char *params, void **config){
 
         	recordLimit=ie.node().child_value("recordLimit");
 		c->records_window = atoi(recordLimit.c_str());
+
+        	recordLimit=ie.node().child_value("bufferSize");
+		c->buff_size = atoi(recordLimit.c_str());
 
         	timeAligment=ie.node().child_value("timeAlignment");
 
@@ -161,7 +185,7 @@ int storage_init (char *params, void **config){
 			c->window_dir = c->prefix + "000000000001/";
 		}
 	} else {
-		VERBOSE(CL_ERROR,"Fastbit plugin: ERROR Unable to parse configuration xml!");
+		MSG_ERROR(msg_module, "Fastbit plugin: ERROR Unable to parse configuration xml!");
 	}
 
 	return 0;
@@ -185,6 +209,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	char formated_time[15];
 	ibis::table *index_table;
 	uint32_t oid = 0;
+	std::string dir;
 
 	int i;
 	int flush=0;
@@ -197,10 +222,8 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 		dom_id = ob_dom->find(oid);
 	}
 
-	templates = (*dom_id).second; 
-	ss << (*dom_id).first;
-	domain_name = ss.str() + "/";
-	ss.str("");
+	templates = (*dom_id).second;
+	dir = dir_hierarchy(conf,(*dom_id).first);
 	
 	/* message from ipfixcol have maximum of 1023 data records */
 	for(i = 0 ; i < 1023; i++){ //TODO magic number! add constant to storage.h 
@@ -221,14 +244,14 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 		/* if there is unknow template parse it and add it to template map */
 		if((table = templates->find(template_id)) == templates->end()){
 			std::cout << "NEW TEMPLATE: " << template_id << std::endl;
-			template_table *table_tmp = new template_table(template_id);
+			template_table *table_tmp = new template_table(template_id, conf->buff_size);
 			table_tmp->parse_template(ipfix_msg->data_couple[i].data_template);
 			templates->insert(std::pair<uint16_t,template_table*>(template_id,table_tmp));
 			table = templates->find(template_id);
 		}
 
 		/* store this data record */	
-		rcnt += (*table).second->store(ipfix_msg->data_couple[i].data_set, conf->sys_dir + domain_name + dir_hierarchy() +conf->window_dir);
+		rcnt += (*table).second->store(ipfix_msg->data_couple[i].data_set, dir);
 
 		
 		//should we create new window? 
@@ -250,15 +273,14 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 			std::cout << "FLUSH" << std::endl;
 			/* flush all templates! */
 			for(dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++){
-				templates = (*dom_id).second; 
-				ss << (*dom_id).first;
-				domain_name = ss.str() + "/";
-				ss.str("");
+				templates = (*dom_id).second;
+				dir = dir_hierarchy(conf,(*dom_id).first);
 				for(table = templates->begin(); table!=templates->end();table++){
-					(*table).second->flush(conf->sys_dir + domain_name + dir_hierarchy() + conf->window_dir);
+					(*table).second->flush(dir);
+					(*table).second->reset_rows();
 					if(conf->indexes){
-						std::cout << "Creating indexes: "<< conf->sys_dir + conf->window_dir << (*table).second->name()<< std::endl;
-						index_table = ibis::table::create((conf->sys_dir + conf->window_dir+(*table).second->name()).c_str());
+						std::cout << "Creating indexes: "<< dir << std::endl;
+						index_table = ibis::table::create(dir.c_str());
 						index_table->buildIndexes();
 						delete index_table;
 					}
@@ -299,21 +321,20 @@ int storage_close (void **config){
 	ibis::table *index_table;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom = conf->ob_dom;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
-	std::stringstream ss;
-	std::string domain_name;
+	std::string dir;
 
 	/* flush data to hdd */
 	std::cout << "FLUSH" << std::endl;
 
 	for(dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++){
 		templates = (*dom_id).second; 
-		ss << (*dom_id).first;
-		domain_name = ss.str() + "/";
+		dir = dir_hierarchy(conf,(*dom_id).first);
+
 		for(table = templates->begin(); table!=templates->end();table++){
-			(*table).second->flush(conf->sys_dir + domain_name + dir_hierarchy() + conf->window_dir);
+			(*table).second->flush(dir);
 			if(conf->indexes){
-				std::cout << "Creating indexes: "<< conf->sys_dir + conf->window_dir + (*table).second->name() << std::endl;
-				index_table = ibis::table::create((conf->sys_dir + conf->window_dir + (*table).second->name()).c_str());
+				std::cout << "Creating indexes: "<< dir << std::endl;
+				index_table = ibis::table::create(dir.c_str());
 				index_table->buildIndexes();
 				delete index_table;
 			}

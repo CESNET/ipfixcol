@@ -1,6 +1,6 @@
 /**
  * \file TableManagerCursor.cpp
- * \author Michal Srb <michal.srb@cesnet.cz>
+ * \author Petr Velan <petr.velan@cesnet.cz>
  * \brief Global cursor over all Tables
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.

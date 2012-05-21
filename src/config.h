@@ -66,6 +66,7 @@ struct plugin_xml_conf {
 	char *observation_domain_id;
 	char *file;
 	xmlDocPtr xmldata;
+	char name[16]; /**< name for process or thread read from configuration*/
 };
 
 /**
@@ -111,6 +112,7 @@ struct storage {
 	void *dll_handler;
 	struct plugin_xml_conf *xml_conf;
     struct storage_thread_conf *thread_config;
+    char thread_name[16];	/**< Name for storage threads (from configuration) */
 };
 
 /**

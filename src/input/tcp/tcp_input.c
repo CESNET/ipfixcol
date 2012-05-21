@@ -57,7 +57,6 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <commlbr.h>
 #include <signal.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
@@ -85,6 +84,8 @@
 /* size of array of socket addresses */
 #define ADDR_ARRAY_SIZE 50
 
+/** Identifier to MSG_* macros */
+static char *msg_module = "TCP input";
 
 /**
  * \struct input_info_list
@@ -176,7 +177,7 @@ void input_listen_tls_cleanup(void *config, struct cleanup *maid)
 				/* TLS shutdown */
 				ret = SSL_shutdown(maid->ssl);
 				if (ret == -1) {
-            		VERBOSE(CL_VERBOSE_OFF, "Error during shutting down TLS connection");
+					MSG_WARNING(msg_module, "Error during TLS connection shutdown");
 				}
 			}
 			SSL_free(maid->ssl);
@@ -225,7 +226,7 @@ void *input_listen(void *config)
         pthread_cleanup_push(input_listen_cleanup, (void *) address);
 
         if ((new_sock = accept(conf->socket, (struct sockaddr*) address, &addr_length)) == -1) {
-            VERBOSE(CL_VERBOSE_BASIC, "Cannot accept new socket: %s", strerror(errno));
+        	MSG_ERROR(msg_module, "Cannot accept new socket: %s", strerror(errno));
             /* exit and call cleanup */
             pthread_exit(0);
         }
@@ -239,7 +240,7 @@ void *input_listen(void *config)
 			/* create a new SSL structure for the connection */
 			ssl = SSL_new(conf->ctx);
 			if (!ssl) {
-		        VERBOSE(CL_VERBOSE_OFF, "Unable to create SSL structure");
+				MSG_ERROR(msg_module, "Unable to create SSL structure");
 				ERR_print_errors_fp(stderr);
             	/* cleanup */
 				input_listen_tls_cleanup(conf, &maid);
@@ -250,7 +251,7 @@ void *input_listen(void *config)
 			/* connect the SSL object with the socket */
 			ret = SSL_set_fd(ssl, new_sock);
 			if (ret != 1) {
-            	VERBOSE(CL_VERBOSE_OFF , "Unable to connect the SSL object with the socket");
+				MSG_ERROR(msg_module, "Unable to connect the SSL object with the socket");
 				ERR_print_errors_fp(stderr);
             	/* cleanup */
 				input_listen_tls_cleanup(conf, &maid);
@@ -261,7 +262,7 @@ void *input_listen(void *config)
 			ret = SSL_accept(ssl);
 			if (ret != 1) {
 				/* handshake wasn't successful */
-    	        VERBOSE(CL_VERBOSE_OFF, "TLS handshake wasn't successful");
+				MSG_ERROR(msg_module, "TLS handshake wasn't successful");
 				ERR_print_errors_fp(stderr);
             	/* cleanup */
 				input_listen_tls_cleanup(conf, &maid);
@@ -271,7 +272,7 @@ void *input_listen(void *config)
 			/* obtain peer's certificate */
 			peer_cert = SSL_get_peer_certificate(ssl);
 			if (!peer_cert) {
-    	        VERBOSE(CL_VERBOSE_OFF, "No certificate was presented by the peer");
+				MSG_ERROR(msg_module, "No certificate was presented by the peer");
             	/* cleanup */
 				input_listen_tls_cleanup(conf, &maid);
 				continue;
@@ -280,7 +281,7 @@ void *input_listen(void *config)
 
 			/* verify peer's certificate */
 			if (SSL_get_verify_result(ssl) != X509_V_OK) {
-    	        VERBOSE(CL_VERBOSE_OFF, "Client sent bad certificate. Verification failed");
+				MSG_ERROR(msg_module, "Client sent bad certificate. Verification failed");
             	/* cleanup */
 				input_listen_tls_cleanup(conf, &maid);
 				continue;
@@ -295,7 +296,7 @@ void *input_listen(void *config)
 
 			if (conf->ssl_list[i] != ssl) {
 				/* limit reached. no space for new SSL structure */
-    	        VERBOSE(CL_VERBOSE_BASIC, "Limit on TLS connections reached. Shutting down this connection.");
+				MSG_WARNING(msg_module, "Limit on TLS connections reached. Shutting down this connection.");
             	/* cleanup */
 				input_listen_tls_cleanup(conf, &maid);
 				continue;
@@ -318,7 +319,7 @@ void *input_listen(void *config)
         } else {
             inet_ntop(AF_INET6, &address->sin6_addr, src_addr, INET6_ADDRSTRLEN);
         }
-        VERBOSE(CL_VERBOSE_BASIC, "Exporter connected from address %s", src_addr);
+        MSG_NOTICE(msg_module, "Exporter connected from address %s", src_addr);
 
         pthread_mutex_unlock(&mutex);
 
@@ -391,7 +392,7 @@ int input_init(char *params, void **config)
     /* allocate plugin_conf structure */
     conf = calloc(1, sizeof(struct plugin_conf));
     if (conf == NULL) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory for config structure: %s", strerror(errno));
+    	MSG_ERROR(msg_module, "Cannot allocate memory for config structure: %s", strerror(errno));
         retval = 1;
         goto out;
     }
@@ -407,21 +408,21 @@ int input_init(char *params, void **config)
     /* parse xml string */
     doc = xmlParseDoc(BAD_CAST params);
     if (doc == NULL) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot parse config xml");
+    	MSG_ERROR(msg_module, "Cannot parse config xml");
         retval = 1;
         goto out;
     }
     /* get the root element node */
     root_element = xmlDocGetRootElement(doc);
     if (root_element == NULL) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot get document root element");
+    	MSG_ERROR(msg_module, "Cannot get document root element");
         retval = 1;
         goto out;
     }
 
     /* check that we have the right config xml, BAD_CAST is (xmlChar *) cast defined by libxml */
     if (!xmlStrEqual(root_element->name, BAD_CAST "tcpCollector")) {
-        VERBOSE(CL_VERBOSE_OFF, "Expecting tcpCollector root element, got %s", root_element->name);
+    	MSG_ERROR(msg_module, "Expecting tcpCollector root element, got %s", root_element->name);
         retval = 1;
         goto out;
     }
@@ -431,7 +432,7 @@ int input_init(char *params, void **config)
 #ifdef TLS_SUPPORT
         /* check whether we want to enable transport layer security */
         if (xmlStrEqual(cur_node->name, BAD_CAST "transportLayerSecurity")) {
-            VERBOSE(CL_VERBOSE_OFF, "TLS enabled");
+        	MSG_NOTICE(msg_module, "TLS enabled");
             conf->tls = 1;   /* TLS enabled */
 			cur_node_parent = cur_node;	
 
@@ -440,7 +441,7 @@ int input_init(char *params, void **config)
         		if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
 					char *tmp_val = malloc(sizeof(char)*strlen((char *)cur_node->children->content)+1);
 					if (!tmp_val) {
-					    VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory: %s", strerror(errno));
+						MSG_ERROR(msg_module, "Cannot allocate memory: %s", strerror(errno));
 					    retval = 1;
 					    goto out;
 					}
@@ -457,7 +458,7 @@ int input_init(char *params, void **config)
 		    			conf->server_pkey_file = tmp_val;
 					} else {
 						/* unknown option */
-		    			VERBOSE(CL_VERBOSE_BASIC, "Unknown configuration option: %s", cur_node->name);
+						MSG_WARNING(msg_module, "Unknown configuration option: %s", cur_node->name);
 						free(tmp_val);
 					}
 				}
@@ -470,7 +471,7 @@ int input_init(char *params, void **config)
 #else   /* user wants TLS, but collector was compiled without it */
         if (xmlStrEqual(cur_node->name, BAD_CAST "transportLayerSecurity")) {
 			/* user wants to enable TLS, but collector was compiled without it */
-    		VERBOSE(CL_VERBOSE_BASIC, "Collector was compiled without TLS support");
+        	MSG_WARNING(msg_module, "Collector was compiled without TLS support");
 			continue;
 		}
 #endif
@@ -479,7 +480,7 @@ int input_init(char *params, void **config)
             char *tmp_val = malloc(sizeof(char)*strlen((char *)cur_node->children->content)+1);
             /* this is not a preferred cast, but we really want to use plain chars here */
             if (tmp_val == NULL) {
-                VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory: %s", strerror(errno));
+            	MSG_ERROR(msg_module, "Cannot allocate memory: %s", strerror(errno));
                 retval = 1;
                 goto out;
             }
@@ -514,15 +515,15 @@ int input_init(char *params, void **config)
 	if (conf->tls) {
 		/* use default options if not specified in configuration file */
 		if (conf->ca_cert_file == NULL) {
-			conf->ca_cert_file = DEFAULT_CA_FILE;
+			conf->ca_cert_file = strdup(DEFAULT_CA_FILE);
 		}
 	
 		if (conf->server_cert_file == NULL) {
-			conf->server_cert_file = DEFAULT_SERVER_CERT_FILE;
+			conf->server_cert_file = strdup(DEFAULT_SERVER_CERT_FILE);
 		}
 	
 		if (conf->server_pkey_file == NULL) {
-			conf->server_pkey_file = DEFAULT_SERVER_PKEY_FILE;
+			conf->server_pkey_file = strdup(DEFAULT_SERVER_PKEY_FILE);
 		}
 	}
 #endif
@@ -538,7 +539,7 @@ int input_init(char *params, void **config)
 
     /* get server address */
     if ((ret = getaddrinfo(address, port, &hints, &addrinfo)) != 0) {
-        VERBOSE(CL_VERBOSE_OFF, "getaddrinfo failed: %s", gai_strerror(ret));
+    	MSG_ERROR(msg_module, "getaddrinfo failed: %s", gai_strerror(ret));
         retval = 1;
         goto out;
     }
@@ -546,7 +547,7 @@ int input_init(char *params, void **config)
     /* create socket */
     conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
     if (conf->socket == -1) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot create socket: %s", strerror(errno));
+    	MSG_ERROR(msg_module, "Cannot create socket: %s", strerror(errno));
         retval = 1;
         goto out;
     }
@@ -554,19 +555,19 @@ int input_init(char *params, void **config)
     /* allow IPv4 connections on IPv6 */
     if ((addrinfo->ai_family == AF_INET6) &&
         (setsockopt(conf->socket, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_only, sizeof(ipv6_only)) == -1)) {
-        VERBOSE(CL_VERBOSE_BASIC, "Cannot turn off socket option IPV6_V6ONLY. Plugin might not accept IPv4 connections");
+    	MSG_WARNING(msg_module, "Cannot turn off socket option IPV6_V6ONLY. Plugin might not accept IPv4 connections");
     }
 
     /* bind socket to address */
     if (bind(conf->socket, addrinfo->ai_addr, addrinfo->ai_addrlen) != 0) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot bind socket: %s", strerror(errno));
+    	MSG_ERROR(msg_module, "Cannot bind socket: %s", strerror(errno));
         retval = 1;
         goto out;
     }
 
     /* this is a listening socket */
     if (listen(conf->socket, BACKLOG) == -1) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot listen on socket: %s", strerror(errno));
+    	MSG_ERROR(msg_module, "Cannot listen on socket: %s", strerror(errno));
         retval = 1;
         goto out;
     }
@@ -582,7 +583,7 @@ int input_init(char *params, void **config)
 		/* create CTX structure for TLS */
 		ctx = SSL_CTX_new(TLSv1_server_method());
 		if (!ctx) {
-	        VERBOSE(CL_VERBOSE_OFF, "Cannot create CTX structure");
+			MSG_ERROR(msg_module, "Cannot create CTX structure");
 			ERR_print_errors_fp(stderr);
 			retval = 1;
 			goto out;
@@ -591,7 +592,7 @@ int input_init(char *params, void **config)
 		/* load server certificate into the CTX structure */
 		ret = SSL_CTX_use_certificate_file(ctx, conf->server_cert_file, SSL_FILETYPE_PEM);
 		if (ret != 1) {
-	        VERBOSE(CL_VERBOSE_OFF, "Unable to load server's certificate from %s", conf->server_cert_file);
+			MSG_ERROR(msg_module, "Unable to load server's certificate from %s", conf->server_cert_file);
 			ERR_print_errors_fp(stderr);
 			retval = 1;
 			goto out;
@@ -600,7 +601,7 @@ int input_init(char *params, void **config)
 		/* load private keys into the CTX structure */
 		SSL_CTX_use_PrivateKey_file(ctx, conf->server_pkey_file, SSL_FILETYPE_PEM);
 		if (ret <= 0) {
-	        VERBOSE(CL_VERBOSE_OFF, "Unable to load server's private key from %s", conf->server_pkey_file);
+			MSG_ERROR(msg_module, "Unable to load server's private key from %s", conf->server_pkey_file);
 			ERR_print_errors_fp(stderr);
 			retval = 1;
 			goto out;
@@ -611,7 +612,7 @@ int input_init(char *params, void **config)
 		
 		ssl_list = (SSL **) malloc(sizeof(SSL *) * DEFAULT_SIZE_SSL_LIST);
 		if (ssl_list == NULL) {
-	        VERBOSE(CL_VERBOSE_OFF, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 			retval = 1;
 			goto out;
 		}
@@ -647,7 +648,7 @@ int input_init(char *params, void **config)
         inet_ntop(AF_INET6, &conf->info.dst_addr.ipv6, dst_addr, INET6_ADDRSTRLEN);
     }
     /* print info */
-    VERBOSE(CL_VERBOSE_BASIC, "TCP input plugin listening on address %s, port %s", dst_addr, port);
+    MSG_NOTICE(msg_module, "TCP input plugin listening on address %s, port %s", dst_addr, port);
 
 
     /* start listening thread */
@@ -657,7 +658,7 @@ int input_init(char *params, void **config)
     *config = (void*) conf;
 
     /* normal exit, all OK */
-    VERBOSE(CL_VERBOSE_BASIC, "Plugin initialization completed successfully");
+    MSG_NOTICE(msg_module, "Plugin initialization completed successfully");
 
 out:
     if (def_port == 0 && port != NULL) { /* free when memory was actually allocated*/
@@ -747,7 +748,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
     if (*packet == NULL) {
         *packet = malloc(BUFF_LEN * sizeof(char));
         if (*packet == NULL) {
-            VERBOSE(CL_VERBOSE_OFF, "Cannot allocate memory for the packet, malloc failed: %s", strerror(errno));
+        	MSG_ERROR(msg_module, "Cannot allocate memory for the packet, malloc failed: %s", strerror(errno));
         }
     }
    
@@ -769,7 +770,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
         	if (errno == EINTR) {
         		return INPUT_INTR;
         	}
-            VERBOSE(CL_VERBOSE_OFF, "Failed to select active connection: %s", strerror(errno));
+        	MSG_WARNING(msg_module, "Failed to select active connection: %s", strerror(errno));
             return INPUT_ERROR;
         }
     }
@@ -801,21 +802,21 @@ int get_packet(void *config, struct input_info **info, char **packet)
 				if (errno == EINTR) {
 					return INPUT_INTR;
 				}
-	        	VERBOSE(CL_VERBOSE_OFF, "Failed to receive IPFIX packet header: %s", strerror(errno));
+				MSG_ERROR(msg_module, "Failed to receive IPFIX packet header: %s", strerror(errno));
 	        	return INPUT_ERROR;
 			}
 		}
 	} else {
-#else   /* TLS disabled */
+#endif
+		/* receive without TLS */
 	    length = recv(sock, *packet, IPFIX_HEADER_LENGTH, MSG_WAITALL);
 	    if (length == -1) {
 	    	if (errno == EINTR) {
 	    		return INPUT_INTR;
 	    	}
-	        VERBOSE(CL_VERBOSE_OFF, "Failed to receive IPFIX packet header: %s", strerror(errno));
+	    	MSG_ERROR(msg_module, "Failed to receive IPFIX packet header: %s", strerror(errno));
 	        return INPUT_ERROR;
 		}
-#endif
 #ifdef TLS_SUPPORT
     }
 #endif
@@ -827,11 +828,11 @@ int get_packet(void *config, struct input_info **info, char **packet)
         if (packet_length > BUFF_LEN) {
             *packet = realloc(*packet, packet_length);
             if (*packet == NULL) {
-                VERBOSE(CL_VERBOSE_OFF, "Packet too big and realloc failed: %s", strerror(errno));
+            	MSG_ERROR(msg_module, "Packet too big and realloc failed: %s", strerror(errno));
                 return INPUT_ERROR;
             }
         } else if (packet_length < IPFIX_HEADER_LENGTH) {
-        	VERBOSE(CL_VERBOSE_OFF, "Packet length too short. Malformed IPFIX packet.");
+        	MSG_WARNING(msg_module, "Packet length too short. Malformed IPFIX packet.");
         	return INPUT_ERROR;
         }
         /* receive the rest of the ipfix packet */
@@ -841,13 +842,13 @@ int get_packet(void *config, struct input_info **info, char **packet)
         	if (errno == EINTR) {
         		return INPUT_INTR;
         	}
-            VERBOSE(CL_VERBOSE_OFF, "Failed to receive IPFIX packet: %s", strerror(errno));
+        	MSG_WARNING(msg_module, "Failed to receive IPFIX packet: %s", strerror(errno));
             return INPUT_ERROR;
         }
         /* set length to correct value */
         length += IPFIX_HEADER_LENGTH;
     } else if (length != 0) {
-    	VERBOSE(CL_VERBOSE_OFF, "Failed to receive IPFIX packet: packet too short: %zi. Closing connection...",
+    	MSG_ERROR(msg_module, "Failed to receive IPFIX packet: packet too short: %zi. Closing connection...",
     				length);
     	/* this will close the connection */
     	length = 0;
@@ -877,7 +878,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
     }
     /* check whether we found the input_info */
     if (info_list == NULL) {
-    	VERBOSE(CL_VERBOSE_BASIC, "input_info not found, passing packet with NULL input info");
+    	MSG_WARNING(msg_module, "input_info not found, passing packet with NULL input info");
     }
 
     /* pass info to the collector */
@@ -888,13 +889,13 @@ int get_packet(void *config, struct input_info **info, char **packet)
 #ifdef TLS_SUPPORT
 		if (conf->tls) {
 			if (SSL_get_shutdown(ssl) != SSL_RECEIVED_SHUTDOWN) {
-	        	VERBOSE(CL_VERBOSE_OFF, "SSL shutdown is incomplete");
+				MSG_WARNING(msg_module, "SSL shutdown is incomplete");
 			}
 
 			/* send "close notify" shutdown alert back to the peer */
 			retval = SSL_shutdown(ssl);
 			if (retval == -1) {
-	        	VERBOSE(CL_VERBOSE_OFF, "Fatal error occured during TLS close notify");
+				MSG_ERROR(msg_module, "Fatal error occured during TLS close notify");
 			}
 		}
 #endif
@@ -904,7 +905,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
         } else {
             inet_ntop(AF_INET6, &conf->sock_addresses[sock]->sin6_addr, src_addr, INET6_ADDRSTRLEN);
         }
-        VERBOSE(CL_VERBOSE_BASIC, "Exporter on address %s closed connection", src_addr);
+        MSG_NOTICE(msg_module, "Exporter on address %s closed connection", src_addr);
            
         /* use mutex so that listening thread does not reuse the socket too quickly */
         pthread_mutex_lock(&mutex);
@@ -933,7 +934,7 @@ int input_close(void **config)
 
     /* kill the listening thread */
     if(pthread_cancel(listen_thread) != 0) {
-        VERBOSE(CL_VERBOSE_OFF, "Cannot cancel listening thread");
+    	MSG_WARNING(msg_module, "Cannot cancel listening thread");
     } else {
         pthread_join(listen_thread, NULL);
     }
@@ -950,7 +951,7 @@ int input_close(void **config)
 				/* send close notify */
 				ret = SSL_shutdown(conf->ssl_list[sock]);
 				if (ret == -1) {
-					VERBOSE(CL_VERBOSE_OFF, "Fatal error occured during TLS close notify");
+					MSG_ERROR(msg_module, "Fatal error occured during TLS close notify");
 				}
 			}
 
@@ -965,7 +966,7 @@ int input_close(void **config)
     /* close listening socket */
     if ((ret = close(conf->socket)) == -1) {
         error++;
-        VERBOSE(CL_VERBOSE_OFF, "Cannot close listening socket: %s", strerror(errno));
+        MSG_ERROR(msg_module, "Cannot close listening socket: %s", strerror(errno));
     }
 
     /* close open sockets */
@@ -973,7 +974,7 @@ int input_close(void **config)
         if (FD_ISSET(sock, &conf->master)) {
             if ((ret = close(sock)) == -1) {
                 error++;
-                VERBOSE(CL_VERBOSE_OFF, "Cannot close socket: %s", strerror(errno));
+                MSG_ERROR(msg_module, "Cannot close socket: %s", strerror(errno));
             }
             if (conf->sock_addresses[sock] != NULL) {
                 free(conf->sock_addresses[sock]);
@@ -1004,13 +1005,25 @@ int input_close(void **config)
 	if (conf->info.options_template_life_packet != NULL) {
 		free(conf->info.options_template_life_packet);
 	}
+#ifdef TLS_SUPPORT
+	/* free strings that are not default (thus static) */
+	if (conf->ca_cert_file != NULL) {
+		free(conf->ca_cert_file);
+	}
+	if (conf->server_cert_file != NULL) {
+		free(conf->server_cert_file);
+	}
+	if (conf->server_pkey_file != NULL) {
+		free(conf->server_pkey_file);
+	}
+#endif
 
     /* free allocated structures */
     FD_ZERO(&conf->master);
     free(*config);
     *config = NULL;
 
-    VERBOSE(CL_VERBOSE_BASIC, "All allocated resources have been freed");
+    MSG_NOTICE(msg_module, "All allocated resources have been freed");
 
     return error;
 }

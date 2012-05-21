@@ -1,6 +1,6 @@
-CC      = @CC@
-CFLAGS  = @CFLAGS@
-LIBS    = @LIBS@ -lpq
+CC = @CC@
+CFLAGS = @CFLAGS@
+LIBS = @LIBS@ -lpq
 INCLUDE = "-I../../../"
 
 prefix = @prefix@
@@ -81,7 +81,7 @@ tarball: $(SRCS) $(HDRS) $(PHDRS)
 	cp -r ../../../headers $(TOPDIR)/$(NAME)-$(VERSION)/
 	cp -r ../../../ipfixcol.h $(TOPDIR)/$(NAME)-$(VERSION)/
 	tar -c -z -f $(RPMDIR)/SOURCES/$(NAME)-$(VERSION)-$(RELEASE).tar.gz \
-	    $(NAME)-$(VERSION);
+		$(NAME)-$(VERSION);
 	@rm -rf $(NAME)-$(VERSION);
 
 .PHONY: rpm
