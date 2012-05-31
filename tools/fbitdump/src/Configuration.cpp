@@ -50,6 +50,7 @@
 #include <resolv.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include "Utils.h"
 
 
@@ -346,6 +347,7 @@ void Configuration::searchForTableParts(stringVector &tables) throw (std::invali
 		/* read tables subdirectories, uses BFS */
 		DIR *d;
 		struct dirent *dent;
+		struct stat statbuf;
 
 		d = opendir(tables[i].c_str());
 		if (d == NULL) {
@@ -353,11 +355,15 @@ void Configuration::searchForTableParts(stringVector &tables) throw (std::invali
 		}
 
 		while((dent = readdir(d)) != NULL) {
-			if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".") && strcmp(dent->d_name, "..")) {
-				/* construct directory path */
-				std::string tablePath = tables[i] + std::string(dent->d_name);
-				Utils::sanitizePath(tablePath);
+			/* construct directory path */
+			std::string tablePath = tables[i] + std::string(dent->d_name);
+			Utils::sanitizePath(tablePath);
+			if (stat(tablePath.c_str(), &statbuf) == -1) {
+				std::cerr << "Cannot stat " << dent->d_name << std::endl;
+				continue;
+			}
 
+			if (S_ISDIR(statbuf.st_mode) && strcmp(dent->d_name, ".") && strcmp(dent->d_name, "..")) {
 				/* test whether the directory is fastbit part */
 				if (Utils::isFastbitPart(tablePath)) {
 					this->parts.push_back(tablePath); /* add the part */
@@ -368,6 +374,11 @@ void Configuration::searchForTableParts(stringVector &tables) throw (std::invali
 		}
 
 		closedir(d);
+	}
+
+	/* throw an error if there is no fastbit part */
+	if (this->parts.size() == 0) {
+		throw std::invalid_argument("No tables found in specified directory");
 	}
 }
 
