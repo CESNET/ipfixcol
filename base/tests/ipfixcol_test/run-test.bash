@@ -38,7 +38,7 @@
 
 
 # path to the collector executable
-COLLECTOR_EXEC="./../../../ipfixcol"
+COLLECTOR_EXEC="./../../src/ipfixcol"
 # run collector with these args
 COLLECTOR_ARGS="-v 5"
 TEST_TOOL_PWD=${PWD}

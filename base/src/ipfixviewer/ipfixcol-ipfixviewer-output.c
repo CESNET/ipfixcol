@@ -60,7 +60,7 @@
  */
 
 /** Identifier to MSG_* macros */
-static char *msg_module = "TCP output";
+static char *msg_module = "viewer";
 
 struct viewer_config {
 	/* structure so far empty */
