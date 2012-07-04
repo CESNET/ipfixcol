@@ -258,11 +258,13 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 		if(rcnt > conf->records_window && conf->records_window !=0){
 			flush = 1;
 			time ( &(conf->last_flush));
+			dir = dir_hierarchy(conf,(*dom_id).first);
 		}
 		if(conf->time_window !=0){
 			time ( &rawtime );
 			if(difftime(rawtime,conf->last_flush) > conf->time_window){
 				flush=1;
+				dir = dir_hierarchy(conf,(*dom_id).first);
 				conf->last_flush += conf->time_window;
 			}
 		}
@@ -273,7 +275,6 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 			/* flush all templates! */
 			for(dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++){
 				templates = (*dom_id).second;
-				dir = dir_hierarchy(conf,(*dom_id).first);
 				for(table = templates->begin(); table!=templates->end();table++){
 					(*table).second->flush(dir);
 					(*table).second->reset_rows();
