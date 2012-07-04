@@ -89,6 +89,9 @@ public:
 		//_tablex = ibis::tablex::create();
 		_index=0;
 		_rows_in_window = 0;
+		if(buff_size == 0){
+			 buff_size = RESERVED_SPACE;
+		}
 		_buff_size = buff_size;
 	}
 	int rows() {return _rows_count;}

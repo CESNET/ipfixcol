@@ -312,6 +312,9 @@ public:
                 _buffer = NULL;
 		sprintf( _name,"e%uid%hu", en, id);
 		this->set_type();
+		if(buf_size == 0){
+			 buf_size = RESERVED_SPACE;
+		}
 		allocate_buffer(buf_size);
 	}
 	/* core methods */
@@ -349,6 +352,9 @@ public:
 		}
 		sprintf( _name,"e%uid%hu", en, id);
 		this->set_type();
+		if(buf_size == 0){
+			 buf_size = RESERVED_SPACE;
+		}
 		allocate_buffer(buf_size);
 	}
 
@@ -371,6 +377,9 @@ public:
                 _buffer = NULL;
 		sprintf( _name,"e%uid%hup%u", en, id, part);
 		this->set_type();
+		if(buf_size == 0){
+			 buf_size = RESERVED_SPACE;
+		}
 		allocate_buffer(buf_size);
 	}
 	/* core methods */
@@ -407,6 +416,9 @@ public:
                 _buffer = NULL;
 		sprintf( _name,"e%iid%hi", en, id);
 		this->set_type();
+		if(buf_size == 0){
+			 buf_size = RESERVED_SPACE;
+		}
 		allocate_buffer(buf_size);
 	}
 	/* core methods */
@@ -435,6 +447,9 @@ public:
                 _buffer = NULL;
 		sprintf( _name,"e%iid%hi", en, id);
 		this->set_type();
+		if(buf_size == 0){
+			 buf_size = RESERVED_SPACE;
+		}
 		allocate_buffer(buf_size);
 	}
 	virtual int set_type();
