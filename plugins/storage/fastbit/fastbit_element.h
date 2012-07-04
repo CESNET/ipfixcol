@@ -55,7 +55,7 @@ extern "C" {
 	#include <ipfixcol/storage.h>
 }
 
-const unsigned int RESERVED_SPACE = 200000;
+const unsigned int RESERVED_SPACE = 75000;
 const int IE_NAME_LENGTH = 16;
 const int TYPE_NAME_LENGTH = 10;
 const char ELEMENTS_XML[] = "/etc/ipfixcol/ipfix-elements.xml";
