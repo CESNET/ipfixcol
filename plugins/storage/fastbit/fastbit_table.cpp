@@ -135,8 +135,10 @@ int template_table::parse_template(struct ipfix_template * tmp){
 				new_element = new el_float(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 				//_tablex->addColumn(new_element->name(), new_element->type());
 				break;
-			case BLOB:
 			case TEXT:
+				new_element = new el_text(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
+				break;
+			case BLOB:
 			case UNKNOWN:
 			default:
 				//store unknown types as uint if possible
