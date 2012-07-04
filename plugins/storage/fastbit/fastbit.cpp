@@ -117,7 +117,7 @@ int storage_init (char *params, void **config){
 
 	struct tm * timeinfo;
 	char formated_time[15];
-	ibis::fileManager::adjustCacheSize(1000000000000);
+	//ibis::fileManager::adjustCacheSize(1000000000000);
 
 	/* create config structure! */
 	(*config) = (struct fastbit_config *)malloc(sizeof( struct fastbit_config));
