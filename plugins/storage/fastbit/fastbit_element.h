@@ -55,7 +55,7 @@ extern "C" {
 	#include <ipfixcol/storage.h>
 }
 
-const unsigned int RESERVED_SPACE = 200000;
+const unsigned int RESERVED_SPACE = 75000;
 const int IE_NAME_LENGTH = 16;
 const int TYPE_NAME_LENGTH = 10;
 const char ELEMENTS_XML[] = "/etc/ipfixcol/ipfix-elements.xml";
@@ -133,7 +133,7 @@ public:
 	 *
 	 * @return element size
 	 */
-	int size(){return _size;}
+	virtual int size(){return _size;}
 
 	/**
 	 * \brief Set element size
@@ -200,8 +200,36 @@ public:
 		if(_filled >= _buf_max){
 			return 1;
 		}
+
 		memcpy(&(_buffer[_size*_filled]),data,_size);
 		_filled++;
+		return 0;
+	}
+
+	int append_str(void *data,int size){
+		//check buffer space
+		if(_filled + size + 1 >= _buf_max){ // 1 = terminating zero
+			_buf_max = _buf_max + (100 * size); //TODO
+			_buffer = (char *) realloc(_buffer,_size * _buf_max);
+		}
+
+		memcpy(&(_buffer[_filled]),data,size);
+
+		//check terminating zero (store string to first
+		//terminating zero even if its specified size is bigger)
+		for(int i = 0; i < size; i++){
+			if(_buffer[_filled+i] == 0){
+				_filled+=i+1; //i is counted from 0 we need add 1!
+				break;
+			}
+			//check if last character is zero.. if not add terminating zero
+			if(i == size-1){
+				if(_buffer[_filled+i] != 0){
+					_buffer[_filled+i+1] = 0;
+					_filled+=i+2; // 2 = new terminating zero + i is counted from 0 so we need to add 1
+				}
+			}
+		}
 		return 0;
 	}
 
@@ -284,6 +312,9 @@ public:
                 _buffer = NULL;
 		sprintf( _name,"e%uid%hu", en, id);
 		this->set_type();
+		if(buf_size == 0){
+			 buf_size = RESERVED_SPACE;
+		}
 		allocate_buffer(buf_size);
 	}
 	/* core methods */
@@ -302,32 +333,39 @@ public:
 	virtual int set_type();
 };
 
-/* TODO solve Variable-Length Information Elements
+// TODO solve Variable-Length Information Elements
 class el_text : public element
 {
+private:
+	bool _var_size;
+	uint16_t _true_size;
+	uint8_t _offset;
 public:
-	char *text_value;
-	el_ipv6(int size = 1, int en = 0, int id = 0,  int part = 0){
-		_size = size;
-		text_value=NULL;
-		sprintf( _name,"e%uid%hup%u", en, id, part);
+	//char *text_value;
+	el_text(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE){
+		_size = 1; // this is size for flush function
+		_true_size = size; // this holds true size of string (var of fix size)
+		_var_size = false;
+		_offset = 0;
+		if(size == 65535){ //its element with variable size
+			_var_size = true;
+		}
+		sprintf( _name,"e%uid%hu", en, id);
 		this->set_type();
-	}
-	virtual int fill(uint8_t * data){
-		//ulong
-		byte_reorder((uint8_t *) &(ipv6_value),data,_size, 0);
-		value = text_value;
-		//std::cout << "FILLED_IPV6" << std::endl;
-		return 0;
+		if(buf_size == 0){
+			 buf_size = RESERVED_SPACE;
+		}
+		allocate_buffer(buf_size);
 	}
 
 	virtual int set_type(){
-		//ulong
-		_type=ibis::ULONG;
+		_type=ibis::TEXT;
 		return 0;
 	}
+	virtual int fill(uint8_t * data);
+	virtual int size(){return _true_size + _offset;} //var. size element carries its size in 1-3 bytes (stored in _offset)
 };
-*/
+
 
 class el_ipv6 : public element
 {
@@ -339,6 +377,9 @@ public:
                 _buffer = NULL;
 		sprintf( _name,"e%uid%hup%u", en, id, part);
 		this->set_type();
+		if(buf_size == 0){
+			 buf_size = RESERVED_SPACE;
+		}
 		allocate_buffer(buf_size);
 	}
 	/* core methods */
@@ -375,6 +416,9 @@ public:
                 _buffer = NULL;
 		sprintf( _name,"e%iid%hi", en, id);
 		this->set_type();
+		if(buf_size == 0){
+			 buf_size = RESERVED_SPACE;
+		}
 		allocate_buffer(buf_size);
 	}
 	/* core methods */
@@ -403,6 +447,9 @@ public:
                 _buffer = NULL;
 		sprintf( _name,"e%iid%hi", en, id);
 		this->set_type();
+		if(buf_size == 0){
+			 buf_size = RESERVED_SPACE;
+		}
 		allocate_buffer(buf_size);
 	}
 	virtual int set_type();

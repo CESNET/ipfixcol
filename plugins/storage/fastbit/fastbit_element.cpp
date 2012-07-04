@@ -189,15 +189,37 @@ int el_ipv6::set_type(){
 	return 0;
 }
 
+int el_text::fill(uint8_t * data){
+	_offset = 0;
+	//get size of data
+	if(_var_size){
+		if(data[0] < 255){
+			_true_size = data[0];
+			_offset = 1;
+		}else{
+			byte_reorder((uint8_t *) &(_true_size),&(data[1]),2);
+			_offset = 3;
+		}
+		//std::cout << "text(" << _name << ") var_size:" << _true_size << std::endl;
+	}else{
+		//std::cout << "text(" << _name << ") fix_size:" << _true_size << std::endl;
+		//fprintf(stderr,"FIX = TEXT: %.5s\n",&data[0]);
+	}
+
+	this-> append_str(&(data[_offset]),_true_size);
+	//its this string terminated by 0?
+	return 0;
+}
 
 int el_var_size::fill(uint8_t * data){
 	//get size of data
 	if(data[0] < 255){
-		_size = data[0];
+		_size = data[0] + 1; //1 is firs byte with true size
 	}else{
 		byte_reorder((uint8_t *) &(_size),&(data[1]),2);
+		_size+=3; //3 = 1 first byte with 256 and 2 bytes with true size
 	}
-	std::cout << "variable(" << _name << ") size:" << _size << std::endl;
+	std::cout << "variable(" << _name << ") whole element size:" << _size << std::endl;
 	return 0;
 }
 int el_var_size::set_type(){

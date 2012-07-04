@@ -71,7 +71,7 @@ private:
 	uint64_t _rows_in_window;
 	uint64_t _rows_count;
 	uint16_t _template_id;
-	int _record_size;
+	//int _record_size;
 	//ibis::tablex * _tablex;
 	char _name[10];
 	char _index;
@@ -89,6 +89,9 @@ public:
 		//_tablex = ibis::tablex::create();
 		_index=0;
 		_rows_in_window = 0;
+		if(buff_size == 0){
+			 buff_size = RESERVED_SPACE;
+		}
 		_buff_size = buff_size;
 	}
 	int rows() {return _rows_count;}
