@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2008-2012</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>3 July 2012</date>
+		<authorgroup>
+			<author>
+				<personname>
+					<firstname>Petr</firstname>
+					<surname>Velan</surname>
+				</personname>
+				<email>petr.velan@cesnet.cz</email>
+				<contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol-statistics-output</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">Statistics output plugin for IPFIXcol.</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>ipfixcol-statistics-output</refname>
+		<refpurpose>Statistics output plugin for IPFIXcol.</refpurpose>
+	</refnamediv>
+	
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+			The <command>ipfix-statistics-output</command> plugin is a part of IPFIXcol (IPFIX collector).
+			<!--  
+			It provides means to store flow data info PostgreSQL database. Recommended PostgreSQL version is at least 8.4.9.
+			 -->
+		</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Configuration</title>
+		<simpara>There are two configuration XML files for ipfixcol that affects plugin usage.
+		First one is internal configuration XML (<filename>/etc/ipfixcol/internalcfg.xml</filename>) where are list of all available plugins for the collecor. 
+		Statistics plugin must be specified here to be usable.
+		</simpara>
+		<simpara><filename>internalcfg.xml</filename> statistics example</simpara>
+		<programlisting>
+	<![CDATA[
+	<storagePlugin>
+		<fileFormat>statistics</fileFormat>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-statistics-output.so</file>
+		<threadName>statistics</threadName>
+	</storagePlugin>
+	]]>
+		</programlisting>
+		<para></para>
+		
+		<simpara>The collector must be configured to use statistics output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
+		The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves. 
+		</simpara>
+		<simpara><filename>startup.xml</filename> statistics example</simpara>
+		<programlisting>
+	<![CDATA[
+	<destination>
+		<name>make statistics from the flow data</name>
+		<fileWriter>
+			<fileFormat>statistics</fileFormat>
+			<interval>300</interval>
+		</fileWriter>
+	</destination>
+	]]>
+		</programlisting>
+	
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term><command>fileFormat</command></term>
+					<listitem>
+						<simpara>Same as in <filename>internalcfg.xml</filename> file.</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>interval</command></term>
+					<listitem>
+						<simpara>The interval of flow data to compute statistics for.</simpara>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org/?page_id=825">http://www.liberouter.org/?page_id=825</link>
+					</term>
+					<listitem>
+						<para>IPFIXcol Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>
