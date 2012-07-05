@@ -71,7 +71,7 @@ private:
 	uint64_t _rows_in_window;
 	uint64_t _rows_count;
 	uint16_t _template_id;
-	int _record_size;
+	//int _record_size;
 	//ibis::tablex * _tablex;
 	char _name[10];
 	char _index;

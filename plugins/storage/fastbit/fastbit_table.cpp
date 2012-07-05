@@ -50,20 +50,24 @@ template_table::~template_table(){
 
 int template_table::store(ipfix_data_set * data_set, std::string path){
 	uint8_t *data = data_set->records;
-	int ri;
+	unsigned int record_cnt = 0;
 	if (data == NULL){
 		return 0;
 	}
 
 	//count how many records does data_set contain
-	int record_count = (ntohs(data_set->header.length)-(sizeof(struct ipfix_set_header)))/_record_size; 
+	int data_size = (ntohs(data_set->header.length)-(sizeof(struct ipfix_set_header)));
 
-        for(ri=0;ri<record_count;ri++){
+        //for(ri=0;ri<record_count;ri++){
+        unsigned int read_data = 0;
+        while(read_data < data_size){
+		record_cnt++;
 		for (el_it = elements.begin(); el_it!=elements.end(); ++el_it) {
 			//CHECK DATA SIZE?!?
 			(*el_it)->fill(data);
 			//_tablex->append((*el_it)->name(), _rows_count, _rows_count+1, (*el_it)->value);
 			data += (*el_it)->size();
+			read_data += (*el_it)->size();
 		}
 		_rows_count++;
 		if(_rows_count >= _buff_size){
@@ -78,7 +82,7 @@ int template_table::store(ipfix_data_set * data_set, std::string path){
 			_rows_count = 0;
 		}
 	}
-	return ri;
+	return record_cnt;
 }
 
 int template_table::parse_template(struct ipfix_template * tmp){
@@ -97,7 +101,7 @@ int template_table::parse_template(struct ipfix_template * tmp){
 		return 1; 
 	}
 	_template_id = tmp->template_id;
-	_record_size = tmp->data_length;
+	//_record_size = tmp->data_length;
 
 	//Find elements
 	for(i=0;i<tmp->field_count + en_offset;i++){
