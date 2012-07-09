@@ -51,6 +51,7 @@
 #include <endian.h>
 #include <time.h>
 #include <errno.h>
+#include <sys/stat.h>
 #include <rrd.h>
 #include <libxml/parser.h>
 
@@ -154,7 +155,6 @@ static uint16_t get_data_from_set(uint8_t *data_record, struct ipfix_template *t
 			break;
 		}
 
-		/* TODO zkontrolovat detekci variable length */
 		/* skip the length of the value */
 		if (length != 65535) {
 			offset += length;
@@ -287,27 +287,30 @@ int storage_init (char *params, void **config)
 	/* initialize RRD database file */
 	int rrd_argc = 0, i;
 	char *rrd_argv[16], timebuff[128], stepbuff[64], ds_bytes[64], ds_packets[64], ds_flows[64];
+	struct stat sts;
 
-	rrd_argv[rrd_argc++] = "create";
-	rrd_argv[rrd_argc++] = conf->filename;
-	snprintf(timebuff, 128, "--start=%lld", (long long)time(NULL)); /* start timestamp */
-	rrd_argv[rrd_argc++] = timebuff;
-	snprintf(stepbuff, 64, "--step=%d", conf->interval); /* interval (step) at which values are stored */
-	rrd_argv[rrd_argc++] = stepbuff;
-	rrd_argv[rrd_argc++] = "--no-overwrite"; /* do not overwrite existing file */
-	snprintf(ds_bytes, 64, "DS:bytes:GAUGE:%u:0:U", conf->interval*2); /* datasource definition, wait 2x the interval for data */
-	snprintf(ds_packets, 64, "DS:packets:GAUGE:%u:0:U", conf->interval*2);
-	snprintf(ds_flows, 64, "DS:flows:GAUGE:%u:0:U", conf->interval*2);
-	rrd_argv[rrd_argc++] = ds_bytes;
-	rrd_argv[rrd_argc++] = ds_packets;
-	rrd_argv[rrd_argc++] = ds_flows;
-	rrd_argv[rrd_argc++] = "RRA:AVERAGE:0.5:1:2016"; /* store 2016 values 1:1 from input */
-	rrd_argv[rrd_argc++] = "RRA:AVERAGE:0.5:24:720"; /* store 720 values, each averaged from 24 input values */
-	rrd_argv[rrd_argc++] = "RRA:AVERAGE:0.5:288:180"; /* store 180 values, each averaged from 288 input values */
+	/* do not overwrite existing file */
+	if (stat(conf->filename, &sts) == -1 && errno == ENOENT) {
+		rrd_argv[rrd_argc++] = "create";
+		rrd_argv[rrd_argc++] = conf->filename;
+		snprintf(timebuff, 128, "--start=%lld", (long long)time(NULL)); /* start timestamp */
+		rrd_argv[rrd_argc++] = timebuff;
+		snprintf(stepbuff, 64, "--step=%d", conf->interval); /* interval (step) at which values are stored */
+		rrd_argv[rrd_argc++] = stepbuff;
+		snprintf(ds_bytes, 64, "DS:bytes:GAUGE:%u:0:U", conf->interval*2); /* datasource definition, wait 2x the interval for data */
+		snprintf(ds_packets, 64, "DS:packets:GAUGE:%u:0:U", conf->interval*2);
+		snprintf(ds_flows, 64, "DS:flows:GAUGE:%u:0:U", conf->interval*2);
+		rrd_argv[rrd_argc++] = ds_bytes;
+		rrd_argv[rrd_argc++] = ds_packets;
+		rrd_argv[rrd_argc++] = ds_flows;
+		rrd_argv[rrd_argc++] = "RRA:AVERAGE:0.5:1:2016"; /* store 2016 values 1:1 from input */
+		rrd_argv[rrd_argc++] = "RRA:AVERAGE:0.5:24:720"; /* store 720 values, each averaged from 24 input values */
+		rrd_argv[rrd_argc++] = "RRA:AVERAGE:0.5:288:180"; /* store 180 values, each averaged from 288 input values */
 
-	if ((i = rrd_create(rrd_argc, rrd_argv))) {
-		MSG_ERROR(msg_module, "Create RRD DB Error: %ld %s\n", i, rrd_get_error());
-		rrd_clear_error();
+		if ((i = rrd_create(rrd_argc, rrd_argv))) {
+			MSG_ERROR(msg_module, "Create RRD DB Error: %ld %s\n", i, rrd_get_error());
+			rrd_clear_error();
+		}
 	}
 
 	*config = conf;
