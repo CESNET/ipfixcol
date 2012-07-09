@@ -77,6 +77,9 @@ AC_CHECK_LIB([xml2], [main],
     [LIBS="`xml2-config --libs` $LIBS"
     CFLAGS="`xml2-config --cflags` $CFLAGS"],
     AC_MSG_ERROR([Libxml2 not found ]))
+    
+### LibXML2 ###
+AC_SEARCH_LIBS([rrd_create], [rrd],, AC_MSG_ERROR([librrd not found]))
 
 ###################### Check for configure parameters ##########################
 AC_ARG_ENABLE([debug], 
@@ -92,6 +95,7 @@ AS_IF([test -d $srcdir/../../../base/headers],
 )
 
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([rrd.h], , AC_MSG_ERROR([rrd.h header missing. Please install rrd-devel package]))
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 AC_C_INLINE

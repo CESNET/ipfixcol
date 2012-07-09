@@ -37,11 +37,21 @@
  *
  */
 
+/*
+ * To add stored elements:
+ * 1) Modify the database creation process and add new datasource in storage_init function
+ * 2) Expand the stats_data structure
+ * 3) Modify get_data_from_set function and expand the switch to work with new element
+ * 4) Modify the template variable in store_packet function and add the new element's value
+ */
+
 #include <ipfixcol.h>
 #include <stdio.h>
 #include <string.h>
 #include <endian.h>
 #include <time.h>
+#include <errno.h>
+#include <rrd.h>
 #include <libxml/parser.h>
 
 /** Default interval for statistics*/
@@ -70,6 +80,7 @@ struct stats_data {
  */
 struct stats_config {
 	uint16_t			interval;
+	char 				*filename;
 	struct stats_data	data;
 	time_t				last;
 };
@@ -248,12 +259,24 @@ int storage_init (char *params, void **config)
 		goto err_xml;
 	}
 
+	/* process the configuration elements */
 	cur = cur->xmlChildrenNode;
 	while (cur != NULL) {
 		if ((!xmlStrcmp(cur->name, (const xmlChar *) "interval"))) {
 			conf->interval = atoi((char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1));
 		}
+		if ((!xmlStrcmp(cur->name, (const xmlChar *) "file"))) {
+			if (!conf->filename) {
+				conf->filename = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+			}
+		}
 		cur = cur->next;
+	}
+
+	/* filename must be specified */
+	if (!conf->filename) {
+		MSG_ERROR(msg_module, "RRD database file not given");
+		goto err_xml;
 	}
 
 	/* use default values if not specified in configuration */
@@ -261,7 +284,36 @@ int storage_init (char *params, void **config)
 		conf->interval = DEFAULT_INTERVAL;
 	}
 
+	/* initialize RRD database file */
+	int rrd_argc = 0, i;
+	char *rrd_argv[16], timebuff[128], stepbuff[64], ds_bytes[64], ds_packets[64], ds_flows[64];
+
+	rrd_argv[rrd_argc++] = "create";
+	rrd_argv[rrd_argc++] = conf->filename;
+	snprintf(timebuff, 128, "--start=%lld", (long long)time(NULL)); /* start timestamp */
+	rrd_argv[rrd_argc++] = timebuff;
+	snprintf(stepbuff, 64, "--step=%d", conf->interval); /* interval (step) at which values are stored */
+	rrd_argv[rrd_argc++] = stepbuff;
+	rrd_argv[rrd_argc++] = "--no-overwrite"; /* do not overwrite existing file */
+	snprintf(ds_bytes, 64, "DS:bytes:GAUGE:%u:0:U", conf->interval*2); /* datasource definition, wait 2x the interval for data */
+	snprintf(ds_packets, 64, "DS:packets:GAUGE:%u:0:U", conf->interval*2);
+	snprintf(ds_flows, 64, "DS:flows:GAUGE:%u:0:U", conf->interval*2);
+	rrd_argv[rrd_argc++] = ds_bytes;
+	rrd_argv[rrd_argc++] = ds_packets;
+	rrd_argv[rrd_argc++] = ds_flows;
+	rrd_argv[rrd_argc++] = "RRA:AVERAGE:0.5:1:2016"; /* store 2016 values 1:1 from input */
+	rrd_argv[rrd_argc++] = "RRA:AVERAGE:0.5:24:720"; /* store 720 values, each averaged from 24 input values */
+	rrd_argv[rrd_argc++] = "RRA:AVERAGE:0.5:288:180"; /* store 180 values, each averaged from 288 input values */
+
+	if ((i = rrd_create(rrd_argc, rrd_argv))) {
+		MSG_ERROR(msg_module, "Create RRD DB Error: %ld %s\n", i, rrd_get_error());
+		rrd_clear_error();
+	}
+
 	*config = conf;
+
+	/* destroy the XML configuration document */
+	xmlFreeDoc(doc);
 
 	return 0;
 
@@ -294,16 +346,6 @@ err_init:
 int store_packet (void *config, const struct ipfix_message *ipfix_msg,
         const struct ipfix_template_mgr *template_mgr)
 {
-//	printf("sequence number: %u\n", htonl(ipfix_msg->pkt_header->sequence_number));
-//	printf("interval: %us\n", ((struct stats_config*) config)->interval);
-
-	/* TODO:
-	 * pocitat pocty packetu, bajtu a toku pro kazdy protokol zvlast (a sumu)
-	 * pro zacatek vypisovat rate
-	 * mrknout jestli by se to fakt nedalo rvat do naky RRD databaze
-	 * inspirovat se hamsterem
-	 *   */
-
 	if (config == NULL || ipfix_msg == NULL) {
 		return -1;
 	}
@@ -313,14 +355,29 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	if (conf->last == 0) {
 		conf->last = time(NULL);
 	} else if (time(NULL) > conf->last + conf->interval) {
-		time_t diff, curr = time(NULL);
-				diff = curr - conf->last;
-				conf->last = curr;
+		conf->last = time(NULL);
 
-		printf("###############\n  Bytes: %lu\n  Packets: %lu\n  Flows: %lu\n###############\n",
-					conf->data.bytes, conf->data.packets, conf->data.flows);
-		printf("###############\n  Bytes/s: %lu\n  Packets/s: %lu\n  Flows/s: %lu\n###############\n",
-							conf->data.bytes/diff, conf->data.packets/diff, conf->data.flows/diff);
+	/*	printf("###############\n  Bytes: %lu\n  Packets: %lu\n  Flows: %lu\n###############\n",
+					conf->data.bytes, conf->data.packets, conf->data.flows);	*/
+
+		/* update RRD database file */
+		int rrd_argc = 0, i;
+		char *rrd_argv[16], buff[128], *template = "bytes:packets:flows";
+		rrd_argv[rrd_argc++] = "update";
+		rrd_argv[rrd_argc++] = conf->filename;
+		rrd_argv[rrd_argc++] = "--template";
+		rrd_argv[rrd_argc++] = template;
+		snprintf(buff, 128, "%llu:%lu:%lu:%lu", (long long) conf->last,
+				conf->data.bytes, conf->data.packets, conf->data.flows);
+		rrd_argv[rrd_argc++] = buff;
+
+		if (( i=rrd_update(rrd_argc, rrd_argv))) {
+			printf("RRD Insert Error: %d %s\n", i, rrd_get_error());
+			rrd_clear_error();
+		}
+
+		/* reset the counters */
+		memset(&conf->data, 0, sizeof(struct stats_data));
 	}
 
 	process_data_sets(ipfix_msg, &conf->data);
@@ -359,8 +416,7 @@ int storage_close (void **config)
 {
 	struct stats_config *conf = (struct stats_config*) *config;
 
-	printf("Bytes: %lu\nPackets: %lu\nFlows: %lu\n", conf->data.bytes, conf->data.packets, conf->data.flows);
-
+	free(conf->filename);
 	free(*config);
 	return 0;
 }
