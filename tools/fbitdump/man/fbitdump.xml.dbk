@@ -39,7 +39,10 @@
 	<refsect1>
 		<title>Description</title>
 		<simpara>
-			The <command>fbitdump.xml</command> is an XML configuration for <citerefentry><refentrytitle>fbitdump</refentrytitle><manvolnum>1</manvolnum></citerefentry> utility. 
+			The <command>fbitdump.xml</command> is an XML configuration for <citerefentry><refentrytitle>fbitdump</refentrytitle><manvolnum>1</manvolnum></citerefentry> utility.
+		</simpara>
+		<simpara> 
+			The layout of the configuration XML document is described by XML Schema Definition in <command>fbitdump.xsd</command>.
 		</simpara>
 	</refsect1>
 

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration>
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xsi:noNamespaceSchemaLocation="fbitdump.xsd">
 <!-- 
 	This is configuration XML for fbitdump utility
 	
@@ -25,11 +26,12 @@
 				'tmstmp64': expects uint64 column (miliseconds since 1970) and prints it as timestamp
 				'tmstmp32': expects uint32 column (seconds since 1970) and prints it as timestamp
 				'tcpflags' : expects uint8 column and print it as TCP flags
+				'protocol' : expects uint8 column and prints a name of corresponding IP protocol
 				'flows'	: this is special column with no relation to the database. It is always computed as number of flows
 			elements under <value type="operation"> can also have attribute 'semantics'. Currently only following can be used:
 				'duration': formats miliseconds as seconds with precision 3.
 			elements under <value type="plain"> have attribute 'aggregation'. This determines how the columns is
-				aggregated. If attribute is empty, column is not aggregated. Supported values are: 'min', 'max', 'sum', 'avg'
+				aggregated. If attribute is empty, column is not aggregated. Supported values are: 'min', 'max', 'sum', 'avg', 'count'
 				
 				
 	Examples are shown below
@@ -37,41 +39,41 @@
 <columns>
 	<column>
 		<name>Date flow start</name>
-		<width>23</width>
 		<alias>%ts</alias>
+		<width>23</width>
 		<value type="plain">
 			<element semantics="tmstmp64" aggregation="min">e0id152</element>
 		</value>
 	</column>
 	<column>
 		<name>Date flow end</name>
-		<width>23</width>
 		<alias>%te</alias>
+		<width>23</width>
 		<value type="plain">
 			<element semantics="tmstmp64" aggregation="max">e0id153</element>
 		</value>
 	</column>
 	<column>
 		<name>Date flow start</name>
-		<width>23</width>
 		<alias>%ts32</alias>
+		<width>23</width>
 		<value type="plain">
 			<element semantics="tmstmp32" aggregation="min">e0id150</element>
 		</value>
 	</column>
 	<column>
 		<name>Date flow end</name>
-		<width>23</width>
 		<alias>%te32</alias>
+		<width>23</width>
 		<value type="plain">
 			<element semantics="tmstmp32" aggregation="max">e0id151</element>
 		</value>
 	</column>
 	<column>
 		<name>Duration</name>
-		<width>9</width>
 		<alias>%td</alias>
 		<alias>%duration</alias>
+		<width>9</width>
 		<value type="operation">
 			<operation name="-" semantics="duration">
 				<arg1>%te</arg1>
@@ -81,55 +83,55 @@
 	</column>
 	<column>
 		<name>Proto</name>
-		<width>10</width>
 		<alias>%pr</alias>
 		<alias>%proto</alias>
+		<width>10</width>
 		<value type="plain">
 			<element semantics="protocol">e0id4</element>
 		</value>
 	</column>
 	<column>
 		<name>Src IPv4</name>
-		<width>16</width>
 		<alias>%sa4</alias>
 		<alias>%srcip4</alias>
+		<width>16</width>
 		<value type="plain">
 			<element semantics="ipv4">e0id8</element>
 		</value>
 	</column>
 	<column>
 		<name>Src IPv6</name>
-		<width>39</width>
 		<alias>%sa6</alias>
 		<alias>%srcip6</alias>
+		<width>39</width>
 		<value type="plain">
 			<element semantics="ipv6" parts="2">e0id27</element>
 		</value>
 	</column>
 	<column>
 		<name>Dst IPv4</name>
-		<width>16</width>
 		<alias>%da4</alias>
 		<alias>%dstip4</alias>
+		<width>16</width>
 		<value type="plain">
 			<element semantics="ipv4">e0id12</element>
 		</value>
 	</column>
 	<column>
 		<name>Dst IPv6</name>
-		<width>39</width>
 		<alias>%da6</alias>
 		<alias>%dstip6</alias>
+		<width>39</width>
 		<value type="plain">
 			<element semantics="ipv6" parts="2">e0id28</element>
 		</value>
 	</column>
 	<column>
 		<name>sPort</name>
-		<width>5</width>
-		<alignLeft/>
 		<alias>%sp</alias>
 		<alias>%srcport</alias>
+		<width>5</width>
+		<alignLeft/>
 		<default-value>0</default-value>
 		<value type="plain">
 			<element>e0id7</element>
@@ -137,10 +139,10 @@
 	</column>
 	<column>
 		<name>dPort</name>
-		<width>5</width>
-		<alignLeft/>
 		<alias>%dp</alias>
 		<alias>%dstport</alias>
+		<width>5</width>
+		<alignLeft/>
 		<default-value>0</default-value>
 		<value type="plain">
 			<element>e0id11</element>
@@ -148,8 +150,8 @@
 	</column>
 	<column>
 		<name>ICMP type</name>
-		<width>9</width>
 		<alias>%icmptype</alias>
+		<width>9</width>
 		<default-value>0</default-value>
 		<value type="plain">
 			<element>e0id32</element>
@@ -157,8 +159,8 @@
 	</column>
 	<column>
 		<name>Flags</name>
-		<width>6</width>
 		<alias>%flg</alias>
+		<width>6</width>
 		<default-value>......</default-value>
 		<value type="plain">
 			<element semantics="tcpflags">e0id6</element>
@@ -166,8 +168,8 @@
 	</column>
 	<column>
 		<name>Tos</name>
-		<width>4</width>
 		<alias>%tos</alias>
+		<width>4</width>
 		<default-value>0</default-value>
 		<value type="plain">
 			<element>e0id5</element>
@@ -175,24 +177,24 @@
 	</column>
 	<column>
 		<name>Packets</name>
-		<width>7</width>
 		<alias>%pkt</alias>
+		<width>7</width>
 		<value type="plain">
 			<element aggregation="sum">e0id2</element>
 		</value>
 	</column>
 	<column>
 		<name>Bytes</name>
-		<width>8</width>
 		<alias>%byt</alias>
+		<width>8</width>
 		<value type="plain">
 			<element aggregation="sum">e0id1</element>
 		</value>
 	</column>
 	<column>
 		<name>pps</name>
-		<width>8</width>
 		<alias>%pps</alias>
+		<width>8</width>
 		<value type="operation">
 			<operation name="/">
 				<arg1>%pkt</arg1>
@@ -202,8 +204,8 @@
 	</column>
 	<column>
 		<name>bps</name>
-		<width>8</width>
 		<alias>%bps</alias>
+		<width>8</width>
 		<value type="operation">
 			<operation name="/">
 				<arg1>%byt</arg1>
@@ -213,8 +215,8 @@
 	</column>
 	<column>
 		<name>Bpp</name>
-		<width>8</width>
 		<alias>%bpp</alias>
+		<width>8</width>
 		<value type="operation">
 			<operation name="/">
 				<arg1>%byt</arg1>
@@ -224,40 +226,40 @@
 	</column>
 	<column>
 		<name>Src AS</name>
-		<width>8</width>
 		<alias>%sas</alias>
+		<width>8</width>
 		<value type='plain'>
 			<element>e0id16</element>
 		</value>
 	</column>
 	<column>
 		<name>Dst AS</name>
-		<width>8</width>
 		<alias>%das</alias>
+		<width>8</width>
 		<value type='plain'>
 			<element>e0id17</element>
 		</value>
 	</column>
 	<column>
 		<name>Input</name>
-		<width>8</width>
 		<alias>%in</alias>
+		<width>8</width>
 		<value type='plain'>
 			<element>e0id10</element>
 		</value>
 	</column>
 	<column>
 		<name>Output</name>
-		<width>8</width>
 		<alias>%out</alias>
+		<width>8</width>
 		<value type='plain'>
 			<element>e0id14</element>
 		</value>
 	</column>
 	<column>
 		<name>Flows</name>
-		<width>5</width>
 		<alias>%fl</alias>
+		<width>5</width>
 		<default-value>1</default-value>
 		<value type="plain">
 			<element semantics="flows" aggregation="count"></element>
@@ -265,8 +267,8 @@
 	</column>
 	<column>
 		<name>If. Description</name>
-		<width>15</width>
 		<alias>%ifdesc</alias>
+		<width>15</width>
 		<default-value>-</default-value>
 		<value type="plain">
 			<element>e0id83</element>
