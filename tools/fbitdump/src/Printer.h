@@ -92,7 +92,6 @@ private:
 
 	/**
 	 * \brief Print short summary after flows output
-	 * @param tm TableManager of printed tables
 	 * @param numPrinted Number of printed rows
 	 */
 	void printFooter(uint64_t numPrinted) const;

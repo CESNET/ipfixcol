@@ -74,7 +74,7 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 			tw += "AND %te <= " + conf.getTimeWindowEnd();
 		}
 		tw += ") AND ";
-	input = tw + input;
+		input = tw + input;
 	}
 
 	YY_BUFFER_STATE bp;

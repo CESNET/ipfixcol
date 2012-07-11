@@ -48,6 +48,7 @@
 #include "Printer.h"
 #include "Filter.h"
 #include "IndexManager.h"
+#include "TemplateInfo.h"
 
 using namespace fbitdump;
 
@@ -95,15 +96,24 @@ int main(int argc, char *argv[])
 			IndexManager::createIndexes(conf, tm);
 		}
 
-		/* do some work */
-		if (conf.getAggregate()) {
-			tm.aggregate(conf.getAggregateColumns(), conf.getSummaryColumns(), filter);
-		} else {
-			tm.filter(filter);
+		/* check whether to print template information */
+		if (conf.getTemplateInfo()) {
+			TemplateInfo::printTemplates(tm, conf);
 		}
 
-		/* print tables */
-		print.print(tm);
+		/* index manipulation and template info are separate tasks, exclusive with flow printing */
+		if (!conf.getDeleteIndexes() && !conf.getCreateIndexes() && !conf.getTemplateInfo()) {
+			/* do the work */
+			if (conf.getAggregate()) {
+				tm.aggregate(conf.getAggregateColumns(), conf.getSummaryColumns(), filter);
+			} else {
+				tm.filter(filter);
+			}
+
+			/* print tables */
+			print.print(tm);
+		}
+
 	} catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
 		return 2;

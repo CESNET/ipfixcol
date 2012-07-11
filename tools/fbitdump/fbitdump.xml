@@ -263,6 +263,15 @@
 			<element semantics="flows" aggregation="count"></element>
 		</value>
 	</column>
+	<column>
+		<name>If. Description</name>
+		<width>15</width>
+		<alias>%ifdesc</alias>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e0id83</element>
+		</value>
+	</column>
 </columns>
 
 <!-- summary section contain aliases of columns that can be used for statistics summary, i.e. totals

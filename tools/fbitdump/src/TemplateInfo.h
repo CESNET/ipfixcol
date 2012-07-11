@@ -1,7 +1,7 @@
 /**
- * \file scanner.l
+ * \file TemplateInfo.h
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Flex fbitdump filter scanner
+ * \brief Header of class for printing information about templates
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
  *
@@ -36,27 +36,42 @@
  * if advised of the possibility of such damage.
  *
  */
-%{
-#include "typedefs.h"
-%}
- 
-%option noyywrap nounput
-/*nodefault*/
 
-%%
 
-%[a-zA-Z0-9]+		{ arg = yytext; return fbitdump::COLUMN; }
-e[0-9]+id[0-9]+(p[0-9]+)?		{ arg = yytext; return fbitdump::RAWCOLUMN; }
-" "+|\t+|\n+		{/* ignore spaces and newlines */}
-[0-9]+[kKmMgGtT]{0,1}	{ arg = yytext; return fbitdump::NUMBER; }
-[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}	{ arg = yytext; return fbitdump::IPv4; }
-[0-9]{4}"/"[0-9]{2}"/"[0-9]{2}\.[0-9]{2}:[0-9]{2}:[0-9]{2}	{ arg = yytext; return fbitdump::TIMESTAMP; }
-">"|"<"|"="|"==" |
-"=>"|"<="|">=" | 
-"=>"|"!="			{ arg = yytext; return fbitdump::CMP; }
-AND|OR|and|or|&|"|"	{ arg = yytext; return fbitdump::OPERATOR; }
-"("|")"				{ arg = yytext; return fbitdump::BRACKET; }
-.					{ arg = yytext; return fbitdump::OTHER; }
+#ifndef TEMPLATEINFO_H_
+#define TEMPLATEINFO_H_
 
-%%
- 
+#include "Configuration.h"
+#include "TableManager.h"
+
+namespace fbitdump {
+
+/**
+ * \brief Class that prints information about used templates
+ *
+ * Retrieves and shows information about elements used in parts (templates)
+ */
+class TemplateInfo
+{
+public:
+	/**
+	 * \brief Prints information about templates of the parts loaded in template manager
+	 *
+	 * @param tm TemplateManager to load parts from
+	 * @param conf Configuration class
+	 */
+	static void printTemplates(TableManager &tm, Configuration &conf);
+
+protected:
+	/**
+	 * \brief Print information about template of one part
+	 *
+	 * @param info ibis::part part to print information about
+	 * @param conf Configuration class
+	 */
+	static void printPartTemplate(ibis::part *part, Configuration &conf);
+}; /* end of TemplateInfo class */
+
+} /* end of fbitdump namespace */
+
+#endif /* TEMPLATEINFO_H_ */

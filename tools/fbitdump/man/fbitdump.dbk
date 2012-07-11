@@ -223,6 +223,13 @@
 					<simpara>Path to configuration file. Default is /usr/share/fbitdump/fbitdump.xml</simpara>
 				</listitem>
 			</varlistentry>
+			
+			<varlistentry>
+				<term>-T</term>
+				<listitem>
+					<simpara>Print information about templates in directories specified by -R</simpara>
+				</listitem>
+			</varlistentry>
 		</variablelist>
 	</refsect1>
 

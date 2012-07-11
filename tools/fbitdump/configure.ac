@@ -139,6 +139,8 @@ AC_CONFIG_FILES([Makefile
 				doc/Makefile
 				fbitdump.spec])
 
+AM_COND_IF(HAVE_DOXYGEN, AC_CONFIG_FILES([doc/doxyconf]))
+
 AC_OUTPUT
 
 # Print warings
@@ -148,9 +150,7 @@ AS_IF([test "x$PROTOCOLS" = xno], AC_MSG_WARN([Due to missing /etc/protocols you
 
 AS_IF([test -z "$AWK"], AC_MSG_WARN([Due to missing awk you will not be able to generate protocols.cpp from /etc/protocols]))
 
-AM_COND_IF(HAVE_DOXYGEN,
-	AC_CONFIG_FILES([doc/doxyconf]), 
-	AC_MSG_WARN([Due to missing doxygen you will not able to generate Doxygen documentation.]))
+AM_COND_IF(HAVE_DOXYGEN,, AC_MSG_WARN([Due to missing doxygen you will not able to generate Doxygen documentation.]))
 
 AS_IF([test -z "$RPMBUILD"], AC_MSG_WARN([Due to missing rpmbuild you will not able to generate RPM package.]))
 
