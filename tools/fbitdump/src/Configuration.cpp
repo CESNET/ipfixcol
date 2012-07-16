@@ -708,7 +708,7 @@ bool Configuration::getOptionm() const
 
 Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false),
 		optm(false), orderColumn(NULL), resolver(NULL), statistics(false), orderAsc(true), extendedStats(false),
-		createIndexes(false), deleteIndexes(false), configFile(CONFIG_XML)
+		createIndexes(false), deleteIndexes(false), configFile(CONFIG_XML), templateInfo(false)
 {
 }
 
