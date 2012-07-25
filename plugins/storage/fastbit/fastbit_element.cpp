@@ -172,6 +172,15 @@ int el_var_size::set_type(){
 	return 0;
 }
 
+int el_blob::fill(uint8_t * data){
+	//get size of data
+	return 0;
+}
+int el_blob::set_type(){
+	_type=ibis::UBYTE;
+	return 0;
+}
+
 int el_uint::fill(uint8_t * data){
 	int offset = 0;
 	switch(_size){

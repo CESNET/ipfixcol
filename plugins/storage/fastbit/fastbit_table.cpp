@@ -157,15 +157,18 @@ int template_table::parse_template(struct ipfix_template * tmp){
 				//store unknown types as uint if possible
 				//std::cout << "UNKNOWN! size:" << field->ie.length << std::endl;
 				if(field->ie.length < 9){
+					std::cout << "UNKNOWN! 1  size:" << field->ie.length << std::endl;
 					new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 					//_tablex->addColumn(new_element->name(), new_element->type());
 				} else if(field->ie.length == 65535){ //variable size element
+					std::cout << "UNKNOWN! 1  size:" << field->ie.length << std::endl;
 					//std::cout << "UNKNOWN! - variable size (skip:" << field->ie.length << std::endl;
 					new_element = new el_var_size(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 					//_tablex->addColumn(new_element->name(), new_element->type());
 				} else { //TODO blob ect
 					//std::cout << "UNKNOWN! - blop:" << field->ie.length << std::endl;
-					new_element = new element(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
+					std::cout << "UNKNOWN! 3  size:" << field->ie.length << std::endl;
+					new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 				}
 
 		}

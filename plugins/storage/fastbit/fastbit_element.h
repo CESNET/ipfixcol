@@ -437,6 +437,25 @@ public:
 	virtual int set_type();
 };
 
+class el_blob : public element
+{
+public:
+	uint_u uint_value;
+	el_blob(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE){
+		_size = size;
+                _filled = 0;
+                _buffer = NULL;
+		sprintf( _name,"e%iid%hi", en, id);
+		this->set_type();
+		if(buf_size == 0){
+			 buf_size = RESERVED_SPACE;
+		}
+		allocate_buffer(buf_size);
+	}
+	virtual int fill(uint8_t * data);
+	virtual int set_type();
+};
+
 
 class el_sint : public el_uint
 {
