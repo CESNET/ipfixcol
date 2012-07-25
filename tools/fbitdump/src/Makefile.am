@@ -28,6 +28,8 @@ fbitdump_SOURCES = \
 	TableManager.h \
 	TableSummary.cpp \
 	TableSummary.h \
+	TemplateInfo.cpp \
+	TemplateInfo.h \
 	typedefs.h \
 	Utils.cpp \
 	Utils.h \

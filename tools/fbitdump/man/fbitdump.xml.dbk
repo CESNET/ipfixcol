@@ -39,7 +39,10 @@
 	<refsect1>
 		<title>Description</title>
 		<simpara>
-			The <command>fbitdump.xml</command> is an XML configuration for <citerefentry><refentrytitle>fbitdump</refentrytitle><manvolnum>1</manvolnum></citerefentry> utility. 
+			The <command>fbitdump.xml</command> is an XML configuration for <citerefentry><refentrytitle>fbitdump</refentrytitle><manvolnum>1</manvolnum></citerefentry> utility.
+		</simpara>
+		<simpara> 
+			The layout of the configuration XML document is described by XML Schema Definition in <command>fbitdump.xsd</command>.
 		</simpara>
 	</refsect1>
 
@@ -138,10 +141,10 @@ Bytes per packet column. The column value is computed from number of bytes (%byt
 				</varlistentry>
 				<varlistentry>
 					<term>
-						<link xlink:href="https://homeproj.cesnet.cz/projects/ipfixcol/">https://homeproj.cesnet.cz/projects/ipfixcol/</link>
+						<link xlink:href="http://www.liberouter.org/?page_id=825">http://www.liberouter.org/?page_id=825</link>
 					</term>
 					<listitem>
-						<para>IPFIXCOL Project Homepage</para>
+						<para>IPFIXcol Project Homepage</para>
 					</listitem>
 				</varlistentry>
 				<varlistentry>

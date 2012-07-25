@@ -49,7 +49,7 @@
 namespace fbitdump {
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "hVaA:r:f:n:c:D:Ns:qeIM:m::R:o:v:Z:t:i::d::C:"
+#define OPTSTRING "hVaA:r:f:n:c:D:Ns:qeIM:m::R:o:v:Z:t:i::d::C:T"
 
 #define CONFIG_XML "/usr/share/fbitdump/fbitdump.xml"
 
@@ -248,6 +248,13 @@ public:
     stringSet getColumnIndexes() const;
 
     /**
+     * \brief Returns true when template information was requested
+     *
+     * @return true when template information was requested
+     */
+    bool getTemplateInfo() const;
+
+    /**
      * \brief Class destructor
      */
     ~Configuration();
@@ -349,6 +356,7 @@ private:
 	bool deleteIndexes;					/**< Delete indexes specified by indexColumns */
 	stringSet indexColumns;				/**< Indexes specified by -i or -d option. Empty means all */
 	std::string configFile;				/**< Configuration file path */
+	bool templateInfo;					/**< Print information about used templates */
 }; /* end of Configuration class */
 
 } /* end of fbitdump namespace */

@@ -8,10 +8,10 @@
 		version="5.0" xml:lang="en">
 	<info>
 		<copyright>
-			<year>2008-2011</year>
+			<year>2008-2012</year>
 			<holder>CESNET, z.s.p.o.</holder>
 		</copyright>
-		<date>20 March 2012</date>
+		<date>3 July 2012</date>
 		<authorgroup>
 			<author>
 				<personname>
@@ -26,38 +26,55 @@
 	</info>
 
 	<refmeta>
-		<refentrytitle>ipfixcol-dummy-output</refentrytitle>
+		<refentrytitle>ipfixcol-statistics-output</refentrytitle>
 		<manvolnum>1</manvolnum>
-		<refmiscinfo otherclass="manual" class="manual">Dummy output plugin for IPFIXcol.</refmiscinfo>
+		<refmiscinfo otherclass="manual" class="manual">Statistics output plugin for IPFIXcol.</refmiscinfo>
 	</refmeta>
 
 	<refnamediv>
-		<refname>ipfixcol-dummy-output</refname>
-		<refpurpose>Dummy output plugin for IPFIXcol that does not store any data.</refpurpose>
+		<refname>ipfixcol-statistics-output</refname>
+		<refpurpose>Statistics output plugin for IPFIXcol.</refpurpose>
 	</refnamediv>
 	
 	<refsect1>
 		<title>Description</title>
 		<simpara>
-			The <command>ipfix-dummy-output</command> plugin is a part of IPFIXcol (IPFIX collector). 
-			It provides means to test the collector without actually storing any data. Every call of store_packet function can have specified delay,
-			so that the throughput of the collector can be tested and required performance of storage plugins can be determined.
+			The <command>ipfix-statistics-output</command> plugin is a part of IPFIXcol (IPFIX collector).
+			<!--  
+			It provides means to store flow data info PostgreSQL database. Recommended PostgreSQL version is at least 8.4.9.
+			 -->
 		</simpara>
 	</refsect1>
 
 	<refsect1>
 		<title>Configuration</title>
-		<simpara>The collector must be configured to use dummy output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
+		<simpara>There are two configuration XML files for ipfixcol that affects plugin usage.
+		First one is internal configuration XML (<filename>/etc/ipfixcol/internalcfg.xml</filename>) where are list of all available plugins for the collecor. 
+		Statistics plugin must be specified here to be usable.
+		</simpara>
+		<simpara><filename>internalcfg.xml</filename> statistics example</simpara>
+		<programlisting>
+	<![CDATA[
+	<storagePlugin>
+		<fileFormat>statistics</fileFormat>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-statistics-output.so</file>
+		<threadName>statistics</threadName>
+	</storagePlugin>
+	]]>
+		</programlisting>
+		<para></para>
+		
+		<simpara>The collector must be configured to use statistics output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
 		The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves. 
 		</simpara>
-		<simpara><filename>startup.xml</filename> dummy example</simpara>
+		<simpara><filename>startup.xml</filename> statistics example</simpara>
 		<programlisting>
 	<![CDATA[
 	<destination>
-		<name>process data records dummy plugin</name>
+		<name>make statistics from the flow data</name>
 		<fileWriter>
-			<fileFormat>dummy</fileFormat>
-			<delay>number of microsecond</delay>
+			<fileFormat>statistics</fileFormat>
+			<interval>300</interval>
 		</fileWriter>
 	</destination>
 	]]>
@@ -72,9 +89,9 @@
 					</listitem>
 				</varlistentry>
 				<varlistentry>
-					<term><command>delay</command></term>
+					<term><command>interval</command></term>
 					<listitem>
-						<simpara>Number of microseconds that store_data function should take. This function is called once per every input packet with data.</simpara>
+						<simpara>The interval of flow data to compute statistics for.</simpara>
 					</listitem>
 				</varlistentry>
 			</variablelist>
@@ -99,7 +116,7 @@
 						<link xlink:href="http://www.liberouter.org/?page_id=825">http://www.liberouter.org/?page_id=825</link>
 					</term>
 					<listitem>
-						<para>IPFIXCOL Project Homepage</para>
+						<para>IPFIXcol Project Homepage</para>
 					</listitem>
 				</varlistentry>
 				<varlistentry>

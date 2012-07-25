@@ -230,6 +230,9 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			}
 			this->configFile = optarg;
 			break;
+		case 'T': /* Template information */
+			this->templateInfo = true;
+			break;
 		default:
 			help ();
 			return 1;
@@ -599,6 +602,11 @@ stringSet Configuration::getColumnIndexes() const
 	return this->indexColumns;
 }
 
+bool Configuration::getTemplateInfo() const
+{
+	return this->templateInfo;
+}
+
 void Configuration::processmOption(std::string order)
 {
 	std::string::size_type pos;
@@ -689,6 +697,7 @@ void Configuration::help() const
 	<< "-t <time>       time window for filtering packets" << std::endl
 	<< "                yyyy/MM/dd.hh:mm:ss[-yyyy/MM/dd.hh:mm:ss]" << std::endl
 	<< "-C <path>       path to configuration file. Default is "CONFIG_XML << std::endl
+	<< "-T              print information about templates in directories specified by -R" << std::endl
 	;
 }
 
@@ -699,7 +708,7 @@ bool Configuration::getOptionm() const
 
 Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false),
 		optm(false), orderColumn(NULL), resolver(NULL), statistics(false), orderAsc(true), extendedStats(false),
-		createIndexes(false), deleteIndexes(false), configFile(CONFIG_XML)
+		createIndexes(false), deleteIndexes(false), configFile(CONFIG_XML), templateInfo(false)
 {
 }
 

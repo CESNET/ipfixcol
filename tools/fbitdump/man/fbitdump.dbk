@@ -223,6 +223,13 @@
 					<simpara>Path to configuration file. Default is /usr/share/fbitdump/fbitdump.xml</simpara>
 				</listitem>
 			</varlistentry>
+			
+			<varlistentry>
+				<term>-T</term>
+				<listitem>
+					<simpara>Print information about templates in directories specified by -R</simpara>
+				</listitem>
+			</varlistentry>
 		</variablelist>
 	</refsect1>
 
@@ -351,7 +358,7 @@ Reads all subdirs in dir recursively. Outputs flows with destination IPv4 192.16
 				</varlistentry>
 				<varlistentry>
 					<term>
-						<link xlink:href="https://homeproj.cesnet.cz/projects/ipfixcol/">https://homeproj.cesnet.cz/projects/ipfixcol/</link>
+						<link xlink:href="http://www.liberouter.org/?page_id=825">http://www.liberouter.org/?page_id=825</link>
 					</term>
 					<listitem>
 						<para>IPFIXCOL Project Homepage</para>

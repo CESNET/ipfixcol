@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+
+	<!--=========== Elements: The root element is configuration ============-->
+	<xs:element name="configuration" type="configurationType"/>
+	
+	<xs:element name="columns" type="columnsType"/>	
+	<xs:element name="summary" type="summaryType"/>
+	
+	<xs:element name="column" type="columnType"/>
+	
+	<xs:element name="alias" type="aliasType"/>
+	<xs:element name="alignLeft" type="alignLeftType"/>
+	<xs:element name="default-value" type="xs:string"/>
+	<xs:element name="name" type="xs:string"/>
+	<xs:element name="value" type="valueType" />
+	<xs:element name="element" type="elementType"/>
+	
+	<xs:element name="operation" type="operationType"/>
+	<xs:element name="arg1" type="aliasType"/>
+	<xs:element name="arg2" type="aliasType"/>
+	<xs:element name="width" type="xs:integer"/>
+	
+	<!--============================ Complex Types =========================-->
+	
+	<xs:complexType name="elementType">
+		<xs:simpleContent>
+			<xs:extension base="columnNameType">
+				<xs:attribute name="aggregation" type="aggregationType" />
+				<xs:attribute name="parts" type="xs:integer"/>
+				<xs:attribute name="semantics" type="plainSemanticsType"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+	
+	<xs:complexType name="configurationType">
+		<xs:sequence>
+			<xs:element ref="columns"/>
+			<xs:element ref="summary"/>
+		</xs:sequence>
+	</xs:complexType>
+	
+	<xs:complexType name="columnType">
+		<xs:sequence>
+			<xs:element ref="name"/>
+			<xs:element ref="alias" minOccurs="1" maxOccurs="unbounded"/>
+			<xs:element ref="width" minOccurs="0"/>
+			<xs:element ref="alignLeft" minOccurs="0"/>
+			<xs:element ref="default-value" minOccurs="0"/>
+			<xs:element ref="value"/>
+		</xs:sequence>
+	</xs:complexType>
+	
+	<xs:complexType name="alignLeftType" />
+	
+	<xs:complexType name="valueType">
+		<xs:choice>
+			<xs:element ref="element"/>
+			<xs:element ref="operation"/>
+		</xs:choice>
+		<xs:attribute name="type" use="required" type="valueTypeType"/>
+	</xs:complexType>
+	
+	<xs:complexType name="columnsType">
+		<xs:sequence>
+			<xs:element minOccurs="0" maxOccurs="unbounded" ref="column"/>
+		</xs:sequence>
+	</xs:complexType>
+	
+	<xs:complexType name="summaryType">
+		<xs:sequence minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="column" type="aliasType"/>
+		</xs:sequence>
+	</xs:complexType>
+	
+	<xs:complexType name="operationType">
+		<xs:sequence>
+			<xs:element ref="arg1"/>
+			<xs:element ref="arg2"/>
+		</xs:sequence>
+		<xs:attribute name="name" use="required" type="operationNameType"/>
+		<xs:attribute name="semantics" type="operationSemanticsType"/>
+	</xs:complexType>
+	
+	<!--====================== Simple Types ================================-->
+	
+	<xs:simpleType name="columnNameType">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="e[0-9]+id[0-9]+(p[0-9]+)?|"></xs:pattern>
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<xs:simpleType name="aliasType">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="%[a-zA-Z0-9]+"></xs:pattern>
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<xs:simpleType name="valueTypeType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="plain" />
+			<xs:enumeration value="operation" />
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<xs:simpleType name="aggregationType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="sum"></xs:enumeration>
+			<xs:enumeration value="min"></xs:enumeration>
+			<xs:enumeration value="max"></xs:enumeration>
+			<xs:enumeration value="avg"></xs:enumeration>
+			<xs:enumeration value="count"></xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<xs:simpleType name="plainSemanticsType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="ipv4"></xs:enumeration>
+			<xs:enumeration value="ipv6"></xs:enumeration>
+			<xs:enumeration value="tmstmp64"></xs:enumeration>
+			<xs:enumeration value="tmstmp32"></xs:enumeration>
+			<xs:enumeration value="tcpflags"></xs:enumeration>
+			<xs:enumeration value="flows"></xs:enumeration>
+			<xs:enumeration value="protocol"></xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<xs:simpleType name="operationNameType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="+"></xs:enumeration>
+			<xs:enumeration value="-"></xs:enumeration>
+			<xs:enumeration value="/"></xs:enumeration>
+			<xs:enumeration value="*"></xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<xs:simpleType name="operationSemanticsType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="duration"></xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	
+</xs:schema>

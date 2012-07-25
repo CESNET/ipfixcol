@@ -1,4 +1,5 @@
-EXTRA_DIST = doxyconf.in
+EXTRA_DIST = doxyconf.in fbitdump.xsd
+pkgdata_DATA = fbitdump.xsd
 
 docpkg = $(PACKAGE_TARNAME)-doxy-$(PACKAGE_VERSION).tar.gz
 
