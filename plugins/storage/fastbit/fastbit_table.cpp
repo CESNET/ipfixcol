@@ -124,11 +124,11 @@ int template_table::parse_template(struct ipfix_template * tmp){
 				/* ipv6 is 128b so we have to split it to two 64b rows!
                                  * adding p0 p1 sufixes to row name
                                  */
-				new_element = new el_ipv6(sizeof(uint64_t), en, field->ie.id & 0x7FFF, 1, _buff_size);
 				//_tablex->addColumn(new_element->name(), new_element->type());
+				new_element = new el_ipv6(sizeof(uint64_t), en, field->ie.id & 0x7FFF, 0, _buff_size);
 				elements.push_back(new_element);
 
-				new_element = new el_ipv6(sizeof(uint64_t), en, field->ie.id & 0x7FFF, 0, _buff_size);
+				new_element = new el_ipv6(sizeof(uint64_t), en, field->ie.id & 0x7FFF, 1, _buff_size);
 				//_tablex->addColumn(new_element->name(), new_element->type());
 				break;
 			case INT: 
