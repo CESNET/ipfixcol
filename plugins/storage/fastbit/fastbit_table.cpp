@@ -61,6 +61,10 @@ int template_table::store(ipfix_data_set * data_set, std::string path){
         //for(ri=0;ri<record_count;ri++){
         unsigned int read_data = 0;
         while(read_data < data_size){
+		if((data_size - read_data) < _min_record_size){
+			//std::cout << "skip padding ( "<< data_size - read_data <<"b)"<< std::endl;
+			break;
+		}
 		record_cnt++;
 		for (el_it = elements.begin(); el_it!=elements.end(); ++el_it) {
 			//CHECK DATA SIZE?!?
@@ -106,6 +110,11 @@ int template_table::parse_template(struct ipfix_template * tmp){
 	//Find elements
 	for(i=0;i<tmp->field_count + en_offset;i++){
 		field = &(tmp->fields[i]);
+		if(field->ie.length == 65535){
+			_min_record_size += 1;
+		} else {
+			_min_record_size += field->ie.length;
+		}
 		
 		//Is this an enterprise element?
 		en = 0;
