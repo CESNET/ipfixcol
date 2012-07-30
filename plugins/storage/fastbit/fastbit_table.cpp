@@ -38,6 +38,7 @@
  */
 
 
+#include <vector>
 #include "fastbit_table.h"
 
 template_table::~template_table(){
@@ -89,9 +90,9 @@ int template_table::store(ipfix_data_set * data_set, std::string path){
 	return record_cnt;
 }
 
-int template_table::parse_template(struct ipfix_template * tmp){
+int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_config * config){
 	int i;
-	int en = 0; // enterprise number (0 = IANA elements)
+	uint32_t en = 0; // enterprise number (0 = IANA elements)
 	int en_offset = 0;
 	template_ie *field;
 	element *new_element;
@@ -135,6 +136,20 @@ int template_table::parse_template(struct ipfix_template * tmp){
                                  */
 				//_tablex->addColumn(new_element->name(), new_element->type());
 				new_element = new el_ipv6(sizeof(uint64_t), en, field->ie.id & 0x7FFF, 0, _buff_size);
+				if(config->indexes == 2){ //mark elements for indexing
+					std::vector<uint32_t>::iterator it;
+					uint32_t i_id;
+					uint32_t i_en;
+					for ( it=config->index_en_id->begin() ; it < config->index_en_id->end(); it++ ){
+						i_en = *it;
+						it++;
+						i_id = *it;
+						if(i_en == en && (field->ie.id & 0x7FFF) == i_id ){
+							std::cout << "index mark: " << i_en <<":"<< i_id << std::endl;
+							new_element->index_mark(true);
+						}
+					}
+				}
 				elements.push_back(new_element);
 
 				new_element = new el_ipv6(sizeof(uint64_t), en, field->ie.id & 0x7FFF, 1, _buff_size);
@@ -157,17 +172,17 @@ int template_table::parse_template(struct ipfix_template * tmp){
 				//store unknown types as uint if possible
 				//std::cout << "UNKNOWN! size:" << field->ie.length << std::endl;
 				if(field->ie.length < 9){
-					std::cout << "UNKNOWN! 1  size:" << field->ie.length << std::endl;
+					std::cout << "UNKNOWN element! size:" << field->ie.length << std::endl;
 					new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 					//_tablex->addColumn(new_element->name(), new_element->type());
 				} else if(field->ie.length == 65535){ //variable size element
-					std::cout << "UNKNOWN! 1  size:" << field->ie.length << std::endl;
+					std::cout << "UNKNOWN element! size:" << field->ie.length << std::endl;
 					//std::cout << "UNKNOWN! - variable size (skip:" << field->ie.length << std::endl;
 					new_element = new el_var_size(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 					//_tablex->addColumn(new_element->name(), new_element->type());
 				} else { //TODO blob ect
 					//std::cout << "UNKNOWN! - blop:" << field->ie.length << std::endl;
-					std::cout << "UNKNOWN! 3  size:" << field->ie.length << std::endl;
+					std::cout << "UNKNOWN element! size:" << field->ie.length << std::endl;
 					new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 				}
 
@@ -175,6 +190,20 @@ int template_table::parse_template(struct ipfix_template * tmp){
 		if(!new_element){
 			std::cerr << "Something is wrong with template elements!" << std::endl;
 			return 1;
+		}
+		if(config->indexes == 2){ //mark elements for indexing
+			std::vector<uint32_t>::iterator it;
+			uint32_t i_id;
+			uint32_t i_en;
+			for ( it=config->index_en_id->begin() ; it < config->index_en_id->end(); it++ ){
+				i_en = *it;
+				it++;
+				i_id = *it;
+				if(i_en == en && (field->ie.id & 0x7FFF) == i_id ){
+					std::cout << "index mark: " << i_en <<":"<< i_id << std::endl;
+					new_element->index_mark(true);
+				}
+			}
 		}
 		elements.push_back(new_element);
 	}

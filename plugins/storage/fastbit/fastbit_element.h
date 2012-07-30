@@ -94,6 +94,7 @@ protected:
 	   exp: e0id16, e20id50.... */
 	char _name[IE_NAME_LENGTH];
 
+	bool _index_mark; //build index for this element?
 	int _filled;
 	int _buf_max;
 	char *_buffer;
@@ -101,13 +102,17 @@ protected:
 public:
 	/* points to elements data after fill() */
 	void *value;
-	element(): _size(0), _filled(0), _buffer(NULL), value(0) {sprintf(_name,"e0id0");};
+	element(): _size(0), _filled(0), _buffer(NULL),_index_mark(false), value(0) {sprintf(_name,"e0id0");};
 	element(int size, int en, int id, uint32_t buf_size = RESERVED_SPACE){
 		_size = size;
+		_index_mark = false;
                 _filled = 0;
                 _buffer = NULL;
 		sprintf( _name,"e%iid%hi", en, id);
 	}
+
+	bool index_mark(){return _index_mark;}
+	void index_mark(bool i){_index_mark = i;}
 
 	/* get & set methods*/
 	/**

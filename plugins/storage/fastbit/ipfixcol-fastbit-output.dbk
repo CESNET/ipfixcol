@@ -84,6 +84,11 @@
 				<prefix>ic</prefix>
 			</namingStrategy>
 			<onTheFlyIndexes>yes</onTheFlyIndexes>
+			<indexes>
+				<element enterprise = "0" id = "12"/>
+				<element enterprise = "0" id = "8"/>
+				<element id = "4"/>
+			</indexes>
 		</fileWriter>
 	</destination>
 	]]>
@@ -363,7 +368,9 @@
 				</term>
 				<listitem>
 					<simpara>This tells plugin to create indexes for stored data
-						(yes/no).</simpara>
+						(yes/no). Elements for indexing can be specified so indexes are build only for those elements
+						(see example startup.xml in this manpage). If there are no specified elements and
+						<command>onTheFlyIndexes</command> is set to "yes" than indexes are build for ALL elements</simpara>
 				</listitem>
 			</varlistentry>
 		</variablelist>
