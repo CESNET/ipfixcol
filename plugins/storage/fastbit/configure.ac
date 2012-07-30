@@ -48,7 +48,7 @@ AC_CONFIG_SRCDIR([fastbit.cpp])
 AC_CONFIG_HEADERS([config.h])
 
 # Initialization
-CFLAGS="-Wall"
+CXXFLAGS="-Wall"
 
 RELEASE=1
 AC_SUBST(RELEASE)
@@ -78,7 +78,7 @@ AC_SEARCH_LIBS([fastbit_init], [fastbit],,
 ###################### Check for configure parameters ##########################
 AC_ARG_ENABLE([debug], 
         AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
-        [CFLAGS="$CFLAGS -Wextra -g"])
+        [CXXFLAGS="$CXXFLAGS -Wextra -g"])
         
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar.h])
