@@ -43,6 +43,7 @@
 
 template_table::~template_table(){
 	for (el_it = elements.begin(); el_it!=elements.end(); ++el_it) {
+		(*el_it)->free_buffer();
 		delete (*el_it);
 	}
 
@@ -57,7 +58,7 @@ int template_table::store(ipfix_data_set * data_set, std::string path){
 	}
 
 	//count how many records does data_set contain
-	int data_size = (ntohs(data_set->header.length)-(sizeof(struct ipfix_set_header)));
+	unsigned int data_size = (ntohs(data_set->header.length)-(sizeof(struct ipfix_set_header)));
 
         //for(ri=0;ri<record_count;ri++){
         unsigned int read_data = 0;

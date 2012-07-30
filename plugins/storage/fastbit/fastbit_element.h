@@ -102,7 +102,7 @@ protected:
 public:
 	/* points to elements data after fill() */
 	void *value;
-	element(): _size(0), _filled(0), _buffer(NULL),_index_mark(false), value(0) {sprintf(_name,"e0id0");};
+	element(): _size(0), _index_mark(false), _filled(0), _buffer(NULL), value(0) {sprintf(_name,"e0id0");};
 	element(int size, int en, int id, uint32_t buf_size = RESERVED_SPACE){
 		_size = size;
 		_index_mark = false;
@@ -199,6 +199,13 @@ public:
 		if(_buffer == NULL){
 			fprintf(stderr,"Memory allocation failed!\n");
 		}
+	}
+
+	/**
+	 * \brief free memory for buffer
+	 */
+	void free_buffer(){
+		free(_buffer);
 	}
 
 	int append(void *data){

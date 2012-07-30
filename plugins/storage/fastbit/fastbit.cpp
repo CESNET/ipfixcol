@@ -101,25 +101,32 @@ int storage_init (char *params, void **config){
 	//ibis::fileManager::adjustCacheSize(1000000000000);
 
 	/* create config structure! */
-	(*config) = (struct fastbit_config *)malloc(sizeof( struct fastbit_config));
 	(*config) = new  struct fastbit_config;
-	if(*config == NULL)
+	if(*config == NULL){
 		std::cerr << "Can't allocate memory for config structure" << std::endl;
+		return 1;
+	}
 
 	/* inicialize template map */
-	((struct fastbit_config*)(*config))->templates = new std::map<uint16_t,template_table*>;
-	if(((struct fastbit_config*)(*config))->templates == NULL)
-		std::cerr << "Can't allocate memory for config structure" << std::endl;
+	//((struct fastbit_config*)(*config))->templates = new std::map<uint16_t,template_table*>;
+	//if(((struct fastbit_config*)(*config))->templates == NULL){
+	//	std::cerr << "Can't allocate memory for config structure" << std::endl;
+	//	return 1;
+	//}
 
 	struct fastbit_config* c = (struct fastbit_config*)(*config);
 	
 	c->ob_dom = new std::map<uint32_t,std::map<uint16_t,template_table*>* >;
-	if(c->ob_dom == NULL)
+	if(c->ob_dom == NULL){
 		std::cerr << "Can't allocate memory for config structure" << std::endl;
+		return 1;
+	}
 
 	c->index_en_id = new std::vector<uint32_t>;
-	if(c->index_en_id == NULL)
+	if(c->index_en_id == NULL){
 		std::cerr << "Can't allocate memory for config structure" << std::endl;
+		return 1;
+	}
 
 	/* parse configuratin xml and upated configure structure accorging to it */
 	pugi::xml_document doc;
@@ -295,6 +302,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 					(*table).second->flush(dir);
 					(*table).second->reset_rows();
 					el_table = (*table).second;
+
 					if(conf->indexes == 1){ //build all indexes
 						std::cout << "Creating indexes: "<< dir << std::endl;
 						index_table = ibis::table::create(dir.c_str());
@@ -304,7 +312,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 					else if(conf->indexes == 2){ //build all indexes
 						index_table = ibis::table::create(dir.c_str());
 						for (el_table->el_it = el_table->elements.begin(); el_table->el_it!=el_table->elements.end(); ++(el_table->el_it)){
-			if((*(el_table->el_it))->index_mark()){
+							if((*(el_table->el_it))->index_mark()){
 								std::cout << "Creating indexes: "<< dir <<(*(el_table->el_it))->name() <<std::endl;
 								index_table->buildIndex((*(el_table->el_it))->name());
 							}
@@ -345,11 +353,13 @@ int storage_close (void **config){
 	std::map<uint16_t,template_table*>::iterator table;
 	template_table* el_table;
 	struct fastbit_config *conf = (struct fastbit_config *) (*config);
-	std::map<uint16_t,template_table*> *templates = conf->templates;
+	std::map<uint16_t,template_table*> *templates;
 	ibis::table *index_table;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom = conf->ob_dom;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
 	std::string dir;
+
+
 
 	/* flush data to hdd */
 	std::cout << "FLUSH" << std::endl;
@@ -384,6 +394,7 @@ int storage_close (void **config){
 	
 	delete ob_dom;
 	delete conf->index_en_id;
+	delete conf;
 	return 0;
 }
 
