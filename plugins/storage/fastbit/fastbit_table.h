@@ -56,6 +56,7 @@
 
 extern "C" {
 	#include <ipfixcol/storage.h>
+	#include <semaphore.h>
 }
 
 /* this enum specifies types of file naming strategy */
@@ -198,16 +199,18 @@ public:
 struct fastbit_config{
 	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom;
 	std::map<uint16_t,template_table*> *templates; /* map with template id / template_table pairs */
-	std::vector<uint32_t> *index_en_id; /* vector of elements which should be indexed.. stored in pairs first enterprise id second element id */
-	int time_window;  /* specifies time interval for storage direcotry rotation (0 = no time based rotation ) */
-	int records_window;             /* specifies record count for storage direcotry rotation (0 = no record based rotation ) */
-	enum name_type dump_name;       /* hold type of name strategy for storage direcotry rotation */
-	std::string sys_dir;            /* path to direcotry where should be storage direcotry flushed */
-	std::string window_dir;         /* current window direcotry */
-	std::string prefix;             /* user prefix for storage direcotry */
+	std::vector<std::string> *index_en_id; /* vector of elements which should be indexed.. stored in pairs first enterprise id second element id */
+	std::vector<std::string> *dirs; /* directories for index & reorder thread */
+	int time_window;  /* specifies time interval for storage directory rotation (0 = no time based rotation ) */
+	int records_window;             /* specifies record count for storage directory rotation (0 = no record based rotation ) */
+	enum name_type dump_name;       /* hold type of name strategy for storage directory rotation */
+	std::string sys_dir;            /* path to directory where should be storage directory flushed */
+	std::string window_dir;         /* current window directory */
+	std::string prefix;             /* user prefix for storage directory */
 	time_t last_flush;/* time of last flush (used for time based rotation, name is based on start of interval not its end!) */
 	int indexes;      /* specifies if indexes should be build during storage. 0 = no indexes, 1 = index all, 2 = index only marked elements*/
 	int buff_size;    /* size of buffer (number of values)*/
+	sem_t sem;		  /* semaphore for index building thread */
 };
 
 #endif

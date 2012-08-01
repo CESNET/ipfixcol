@@ -137,20 +137,6 @@ int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_co
                                  */
 				//_tablex->addColumn(new_element->name(), new_element->type());
 				new_element = new el_ipv6(sizeof(uint64_t), en, field->ie.id & 0x7FFF, 0, _buff_size);
-				if(config->indexes == 2){ //mark elements for indexing
-					std::vector<uint32_t>::iterator it;
-					uint32_t i_id;
-					uint32_t i_en;
-					for ( it=config->index_en_id->begin() ; it < config->index_en_id->end(); it++ ){
-						i_en = *it;
-						it++;
-						i_id = *it;
-						if(i_en == en && (field->ie.id & 0x7FFF) == i_id ){
-							std::cout << "index mark: " << i_en <<":"<< i_id << std::endl;
-							new_element->index_mark(true);
-						}
-					}
-				}
 				elements.push_back(new_element);
 
 				new_element = new el_ipv6(sizeof(uint64_t), en, field->ie.id & 0x7FFF, 1, _buff_size);
@@ -191,20 +177,6 @@ int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_co
 		if(!new_element){
 			std::cerr << "Something is wrong with template elements!" << std::endl;
 			return 1;
-		}
-		if(config->indexes == 2){ //mark elements for indexing
-			std::vector<uint32_t>::iterator it;
-			uint32_t i_id;
-			uint32_t i_en;
-			for ( it=config->index_en_id->begin() ; it < config->index_en_id->end(); it++ ){
-				i_en = *it;
-				it++;
-				i_id = *it;
-				if(i_en == en && (field->ie.id & 0x7FFF) == i_id ){
-					std::cout << "index mark: " << i_en <<":"<< i_id << std::endl;
-					new_element->index_mark(true);
-				}
-			}
 		}
 		elements.push_back(new_element);
 	}

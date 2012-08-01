@@ -42,11 +42,15 @@
 extern "C" {
 	#include <ipfixcol/storage.h>
 	#include <ipfixcol/verbose.h>
+	#include <pthread.h>
+	#include <semaphore.h>
 }
+
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+
 
 #include "fastbit_table.h"
 #include "fastbit_element.h"
@@ -61,6 +65,47 @@ extern "C" {
 
 /** Identifier to MSG_* macros */
 static const char *msg_module = "fastbit storage";
+
+void * reorder_index(void * config){
+	struct fastbit_config *conf = static_cast<struct fastbit_config*>(config);
+	ibis::table *index_table;
+	std::string dir;
+	ibis::part *reorder_part;
+	ibis::table::stringList ibis_columns;
+	sem_wait(&(conf->sem));
+
+	for(unsigned int i = 0; i < conf->dirs->size(); i++){
+		dir = (*conf->dirs)[i];
+		/* reorder partitions */
+		std::cout << "Reordering: "<< dir << std::endl;
+		reorder_part = new ibis::part(dir.c_str(),NULL, false);
+		reorder_part->reorder(); //TODO return value
+		delete reorder_part;
+
+		/* build indexes */
+		if(conf->indexes == 1){ //build all indexes
+			std::cout << "Creating indexes: "<< dir << std::endl;
+			index_table = ibis::table::create(dir.c_str());
+			index_table->buildIndexes();
+			delete index_table;
+		}
+		else if(conf->indexes == 2){ //build selected indexes
+			index_table = ibis::table::create(dir.c_str());
+			ibis_columns = index_table->columnNames();
+			for (unsigned int i=0; i < conf->index_en_id->size(); i++){
+				for(unsigned int j=0; j < ibis_columns.size(); j++ ){
+					if((*conf->index_en_id)[i] == std::string(ibis_columns[j])){
+						std::cout << "Creating indexes: "<< dir << (*conf->index_en_id)[i] <<std::endl;
+						index_table->buildIndex(ibis_columns[j]);
+					}
+				}
+			}
+			delete index_table;
+		}
+	}
+	sem_post(&(conf->sem));
+	return NULL;
+}
 
 
 std::string dir_hierarchy(struct fastbit_config *config, uint32_t oid){
@@ -122,8 +167,13 @@ int storage_init (char *params, void **config){
 		return 1;
 	}
 
-	c->index_en_id = new std::vector<uint32_t>;
+	c->index_en_id = new std::vector<std::string>;
 	if(c->index_en_id == NULL){
+		std::cerr << "Can't allocate memory for config structure" << std::endl;
+		return 1;
+	}
+	c->dirs = new std::vector<std::string>;
+	if(c->dirs == NULL){
 		std::cerr << "Can't allocate memory for config structure" << std::endl;
 		return 1;
 	}
@@ -156,18 +206,23 @@ int storage_init (char *params, void **config){
 		for (pugi::xpath_node_set::const_iterator it = index_e.begin(); it != index_e.end(); ++it)
 		{
 			pugi::xpath_node node = *it;
-			uint32_t en = 0;
-			uint32_t id = 0;
+			std::string en = "0";
+			std::string id = "0";
 			for (pugi::xml_attribute_iterator ait = node.node().attributes_begin(); ait != node.node().attributes_end(); ++ait)
 			{
 				if(std::string(ait->name()) == "enterprise"){
-					en = strtoul(ait->value(),NULL,0);
+					en = ait->value();
 				}else if (std::string(ait->name()) == "id"){
-					id = strtoul(ait->value(),NULL,0);
+					id = ait->value();
 				}
 			}
-			c->index_en_id->push_back(en);
-			c->index_en_id->push_back(id);
+
+			if(IPv6 == get_type_from_xml(strtoul(en.c_str(),NULL,0), strtoul(id.c_str(),NULL,0))){
+				c->index_en_id->push_back("e"+en+"id"+id+"p0");
+				c->index_en_id->push_back("e"+en+"id"+id+"p1");
+			} else {
+				c->index_en_id->push_back("e"+en+"id"+id);
+			}
 		}
 
 		if(c->index_en_id->size() > 0 && c->indexes){
@@ -205,6 +260,10 @@ int storage_init (char *params, void **config){
 			c->dump_name = INCREMENTAL;
 			c->window_dir = c->prefix + "000000000001/";
 		}
+		if ( sem_init(&(c->sem),0,1) ){
+		  std::cerr << "Error semaphore init" << std::endl;
+		  return 1;
+		}
 	} else {
 		MSG_ERROR(msg_module, "Fastbit plugin: ERROR Unable to parse configuration xml!");
 	}
@@ -228,10 +287,11 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	time_t rawtime;
 	struct tm * timeinfo;
 	char formated_time[15];
-	ibis::table *index_table;
+	//ibis::table *index_table;
 	uint32_t oid = 0;
 	std::string dir;
-
+	pthread_t index_thread;
+	int s;
 	int i;
 	int flush=0;
 
@@ -280,14 +340,16 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 		if(rcnt > conf->records_window && conf->records_window !=0){
 			flush = 1;
 			time ( &(conf->last_flush));
-			dir = dir_hierarchy(conf,(*dom_id).first);
+			//dir = dir_hierarchy(conf,(*dom_id).first);
 		}
+		time_t last_flush;
+		last_flush = 0;
 		if(conf->time_window !=0){
 			time ( &rawtime );
 			if(difftime(rawtime,conf->last_flush) > conf->time_window){
 				flush=1;
-				dir = dir_hierarchy(conf,(*dom_id).first);
-				conf->last_flush += conf->time_window;
+				//dir = dir_hierarchy(conf,(*dom_id).first);
+				last_flush = conf->last_flush + conf->time_window;
 			}
 		}
 
@@ -295,32 +357,35 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 			flushed ++;
 			template_table* el_table;
 			std::cout << "FLUSH" << std::endl;
+			sem_wait(&(conf->sem));
 			/* flush all templates! */
+			conf->dirs->clear();
 			for(dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++){
 				templates = (*dom_id).second;
+				dir = dir_hierarchy(conf,(*dom_id).first);
 				for(table = templates->begin(); table!=templates->end();table++){
+					conf->dirs->push_back(dir + ((*table).second)->name() + "/");
 					(*table).second->flush(dir);
 					(*table).second->reset_rows();
 					el_table = (*table).second;
-
-					if(conf->indexes == 1){ //build all indexes
-						std::cout << "Creating indexes: "<< dir << std::endl;
-						index_table = ibis::table::create(dir.c_str());
-						index_table->buildIndexes();
-						delete index_table;
-					}
-					else if(conf->indexes == 2){ //build all indexes
-						index_table = ibis::table::create(dir.c_str());
-						for (el_table->el_it = el_table->elements.begin(); el_table->el_it!=el_table->elements.end(); ++(el_table->el_it)){
-							if((*(el_table->el_it))->index_mark()){
-								std::cout << "Creating indexes: "<< dir <<(*(el_table->el_it))->name() <<std::endl;
-								index_table->buildIndex((*(el_table->el_it))->name());
-							}
-						}
-						delete index_table;
-					}
 				}
 			}
+			if(last_flush){
+				conf->last_flush = last_flush;
+			}
+
+
+			sem_post(&(conf->sem));
+			s = pthread_create(&index_thread, NULL, reorder_index, conf);
+			if (s != 0){
+				std::cerr << " Error: pthread_create" << std::endl;
+			}
+			s = pthread_detach(index_thread);
+			if (s != 0){
+				std::cerr << " Error: pthread_detach" << std::endl;
+			}
+
+
 			/* change window directory name! */
 			if (conf->dump_name == INCREMENTAL){
 				ss << std::setw(12) << std::setfill('0') << flushed;
@@ -351,49 +416,45 @@ extern "C"
 int storage_close (void **config){
 	std::cerr <<"CLOSE" << std::endl;
 	std::map<uint16_t,template_table*>::iterator table;
-	template_table* el_table;
+	//template_table* el_table;
 	struct fastbit_config *conf = (struct fastbit_config *) (*config);
 	std::map<uint16_t,template_table*> *templates;
-	ibis::table *index_table;
+	//ibis::table *index_table;
+	//ibis::part *reorder_part;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom = conf->ob_dom;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
 	std::string dir;
-
-
+	pthread_t index_thread;
+	int s;
 
 	/* flush data to hdd */
 	std::cout << "FLUSH" << std::endl;
-
+	sem_wait(&(conf->sem));
+	conf->dirs->clear();
 	for(dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++){
 		templates = (*dom_id).second; 
 		dir = dir_hierarchy(conf,(*dom_id).first);
-
 		for(table = templates->begin(); table!=templates->end();table++){
+			conf->dirs->push_back(dir + ((*table).second)->name() + "/");
 			(*table).second->flush(dir);
-			el_table = (*table).second;
-			if(conf->indexes == 1){ //build all indexes
-				std::cout << "Creating indexes: "<< dir << std::endl;
-				index_table = ibis::table::create(dir.c_str());
-				index_table->buildIndexes();
-				delete index_table;
-			}
-			else if(conf->indexes == 2){ //build all indexes
-				index_table = ibis::table::create(dir.c_str());
-				for (el_table->el_it = el_table->elements.begin(); el_table->el_it!=el_table->elements.end(); ++(el_table->el_it)){
-					if((*(el_table->el_it))->index_mark()){
-						std::cout << "Creating indexes: "<< dir <<(*(el_table->el_it))->name() <<std::endl;
-						index_table->buildIndex((*(el_table->el_it))->name());
-					}
-				}
-				delete index_table;
-			}
 			delete (*table).second;
 		}
 		delete (*dom_id).second;
 	}
 	
+	sem_post(&(conf->sem));
+	s = pthread_create(&index_thread, NULL, reorder_index, conf);
+	if (s != 0){
+		std::cerr << " Error: pthread_create" << std::endl;
+	}
+	s = pthread_join(index_thread,NULL);
+	if (s != 0){
+			std::cerr << " Error: pthread_join" << std::endl;
+	}
+
 	delete ob_dom;
 	delete conf->index_en_id;
+	delete conf->dirs;
 	delete conf;
 	return 0;
 }
