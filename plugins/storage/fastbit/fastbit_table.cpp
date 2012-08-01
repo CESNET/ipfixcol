@@ -105,7 +105,7 @@ int template_table::store(ipfix_data_set * data_set, std::string path){
 			for (el_it = elements.begin(); el_it!=elements.end(); ++el_it) {
 				(*el_it)->flush(path + _name);
 			}
-			std::cout << "BUFFER SIZE -> FLUSH: WRITEN " << _name << " rows: " << _rows_count << std::endl;
+			//std::cout << "BUFFER SIZE -> FLUSH: WRITEN " << _name << " rows: " << _rows_count << std::endl;
 			_rows_count = 0;
 		}
 	}
