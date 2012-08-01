@@ -129,8 +129,9 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 
 	/* go over all parts (theirs intersections), empty intersections are ignored */
 	for (std::vector<stringSet>::const_iterator outerIter = colIntersect.begin(); outerIter != colIntersect.end(); outerIter++) {
-		/* work with current intersection only if it has not been used before and if it is not empty */
-		if (used[iterPos] || outerIter->size() == 0	) {
+		/* work with current intersection only if it has not been used before */
+		/* empty intersections are allowed - we might want to show sum of data that do not match (or query sum(pkt)) */
+		if (used[iterPos]) {
 			iterPos++;
 			continue;
 		}

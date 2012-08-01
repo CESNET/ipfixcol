@@ -647,8 +647,8 @@ void Configuration::help() const
 	<< "-h              this text you see right here" << std::endl
 	<< "-V              Print version and exit." << std::endl
 	<< "-a              Aggregate netflow data." << std::endl
-	<< "-A <expr>[/net] How to aggregate: ',' sep list of tags see fbitdump(1)" << std::endl
-	<< "                or subnet aggregation: srcip4/24, srcip6/64." << std::endl
+	<< "-A [<expr>]     How to aggregate: ',' sep list of tags see man fbitdump(1)" << std::endl
+//	<< "                or subnet aggregation: srcip4/24, srcip6/64." << std::endl
 	//<< "-b              Aggregate netflow records as bidirectional flows." << std::endl
 	//<< "-B              Aggregate netflow records as bidirectional flows - Guess direction." << std::endl
 //	<< "-w <file>       write output to file" << std::endl
@@ -676,7 +676,7 @@ void Configuration::help() const
 	<< "-r <expr>       Specifies subdirectory or subdirectories for -M, usable only with -M." << std::endl
 	<< "                expr can be dir, which loads the dir from all directories specified in -M," << std::endl
 	<< "				or dir1:dir2, which reads data from subdirectories 'dir1' to 'dir2', in directories from -M." << std::endl
-	<< "-m [column]             Print netflow data date sorted. Takes optional parameter '%column' to sort by." << std::endl
+	<< "-m [column]     Print netflow data date sorted. Takes optional parameter '%column' to sort by." << std::endl
 	<< "-R <expr>       Read input from directory (and subdirectories recursively). Can be repeated." << std::endl
 	<< "                /any/dir  Read all data from directory 'dir'." << std::endl
 	<< "                /dir/dir1:dir2: Read all data from directories 'dir1' to 'dir2'." << std::endl
@@ -837,6 +837,10 @@ void Configuration::parseAggregateArg(char *arg) throw (std::invalid_argument)
 
 	/* add aggregate columns to set */
 	this->aggregateColumnsAliases.clear();
+
+	/* NULL argument means no args, no further processing */
+	if (arg == NULL) return;
+
 	if (!Utils::splitString(arg, this->aggregateColumnsAliases)) {
 		throw std::invalid_argument(std::string("Ivalid input string ") + arg);
 	}
