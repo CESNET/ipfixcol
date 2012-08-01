@@ -77,7 +77,8 @@ enum store_type{UINT,INT,BLOB,TEXT,FLOAT,IPv6,UNKNOWN};
 * @param en Enterprise number of element
 * @param id ID of information element
  */
-enum store_type get_type_from_xml(unsigned int en,unsigned int id);
+int load_types_from_xml(struct fastbit_config *conf);
+enum store_type get_type_from_xml(struct fastbit_config *conf,unsigned int en,unsigned int id);
 
 /**
  ** \brief Class wrapper for information elements

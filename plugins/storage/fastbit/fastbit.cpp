@@ -61,10 +61,14 @@ extern "C" {
 #include <iostream>
 #include <iomanip>
 #include <string>
+#include <fstream>
+#include <iostream>
+
 #include "pugixml.hpp"
 
 /** Identifier to MSG_* macros */
 static const char *msg_module = "fastbit storage";
+
 
 void * reorder_index(void * config){
 	struct fastbit_config *conf = static_cast<struct fastbit_config*>(config);
@@ -169,6 +173,12 @@ int storage_init (char *params, void **config){
 		return 1;
 	}
 
+	c->elements_types = new	std::map<uint32_t,std::map<uint16_t,enum store_type> >;
+	if(c->elements_types == NULL){
+		std::cerr << "Can't allocate memory for config structure" << std::endl;
+		return 1;
+	}
+
 	c->index_en_id = new std::vector<std::string>;
 	if(c->index_en_id == NULL){
 		std::cerr << "Can't allocate memory for config structure" << std::endl;
@@ -186,8 +196,11 @@ int storage_init (char *params, void **config){
 	std::string path,timeWindow,recordLimit,nameType,namePrefix,indexes,test,timeAligment;
 
 	if(doc){
-	        pugi::xpath_node ie = doc.select_single_node("fileWriter");
-        	path=ie.node().child_value("path");
+
+		load_types_from_xml(c);
+
+		pugi::xpath_node ie = doc.select_single_node("fileWriter");
+		path=ie.node().child_value("path");
 		//make sure path ends with "/" character
 		if(path.at(path.size() -1) != '/'){
 			c->sys_dir = path + "/";
@@ -221,7 +234,7 @@ int storage_init (char *params, void **config){
 				}
 			}
 
-			if(IPv6 == get_type_from_xml(strtoul(en.c_str(),NULL,0), strtoul(id.c_str(),NULL,0))){
+			if(IPv6 == get_type_from_xml(c,strtoul(en.c_str(),NULL,0), strtoul(id.c_str(),NULL,0))){
 				c->index_en_id->push_back("e"+en+"id"+id+"p0");
 				c->index_en_id->push_back("e"+en+"id"+id+"p1");
 			} else {
@@ -459,6 +472,7 @@ int storage_close (void **config){
 	delete ob_dom;
 	delete conf->index_en_id;
 	delete conf->dirs;
+	delete conf->elements_types;
 	delete conf;
 	return 0;
 }

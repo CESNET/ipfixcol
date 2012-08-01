@@ -39,6 +39,56 @@
 
 
 #include "fastbit_element.h"
+#include "fastbit_table.h"
+
+
+int load_types_from_xml(struct fastbit_config *conf){
+	pugi::xml_document doc;
+	uint32_t en;
+	uint16_t id;
+	enum store_type type;
+	std::string str_value;
+
+	if (!doc.load_file("/etc/ipfixcol/ipfix-elements.xml")) return -1;
+
+
+	pugi::xpath_node_set elements = doc.select_nodes("/ipfix-elements/element");
+	for (pugi::xpath_node_set::const_iterator it = elements.begin(); it != elements.end(); ++it)
+	{
+		pugi::xpath_node node = *it;
+
+		str_value = it->node().child_value("enterprise");
+		en = strtoul(str_value.c_str(),NULL,0);
+		str_value = it->node().child_value("id");
+		id = strtoul(str_value.c_str(),NULL,0);
+
+		str_value = it->node().child_value("dataType");
+
+		if(str_value =="unsigned8" or  str_value =="unsigned16" or str_value =="unsigned32" or str_value =="unsigned64" or \
+		   str_value =="dateTimeSeconds" or str_value =="dateTimeMilliseconds" or str_value =="dateTimeMicroseconds" or \
+	           str_value =="dateTimeNanoseconds" or str_value =="ipv4Address" or str_value =="macAddress" or str_value == "boolean"){
+			type =UINT;
+		}else if(str_value =="signed8" or str_value =="signed16" or str_value =="signed32" or str_value =="signed64" ){
+			type = INT;
+		}else if(str_value =="ipv6Address"){
+			type = IPv6;
+		}else if(str_value =="float32" or str_value =="float64"){
+			type = FLOAT;
+		}else if(str_value =="string"){
+			type = TEXT;
+		}else if(str_value =="octetArray" or str_value =="basicList" or str_value =="subTemplateList" or str_value=="subTemplateMultiList"){
+			type = BLOB;
+		}else{
+			type = UNKNOWN;
+		}
+		//conf->elements_types->insert(std::make_pair(en , std::make_pair(id, type)));
+		(*conf->elements_types)[en][id] = type;
+		//std::cout << "el loaded: " << en << ":" << id <<":"<< type << std::endl;
+	}
+
+	return 0;
+}
+
 
 /*
  * \brief Search elements xml for type of element
@@ -52,32 +102,8 @@
 * @param en Enterprise number of element
 * @param id ID of information element
  */
-enum store_type get_type_from_xml(unsigned int en, unsigned int id){
-	pugi::xml_document doc;
-	char node_query[50];
-	std::string type;
-	if (!doc.load_file("/etc/ipfixcol/ipfix-elements.xml")) return UINT;
-
-
-	sprintf(node_query,"//element[enterprise='%u' and id='%u']",en,id);
-	pugi::xpath_node ie = doc.select_single_node(node_query);
-        type=ie.node().child_value("dataType");
-	if(type =="unsigned8" or  type =="unsigned16" or type =="unsigned32" or type =="unsigned64" or \
-	   type =="dateTimeSeconds" or type =="dateTimeMilliseconds" or type =="dateTimeMicroseconds" or \
-           type =="dateTimeNanoseconds" or type =="ipv4Address" or type =="macAddress" or type == "boolean"){
-		return UINT;
-	}else if(type =="signed8" or type =="signed16" or type =="signed32" or type =="signed64" ){
-		return INT;
-	}else if(type =="ipv6Address"){
-		return IPv6;
-	}else if(type =="float32" or type =="float64"){
-		return FLOAT;
-	}else if(type =="string"){
-		return TEXT;
-	}else if(type =="octetArray" or type =="basicList" or type =="subTemplateList" or type=="subTemplateMultiList"){
-		return BLOB;
-	}
-	return UNKNOWN;
+enum store_type get_type_from_xml(struct fastbit_config *conf, unsigned int en, unsigned int id){
+	return (*conf->elements_types)[en][id];
 }
 
 void element::byte_reorder(uint8_t *dst,uint8_t *src, int size, int offset){

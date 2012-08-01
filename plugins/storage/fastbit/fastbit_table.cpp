@@ -41,6 +41,27 @@
 #include <vector>
 #include "fastbit_table.h"
 
+#define ROW_LINE "Number_of_rows ="
+
+uint64_t get_rows_from_part(const char *part_path){
+	uint64_t rows = 0;
+	std::string line;
+	std::string str_row;
+	size_t pos;
+
+	std::ifstream part_file(part_path);
+	if(!part_file.is_open()){
+		return rows;
+	}
+	while(getline(part_file, line, '\n')){
+		if((pos =line.find(ROW_LINE)) != std::string::npos){
+			str_row = line.substr(pos + strlen(ROW_LINE));
+			rows = strtoul(str_row.c_str(),NULL,0);
+		}
+	}
+	return rows;
+}
+
 template_table::~template_table(){
 	for (el_it = elements.begin(); el_it!=elements.end(); ++el_it) {
 		(*el_it)->free_buffer();
@@ -126,7 +147,7 @@ int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_co
 			en = tmp->fields[i].enterprise_number;
 		}
 		//TODO std::cout << "element size:" << field->ie.length << " id:" << (field->ie.id & 0x7FFF) << " en:" << en << std::endl;
-		switch(get_type_from_xml(en, field->ie.id & 0x7FFF)){
+		switch(get_type_from_xml(config, en, field->ie.id & 0x7FFF)){
 			case UINT:
 				new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 				//_tablex->addColumn(new_element->name(), new_element->type());
