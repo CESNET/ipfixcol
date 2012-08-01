@@ -37,7 +37,9 @@
  *
  */
 
-
+extern "C" {
+#include <ipfixcol/verbose.h>
+}
 #include "fastbit_element.h"
 #include "fastbit_table.h"
 
@@ -128,7 +130,7 @@ int el_float::fill(uint8_t * data){
 		this->append(&(float_value.float64));
 		break;
 	default:
-		std::cerr << "Wrong float size!" << std::endl;
+		MSG_ERROR(msg_module,"Wrong element size (%s - %u)!",_name,_size);
 		break;
 	}
 	return 0;
@@ -145,7 +147,7 @@ int el_float::set_type(){
 		_type=ibis::DOUBLE;
 		break;
 	default:
-		std::cerr << "Wrong float size!" << std::endl;
+		MSG_ERROR(msg_module,"Wrong element size (%s - %u)!",_name,_size);
 		break;
 	}
 	return 0;
@@ -190,7 +192,6 @@ int el_var_size::fill(uint8_t * data){
 		byte_reorder((uint8_t *) &(_size),&(data[1]),2);
 		_size+=3; //3 = 1 first byte with 256 and 2 bytes with true size
 	}
-	std::cout << "variable(" << _name << ") whole element size:" << _size << std::endl;
 	return 0;
 }
 int el_var_size::set_type(){
@@ -243,7 +244,7 @@ int el_uint::fill(uint8_t * data){
 		break;
 	default:
 		return 1;
-		std::cerr << "Too large uint element!" << std::endl;
+		MSG_ERROR(msg_module,"Wrong element size (%s - %u)!",_name,_size);
 		break;
 	}
 	return 0;
@@ -272,7 +273,7 @@ int el_uint::set_type(){
 		break;
 	default:
 		return 1;
-		std::cerr << "Too large uint element!" << std::endl;
+		MSG_ERROR(msg_module,"Wrong element size (%s - %u)!",_name,_size);
 		break;
 	}
 	return 0;
@@ -302,7 +303,7 @@ int el_sint::set_type(){
 		break;
 	default:
 		return 1;
-		std::cerr << "Too large uint element!" << std::endl;
+		MSG_ERROR(msg_module,"Wrong element size (%s - %u)!",_name,_size);
 		break;
 	}
 	return 0;

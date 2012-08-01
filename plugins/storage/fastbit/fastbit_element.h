@@ -175,7 +175,7 @@ public:
 	 * @return 0 on succes
 	 * @return 1 on failure
 	 */
-	virtual int fill(uint8_t * data) {std::cout<<"STORE_DEF"<<std::endl;return 0;}
+	virtual int fill(uint8_t * data) {return 0;}
 
 	/**
 	 * \brief Copy data and change byte order
