@@ -52,7 +52,7 @@
 * @param en Enterprise number of element
 * @param id ID of information element
  */
-enum store_type get_type_from_xml(int en, int id){
+enum store_type get_type_from_xml(unsigned int en, unsigned int id){
 	pugi::xml_document doc;
 	char node_query[50];
 	std::string type;
