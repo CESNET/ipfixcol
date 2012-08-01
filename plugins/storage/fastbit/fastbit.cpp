@@ -77,10 +77,12 @@ void * reorder_index(void * config){
 	for(unsigned int i = 0; i < conf->dirs->size(); i++){
 		dir = (*conf->dirs)[i];
 		/* reorder partitions */
-		std::cout << "Reordering: "<< dir << std::endl;
-		reorder_part = new ibis::part(dir.c_str(),NULL, false);
-		reorder_part->reorder(); //TODO return value
-		delete reorder_part;
+		if(conf->reorder == 1){
+			std::cout << "Reordering: "<< dir << std::endl;
+			reorder_part = new ibis::part(dir.c_str(),NULL, false);
+			reorder_part->reorder(); //TODO return value
+			delete reorder_part;
+		}
 
 		/* build indexes */
 		if(conf->indexes == 1){ //build all indexes
@@ -193,14 +195,16 @@ int storage_init (char *params, void **config){
 			c->sys_dir = path;
 		}
 
+		c->indexes = 0;
 		indexes=ie.node().child_value("onTheFlyIndexes");
 		if(indexes == "yes"){
 			c->indexes = 1;
-		} else {
-			c->indexes = 0;
 		}
-
-
+		c->reorder = 0;
+		indexes=ie.node().child_value("reorder");
+		if(indexes == "yes"){
+			c->reorder = 1;
+		}
 
 		pugi::xpath_node_set index_e = doc.select_nodes("fileWriter/indexes/element");
 		for (pugi::xpath_node_set::const_iterator it = index_e.begin(); it != index_e.end(); ++it)

@@ -373,6 +373,16 @@
 						<command>onTheFlyIndexes</command> is set to "yes" than indexes are build for ALL elements</simpara>
 				</listitem>
 			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>reorder</command>
+				</term>
+				<listitem>
+					<simpara>This tells plugin to reorder for stored data (yes/no).
+					Reorder is based on cardinality so queries on reordered data should
+					be faster and data indexes smaller. </simpara>
+				</listitem>
+			</varlistentry>
 		</variablelist>
 	</para>
 	</refsect1>

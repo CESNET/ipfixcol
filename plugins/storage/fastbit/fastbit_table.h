@@ -208,6 +208,7 @@ struct fastbit_config{
 	std::string window_dir;         /* current window directory */
 	std::string prefix;             /* user prefix for storage directory */
 	time_t last_flush;/* time of last flush (used for time based rotation, name is based on start of interval not its end!) */
+	int reorder;	  /* specifies if stored data should be reordered */
 	int indexes;      /* specifies if indexes should be build during storage. 0 = no indexes, 1 = index all, 2 = index only marked elements*/
 	int buff_size;    /* size of buffer (number of values)*/
 	sem_t sem;		  /* semaphore for index building thread */
