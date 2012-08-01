@@ -229,23 +229,23 @@ int storage_init (char *params, void **config){
 			c->indexes = 2; //mark elements for indexes
 		}
 
-	        ie = doc.select_single_node("fileWriter/dumpInterval");
-        	timeWindow=ie.node().child_value("timeWindow");
+		ie = doc.select_single_node("fileWriter/dumpInterval");
+		timeWindow=ie.node().child_value("timeWindow");
 		c->time_window = atoi(timeWindow.c_str());
 
-        	recordLimit=ie.node().child_value("recordLimit");
+		recordLimit=ie.node().child_value("recordLimit");
 		c->records_window = atoi(recordLimit.c_str());
 
-        	recordLimit=ie.node().child_value("bufferSize");
+		recordLimit=ie.node().child_value("bufferSize");
 		c->buff_size = atoi(recordLimit.c_str());
 
-        	timeAligment=ie.node().child_value("timeAlignment");
+		timeAligment=ie.node().child_value("timeAlignment");
 
-	        ie = doc.select_single_node("fileWriter/namingStrategy");
-        	namePrefix=ie.node().child_value("prefix");
+		ie = doc.select_single_node("fileWriter/namingStrategy");
+		namePrefix=ie.node().child_value("prefix");
 		c->prefix = namePrefix;
 
-        	nameType=ie.node().child_value("type");
+		nameType=ie.node().child_value("type");
 		if(nameType == "time"){
 			c->dump_name = TIME;
 			time ( &(c->last_flush));
