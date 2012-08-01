@@ -62,6 +62,11 @@ bool splitString(char *str, stringSet &result)
 	}
 
 	token = strtok(str, ",");
+	/* NULL token cannot be added to result */
+	if (token == NULL) {
+		return true;
+	}
+
 	result.insert(token);
 	while ((token = strtok(NULL, ",")) != NULL) {
 		result.insert(token);

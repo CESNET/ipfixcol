@@ -92,9 +92,10 @@
 			</varlistentry>
 			
 			<varlistentry>
-				<term>-A <replaceable class="parameter">aggregation</replaceable></term>
+				<term>-A [<replaceable class="parameter">aggregation</replaceable>]</term>
 				<listitem>
 					<simpara>Aggregate netflow data by any number of given columns. Aggregation is a ',' separated list of column aliases (beginning with %).</simpara>
+					<simpara>Aggregation can be specified without any columns, which will cause summary columns to be computed without any grouping.</simpara>
 				</listitem>
 			</varlistentry>
 			
