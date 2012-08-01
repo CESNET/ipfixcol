@@ -152,7 +152,7 @@ int storage_init (char *params, void **config){
 		return 1;
 	}
 
-	/* inicialize template map */
+	/* initialize template map */
 	//((struct fastbit_config*)(*config))->templates = new std::map<uint16_t,template_table*>;
 	//if(((struct fastbit_config*)(*config))->templates == NULL){
 	//	std::cerr << "Can't allocate memory for config structure" << std::endl;
@@ -178,7 +178,7 @@ int storage_init (char *params, void **config){
 		return 1;
 	}
 
-	/* parse configuratin xml and upated configure structure accorging to it */
+	/* parse configuration xml and updated configure structure according to it */
 	pugi::xml_document doc;
 	doc.load(params);
 	std::string path,timeWindow,recordLimit,nameType,namePrefix,indexes,test,timeAligment;
@@ -315,14 +315,14 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 
 	
 		if(ipfix_msg->data_couple[i].data_template == NULL){
-			//skip data without tamplate!
+			//skip data without template!
 			continue;
 		}
 
 		uint16_t template_id = ipfix_msg->data_couple[i].data_template->template_id;
 
 
-		/* if there is unknow template parse it and add it to template map */
+		/* if there is unknown template parse it and add it to template map */
 		if((table = templates->find(template_id)) == templates->end()){
 			std::cout << "NEW TEMPLATE: " << template_id << std::endl;
 			template_table *table_tmp = new template_table(template_id, conf->buff_size);
