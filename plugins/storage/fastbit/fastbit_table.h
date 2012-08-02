@@ -59,6 +59,9 @@ extern "C" {
 	#include <semaphore.h>
 }
 
+/** Identifier to MSG_* macros */
+static const char *msg_module = "fastbit storage";
+
 /* this enum specifies types of file naming strategy */
 enum name_type{TIME,INCREMENTAL};
 
@@ -142,7 +145,6 @@ public:
 		part = ss.str();
 		fputs(part.c_str(),f);
 		fclose(f);
-		std::cout << "UPDATED PART from: " << rows_in_part << "to" << _rows_in_window + rows_in_part <<std::endl;
 		return 0;
 	}
 
@@ -155,19 +157,19 @@ public:
 			if(errno == ENOENT){ //check parent direcotry
 				pos = path.find_last_of("/\\");
 				if(pos == std::string::npos){
-					std::cout << "Error while creating dir:\"" << path << "\"\n";
+					MSG_ERROR(msg_module,"Error while creating directory: %s",path.c_str());
 					return 1;
 				}
 				this->dir_check(path.substr(0,pos));
 				//try create dir againe
 				if(mkdir(path.c_str(),0777) != 0){
-					std::cout << "Error while creating dir:\"" << path << "\"\n";
+					MSG_ERROR(msg_module,"Error while creating directory: %s",path.c_str());
 					return 1;
 				}
 				return 0;
 			}
 			//other error
-			std::cout << "Error while creating dir:\"" << path << "\"\n";
+			MSG_ERROR(msg_module,"Error while creating directory: %s",path.c_str());
 			return 1;
 		}
 		return 0;
