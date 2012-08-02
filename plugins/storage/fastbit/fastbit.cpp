@@ -298,7 +298,7 @@ int process_startup_xml(char *params, struct fastbit_config* c){
 extern "C"
 int storage_init (char *params, void **config){
 	MSG_DEBUG(MSG_MODULE, "Fastbit plugin: initialization");
-	struct fastbit_config* c = (struct fastbit_config*)(*config);
+	struct fastbit_config* c = NULL;
 
 	/* create config structure! */
 	(*config) = new  struct fastbit_config;
@@ -306,6 +306,7 @@ int storage_init (char *params, void **config){
 		MSG_ERROR(MSG_MODULE,"Can't allocate memory for config structure");
 		return 1;
 	}
+	c = (struct fastbit_config*)(*config);
 	c->ob_dom = new std::map<uint32_t,std::map<uint16_t,template_table*>* >;
 	if(c->ob_dom == NULL){
 		MSG_ERROR(MSG_MODULE, "Can't allocate memory for config structure");
