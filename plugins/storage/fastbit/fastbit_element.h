@@ -69,42 +69,42 @@ const char ELEMENTS_XML[] = "/etc/ipfixcol/ipfix-elements.xml";
 
 class template_table; //Needed becouse of Circular dependency
 
-
-
 /**
- * \brief Search elements xml for type of element
+ * \brief Load elements types from xml to configure structure
  *
- * This function reads /etc/ipfixcol/ipfix-elements.xml (TODO add this as parameter)
- * and search element specified by element id and enterprise id.
- * When its found it decides if its integer, text, float etc..
- * (it does not provide exact type (size) as uint32_t,double ect.)
+ * This function reads /etc/ipfixcol/ipfix-elements.xml
+ * and stores elements data type in configuration structure
  *
- * @param data point
-* @param en Enterprise number of element
-* @param id ID of information element
+ * @param conf fastbit storage plug-in configuration structure
  */
 int load_types_from_xml(struct fastbit_config *conf);
+
+/**
+ * \brief Search for element type in configure structure
+ *
+ * @param conf fastbit storage plug-in configuration structure
+ * @param en Enterprise number of element
+ * @param id ID of information element
+ * @return element type
+ */
 enum store_type get_type_from_xml(struct fastbit_config *conf,unsigned int en,unsigned int id);
 
 /**
- ** \brief Class wrapper for information elements
- **
- **
- **/
+ * \brief Class wrapper for information elements
+ */
 class element
 {
 protected:
 	int _size;
 	enum ibis::TYPE_T _type;
 	/* row name for this element
-	   combination of id and elterprise number
+	   combination of id and enterprise number
 	   exp: e0id16, e20id50.... */
 	char _name[IE_NAME_LENGTH];
 
-	bool _index_mark; //build index for this element?
-	int _filled;
-	int _buf_max;
-	char *_buffer;
+	int _filled;  /* number of items are stored in buffer*/
+	int _buf_max; /* maximum number of items buffer can hold */
+	char *_buffer; /* items buffer */
 
 public:
 	/* points to elements data after fill() */

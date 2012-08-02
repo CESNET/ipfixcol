@@ -44,7 +44,6 @@ extern "C" {
 #include "fastbit_element.h"
 #include "fastbit_table.h"
 
-
 int load_types_from_xml(struct fastbit_config *conf){
 	pugi::xml_document doc;
 	uint32_t en;
@@ -92,19 +91,6 @@ int load_types_from_xml(struct fastbit_config *conf){
 	return 0;
 }
 
-
-/*
- * \brief Search elements xml for type of element
- *
- * This function reads /etc/ipfixcol/ipfix-elements.xml (TODO add this as parameter)
- * and search element specified by element id and enterprise id.
- * When its found it decides if its integer, text, float etc..
- * (it does not provide exact type (size) as uint32_t,double ect.)
- *
- * @param data point
-* @param en Enterprise number of element
-* @param id ID of information element
- */
 enum store_type get_type_from_xml(struct fastbit_config *conf, unsigned int en, unsigned int id){
 	return (*conf->elements_types)[en][id];
 }
