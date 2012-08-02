@@ -53,20 +53,21 @@
 #include "pugixml.hpp"
 #include "fastbit_element.h"
 #include <sys/stat.h>
+#include "config_struct.h"
 
 extern "C" {
 	#include <ipfixcol/storage.h>
 	#include <semaphore.h>
 }
 
-/** Identifier to MSG_* macros */
-static const char *msg_module = "fastbit storage";
 
-/* this enum specifies types of file naming strategy */
-enum name_type{TIME,INCREMENTAL};
+
+//extern const char *msg_module;
+
+class element; //needed because of Circular dependency
 
 uint64_t get_rows_from_part(const char *);
-class element; //needed because of Circular dependency
+
 
 /* For each uniq template is created instance of template_table object.
  * The object is used to parse data records belonging to the template

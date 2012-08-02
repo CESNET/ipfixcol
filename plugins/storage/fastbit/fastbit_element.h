@@ -51,11 +51,14 @@
 #include <string>
 #include "pugixml.hpp"
 
+#include "fastbit.h"
+#include "config_struct.h"
+
 extern "C" {
 	#include <ipfixcol/storage.h>
 }
 
-const unsigned int RESERVED_SPACE = 75000;
+
 const int IE_NAME_LENGTH = 16;
 const int TYPE_NAME_LENGTH = 10;
 const char ELEMENTS_XML[] = "/etc/ipfixcol/ipfix-elements.xml";
@@ -63,7 +66,7 @@ const char ELEMENTS_XML[] = "/etc/ipfixcol/ipfix-elements.xml";
 
 class template_table; //Needed becouse of Circular dependency
 
-enum store_type{UINT,INT,BLOB,TEXT,FLOAT,IPv6,UNKNOWN};
+
 
 /**
  * \brief Search elements xml for type of element

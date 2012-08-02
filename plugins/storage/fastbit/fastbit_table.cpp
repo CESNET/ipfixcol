@@ -179,7 +179,7 @@ int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_co
 			case BLOB:
 			case UNKNOWN:
 			default:
-				MSG_DEBUG(msg_module,"Received UNKNOWN element (size: %u)",field->ie.length);
+				MSG_DEBUG(MSG_MODULE,"Received UNKNOWN element (size: %u)",field->ie.length);
 				if(field->ie.length < 9){
 					new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 				} else if(field->ie.length == 65535){ //variable size element
@@ -190,7 +190,7 @@ int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_co
 				break;
 			}
 		if(!new_element){
-			MSG_ERROR(msg_module,"Something is wrong with template elements!");
+			MSG_ERROR(MSG_MODULE,"Something is wrong with template elements!");
 			return 1;
 		}
 		elements.push_back(new_element);

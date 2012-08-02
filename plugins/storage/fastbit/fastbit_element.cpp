@@ -130,7 +130,7 @@ int el_float::fill(uint8_t * data){
 		this->append(&(float_value.float64));
 		break;
 	default:
-		MSG_ERROR(msg_module,"Wrong element size (%s - %u)!",_name,_size);
+		MSG_ERROR(MSG_MODULE,"Wrong element size (%s - %u)!",_name,_size);
 		break;
 	}
 	return 0;
@@ -273,7 +273,7 @@ int el_uint::set_type(){
 		break;
 	default:
 		return 1;
-		MSG_ERROR(msg_module,"Wrong element size (%s - %u)!",_name,_size);
+		MSG_ERROR(MSG_MODULE,"Wrong element size (%s - %u)!",_name,_size);
 		break;
 	}
 	return 0;
@@ -303,7 +303,7 @@ int el_sint::set_type(){
 		break;
 	default:
 		return 1;
-		MSG_ERROR(msg_module,"Wrong element size (%s - %u)!",_name,_size);
+		MSG_ERROR(MSG_MODULE,"Wrong element size (%s - %u)!",_name,_size);
 		break;
 	}
 	return 0;
