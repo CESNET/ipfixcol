@@ -155,9 +155,9 @@ int template_table::store(ipfix_data_set * data_set, std::string path){
 	//count how many records does data_set contain
 	unsigned int data_size = (ntohs(data_set->header.length)-(sizeof(struct ipfix_set_header)));
 
-        //for(ri=0;ri<record_count;ri++){
-        unsigned int read_data = 0;
-        while(read_data < data_size){
+	//for(ri=0;ri<record_count;ri++){
+	unsigned int read_data = 0;
+	while(read_data < data_size){
 		if((data_size - read_data) < _min_record_size){
 			//std::cout << "skip padding ( "<< data_size - read_data <<"b)"<< std::endl;
 			break;
