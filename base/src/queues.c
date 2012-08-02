@@ -196,6 +196,12 @@ struct ipfix_message* rbuffer_read (struct ring_buffer* rbuffer, unsigned int *i
 		return (NULL);
 	}
 
+	/* Wake up other threads waiting for read */
+	if (pthread_cond_signal (&(rbuffer->cond)) != 0) {
+		MSG_ERROR(msg_module, "Condition signal failed (%s:%d)", __FILE__, __LINE__);
+		return (EXIT_FAILURE);
+	}
+
 	/* get data */
 	return (rbuffer->data[*index]);
 }
