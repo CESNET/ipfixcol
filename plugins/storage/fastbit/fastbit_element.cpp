@@ -102,8 +102,8 @@ void element::byte_reorder(uint8_t *dst,uint8_t *src, int size, int offset){
 	}
 }
 
-element:: element(): _size(0), _type(ibis::UBYTE), _index_mark(false),
-					 _filled(0), _buf_max(0),_buffer(NULL), value(0){
+element:: element(): _size(0), _type(ibis::UBYTE), _filled(0),
+					_buf_max(0),_buffer(NULL), value(0){
 	sprintf(_name,"e0id0");
 }
 
@@ -111,7 +111,6 @@ element::element(int size, int en, int id, uint32_t buf_size){
 	value = NULL;
 	_size = size;
 	_type = ibis::UBYTE;
-	_index_mark = false;
 	_filled = 0;
 	_buf_max = 0;
 	_buffer = NULL;
