@@ -293,7 +293,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	const struct ipfix_template_mgr *template_mgr){
 	std::map<uint16_t,template_table*>::iterator table;
 	struct fastbit_config *conf = (struct fastbit_config *) config;
-	std::map<uint16_t,template_table*> *templates = conf->templates;
+	std::map<uint16_t,template_table*> *templates = NULL;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom = conf->ob_dom;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
 	static int rcnt = 0;

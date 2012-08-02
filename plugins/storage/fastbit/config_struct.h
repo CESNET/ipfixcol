@@ -62,9 +62,6 @@ struct fastbit_config{
 	 * (Enterprise id -> element id -> element storage type) */
 	std::map<uint32_t,std::map<uint16_t,enum store_type> > *elements_types;
 
-	/*TODO map with template id / template_table pairs */
-	std::map<uint16_t,template_table*> *templates;
-
 	/* index_en_id stores elements which should be indexed.
 	 * elements stored as column names ('e0id4') */
 	std::vector<std::string> *index_en_id;
