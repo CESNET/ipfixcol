@@ -112,9 +112,6 @@ public:
 	element();
 	element(int size, int en, int id, uint32_t buf_size = RESERVED_SPACE);
 
-	bool index_mark(){return _index_mark;}
-	void index_mark(bool i){_index_mark = i;}
-
 	/* get & set methods*/
 	/**
 	 * \brief Get method for element name
