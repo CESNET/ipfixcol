@@ -84,6 +84,7 @@
 				<prefix>ic</prefix>
 			</namingStrategy>
 			<onTheFlyIndexes>yes</onTheFlyIndexes>
+			<reorder>yes</reorder>
 			<indexes>
 				<element enterprise = "0" id = "12"/>
 				<element enterprise = "0" id = "8"/>
