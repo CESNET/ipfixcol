@@ -68,7 +68,6 @@ extern "C" {
 
 #include "pugixml.hpp"
 
-
 void * reorder_index(void * config){
 	struct fastbit_config *conf = static_cast<struct fastbit_config*>(config);
 	ibis::table *index_table;
@@ -139,6 +138,61 @@ std::string dir_hierarchy(struct fastbit_config *config, uint32_t oid){
 	dir+= config->window_dir;
 	//std::cout << "Final hierarchy: " << dir << std::endl;
 	return dir;
+}
+
+void flush_data(struct fastbit_config *conf, bool close){
+	std::string dir;
+	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
+	std::map<uint16_t,template_table*>::iterator table;
+	std::map<uint16_t,template_table*> *templates = NULL;
+	int s;
+	pthread_t index_thread;
+	std::stringstream ss;
+	static int flushed = 1;
+	struct tm * timeinfo;
+	char formated_time[15];
+
+	MSG_DEBUG(MSG_MODULE,"Flushing data to disk");
+	sem_wait(&(conf->sem));
+	conf->dirs->clear();
+	for(dom_id = conf->ob_dom->begin(); dom_id!=conf->ob_dom->end();dom_id++){
+		templates = (*dom_id).second;
+		dir = dir_hierarchy(conf,(*dom_id).first);
+		for(table = templates->begin(); table!=templates->end();table++){
+			conf->dirs->push_back(dir + ((*table).second)->name() + "/");
+			(*table).second->flush(dir);
+			(*table).second->reset_rows();
+		}
+	}
+	sem_post(&(conf->sem));
+
+	s = pthread_create(&index_thread, NULL, reorder_index, conf);
+	if (s != 0){
+		MSG_ERROR(MSG_MODULE,"pthread_create");
+	}
+	if(close){
+		s = pthread_join(index_thread,NULL);
+		if (s != 0){
+			MSG_ERROR(MSG_MODULE,"pthread_join");
+		}
+	}else{
+		s = pthread_detach(index_thread);
+		if (s != 0){
+			MSG_ERROR(MSG_MODULE,"pthread_detach");
+		}
+	}
+
+	// change window directory name!
+	if (conf->dump_name == INCREMENTAL){
+		ss << std::setw(12) << std::setfill('0') << flushed;
+		conf->window_dir = conf->prefix + ss.str() + "/";
+		ss.str("");
+		flushed++;
+	}else{
+		timeinfo = localtime ( &(conf->last_flush));
+		strftime(formated_time,15,"%Y%m%d%H%M",timeinfo);
+		conf->window_dir = conf->prefix + std::string(formated_time) + "/";
+	}
 }
 
 /* plugin inicialization */
@@ -297,19 +351,13 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom = conf->ob_dom;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
 	static int rcnt = 0;
-	static int flushed = 1;
 	std::stringstream ss;
 	std::string domain_name;
 	time_t rawtime;
-	struct tm * timeinfo;
-	char formated_time[15];
-	//ibis::table *index_table;
 	uint32_t oid = 0;
 	std::string dir;
-	pthread_t index_thread;
-	int s;
 	int i;
-	int flush=0;
+	uint16_t template_id;
 
 	oid = ntohl(ipfix_msg->pkt_header->observation_domain_id);
 	if((dom_id = ob_dom->find(oid)) == ob_dom->end()){
@@ -328,15 +376,13 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 			//there are no more filled data_sets	
 			return 0;
 		}
-
 	
 		if(ipfix_msg->data_couple[i].data_template == NULL){
 			//skip data without template!
 			continue;
 		}
 
-		uint16_t template_id = ipfix_msg->data_couple[i].data_template->template_id;
-
+		template_id = ipfix_msg->data_couple[i].data_template->template_id;
 
 		/* if there is unknown template parse it and add it to template map */
 		if((table = templates->find(template_id)) == templates->end()){
@@ -347,76 +393,24 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 			table = templates->find(template_id);
 		}
 
-		/* store this data record */	
-		rcnt += (*table).second->store(ipfix_msg->data_couple[i].data_set, dir);
-
 		
 		//should we create new window? 
-		//-----------TODO rewrite and create function for it?--------------
-		if(rcnt > conf->records_window && conf->records_window !=0){
-			flush = 1;
+		if(conf->records_window != 0 && rcnt > conf->records_window){
+			flush_data(conf, false);
 			time ( &(conf->last_flush));
-			//dir = dir_hierarchy(conf,(*dom_id).first);
+			rcnt = 0;
 		}
-		time_t last_flush;
-		last_flush = 0;
 		if(conf->time_window !=0){
 			time ( &rawtime );
 			if(difftime(rawtime,conf->last_flush) > conf->time_window){
-				flush=1;
-				//dir = dir_hierarchy(conf,(*dom_id).first);
-				last_flush = conf->last_flush + conf->time_window;
+				flush_data(conf, false);
+				conf->last_flush = conf->last_flush + conf->time_window;
+				rcnt = 0;
 			}
 		}
 
-		if(flush){
-			flushed ++;
-			template_table* el_table;
-			MSG_DEBUG(MSG_MODULE,"Flushing data to disk");
-			sem_wait(&(conf->sem));
-			/* flush all templates! */
-			conf->dirs->clear();
-			for(dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++){
-				templates = (*dom_id).second;
-				dir = dir_hierarchy(conf,(*dom_id).first);
-				for(table = templates->begin(); table!=templates->end();table++){
-					conf->dirs->push_back(dir + ((*table).second)->name() + "/");
-					(*table).second->flush(dir);
-					(*table).second->reset_rows();
-					el_table = (*table).second;
-				}
-			}
-			if(last_flush){
-				conf->last_flush = last_flush;
-			}
-
-
-			sem_post(&(conf->sem));
-			s = pthread_create(&index_thread, NULL, reorder_index, conf);
-			if (s != 0){
-				MSG_ERROR(MSG_MODULE,"pthread_create");
-			}
-			s = pthread_detach(index_thread);
-			if (s != 0){
-				MSG_ERROR(MSG_MODULE,"pthread_detach");
-			}
-
-
-			/* change window directory name! */
-			if (conf->dump_name == INCREMENTAL){
-				ss << std::setw(12) << std::setfill('0') << flushed;
-				conf->window_dir = conf->prefix + ss.str() + "/";
-				ss.str("");
-			}else{
-				timeinfo = localtime ( &(conf->last_flush));
-
-				strftime(formated_time,15,"%Y%m%d%H%M",timeinfo);
-				conf->window_dir = conf->prefix + std::string(formated_time) + "/";
-			}
-			rcnt = 0;
-			flush=0;
-		}
-		//-------------------------------------------------------------------
+		/* store this data record */
+		rcnt += (*table).second->store(ipfix_msg->data_couple[i].data_set, dir);
 	}
 	return 0;
 }
@@ -431,40 +425,21 @@ extern "C"
 int storage_close (void **config){
 	MSG_DEBUG(MSG_MODULE,"CLOSE");
 	std::map<uint16_t,template_table*>::iterator table;
-	//template_table* el_table;
 	struct fastbit_config *conf = (struct fastbit_config *) (*config);
 	std::map<uint16_t,template_table*> *templates;
-	//ibis::table *index_table;
-	//ibis::part *reorder_part;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom = conf->ob_dom;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
-	std::string dir;
-	pthread_t index_thread;
-	int s;
 
 	/* flush data to hdd */
-	MSG_DEBUG(MSG_MODULE,"Flushing data to disk");
-	sem_wait(&(conf->sem));
-	conf->dirs->clear();
+
+	flush_data(conf, true);
+
 	for(dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++){
 		templates = (*dom_id).second; 
-		dir = dir_hierarchy(conf,(*dom_id).first);
 		for(table = templates->begin(); table!=templates->end();table++){
-			conf->dirs->push_back(dir + ((*table).second)->name() + "/");
-			(*table).second->flush(dir);
 			delete (*table).second;
 		}
 		delete (*dom_id).second;
-	}
-	
-	sem_post(&(conf->sem));
-	s = pthread_create(&index_thread, NULL, reorder_index, conf);
-	if (s != 0){
-		MSG_ERROR(MSG_MODULE,"pthread_create");
-	}
-	s = pthread_join(index_thread,NULL);
-	if (s != 0){
-		MSG_ERROR(MSG_MODULE,"pthread_join");
 	}
 
 	delete ob_dom;
