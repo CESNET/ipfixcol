@@ -40,13 +40,13 @@
 #ifndef CONFIG_STRUCT_H_
 #define CONFIG_STRUCT_H_
 
-#include <string>
-#include <map>
-#include <vector>
-
 extern "C" {
 	#include <semaphore.h>
 }
+
+#include <string>
+#include <map>
+#include <vector>
 
 #include "fastbit.h"
 #include "fastbit_table.h"

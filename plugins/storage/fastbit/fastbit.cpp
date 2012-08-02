@@ -1,5 +1,5 @@
 /**
- * \file fastbit.c
+ * \file fastbit.cpp
  * \author Petr Kramolis <kramolis@cesnet.cz>
  * \brief ipficol storage plugin based on fastbit
  *
@@ -38,26 +38,16 @@
  */
 
 
-
 extern "C" {
-	#include <ipfixcol/storage.h>
-	#include <ipfixcol/verbose.h>
-	#include <pthread.h>
-	#include <semaphore.h>
-}
-
-#include <fastbit.h>
-
+#include <ipfixcol/storage.h>
+#include <ipfixcol/verbose.h>
+#include <pthread.h>
+#include <semaphore.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-
-
-#include "fastbit_table.h"
-#include "fastbit_element.h"
-
-#include <fastbit/ibis.h>
+}
 
 #include <map>
 #include <iostream>
@@ -66,7 +56,16 @@ extern "C" {
 #include <fstream>
 #include <iostream>
 
+#include <fastbit/ibis.h>
+
 #include "pugixml.hpp"
+
+#include "fastbit.h"
+#include "fastbit_table.h"
+#include "fastbit_element.h"
+
+
+
 
 void * reorder_index(void * config){
 	struct fastbit_config *conf = static_cast<struct fastbit_config*>(config);

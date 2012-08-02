@@ -41,24 +41,26 @@
 #define _TEMPLATE_TABLE_H_
 
 
+extern "C" {
+#include <ipfixcol/storage.h>
+#include <semaphore.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <fastbit/ibis.h>
+#include <sys/stat.h>
+}
 #include <map>
 #include <vector>
 #include <iostream>
 #include <string>
-#include "pugixml.hpp"
-#include "fastbit_element.h"
-#include <sys/stat.h>
-#include "config_struct.h"
 
-extern "C" {
-	#include <ipfixcol/storage.h>
-	#include <semaphore.h>
-}
+#include <fastbit/ibis.h>
+
+#include "pugixml.hpp"
+
+#include "fastbit_element.h"
+#include "config_struct.h"
 
 
 

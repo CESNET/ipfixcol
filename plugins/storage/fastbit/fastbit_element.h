@@ -40,23 +40,26 @@
 #ifndef FASTBIT_ELEMENT
 #define FASTBIT_ELEMENT
 
-
+extern "C" {
+#include <ipfixcol/storage.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <fastbit/ibis.h>
+}
+
 #include <map>
 #include <iostream>
 #include <string>
+
+#include <fastbit/ibis.h>
+
 #include "pugixml.hpp"
 
 #include "fastbit.h"
 #include "config_struct.h"
 
-extern "C" {
-	#include <ipfixcol/storage.h>
-}
+
 
 
 const int IE_NAME_LENGTH = 16;

@@ -41,6 +41,7 @@ extern "C" {
 #include <ipfixcol/verbose.h>
 }
 #include <vector>
+
 #include "fastbit_table.h"
 
 
