@@ -195,61 +195,16 @@ void flush_data(struct fastbit_config *conf, bool close){
 	}
 }
 
-/* plugin inicialization */
-extern "C"
-int storage_init (char *params, void **config){
-	MSG_DEBUG(MSG_MODULE, "Fastbit plugin: initialization");
-
+int process_startup_xml(char *params, struct fastbit_config* c){
 	struct tm * timeinfo;
 	char formated_time[15];
-	//ibis::fileManager::adjustCacheSize(1000000000000);
-
-	/* create config structure! */
-	(*config) = new  struct fastbit_config;
-	if(*config == NULL){
-		MSG_ERROR(MSG_MODULE,"Can't allocate memory for config structure");
-		return 1;
-	}
-
-	/* initialize template map */
-	//((struct fastbit_config*)(*config))->templates = new std::map<uint16_t,template_table*>;
-	//if(((struct fastbit_config*)(*config))->templates == NULL){
-	//	std::cerr << "Can't allocate memory for config structure" << std::endl;
-	//	return 1;
-	//}
-
-	struct fastbit_config* c = (struct fastbit_config*)(*config);
-	
-	c->ob_dom = new std::map<uint32_t,std::map<uint16_t,template_table*>* >;
-	if(c->ob_dom == NULL){
-		MSG_ERROR(MSG_MODULE, "Can't allocate memory for config structure");
-		return 1;
-	}
-
-	c->elements_types = new	std::map<uint32_t,std::map<uint16_t,enum store_type> >;
-	if(c->elements_types == NULL){
-		MSG_ERROR(MSG_MODULE, "Can't allocate memory for config structure");
-		return 1;
-	}
-
-	c->index_en_id = new std::vector<std::string>;
-	if(c->index_en_id == NULL){
-		MSG_ERROR(MSG_MODULE, "Can't allocate memory for config structure");
-		return 1;
-	}
-	c->dirs = new std::vector<std::string>;
-	if(c->dirs == NULL){
-		MSG_ERROR(MSG_MODULE, "Can't allocate memory for config structure");
-		return 1;
-	}
-
-	/* parse configuration xml and updated configure structure according to it */
-	pugi::xml_document doc;
-	doc.load(params);
 	std::string path,timeWindow,recordLimit,nameType,namePrefix,indexes,test,timeAligment;
 
-	if(doc){
+	pugi::xml_document doc;
+	doc.load(params);
 
+	if(doc){
+		/*load element types from xml */
 		load_types_from_xml(c);
 
 		pugi::xpath_node ie = doc.select_single_node("fileWriter");
@@ -286,7 +241,7 @@ int storage_init (char *params, void **config){
 					id = ait->value();
 				}
 			}
-
+			/* make sure IPv6 elements are indexed */
 			if(IPv6 == get_type_from_xml(c,strtoul(en.c_str(),NULL,0), strtoul(id.c_str(),NULL,0))){
 				c->index_en_id->push_back("e"+en+"id"+id+"p0");
 				c->index_en_id->push_back("e"+en+"id"+id+"p1");
@@ -332,12 +287,52 @@ int storage_init (char *params, void **config){
 		}
 		if ( sem_init(&(c->sem),0,1) ){
 			MSG_ERROR(MSG_MODULE,"Error semaphore init");
-		  return 1;
+			return 1;
 		}
 	} else {
-		MSG_ERROR(MSG_MODULE, "Unable to parse configuration xml!");
+		return 1;
+	}
+	return 0;
+}
+
+/* plugin inicialization */
+extern "C"
+int storage_init (char *params, void **config){
+	MSG_DEBUG(MSG_MODULE, "Fastbit plugin: initialization");
+	struct fastbit_config* c = (struct fastbit_config*)(*config);
+
+	/* create config structure! */
+	(*config) = new  struct fastbit_config;
+	if(*config == NULL){
+		MSG_ERROR(MSG_MODULE,"Can't allocate memory for config structure");
+		return 1;
+	}
+	c->ob_dom = new std::map<uint32_t,std::map<uint16_t,template_table*>* >;
+	if(c->ob_dom == NULL){
+		MSG_ERROR(MSG_MODULE, "Can't allocate memory for config structure");
+		return 1;
+	}
+	c->elements_types = new	std::map<uint32_t,std::map<uint16_t,enum store_type> >;
+	if(c->elements_types == NULL){
+		MSG_ERROR(MSG_MODULE, "Can't allocate memory for config structure");
+		return 1;
+	}
+	c->index_en_id = new std::vector<std::string>;
+	if(c->index_en_id == NULL){
+		MSG_ERROR(MSG_MODULE, "Can't allocate memory for config structure");
+		return 1;
+	}
+	c->dirs = new std::vector<std::string>;
+	if(c->dirs == NULL){
+		MSG_ERROR(MSG_MODULE, "Can't allocate memory for config structure");
+		return 1;
 	}
 
+	/* parse configuration xml and updated configure structure according to it */
+	if(process_startup_xml(params, c)){
+		MSG_ERROR(MSG_MODULE, "Unable to parse configuration xml!");
+		return 1;
+	}
 	return 0;
 }
 
@@ -424,16 +419,16 @@ int store_now (const void *config){
 extern "C"
 int storage_close (void **config){
 	MSG_DEBUG(MSG_MODULE,"CLOSE");
-	std::map<uint16_t,template_table*>::iterator table;
 	struct fastbit_config *conf = (struct fastbit_config *) (*config);
+	std::map<uint16_t,template_table*>::iterator table;
 	std::map<uint16_t,template_table*> *templates;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom = conf->ob_dom;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
 
 	/* flush data to hdd */
-
 	flush_data(conf, true);
 
+	/* free config structure */
 	for(dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++){
 		templates = (*dom_id).second; 
 		for(table = templates->begin(); table!=templates->end();table++){
@@ -441,7 +436,6 @@ int storage_close (void **config){
 		}
 		delete (*dom_id).second;
 	}
-
 	delete ob_dom;
 	delete conf->index_en_id;
 	delete conf->dirs;
