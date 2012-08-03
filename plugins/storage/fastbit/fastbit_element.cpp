@@ -39,10 +39,12 @@
 
 extern "C" {
 #include <ipfixcol/verbose.h>
+#include <endian.h>
 }
 
 #include "fastbit_element.h"
 #include "fastbit_table.h"
+
 
 int load_types_from_xml(struct fastbit_config *conf){
 	pugi::xml_document doc;
@@ -214,7 +216,7 @@ int el_var_size::fill(uint8_t * data){
 	if(data[0] < 255){
 		_size = data[0] + 1; //1 is firs byte with true size
 	}else{
-		byte_reorder((uint8_t *) &(_size),&(data[1]),2);
+		_size = ntohs(*((uint16_t*) data[1]));
 		_size+=3; //3 = 1 first byte with 256 and 2 bytes with true size
 	}
 	return 0;
@@ -241,13 +243,13 @@ int el_float::fill(uint8_t * data){
 	switch(_size){
 	case 4:
 		//flat32
-		byte_reorder((uint8_t *) &(float_value.float32),data,_size);
+		*((uint32_t*)&(float_value.float32)) = ntohl(*((uint32_t*) data));
 		value = &(float_value.float32);
 		this->append(&(float_value.float32));
 		break;
 	case 8:
 		//float64
-		byte_reorder((uint8_t *) &(float_value.float64),data,_size);
+		*((uint64_t*)&(float_value.float64)) = be64toh(*((uint64_t*) data));
 		value = &(float_value.float64);
 		this->append(&(float_value.float64));
 		break;
@@ -299,7 +301,7 @@ int el_text::fill(uint8_t * data){
 			_true_size = data[0];
 			_offset = 1;
 		}else{
-			byte_reorder((uint8_t *) &(_true_size),&(data[1]),2);
+			_true_size = ntohs(*((uint16_t*) data[1]));
 			_offset = 3;
 		}
 	}
@@ -324,7 +326,7 @@ el_ipv6::el_ipv6(int size, int en, int id, int part, uint32_t buf_size){
 
 int el_ipv6::fill(uint8_t * data){
 	//ulong
-	byte_reorder((uint8_t *) &(ipv6_value),data,_size, 0);
+	ipv6_value = ntohl(*((uint64_t*) data));
 	value = &(ipv6_value);
 	this->append(&(ipv6_value));
 	return 0;
@@ -381,26 +383,37 @@ int el_uint::fill(uint8_t * data){
 		break;
 	case 2:
 		//ushort
-		byte_reorder((uint8_t *) &(uint_value.ushort),data,_size);
+		uint_value.ushort = ntohs(*((uint16_t*) data));
 		value = &(uint_value.ubyte);
 		this->append(&(uint_value.ushort));
 		break;
 	case 3:
 		offset++;
+		byte_reorder((uint8_t *) &(uint_value.uint),data,_size, offset);
+		value = &(uint_value.ubyte);
+		this->append(&(uint_value.uint));
+		break;
 	case 4:
 		//uint
-		byte_reorder((uint8_t *) &(uint_value.uint),data,_size, offset);
-		//std::cout << _name << " v: " << uint_value.uint << "|" << *((uint32_t *)data) << std::endl;
+		uint_value.uint = ntohl(*((uint32_t*) data));
 		value = &(uint_value.ubyte);
 		this->append(&(uint_value.uint));
 		break;
 	case 6: //mec addres
 		offset++;
+		byte_reorder((uint8_t *) &(uint_value.uint),data,_size, offset);
+		value = &(uint_value.ubyte);
+		this->append(&(uint_value.uint));
+		break;
 	case 7:
 		offset++;
+		byte_reorder((uint8_t *) &(uint_value.uint),data,_size, offset);
+		value = &(uint_value.ubyte);
+		this->append(&(uint_value.uint));
+		break;
 	case 8:
 		//ulong
-		byte_reorder((uint8_t *) &(uint_value.ulong),data,_size, offset);
+		uint_value.ulong = be64toh(*((uint64_t*) data));
 		value = &(uint_value.ubyte);
 		this->append(&(uint_value.ulong));
 		break;
