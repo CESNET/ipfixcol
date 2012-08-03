@@ -151,6 +151,18 @@ void flush_data(struct fastbit_config *conf, bool close){
 	struct tm * timeinfo;
 	char formated_time[15];
 
+	// change window directory name!
+	if (conf->dump_name == INCREMENTAL){
+		ss << std::setw(12) << std::setfill('0') << flushed;
+		conf->window_dir = conf->prefix + ss.str() + "/";
+		ss.str("");
+		flushed++;
+	}else{
+		timeinfo = localtime ( &(conf->last_flush));
+		strftime(formated_time,15,"%Y%m%d%H%M",timeinfo);
+		conf->window_dir = conf->prefix + std::string(formated_time) + "/";
+	}
+
 	MSG_DEBUG(MSG_MODULE,"Flushing data to disk");
 	sem_wait(&(conf->sem));
 	conf->dirs->clear();
@@ -179,18 +191,6 @@ void flush_data(struct fastbit_config *conf, bool close){
 		if (s != 0){
 			MSG_ERROR(MSG_MODULE,"pthread_detach");
 		}
-	}
-
-	// change window directory name!
-	if (conf->dump_name == INCREMENTAL){
-		ss << std::setw(12) << std::setfill('0') << flushed;
-		conf->window_dir = conf->prefix + ss.str() + "/";
-		ss.str("");
-		flushed++;
-	}else{
-		timeinfo = localtime ( &(conf->last_flush));
-		strftime(formated_time,15,"%Y%m%d%H%M",timeinfo);
-		conf->window_dir = conf->prefix + std::string(formated_time) + "/";
 	}
 }
 
