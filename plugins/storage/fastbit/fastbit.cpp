@@ -139,13 +139,7 @@ std::string dir_hierarchy(struct fastbit_config *config, uint32_t oid){
 	return dir;
 }
 
-void flush_data(struct fastbit_config *conf, bool close){
-	std::string dir;
-	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
-	std::map<uint16_t,template_table*>::iterator table;
-	std::map<uint16_t,template_table*> *templates = NULL;
-	int s;
-	pthread_t index_thread;
+void update_window_name(struct fastbit_config *conf){
 	std::stringstream ss;
 	static int flushed = 1;
 	struct tm * timeinfo;
@@ -162,6 +156,17 @@ void flush_data(struct fastbit_config *conf, bool close){
 		strftime(formated_time,15,"%Y%m%d%H%M",timeinfo);
 		conf->window_dir = conf->prefix + std::string(formated_time) + "/";
 	}
+
+}
+
+void flush_data(struct fastbit_config *conf, bool close){
+	std::string dir;
+	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
+	std::map<uint16_t,template_table*>::iterator table;
+	std::map<uint16_t,template_table*> *templates = NULL;
+	int s;
+	pthread_t index_thread;
+	std::stringstream ss;
 
 	MSG_DEBUG(MSG_MODULE,"Flushing data to disk");
 	sem_wait(&(conf->sem));
@@ -346,7 +351,6 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom = conf->ob_dom;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
 	static int rcnt = 0;
-	std::stringstream ss;
 	std::string domain_name;
 	time_t rawtime;
 	uint32_t oid = 0;
@@ -393,6 +397,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 		if(conf->records_window != 0 && rcnt > conf->records_window){
 			flush_data(conf, false);
 			time ( &(conf->last_flush));
+			update_window_name(conf);
 			dir = dir_hierarchy(conf,(*dom_id).first);
 			rcnt = 0;
 		}
@@ -401,6 +406,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 			if(difftime(rawtime,conf->last_flush) > conf->time_window){
 				flush_data(conf, false);
 				conf->last_flush = conf->last_flush + conf->time_window;
+				update_window_name(conf);
 				dir = dir_hierarchy(conf,(*dom_id).first);
 				rcnt = 0;
 			}
