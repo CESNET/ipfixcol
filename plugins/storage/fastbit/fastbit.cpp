@@ -393,6 +393,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 		if(conf->records_window != 0 && rcnt > conf->records_window){
 			flush_data(conf, false);
 			time ( &(conf->last_flush));
+			dir = dir_hierarchy(conf,(*dom_id).first);
 			rcnt = 0;
 		}
 		if(conf->time_window !=0){
@@ -400,6 +401,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 			if(difftime(rawtime,conf->last_flush) > conf->time_window){
 				flush_data(conf, false);
 				conf->last_flush = conf->last_flush + conf->time_window;
+				dir = dir_hierarchy(conf,(*dom_id).first);
 				rcnt = 0;
 			}
 		}
