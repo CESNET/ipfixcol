@@ -7,7 +7,7 @@ pluginsdir = $(datadir)/ipfixcol/plugins
 
 plugins_LTLIBRARIES = ipfixcol-fastbit-output.la
 ipfixcol_fastbit_output_la_LDFLAGS = -module -avoid-version -shared
-ipfixcol_fastbit_output_la_SOURCES = fastbit.cpp fastbit_table.cpp fastbit_table.h fastbit_element.cpp fastbit_element.h
+ipfixcol_fastbit_output_la_SOURCES = fastbit.cpp fastbit.h fastbit_table.cpp fastbit_table.h fastbit_element.cpp fastbit_element.h config_struct.h
 ipfixcol_fastbit_output_la_LIBADD = pugixml/libpugixml.la
 
 MANSRC = ipfixcol-fastbit-output.dbk

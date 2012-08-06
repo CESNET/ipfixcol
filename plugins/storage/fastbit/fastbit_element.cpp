@@ -40,9 +40,9 @@
 extern "C" {
 #include <ipfixcol/verbose.h>
 }
+
 #include "fastbit_element.h"
 #include "fastbit_table.h"
-
 
 int load_types_from_xml(struct fastbit_config *conf){
 	pugi::xml_document doc;
@@ -91,19 +91,6 @@ int load_types_from_xml(struct fastbit_config *conf){
 	return 0;
 }
 
-
-/*
- * \brief Search elements xml for type of element
- *
- * This function reads /etc/ipfixcol/ipfix-elements.xml (TODO add this as parameter)
- * and search element specified by element id and enterprise id.
- * When its found it decides if its integer, text, float etc..
- * (it does not provide exact type (size) as uint32_t,double ect.)
- *
- * @param data point
-* @param en Enterprise number of element
-* @param id ID of information element
- */
 enum store_type get_type_from_xml(struct fastbit_config *conf, unsigned int en, unsigned int id){
 	return (*conf->elements_types)[en][id];
 }
@@ -113,6 +100,141 @@ void element::byte_reorder(uint8_t *dst,uint8_t *src, int size, int offset){
 	for(i=0;i<size;i++){
 		dst[i+offset] = src[size-i-1];
 	}
+}
+
+element:: element(): _size(0), _type(ibis::UBYTE), _filled(0),
+					_buf_max(0),_buffer(NULL), value(0){
+	sprintf(_name,"e0id0");
+}
+
+element::element(int size, int en, int id, uint32_t buf_size){
+	value = NULL;
+	_size = size;
+	_type = ibis::UBYTE;
+	_filled = 0;
+	_buf_max = 0;
+	_buffer = NULL;
+	sprintf( _name,"e%iid%hi", en, id);
+}
+
+void element::allocate_buffer(int count){
+	_buf_max = count;
+	_buffer = (char *) realloc(_buffer,_size*count);
+	if(_buffer == NULL){
+		fprintf(stderr,"Memory allocation failed!\n");
+	}
+}
+
+void element::free_buffer(){
+	free(_buffer);
+}
+
+int element::append(void *data){
+	if(_filled >= _buf_max){
+		return 1;
+	}
+
+	memcpy(&(_buffer[_size*_filled]),data,_size);
+	_filled++;
+	return 0;
+}
+
+int element::append_str(void *data,int size){
+	//check buffer space
+	if(_filled + size + 1 >= _buf_max){ // 1 = terminating zero
+		_buf_max = _buf_max + (100 * size); //TODO
+		_buffer = (char *) realloc(_buffer,_size * _buf_max);
+	}
+
+	memcpy(&(_buffer[_filled]),data,size);
+
+	//check terminating zero (store string to first
+	//terminating zero even if its specified size is bigger)
+	for(int i = 0; i < size; i++){
+		if(_buffer[_filled+i] == 0){
+			_filled+=i+1; //i is counted from 0 we need add 1!
+			break;
+		}
+		//check if last character is zero.. if not add terminating zero
+		if(i == size-1){
+			if(_buffer[_filled+i] != 0){
+				_buffer[_filled+i+1] = 0;
+				_filled+=i+2; // 2 = new terminating zero + i is counted from 0 so we need to add 1
+			}
+		}
+	}
+	return 0;
+}
+
+int element::flush(std::string path){
+	FILE *f;
+	size_t check;
+	if(_filled > 0){
+		//std::cout << "FLUSH ELEMENT:" << path << "/" << _name << std::endl;
+		//std::cout << "FLUSH BUFFER: size:" << _size << " filled:" << _filled << " max" << _buf_max << std::endl;
+		f = fopen((path +"/"+_name).c_str(),"a+");
+		if(f == NULL){
+			fprintf(stderr, "Error while writing data (fopen)!\n");
+			return 1;
+		}
+		//std::cout << "FILE OPEN" << std::endl;
+		if(_buffer == NULL){
+			fprintf(stderr, "Error while writing data! (buffer)\n");
+			return 1;
+		}
+		check = fwrite( _buffer, _size , _filled, f);
+		if(check != (size_t) _filled){
+			fprintf(stderr, "Error while writing data! (fwrite)\n");
+			return 1;
+		}
+		_filled = 0;
+		fclose(f);
+	}
+	return 0;
+}
+
+std::string element::get_part_info(){
+	return  std::string("\nBegin Column") + \
+		"\nname = " + std::string(this->_name) + \
+		"\ndata_type = " + ibis::TYPESTRING[(int)this->_type] + \
+		"\nEnd Column\n";
+}
+
+el_var_size::el_var_size(int size, int en, int id, uint32_t buf_size){
+	data = NULL;
+	_size = size;
+	_filled = 0;
+	_buffer = NULL;
+	sprintf( _name,"e%uid%hu", en, id);
+	this->set_type();
+}
+
+int el_var_size::fill(uint8_t * data){
+	//get size of data
+	if(data[0] < 255){
+		_size = data[0] + 1; //1 is firs byte with true size
+	}else{
+		byte_reorder((uint8_t *) &(_size),&(data[1]),2);
+		_size+=3; //3 = 1 first byte with 256 and 2 bytes with true size
+	}
+	return 0;
+}
+
+int el_var_size::set_type(){
+	_type=ibis::UBYTE;
+	return 0;
+}
+
+el_float::el_float(int size, int en, int id, uint32_t buf_size){
+	_size = size;
+	_filled = 0;
+	_buffer = NULL;
+	sprintf( _name,"e%uid%hu", en, id);
+	this->set_type();
+	if(buf_size == 0){
+		buf_size = RESERVED_SPACE;
+	}
+	allocate_buffer(buf_size);
 }
 
 int el_float::fill(uint8_t * data){
@@ -130,7 +252,7 @@ int el_float::fill(uint8_t * data){
 		this->append(&(float_value.float64));
 		break;
 	default:
-		MSG_ERROR(msg_module,"Wrong element size (%s - %u)!",_name,_size);
+		MSG_ERROR(MSG_MODULE,"Wrong element size (%s - %u)!",_name,_size);
 		break;
 	}
 	return 0;
@@ -147,24 +269,26 @@ int el_float::set_type(){
 		_type=ibis::DOUBLE;
 		break;
 	default:
-		MSG_ERROR(msg_module,"Wrong element size (%s - %u)!",_name,_size);
+		MSG_ERROR(MSG_MODULE,"Wrong element size (%s - %u)!",_name,_size);
 		break;
 	}
 	return 0;
 }
 
-int el_ipv6::fill(uint8_t * data){
-	//ulong
-	byte_reorder((uint8_t *) &(ipv6_value),data,_size, 0);
-	value = &(ipv6_value);
-	this->append(&(ipv6_value));
-	return 0;
-}
-
-int el_ipv6::set_type(){
-	//ulong
-	_type=ibis::ULONG;
-	return 0;
+el_text::el_text(int size, int en, int id, uint32_t buf_size){
+	_size = 1; // this is size for flush function
+	_true_size = size; // this holds true size of string (var of fix size)
+	_var_size = false;
+	_offset = 0;
+	if(size == 65535){ //its element with variable size
+		_var_size = true;
+	}
+	sprintf( _name,"e%uid%hu", en, id);
+	this->set_type();
+	if(buf_size == 0){
+		 buf_size = RESERVED_SPACE;
+	}
+	allocate_buffer(buf_size);
 }
 
 int el_text::fill(uint8_t * data){
@@ -184,19 +308,44 @@ int el_text::fill(uint8_t * data){
 	return 0;
 }
 
-int el_var_size::fill(uint8_t * data){
-	//get size of data
-	if(data[0] < 255){
-		_size = data[0] + 1; //1 is firs byte with true size
-	}else{
-		byte_reorder((uint8_t *) &(_size),&(data[1]),2);
-		_size+=3; //3 = 1 first byte with 256 and 2 bytes with true size
+
+el_ipv6::el_ipv6(int size, int en, int id, int part, uint32_t buf_size){
+	ipv6_value = 0;
+	_size = size;
+	_filled = 0;
+	_buffer = NULL;
+	sprintf( _name,"e%uid%hup%u", en, id, part);
+	this->set_type();
+	if(buf_size == 0){
+		 buf_size = RESERVED_SPACE;
 	}
+	allocate_buffer(buf_size);
+}
+
+int el_ipv6::fill(uint8_t * data){
+	//ulong
+	byte_reorder((uint8_t *) &(ipv6_value),data,_size, 0);
+	value = &(ipv6_value);
+	this->append(&(ipv6_value));
 	return 0;
 }
-int el_var_size::set_type(){
-	_type=ibis::UBYTE;
+
+int el_ipv6::set_type(){
+	//ulong
+	_type=ibis::ULONG;
 	return 0;
+}
+
+el_blob::el_blob(int size, int en, int id, uint32_t buf_size){
+	_size = size;
+	_filled = 0;
+	_buffer = NULL;
+	sprintf( _name,"e%iid%hi", en, id);
+	this->set_type();
+	if(buf_size == 0){
+		buf_size = RESERVED_SPACE;
+	}
+	allocate_buffer(buf_size);
 }
 
 int el_blob::fill(uint8_t * data){
@@ -207,6 +356,19 @@ int el_blob::set_type(){
 	_type=ibis::UBYTE;
 	return 0;
 }
+
+el_uint::el_uint(int size, int en, int id, uint32_t buf_size){
+	_size = size;
+	_filled = 0;
+	_buffer = NULL;
+	sprintf( _name,"e%iid%hi", en, id);
+	this->set_type();
+	if(buf_size == 0){
+		 buf_size = RESERVED_SPACE;
+	}
+	allocate_buffer(buf_size);
+}
+
 
 int el_uint::fill(uint8_t * data){
 	int offset = 0;
@@ -244,7 +406,7 @@ int el_uint::fill(uint8_t * data){
 		break;
 	default:
 		return 1;
-		MSG_ERROR(msg_module,"Wrong element size (%s - %u)!",_name,_size);
+		MSG_ERROR(MSG_MODULE,"Wrong element size (%s - %u)!",_name,_size);
 		break;
 	}
 	return 0;
@@ -273,7 +435,7 @@ int el_uint::set_type(){
 		break;
 	default:
 		return 1;
-		MSG_ERROR(msg_module,"Wrong element size (%s - %u)!",_name,_size);
+		MSG_ERROR(MSG_MODULE,"Wrong element size (%s - %u)!",_name,_size);
 		break;
 	}
 	return 0;
@@ -303,9 +465,20 @@ int el_sint::set_type(){
 		break;
 	default:
 		return 1;
-		MSG_ERROR(msg_module,"Wrong element size (%s - %u)!",_name,_size);
+		MSG_ERROR(MSG_MODULE,"Wrong element size (%s - %u)!",_name,_size);
 		break;
 	}
 	return 0;
 }
 
+el_sint::el_sint(int size , int en, int id, uint32_t buf_size){
+		_size = size;
+		_filled = 0;
+		_buffer = NULL;
+		sprintf( _name,"e%iid%hi", en, id);
+		this->set_type();
+		if(buf_size == 0){
+			 buf_size = RESERVED_SPACE;
+		}
+		allocate_buffer(buf_size);
+	}

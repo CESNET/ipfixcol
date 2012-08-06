@@ -1,5 +1,5 @@
 /**
- * \file fastbit.c
+ * \file fastbit.cpp
  * \author Petr Kramolis <kramolis@cesnet.cz>
  * \brief ipficol storage plugin based on fastbit
  *
@@ -38,24 +38,16 @@
  */
 
 
-
 extern "C" {
-	#include <ipfixcol/storage.h>
-	#include <ipfixcol/verbose.h>
-	#include <pthread.h>
-	#include <semaphore.h>
-}
-
+#include <ipfixcol/storage.h>
+#include <ipfixcol/verbose.h>
+#include <pthread.h>
+#include <semaphore.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-
-
-#include "fastbit_table.h"
-#include "fastbit_element.h"
-
-#include <fastbit/ibis.h>
+}
 
 #include <map>
 #include <iostream>
@@ -64,7 +56,13 @@ extern "C" {
 #include <fstream>
 #include <iostream>
 
+#include <fastbit/ibis.h>
+
 #include "pugixml.hpp"
+
+#include "fastbit.h"
+#include "fastbit_table.h"
+#include "fastbit_element.h"
 
 
 
@@ -81,7 +79,7 @@ void * reorder_index(void * config){
 		dir = (*conf->dirs)[i];
 		/* reorder partitions */
 		if(conf->reorder == 1){
-			MSG_DEBUG(msg_module,"Reordering: %s",dir.c_str());
+			MSG_DEBUG(MSG_MODULE,"Reordering: %s",dir.c_str());
 			reorder_part = new ibis::part(dir.c_str(),NULL, false);
 			reorder_part->reorder(); //TODO return value
 			delete reorder_part;
@@ -89,7 +87,7 @@ void * reorder_index(void * config){
 
 		/* build indexes */
 		if(conf->indexes == 1){ //build all indexes
-			MSG_DEBUG(msg_module,"Creating indexes: %s",dir.c_str());
+			MSG_DEBUG(MSG_MODULE,"Creating indexes: %s",dir.c_str());
 			index_table = ibis::table::create(dir.c_str());
 			index_table->buildIndexes();
 			delete index_table;
@@ -100,7 +98,7 @@ void * reorder_index(void * config){
 			for (unsigned int i=0; i < conf->index_en_id->size(); i++){
 				for(unsigned int j=0; j < ibis_columns.size(); j++ ){
 					if((*conf->index_en_id)[i] == std::string(ibis_columns[j])){
-						MSG_DEBUG(msg_module,"Creating indexes: %s%s",dir.c_str(),(*conf->index_en_id)[i].c_str());
+						MSG_DEBUG(MSG_MODULE,"Creating indexes: %s%s",dir.c_str(),(*conf->index_en_id)[i].c_str());
 						index_table->buildIndex(ibis_columns[j]);
 					}
 				}
@@ -141,61 +139,76 @@ std::string dir_hierarchy(struct fastbit_config *config, uint32_t oid){
 	return dir;
 }
 
-/* plugin inicialization */
-extern "C"
-int storage_init (char *params, void **config){
-	MSG_DEBUG(msg_module, "Fastbit plugin: initialization");
-
+void update_window_name(struct fastbit_config *conf){
+	std::stringstream ss;
+	static int flushed = 1;
 	struct tm * timeinfo;
 	char formated_time[15];
-	//ibis::fileManager::adjustCacheSize(1000000000000);
 
-	/* create config structure! */
-	(*config) = new  struct fastbit_config;
-	if(*config == NULL){
-		MSG_ERROR(msg_module,"Can't allocate memory for config structure");
-		return 1;
+	// change window directory name!
+	if (conf->dump_name == INCREMENTAL){
+		ss << std::setw(12) << std::setfill('0') << flushed;
+		conf->window_dir = conf->prefix + ss.str() + "/";
+		ss.str("");
+		flushed++;
+	}else{
+		timeinfo = localtime ( &(conf->last_flush));
+		strftime(formated_time,15,"%Y%m%d%H%M",timeinfo);
+		conf->window_dir = conf->prefix + std::string(formated_time) + "/";
 	}
 
-	/* initialize template map */
-	//((struct fastbit_config*)(*config))->templates = new std::map<uint16_t,template_table*>;
-	//if(((struct fastbit_config*)(*config))->templates == NULL){
-	//	std::cerr << "Can't allocate memory for config structure" << std::endl;
-	//	return 1;
-	//}
+}
 
-	struct fastbit_config* c = (struct fastbit_config*)(*config);
-	
-	c->ob_dom = new std::map<uint32_t,std::map<uint16_t,template_table*>* >;
-	if(c->ob_dom == NULL){
-		MSG_ERROR(msg_module, "Can't allocate memory for config structure");
-		return 1;
-	}
+void flush_data(struct fastbit_config *conf, bool close){
+	std::string dir;
+	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
+	std::map<uint16_t,template_table*>::iterator table;
+	std::map<uint16_t,template_table*> *templates = NULL;
+	int s;
+	pthread_t index_thread;
+	std::stringstream ss;
 
-	c->elements_types = new	std::map<uint32_t,std::map<uint16_t,enum store_type> >;
-	if(c->elements_types == NULL){
-		MSG_ERROR(msg_module, "Can't allocate memory for config structure");
-		return 1;
+	MSG_DEBUG(MSG_MODULE,"Flushing data to disk");
+	sem_wait(&(conf->sem));
+	conf->dirs->clear();
+	for(dom_id = conf->ob_dom->begin(); dom_id!=conf->ob_dom->end();dom_id++){
+		templates = (*dom_id).second;
+		dir = dir_hierarchy(conf,(*dom_id).first);
+		for(table = templates->begin(); table!=templates->end();table++){
+			conf->dirs->push_back(dir + ((*table).second)->name() + "/");
+			(*table).second->flush(dir);
+			(*table).second->reset_rows();
+		}
 	}
+	sem_post(&(conf->sem));
 
-	c->index_en_id = new std::vector<std::string>;
-	if(c->index_en_id == NULL){
-		MSG_ERROR(msg_module, "Can't allocate memory for config structure");
-		return 1;
+	s = pthread_create(&index_thread, NULL, reorder_index, conf);
+	if (s != 0){
+		MSG_ERROR(MSG_MODULE,"pthread_create");
 	}
-	c->dirs = new std::vector<std::string>;
-	if(c->dirs == NULL){
-		MSG_ERROR(msg_module, "Can't allocate memory for config structure");
-		return 1;
+	if(close){
+		s = pthread_join(index_thread,NULL);
+		if (s != 0){
+			MSG_ERROR(MSG_MODULE,"pthread_join");
+		}
+	}else{
+		s = pthread_detach(index_thread);
+		if (s != 0){
+			MSG_ERROR(MSG_MODULE,"pthread_detach");
+		}
 	}
+}
 
-	/* parse configuration xml and updated configure structure according to it */
-	pugi::xml_document doc;
-	doc.load(params);
+int process_startup_xml(char *params, struct fastbit_config* c){
+	struct tm * timeinfo;
+	char formated_time[15];
 	std::string path,timeWindow,recordLimit,nameType,namePrefix,indexes,test,timeAligment;
 
-	if(doc){
+	pugi::xml_document doc;
+	doc.load(params);
 
+	if(doc){
+		/*load element types from xml */
 		load_types_from_xml(c);
 
 		pugi::xpath_node ie = doc.select_single_node("fileWriter");
@@ -232,7 +245,7 @@ int storage_init (char *params, void **config){
 					id = ait->value();
 				}
 			}
-
+			/* make sure IPv6 elements are indexed */
 			if(IPv6 == get_type_from_xml(c,strtoul(en.c_str(),NULL,0), strtoul(id.c_str(),NULL,0))){
 				c->index_en_id->push_back("e"+en+"id"+id+"p0");
 				c->index_en_id->push_back("e"+en+"id"+id+"p1");
@@ -277,13 +290,54 @@ int storage_init (char *params, void **config){
 			c->window_dir = c->prefix + "000000000001/";
 		}
 		if ( sem_init(&(c->sem),0,1) ){
-			MSG_ERROR(msg_module,"Error semaphore init");
-		  return 1;
+			MSG_ERROR(MSG_MODULE,"Error semaphore init");
+			return 1;
 		}
 	} else {
-		MSG_ERROR(msg_module, "Unable to parse configuration xml!");
+		return 1;
+	}
+	return 0;
+}
+
+/* plugin inicialization */
+extern "C"
+int storage_init (char *params, void **config){
+	MSG_DEBUG(MSG_MODULE, "Fastbit plugin: initialization");
+	struct fastbit_config* c = NULL;
+
+	/* create config structure! */
+	(*config) = new  struct fastbit_config;
+	if(*config == NULL){
+		MSG_ERROR(MSG_MODULE,"Can't allocate memory for config structure");
+		return 1;
+	}
+	c = (struct fastbit_config*)(*config);
+	c->ob_dom = new std::map<uint32_t,std::map<uint16_t,template_table*>* >;
+	if(c->ob_dom == NULL){
+		MSG_ERROR(MSG_MODULE, "Can't allocate memory for config structure");
+		return 1;
+	}
+	c->elements_types = new	std::map<uint32_t,std::map<uint16_t,enum store_type> >;
+	if(c->elements_types == NULL){
+		MSG_ERROR(MSG_MODULE, "Can't allocate memory for config structure");
+		return 1;
+	}
+	c->index_en_id = new std::vector<std::string>;
+	if(c->index_en_id == NULL){
+		MSG_ERROR(MSG_MODULE, "Can't allocate memory for config structure");
+		return 1;
+	}
+	c->dirs = new std::vector<std::string>;
+	if(c->dirs == NULL){
+		MSG_ERROR(MSG_MODULE, "Can't allocate memory for config structure");
+		return 1;
 	}
 
+	/* parse configuration xml and updated configure structure according to it */
+	if(process_startup_xml(params, c)){
+		MSG_ERROR(MSG_MODULE, "Unable to parse configuration xml!");
+		return 1;
+	}
 	return 0;
 }
 
@@ -293,27 +347,20 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	const struct ipfix_template_mgr *template_mgr){
 	std::map<uint16_t,template_table*>::iterator table;
 	struct fastbit_config *conf = (struct fastbit_config *) config;
-	std::map<uint16_t,template_table*> *templates = conf->templates;
+	std::map<uint16_t,template_table*> *templates = NULL;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom = conf->ob_dom;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
 	static int rcnt = 0;
-	static int flushed = 1;
-	std::stringstream ss;
 	std::string domain_name;
 	time_t rawtime;
-	struct tm * timeinfo;
-	char formated_time[15];
-	//ibis::table *index_table;
 	uint32_t oid = 0;
 	std::string dir;
-	pthread_t index_thread;
-	int s;
 	int i;
-	int flush=0;
+	uint16_t template_id;
 
 	oid = ntohl(ipfix_msg->pkt_header->observation_domain_id);
 	if((dom_id = ob_dom->find(oid)) == ob_dom->end()){
-		MSG_DEBUG(msg_module,"Received new domain id: %u", oid);
+		MSG_DEBUG(MSG_MODULE,"Received new domain id: %u", oid);
 		std::map<uint16_t,template_table*> *new_dom_id = new std::map<uint16_t,template_table*>;
 		ob_dom->insert(std::make_pair(oid, new_dom_id));
 		dom_id = ob_dom->find(oid);
@@ -328,145 +375,75 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 			//there are no more filled data_sets	
 			return 0;
 		}
-
 	
 		if(ipfix_msg->data_couple[i].data_template == NULL){
 			//skip data without template!
 			continue;
 		}
 
-		uint16_t template_id = ipfix_msg->data_couple[i].data_template->template_id;
-
+		template_id = ipfix_msg->data_couple[i].data_template->template_id;
 
 		/* if there is unknown template parse it and add it to template map */
 		if((table = templates->find(template_id)) == templates->end()){
-			MSG_DEBUG(msg_module,"Received new template: %hu", template_id);
+			MSG_DEBUG(MSG_MODULE,"Received new template: %hu", template_id);
 			template_table *table_tmp = new template_table(template_id, conf->buff_size);
 			table_tmp->parse_template(ipfix_msg->data_couple[i].data_template, conf);
 			templates->insert(std::pair<uint16_t,template_table*>(template_id,table_tmp));
 			table = templates->find(template_id);
 		}
 
-		/* store this data record */	
-		rcnt += (*table).second->store(ipfix_msg->data_couple[i].data_set, dir);
-
 		
 		//should we create new window? 
-		//-----------TODO rewrite and create function for it?--------------
-		if(rcnt > conf->records_window && conf->records_window !=0){
-			flush = 1;
+		if(conf->records_window != 0 && rcnt > conf->records_window){
+			flush_data(conf, false);
 			time ( &(conf->last_flush));
-			//dir = dir_hierarchy(conf,(*dom_id).first);
+			update_window_name(conf);
+			dir = dir_hierarchy(conf,(*dom_id).first);
+			rcnt = 0;
 		}
-		time_t last_flush;
-		last_flush = 0;
 		if(conf->time_window !=0){
 			time ( &rawtime );
 			if(difftime(rawtime,conf->last_flush) > conf->time_window){
-				flush=1;
-				//dir = dir_hierarchy(conf,(*dom_id).first);
-				last_flush = conf->last_flush + conf->time_window;
-			}
-		}
-
-		if(flush){
-			flushed ++;
-			template_table* el_table;
-			MSG_DEBUG(msg_module,"Flushing data to disk");
-			sem_wait(&(conf->sem));
-			/* flush all templates! */
-			conf->dirs->clear();
-			for(dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++){
-				templates = (*dom_id).second;
+				flush_data(conf, false);
+				conf->last_flush = conf->last_flush + conf->time_window;
+				update_window_name(conf);
 				dir = dir_hierarchy(conf,(*dom_id).first);
-				for(table = templates->begin(); table!=templates->end();table++){
-					conf->dirs->push_back(dir + ((*table).second)->name() + "/");
-					(*table).second->flush(dir);
-					(*table).second->reset_rows();
-					el_table = (*table).second;
-				}
+				rcnt = 0;
 			}
-			if(last_flush){
-				conf->last_flush = last_flush;
-			}
-
-
-			sem_post(&(conf->sem));
-			s = pthread_create(&index_thread, NULL, reorder_index, conf);
-			if (s != 0){
-				MSG_ERROR(msg_module,"pthread_create");
-			}
-			s = pthread_detach(index_thread);
-			if (s != 0){
-				MSG_ERROR(msg_module,"pthread_detach");
-			}
-
-
-			/* change window directory name! */
-			if (conf->dump_name == INCREMENTAL){
-				ss << std::setw(12) << std::setfill('0') << flushed;
-				conf->window_dir = conf->prefix + ss.str() + "/";
-				ss.str("");
-			}else{
-				timeinfo = localtime ( &(conf->last_flush));
-
-				strftime(formated_time,15,"%Y%m%d%H%M",timeinfo);
-				conf->window_dir = conf->prefix + std::string(formated_time) + "/";
-			}
-			rcnt = 0;
-			flush=0;
 		}
-		//-------------------------------------------------------------------
+
+		/* store this data record */
+		rcnt += (*table).second->store(ipfix_msg->data_couple[i].data_set, dir);
 	}
 	return 0;
 }
 
 extern "C"
 int store_now (const void *config){
-	MSG_DEBUG(msg_module,"STORE_NOW");
+	MSG_DEBUG(MSG_MODULE,"STORE_NOW");
 	return 0;
 }
 
 extern "C"
 int storage_close (void **config){
-	MSG_DEBUG(msg_module,"CLOSE");
-	std::map<uint16_t,template_table*>::iterator table;
-	//template_table* el_table;
+	MSG_DEBUG(MSG_MODULE,"CLOSE");
 	struct fastbit_config *conf = (struct fastbit_config *) (*config);
+	std::map<uint16_t,template_table*>::iterator table;
 	std::map<uint16_t,template_table*> *templates;
-	//ibis::table *index_table;
-	//ibis::part *reorder_part;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom = conf->ob_dom;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
-	std::string dir;
-	pthread_t index_thread;
-	int s;
 
 	/* flush data to hdd */
-	MSG_DEBUG(msg_module,"Flushing data to disk");
-	sem_wait(&(conf->sem));
-	conf->dirs->clear();
+	flush_data(conf, true);
+
+	/* free config structure */
 	for(dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++){
 		templates = (*dom_id).second; 
-		dir = dir_hierarchy(conf,(*dom_id).first);
 		for(table = templates->begin(); table!=templates->end();table++){
-			conf->dirs->push_back(dir + ((*table).second)->name() + "/");
-			(*table).second->flush(dir);
 			delete (*table).second;
 		}
 		delete (*dom_id).second;
 	}
-	
-	sem_post(&(conf->sem));
-	s = pthread_create(&index_thread, NULL, reorder_index, conf);
-	if (s != 0){
-		MSG_ERROR(msg_module,"pthread_create");
-	}
-	s = pthread_join(index_thread,NULL);
-	if (s != 0){
-		MSG_ERROR(msg_module,"pthread_join");
-	}
-
 	delete ob_dom;
 	delete conf->index_en_id;
 	delete conf->dirs;

@@ -40,22 +40,28 @@
 #ifndef FASTBIT_ELEMENT
 #define FASTBIT_ELEMENT
 
-
+extern "C" {
+#include <ipfixcol/storage.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <fastbit/ibis.h>
+}
+
 #include <map>
 #include <iostream>
 #include <string>
+
+#include <fastbit/ibis.h>
+
 #include "pugixml.hpp"
 
-extern "C" {
-	#include <ipfixcol/storage.h>
-}
+#include "fastbit.h"
+#include "config_struct.h"
 
-const unsigned int RESERVED_SPACE = 75000;
+
+
+
 const int IE_NAME_LENGTH = 16;
 const int TYPE_NAME_LENGTH = 10;
 const char ELEMENTS_XML[] = "/etc/ipfixcol/ipfix-elements.xml";
@@ -63,57 +69,48 @@ const char ELEMENTS_XML[] = "/etc/ipfixcol/ipfix-elements.xml";
 
 class template_table; //Needed becouse of Circular dependency
 
-enum store_type{UINT,INT,BLOB,TEXT,FLOAT,IPv6,UNKNOWN};
-
 /**
- * \brief Search elements xml for type of element
+ * \brief Load elements types from xml to configure structure
  *
- * This function reads /etc/ipfixcol/ipfix-elements.xml (TODO add this as parameter)
- * and search element specified by element id and enterprise id.
- * When its found it decides if its integer, text, float etc..
- * (it does not provide exact type (size) as uint32_t,double ect.)
+ * This function reads /etc/ipfixcol/ipfix-elements.xml
+ * and stores elements data type in configuration structure
  *
- * @param data point
-* @param en Enterprise number of element
-* @param id ID of information element
+ * @param conf fastbit storage plug-in configuration structure
  */
 int load_types_from_xml(struct fastbit_config *conf);
+
+/**
+ * \brief Search for element type in configure structure
+ *
+ * @param conf fastbit storage plug-in configuration structure
+ * @param en Enterprise number of element
+ * @param id ID of information element
+ * @return element type
+ */
 enum store_type get_type_from_xml(struct fastbit_config *conf,unsigned int en,unsigned int id);
 
 /**
- ** \brief Class wrapper for information elements
- **
- **
- **/
+ * \brief Class wrapper for information elements
+ */
 class element
 {
 protected:
 	int _size;
 	enum ibis::TYPE_T _type;
 	/* row name for this element
-	   combination of id and elterprise number
+	   combination of id and enterprise number
 	   exp: e0id16, e20id50.... */
 	char _name[IE_NAME_LENGTH];
 
-	bool _index_mark; //build index for this element?
-	int _filled;
-	int _buf_max;
-	char *_buffer;
+	int _filled;  /* number of items are stored in buffer*/
+	int _buf_max; /* maximum number of items buffer can hold */
+	char *_buffer; /* items buffer */
 
 public:
 	/* points to elements data after fill() */
 	void *value;
-	element(): _size(0), _index_mark(false), _filled(0), _buffer(NULL), value(0) {sprintf(_name,"e0id0");};
-	element(int size, int en, int id, uint32_t buf_size = RESERVED_SPACE){
-		_size = size;
-		_index_mark = false;
-                _filled = 0;
-                _buffer = NULL;
-		sprintf( _name,"e%iid%hi", en, id);
-	}
-
-	bool index_mark(){return _index_mark;}
-	void index_mark(bool i){_index_mark = i;}
+	element();
+	element(int size, int en, int id, uint32_t buf_size = RESERVED_SPACE);
 
 	/* get & set methods*/
 	/**
@@ -194,104 +191,25 @@ public:
 	/**
 	 * \brief allocate memory for buffer
 	 */
-	void allocate_buffer(int count){
-		_buf_max = count;
-		_buffer = (char *) realloc(_buffer,_size*count);
-		if(_buffer == NULL){
-			fprintf(stderr,"Memory allocation failed!\n");
-		}
-	}
+	void allocate_buffer(int count);
 
 	/**
 	 * \brief free memory for buffer
 	 */
-	void free_buffer(){
-		free(_buffer);
-	}
+	void free_buffer();
+	int append(void *data);
+	int append_str(void *data,int size);
 
-	int append(void *data){
-		if(_filled >= _buf_max){
-			return 1;
-		}
+	int flush(std::string path);
 
-		memcpy(&(_buffer[_size*_filled]),data,_size);
-		_filled++;
-		return 0;
-	}
-
-	int append_str(void *data,int size){
-		//check buffer space
-		if(_filled + size + 1 >= _buf_max){ // 1 = terminating zero
-			_buf_max = _buf_max + (100 * size); //TODO
-			_buffer = (char *) realloc(_buffer,_size * _buf_max);
-		}
-
-		memcpy(&(_buffer[_filled]),data,size);
-
-		//check terminating zero (store string to first
-		//terminating zero even if its specified size is bigger)
-		for(int i = 0; i < size; i++){
-			if(_buffer[_filled+i] == 0){
-				_filled+=i+1; //i is counted from 0 we need add 1!
-				break;
-			}
-			//check if last character is zero.. if not add terminating zero
-			if(i == size-1){
-				if(_buffer[_filled+i] != 0){
-					_buffer[_filled+i+1] = 0;
-					_filled+=i+2; // 2 = new terminating zero + i is counted from 0 so we need to add 1
-				}
-			}
-		}
-		return 0;
-	}
-
-	int flush(std::string path){
-		FILE *f;
-		size_t check;
-		if(_filled > 0){
-			//std::cout << "FLUSH ELEMENT:" << path << "/" << _name << std::endl;
-			//std::cout << "FLUSH BUFFER: size:" << _size << " filled:" << _filled << " max" << _buf_max << std::endl;
-			f = fopen((path +"/"+_name).c_str(),"a+");
-			if(f == NULL){
-				fprintf(stderr, "Error while writing data (fopen)!\n");
-				return 1;
-			}
-			//std::cout << "FILE OPEN" << std::endl;
-			if(_buffer == NULL){
-				fprintf(stderr, "Error while writing data! (buffer)\n");
-				return 1;
-			}
-			check = fwrite( _buffer, _size , _filled, f);
-			if(check != (size_t) _filled){
-				fprintf(stderr, "Error while writing data! (fwrite)\n");
-				return 1;
-			}
-			_filled = 0;
-			fclose(f);
-		}
-		return 0;
-	}
-
-	std::string get_part_info(){
-		return  std::string("\nBegin Column") + \
-			"\nname = " + std::string(this->_name) + \
-			"\ndata_type = " + ibis::TYPESTRING[(int)this->_type] + \
-			"\nEnd Column\n";
-	}
+	std::string get_part_info();
 };
 
 class el_var_size : public element
 {
 public:
 	void *data;
-	el_var_size(int size = 0, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE){
-		_size = size;
-                _filled = 0;
-                _buffer = NULL;
-		sprintf( _name,"e%uid%hu", en, id);
-		this->set_type();
-	}
+	el_var_size(int size = 0, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
 	/* core methods */
 	/**
 	 * \brief fill internal element value according to given data
@@ -319,17 +237,7 @@ class el_float : public element
 {
 public:
 	float_u float_value;
-	el_float(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE){
-		_size = size;
-                _filled = 0;
-                _buffer = NULL;
-		sprintf( _name,"e%uid%hu", en, id);
-		this->set_type();
-		if(buf_size == 0){
-			 buf_size = RESERVED_SPACE;
-		}
-		allocate_buffer(buf_size);
-	}
+	el_float(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
 	/* core methods */
 	/**
 	 * \brief fill internal element value according to given data
@@ -355,21 +263,7 @@ private:
 	uint8_t _offset;
 public:
 	//char *text_value;
-	el_text(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE){
-		_size = 1; // this is size for flush function
-		_true_size = size; // this holds true size of string (var of fix size)
-		_var_size = false;
-		_offset = 0;
-		if(size == 65535){ //its element with variable size
-			_var_size = true;
-		}
-		sprintf( _name,"e%uid%hu", en, id);
-		this->set_type();
-		if(buf_size == 0){
-			 buf_size = RESERVED_SPACE;
-		}
-		allocate_buffer(buf_size);
-	}
+	el_text(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
 
 	virtual int set_type(){
 		_type=ibis::TEXT;
@@ -384,56 +278,7 @@ class el_ipv6 : public element
 {
 public:
 	uint64_t ipv6_value;
-	el_ipv6(int size = 1, int en = 0, int id = 0,  int part = 0, uint32_t buf_size = RESERVED_SPACE){
-		_size = size;
-                _filled = 0;
-                _buffer = NULL;
-		sprintf( _name,"e%uid%hup%u", en, id, part);
-		this->set_type();
-		if(buf_size == 0){
-			 buf_size = RESERVED_SPACE;
-		}
-		allocate_buffer(buf_size);
-	}
-	/* core methods */
-	/**
-	 * \brief fill internal element value according to given data
-	 *
-	 * This method transforms data from ipfix record to internal
-	 * value usable by fastbit. Number of bytes to read is specified by _size
-	 * variable. This method converts endianity. Data can be accesed by value pointer.
-	 *
-	 * @param data pointer to input data (usualy ipfix element)
-	 * @return 0 on succes
-	 * @return 1 on failure
-	 */
-	virtual int fill(uint8_t * data);
-	virtual int set_type();
-};
-
-typedef union uinteger_union
-{
-	uint8_t ubyte;
-	uint16_t ushort;
-	uint32_t uint;
-	uint64_t ulong;
-}uint_u;
-
-class el_uint : public element
-{
-public:
-	uint_u uint_value;
-	el_uint(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE){
-		_size = size;
-                _filled = 0;
-                _buffer = NULL;
-		sprintf( _name,"e%iid%hi", en, id);
-		this->set_type();
-		if(buf_size == 0){
-			 buf_size = RESERVED_SPACE;
-		}
-		allocate_buffer(buf_size);
-	}
+	el_ipv6(int size = 1, int en = 0, int id = 0,  int part = 0, uint32_t buf_size = RESERVED_SPACE);
 	/* core methods */
 	/**
 	 * \brief fill internal element value according to given data
@@ -453,37 +298,48 @@ public:
 class el_blob : public element
 {
 public:
+	uint8_t uint_value;
+	el_blob(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
+	virtual int fill(uint8_t * data);
+	virtual int set_type();
+};
+
+typedef union uinteger_union
+{
+	uint8_t ubyte;
+	uint16_t ushort;
+	uint32_t uint;
+	uint64_t ulong;
+}uint_u;
+
+class el_uint : public element
+{
+public:
 	uint_u uint_value;
-	el_blob(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE){
-		_size = size;
-                _filled = 0;
-                _buffer = NULL;
-		sprintf( _name,"e%iid%hi", en, id);
-		this->set_type();
-		if(buf_size == 0){
-			 buf_size = RESERVED_SPACE;
-		}
-		allocate_buffer(buf_size);
-	}
+	el_uint(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
+	/* core methods */
+	/**
+	 * \brief fill internal element value according to given data
+	 *
+	 * This method transforms data from ipfix record to internal
+	 * value usable by fastbit. Number of bytes to read is specified by _size
+	 * variable. This method converts endianity. Data can be accesed by value pointer.
+	 *
+	 * @param data pointer to input data (usualy ipfix element)
+	 * @return 0 on succes
+	 * @return 1 on failure
+	 */
 	virtual int fill(uint8_t * data);
 	virtual int set_type();
 };
 
 
+
+
 class el_sint : public el_uint
 {
 public:
-	el_sint(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE){
-		_size = size;
-                _filled = 0;
-                _buffer = NULL;
-		sprintf( _name,"e%iid%hi", en, id);
-		this->set_type();
-		if(buf_size == 0){
-			 buf_size = RESERVED_SPACE;
-		}
-		allocate_buffer(buf_size);
-	}
+	el_sint(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
 	virtual int set_type();
 };
 #endif
