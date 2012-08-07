@@ -263,7 +263,11 @@ int storage_init (char *params, void **config)
 	cur = cur->xmlChildrenNode;
 	while (cur != NULL) {
 		if ((!xmlStrcmp(cur->name, (const xmlChar *) "interval"))) {
-			conf->interval = atoi((char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1));
+			char *interval = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+			if (interval != NULL) {
+				conf->interval = atoi(interval);
+				free(interval);
+			}
 		}
 		if ((!xmlStrcmp(cur->name, (const xmlChar *) "file"))) {
 			if (!conf->filename) {

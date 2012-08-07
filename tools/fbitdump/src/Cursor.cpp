@@ -151,7 +151,7 @@ bool Cursor::getColumn(std::string name, Values &value, int part) const
 		break;
 	}
 
-	if (ret < 0) { /* TODO check that errors are negative only */
+	if (ret < 0) {
 		return false;
 	}
 
