@@ -300,7 +300,7 @@ const std::string Printer::printIPv6(uint64_t part1, uint64_t part2) const
 const std::string Printer::printTimestamp32(uint32_t timestamp) const
 {
 	time_t timesec = timestamp;
-	struct tm *tm = gmtime(&timesec);
+	struct tm *tm = localtime(&timesec);
 
 	return this->printTimestamp(tm, 0);
 }
