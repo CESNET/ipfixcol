@@ -105,6 +105,7 @@ void * reorder_index(void * config){
 			}
 			delete index_table;
 		}
+		ibis::fileManager::instance().flushDir(dir.c_str());
 	}
 	sem_post(&(conf->sem));
 	return NULL;
