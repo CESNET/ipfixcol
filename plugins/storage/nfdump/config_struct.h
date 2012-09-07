@@ -68,7 +68,7 @@ struct nfdumpConfig{
 	std::string windowDir;
 
 	/* user prefix for storage directory */
-	std::string prefix;
+	std::string ident;
 
 	/* time of last flush (used for time based rotation,
 	 * name is based on start of interval not its end!) */

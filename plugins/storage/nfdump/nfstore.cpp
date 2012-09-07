@@ -136,7 +136,7 @@ void updateFileName(struct nfdumpConfig *conf){
 	// change window directory name!
 	timeinfo = localtime ( &(conf->lastFlush));
 	strftime(formatedTime,15,"%Y%m%d%H%M",timeinfo);
-	conf->windowDir = conf->prefix + std::string(formatedTime);
+	conf->windowDir = std::string(formatedTime);
 }
 
 
@@ -149,6 +149,10 @@ int processStartupXML(char *params, struct nfdumpConfig* c){
 	if(doc){
 		pugi::xpath_node ie = doc.select_single_node("fileWriter");
 		path=ie.node().child_value("path");
+		if(path==""){
+			MSG_WARNING(MSG_MODULE,"Storage path is not specified! Data are stored in local direcotry!");
+			path=".";
+		}
 		//make sure path ends with "/" character
 		if(path.at(path.size() -1) != '/'){
 			c->sysDir = path + "/";
@@ -159,6 +163,9 @@ int processStartupXML(char *params, struct nfdumpConfig* c){
 		ie = doc.select_single_node("fileWriter/dumpInterval");
 		timeWindow=ie.node().child_value("timeWindow");
 		c->timeWindow = atoi(timeWindow.c_str());
+		if(c->timeWindow == 0){
+			c->timeWindow = 360;
+		}
 
 		recordLimit=ie.node().child_value("bufferSize");
 		c->bufferSize = atoi(recordLimit.c_str());
@@ -168,20 +175,13 @@ int processStartupXML(char *params, struct nfdumpConfig* c){
 
 		timeAligment=ie.node().child_value("timeAlignment");
 
-		ie = doc.select_single_node("fileWriter/namingStrategy");
-		namePrefix=ie.node().child_value("prefix");
-		c->prefix = namePrefix;
-
-		nameType=ie.node().child_value("type");
-		if(nameType == "time"){
-			//c->dump_name = TIME;
-			time ( &(c->lastFlush));
-			if(timeAligment == "yes"){
-				/* operators '/' and '*' are used for round down time to time window */
-				c->lastFlush = ((c->lastFlush/c->timeWindow) * c->timeWindow);
-			}
-			updateFileName(c);
+		time ( &(c->lastFlush));
+		if(timeAligment == "yes"){
+			/* operators '/' and '*' are used for round down time to time window */
+			c->lastFlush = ((c->lastFlush/c->timeWindow) * c->timeWindow);
 		}
+		updateFileName(c);
+
 	} else {
 		return 1;
 	}
