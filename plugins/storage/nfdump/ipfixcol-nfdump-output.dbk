@@ -1,0 +1,421 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2008-2012</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>13 April 2012</date>
+		<authorgroup>
+			<author>
+				<personname>
+					<firstname>Petr</firstname>
+					<surname>Kramolis</surname>
+				</personname>
+				<email>kramolis@cesnet.cz</email>
+				<contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol-nfdump-output</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">NFDUMP output plugin for IPFIXcol.</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>ipfixcol-nfdump-output</refname>
+		<refpurpose>NFDUMP output plugin for IPFIXcol.</refpurpose>
+	</refnamediv>
+	
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+			The <command>ipfixcol-nfdump-output.so</command> is output plugin for ipfixcol (ipfix collector).
+		</simpara>
+	</refsect1>
+	
+	<refsect1>
+		<title>Supported IPFIX elements</title>
+		<simpara>NFDUMP file format is designed to store only certain flow information. So this plug-in 
+		can't store all IPFIX elements to NFDUMP files. There are few elements which MUST be present in IPFIX
+		record otherwise WHOLE record is ignored and NOT stored at all(this usually means all data records for certain template).
+		Rest of supported IPFIX elements is optional. IPFIX records can contain unsupported elements too (these elements
+		are simply ignored). See below for supported IPFIX elements (identified by numbers assigned by IANA)</simpara>
+		
+	</refsect1>	
+	<refsect1>
+		<title>Necessary elements</title>
+		<para>1 - delta byte count</para>
+		<para>2 - delta packet count</para>
+		<para>4 - protocol nuber</para>
+		<para>8, 27 - IPv4 or IPv6 source address</para>
+		<para>12, 28 - IPv4 or IPv6 destination address</para>
+		<para>150, 152, 154, 156 - one of these elements to with flow start time-stamp</para>
+		<para>151, 153, 155 ,157 - one of these elements to with flow end time-stamp</para>
+	</refsect1>	
+	<refsect1>
+		<title>Optional elements</title>
+		<para>3 - Agrregated flows</para>
+		<para>5 - class of service </para>
+		<para>6 - TCP flags </para>
+		<para>7 - source port</para>
+		<para>9, 29 - IPv4 or IPv6 source address prefix length</para>
+		<para>10 - ingress interface </para>
+		<para>11 - destination port </para>
+		<para>13, 30 - IPv4 or IPv6 destination address prefix length</para>
+		<para>14 - egress interface</para>
+		<para>15 - IPv4 next hop</para>
+		<para>16 - source autonomous system</para>
+		<para>17 - destination autonomous system</para>
+		<para>18 - BGP IPv4 next hop</para>
+		<para>23 - POST delta byte count</para>
+		<para>24 - POST packet byte count</para>
+		<para>32 - ICMP type </para>
+		<para>55 - POST class of service</para>
+		<para>56 -source MAC</para>
+		<para>57 - POST destination MAC</para>
+		<para>58 - VLAN identifier</para>
+		<para>59 - POST VLAN identifier</para>
+		<para>61 - flow direction</para>
+		<para>62 - IPv6 next hop</para>
+		<para>63 - BGP IPv6 next hop</para>
+		<para>70-79 - one or more of MPLS labels</para>
+		<para>80 -destination MAC</para>
+		<para>81 - POST source MAC</para>
+		<para>89 - forward status (this is NetFlow element in IPFIX it's only as reserved)</para>
+	</refsect1>
+
+	<refsect1>
+		<title>Configuration</title>
+		<simpara>There are two configuration XML files for ipfixcol that affects plugin usage.
+		First one is internal configuration XML (<filename>/etc/ipfixcol/internalcfg.xml</filename>)
+		where are list of all available plugins for the collecor. To use nfdump output plugin,
+		make sure it is properly specified in the configuration XMLs.
+		</simpara>
+		<simpara><filename>internalcfg.xml</filename> nfdump example</simpara>
+		<programlisting>
+	<![CDATA[
+	<storagePlugin>
+		<fileFormat>nfdump</fileFormat>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-nfdump-output.so</file>
+		<threadName>nfdump</threadName>
+	</storagePlugin>
+	]]>
+		</programlisting>
+		<para></para>
+		
+		<simpara>The collector must be configured to use nfdump output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
+		The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves. 
+		</simpara>
+		<simpara><filename>startup.xml</filename> nfdump example</simpara>
+		<programlisting>
+	<![CDATA[
+	<destination>
+		<name>store data records in NFDUMP file format</name>
+		<fileWriter>
+			<fileFormat>nfdump</fileFormat>
+			<path>storagePath/%o/%Y/%m/%d/</path>
+			<dumpInterval>
+				<timeWindow>300</timeWindow>
+				<timeAlignment>yes</timeAlignment>
+				<bufferSize>50000</bufferSize>
+			</dumpInterval>
+		</fileWriter>
+	</destination>
+	]]>
+		</programlisting>
+
+	<para>
+		<variablelist>
+			<varlistentry>
+				<term>
+					<command>path</command>
+				</term>
+				<listitem>
+					<simpara>the path element specifies storage direcotry for data
+						collected by nfdump plugin. Path can contain
+						format tokens for day, month, obervation id ect. This allows you to
+						create direcotry hierarchy basedon format tokens.
+					</simpara>
+
+					<variablelist>
+						<varlistentry>
+							<term>
+								<command>%a</command>
+							</term>
+							<listitem>
+								<simpara>Abbreviated weekday name (local-depended). Example: Thu
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%A</command>
+							</term>
+							<listitem>
+								<simpara>Full weekday name (local-depended). Example: Thursday
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%b</command>
+							</term>
+							<listitem>
+								<simpara>Abbreviated month name (local-depended). Example: Aug
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%B</command>
+							</term>
+							<listitem>
+								<simpara>Full month name (local-depended). Example: August
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%c</command>
+							</term>
+							<listitem>
+								<simpara>Date and time representation (local-depended). Example:
+									Thu Aug 23 14:55:02 2001</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%d</command>
+							</term>
+							<listitem>
+								<simpara>Day of the month (01-31). Example: 23</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%H</command>
+							</term>
+							<listitem>
+								<simpara>Hour in 24h format (00-23). Example: 14</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%I</command>
+							</term>
+							<listitem>
+								<simpara>Hour in 12h format (01-12). Example: 02</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%j</command>
+							</term>
+							<listitem>
+								<simpara>Day of the year (001-366). Example: 235</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%m</command>
+							</term>
+							<listitem>
+								<simpara>Month as a decimal number (01-12). Example: 08
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%M</command>
+							</term>
+							<listitem>
+								<simpara>Minute (00-59). Example: 55</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%o</command>
+							</term>
+							<listitem>
+								<simpara>Observation Domain Id. Example: 1</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%p</command>
+							</term>
+							<listitem>
+								<simpara>AM or PM designation. Example: PM</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%S</command>
+							</term>
+							<listitem>
+								<simpara>Second (00-61). Example: 02</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%U</command>
+							</term>
+							<listitem>
+								<simpara>Week number with the first Sunday as the first day of
+									week one (00-53). Example: 33</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%w</command>
+							</term>
+							<listitem>
+								<simpara>Weekday as a decimal number with Sunday as 0 (0-6).
+									Example: 4</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%W</command>
+							</term>
+							<listitem>
+								<simpara>Week number with the first Monday as the first day of
+									week one (00-53). Example: 34</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%x</command>
+							</term>
+							<listitem>
+								<simpara>Date representation (local-depended). Example: '08/23/01'. This creates 3 subdirectories.
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%X</command>
+							</term>
+							<listitem>
+								<simpara>Time representation (local-depended). Example: 14:55:02</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%y</command>
+							</term>
+							<listitem>
+								<simpara>Year, last two digits (00-99). Example: 01</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%Y</command>
+							</term>
+							<listitem>
+								<simpara>Year. Example: 2001</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%Z</command>
+							</term>
+							<listitem>
+								<simpara>Timezone name or abbreviation. Example: CDT</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%%</command>
+							</term>
+							<listitem>
+								<simpara>A % sign. Example: %</simpara>
+							</listitem>
+						</varlistentry>
+					</variablelist>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>dumpInterval - timeWindow</command>
+				</term>
+				<listitem>
+					<simpara>timeWindow is interval for rotation of NFDUMP files(seconds)</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>dumpInterval - timeAlignment</command>
+				</term>
+				<listitem>
+					<simpara>Align flush time according to timeWindow. For example when
+						is collector started at 12:43 with 5 min
+						timeWindow than next flush time is 12:48 but with alignment next flush time
+						is 12:45. (yes/no)
+					</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>dumpInterval - bufferSize</command>
+				</term>
+				<listitem>
+					<simpara>Specifies how internal buffer size (bytes).
+					</simpara>
+				</listitem>
+			</varlistentry>
+		</variablelist>
+	</para>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org/?page_id=825">http://www.liberouter.org/?page_id=825</link>
+					</term>
+					<listitem>
+						<para>IPFIXcol Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>
