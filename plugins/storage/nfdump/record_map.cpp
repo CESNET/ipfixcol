@@ -191,6 +191,11 @@ int NfdumpFile::newFile(std::string name, uint bufferSize){
 
 void NfdumpFile::updateFile(){
 	uint check;
+	if(f_ == NULL){
+		MSG_ERROR(MSG_MODULE,"Can't update file");
+		bufferUsed_ = 0;
+		return;
+	}
 	//update file header
 	fileHeader_.updateHeader(f_);
 	//update stats
@@ -277,8 +282,13 @@ void NfdumpFile::bufferPtk(const data_template_couple *dtcouple){
 void NfdumpFile::closeFile(){
 	std::map<uint16_t,RecordMap*>::iterator maps_it;
 
+	if(f_ == NULL){
+		return;
+	}
+
 	updateFile();
 	fclose(f_);
+
 
 	for(maps_it = extMaps_->begin(); maps_it!=extMaps_->end();maps_it++){
 		delete maps_it->second;
