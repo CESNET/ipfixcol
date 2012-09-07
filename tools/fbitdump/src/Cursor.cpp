@@ -151,7 +151,7 @@ bool Cursor::getColumn(std::string name, Values &value, int part) const
 		break;
 	}
 
-	if (ret != 0) {
+	if (ret < 0) {
 		return false;
 	}
 

@@ -288,15 +288,8 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 						xpath_obj_destinations = xmlXPathEvalExpression (BAD_CAST "/ietf-ipfix:exportingProcess/ietf-ipfix:destination", exporter_ctxt);
 						if (xpath_obj_destinations != NULL) {
 							if (xmlXPathNodeSetIsEmpty (xpath_obj_destinations->nodesetval)) {
-								/* no fileWriter found */
-								xmlXPathFreeObject (xpath_obj_destinations);
-								xpath_obj_destinations = NULL;
-								xmlXPathFreeContext (exporter_ctxt);
-								exporter_ctxt = NULL;
-								xmlFreeDoc (exporter_doc);
-								exporter_doc = NULL;
-								/* break while loop to get to another exportingProcess */
-								break;
+								/* no fileWriter found, continue with another exportingProcess */
+								goto loop_cleanup;
 							}
 						}
 
@@ -364,6 +357,14 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 				/* go to the next exportingProcess element */
 				aux_node = aux_node->next;
 			}
+			loop_cleanup:
+			/* free data from previous iteration in case of multiple exportingProcesses (also erased in cleanup) */
+			xmlXPathFreeObject (xpath_obj_destinations);
+			xpath_obj_destinations = NULL;
+			xmlXPathFreeContext (exporter_ctxt);
+			exporter_ctxt = NULL;
+			xmlFreeDoc (exporter_doc);
+			exporter_doc = NULL;
 		}
 	}
 	/* inform that everything was done but no valid plugin has been found */
