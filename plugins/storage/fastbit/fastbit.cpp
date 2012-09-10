@@ -407,6 +407,9 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 			if(difftime(rawtime,conf->last_flush) > conf->time_window){
 				flush_data(conf, false);
 				conf->last_flush = conf->last_flush + conf->time_window;
+				while(difftime(rawtime,conf->last_flush) > conf->time_window){
+					conf->last_flush = conf->last_flush + conf->time_window;
+				}
 				update_window_name(conf);
 				dir = dir_hierarchy(conf,(*dom_id).first);
 				rcnt = 0;
