@@ -181,7 +181,6 @@ int processStartupXML(char *params, struct nfdumpConfig* c){
 			c->lastFlush = ((c->lastFlush/c->timeWindow) * c->timeWindow);
 		}
 		updateFileName(c);
-
 	} else {
 		return 1;
 	}
@@ -222,21 +221,19 @@ int store_packet (void *config,	const struct ipfix_message *ipfix_msg,
 	const struct ipfix_template_mgr *){
 	MSG_DEBUG(MSG_MODULE, "store packet");
 	struct nfdumpConfig *conf = (struct nfdumpConfig *) config;
-	//std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
 	std::map<uint32_t,NfdumpFile*>::iterator files_it;
 	NfdumpFile *file_tmp = NULL;
 	std::string file_path;
 	time_t rawtime;
 	uint32_t oid = -1;
-	//size_t pos;
-	//int i;
-
-
 
 	//should we create new window?
 	time ( &rawtime );
 	if(difftime(rawtime,conf->lastFlush) > conf->timeWindow){
 		conf->lastFlush = conf->lastFlush + conf->timeWindow;
+		while(difftime(rawtime,conf->lastFlush) > conf->timeWindow){
+			conf->lastFlush = conf->lastFlush + conf->timeWindow;
+		}
 		updateFileName(conf);
 
 		for(files_it = conf->files->begin(); files_it!=conf->files->end();files_it++){
