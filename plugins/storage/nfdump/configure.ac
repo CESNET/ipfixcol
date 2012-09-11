@@ -89,7 +89,8 @@ AS_IF([test -d $srcdir/../../../base/headers],
 )
 
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
-
+AC_CHECK_HEADERS([lzo/lzoconf.h], , AC_MSG_ERROR([lzo/lzoconf.h header missing. Please install liblzo2-devel package]), [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([lzo/lzo1x.h], , AC_MSG_ERROR([lzo/lzo1x.h header missing. Please install liblzo2-devel package]), [AC_INCLUDES_DEFAULT])
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 AC_HEADER_STDBOOL
