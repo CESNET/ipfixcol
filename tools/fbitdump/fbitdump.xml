@@ -241,6 +241,14 @@
 		</value>
 	</column>
 	<column>
+		<name>ip Ver.</name>
+		<alias>%ipv</alias>
+		<width>7</width>
+		<value type="plain">
+			<element>e0id60</element>
+		</value>
+	</column>
+	<column>
 		<name>Input</name>
 		<alias>%in</alias>
 		<width>8</width>

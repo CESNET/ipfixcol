@@ -36,6 +36,7 @@ make DESTDIR=%buildroot install
 
 %files
 %_bindir/fbitdump
+%_bindir/fbitexpire
 %_datadir/fbitdump/fbitdump.xml
 %_datadir/fbitdump/fbitdump.xsd
 %_mandir/man1/fbitdump.1.gz
