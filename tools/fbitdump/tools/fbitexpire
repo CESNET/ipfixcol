@@ -1,0 +1,186 @@
+#!/bin/bash
+#
+# \file fbitexpire
+# \author Petr Velan <petr.velan@cesnet.cz>
+# \brief Script that handles old fastbit data
+#
+# Copyright (C) 2011 CESNET, z.s.p.o.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with the
+#    distribution.
+# 3. Neither the name of the Company nor the names of its contributors
+#    may be used to endorse or promote products derived from this
+#    software without specific prior written permission.
+#
+# ALTERNATIVELY, provided that this notice is retained in full, this
+# product may be distributed under the terms of the GNU General Public
+# License (GPL) version 2 or later, in which case the provisions
+# of the GPL apply INSTEAD OF those given above.
+#
+# This software is provided ``as is, and any express or implied
+# warranties, including, but not limited to, the implied warranties of
+# merchantability and fitness for a particular purpose are disclaimed.
+# In no event shall the company or contributors be liable for any
+# direct, indirect, incidental, special, exemplary, or consequential
+# damages (including, but not limited to, procurement of substitute
+# goods or services; loss of use, data, or profits; or business
+# interruption) however caused and on any theory of liability, whether
+# in contract, strict liability, or tort (including negligence or
+# otherwise) arising in any way out of the use of this software, even
+# if advised of the possibility of such damage.
+#
+
+STATSFILE="stats.txt"
+
+# usage function
+function usage
+{
+	echo "Usage fbitexpire -d directory -u usage -f days"
+	echo "Removes old FastBit files to free disk space."
+	echo ""
+	echo "  -d dir      Directory to process. Can be repeated."
+	echo "  -s size     Target directory size, can use KB, MB, GB and TB as units."
+	echo "  -f days     Number of days to keep full data."
+	echo "  -h          Print this help text."
+	echo ""
+	echo "Report fbitexpire bugs to <petr.velan@cesnet.cz>"
+}
+
+
+
+function remove_indexes
+{
+	fbitdump -R $1 -d 2>/dev/null
+}
+
+function remove_data
+{
+	for i in `ls $1`; do
+		if [ -e $1/$i/$STATSFILE ]; then
+			continue;
+		fi;
+
+		STATS=`fbitdump -R $1/$i -o "fmt:%byt %pkt %fl" -A -N 2>/dev/null >$1/$i/$STATSFILE`
+		find $1/$i -mindepth 1 -maxdepth 1 ! -name "$STATSFILE" -exec rm -fr {} \;
+	done;
+}
+
+# process the input
+while getopts ":d:s:f:h" opt; do
+	case $opt in
+		d)
+			DIRS="$DIRS $OPTARG"
+		;;
+		s)
+			# expand units
+			UNITS=`echo $OPTARG | sed -e "s/[0-9]*\([A-Z]\{2\}\)/\1/"`
+			SIZE=`echo $OPTARG | sed -e "s/\([0-9]*\)[A-Z]\{2\}/\1/"`
+
+			case $UNITS in
+			"TB")
+				SIZE=$[SIZE*1024*1024*1024*1024]
+			;;
+			"GB")
+				SIZE=$[SIZE*1024*1024*1024]
+			;;
+			"MB")
+				SIZE=$[SIZE*1024*1024]
+			;;
+			"KB")
+				SIZE=$[SIZE*1024]
+			;;
+			esac;
+		;;
+		f)
+			FULLDAYS=$OPTARG
+		;;
+		h)
+			usage
+			exit 0;
+		;;
+		\?)
+			echo "Invalid option: -$OPTARG" >&2
+			exit 1;
+		;;	
+		:)
+			echo "Option -$OPTARG requires an argument." >&2
+		;;
+  esac
+done
+
+if [ ${#DIRS[*]} -eq 0 ] || [ -z $SIZE ] || [ -z $FULLDAYS ]; then
+	usage;
+	exit 1;
+fi
+
+# compute total directory size
+TOTALSIZE=`du --block-size=1 -s ${DIRS[*]} | awk '{s+=$1}END{print s}'`
+
+# exit when dirs are small enough
+if [ $TOTALSIZE -le $SIZE ]; then
+	exit 0;
+fi
+
+# add all days to array indexed by YYYYMMDD
+for odid in $DIRS; do
+	for year in `ls -r $odid`; do
+		for month in `ls -r $odid/$year`; do
+			for day in `ls -r $odid/$year/$month`; do
+				DAYS[$year$month$day]="${DAYS[$year$month$day]} $odid/$year/$month/$day" 
+			done;
+		done;
+	done;
+done;
+
+#readarray -t RDAYS < <(printf '%s\n' "${DAYS[@]}" | sort -r)
+
+# remove full days, we do not want to touch these
+dayscount=${#DAYS[*]}
+day=$[$dayscount-$FULLDAYS]
+i=1
+for index in ${!DAYS[*]}; do
+	if [ $day -lt $i ]; then
+		DAYSFULL[$index]=${DAYS[$index]}
+		unset DAYS[$index];
+	fi
+	i=$[i+1]
+done;
+unset i;
+
+# remove indexes
+for day in ${DAYS[*]}; do
+	remove_indexes $day
+done;
+
+# check whether we can end with removing of the indexes
+CURRENTSIZE=`du --block-size=1 -s ${DIRS[*]} | awk '{s+=$1}END{print s}'`
+# exit when dirs are small enough
+if [ $CURRENTSIZE -le $SIZE ]; then
+	exit 0;
+fi
+
+# start removing the data
+for day in ${DAYS[*]}; do
+	CURRENTSIZE=$[CURRENTSIZE-`du --block-size=1 -s $day | awk '{print $1}'`]
+	remove_data $day
+done;
+
+# exit when dirs are small enough
+if [ $CURRENTSIZE -le $SIZE ]; then
+	exit 0;
+else
+	echo "Not enough space was freed by $0" >&2
+	exit 2;
+fi
+
+#printf '%s\n' ${DAYS[*]}
+#echo "full"
+#printf '%s\n' ${DAYSFULL[*]}
+
