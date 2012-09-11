@@ -124,6 +124,7 @@
 		<fileWriter>
 			<fileFormat>nfdump</fileFormat>
 			<path>storagePath/%o/%Y/%m/%d/</path>
+			<prefix>ic</prefix>
 			<compression>yes</compression>
 			<dumpInterval>
 				<timeWindow>300</timeWindow>
@@ -344,6 +345,14 @@
 							</listitem>
 						</varlistentry>
 					</variablelist>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>prefix</command>
+				</term>
+				<listitem>
+					<simpara>Specifies name prefix for output files.</simpara>
 				</listitem>
 			</varlistentry>
 			<varlistentry>

@@ -140,7 +140,7 @@ void updateFileName(struct nfdumpConfig *conf){
 	// change window directory name!
 	timeinfo = localtime ( &(conf->lastFlush));
 	strftime(formatedTime,15,"%Y%m%d%H%M",timeinfo);
-	conf->windowDir = std::string(formatedTime);
+	conf->windowDir = conf->prefix + std::string(formatedTime);
 }
 
 
@@ -163,6 +163,9 @@ int processStartupXML(char *params, struct nfdumpConfig* c){
 		} else {
 			c->sysDir = path;
 		}
+
+		namePrefix=ie.node().child_value("prefix");
+		c->prefix = namePrefix; //no need for default value error value is "" anyway
 
 		compression=ie.node().child_value("compression");
 		if(compression == "yes"){
