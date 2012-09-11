@@ -71,7 +71,10 @@ AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
 AC_LANG([C++])
-
+############################ Check for libraries ###############################
+AC_SEARCH_LIBS([__lzo_init_v2], [lzo2],,
+    	AC_MSG_ERROR([Required library lzo2 missing]))
+    	
 ###################### Check for configure parameters ##########################
 AC_ARG_ENABLE([debug], 
         AC_HELP_STRING([--enable-debug],[turn on more debugging options]),

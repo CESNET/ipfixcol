@@ -70,6 +70,9 @@ struct nfdumpConfig{
 	/* user prefix for storage directory */
 	std::string ident;
 
+	/* lzo compression of records */
+	bool compression;
+
 	/* time of last flush (used for time based rotation,
 	 * name is based on start of interval not its end!) */
 	time_t lastFlush;

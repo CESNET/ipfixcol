@@ -47,6 +47,9 @@
 #include <string>
 #include <map>
 
+
+
+
 struct FlowStats{
 	uint64_t bytes;
 	uint64_t packets;
@@ -78,6 +81,7 @@ public:
 	void increaseRecordsCnt(){block_.NumRecords++;}
 	void addRecordSize(uint32_t size){block_.size+=size;}
 	void newBlock(FILE *f);
+	void compress(char *buffer, uint *bufferUsed);
 	void updateBlock(FILE *f);
 };
 
@@ -86,8 +90,9 @@ class FileHeader{
 	long position_;
 public:
 	uint size(){return sizeof(struct file_header_s);}
+	bool compressed(){return header_.flags & FLAG_COMPRESSED;}
 	void increaseBlockCnt(){header_.NumBlocks++;};
-	void newHeader(FILE *f);
+	void newHeader(FILE *f, bool compressed = false);
 	void updateHeader(FILE *f);
 };
 
@@ -139,8 +144,8 @@ class NfdumpFile{
 	/* buffer number of bytes used in buffer */
 	unsigned int bufferUsed_;
 public:
-	int newFile(std::string name, uint bufferSize = BUFFER_SIZE_);
-	void updateFile();
+	int newFile(std::string name, uint bufferSize = BUFFER_SIZE_ , bool compressed = false);
+	void updateFile(bool compression = false);
 	void bufferPtk(const struct data_template_couple dtcouple[]);
 	void closeFile();
 };

@@ -124,6 +124,7 @@
 		<fileWriter>
 			<fileFormat>nfdump</fileFormat>
 			<path>storagePath/%o/%Y/%m/%d/</path>
+			<compression>yes</compression>
 			<dumpInterval>
 				<timeWindow>300</timeWindow>
 				<timeAlignment>yes</timeAlignment>
@@ -343,6 +344,14 @@
 							</listitem>
 						</varlistentry>
 					</variablelist>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>compression</command>
+				</term>
+				<listitem>
+					<simpara>LZO compression for data (yes/no)</simpara>
 				</listitem>
 			</varlistentry>
 			<varlistentry>

@@ -64,6 +64,10 @@ extern "C" {
 #include "config_struct.h"
 #include "nfstore.h"
 
+extern "C" {
+#include <lzo/lzoconf.h>
+}
+
 
 std::string DirHierarchy(struct nfdumpConfig *config, uint32_t oid){
 	struct tm * timeinfo;
@@ -141,7 +145,7 @@ void updateFileName(struct nfdumpConfig *conf){
 
 
 int processStartupXML(char *params, struct nfdumpConfig* c){
-	std::string path,timeWindow,recordLimit,nameType,namePrefix,indexes,test,timeAligment;
+	std::string path,timeWindow,bufferSize,compression,namePrefix,indexes,test,timeAligment;
 
 	pugi::xml_document doc;
 	doc.load(params);
@@ -160,6 +164,17 @@ int processStartupXML(char *params, struct nfdumpConfig* c){
 			c->sysDir = path;
 		}
 
+		compression=ie.node().child_value("compression");
+		if(compression == "yes"){
+			c->compression = true;
+			if (lzo_init() != LZO_E_OK){
+				MSG_WARNING(MSG_MODULE,"Compression initialization failed (storing without compression)!");
+				c->compression = false;
+			}
+		} else {
+			c->compression = false;
+		}
+
 		ie = doc.select_single_node("fileWriter/dumpInterval");
 		timeWindow=ie.node().child_value("timeWindow");
 		c->timeWindow = atoi(timeWindow.c_str());
@@ -167,8 +182,8 @@ int processStartupXML(char *params, struct nfdumpConfig* c){
 			c->timeWindow = 360;
 		}
 
-		recordLimit=ie.node().child_value("bufferSize");
-		c->bufferSize = atoi(recordLimit.c_str());
+		bufferSize=ie.node().child_value("bufferSize");
+		c->bufferSize = atoi(bufferSize.c_str());
 		if(c->bufferSize == 0){
 			c->bufferSize = BUFFER_SIZE;
 		}
@@ -240,7 +255,7 @@ int store_packet (void *config,	const struct ipfix_message *ipfix_msg,
 			files_it->second->closeFile();
 			file_path = DirHierarchy(conf,files_it->first);
 			DirCheck(file_path);
-			files_it->second->newFile(file_path, conf->bufferSize);
+			files_it->second->newFile(file_path, conf->bufferSize, conf->compression);
 		}
 	}
 
@@ -252,7 +267,7 @@ int store_packet (void *config,	const struct ipfix_message *ipfix_msg,
 		file_tmp = new NfdumpFile();
 		file_path = DirHierarchy(conf,oid);
 		DirCheck(file_path);
-		file_tmp->newFile(file_path, conf->bufferSize);
+		file_tmp->newFile(file_path, conf->bufferSize, conf->compression);
 		(*conf->files)[oid] = file_tmp;
 		files_it = conf->files->find(oid);
 	}

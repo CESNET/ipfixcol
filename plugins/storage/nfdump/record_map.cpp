@@ -54,11 +54,21 @@ extern "C" {
 #include "nfstore.h"
 #include "nffile.h"
 
-void FileHeader::newHeader(FILE *f){
+extern "C" {
+#include <lzo/lzoconf.h>
+#include <lzo/lzo1x.h>
+}
+
+static lzo_align_t __LZO_MMODEL wrkmem[LZO1X_1_MEM_COMPRESS];
+
+void FileHeader::newHeader(FILE *f, bool compressed ){
 	header_.magic = MAGIC;
 	header_.version = LAYOUT_VERSION_1;
 	header_.flags = 0;
 	header_.NumBlocks = 0;
+	if(compressed){
+		header_.flags = header_.flags | FLAG_COMPRESSED;
+	}
 	memset(header_.ident,0,IdentLen);
 	strcpy(header_.ident,"none");
 	position_ = ftell(f);
@@ -158,7 +168,32 @@ void BlockHeader::updateBlock(FILE *f){
 }
 
 
-int NfdumpFile::newFile(std::string name, uint bufferSize){
+
+void BlockHeader::compress(char *buffer, uint *bufferUsed){ //TODO
+	lzo_uint iSize,oSize;
+	unsigned char __LZO_MMODEL *input;
+	unsigned char __LZO_MMODEL *output;
+
+	char *ibuff;
+
+	ibuff = new char[block_.size];
+	memcpy(ibuff,buffer,block_.size);
+
+	input = (unsigned char __LZO_MMODEL *) ibuff;
+	iSize = block_.size;
+	output = (unsigned char __LZO_MMODEL *) buffer;
+	oSize = 0;
+	if(lzo1x_1_compress(input,iSize,output,&oSize,wrkmem) != LZO_E_OK){
+		MSG_ERROR(MSG_MODULE,"Compression failed");
+	}
+	*bufferUsed = oSize;
+	block_.size = oSize;
+	delete[] ibuff;
+	//TODO ret val
+}
+
+
+int NfdumpFile::newFile(std::string name, uint bufferSize, bool compressed){
 	MSG_DEBUG(MSG_MODULE,"Creating new file: \"%s\"",name.c_str());
 	f_ = fopen(name.c_str(),"w+");
 	if(f_ == NULL){
@@ -166,7 +201,7 @@ int NfdumpFile::newFile(std::string name, uint bufferSize){
 		return -1;
 	}
 	//create header
-	fileHeader_.newHeader(f_);
+	fileHeader_.newHeader(f_,compressed);
 	//create stats
 	stats_.newStats(f_);
 	fileHeader_.increaseBlockCnt();
@@ -189,8 +224,9 @@ int NfdumpFile::newFile(std::string name, uint bufferSize){
 	return 0;
 }
 
-void NfdumpFile::updateFile(){
+void NfdumpFile::updateFile(bool compression){
 	uint check;
+
 	if(f_ == NULL){
 		MSG_ERROR(MSG_MODULE,"Can't update file");
 		bufferUsed_ = 0;
@@ -201,7 +237,15 @@ void NfdumpFile::updateFile(){
 	//update stats
 	stats_.updateStats(f_);
 	//update last block header
-	currentBlock_.updateBlock(f_);
+
+
+	if(compression){
+		currentBlock_.compress(buffer_, &bufferUsed_);
+		currentBlock_.updateBlock(f_);
+	}else{
+		currentBlock_.updateBlock(f_);
+	}
+
 	//flush data from buffer
 	check = fseek(f_, 0, SEEK_END);
 	if(check != 0){
@@ -254,7 +298,7 @@ void NfdumpFile::bufferPtk(const data_template_couple *dtcouple){
 		/* flush data if there is no space in buffers */
 		if(bufferSize_ <= bufferUsed_ + ext_map_it->second->maxSize()){
 			std::map<uint16_t,RecordMap*>::iterator maps_it;
-			updateFile();
+			updateFile(fileHeader_.compressed());
 			fileHeader_.increaseBlockCnt();
 			currentBlock_.newBlock(f_);
 			//for(maps_it = _ext_maps->begin(); maps_it!=_ext_maps->end();maps_it++){
@@ -286,7 +330,7 @@ void NfdumpFile::closeFile(){
 		return;
 	}
 
-	updateFile();
+	updateFile(fileHeader_.compressed());
 	fclose(f_);
 
 
