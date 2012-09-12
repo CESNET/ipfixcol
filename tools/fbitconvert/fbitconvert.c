@@ -414,7 +414,10 @@ process_ext_map(struct extension_map_s * extension_map, struct extensions *ext,
 	ext->map[ext->filled].tmp6_index = template_mgr->counter;
 
 	int eid=0;
-	for(eid = 0; eid < extension_map->extension_size/2;eid++){ // extension id is 2 byte
+	for(eid = 0; eid < extension_map->size/2;eid++){ // extension id is 2 byte
+		if(extension_map->ex_id[eid] == 0){
+			break;
+		}
 		ext->map[ext->filled].value[eid] = extension_map->ex_id[eid];
 		ext->map[ext->filled].values_count++;
 		ext_fill_tm[extension_map->ex_id[eid]] (0, template1);
