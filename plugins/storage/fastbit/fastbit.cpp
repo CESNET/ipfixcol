@@ -287,6 +287,7 @@ int process_startup_xml(char *params, struct fastbit_config* c){
 			strftime(formated_time,15,"%Y%m%d%H%M",timeinfo);
 			c->window_dir = c->prefix + std::string(formated_time) + "/";
 		} else if (nameType == "incremental") {
+			time ( &(c->last_flush));
 			c->dump_name = INCREMENTAL;
 			c->window_dir = c->prefix + "000000000001/";
 		}
