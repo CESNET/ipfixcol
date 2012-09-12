@@ -20,9 +20,7 @@
 #include "ext_fill.h"
 
 
-//#define PLUGIN_PATH "/usr/share/ipfixcol/plugins/ipfixcol-fastbit-output.so"  //TODO
-
-#define PLUGIN_PATH "/home/kramolis/git/ipfixcol/plugins/storage/fastbit/.libs/ipfixcol-fastbit-output.so"
+#define PLUGIN_PATH "/usr/share/ipfixcol/plugins/ipfixcol-fastbit-output.so"
 
 #define ARGUMENTS "hbi:w:v:p:P:r:V"
 
@@ -220,9 +218,6 @@ void fill_basic_template(uint8_t flags, struct ipfix_template **template){
 	int i;
 	for(i=0;i<HEADER_ELEMENTS;i++){	
 		(*template)->fields[(*template)->field_count].ie.id = header_elements[i][0];
-
-
-		MSG_NOTICE(msg_str, "FILL %i - %p",i,&((*template)->fields[(*template)->field_count].ie.length));
 		(*template)->fields[(*template)->field_count].ie.length = header_elements[i][1];
 		(*template)->field_count++;
 		(*template)->data_length += header_elements[i][1];  
@@ -230,17 +225,12 @@ void fill_basic_template(uint8_t flags, struct ipfix_template **template){
 	}
 
 	//add mandatory extensions elements 
-	MSG_NOTICE(msg_str, "PRE BASIC TEMPLATE: 'field count - %i' template_length - %i DATA-LENGTH - %i" \
-		,(*template)->field_count, (*template)->template_length, (*template)->data_length);
 	//Extension 1
 	ext_fill_tm[1] (flags, *template);
 	//Extension 2
 	ext_fill_tm[2] (flags, *template);
 	//Extension 3
 	ext_fill_tm[3] (flags, *template);
-	MSG_NOTICE(msg_str, "BASIC TEMPLATE: 'field count - %i' template_length - %i DATA-LENGTH - %i" \
-		,(*template)->field_count, (*template)->template_length, (*template)->data_length);
-
 }
 void init_ipfix_msg(struct ipfix_message *ipfix_msg){
 	ipfix_msg->pkt_header = (struct ipfix_header *) malloc(sizeof(struct ipfix_header));
