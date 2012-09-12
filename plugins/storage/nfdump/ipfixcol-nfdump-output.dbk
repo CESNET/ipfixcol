@@ -124,7 +124,7 @@
 		<fileWriter>
 			<fileFormat>nfdump</fileFormat>
 			<path>storagePath/%o/%Y/%m/%d/</path>
-			<prefix>ic</prefix>
+			<prefix>nfcapd.</prefix>
 			<ident>file ident</ident>
 			<compression>yes</compression>
 			<dumpInterval>
