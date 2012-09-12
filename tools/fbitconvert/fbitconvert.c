@@ -20,7 +20,7 @@
 #include "ext_fill.h"
 
 
-#define PLUGIN_PATH "/usr/share/ipfixcol/plugins/ipfixcol-fastbit-output.so"
+#define PLUGIN_PATH "/usr/local/share/ipfixcol/plugins/ipfixcol-fastbit-output.so"
 
 #define ARGUMENTS "hbi:w:v:p:P:r:V"
 
