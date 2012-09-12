@@ -92,7 +92,7 @@ public:
 	uint size(){return sizeof(struct file_header_s);}
 	bool compressed(){return header_.flags & FLAG_COMPRESSED;}
 	void increaseBlockCnt(){header_.NumBlocks++;};
-	void newHeader(FILE *f, bool compressed = false);
+	void newHeader(FILE *f, struct nfdumpConfig* conf);
 	void updateHeader(FILE *f);
 };
 
@@ -144,7 +144,7 @@ class NfdumpFile{
 	/* buffer number of bytes used in buffer */
 	unsigned int bufferUsed_;
 public:
-	int newFile(std::string name, uint bufferSize = BUFFER_SIZE_ , bool compressed = false);
+	int newFile(std::string name, struct nfdumpConfig* conf);
 	void updateFile(bool compression = false);
 	void bufferPtk(const struct data_template_couple dtcouple[]);
 	void closeFile();

@@ -145,30 +145,44 @@ void updateFileName(struct nfdumpConfig *conf){
 
 
 int processStartupXML(char *params, struct nfdumpConfig* c){
-	std::string path,timeWindow,bufferSize,compression,namePrefix,indexes,test,timeAligment;
+	std::string tmp;
 
 	pugi::xml_document doc;
 	doc.load(params);
 
 	if(doc){
 		pugi::xpath_node ie = doc.select_single_node("fileWriter");
-		path=ie.node().child_value("path");
-		if(path==""){
+		tmp=ie.node().child_value("path");
+		if(tmp==""){
 			MSG_WARNING(MSG_MODULE,"Storage path is not specified! Data are stored in local direcotry!");
-			path=".";
+			tmp=".";
 		}
 		//make sure path ends with "/" character
-		if(path.at(path.size() -1) != '/'){
-			c->sysDir = path + "/";
+		if(tmp.at(tmp.size() -1) != '/'){
+			c->sysDir = tmp + "/";
 		} else {
-			c->sysDir = path;
+			c->sysDir = tmp;
 		}
 
-		namePrefix=ie.node().child_value("prefix");
-		c->prefix = namePrefix; //no need for default value error value is "" anyway
+		tmp=ie.node().child_value("prefix");
+		c->prefix = tmp; //no need for default value error value is "" anyway
 
-		compression=ie.node().child_value("compression");
-		if(compression == "yes"){
+		tmp=ie.node().child_value("ident");
+		if(tmp != ""){
+			if(tmp.length() >= IdentLen){
+				tmp.resize(IdentLen);
+				c->ident = tmp;
+				MSG_WARNING(MSG_MODULE,"Identification string is too long (max length is %u)",IdentLen -1);
+				MSG_WARNING(MSG_MODULE,"Identification string set to: %s",tmp.c_str());
+			} else{
+				c->ident = tmp;
+			}
+		}else{
+			c->ident = "none";
+		}
+
+		tmp=ie.node().child_value("compression");
+		if(tmp == "yes"){
 			c->compression = true;
 			if (lzo_init() != LZO_E_OK){
 				MSG_WARNING(MSG_MODULE,"Compression initialization failed (storing without compression)!");
@@ -179,22 +193,22 @@ int processStartupXML(char *params, struct nfdumpConfig* c){
 		}
 
 		ie = doc.select_single_node("fileWriter/dumpInterval");
-		timeWindow=ie.node().child_value("timeWindow");
-		c->timeWindow = atoi(timeWindow.c_str());
+		tmp=ie.node().child_value("timeWindow");
+		c->timeWindow = atoi(tmp.c_str());
 		if(c->timeWindow == 0){
 			c->timeWindow = 360;
 		}
 
-		bufferSize=ie.node().child_value("bufferSize");
-		c->bufferSize = atoi(bufferSize.c_str());
+		tmp=ie.node().child_value("bufferSize");
+		c->bufferSize = atoi(tmp.c_str());
 		if(c->bufferSize == 0){
 			c->bufferSize = BUFFER_SIZE;
 		}
 
-		timeAligment=ie.node().child_value("timeAlignment");
+		tmp=ie.node().child_value("timeAlignment");
 
 		time ( &(c->lastFlush));
-		if(timeAligment == "yes"){
+		if(tmp == "yes"){
 			/* operators '/' and '*' are used for round down time to time window */
 			c->lastFlush = ((c->lastFlush/c->timeWindow) * c->timeWindow);
 		}
@@ -258,7 +272,7 @@ int store_packet (void *config,	const struct ipfix_message *ipfix_msg,
 			files_it->second->closeFile();
 			file_path = DirHierarchy(conf,files_it->first);
 			DirCheck(file_path);
-			files_it->second->newFile(file_path, conf->bufferSize, conf->compression);
+			files_it->second->newFile(file_path, conf);
 		}
 	}
 
@@ -270,7 +284,7 @@ int store_packet (void *config,	const struct ipfix_message *ipfix_msg,
 		file_tmp = new NfdumpFile();
 		file_path = DirHierarchy(conf,oid);
 		DirCheck(file_path);
-		file_tmp->newFile(file_path, conf->bufferSize, conf->compression);
+		file_tmp->newFile(file_path, conf);
 		(*conf->files)[oid] = file_tmp;
 		files_it = conf->files->find(oid);
 	}

@@ -70,7 +70,7 @@ struct nfdumpConfig{
 	/* user prefix for output files*/
 	std::string prefix;
 
-	/* indentation string for nffiles*/
+	/* identification string for nffiles*/
 	std::string ident;
 
 	/* lzo compression of records */

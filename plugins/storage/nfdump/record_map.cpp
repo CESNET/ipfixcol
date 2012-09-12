@@ -61,16 +61,16 @@ extern "C" {
 
 static lzo_align_t __LZO_MMODEL wrkmem[LZO1X_1_MEM_COMPRESS];
 
-void FileHeader::newHeader(FILE *f, bool compressed ){
+void FileHeader::newHeader(FILE *f, struct nfdumpConfig* conf){
 	header_.magic = MAGIC;
 	header_.version = LAYOUT_VERSION_1;
 	header_.flags = 0;
 	header_.NumBlocks = 0;
-	if(compressed){
+	if(conf->compression){
 		header_.flags = header_.flags | FLAG_COMPRESSED;
 	}
 	memset(header_.ident,0,IdentLen);
-	strcpy(header_.ident,"none");
+	strcpy(header_.ident,conf->ident.c_str());
 	position_ = ftell(f);
 	updateHeader(f);
 }
@@ -193,7 +193,7 @@ void BlockHeader::compress(char *buffer, uint *bufferUsed){ //TODO
 }
 
 
-int NfdumpFile::newFile(std::string name, uint bufferSize, bool compressed){
+int NfdumpFile::newFile(std::string name, struct nfdumpConfig* conf){
 	MSG_DEBUG(MSG_MODULE,"Creating new file: \"%s\"",name.c_str());
 	f_ = fopen(name.c_str(),"w+");
 	if(f_ == NULL){
@@ -201,7 +201,7 @@ int NfdumpFile::newFile(std::string name, uint bufferSize, bool compressed){
 		return -1;
 	}
 	//create header
-	fileHeader_.newHeader(f_,compressed);
+	fileHeader_.newHeader(f_,conf);
 	//create stats
 	stats_.newStats(f_);
 	fileHeader_.increaseBlockCnt();
@@ -213,7 +213,7 @@ int NfdumpFile::newFile(std::string name, uint bufferSize, bool compressed){
 		return -1;
 	}
 
-	bufferSize_ = bufferSize;
+	bufferSize_ = conf->bufferSize;
 	bufferUsed_ = 0;
 	buffer_ = new char[BUFFER_SIZE];
 
