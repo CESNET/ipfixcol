@@ -15,41 +15,41 @@ void ext0_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 
 //TODO CREATE MACRO FOR IT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #define CONVERT_2x16() \
-	*((uint16_t *) &(data_set->records[data_set->header.length])) = htons(*((uint16_t *) &data[*offset])); \
-	data_set->header.length += 2; \
-	*((uint16_t *) &(data_set->records[data_set->header.length])) = htons(*(((uint16_t *) &data[*offset])+1)); \
-	data_set->header.length += 2; \
-	(*offset)++;
+		*((uint16_t *) &(data_set->records[data_set->header.length])) = htons(*((uint16_t *) &data[*offset])); \
+		data_set->header.length += 2; \
+		*((uint16_t *) &(data_set->records[data_set->header.length])) = htons(*(((uint16_t *) &data[*offset])+1)); \
+		data_set->header.length += 2; \
+		(*offset)++;
 
 #define CONVERT_32() \
-	*((uint32_t *) &(data_set->records[data_set->header.length])) = htonl(*((uint32_t *) &data[*offset])); \
-	data_set->header.length += 4; \
-	(*offset)++;
+		*((uint32_t *) &(data_set->records[data_set->header.length])) = htonl(*((uint32_t *) &data[*offset])); \
+		data_set->header.length += 4; \
+		(*offset)++;
 
 
 #define CONVERT_64() \
-	*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64(*((uint64_t *) &data[*offset])); \
-	data_set->header.length += 8; \
-	(*offset)+=2;
+		*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64(*((uint64_t *) &data[*offset])); \
+		data_set->header.length += 8; \
+		(*offset)+=2;
 
 
 #define CONVERT_IPv6() \
-	*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64(*(((uint64_t *) &data[(*offset)])+1)); \
-	data_set->header.length += 8; \
-	*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64(*((uint64_t *) &data[*offset])); \
-	data_set->header.length += 8; \
-	(*offset)+=4;
+		*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64(*(((uint64_t *) &data[(*offset)])+1)); \
+		data_set->header.length += 8; \
+		*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64(*((uint64_t *) &data[*offset])); \
+		data_set->header.length += 8; \
+		(*offset)+=4;
 
 //EXTENSION 1
 void ext1_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
 	if(TestFlag(flags, FLAG_IPV6_ADDR)){
 		MSG_NOTICE(msg_str, "\tIPv6-SRC: hight:%lu low:%lu",*((uint64_t *) &data[*offset]), \
-			*((uint64_t *) &data[(*offset)+2]));
+				*((uint64_t *) &data[(*offset)+2]));
 
 		CONVERT_IPv6();
 
 		MSG_NOTICE(msg_str, "\tIPv6-DST: hight:%lu low:%lu",*((uint64_t *) &data[*offset]), \
-			*((uint64_t *) &data[(*offset)+2]));
+				*((uint64_t *) &data[(*offset)+2]));
 		CONVERT_IPv6();
 
 	} else {
@@ -148,7 +148,7 @@ void ext9_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 void ext10_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
 
 	MSG_NOTICE(msg_str, "\tNEXT-HOP: hight:%lu low:%lu (ipv6)",*((uint64_t *) &data[*offset]), \
-		*((uint64_t *) &data[(*offset)+8]));
+			*((uint64_t *) &data[(*offset)+8]));
 
 	CONVERT_IPv6();
 }
@@ -165,7 +165,7 @@ void ext11_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_s
 //EXTENSION 12 - BGP next hop ipv6
 void ext12_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
 	MSG_NOTICE(msg_str, "\tBGP-NEXT-HOP: hight:%lu low:%lu (ipv6)",*((uint64_t *) &data[*offset]), \
-		*((uint64_t *) &data[(*offset)+8]));
+			*((uint64_t *) &data[(*offset)+8]));
 	CONVERT_IPv6();
 }
 
@@ -273,7 +273,7 @@ void ext23_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_s
 //EXTENSION 24 - Router ipv6
 void ext24_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
 	MSG_NOTICE(msg_str, "\tROUTER-IP: hight:%lu low:%lu (ipv6)",*((uint64_t *) &data[*offset]), \
-		*((uint64_t *) &data[(*offset)+8]));
+			*((uint64_t *) &data[(*offset)+8]));
 	CONVERT_IPv6();
 
 }

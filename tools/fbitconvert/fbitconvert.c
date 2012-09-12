@@ -37,7 +37,7 @@ void signal_handler(int signal_id){
 		stop = 1;
 		ctrl_c++;
 	}
-    	signal(SIGINT,&signal_handler);
+	signal(SIGINT,&signal_handler);
 }
 
 
@@ -45,20 +45,20 @@ void signal_handler(int signal_id){
 void hex(void *ptr, int size){
 	int i,space = 0;
 	for(i=1;i<size+1;i++){
-	        if(!((i-1)%16)){
-	                fprintf(stderr,"%p  ", &((char *)ptr)[i-1]);
-	        }
-	        fprintf(stderr,"%02hhx",((char *)ptr)[i-1]);
-	        if(!(i%8)){
-	                if(space){
-	                        fprintf(stderr,"\n");
-	                        space = 0;
-	                        continue;
-	                }
-	                fprintf(stderr," ");
-	                space = 1;
-	        }
-	        fprintf(stderr," ");
+		if(!((i-1)%16)){
+			fprintf(stderr,"%p  ", &((char *)ptr)[i-1]);
+		}
+		fprintf(stderr,"%02hhx",((char *)ptr)[i-1]);
+		if(!(i%8)){
+			if(space){
+				fprintf(stderr,"\n");
+				space = 0;
+				continue;
+			}
+			fprintf(stderr," ");
+			space = 1;
+		}
+		fprintf(stderr," ");
 	}
 	fprintf(stderr,"\n");
 }
@@ -82,79 +82,79 @@ struct storage{
 };
 
 void (*ext_parse[26]) (uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set) = {
-	ext0_parse,
-	ext1_parse,
-	ext2_parse,
-	ext3_parse,
-	ext4_parse,
-	ext5_parse,
-	ext6_parse,
-	ext7_parse,
-	ext8_parse,
-	ext9_parse,
-	ext10_parse,
-	ext11_parse,
-	ext12_parse,
-	ext13_parse,
-	ext14_parse,
-	ext15_parse,
-	ext16_parse,
-	ext17_parse,
-	ext18_parse,
-	ext19_parse,
-	ext20_parse,
-	ext21_parse,
-	ext22_parse,
-	ext23_parse,
-	ext24_parse,
-	ext25_parse
+		ext0_parse,
+		ext1_parse,
+		ext2_parse,
+		ext3_parse,
+		ext4_parse,
+		ext5_parse,
+		ext6_parse,
+		ext7_parse,
+		ext8_parse,
+		ext9_parse,
+		ext10_parse,
+		ext11_parse,
+		ext12_parse,
+		ext13_parse,
+		ext14_parse,
+		ext15_parse,
+		ext16_parse,
+		ext17_parse,
+		ext18_parse,
+		ext19_parse,
+		ext20_parse,
+		ext21_parse,
+		ext22_parse,
+		ext23_parse,
+		ext24_parse,
+		ext25_parse
 };
 
 void (*ext_fill_tm[26]) (uint8_t flags, struct ipfix_template * template) = {
-	ext0_fill_tm,
-	ext1_fill_tm,
-	ext2_fill_tm,
-	ext3_fill_tm,
-	ext4_fill_tm,
-	ext5_fill_tm,
-	ext6_fill_tm,
-	ext7_fill_tm,
-	ext8_fill_tm,
-	ext9_fill_tm,
-	ext10_fill_tm,
-	ext11_fill_tm,
-	ext12_fill_tm,
-	ext13_fill_tm,
-	ext14_fill_tm,
-	ext15_fill_tm,
-	ext16_fill_tm,
-	ext17_fill_tm,
-	ext18_fill_tm,
-	ext19_fill_tm,
-	ext20_fill_tm,
-	ext21_fill_tm,
-	ext22_fill_tm,
-	ext23_fill_tm,
-	ext24_fill_tm,
-	ext25_fill_tm
+		ext0_fill_tm,
+		ext1_fill_tm,
+		ext2_fill_tm,
+		ext3_fill_tm,
+		ext4_fill_tm,
+		ext5_fill_tm,
+		ext6_fill_tm,
+		ext7_fill_tm,
+		ext8_fill_tm,
+		ext9_fill_tm,
+		ext10_fill_tm,
+		ext11_fill_tm,
+		ext12_fill_tm,
+		ext13_fill_tm,
+		ext14_fill_tm,
+		ext15_fill_tm,
+		ext16_fill_tm,
+		ext17_fill_tm,
+		ext18_fill_tm,
+		ext19_fill_tm,
+		ext20_fill_tm,
+		ext21_fill_tm,
+		ext22_fill_tm,
+		ext23_fill_tm,
+		ext24_fill_tm,
+		ext25_fill_tm
 };
 
 #define HEADER_ELEMENTS 7
 int header_elements[][2] = {
-	//id,size
-	{152,8}, //flowEndSysUpTime MILLISECONDS !
-	{153,8}, //flowStartSysUpTime MILLISECONDS !
-	{6,1},  //tcpControlBits flags
-	{4,1},  //protocolIdentifier
-	{5,1},  //ipClassOfService
-	{7,2},  //sourceTransportPort
-	{11,2} //destinationTransportPort
+		//id,size
+		{152,8}, //flowEndSysUpTime MILLISECONDS !
+		{153,8}, //flowStartSysUpTime MILLISECONDS !
+		{6,1},  //tcpControlBits flags
+		{4,1},  //protocolIdentifier
+		{5,1},  //ipClassOfService
+		{7,2},  //sourceTransportPort
+		{11,2} //destinationTransportPort
 };
 
 #define ALLOC_FIELDS_SIZE 60
 
 void fill_basic_data(struct ipfix_data_set *data_set, struct common_record_s *record){
-	
+
 	MSG_NOTICE(msg_str, "\tTYPE: %hu", record->type);
 	MSG_NOTICE(msg_str, "\tSIZE: %hu", record->size);
 	MSG_NOTICE(msg_str, "\tEXPORTER-REF: %hhu", record->exporter_ref);
@@ -195,7 +195,7 @@ void fill_basic_template(uint8_t flags, struct ipfix_template **template){
 	static int template_id_counter = 1;
 
 	(*template) = (struct ipfix_template *) malloc(sizeof(struct ipfix_template) + \
-		ALLOC_FIELDS_SIZE * sizeof(template_ie));
+			ALLOC_FIELDS_SIZE * sizeof(template_ie));
 	fbt++;
 	if(*template == NULL){
 		MSG_ERROR(msg_str, "Malloc faild to get space for ipfix template");
@@ -242,9 +242,9 @@ void init_ipfix_msg(struct ipfix_message *ipfix_msg){
 	ipfix_msg->pkt_header->observation_domain_id = 0; 
 
 	ipfix_msg->input_info = NULL;
-        memset(ipfix_msg->templ_set,0,sizeof(struct ipfix_template_set *) *1024);
-        memset(ipfix_msg->opt_templ_set,0,sizeof(struct ipfix_optional_template_set *) *1024);
-        memset(ipfix_msg->data_couple,0,sizeof(struct data_template_couple) *1023);
+	memset(ipfix_msg->templ_set,0,sizeof(struct ipfix_template_set *) *1024);
+	memset(ipfix_msg->opt_templ_set,0,sizeof(struct ipfix_optional_template_set *) *1024);
+	memset(ipfix_msg->data_couple,0,sizeof(struct data_template_couple) *1023);
 }
 
 void clean_ipfix_msg(struct ipfix_message *ipfix_msg){
@@ -297,7 +297,7 @@ void add_template(struct ipfix_message *ipfix_msg, struct ipfix_template * templ
 	for(i=0;i<1024;i++){
 		if(ipfix_msg->templ_set[i] == NULL){
 			ipfix_msg->templ_set[i] = (struct ipfix_template_set *) \
-				malloc(sizeof(struct ipfix_options_template_set)+template->data_length);
+					malloc(sizeof(struct ipfix_options_template_set)+template->data_length);
 			ad++;
 			ipfix_msg->templ_set[i]->header.flowset_id = 2;
 			ipfix_msg->templ_set[i]->header.length = 8 + template->template_length;
@@ -416,7 +416,7 @@ process_ext_map(struct extension_map_s * extension_map, struct extensions *ext,
 	}
 
 	template_mgr->counter++;
-	 //template for this record with ipv4
+	//template for this record with ipv4
 	fill_basic_template(0, &(template_mgr->templates[template_mgr->counter]));
 	template1 = template_mgr->templates[template_mgr->counter];
 	ext->map[ext->filled].tmp4_index = template_mgr->counter;
@@ -554,31 +554,31 @@ int main(int argc, char *argv[]){
 
 	dlhandle = dlopen (plugin, RTLD_LAZY);
 	if (!dlhandle) {
-	    fputs (dlerror(), stderr);
-	    exit(1);
+		fputs (dlerror(), stderr);
+		exit(1);
 	}
 
 	plugin_init = dlsym(dlhandle, "storage_init");
 	if ((error = dlerror()) != NULL)  {
-	    fputs(error, stderr);
-	    exit(1);
+		fputs(error, stderr);
+		exit(1);
 	}
 
 	plugin_store = dlsym(dlhandle, "store_packet");
 	if ((error = dlerror()) != NULL)  {
-	    fputs(error, stderr);
-	    exit(1);
+		fputs(error, stderr);
+		exit(1);
 	}
 
 	plugin_close = dlsym(dlhandle, "storage_close");
 	if ((error = dlerror()) != NULL)  {
-	    fputs(error, stderr);
-	    exit(1);
+		fputs(error, stderr);
+		exit(1);
 	}
 
 	//plugin configuration xml
 	char params_template[] =
-	        	"<?xml version=\"1.0\"?> \
+			"<?xml version=\"1.0\"?> \
 	                 <fileWriter xmlns=\"urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp\"> \
 				<fileFormat>fastbit</fileFormat> \
 				<path>%s</path> \
@@ -608,7 +608,7 @@ int main(int argc, char *argv[]){
 		MSG_ERROR(msg_str, "Can't read allocate memory for extension map");
 		return 1;
 	}
-	
+
 	template_mgr.templates = (struct ipfix_template **) calloc(ext.size,sizeof(struct ipfix_template *));
 	if(ext.map == NULL){
 		MSG_ERROR(msg_str, "Can't read allocate memory for templates");
@@ -649,7 +649,7 @@ int main(int argc, char *argv[]){
 		ext.map[ext.filled].tmp6_index = template_mgr.counter;
 
 		char * buffer_start = NULL;
-		
+
 		for(i = 0; i < header.NumBlocks && !stop ; i++){
 			read_size = fread(&block_header, sizeof(struct data_block_header_s), 1,f);
 			if (read_size != 1){
@@ -684,7 +684,7 @@ int main(int argc, char *argv[]){
 				fclose(f);
 				return 1;
 			}
-		
+
 			size = 0;
 			//read block
 			while (size < block_header.size && !stop){
@@ -713,9 +713,9 @@ int main(int argc, char *argv[]){
 
 		dlclose(dlhandle);	
 		if(buffer_start!=NULL){
- 			free(buffer_start);
+			free(buffer_start);
 		}
-		
+
 		for(i=0;i<=ext.filled;i++){
 			free(ext.map[i].value);
 		}
