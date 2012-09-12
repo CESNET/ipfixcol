@@ -4,7 +4,7 @@ AM_CFLAGS = -rdynamic
 
 bin_PROGRAMS = fbitconvert
 
-fbitconvert_SOURCES = fbitconvert.c nffile.h verbose.c
+fbitconvert_SOURCES = fbitconvert.c ext_fill.c ext_fill.h ext_parse.c ext_parse.h nffile.h verbose.c
 
 rpmspec = $(PACKAGE_TARNAME).spec
 RPMDIR = RPMBUILD
