@@ -14,7 +14,7 @@ BuildRequires: gcc make doxygen
 BuildRequires: ipfixcol-devel
 BuildRequires: lzo-devel
 Requires: ipfixcol
-Requires: lzo or liblzo2
+Requires: lzo
 
 %description
 nfdump storage plugin for ipfixcol.
