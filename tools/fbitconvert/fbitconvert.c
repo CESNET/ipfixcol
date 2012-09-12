@@ -155,36 +155,21 @@ int header_elements[][2] = {
 
 void fill_basic_data(struct ipfix_data_set *data_set, struct common_record_s *record){
 
-	MSG_NOTICE(msg_str, "\tTYPE: %hu", record->type);
-	MSG_NOTICE(msg_str, "\tSIZE: %hu", record->size);
-	MSG_NOTICE(msg_str, "\tEXPORTER-REF: %hhu", record->exporter_ref);
-	MSG_NOTICE(msg_str, "\tFLAGS: %hhu", record->flags);
-	MSG_NOTICE(msg_str, "\tEXT-MAP: %hu", record->ext_map);
-	MSG_NOTICE(msg_str, "\tMSEC-FIRST: %hu", record->msec_first);
-	MSG_NOTICE(msg_str, "\tMSEC-LAST: %hu", record->msec_last);
-	MSG_NOTICE(msg_str, "\tFIRST: %u", record->first);
-	MSG_NOTICE(msg_str, "\tLAST: %u", record->last);
-	MSG_NOTICE(msg_str, "\tFWD-STATUS: %hhu", record->fwd_status); //TODO?
+	//MSG_NOTICE(msg_str, "\tFWD-STATUS: %hhu", record->fwd_status); //TODO?
 	*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64((uint64_t)record->first*1000+record->msec_first); //sec 2 msec
 	data_set->header.length += 8;
 	*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64((uint64_t)record->last*1000+record->msec_last); //sec 2 msec
 	data_set->header.length += 8;
-	MSG_NOTICE(msg_str, "\tTCP-FLAGS: %hhu", record->tcp_flags);
 	data_set->records[data_set->header.length] =record->tcp_flags;
 	data_set->header.length += 1;
-	MSG_NOTICE(msg_str, "\tPROTOCOL: %hhu", record->prot);
 	data_set->records[data_set->header.length] =record->prot;
 	data_set->header.length += 1;
-	MSG_NOTICE(msg_str, "\tTOS: %hhu", record->tos);
 	data_set->records[data_set->header.length] =record->tos;
 	data_set->header.length += 1;
-	MSG_NOTICE(msg_str, "\tSRC-PORT: %hu", record->srcport);
 	*((uint16_t *) &(data_set->records[data_set->header.length])) = htons(record->srcport);
 	data_set->header.length += 2;
-	MSG_NOTICE(msg_str, "\tDST-PORT: %hu", record->dstport);
 	*((uint16_t *) &(data_set->records[data_set->header.length])) = htons(record->dstport);
 	data_set->header.length += 2;
-	MSG_NOTICE(msg_str, "DATA HEADER FILLED: %i", data_set->header.length);
 
 }
 
