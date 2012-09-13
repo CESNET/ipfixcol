@@ -222,13 +222,13 @@ void ext20_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_s
 	uint64_t buf;
 	MSG_NOTICE(msg_str, "\tIN-SRC-MAC: %lu (48b - 64 aling)", *((uint64_t *) &data[*offset]));
 	buf = htobe64(data[*offset]);
-	memcpy(&(data_set->records[data_set->header.length]), &buf, 3);
-	data_set->header.length += 3;
+	memcpy(&(data_set->records[data_set->header.length]), &buf, 6);
+	data_set->header.length += 6;
 	(*offset)+=2;
 	MSG_NOTICE(msg_str, "\tOUT-DST-MAC: %lu (48b - 64 aling)", *((uint64_t *) &data[*offset]));
 	buf = htobe64(data[*offset]);
-	memcpy(&(data_set->records[data_set->header.length]), &buf, 3);
-	data_set->header.length += 3;
+	memcpy(&(data_set->records[data_set->header.length]), &buf, 6);
+	data_set->header.length += 6;
 	(*offset)+=2;
 
 }
@@ -238,13 +238,13 @@ void ext21_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_s
 	uint64_t buf;
 	MSG_NOTICE(msg_str, "\tIN-DST-MAC: %lu (48b - 64 aling)", *((uint64_t *) &data[*offset]));
 	buf = htobe64(data[*offset]);
-	memcpy(&(data_set->records[data_set->header.length]), &buf, 3);
-	data_set->header.length += 3;
+	memcpy(&(data_set->records[data_set->header.length]), &buf, 6);
+	data_set->header.length += 6;
 	(*offset)+=2;
 	MSG_NOTICE(msg_str, "\tOUT-SRC-MAC: %lu (48b - 64 aling)", *((uint64_t *) &data[*offset]));
 	buf = htobe64(data[*offset]);
-	memcpy(&(data_set->records[data_set->header.length]), &buf, 3);
-	data_set->header.length += 3;
+	memcpy(&(data_set->records[data_set->header.length]), &buf, 6);
+	data_set->header.length += 6;
 	(*offset)+=2;
 
 }
