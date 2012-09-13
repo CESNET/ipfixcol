@@ -132,6 +132,13 @@ public:
 	void name(int en, int id){sprintf( _name,"e%iid%hi", en, id);}
 
 	/**
+		 * \brief Get method for element output_size
+		 *
+		 * @return element size
+		 */
+	virtual int output_size(){return _size;}
+
+	/**
 	 * \brief Get method for element size
 	 *
 	 * @return element size
@@ -316,6 +323,7 @@ class el_uint : public element
 {
 public:
 	uint_u uint_value;
+	uint _output_size;
 	el_uint(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
 	/* core methods */
 	/**
@@ -330,6 +338,7 @@ public:
 	 * @return 1 on failure
 	 */
 	virtual int fill(uint8_t * data);
+	virtual int output_size(){return _output_size;}
 	virtual int set_type();
 };
 

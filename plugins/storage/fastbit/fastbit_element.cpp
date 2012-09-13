@@ -97,10 +97,10 @@ enum store_type get_type_from_xml(struct fastbit_config *conf, unsigned int en, 
 	return (*conf->elements_types)[en][id];
 }
 
-void element::byte_reorder(uint8_t *dst,uint8_t *src, int size, int offset){
+void element::byte_reorder(uint8_t *dst,uint8_t *src, int srcSize, int dstSize){
 	int i;
-	for(i=0;i<size;i++){
-		dst[i+offset] = src[size-i-1];
+	for(i=0;i<srcSize;i++){
+		dst[i] = src[srcSize-i-1];
 	}
 }
 
@@ -136,7 +136,7 @@ int element::append(void *data){
 		return 1;
 	}
 
-	memcpy(&(_buffer[_size*_filled]),data,_size);
+	memcpy(&(_buffer[output_size()*_filled]),data,output_size());
 	_filled++;
 	return 0;
 }
@@ -184,8 +184,9 @@ int element::flush(std::string path){
 			fprintf(stderr, "Error while writing data! (buffer)\n");
 			return 1;
 		}
-		check = fwrite( _buffer, _size , _filled, f);
-		if(check != (size_t) _filled){
+		fprintf(stderr, "FWRITE SIZE %u\n", output_size());
+		check = fwrite( _buffer, output_size() , _filled, f);
+		if(check != (size_t) _filled ){
 			fprintf(stderr, "Error while writing data! (fwrite)\n");
 			return 1;
 		}
@@ -360,10 +361,11 @@ int el_blob::set_type(){
 }
 
 el_uint::el_uint(int size, int en, int id, uint32_t buf_size){
+	_output_size = 0;
 	_size = size;
 	_filled = 0;
 	_buffer = NULL;
-	sprintf( _name,"e%iid%hi", en, id);
+	sprintf( _name,"e%iid%hi", en, id); //TODO
 	this->set_type();
 	if(buf_size == 0){
 		 buf_size = RESERVED_SPACE;
@@ -373,53 +375,53 @@ el_uint::el_uint(int size, int en, int id, uint32_t buf_size){
 
 
 int el_uint::fill(uint8_t * data){
-	int offset = 0;
+	uint_value.ulong = 0;
 	switch(_size){
 	case 1:
 		//ubyte
+		_output_size = sizeof(char);
 		uint_value.ubyte = data[0];
 		value = &(uint_value.ubyte);
 		this->append(&(uint_value.ubyte));
 		break;
 	case 2:
 		//ushort
+		_output_size = sizeof(ushort);
 		uint_value.ushort = ntohs(*((uint16_t*) data));
 		value = &(uint_value.ubyte);
 		this->append(&(uint_value.ushort));
 		break;
 	case 3:
-		offset++;
-		byte_reorder((uint8_t *) &(uint_value.uint),data,_size, offset);
+		_output_size = sizeof(uint);
+		byte_reorder((uint8_t *) &(uint_value.uint),data,_size, sizeof(uint));
 		value = &(uint_value.ubyte);
 		this->append(&(uint_value.uint));
 		break;
 	case 4:
 		//uint
+		_output_size = sizeof(uint);
 		uint_value.uint = ntohl(*((uint32_t*) data));
 		value = &(uint_value.ubyte);
 		this->append(&(uint_value.uint));
 		break;
-	case 6: //mec addres
-		offset++;
-		byte_reorder((uint8_t *) &(uint_value.uint),data,_size, offset);
-		value = &(uint_value.ubyte);
-		this->append(&(uint_value.uint));
-		break;
+	case 5:
+	case 6:
 	case 7:
-		offset++;
-		byte_reorder((uint8_t *) &(uint_value.uint),data,_size, offset);
+		_output_size = sizeof(ulong);
+		byte_reorder((uint8_t *) &(uint_value.ulong),data,_size, sizeof(ulong));
 		value = &(uint_value.ubyte);
-		this->append(&(uint_value.uint));
+		this->append(&(uint_value.ulong));
 		break;
 	case 8:
 		//ulong
+		_output_size = sizeof(ulong);
 		uint_value.ulong = be64toh(*((uint64_t*) data));
 		value = &(uint_value.ubyte);
 		this->append(&(uint_value.ulong));
 		break;
 	default:
-		return 1;
 		MSG_ERROR(MSG_MODULE,"Wrong element size (%s - %u)!",_name,_size);
+		return 1;
 		break;
 	}
 	return 0;
@@ -440,7 +442,8 @@ int el_uint::set_type(){
 		//uint
 		_type=ibis::UINT;
 		break;
-	case 6: //mec addres
+	case 5:
+	case 6:
 	case 7:
 	case 8:
 		//ulong
@@ -470,7 +473,8 @@ int el_sint::set_type(){
 		//uint
 		_type=ibis::INT;
 		break;
-	case 6: //mec addres
+	case 5:
+	case 6:
 	case 7:
 	case 8:
 		//ulong
