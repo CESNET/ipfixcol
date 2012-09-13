@@ -124,6 +124,9 @@
 		<fileWriter>
 			<fileFormat>nfdump</fileFormat>
 			<path>storagePath/%o/%Y/%m/%d/</path>
+			<prefix>nfcapd.</prefix>
+			<ident>file ident</ident>
+			<compression>yes</compression>
 			<dumpInterval>
 				<timeWindow>300</timeWindow>
 				<timeAlignment>yes</timeAlignment>
@@ -343,6 +346,30 @@
 							</listitem>
 						</varlistentry>
 					</variablelist>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>prefix</command>
+				</term>
+				<listitem>
+					<simpara>Specifies name prefix for output files.</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>ident</command>
+				</term>
+				<listitem>
+					<simpara>Specifies name identification line for nfdump files.</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>compression</command>
+				</term>
+				<listitem>
+					<simpara>LZO compression for data (yes/no)</simpara>
 				</listitem>
 			</varlistentry>
 			<varlistentry>

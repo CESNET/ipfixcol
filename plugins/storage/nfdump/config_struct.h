@@ -67,8 +67,14 @@ struct nfdumpConfig{
 	/* current window directory */
 	std::string windowDir;
 
-	/* user prefix for storage directory */
+	/* user prefix for output files*/
+	std::string prefix;
+
+	/* identification string for nffiles*/
 	std::string ident;
+
+	/* lzo compression of records */
+	bool compression;
 
 	/* time of last flush (used for time based rotation,
 	 * name is based on start of interval not its end!) */

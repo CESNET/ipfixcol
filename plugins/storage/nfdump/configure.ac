@@ -38,7 +38,7 @@
 
 AC_PREREQ([2.60])
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol-nfdump-output], [1.0.2])
+AC_INIT([ipfixcol-nfdump-output], [1.0.4])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 LT_PREREQ([2.2])
 LT_INIT([dlopen disable-static])
@@ -71,7 +71,10 @@ AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
 AC_LANG([C++])
-
+############################ Check for libraries ###############################
+AC_SEARCH_LIBS([__lzo_init_v2], [lzo2],,
+    	AC_MSG_ERROR([Required library lzo2 missing]))
+    	
 ###################### Check for configure parameters ##########################
 AC_ARG_ENABLE([debug], 
         AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
@@ -86,7 +89,8 @@ AS_IF([test -d $srcdir/../../../base/headers],
 )
 
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
-
+AC_CHECK_HEADERS([lzo/lzoconf.h], , AC_MSG_ERROR([lzo/lzoconf.h header missing. Please install liblzo2-devel package]), [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([lzo/lzo1x.h], , AC_MSG_ERROR([lzo/lzo1x.h header missing. Please install liblzo2-devel package]), [AC_INCLUDES_DEFAULT])
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 AC_HEADER_STDBOOL
