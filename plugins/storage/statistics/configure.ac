@@ -38,7 +38,7 @@
 
 AC_PREREQ([2.60])
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol-statistics-output], [1.0.0])
+AC_INIT([ipfixcol-statistics-output], [1.0.2])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 LT_PREREQ([2.2])
 LT_INIT([dlopen disable-static])
