@@ -276,14 +276,14 @@ void add_data_set(struct ipfix_message *ipfix_msg, struct ipfix_data_set *data_s
 	}
 }
 
-int ad =0;	
+//int ad =0;	TODO remove
 void add_template(struct ipfix_message *ipfix_msg, struct ipfix_template * template){
 	int i;
 	for(i=0;i<1024;i++){
 		if(ipfix_msg->templ_set[i] == NULL){
 			ipfix_msg->templ_set[i] = (struct ipfix_template_set *) \
 					malloc(sizeof(struct ipfix_options_template_set)+template->data_length);
-			ad++;
+			//ad++;
 			ipfix_msg->templ_set[i]->header.flowset_id = 2;
 			ipfix_msg->templ_set[i]->header.length = 8 + template->template_length;
 			ipfix_msg->templ_set[i]->first_record.template_id = template->template_id;
@@ -626,7 +626,7 @@ int main(int argc, char *argv[]){
 
 		//TODO MSG_NOTICE(msg_str, "\tSEQUENCE-FAIULURE: %u", stats.sequence_failure);
 
-		//template for this record with ipv4
+		//template for this record with ipv4 TODO REMOVE?
 		fill_basic_template(0, &(template_mgr.templates[template_mgr.counter]));
 		ext.map[ext.filled].tmp4_index = template_mgr.counter;
 

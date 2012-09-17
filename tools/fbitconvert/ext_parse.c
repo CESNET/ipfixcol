@@ -252,14 +252,17 @@ void ext21_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_s
 //EXTENSION 22 - MPLS (32b ints)
 void ext22_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
 	int i=0;
+	uint32_t tmp;
 	for(i=0;i<10;i++){
 		MSG_NOTICE(msg_str, "\tMPLS-LABEL-%i: %u (32b)",i, *((uint32_t *) &data[*offset+1]));
-		*((uint32_t *) &(data_set->records[data_set->header.length])) = htonl(*((uint32_t *) &data[*offset+1]));
-		data_set->header.length += 4;
+		tmp = htonl(*((uint32_t *) &data[*offset+1]));
+		memcpy(&(data_set->records[data_set->header.length]),&tmp,3);
+		data_set->header.length += 3;
 		i++;
 		MSG_NOTICE(msg_str, "\tMPLS-LABEL-%i: %u (32b)",i, *((uint32_t *) &data[*offset]));
-		*((uint32_t *) &(data_set->records[data_set->header.length])) = htonl(*((uint32_t *) &data[*offset]));
-		data_set->header.length += 4;
+		tmp = htonl(*((uint32_t *) &data[*offset]));
+		memcpy(&(data_set->records[data_set->header.length]),&tmp,3);
+		data_set->header.length += 3;
 		(*offset)+=2;
 	}
 }
