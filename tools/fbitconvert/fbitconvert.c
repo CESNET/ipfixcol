@@ -276,14 +276,13 @@ void add_data_set(struct ipfix_message *ipfix_msg, struct ipfix_data_set *data_s
 	}
 }
 
-//int ad =0;	TODO remove
 void add_template(struct ipfix_message *ipfix_msg, struct ipfix_template * template){
 	int i;
 	for(i=0;i<1024;i++){
 		if(ipfix_msg->templ_set[i] == NULL){
 			ipfix_msg->templ_set[i] = (struct ipfix_template_set *) \
 					malloc(sizeof(struct ipfix_options_template_set)+template->data_length);
-			//ad++;
+
 			ipfix_msg->templ_set[i]->header.flowset_id = 2;
 			ipfix_msg->templ_set[i]->header.length = 8 + template->template_length;
 			ipfix_msg->templ_set[i]->first_record.template_id = template->template_id;
@@ -388,7 +387,7 @@ process_ext_map(struct extension_map_s * extension_map, struct extensions *ext,
 
 	ext->map[ext->filled].value = (uint16_t *) malloc(extension_map->extension_size);
 	ext->map[ext->filled].values_count = 0;
-	ext->map[ext->filled].id = extension_map->map_id; //TODO
+	ext->map[ext->filled].id = extension_map->map_id;
 
 
 	if(template_mgr->counter+2 >= template_mgr->max_length){
@@ -625,7 +624,7 @@ int main(int argc, char *argv[]){
 
 		//TODO MSG_NOTICE(msg_str, "\tSEQUENCE-FAIULURE: %u", stats.sequence_failure);
 
-		//template for this record with ipv4 TODO REMOVE?
+		//template for this record with ipv4
 		fill_basic_template(0, &(template_mgr.templates[template_mgr.counter]));
 		ext.map[ext.filled].tmp4_index = template_mgr.counter;
 
