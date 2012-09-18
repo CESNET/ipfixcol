@@ -286,7 +286,7 @@ void ext21_fill_tm(uint8_t flags, struct ipfix_template * template){
 
 //EXTENSION 22 - MPLS (32b ints)
 void ext22_fill_tm(uint8_t flags, struct ipfix_template * template){
-	int i=0;
+	int i;
 	for(i=0;i<10;i++){
 		template->fields[template->field_count].ie.id = 70 + i;
 		template->fields[template->field_count].ie.length = 3;

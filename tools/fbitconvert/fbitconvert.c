@@ -139,9 +139,10 @@ void (*ext_fill_tm[26]) (uint8_t flags, struct ipfix_template * template) = {
 		ext25_fill_tm
 };
 
-#define HEADER_ELEMENTS 7
+#define HEADER_ELEMENTS 8
 int header_elements[][2] = {
 		//id,size
+		{89,1},  //fwd_status
 		{152,8}, //flowEndSysUpTime MILLISECONDS !
 		{153,8}, //flowStartSysUpTime MILLISECONDS !
 		{6,1},  //tcpControlBits flags
@@ -155,7 +156,8 @@ int header_elements[][2] = {
 
 void fill_basic_data(struct ipfix_data_set *data_set, struct common_record_s *record){
 
-	//MSG_NOTICE(msg_str, "\tFWD-STATUS: %hhu", record->fwd_status); //TODO?
+	data_set->records[data_set->header.length] = record->fwd_status;
+	data_set->header.length += 1;
 	*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64((uint64_t)record->first*1000+record->msec_first); //sec 2 msec
 	data_set->header.length += 8;
 	*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64((uint64_t)record->last*1000+record->msec_last); //sec 2 msec
