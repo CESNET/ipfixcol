@@ -184,7 +184,6 @@ int element::flush(std::string path){
 			fprintf(stderr, "Error while writing data! (buffer)\n");
 			return 1;
 		}
-		fprintf(stderr, "FWRITE SIZE %u\n", output_size());
 		check = fwrite( _buffer, output_size() , _filled, f);
 		if(check != (size_t) _filled ){
 			fprintf(stderr, "Error while writing data! (fwrite)\n");
