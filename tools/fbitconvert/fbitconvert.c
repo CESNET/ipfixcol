@@ -194,10 +194,8 @@ void fill_basic_template(uint8_t flags, struct ipfix_template **template){
 
 	(*template)->field_count = 0;
 	(*template)->scope_field_count = 0;
-	(*template)->template_length = 0; //TODO    /**Length of the template */
-	(*template)->data_length = 0;   //TODO     /**Length of the data record specified
-
-	//(*template)->fields = (template_ie *) calloc(ALLOC_FIELDS_SIZE,sizeof(template_ie));
+	(*template)->template_length = 0;
+	(*template)->data_length = 0;
 
 	// add header elements into template
 	int i;
@@ -496,12 +494,11 @@ int main(int argc, char *argv[]){
 			break;
 		case 'P':
 			if(optarg[0]=='/'){
-				MSG_NOTICE(msg_str, "plug-in absolute path: %s\n",optarg);
-				plugin = optarg;
+				plugin = (char *) malloc(strlen(optarg)+1);
+				strcpy(plugin,optarg);
 			}else{
-				plugin = (char *) malloc(strlen(optarg)+2);
+				plugin = (char *) malloc(strlen(optarg)+3);
 				sprintf(plugin,"./%s",optarg);
-				MSG_NOTICE(msg_str, "plug-in relative path: %s\n", plugin);
 			}
 			break;
 		case 'r':
@@ -713,6 +710,7 @@ int main(int argc, char *argv[]){
 		free(template_mgr.templates);
 		fclose(f);
 		plugin_close(&config);
+		free(plugin);
 	} else {
 		MSG_ERROR(msg_str, "Can't open file: %s",input_file);
 	}
