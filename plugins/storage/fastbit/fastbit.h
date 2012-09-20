@@ -47,7 +47,7 @@ const unsigned int RESERVED_SPACE = 75000;
 #define MSG_MODULE "fastbit storage"
 
 /* this enum specifies types of file naming strategy */
-enum name_type{TIME,INCREMENTAL};
+enum name_type{TIME,INCREMENTAL,PREFIX};
 
 /* this enum specifies types of elements */
 enum store_type{UINT,INT,BLOB,TEXT,FLOAT,IPv6,UNKNOWN};

@@ -147,7 +147,9 @@ void update_window_name(struct fastbit_config *conf){
 	char formated_time[15];
 
 	// change window directory name!
-	if (conf->dump_name == INCREMENTAL){
+	if (conf->dump_name == PREFIX){
+		conf->window_dir = conf->prefix + "/";
+	}else if (conf->dump_name == INCREMENTAL){
 		ss << std::setw(12) << std::setfill('0') << flushed;
 		conf->window_dir = conf->prefix + ss.str() + "/";
 		ss.str("");
@@ -290,6 +292,13 @@ int process_startup_xml(char *params, struct fastbit_config* c){
 			time ( &(c->last_flush));
 			c->dump_name = INCREMENTAL;
 			c->window_dir = c->prefix + "000000000001/";
+		} else if (nameType == "prefix") {
+			time ( &(c->last_flush));
+			c->dump_name = PREFIX;
+			if(c->prefix ==""){
+				c->prefix == "fbitfiles";
+			}
+			c->window_dir = c->prefix + "/";
 		}
 		if ( sem_init(&(c->sem),0,1) ){
 			MSG_ERROR(MSG_MODULE,"Error semaphore init");
