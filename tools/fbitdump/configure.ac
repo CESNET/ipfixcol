@@ -102,7 +102,7 @@ AC_ARG_ENABLE([debug],
 
 AC_HEADER_RESOLV
 
-AC_CHECK_HEADERS([getopt.h iostream regex.h dirent.h fatbit/ibis.h string arpa/inet.h \
+AC_CHECK_HEADERS([getopt.h iostream regex.h dirent.h string arpa/inet.h \
 	cstdlib cstring unistd.h algorithm cstdio vector set map string fstream \
 	float.h inttypes.h libintl.h malloc.h netdb.h stddef.h stdint.h stdlib.h string.h sys/socket.h wchar.h])
 
