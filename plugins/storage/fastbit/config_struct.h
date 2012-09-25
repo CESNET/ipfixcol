@@ -50,6 +50,7 @@ extern "C" {
 
 #include "fastbit.h"
 #include "fastbit_table.h"
+#include "FlowWatch.h"
 
 class template_table;
 
@@ -57,6 +58,8 @@ struct fastbit_config{
 	/*ob_dom stores data buffers based on received templates
 	 * (observation ids -> template id -> template data */
 	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom;
+
+	std::map<uint32_t,FlowWatch> *flowWatch;
 
 	/* element info from ipfix-elements.xml is loaded into elements_types
 	 * (Enterprise id -> element id -> element storage type) */

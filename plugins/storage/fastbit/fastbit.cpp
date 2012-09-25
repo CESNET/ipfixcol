@@ -63,8 +63,7 @@ extern "C" {
 #include "fastbit.h"
 #include "fastbit_table.h"
 #include "fastbit_element.h"
-
-
+#include "FlowWatch.h"
 
 
 void * reorder_index(void * config){
@@ -171,17 +170,32 @@ void flush_data(struct fastbit_config *conf, bool close){
 	pthread_t index_thread;
 	std::stringstream ss;
 
+
 	MSG_DEBUG(MSG_MODULE,"Flushing data to disk");
+
+
 	sem_wait(&(conf->sem));
 	conf->dirs->clear();
 	for(dom_id = conf->ob_dom->begin(); dom_id!=conf->ob_dom->end();dom_id++){
+
+		MSG_DEBUG(MSG_MODULE,"Exported: %u Collected: %u",
+				conf->flowWatch->at((*dom_id).first).exportedFlows(),
+				conf->flowWatch->at((*dom_id).first).receivedFlows());
+
+
 		templates = (*dom_id).second;
 		dir = dir_hierarchy(conf,(*dom_id).first);
+
 		for(table = templates->begin(); table!=templates->end();table++){
 			conf->dirs->push_back(dir + ((*table).second)->name() + "/");
 			(*table).second->flush(dir);
 			(*table).second->reset_rows();
 		}
+
+		if(conf->flowWatch->at((*dom_id).first).write(dir) == -1){
+			MSG_ERROR(MSG_MODULE,"Unable to write flows stats: %s", dir.c_str());
+		}
+		conf->flowWatch->at((*dom_id).first).reset();
 	}
 	sem_post(&(conf->sem));
 
@@ -328,6 +342,13 @@ int storage_init (char *params, void **config){
 		MSG_ERROR(MSG_MODULE, "Can't allocate memory for config structure");
 		return 1;
 	}
+
+	c->flowWatch = new std::map<uint32_t,FlowWatch>;
+		if(c->flowWatch == NULL){
+			MSG_ERROR(MSG_MODULE, "Can't allocate memory for config structure");
+			return 1;
+	}
+
 	c->elements_types = new	std::map<uint32_t,std::map<uint16_t,enum store_type> >;
 	if(c->elements_types == NULL){
 		MSG_ERROR(MSG_MODULE, "Can't allocate memory for config structure");
@@ -362,6 +383,8 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom = conf->ob_dom;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
 	static int rcnt = 0;
+	uint rcFlows = 0;
+	uint rcFlowsSum = 0;
 	std::string domain_name;
 	time_t rawtime;
 	uint32_t oid = 0;
@@ -375,16 +398,18 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 		std::map<uint16_t,template_table*> *new_dom_id = new std::map<uint16_t,template_table*>;
 		ob_dom->insert(std::make_pair(oid, new_dom_id));
 		dom_id = ob_dom->find(oid);
+
+		(*conf->flowWatch)[oid] = FlowWatch();
 	}
 
 	templates = (*dom_id).second;
 	dir = dir_hierarchy(conf,(*dom_id).first);
-	
+
 	/* message from ipfixcol have maximum of 1023 data records */
 	for(i = 0 ; i < 1023; i++){ //TODO magic number! add constant to storage.h 
 		if(ipfix_msg->data_couple[i].data_set == NULL){
 			//there are no more filled data_sets	
-			return 0;
+			break;
 		}
 	
 		if(ipfix_msg->data_couple[i].data_template == NULL){
@@ -427,8 +452,17 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 		}
 
 		/* store this data record */
-		rcnt += (*table).second->store(ipfix_msg->data_couple[i].data_set, dir);
+
+		rcFlows = (*table).second->store(ipfix_msg->data_couple[i].data_set, dir);
+		rcFlowsSum += rcFlows;
+		rcnt += rcFlows;
+
 	}
+
+	if(rcFlowsSum){
+		conf->flowWatch->at(oid).addFlows(rcFlowsSum);
+	}
+	conf->flowWatch->at(oid).updateSQ(ntohl(ipfix_msg->pkt_header->sequence_number));
 	return 0;
 }
 
@@ -461,6 +495,7 @@ int storage_close (void **config){
 	delete ob_dom;
 	delete conf->index_en_id;
 	delete conf->dirs;
+	delete conf->flowWatch;
 	delete conf->elements_types;
 	delete conf;
 	return 0;
