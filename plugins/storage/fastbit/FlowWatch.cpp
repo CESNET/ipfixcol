@@ -88,7 +88,6 @@ FlowWatch::updateSQ(uint SQ){
 			}
 		}
 	}
-	fprintf(stderr,"SQ UPDATE: first: %u last: %u SQ: %u\n",firstSQ_, lastSQ_, SQ );
 }
 
 void
