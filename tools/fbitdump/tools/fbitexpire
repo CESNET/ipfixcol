@@ -170,6 +170,11 @@ fi
 for day in ${DAYS[*]}; do
 	CURRENTSIZE=$[CURRENTSIZE-`du --block-size=1 -s $day | awk '{print $1}'`]
 	remove_data $day
+	
+	# exit when dirs are small enough
+	if [ $CURRENTSIZE -le $SIZE ]; then
+		exit 0;
+	fi
 done;
 
 # exit when dirs are small enough

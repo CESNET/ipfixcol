@@ -175,6 +175,7 @@ void *listen_worker(void *data) {
 		memcpy(&(node->info.src_addr.ipv6), src_addr6, 
 		                        sizeof(node->info.src_addr.ipv6));
 		node->info.src_port = ntohs(src_addr6->sin6_port);
+		node->info.dst_port = ntohs(((struct sockaddr_in6*) addr_ptr)->sin6_port);
 		node->socket = conn_socket;
 
 
@@ -229,7 +230,7 @@ err_assoc:
  */
 int input_init(char *params, void **config)
 {
-	struct sctp_config *conf;
+	struct sctp_config *conf = NULL;
 	xmlDocPtr doc;
 	xmlNodePtr cur;
 	xmlChar *listen_port_str = NULL;
@@ -237,12 +238,12 @@ int input_init(char *params, void **config)
 	struct sctp_event_subscribe sctp_events;
 	int epollfd;
 	int ret;
-	char *ip_str;
-	struct sockaddr_in *sockaddr;
-	struct sockaddr_in6 *sockaddr6;
-	struct sockaddr_in **sockaddr_listen_old;
+	char *ip_str = NULL;
+	struct sockaddr_in *sockaddr = NULL;
+	struct sockaddr_in6 *sockaddr6 = NULL;
+	struct sockaddr_in **sockaddr_listen_old = NULL;
 	int ip_family;
-	char *dot;
+	char *dot = NULL;
 	uint8_t port_set = 0;
 	int i;
 
@@ -331,6 +332,11 @@ int input_init(char *params, void **config)
 			/* user wants to listen on this IP address */
 			ip_str = (char *) xmlNodeListGetString(doc, cur->children, 1);
 
+			if (ip_str == NULL) {
+				cur = cur->next;
+				continue;
+			}
+			
 			/* try to determine address family */
 			dot = strchr(ip_str, '.');
 			ip_family = (dot) ? AF_INET : AF_INET6;
@@ -492,7 +498,7 @@ err_sockaddr6_case:
 
 	/* use default address if user doesn't specified any */
 	if ((sockaddr6_listen_counter == 0) && (sockaddr_listen_counter == 0)) {
-		sockaddr6 = (struct sockaddr_in6 *) malloc(sizeof(*sockaddr6));
+		sockaddr6 = (struct sockaddr_in6 *) calloc(1, sizeof(*sockaddr6));
 		if (!sockaddr6) {
 			MSG_ERROR(msg_module, "Not enough memory (%s:%d)",
 			                        __FILE__, __LINE__);

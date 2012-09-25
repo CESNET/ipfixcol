@@ -198,6 +198,15 @@ static int process_data_sets(const struct ipfix_message *ipfix_msg, struct stats
 
 	while(data_set) {
 		template = ipfix_msg->data_couple[data_index].data_template;
+
+		/* skip datasets with missing templates */
+		if (template == NULL) {
+			/* process next set */
+			data_set = ipfix_msg->data_couple[++data_index].data_set;
+
+			continue;
+		}
+
 		min_record_length = template->data_length;
 		offset = 4;  /* size of the header */
 

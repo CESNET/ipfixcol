@@ -74,6 +74,7 @@
 		<name>make statistics from the flow data</name>
 		<fileWriter>
 			<fileFormat>statistics</fileFormat>
+			<file>/patth/to/rrd_file</file>
 			<interval>300</interval>
 		</fileWriter>
 	</destination>
@@ -86,6 +87,12 @@
 					<term><command>fileFormat</command></term>
 					<listitem>
 						<simpara>Same as in <filename>internalcfg.xml</filename> file.</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>file</command></term>
+					<listitem>
+						<simpara>A path to RRD database file for writing.</simpara>
 					</listitem>
 				</varlistentry>
 				<varlistentry>
