@@ -145,6 +145,10 @@ void Stats::updateStats(FILE *f){
 	}
 }
 
+void Stats::increaseSQFail(){
+	stats_.sequence_failure++;
+}
+
 
 void BlockHeader::newBlock(FILE *f){
 	block_.NumRecords = 0;
@@ -258,20 +262,22 @@ void NfdumpFile::updateFile(bool compression){
 	bufferUsed_ = 0;
 }
 
-void NfdumpFile::bufferPtk(const data_template_couple *dtcouple){
+unsigned int
+NfdumpFile::bufferPtk(const data_template_couple *dtcouple){
 	uint16_t template_id;
 	std::map<uint16_t,RecordMap*>::iterator ext_map_it;
 	RecordMap *map_tmp;
 	static uint16_t map_id_cnt = 1;
 	char *buffer;
+	unsigned int flowCount = 0;
 
-	if(f_ == NULL) return;
+	if(f_ == NULL) return 0;
 
 	/* message from ipfixcol have maximum of 1023 data records */
 	for(int i = 0 ; i < 1023; i++){ //TODO magic number! add constant to storage.h
 		if(dtcouple[i].data_set == NULL){
 			//there are no more filled data_sets
-			return;
+			break;
 		}
 
 		if(dtcouple[i].data_template == NULL){
@@ -318,9 +324,20 @@ void NfdumpFile::bufferPtk(const data_template_couple *dtcouple){
 			buffer = buffer_ + bufferUsed_;
 		}
 		//store extension data
-		ext_map_it->second->bufferData(dtcouple[i].data_set, buffer,
-				&bufferUsed_, &currentBlock_, &stats_);
+		flowCount+= ext_map_it->second->bufferData(dtcouple[i].data_set, buffer,
+						&bufferUsed_, &currentBlock_, &stats_);
 	}
+	return flowCount;
+}
+
+void NfdumpFile::checkSQNumber(unsigned int SQ, unsigned int recFlows){
+	if(SQ != nextSQ_ ){
+		stats_.increaseSQFail();
+		MSG_DEBUG(MSG_MODULE,"SQ: %u expectedSQ: %u recFlows: %u nextSQ: %u",SQ,nextSQ_,recFlows,(SQ + recFlows) % 0xffffffff);
+		nextSQ_ = SQ;
+
+	}
+	nextSQ_ = (nextSQ_ + recFlows) % 0xffffffff;
 }
 
 void NfdumpFile::closeFile(){
@@ -514,7 +531,7 @@ void RecordMap::genereate_map(char * buffer){
 uint16_t RecordMap::bufferData(ipfix_data_set *data_set,char *buffer, uint *buffer_used,
 		class BlockHeader * block, class Stats *stats){
 	unsigned int data_size,read_data,cur_size;
-	unsigned int writed_size = 0;
+	unsigned int flowCount = 0;
 	struct FlowStats fstats;
 	fstats.flags=0;
 	int filled =0; //TODO
@@ -548,10 +565,11 @@ uint16_t RecordMap::bufferData(ipfix_data_set *data_set,char *buffer, uint *buff
 		filled += recordSize();
 		stats->addStats(&fstats);
 		block->increaseRecordsCnt();
+		flowCount++;
 	}
 	block->addRecordSize(filled);
 	(*buffer_used)+= filled;
-	return writed_size;
+	return flowCount;
 }
 
 void RecordMap::cleanMetadata(){

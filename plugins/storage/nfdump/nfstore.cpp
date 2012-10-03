@@ -289,7 +289,9 @@ int store_packet (void *config,	const struct ipfix_message *ipfix_msg,
 		files_it = conf->files->find(oid);
 	}
 
-	files_it->second->bufferPtk(ipfix_msg->data_couple);
+	unsigned int recFlows;
+	recFlows = files_it->second->bufferPtk(ipfix_msg->data_couple);
+	files_it->second->checkSQNumber(ntohl(ipfix_msg->pkt_header->sequence_number), recFlows);
 	return 0;
 }
 

@@ -352,7 +352,7 @@
 				</term>
 				<listitem>
 					<simpara>Specifies how are asigned names to data dumps.
-						(time/incremental)</simpara>
+						(time/incremental/prefix)</simpara>
 				</listitem>
 			</varlistentry>
 			<varlistentry>

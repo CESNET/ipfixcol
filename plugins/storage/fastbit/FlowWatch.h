@@ -1,9 +1,9 @@
-/**
- * \file fastbit.h
+/*
+ * \file FlowWatch.h
  * \author Petr Kramolis <kramolis@cesnet.cz>
- * \brief
+ * \brief class for flows and SQ numbers check
  *
- * Copyright (C) 2011 CESNET, z.s.p.o.
+ * Copyright (C) 2012 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,20 +36,28 @@
  * if advised of the possibility of such damage.
  *
  */
+#ifndef FLOWWATCH_H_
+#define FLOWWATCH_H_
 
-#ifndef FASTBIT_H_
-#define FASTBIT_H_
+#include <stdio.h>
+#include <stdlib.h>
 
-/* size of elements buffer (number of stored elements) */
-const unsigned int RESERVED_SPACE = 75000;
+class FlowWatch {
+	enum {SQ_MAX=4294967295,SQ_BOT_LIMIT=1431655765, SQ_TOP_LIMIT=2863311530 };
+	uint firstSQ_;
+	uint lastSQ_;
+	uint recFlows_;
+	uint lastFlows_;
+	bool reseted;
+public:
+	void updateSQ(uint sq);
+	void addFlows(uint recFlows);
+	uint exportedFlows();
+	uint receivedFlows();
+	void reset();
+	int write(std::string dir);
+	FlowWatch();
+	virtual ~FlowWatch();
+};
 
-/** Identifier to MSG_* macros */
-#define MSG_MODULE "fastbit storage"
-
-/* this enum specifies types of file naming strategy */
-enum name_type{TIME,INCREMENTAL,PREFIX};
-
-/* this enum specifies types of elements */
-enum store_type{UINT,INT,BLOB,TEXT,FLOAT,IPv6,UNKNOWN};
-
-#endif /* FASTBIT_H_ */
+#endif /* FLOWWATCH_H_ */

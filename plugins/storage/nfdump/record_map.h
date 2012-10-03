@@ -70,6 +70,7 @@ public:
 	void newStats(FILE *f);
 	void addStats(struct FlowStats *fstats);
 	void updateStats(FILE *f);
+	void increaseSQFail();
 };
 
 class BlockHeader {
@@ -137,6 +138,7 @@ class NfdumpFile{
 	class Stats stats_;
 	class BlockHeader currentBlock_;
 	std::map<uint16_t,RecordMap*> *extMaps_;
+	unsigned int nextSQ_;
 
 	char *buffer_;
 	/* buffer allocated size */
@@ -146,7 +148,8 @@ class NfdumpFile{
 public:
 	int newFile(std::string name, struct nfdumpConfig* conf);
 	void updateFile(bool compression = false);
-	void bufferPtk(const struct data_template_couple dtcouple[]);
+	unsigned int bufferPtk(const struct data_template_couple dtcouple[]);
+	void checkSQNumber(unsigned int SQ, unsigned int recFlows);
 	void closeFile();
 };
 

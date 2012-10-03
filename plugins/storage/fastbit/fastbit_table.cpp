@@ -283,7 +283,6 @@ int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_co
 		}
 		elements.push_back(new_element);
 	}
-	//_tablex->reserveSpace(RESERVED_SPACE);
 	return 0;
 }
 
