@@ -6,8 +6,13 @@
 	
 	<xs:element name="columns" type="columnsType"/>	
 	<xs:element name="summary" type="summaryType"/>
+	<xs:element name="output" type="outputType"/>
 	
 	<xs:element name="column" type="columnType"/>
+	
+	<xs:element name="format" type="formatType"/>
+	<xs:element name="formatName" type="xs:string"/>
+	<xs:element name="formatString" type="xs:string"/>
 	
 	<xs:element name="alias" type="aliasType"/>
 	<xs:element name="alignLeft" type="alignLeftType"/>
@@ -37,6 +42,7 @@
 		<xs:sequence>
 			<xs:element ref="columns"/>
 			<xs:element ref="summary"/>
+			<xs:element ref="output"/>
 		</xs:sequence>
 	</xs:complexType>
 	
@@ -48,6 +54,19 @@
 			<xs:element ref="alignLeft" minOccurs="0"/>
 			<xs:element ref="default-value" minOccurs="0"/>
 			<xs:element ref="value"/>
+		</xs:sequence>
+	</xs:complexType>
+	
+	<xs:complexType name="outputType">
+		<xs:sequence>
+			<xs:element ref="format" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+	</xs:complexType>
+	
+	<xs:complexType name="formatType">
+		<xs:sequence>
+			<xs:element ref="formatName"/>
+			<xs:element ref="formatString"/>
 		</xs:sequence>
 	</xs:complexType>
 	

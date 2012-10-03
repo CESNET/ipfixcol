@@ -291,4 +291,64 @@
 	<column>%byt</column>
 	<column>%fl</column>
 </summary>
+
+<!-- definition of output formats that can be used with -o option -->
+<output>
+	<format>
+		<formatName>line</formatName>
+		<formatString>%ts %td %pr %sa4:%sp -> %da4:%dp %sa6:%sp -> %da6:%dp %pkt %byt %fl</formatString>
+	</format>
+	<format>
+		<formatName>long</formatName>
+		<formatString>%ts %td %pr %sa4:%sp -> %da4:%dp %sa6:%sp -> %da6:%dp %flg %tos %pkt %byt %fl</formatString>
+	</format>
+	<format>
+		<formatName>extended</formatName>
+		<formatString>%ts %td %pr %sa4:%sp -> %da4:%dp %sa6:%sp -> %da6:%dp %flg %tos %pkt %byt %bps %pps %bpp %fl</formatString>
+	</format>
+	<format>
+		<formatName>pipe</formatName>
+		<formatString>%ts|%td|%pr|%sa4|%sp|%da4|%dp|%pkt|%byt|%fl</formatString>
+	</format>
+	<format>
+		<formatName>csv</formatName>
+		<formatString>%ts,%td,%pr,%sa4,%sp,%da4,%dp,%pkt,%byt,%fl</formatString>
+	</format>
+	<format>
+		<formatName>extra</formatName>
+		<formatString>%ts %td %pr %sa4 -> %da4 %sa6 -> %da6 %sp %dp %flg %tos %pkt %byt %bps %pps %bpp %icmptype %sas %das %in %out %fl</formatString>
+	</format>
+	<format>
+		<formatName>line4</formatName>
+		<formatString>%ts %td %pr %sa4:%sp -> %da4:%dp %pkt %byt %fl</formatString>
+	</format>
+	<format>
+		<formatName>long4</formatName>
+		<formatString>%ts %td %pr %sa4:%sp -> %da4:%dp %flg %tos %pkt %byt %fl</formatString>
+	</format>
+	<format>
+		<formatName>extended4</formatName>
+		<formatString>%ts %td %pr %sa4:%sp -> %da4:%dp %flg %tos %pkt %byt %bps %pps %bpp %fl</formatString>
+	</format>
+	<format>
+		<formatName>extra4</formatName>
+		<formatString>%ts %td %pr %sa4:%sp -> %da4:%dp %flg %tos %pkt %byt %bps %pps %bpp %icmptype %sas %das %in %out %fl</formatString>
+	</format>
+	<format>
+		<formatName>line6</formatName>
+		<formatString>%ts %td %pr %sa6:%sp -> %da6:%dp %pkt %byt %fl</formatString>
+	</format>
+	<format>
+		<formatName>long6</formatName>
+		<formatString>%ts %td %pr %sa6:%sp -> %da6:%dp %flg %tos %pkt %byt %fl</formatString>
+	</format>
+		<format>
+		<formatName>extended4</formatName>
+		<formatString>%ts %td %pr %sa6:%sp -> %da6:%dp %flg %tos %pkt %byt %bps %pps %bpp %fl</formatString>
+	</format>
+	<format>
+		<formatName>extra4</formatName>
+		<formatString>%ts %td %pr %sa6:%sp -> %da6:%dp %flg %tos %pkt %byt %bps %pps %bpp %icmptype %sas %das %in %out %fl</formatString>
+	</format>
+</output>
 </configuration>
