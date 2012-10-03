@@ -293,7 +293,7 @@ TableManager::TableManager(Configuration &conf): conf(conf), tableSummary(NULL)
 #ifdef DEBUG
 		std::cerr << "Loading table part from: " << tmp << std::endl;
 #endif
-		part = new ibis::part(tmp.c_str(), NULL, true);
+		part = new ibis::part(tmp.c_str(), true);
 		if (part != NULL) {
 			this->parts.push_back(part);
 

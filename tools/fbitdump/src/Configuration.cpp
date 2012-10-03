@@ -360,13 +360,14 @@ void Configuration::searchForTableParts(stringVector &tables) throw (std::invali
 		while((dent = readdir(d)) != NULL) {
 			/* construct directory path */
 			std::string tablePath = tables[i] + std::string(dent->d_name);
-			Utils::sanitizePath(tablePath);
 			if (stat(tablePath.c_str(), &statbuf) == -1) {
 				std::cerr << "Cannot stat " << dent->d_name << std::endl;
 				continue;
 			}
 
 			if (S_ISDIR(statbuf.st_mode) && strcmp(dent->d_name, ".") && strcmp(dent->d_name, "..")) {
+				Utils::sanitizePath(tablePath);
+
 				/* test whether the directory is fastbit part */
 				if (Utils::isFastbitPart(tablePath)) {
 					this->parts.push_back(tablePath); /* add the part */
