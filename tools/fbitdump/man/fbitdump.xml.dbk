@@ -91,6 +91,11 @@
 			Section <emphasis>&lt;summary&gt;</emphasis> is used to specify which columns are considered summary columns. Each column is specified by its alias inside element <emphasis>&lt;column&gt;</emphasis>.
 			Summary columns are used in statistics mode to provide percentage information and also in total summary below the printed records.
 		</simpara>
+		<simpara>
+			Section <emphasis>&lt;output&gt;</emphasis> is used to define output formats. 
+			Each <emphasis>&lt;format&gt;</emphasis> has <emphasis>&lt;formatName&gt;</emphasis> which is used to reference it on command line, 
+			and <emphasis>&lt;formatString&gt;</emphasis>, which defines the output format to be used for this format.
+		</simpara>
 	</refsect1>
 
 	<refsect1>

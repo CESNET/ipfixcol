@@ -281,45 +281,8 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		this->filter = "1=1";
 	}
 
-	if (this->format.empty() || this->format == "line") {
-		this->format = "%ts %td %pr %sa4:%sp -> %da4:%dp %sa6:%sp -> %da6:%dp %pkt %byt %fl";
-	} else if (this->format == "long") {
-		this->format = "%ts %td %pr %sa4:%sp -> %da4:%dp %sa6:%sp -> %da6:%dp %flg %tos %pkt %byt %fl";
-	} else if (this->format == "extended") {
-		this->format = "%ts %td %pr %sa4:%sp -> %da4:%dp %sa6:%sp -> %da6:%dp %flg %tos %pkt %byt %bps %pps %bpp %fl";
-	} else if (this->format == "pipe") {
-		this->format = "%ts|%td|%pr|%sa4|%sp|%da4|%dp|%pkt|%byt|%fl";
-	} else if (this->format == "csv") {
-		this->format = "%ts,%td,%pr,%sa4,%sp,%da4,%dp,%pkt,%byt,%fl";
-	} else if (this->format.substr(0,4) == "fmt:") {
-		this->format = this->format.substr(4);
-		/* when aggregating, always add flows */
-		size_t pos;
-		if (this->getAggregate() && ((pos = this->format.find("%fl")) == std::string::npos
-				|| isalnum(this->format[pos+3]))) {
-			this->format += " %fl";
-		}
-	} else if (this->format == "extra") {
-		this->format = "%ts %td %pr %sa4 -> %da4 %sa6 -> %da6 %sp %dp %flg %tos %pkt %byt %bps %pps %bpp %icmptype %sas %das %in %out %fl";
-	} else if (this->format == "line4") {
-			this->format = "%ts %td %pr %sa4:%sp -> %da4:%dp %pkt %byt %fl";
-	} else if (this->format == "long4") {
-		this->format = "%ts %td %pr %sa4:%sp -> %da4:%dp %flg %tos %pkt %byt %fl";
-	} else if (this->format == "extended4") {
-		this->format = "%ts %td %pr %sa4:%sp -> %da4:%dp %flg %tos %pkt %byt %bps %pps %bpp %fl";
-	} else if (this->format == "extra4") {
-		this->format = "%ts %td %pr %sa4:%sp -> %da4:%dp %flg %tos %pkt %byt %bps %pps %bpp %icmptype %sas %das %in %out %fl";
-	} else if (this->format == "line6") {
-		this->format = "%ts %td %pr %sa6:%sp -> %da6:%dp %pkt %byt %fl";
-	} else if (this->format == "long6") {
-		this->format = "%ts %td %pr %sa6:%sp -> %da6:%dp %flg %tos %pkt %byt %fl";
-	} else if (this->format == "extended6") {
-		this->format = "%ts %td %pr %sa6:%sp -> %da6:%dp %flg %tos %pkt %byt %bps %pps %bpp %fl";
-	} else if (this->format == "extra6") {
-		this->format = "%ts %td %pr %sa6:%sp -> %da6:%dp %flg %tos %pkt %byt %bps %pps %bpp %icmptype %sas %das %in %out %fl";
-	} else {
-		throw std::invalid_argument("Unknown ouput mode: '" + this->format + "'");
-	}
+	/* prepare output format string from configuration file */
+	this->loadOutputFormat();
 
 	/* parse output format string */
 	this->parseFormat(this->format);
@@ -857,6 +820,40 @@ void Configuration::parseIndexColumns(char *arg)
 			stringSet columns = col.getColumns();
 			this->indexColumns.insert(columns.begin(), columns.end());
 		}
+	}
+}
+
+void Configuration::loadOutputFormat() throw (std::invalid_argument)
+{
+	/* Look out for custom format */
+	if (this->format.substr(0,4) == "fmt:") {
+		this->format = this->format.substr(4);
+		/* when aggregating, always add flows */
+		size_t pos;
+		if (this->getAggregate() && ((pos = this->format.find("%fl")) == std::string::npos
+				|| isalnum(this->format[pos+3]))) {
+			this->format += " %fl";
+		}
+		return;
+	}
+
+	/* Use 'line' as a default format */
+	if (this->format.empty()) {
+		this->format = "line";
+	}
+
+	/* Try to find the format in configuration XML */
+	pugi::xpath_node format = this->getXMLConfiguration().select_single_node(("/configuration/output/format[formatName='"+this->format+"']").c_str());
+	/* check what we found */
+	if (format == NULL) {
+		throw std::invalid_argument(std::string("Format '") + this->format + "' is not defined");
+	}
+
+	/* set format string */
+	if (format.node().child("formatString") != NULL) {
+		this->format = format.node().child_value("formatString");
+	} else {
+		throw std::invalid_argument("Missing format string for '" + this->format + "'");
 	}
 }
 

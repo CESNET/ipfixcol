@@ -236,7 +236,10 @@
 
 	<refsect1>
 		<title>Output Formats</title>
-		<simpara>There are few predefined formats compiled into the program. Each format is defined as string containing column aliases starting with %. Custom formats are supported.</simpara>
+		<simpara>
+			There are few predefined formats specified in <filename>fbitdump.xml</filename>. 
+			Each format is defined as string containing column aliases starting with %. Custom formats are supported.
+		</simpara>
 		<simpara>Long numbers are scaled using <emphasis>M</emphasis>, <emphasis>G</emphasis> and <emphasis>T</emphasis> suffixes with their usual meaning.</simpara>
 		<variablelist>
 			<varlistentry>
@@ -290,7 +293,8 @@
 			<varlistentry>
 				<term><replaceable class="parameter">fmt:</replaceable>userformat</term>
 				<listitem>
-					<simpara>This allows the user to define her own format. All %x strings in userformat are considered columns, the rest are column separators.
+					<simpara>This allows the user to define her own format using command line. All %x strings in userformat are considered columns, the rest are column separators.
+					Do not use this in <filename>fbitdump.xml</filename>.
 					</simpara>
 					<example>
 						<simpara>This makes the same output as line4 format:</simpara>

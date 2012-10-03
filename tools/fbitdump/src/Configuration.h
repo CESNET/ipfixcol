@@ -333,6 +333,13 @@ private:
      */
     void parseIndexColumns(char *arg);
 
+    /**
+     * \brief Check and load named output format from configuration file
+     *
+     * Uses and modifies this->format variable
+     */
+    void loadOutputFormat() throw (std::invalid_argument);
+
     stringVector parts;                 /**< Fastbit parts paths to be used*/
     stringSet aggregateColumnsAliases;  /**< Aggregate columns aliases set */
 	uint64_t maxRecords;                /**< Limit number of printed records */
