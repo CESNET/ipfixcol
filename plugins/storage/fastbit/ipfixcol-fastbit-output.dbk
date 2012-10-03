@@ -84,7 +84,7 @@
 				<prefix>ic</prefix>
 			</namingStrategy>
 			<onTheFlyIndexes>yes</onTheFlyIndexes>
-			<reorder>yes</reorder>
+			<reorder>no</reorder>
 			<indexes>
 				<element enterprise = "0" id = "12"/>
 				<element enterprise = "0" id = "8"/>
@@ -382,6 +382,7 @@
 					<simpara>This tells plugin to reorder for stored data (yes/no).
 					Reorder is based on cardinality so queries on reordered data should
 					be faster and data indexes smaller. </simpara>
+					<simpara>Warning: The reordering does not work on string and blob columns.</simpara>
 				</listitem>
 			</varlistentry>
 		</variablelist>
