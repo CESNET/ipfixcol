@@ -326,7 +326,7 @@ el_ipv6::el_ipv6(int size, int en, int id, int part, uint32_t buf_size){
 
 int el_ipv6::fill(uint8_t * data){
 	//ulong
-	ipv6_value = ntohl(*((uint64_t*) data));
+	ipv6_value = htobe64(*((uint64_t*) data));
 	value = &(ipv6_value);
 	this->append(&(ipv6_value));
 	return 0;
