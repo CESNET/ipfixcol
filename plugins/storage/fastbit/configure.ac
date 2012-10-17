@@ -38,7 +38,7 @@
 
 AC_PREREQ([2.60])
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol-fastbit-output], [1.4.6])
+AC_INIT([ipfixcol-fastbit-output], [1.4.7])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 LT_PREREQ([2.2])
 LT_INIT([dlopen disable-static])
@@ -50,7 +50,7 @@ AC_CONFIG_HEADERS([config.h])
 # Initialization
 CXXFLAGS="-Wall"
 
-RELEASE=2
+RELEASE=1
 AC_SUBST(RELEASE)
 
 # Set user name and email for packaging purposes 
