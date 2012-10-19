@@ -1,6 +1,6 @@
 AC_PREREQ([2.60])
 AC_INIT([ipfixcol-projects], [1.0])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 LT_PREREQ([2.2])
 LT_INIT([dlopen])
 
