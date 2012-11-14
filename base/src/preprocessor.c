@@ -224,12 +224,12 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 			free (packet);
 			return;
 		}
+
 	    /* add config to data_mngmts structure */
-	    if (data_mngmts == NULL) {
-	        data_mngmts = config;
-	    } else {
-	        data_mngmts->next = config;
-	    }
+    	config->next = data_mngmts;
+        data_mngmts = config;
+
+        MSG_NOTICE(msg_module, "Created new Data manager for ODID %i", ntohl(msg->pkt_header->observation_domain_id));
 	}
 
 
