@@ -246,15 +246,15 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 }
 
 
-struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *template, int type)
+struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *template, int max_len, int type)
 {
-	struct ipfix_template *tmpl;
-
-	tmpl = tm_get_template(tm, ntohs(((struct ipfix_template_record*) template)->template_id));
-	if (tm_fill_template(tmpl, template, tmpl->template_length, tmpl->data_length,type) != 0) {
-		return NULL;
+	/* remove the old template */
+	if (tm_remove_template(tm, ntohs(((struct ipfix_template_record*) template)->template_id)) != 0) {
+		MSG_WARNING(msg_module, "Cannot remove template %i.", ntohs(((struct ipfix_template_record*) template)->template_id));
 	}
-	return tmpl;
+
+	/* create a new one */
+	return tm_add_template(tm, template, max_len, type);
 }
 
 

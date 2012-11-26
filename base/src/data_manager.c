@@ -157,7 +157,7 @@ static int data_manager_process_one_template(struct ipfix_template_mgr *template
 		/* template already exists */
 		MSG_WARNING(msg_module, "%s ID %i already exists. Rewriting.",
 				(type==TM_TEMPLATE)?"Template":"Options template", template->template_id);
-		template = tm_update_template(template_mgr, tmpl, type);
+		template = tm_update_template(template_mgr, tmpl, max_len, type);
 	}
 	if (template == NULL) {
 		MSG_WARNING(msg_module, "Cannot parse %s set, skipping to next set",

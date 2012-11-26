@@ -145,7 +145,7 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm,
  * \return updated ipfix_template on success, NULL if error occurs.
  */
 struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm,
-                                                       void *tmp, int type);
+                                          void *tmp, int max_len, int type);
 
 /**
  * \brief Function for specific Template lookup.
