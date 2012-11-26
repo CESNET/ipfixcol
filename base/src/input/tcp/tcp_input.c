@@ -816,7 +816,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
 	    	}
 	    	MSG_ERROR(msg_module, "Failed to receive IPFIX packet header: %s", strerror(errno));
 	        return INPUT_ERROR;
-		}
+	    }
 #ifdef TLS_SUPPORT
     }
 #endif
@@ -824,6 +824,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
 	if (length >= IPFIX_HEADER_LENGTH) { /* header received */
         /* get packet total length */
         packet_length = ntohs(((struct ipfix_header *) *packet)->length);
+
         /* check whether buffer is big enough */
         if (packet_length > BUFF_LEN) {
             *packet = realloc(*packet, packet_length);
@@ -835,16 +836,20 @@ int get_packet(void *config, struct input_info **info, char **packet)
         	MSG_WARNING(msg_module, "Packet length too short. Malformed IPFIX packet.");
         	return INPUT_ERROR;
         }
+
         /* receive the rest of the ipfix packet */
-        length = recv(sock, (*packet) + IPFIX_HEADER_LENGTH, 
-            ntohs(((struct ipfix_header *) *packet)->length) - IPFIX_HEADER_LENGTH, MSG_WAITALL);
+        length = recv(sock, (*packet) + IPFIX_HEADER_LENGTH, packet_length - IPFIX_HEADER_LENGTH, MSG_WAITALL);
         if (length == -1) {
         	if (errno == EINTR) {
         		return INPUT_INTR;
         	}
         	MSG_WARNING(msg_module, "Failed to receive IPFIX packet: %s", strerror(errno));
             return INPUT_ERROR;
-        }
+
+        } else if (length < packet_length - IPFIX_HEADER_LENGTH) {
+	    	MSG_ERROR(msg_module, "Read IPFIX data is too short (%i): %s", length, strerror(errno));
+		}
+
         /* set length to correct value */
         length += IPFIX_HEADER_LENGTH;
     } else if (length != 0) {
