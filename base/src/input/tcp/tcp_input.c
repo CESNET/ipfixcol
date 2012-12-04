@@ -833,7 +833,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
                 return INPUT_ERROR;
             }
         } else if (packet_length < IPFIX_HEADER_LENGTH) {
-        	MSG_WARNING(msg_module, "Packet length too short. Malformed IPFIX packet.");
+        	MSG_WARNING(msg_module, "Packet length too short (%i). Malformed IPFIX packet.", packet_length);
         	return INPUT_ERROR;
         }
 
