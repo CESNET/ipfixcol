@@ -282,6 +282,145 @@
 			<element>e0id83</element>
 		</value>
 	</column>
+	<column>
+		<name>VLAN</name>
+		<alias>%vlan</alias>
+		<width>4</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e0id58</element>
+		</value>
+	</column>
+	<column>
+		<name>sGeo</name>
+		<alias>%sgeo</alias>
+		<width>4</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id0</element>
+		</value>
+	</column>
+	<column>
+		<name>dGeo</name>
+		<alias>%dgeo</alias>
+		<width>4</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id1</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP UA</name>
+		<alias>%httpua</alias>
+		<width>7</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id100</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Method</name>
+		<alias>%httpm</alias>
+		<width>11</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id101</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Dom.</name>
+		<alias>%httpd</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id102</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Ref.</name>
+		<alias>%httpr</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id103</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP CT</name>
+		<alias>%httpct</alias>
+		<width>7</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id104</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Url</name>
+		<alias>%httpurl</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id105</element>
+		</value>
+	</column>
+	<column>
+		<name>TUN Src IPv6</name>
+		<alias>%tunsa6</alias>
+		<alias>%tunsrcip6</alias>
+		<width>39</width>
+		<value type="plain">
+			<element semantics="ipv6" parts="2">e16982id400</element>
+		</value>
+	</column>
+	<column>
+		<name>TUN Dst IPv6</name>
+		<alias>%tunda6</alias>
+		<alias>%tundstip6</alias>
+		<width>39</width>
+		<value type="plain">
+			<element semantics="ipv6" parts="2">e16982id401</element>
+		</value>
+	</column>
+	<column>
+		<name>TUN sp</name>
+		<alias>%tunsp</alias>
+		<alias>%tunsrcport</alias>
+		<width>6</width>
+		<alignLeft/>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id402</element>
+		</value>
+	</column>
+	<column>
+		<name>TUN dp</name>
+		<alias>%tundp</alias>
+		<alias>%tundstport</alias>
+		<width>6</width>
+		<alignLeft/>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id403</element>
+		</value>
+	</column>
+	<column>
+		<name>TUN Proto</name>
+		<alias>%tunpr</alias>
+		<alias>%tunproto</alias>
+		<width>10</width>
+		<value type="plain">
+			<element semantics="protocol">e16982id404</element>
+		</value>
+	</column>
+	<column>
+		<name>TUN Type</name>
+		<alias>%tuntype</alias>
+		<width>8</width>
+		<value type="plain">
+			<element>e16982id405</element>
+		</value>
+	</column>
+
 </columns>
 
 <!-- summary section contain aliases of columns that can be used for statistics summary, i.e. totals
@@ -350,5 +489,18 @@
 		<formatName>extra4</formatName>
 		<formatString>%ts %td %pr %sa6:%sp -> %da6:%dp %flg %tos %pkt %byt %bps %pps %bpp %icmptype %sas %das %in %out %fl</formatString>
 	</format>
+	<format>
+		<formatName>http</formatName>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %sa6 %da6 %flg %pkt %byt %fl %httpua %httpm %httpd %httpurl %httpr %httpct</formatString>
+	</format>
+	<format>
+		<formatName>http4</formatName>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %flg %pkt %byt %fl %httpua %httpm %httpd %httpurl %httpr %httpct</formatString>
+	</format>
+	<format>
+		<formatName>tun</formatName>
+		<formatString>%ts %td %pr %sa4:%sp -> %da4:%dp %flg %pkt %byt %fl %tunsa6:%tunsp -> %tunda6:%tundp %tunproto %tuntype</formatString>
+	</format>
+
 </output>
 </configuration>
