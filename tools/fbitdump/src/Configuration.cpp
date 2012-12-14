@@ -132,11 +132,12 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			std::string::size_type pos;
 			char parseArg[250];
 			if ((pos = arg.find('/')) != std::string::npos) { /* ordering column specified */
-				if (pos > 250) { /* constant char array */
+				if (pos >= 250) { /* constant char array */
 					throw std::invalid_argument("Argument for option -s is too long");
 				}
 				/* column name is before '/' */
 				strncpy(parseArg, optarg, pos);
+				parseArg[pos] = '\0';
 			} else { /* use whole optarg as column name */
 				strcpy(parseArg, optarg);
 			}
@@ -660,7 +661,7 @@ void Configuration::help() const
 //	<< "-Z              Check filter syntax and exit." << std::endl
 	<< "-t <time>       time window for filtering packets" << std::endl
 	<< "                yyyy/MM/dd.hh:mm:ss[-yyyy/MM/dd.hh:mm:ss]" << std::endl
-	<< "-C <path>       path to configuration file. Default is "CONFIG_XML << std::endl
+	<< "-C <path>       path to configuration file. Default is " << CONFIG_XML << std::endl
 	<< "-T              print information about templates in directories specified by -R" << std::endl
 	;
 }
