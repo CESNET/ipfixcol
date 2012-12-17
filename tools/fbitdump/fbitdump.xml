@@ -420,6 +420,102 @@
 			<element>e16982id405</element>
 		</value>
 	</column>
+	<column>
+		<name>TUN TCP fl</name>
+		<alias>%tunflags</alias>
+		<width>10</width>
+		<value type="plain">
+			<element>e16982id406</element>
+		</value>
+	</column>
+	<column>
+		<name>TUN ICMP</name>
+		<alias>%tunicmp</alias>
+		<width>8</width>
+		<value type="plain">
+			<element>e16982id407</element>
+		</value>
+	</column>
+	<column>
+		<name>TUN hdrs</name>
+		<alias>%tunhdrs</alias>
+		<width>8</width>
+		<value type="plain">
+			<element>e16982id408</element>
+		</value>
+	</column>
+	<column>
+		<name>TUN trls</name>
+		<alias>%tuntrls</alias>
+		<width>8</width>
+		<value type="plain">
+			<element>e16982id409</element>
+		</value>
+	</column>
+	<column>
+		<name>TUN sCtry</name>
+		<alias>%tunsctry</alias>
+		<width>9</width>
+		<value type="plain">
+			<element>e16982id410</element>
+		</value>
+	</column>
+	<column>
+		<name>TUN dCtry</name>
+		<alias>%tundctry</alias>
+		<width>9</width>
+		<value type="plain">
+			<element>e16982id411</element>
+		</value>
+	</column>
+	<column>
+		<name>sCtry</name>
+		<alias>%tunosctry</alias>
+		<width>5</width>
+		<value type="plain">
+			<element>e16982id412</element>
+		</value>
+	</column>
+	<column>
+		<name>dCtry</name>
+		<alias>%tunodctry</alias>
+		<width>5</width>
+		<value type="plain">
+			<element>e16982id413</element>
+		</value>
+	</column>
+	<column>
+		<name>App PID</name>
+		<alias>%apppid</alias>
+		<width>7</width>
+		<value type="plain">
+			<element>e16982id200</element>
+		</value>
+	</column>
+	<column>
+		<name>App Name</name>
+		<alias>%appname</alias>
+		<width>8</width>
+		<value type="plain">
+			<element>e16982id201</element>
+		</value>
+	</column>
+	<column>
+		<name>App UID</name>
+		<alias>%appuid</alias>
+		<width>7</width>
+		<value type="plain">
+			<element>e16982id202</element>
+		</value>
+	</column>
+	<column>
+		<name>App Match</name>
+		<alias>%appmatch</alias>
+		<width>9</width>
+		<value type="plain">
+			<element>e16982id203</element>
+		</value>
+	</column>
 
 </columns>
 
@@ -499,7 +595,11 @@
 	</format>
 	<format>
 		<formatName>tun</formatName>
-		<formatString>%ts %td %pr %sa4:%sp -> %da4:%dp %flg %pkt %byt %fl %tunsa6:%tunsp -> %tunda6:%tundp %tunproto %tuntype</formatString>
+		<formatString>%ts %td %pr %sa4:%sp -> %da4:%dp %flg %pkt %byt %fl %tunsa6:%tunsp -> %tunda6:%tundp %tunproto %tuntype %tunflags %tunicmp %tunhdrs %tuntrls %tunsctry %tundctry %tunosctry %tunodctry</formatString>
+	</format>
+	<format>
+		<formatName>app</formatName>
+		<formatString>%ts %td %pr %sa4:%sp -> %da4:%dp %flg %pkt %byt %fl %appname %apppid %appuid %appmatch</formatString>
 	</format>
 
 </output>

@@ -2095,28 +2095,85 @@
 	</element>
 	<element>
 		<enterprise>16982</enterprise>
-		<id>420</id>
+		<id>406</id>
+		<name>tunnelTCPFlags</name>
+		<dataType>unsigned8</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>16982</enterprise>
+		<id>407</id>
+		<name>tunnelICMPcode</name>
+		<dataType>unsigned16</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>16982</enterprise>
+		<id>408</id>
+		<name>tunnelTeredoHeaders</name>
+		<dataType>unsigned8</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>16982</enterprise>
+		<id>409</id>
+		<name>tunnelTeredoTrailers</name>
+		<dataType>unsigned8</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>16982</enterprise>
+		<id>410</id>
+		<name>tunnelSourceGeo</name>
+		<dataType>string</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>16982</enterprise>
+		<id>411</id>
+		<name>tunnelDestinationGeo</name>
+		<dataType>string</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>16982</enterprise>
+		<id>412</id>
+		<name>tunnelOuterSourceGeo</name>
+		<dataType>string</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>16982</enterprise>
+		<id>413</id>
+		<name>tunnelOuterDestinationGeo</name>
+		<dataType>string</dataType>
+		<semantic>identifier</semantic>
+	</element>
+
+	<element>
+		<enterprise>16982</enterprise>
+		<id>200</id>
 		<name>appPID</name>
 		<dataType>unsigned32</dataType>
 		<semantic>identifier</semantic>
 	</element>
 	<element>
 		<enterprise>16982</enterprise>
-		<id>421</id>
+		<id>201</id>
 		<name>appName</name>
 		<dataType>string</dataType>
 		<semantic>identifier</semantic>
 	</element>
 	<element>
 		<enterprise>16982</enterprise>
-		<id>422</id>
+		<id>202</id>
 		<name>appUID</name>
 		<dataType>unsigned32</dataType>
 		<semantic>identifier</semantic>
 	</element>
 	<element>
 		<enterprise>16982</enterprise>
-		<id>423</id>
+		<id>203</id>
 		<name>appMatchLevel</name>
 		<dataType>unsigned8</dataType>
 		<semantic>identifier</semantic>
