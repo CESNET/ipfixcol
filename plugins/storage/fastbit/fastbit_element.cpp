@@ -150,6 +150,13 @@ int element::append_str(void *data,int size){
 
 	memcpy(&(_buffer[_filled]),data,size);
 
+	/* Set terminating character, just to be sure it is there */
+	_buffer[_filled + size] = '\0';
+
+	/* Get the real string length (data may contain more '\0' accidentally) */
+	_filled += strlen(_buffer +_filled) + 1;
+
+	/*
 	//check terminating zero (store string to first
 	//terminating zero even if its specified size is bigger)
 	for(int i = 0; i < size; i++){
@@ -165,6 +172,7 @@ int element::append_str(void *data,int size){
 			}
 		}
 	}
+	*/
 	return 0;
 }
 
