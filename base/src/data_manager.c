@@ -129,8 +129,10 @@ static int data_manager_process_one_template(struct ipfix_template_mgr *template
 		/* got withdrawal message with UDP -> this is wrong */
 		MSG_WARNING(msg_module, "Got template withdraw message on UDP. Ignoring.");
 		return TM_TEMPLATE_WITHDRAW_LEN;
-	} else if (ntohs(template_record->template_id) == IPFIX_TEMPLATE_FLOWSET_ID &&
+	} else if ((ntohs(template_record->template_id) == IPFIX_TEMPLATE_FLOWSET_ID ||
+				ntohs(template_record->template_id) == IPFIX_OPTION_FLOWSET_ID) &&
 			ntohs(template_record->count) == 0) {
+		/* withdraw template or option template */
 		tm_remove_all_templates(template_mgr, type);
 		/* don't try to parse the withdraw template */
 		return TM_TEMPLATE_WITHDRAW_LEN;
