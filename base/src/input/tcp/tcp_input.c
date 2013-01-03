@@ -380,7 +380,7 @@ int input_init(char *params, void **config)
     char *port = NULL, *address = NULL;
     int ai_family = AF_INET6; /* IPv6 is default */
     char dst_addr[INET6_ADDRSTRLEN];
-    int ret, ipv6_only = 0, retval = 0;
+    int ret, ipv6_only = 0, retval = 0, yes = 1; /* yes is for setsockopt */
     /* 1 when using default port - don't free memory */
     int def_port = 0;
 #ifdef TLS_SUPPORT
@@ -556,6 +556,12 @@ int input_init(char *params, void **config)
     if ((addrinfo->ai_family == AF_INET6) &&
         (setsockopt(conf->socket, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_only, sizeof(ipv6_only)) == -1)) {
     	MSG_WARNING(msg_module, "Cannot turn off socket option IPV6_V6ONLY. Plugin might not accept IPv4 connections");
+    }
+
+    /* allow to reuse the address immediately */
+    if (setsockopt(conf->socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1)
+    {
+        MSG_WARNING(msg_module, "Cannot turn on socket reuse option. It may take a while before collector can be restarted");
     }
 
     /* bind socket to address */
