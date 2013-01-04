@@ -109,6 +109,9 @@ AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([floor memmove mkdir strchr strstr strtol strtoul])
+AC_CHECK_DECL([be64toh], [AC_DEFINE([HAVE_BE64TOH], [1],
+                               [Define if macro be64toh exists.])],,
+							   [[#include <endian.h>]])
 
 ############################### Set output #####################################
 

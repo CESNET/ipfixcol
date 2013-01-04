@@ -40,6 +40,20 @@
 #ifndef FASTBIT_H_
 #define FASTBIT_H_
 
+/* Get defines from configure */
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+/* We need be64toh macro */
+#ifndef HAVE_BE64TOH
+# if __BYTE_ORDER == __LITTLE_ENDIAN
+#  define be64toh(x) __bswap_64 (x)
+# else
+#  define be64toh(x) (x)
+# endif
+#endif
+
 /* size of elements buffer (number of stored elements) */
 const unsigned int RESERVED_SPACE = 75000;
 

@@ -59,7 +59,7 @@ int load_types_from_xml(struct fastbit_config *conf){
 	pugi::xpath_node_set elements = doc.select_nodes("/ipfix-elements/element");
 	for (pugi::xpath_node_set::const_iterator it = elements.begin(); it != elements.end(); ++it)
 	{
-		pugi::xpath_node node = *it;
+		//pugi::xpath_node node = *it;
 
 		str_value = it->node().child_value("enterprise");
 		en = strtoul(str_value.c_str(),NULL,0);
@@ -224,7 +224,7 @@ int el_var_size::fill(uint8_t * data){
 	if(data[0] < 255){
 		_size = data[0] + 1; //1 is firs byte with true size
 	}else{
-		_size = ntohs(*((uint16_t*) data[1]));
+		_size = ntohs(*((uint16_t*) &data[1]));
 		_size+=3; //3 = 1 first byte with 256 and 2 bytes with true size
 	}
 	return 0;
@@ -309,7 +309,7 @@ int el_text::fill(uint8_t * data){
 			_true_size = data[0];
 			_offset = 1;
 		}else{
-			_true_size = ntohs(*((uint16_t*) data[1]));
+			_true_size = ntohs(*((uint16_t*) &data[1]));
 			_offset = 3;
 		}
 	}
@@ -334,7 +334,7 @@ el_ipv6::el_ipv6(int size, int en, int id, int part, uint32_t buf_size){
 
 int el_ipv6::fill(uint8_t * data){
 	//ulong
-	ipv6_value = htobe64(*((uint64_t*) data));
+	ipv6_value = be64toh(*((uint64_t*) data));
 	value = &(ipv6_value);
 	this->append(&(ipv6_value));
 	return 0;

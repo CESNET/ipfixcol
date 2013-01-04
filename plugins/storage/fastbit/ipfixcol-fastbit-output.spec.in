@@ -34,7 +34,7 @@ Fastbit storage plugin for ipfixcol.
 make
 
 %install
-make DESTDIR=$RPM_BUILD_ROOT install
+make DESTDIR=%{buildroot} install
 
 %files
 #storage plugins
