@@ -265,7 +265,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	if (optind < argc) {
 		this->filter = argv[optind];
 	} else if (!filterFile.empty()) {
-		std::ifstream t(filterFile, std::ifstream::in | std::ifstream::ate);
+		std::ifstream t(filterFile.c_str(), std::ifstream::in | std::ifstream::ate);
 
 		if (!t.good()) {
 			throw std::invalid_argument("Cannot open file '" + filterFile + "'");

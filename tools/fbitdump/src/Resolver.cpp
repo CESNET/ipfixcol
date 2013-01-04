@@ -46,6 +46,7 @@
 #include <arpa/inet.h>
 #include <stdexcept>
 
+#include "typedefs.h"
 #include "Resolver.h"
 
 namespace fbitdump {
@@ -143,7 +144,7 @@ bool Resolver::reverseLookup(uint32_t address, std::string &result)
 bool Resolver::reverseLookup6(uint64_t in6_addr_part1, uint64_t in6_addr_part2, std::string &result)
 {
 	/* look into cache */
-	std::map<uint64_t, std::map<uint64_t, std::string>>::const_iterator it;
+	std::map<uint64_t, std::map<uint64_t, std::string> >::const_iterator it;
 	std::map<uint64_t, std::string>::const_iterator it2;
 	if (((it = this->dnsCache6.find(in6_addr_part1)) != this->dnsCache6.end()) &&
 			((it2 = it->second.find(in6_addr_part2)) != it->second.end())) {

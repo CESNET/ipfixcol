@@ -1,6 +1,6 @@
 bin_PROGRAMS = fbitdump
-AM_CPPFLAGS = -I$(top_srcdir)/3rdparty
-AM_CXXFLAGS = -fno-strict-aliasing
+AM_CPPFLAGS = @AM_CPPFLAGS@ -I$(top_srcdir)/3rdparty
+AM_CXXFLAGS = @AM_CXXFLAGS@ -fno-strict-aliasing
 LDADD = ../3rdparty/libpugixml.a
 fbitdump_SOURCES = \
 	Column.cpp \

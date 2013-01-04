@@ -48,6 +48,21 @@
 #include <stdexcept>
 #include "fastbit/ibis.h"
 
+/* Get defines from configure */
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+/* We need be64toh macro */
+#ifndef HAVE_HTOBE64
+# if __BYTE_ORDER == __LITTLE_ENDIAN
+#  define htobe64(x) __bswap_64 (x)
+# else
+#  define htobe64(x) (x)
+# endif
+#endif
+
+
 namespace fbitdump {
 
 /* this is needed for the lexer: new yylex function prototype */

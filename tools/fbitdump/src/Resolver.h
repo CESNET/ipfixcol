@@ -90,7 +90,7 @@ private:
 	bool configured;
 
 	std::map<uint32_t, std::string> dnsCache;
-	std::map<uint64_t, std::map<uint64_t, std::string>> dnsCache6;
+	std::map<uint64_t, std::map<uint64_t, std::string> > dnsCache6;
 
     /**
      * \brief Initialise resolver to use nameserver

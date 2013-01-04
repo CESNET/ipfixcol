@@ -44,13 +44,14 @@ AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 AC_CONFIG_SRCDIR([src/fbitdump.cpp])
 AC_CONFIG_HEADERS([config.h])
 
-RELEASE=2
+RELEASE=3
 AC_SUBST(RELEASE)
 
 # Initialization
+: ${CXXFLAGS=""}
+AM_CXXFLAGS="-Wall -O2"
 AC_LANG(C++)
 
-CXXFLAGS="-Wall -O2 -std=gnu++0x"
 CXX="g++"
 
 # Set user name and email for packaging purposes 
@@ -78,6 +79,10 @@ AC_PROG_INSTALL
 AC_PROG_RANLIB
 AC_PROG_AWK
 
+# Check for latest g++ standard
+LBR_SET_CXXSTD
+AM_CXXFLAGS="$AM_CXXFLAGS $CXXSTD"
+
 ############################ Check for libraries ###############################
 
 AC_SEARCH_LIBS([fastbit_init], [fastbit],,
@@ -95,9 +100,12 @@ AC_CHECK_FILE([/etc/protocols],[PROTOCOLS=yes], [PROTOCOLS=no])
 
 AC_ARG_ENABLE([debug], 
         AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
-        [CPPFLAGS="$CPPFLAGS -DDEBUG"
-        CXXFLAGS="$CXXFLAGS -Wextra -g"])
+        [AM_CPPFLAGS="$AM_CPPFLAGS -DDEBUG"
+        AM_CXXFLAGS="$AM_CXXFLAGS -Wextra -g -O0"])
 
+# Substitute compiler flags
+AC_SUBST([AM_CPPFLAGS])
+AC_SUBST([AM_CXXFLAGS])
 ######################### Checks for header files ##############################
 
 AC_HEADER_RESOLV
@@ -128,6 +136,10 @@ AC_FUNC_MKTIME
 AC_FUNC_REALLOC
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([htonl inet_ntop gmtime regcomp getline floor memmove memset regcomp select strchr strdup strerror strrchr strstr strtol strtoul strverscmp])
+AC_CHECK_DECL([htobe64], [AC_DEFINE([HAVE_HTOBE64], [1],
+                               [Define if macro htobe64 exists.])],,
+							   [[#include <endian.h>]])
+
 
 ############################### Set output #####################################
 
@@ -162,7 +174,7 @@ echo "
   Prefix........: $prefix
   Distribution..: $DISTRO
   Debug build...: ${enable_debug:-no}
-  C++ Compiler..: $CXX $CXXFLAGS $CPPFLAGS
+  C++ Compiler..: $CXX $AM_CXXFLAGS $CXXFLAGS $AM_CPPFLAGS $CPPFLAGS
   Linker........: $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
   xsltproc......: ${XSLTPROC:-NONE}
