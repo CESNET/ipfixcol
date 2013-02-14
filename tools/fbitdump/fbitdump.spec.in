@@ -11,8 +11,8 @@ Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 
 BuildRequires: gcc-c++ flex bison make doxygen graphviz pkgconfig
-Requires: fastbit-liberouter, libfastbit = ibis1.3.2.8
-BuildRequires: fastbit-liberouter-devel, libfastbit-devel = ibis1.3.2.8
+Requires: fastbit-liberouter, libfastbit = ibis1.3.5.1
+BuildRequires: fastbit-liberouter-devel, libfastbit-devel = ibis1.3.5.1
 
 %description
 Tool for displaying captured ipfix data in fastbit database format.

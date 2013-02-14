@@ -88,7 +88,7 @@ void * reorder_index(void * config){
 		if(conf->indexes == 1){ //build all indexes
 			MSG_DEBUG(MSG_MODULE,"Creating indexes: %s",dir.c_str());
 			index_table = ibis::table::create(dir.c_str());
-			index_table->buildIndexes();
+			index_table->buildIndexes(NULL);
 			delete index_table;
 		}
 		else if(conf->indexes == 2){ //build selected indexes
@@ -426,6 +426,9 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 			table_tmp->parse_template(ipfix_msg->data_couple[i].data_template, conf);
 			templates->insert(std::pair<uint16_t,template_table*>(template_id,table_tmp));
 			table = templates->find(template_id);
+
+			/* TODO check that the directory for template does not already exist */
+			//table->second->dir_check()
 		}
 
 		

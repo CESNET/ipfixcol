@@ -44,7 +44,7 @@ AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 AC_CONFIG_SRCDIR([src/fbitdump.cpp])
 AC_CONFIG_HEADERS([config.h])
 
-RELEASE=3
+RELEASE=4
 AC_SUBST(RELEASE)
 
 # Initialization
