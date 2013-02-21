@@ -143,19 +143,19 @@ void update_window_name(struct fastbit_config *conf){
 	std::stringstream ss;
 	static int flushed = 1;
 	struct tm * timeinfo;
-	char formated_time[15];
+	char formated_time[17];
 
 	// change window directory name!
 	if (conf->dump_name == PREFIX){
 		conf->window_dir = conf->prefix + "/";
-	}else if (conf->dump_name == INCREMENTAL){
+	} else if (conf->dump_name == INCREMENTAL) {
 		ss << std::setw(12) << std::setfill('0') << flushed;
 		conf->window_dir = conf->prefix + ss.str() + "/";
 		ss.str("");
 		flushed++;
-	}else{
+	} else {
 		timeinfo = localtime ( &(conf->last_flush));
-		strftime(formated_time,15,"%Y%m%d%H%M",timeinfo);
+		strftime(formated_time,17,"%Y%m%d%H%M%S",timeinfo);
 		conf->window_dir = conf->prefix + std::string(formated_time) + "/";
 	}
 
@@ -218,7 +218,7 @@ void flush_data(struct fastbit_config *conf, bool close){
 
 int process_startup_xml(char *params, struct fastbit_config* c){
 	struct tm * timeinfo;
-	char formated_time[15];
+	char formated_time[17];
 	std::string path,timeWindow,recordLimit,nameType,namePrefix,indexes,test,timeAligment;
 
 	pugi::xml_document doc;
@@ -300,7 +300,7 @@ int process_startup_xml(char *params, struct fastbit_config* c){
 				c->last_flush = ((c->last_flush/c->time_window) * c->time_window);
 			}
 			timeinfo = localtime ( &(c->last_flush));
-			strftime(formated_time,15,"%Y%m%d%H%M",timeinfo);
+			strftime(formated_time,17,"%Y%m%d%H%M%S",timeinfo);
 			c->window_dir = c->prefix + std::string(formated_time) + "/";
 		} else if (nameType == "incremental") {
 			time ( &(c->last_flush));

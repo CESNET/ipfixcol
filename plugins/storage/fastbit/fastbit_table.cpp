@@ -82,7 +82,6 @@ template_table::template_table(int template_id, uint32_t buff_size): _rows_count
 
 template_table::~template_table(){
 	for (el_it = elements.begin(); el_it!=elements.end(); ++el_it) {
-		(*el_it)->free_buffer();
 		delete (*el_it);
 	}
 
@@ -149,6 +148,7 @@ int template_table::dir_check(std::string path){
 int template_table::store(ipfix_data_set * data_set, std::string path){
 	uint8_t *data = data_set->records;
 	unsigned int record_cnt = 0;
+	uint16_t element_size = 0;
 	if (data == NULL){
 		return 0;
 	}
@@ -165,11 +165,11 @@ int template_table::store(ipfix_data_set * data_set, std::string path){
 		}
 		record_cnt++;
 		for (el_it = elements.begin(); el_it!=elements.end(); ++el_it) {
-			//CHECK DATA SIZE?!?
-			(*el_it)->fill(data);
 			//_tablex->append((*el_it)->name(), _rows_count, _rows_count+1, (*el_it)->value);
-			data += (*el_it)->size();
-			read_data += (*el_it)->size();
+			//CHECK DATA SIZE?!?
+			element_size = (*el_it)->fill(data);
+			data += element_size;
+			read_data += element_size;
 		}
 		_rows_count++;
 		if(_rows_count >= _buff_size){
@@ -265,6 +265,8 @@ int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_co
 				new_element = new el_text(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 				break;
 			case BLOB:
+				new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
+				break;
 			case UNKNOWN:
 			default:
 				MSG_DEBUG(MSG_MODULE,"Received UNKNOWN element (size: %u)",field->ie.length);

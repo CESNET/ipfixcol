@@ -106,19 +106,12 @@ protected:
 	int _buf_max; /* maximum number of items buffer can hold */
 	char *_buffer; /* items buffer */
 
-public:
-	/* points to elements data after fill() */
-	void *value;
-	element();
-	element(int size, int en, int id, uint32_t buf_size = RESERVED_SPACE);
-
-	/* get & set methods*/
 	/**
-	 * \brief Get method for element name
+	 * \brief Get method for element size
 	 *
-	 * @return Null terminated string with element name
+	 * @return element size
 	 */
-	char *name() {return _name;}
+	int size() { return _size; }
 
 	/**
 	 * \brief Set element name
@@ -128,58 +121,9 @@ public:
 	 *
 	 * @param en Enterprise number of element
 	 * @param id ID of information element
+	 * @param part Number of part (used for IPv6)
 	 */
-	void name(int en, int id){sprintf( _name,"e%iid%hi", en, id);}
-
-	/**
-		 * \brief Get method for element output_size
-		 *
-		 * @return element size
-		 */
-	virtual int output_size(){return _size;}
-
-	/**
-	 * \brief Get method for element size
-	 *
-	 * @return element size
-	 */
-	virtual int size(){return _size;}
-
-	/**
-	 * \brief Set element size
-	 *
-	 * Element size is used for parsing data records
-	 * so it must be set properly.
-	 *
-	 * @param size element size
-	 */
-	void size( int size) {_size = size;}
-
-	/**
-	 * \brief Set element type
-	 *
-	 * This sets which fastbit data type
-	 * is used for this element when its
-	 * stored to fastbit data base.
-	 *
-	 * @param type value of one fastbit data type for enum ibis::TYPE_T
-	 */
-	void type(enum ibis::TYPE_T type) {_type = type;}
-	enum ibis::TYPE_T type() {return _type;}
-
-	/* core methods */
-	/**
-	 * \brief fill internal element value according to given data
-	 *
-	 * This method transforms data from ipfix record to internal
-	 * value usable by fastbit. Number of bytes to read is specified by _size
-	 * variable. This method converts endianity. Data can be accesed by value pointer.
-	 *
-	 * @param data pointer to input data (usualy ipfix element)
-	 * @return 0 on succes
-	 * @return 1 on failure
-	 */
-	virtual int fill(uint8_t * data) {return 0;}
+	void setName(int en, int id, int part=-1);
 
 	/**
 	 * \brief Copy data and change byte order
@@ -197,18 +141,52 @@ public:
 
 	/**
 	 * \brief allocate memory for buffer
+	 *
+	 * @param count Number of elements that the buffer should hold
 	 */
 	void allocate_buffer(int count);
 
 	/**
 	 * \brief free memory for buffer
 	 */
-	void free_buffer();
+	virtual void free_buffer();
+
+	/**
+	 * \brief Append data to the buffer
+	 * @param data
+	 * @return 0 on success, 1 when buffer is full
+	 */
 	int append(void *data);
-	int append_str(void *data,int size);
 
-	int flush(std::string path);
+public:
+	virtual ~element() { free_buffer(); };
 
+	/* core methods */
+	/**
+	 * \brief fill internal element value according to given data
+	 *
+	 * This method transforms data from ipfix record to internal
+	 * value usable by fastbit. Number of bytes to read is specified by _size
+	 * variable. This method converts endianity. Data can be accesed by value pointer.
+	 *
+	 * @param data pointer to input data (usualy ipfix element)
+	 * @return size of the element read from the data
+	 */
+	virtual uint16_t fill(uint8_t * data) = 0;
+
+	/**
+	 * \brief Flush buffer content to file
+	 *
+	 * @param path of the file to write to
+	 * @return 0 on success, 1 otherwise
+	 */
+	virtual int flush(std::string path);
+
+	/**
+	 * \brief Return string with par information for -part.txt FastBit file
+	 *
+	 * @return string with part information
+	 */
 	std::string get_part_info();
 };
 
@@ -229,8 +207,10 @@ public:
 	 * @return 0 on succes
 	 * @return 1 on failure
 	 */
-	virtual int fill(uint8_t * data);
-	virtual int set_type();
+	virtual uint16_t fill(uint8_t * data);
+
+protected:
+	int set_type();
 };
 
 
@@ -257,11 +237,12 @@ public:
 	 * @return 0 on succes 
 	 * @return 1 on failure
 	 */
-	virtual int fill(uint8_t * data);
-	virtual int set_type();
+	virtual uint16_t fill(uint8_t * data);
+
+protected:
+	int set_type();
 };
 
-// TODO solve Variable-Length Information Elements
 class el_text : public element
 {
 private:
@@ -272,12 +253,21 @@ public:
 	//char *text_value;
 	el_text(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
 
-	virtual int set_type(){
+	virtual uint16_t fill(uint8_t * data);
+
+protected:
+	int set_type() {
 		_type=ibis::TEXT;
 		return 0;
 	}
-	virtual int fill(uint8_t * data);
-	virtual int size(){return _true_size + _offset;} //var. size element carries its size in 1-3 bytes (stored in _offset)
+
+	/**
+	 * \brief Append string to buffer
+	 * @param data Data to append
+	 * @param size size of data to append
+	 * @return 0 on success, 1 otherwise
+	 */
+	int append_str(void *data, int size);
 };
 
 
@@ -298,17 +288,48 @@ public:
 	 * @return 0 on succes
 	 * @return 1 on failure
 	 */
-	virtual int fill(uint8_t * data);
-	virtual int set_type();
+	virtual uint16_t fill(uint8_t * data);
+
+protected:
+	int set_type();
 };
 
 class el_blob : public element
 {
 public:
-	uint8_t uint_value;
 	el_blob(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
-	virtual int fill(uint8_t * data);
-	virtual int set_type();
+	virtual uint16_t fill(uint8_t * data);
+
+protected:
+	bool _var_size;
+	uint16_t _true_size;
+	uint8_t uint_value;
+
+	char *_sp_buffer;
+	uint16_t _sp_buffer_size;
+	uint16_t _sp_buffer_offset;
+
+	/**
+	 * \brief Function to free both buffers used by this class
+	 *
+	 * Calls parent function free_buffer
+	 */
+	virtual void free_buffer();
+
+	/**
+	 * \brief Overloaded flush function to write the sp buffer
+	 *
+	 * Calls parent funtion flush
+	 *
+	 * @param path to write the file to
+	 * @return 0 on success, 1 otherwise
+	 */
+	virtual int flush(std::string path);
+
+	int set_type(){
+		_type=ibis::BLOB;
+		return 0;
+	}
 };
 
 typedef union uinteger_union
@@ -322,8 +343,6 @@ typedef union uinteger_union
 class el_uint : public element
 {
 public:
-	uint_u uint_value;
-	uint _output_size;
 	el_uint(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
 	/* core methods */
 	/**
@@ -337,9 +356,13 @@ public:
 	 * @return 0 on succes
 	 * @return 1 on failure
 	 */
-	virtual int fill(uint8_t * data);
-	virtual int output_size(){return _output_size;}
-	virtual int set_type();
+	virtual uint16_t fill(uint8_t * data);
+
+protected:
+	uint_u uint_value;
+	uint16_t _real_size; /**< Element Size that was sent (can differ from storage _size) */
+
+	int set_type();
 };
 
 
@@ -349,6 +372,8 @@ class el_sint : public el_uint
 {
 public:
 	el_sint(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
-	virtual int set_type();
+
+protected:
+	int set_type();
 };
 #endif
