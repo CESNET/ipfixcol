@@ -425,7 +425,7 @@
 		<alias>%tunflags</alias>
 		<width>10</width>
 		<value type="plain">
-			<element>e16982id406</element>
+			<element semantics="tcpflags">e16982id406</element>
 		</value>
 	</column>
 	<column>
@@ -484,6 +484,23 @@
 			<element>e16982id413</element>
 		</value>
 	</column>
+	<column>
+		<name>TUN HOP</name>
+		<alias>%tunhop</alias>
+		<width>7</width>
+		<value type="plain">
+			<element>e16982id414</element>
+		</value>
+	</column>
+	<column>
+		<name>TTL</name>
+		<alias>%ttl</alias>
+		<width>3</width>
+		<value type="plain">
+			<element>e0id192</element>
+		</value>
+	</column>
+
 	<column>
 		<name>App PID</name>
 		<alias>%apppid</alias>
@@ -595,8 +612,13 @@
 	</format>
 	<format>
 		<formatName>tun</formatName>
-		<formatString>%ts %td %pr %sa4:%sp -> %da4:%dp %flg %pkt %byt %fl %tunsa6:%tunsp -> %tunda6:%tundp %tunproto %tuntype %tunflags %tunicmp %tunhdrs %tuntrls %tunsctry %tundctry %tunosctry %tunodctry</formatString>
+		<formatString>%ts %td %pr %sa4:%sp -> %da4:%dp %flg %pkt %byt %fl %tunsa6:%tunsp -> %tunda6:%tundp %tunproto %tuntype %tunflags %tunicmp %tunhdrs %tuntrls %tunsctry %tundctry %tunosctry %tunodctry %tunhop %ttl</formatString>
 	</format>
+	<format>
+		<formatName>tun2</formatName>
+		<formatString>%ts;%td;%pr;%sa4;%sp;%da4;%dp;%flg;%pkt;%byt;%fl;%tunsa6;%tunsp;%tunda6;%tundp;%tunproto;%tuntype;%tunflags;%tunicmp;%tunhdrs;%tuntrls;%tunsctry;%tundctry;%tunosctry;%tunodctry</formatString>
+	</format>
+
 	<format>
 		<formatName>app</formatName>
 		<formatString>%ts %td %pr %sa4:%sp -> %da4:%dp %flg %pkt %byt %fl %appname %apppid %appuid %appmatch</formatString>

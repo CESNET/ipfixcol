@@ -39,6 +39,7 @@
 
 #include "Values.h"
 #include "Utils.h"
+#include <iomanip>
 
 namespace fbitdump {
 
@@ -139,10 +140,20 @@ std::string Values::toString(bool plainNumbers) const
 		Utils::formatNumber(this->value[0].dbl, ss, plainNumbers);
 		valStr = ss.str();
 		break;
+	case ibis::BLOB:
+		ss << std::hex << std::setfill('0');
+
+		/* Convert the value to hexa */
+		for (uint64_t i=0; i < this->opaque.size(); i++) {
+			ss << std::setw(2) << static_cast<uint16_t>((this->opaque.address()[i]));
+		}
+
+		valStr = ss.str();
+		ss << std::dec << std::setfill(' ');
+		break;
 	case ibis::TEXT:
 	case ibis::CATEGORY:
 	case ibis::OID:
-	case ibis::BLOB:
 	case ibis::UNKNOWN_TYPE:
 		valStr = this->string;
 		break;

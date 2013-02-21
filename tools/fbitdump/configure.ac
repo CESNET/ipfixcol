@@ -39,12 +39,12 @@
 AC_PREREQ([2.60])
 
 # Process this file with autoconf to produce a configure script.
-AC_INIT([fbitdump], [0.3.3])
+AC_INIT([fbitdump], [0.3.4])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 AC_CONFIG_SRCDIR([src/fbitdump.cpp])
 AC_CONFIG_HEADERS([config.h])
 
-RELEASE=4
+RELEASE=1
 AC_SUBST(RELEASE)
 
 # Initialization

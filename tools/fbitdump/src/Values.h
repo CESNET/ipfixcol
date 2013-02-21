@@ -70,6 +70,7 @@ public:
 		double dbl;
 	} value[MAX_PARTS];
 	std::string string;
+	ibis::opaque opaque;
 
 	/**
 	 * \brief Convert value to int64_t type

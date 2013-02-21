@@ -141,7 +141,7 @@ bool Cursor::getColumn(std::string name, Values &value, int part) const
 	case ibis::OID:
 	case ibis::BLOB:
 		value.type = ibis::BLOB;
-		value.string = "TODO";
+		ret = this->cursor->getColumnAsOpaque(colNum, value.opaque);
 		break;
 	case ibis::UNKNOWN_TYPE:
 		/* column not found in DB */
