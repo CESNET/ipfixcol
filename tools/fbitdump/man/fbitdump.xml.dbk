@@ -146,7 +146,7 @@ Bytes per packet column. The column value is computed from number of bytes (%byt
 				</varlistentry>
 				<varlistentry>
 					<term>
-						<link xlink:href="http://www.liberouter.org/?page_id=825">http://www.liberouter.org/?page_id=825</link>
+						<link xlink:href="http://www.liberouter.org/technologies/ipfixcol/">http://www.liberouter.org/technologies/ipfixcol/</link>
 					</term>
 					<listitem>
 						<para>IPFIXcol Project Homepage</para>

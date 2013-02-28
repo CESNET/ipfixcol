@@ -88,7 +88,7 @@ void version ()
 {
 	printf ("%s: IPFIX Collector capture daemon.\n", PACKAGE);
 	printf ("Version: %s, Copyright (C) 2011 CESNET z.s.p.o.\n", VERSION);
-	printf ("See http://www.liberouter.org/?page_id=825 for more information.\n\n");
+	printf ("See http://www.liberouter.org/technologies/ipfixcol/ for more information.\n\n");
 }
 
 /**
