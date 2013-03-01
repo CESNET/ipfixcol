@@ -158,7 +158,6 @@ void update_window_name(struct fastbit_config *conf){
 		strftime(formated_time,17,"%Y%m%d%H%M%S",timeinfo);
 		conf->window_dir = conf->prefix + std::string(formated_time) + "/";
 	}
-
 }
 
 void flush_data(struct fastbit_config *conf, bool close){
@@ -309,7 +308,7 @@ int process_startup_xml(char *params, struct fastbit_config* c){
 		} else if (nameType == "prefix") {
 			time ( &(c->last_flush));
 			c->dump_name = PREFIX;
-			if(c->prefix ==""){
+			if (c->prefix == "") {
 				c->prefix == "fbitfiles";
 			}
 			c->window_dir = c->prefix + "/";
@@ -370,6 +369,10 @@ int storage_init (char *params, void **config){
 		MSG_ERROR(MSG_MODULE, "Unable to parse configuration xml!");
 		return 1;
 	}
+
+	/* On startup we expect to write to new directory */
+	c->new_dir = true;
+
 	return 0;
 }
 
@@ -426,21 +429,22 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 			table_tmp->parse_template(ipfix_msg->data_couple[i].data_template, conf);
 			templates->insert(std::pair<uint16_t,template_table*>(template_id,table_tmp));
 			table = templates->find(template_id);
-
-			/* TODO check that the directory for template does not already exist */
-			//table->second->dir_check()
+		} else {
+			// TODO check template time. On reception of a new template it is crucial to rewrite the old one.
 		}
 
 		
 		//should we create new window? 
-		if(conf->records_window != 0 && rcnt > conf->records_window){
+		if (conf->records_window != 0 && rcnt > conf->records_window) {
 			flush_data(conf, false);
 			time ( &(conf->last_flush));
 			update_window_name(conf);
 			dir = dir_hierarchy(conf,(*dom_id).first);
 			rcnt = 0;
+			conf->new_dir = true;
 		}
-		if(conf->time_window !=0){
+
+		if (conf->time_window != 0) {
 			time ( &rawtime );
 			if(difftime(rawtime,conf->last_flush) > conf->time_window){
 				flush_data(conf, false);
@@ -451,16 +455,19 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 				update_window_name(conf);
 				dir = dir_hierarchy(conf,(*dom_id).first);
 				rcnt = 0;
+				conf->new_dir = true;
 			}
 		}
 
 		/* store this data record */
-
-		rcFlows = (*table).second->store(ipfix_msg->data_couple[i].data_set, dir);
+		rcFlows = (*table).second->store(ipfix_msg->data_couple[i].data_set, dir, conf->new_dir);
 		rcFlowsSum += rcFlows;
 		rcnt += rcFlows;
 
 	}
+
+	/* We've told all tables that the directory has changed */
+	conf->new_dir = false;
 
 	if(rcFlowsSum){
 		conf->flowWatch->at(oid).addFlows(rcFlowsSum);

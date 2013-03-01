@@ -84,7 +84,10 @@ private:
 	uint32_t _min_record_size;
 	//ibis::tablex * _tablex;
 	char _name[10];
+	char _orig_name[10]; /**< saves the _name when renamed due to template collision*/
+	bool _new_dir; /**< Remember that the directory is supposed to be new */
 	char _index;
+
 public:
 	/* vector of elements stored in data record (based on template)
 	 * element polymorphs to necessary data type
@@ -106,12 +109,27 @@ public:
 	 *
 	 * @param data_set ipfixcol data set
 	 * @param path path to direcotry where should be data flushed
+	 * @param new_dir does the path lead to new directory?
 	 */
-	int store(ipfix_data_set * data_set, std::string path);
+	int store(ipfix_data_set * data_set, std::string path, bool new_dir);
 
 	int update_part(std::string path);
 
-	int dir_check(std::string path);
+	/**
+	 * \brief Checks that specified directory exists and creates it when not
+	 *
+	 * When new direcotry is expected and it already exists,
+	 * creates new direcotry suffixed with 'a', 'b', 'c', ...
+	 * whatever is the first unused one.
+	 *
+	 * Changes table property _name
+	 *
+	 * @param path to the directory to create
+	 * @param new_dir does the path lead to new directory?
+	 * @return 0 when directory is created, 1 when directory existed,
+	 * 	2 when directory cannot be created
+	 */
+	int dir_check(std::string path, bool new_dir);
 
 
 	void reset_rows(){

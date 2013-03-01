@@ -80,6 +80,8 @@ struct fastbit_config{
 	 * (0 = no record based rotation ) */
 	int records_window;
 
+	bool new_dir; /** Is current directory a new one? */
+
 	/* hold type of name strategy for storage directory rotation */
 	enum name_type dump_name;
 

@@ -185,7 +185,7 @@ uint16_t el_var_size::fill(uint8_t * data) {
 		_size = ntohs(*((uint16_t*) &data[1]));
 		_size+=3; //3 = 1 first byte with 256 and 2 bytes with true size
 	}
-	return 0;
+	return _size;
 }
 
 int el_var_size::set_type() {
@@ -266,13 +266,13 @@ int el_text::append_str(void *data, int size) {
 		_buffer = (char *) realloc(_buffer, _size * _buf_max);
 	}
 
-	memcpy(&(_buffer[_filled]),data,size);
+	memcpy(_buffer + _filled, data, size);
 
 	/* Set terminating character, just to be sure it is there */
 	_buffer[_filled + size] = '\0';
 
 	/* Get the real string length (data may contain more '\0' accidentally) */
-	_filled += strlen(_buffer +_filled) + 1;
+	_filled += strlen(_buffer + _filled) + 1;
 
 	return 0;
 }
@@ -481,7 +481,7 @@ uint16_t el_uint::fill(uint8_t * data) {
 		return 1;
 		break;
 	}
-	return _size;
+	return _real_size;
 }
 
 int el_uint::set_type() {
