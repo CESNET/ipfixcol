@@ -267,6 +267,9 @@ int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_co
 	_template_id = tmp->template_id;
 	//_record_size = tmp->data_length;
 
+	/* Save the time of the template transmission */
+	_last_transmission = tmp->last_transmission;
+
 	//Find elements
 	for(i=0;i<tmp->field_count + en_offset;i++){
 		field = &(tmp->fields[i]);

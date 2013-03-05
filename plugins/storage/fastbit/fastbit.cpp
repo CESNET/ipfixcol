@@ -160,11 +160,9 @@ void update_window_name(struct fastbit_config *conf){
 	}
 }
 
-void flush_data(struct fastbit_config *conf, bool close){
+void flush_data(struct fastbit_config *conf, uint32_t odid, std::map<uint16_t,template_table*> *templates, bool close) {
 	std::string dir;
-	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
 	std::map<uint16_t,template_table*>::iterator table;
-	std::map<uint16_t,template_table*> *templates = NULL;
 	int s;
 	pthread_t index_thread;
 	std::stringstream ss;
@@ -174,42 +172,41 @@ void flush_data(struct fastbit_config *conf, bool close){
 
 
 	sem_wait(&(conf->sem));
-	conf->dirs->clear();
-	for(dom_id = conf->ob_dom->begin(); dom_id!=conf->ob_dom->end();dom_id++){
+	{ /*  */
+		conf->dirs->clear();
 
-		MSG_DEBUG(MSG_MODULE,"Exported: %u Collected: %u",
-				conf->flowWatch->at((*dom_id).first).exportedFlows(),
-				conf->flowWatch->at((*dom_id).first).receivedFlows());
+		MSG_DEBUG(MSG_MODULE,"ODID [%u]: Exported: %u Collected: %u", odid,
+				conf->flowWatch->at(odid).exportedFlows(),
+				conf->flowWatch->at(odid).receivedFlows());
 
 
-		templates = (*dom_id).second;
-		dir = dir_hierarchy(conf,(*dom_id).first);
+		dir = dir_hierarchy(conf, odid);
 
-		for(table = templates->begin(); table!=templates->end();table++){
+		for (table = templates->begin(); table != templates->end();table++) {
 			conf->dirs->push_back(dir + ((*table).second)->name() + "/");
 			(*table).second->flush(dir);
 			(*table).second->reset_rows();
 		}
 
-		if(conf->flowWatch->at((*dom_id).first).write(dir) == -1){
+		if (conf->flowWatch->at(odid).write(dir) == -1) {
 			MSG_ERROR(MSG_MODULE,"Unable to write flows stats: %s", dir.c_str());
 		}
-		conf->flowWatch->at((*dom_id).first).reset();
+		conf->flowWatch->at(odid).reset();
 	}
 	sem_post(&(conf->sem));
 
 	s = pthread_create(&index_thread, NULL, reorder_index, conf);
-	if (s != 0){
+	if (s != 0) {
 		MSG_ERROR(MSG_MODULE,"pthread_create");
 	}
-	if(close){
+	if (close){
 		s = pthread_join(index_thread,NULL);
-		if (s != 0){
+		if (s != 0) {
 			MSG_ERROR(MSG_MODULE,"pthread_join");
 		}
-	}else{
+	} else {
 		s = pthread_detach(index_thread);
-		if (s != 0){
+		if (s != 0) {
 			MSG_ERROR(MSG_MODULE,"pthread_detach");
 		}
 	}
@@ -383,6 +380,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	std::map<uint16_t,template_table*>::iterator table;
 	struct fastbit_config *conf = (struct fastbit_config *) config;
 	std::map<uint16_t,template_table*> *templates = NULL;
+	std::map<uint16_t,template_table*> *old_templates = NULL; /* Templates to be removed */
 	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom = conf->ob_dom;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
 	static int rcnt = 0;
@@ -409,13 +407,13 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	dir = dir_hierarchy(conf,(*dom_id).first);
 
 	/* message from ipfixcol have maximum of 1023 data records */
-	for(i = 0 ; i < 1023; i++){ //TODO magic number! add constant to storage.h 
-		if(ipfix_msg->data_couple[i].data_set == NULL){
+	for (i = 0 ; i < 1023; i++) { //TODO magic number! add constant to storage.h
+		if (ipfix_msg->data_couple[i].data_set == NULL) {
 			//there are no more filled data_sets	
 			break;
 		}
 	
-		if(ipfix_msg->data_couple[i].data_template == NULL){
+		if (ipfix_msg->data_couple[i].data_template == NULL) {
 			//skip data without template!
 			continue;
 		}
@@ -423,20 +421,50 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 		template_id = ipfix_msg->data_couple[i].data_template->template_id;
 
 		/* if there is unknown template parse it and add it to template map */
-		if((table = templates->find(template_id)) == templates->end()){
+		if ((table = templates->find(template_id)) == templates->end()) {
 			MSG_DEBUG(MSG_MODULE,"Received new template: %hu", template_id);
 			template_table *table_tmp = new template_table(template_id, conf->buff_size);
 			table_tmp->parse_template(ipfix_msg->data_couple[i].data_template, conf);
 			templates->insert(std::pair<uint16_t,template_table*>(template_id,table_tmp));
 			table = templates->find(template_id);
 		} else {
-			// TODO check template time. On reception of a new template it is crucial to rewrite the old one.
+			/* Check template time. On reception of a new template it is crucial to rewrite the old one. */
+			if (ipfix_msg->data_couple[i].data_template->last_transmission > table->second->get_last_transmission()) {
+				MSG_DEBUG(MSG_MODULE,"Received new template with already used ODID: %hu", template_id);
+				//std::cout << "Template " << template_id << " time: " << ctime(&ipfix_msg->data_couple[i].data_template->last_transmission) << std::endl;
+
+				/* Init map for old template if necessary */
+				if (old_templates == NULL) old_templates = new std::map<uint16_t,template_table*>;
+
+				/* Store old template */
+				old_templates->insert(std::pair<uint16_t,template_table*>(table->first,table->second));
+
+				/* Flush data */
+				flush_data(conf, oid, old_templates, false);
+
+				/* Remove rewritten template */
+				delete table->second;
+				delete old_templates;
+				old_templates = NULL;
+
+				/* Remove old template from current list */
+				templates->erase(table);
+
+				/* Add the new template */
+				template_table *table_tmp = new template_table(template_id, conf->buff_size);
+				table_tmp->parse_template(ipfix_msg->data_couple[i].data_template, conf);
+				templates->insert(std::pair<uint16_t,template_table*>(template_id,table_tmp));
+				table = templates->find(template_id);
+
+				/* Do not save to the same directory */
+				conf->new_dir = true;
+			}
 		}
 
 		
 		//should we create new window? 
 		if (conf->records_window != 0 && rcnt > conf->records_window) {
-			flush_data(conf, false);
+			flush_data(conf, oid, templates, false);
 			time ( &(conf->last_flush));
 			update_window_name(conf);
 			dir = dir_hierarchy(conf,(*dom_id).first);
@@ -447,7 +475,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 		if (conf->time_window != 0) {
 			time ( &rawtime );
 			if(difftime(rawtime,conf->last_flush) > conf->time_window){
-				flush_data(conf, false);
+				flush_data(conf, oid, templates, false);
 				conf->last_flush = conf->last_flush + conf->time_window;
 				while(difftime(rawtime,conf->last_flush) > conf->time_window){
 					conf->last_flush = conf->last_flush + conf->time_window;
@@ -491,17 +519,20 @@ int storage_close (void **config){
 	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom = conf->ob_dom;
 	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
 
-	/* flush data to hdd */
-	flush_data(conf, true);
-
-	/* free config structure */
+	/* flush data, remove templates */
 	for(dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++){
-		templates = (*dom_id).second; 
+		/* flush data */
+		templates = (*dom_id).second;
+		flush_data(conf, (*dom_id).first, templates, true);
+
+		/* free templates */
 		for(table = templates->begin(); table!=templates->end();table++){
 			delete (*table).second;
 		}
 		delete (*dom_id).second;
 	}
+
+	/* free config structure */
 	delete ob_dom;
 	delete conf->index_en_id;
 	delete conf->dirs;

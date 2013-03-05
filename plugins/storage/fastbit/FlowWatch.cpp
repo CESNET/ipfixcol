@@ -39,6 +39,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <stdint.h>
 
 #include "FlowWatch.h"
 
@@ -110,18 +111,43 @@ FlowWatch::exportedFlows(){
 
 
 int
-FlowWatch::write(std::string dir){
-	 std::ofstream flowsFile;
+FlowWatch::write(std::string dir) {
+	std::ofstream flowsFile;
+	std::ifstream iFlowsFile;
+	std::string fileName, tmp;
+	uint32_t exported = 0, received = 0;
 
-	 flowsFile.open((dir + "flowsStats.txt").c_str());
-	 if(flowsFile.is_open()){
-		 flowsFile << "Exported flows: "<< exportedFlows() << std::endl;
-		 flowsFile << "Received flows: "<< receivedFlows() << std::endl;
-		 flowsFile << "Lost flows: "<< exportedFlows() - receivedFlows() << std::endl;
-	 	 flowsFile.close();
-	 	 return 0;
-	 }
-	 return -1;
+	/* Create filename */
+	fileName = dir + "flowsStats.txt";
+
+	iFlowsFile.open(fileName.c_str(), std::ios_base::in);
+
+	/* Get current stats */
+	if (iFlowsFile.is_open()) {
+		/* Read the first two lines containing numbers */
+		std::getline(iFlowsFile, tmp, ':');
+		iFlowsFile >> exported;
+
+		std::getline(iFlowsFile, tmp, ':');
+		iFlowsFile >> received;
+
+		iFlowsFile.close();
+	}
+
+	/* Write updated stats */
+	flowsFile.open(fileName.c_str(), std::ios_base::trunc | std::ios_base::out);
+
+	exported += exportedFlows();
+	received += receivedFlows();
+
+	if(flowsFile.is_open()){
+		flowsFile << "Exported flows: "<< exported << std::endl;
+		flowsFile << "Received flows: "<< received << std::endl;
+		flowsFile << "Lost flows: "<< exported - received << std::endl;
+		flowsFile.close();
+		return 0;
+	}
+	return -1;
 }
 
 uint

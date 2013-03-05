@@ -87,6 +87,7 @@ private:
 	char _orig_name[10]; /**< saves the _name when renamed due to template collision*/
 	bool _new_dir; /**< Remember that the directory is supposed to be new */
 	char _index;
+	time_t _last_transmission; /**< Last transmission of the template. Used to detect changes. */
 
 public:
 	/* vector of elements stored in data record (based on template)
@@ -132,7 +133,7 @@ public:
 	int dir_check(std::string path, bool new_dir);
 
 
-	void reset_rows(){
+	void reset_rows() {
 		_rows_in_window = 0;
 	}
 
@@ -142,6 +143,10 @@ public:
 	 * @param path path to direcotry where should be data flushed
 	 */
 	void flush(std::string path);
+
+	time_t get_last_transmission() {
+		return _last_transmission;
+	}
 
 	~template_table();
 };
