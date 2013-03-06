@@ -43,7 +43,8 @@
 
 #include "FlowWatch.h"
 
-FlowWatch::FlowWatch() {
+FlowWatch::FlowWatch()
+{
 	recFlows_ = 0;
 	lastFlows_ = 0;
 	lastSQ_ = 0;
@@ -51,8 +52,8 @@ FlowWatch::FlowWatch() {
 	reseted = true;
 }
 
-void
-FlowWatch::reset(){
+void FlowWatch::reset()
+{
 	reseted = true;
 	recFlows_ = 0;
 	lastFlows_ = 0;
@@ -60,58 +61,58 @@ FlowWatch::reset(){
 	firstSQ_ = 0;
 }
 
-void
-FlowWatch::updateSQ(uint SQ){
-	if(reseted == true){
+void FlowWatch::updateSQ(uint SQ)
+{
+	if (reseted == true) {
 		firstSQ_ = lastSQ_ = SQ;
 		reseted = false;
-	}else{
-		if(SQ < firstSQ_){
+	} else {
+		if (SQ < firstSQ_) {
 			//detect SQ reset (modulo 2^32)
-			if(firstSQ_ > SQ_TOP_LIMIT && SQ < SQ_BOT_LIMIT){
+			if(firstSQ_ > SQ_TOP_LIMIT && SQ < SQ_BOT_LIMIT) {
 				//is this first packet with reseted SQ?
-				if(lastSQ_ < SQ_BOT_LIMIT){
-					if(lastSQ_ < SQ){
+				if(lastSQ_ < SQ_BOT_LIMIT) {
+					if(lastSQ_ < SQ) {
 						lastSQ_ = SQ;
 					}
-				}else{
+				} else {
 					lastSQ_ = SQ;
 				}
 			}
 			//first packet or out of order packet with lesser SQ
 			firstSQ_ = SQ;
 		}
-		if(SQ > lastSQ_){
+		if (SQ > lastSQ_) {
 			if(lastSQ_ < SQ_BOT_LIMIT && SQ > SQ_TOP_LIMIT){
 				//do nothing out of order packet with SQ num before SQ reset
-			}else{
+			} else {
 				lastSQ_ = SQ;
 			}
 		}
 	}
 }
 
-void
-FlowWatch::addFlows(uint recFlows){
+void FlowWatch::addFlows(uint recFlows)
+{
 	lastFlows_ = recFlows;
 	recFlows_ += recFlows;
 }
 
-uint
-FlowWatch::exportedFlows(){
+uint FlowWatch::exportedFlows()
+{
 	uint expFlows;
-	if(lastSQ_ < firstSQ_){
+	if (lastSQ_ < firstSQ_) {
 		expFlows = SQ_MAX - firstSQ_;
 		expFlows += lastSQ_;
-	}else{
+	} else {
 		expFlows = lastSQ_ - firstSQ_;
 	}
-	return expFlows +lastFlows_;
+	return expFlows + lastFlows_;
 }
 
 
-int
-FlowWatch::write(std::string dir) {
+int FlowWatch::write(std::string dir)
+{
 	std::ofstream flowsFile;
 	std::ifstream iFlowsFile;
 	std::string fileName, tmp;
@@ -140,7 +141,7 @@ FlowWatch::write(std::string dir) {
 	exported += exportedFlows();
 	received += receivedFlows();
 
-	if(flowsFile.is_open()){
+	if (flowsFile.is_open()) {
 		flowsFile << "Exported flows: "<< exported << std::endl;
 		flowsFile << "Received flows: "<< received << std::endl;
 		flowsFile << "Lost flows: "<< exported - received << std::endl;
@@ -150,12 +151,11 @@ FlowWatch::write(std::string dir) {
 	return -1;
 }
 
-uint
-FlowWatch::receivedFlows(){
+uint FlowWatch::receivedFlows()
+{
 	return recFlows_;
 }
 
 
-FlowWatch::~FlowWatch() {
-}
+FlowWatch::~FlowWatch() {}
 

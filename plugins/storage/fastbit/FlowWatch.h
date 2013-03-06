@@ -47,7 +47,7 @@ class FlowWatch {
 	uint firstSQ_;
 	uint lastSQ_;
 	uint recFlows_;
-	uint lastFlows_;
+	uint lastFlows_; /**< Number of flows in the last packet */
 	bool reseted;
 public:
 	void updateSQ(uint sq);
