@@ -2149,7 +2149,13 @@
 		<dataType>string</dataType>
 		<semantic>identifier</semantic>
 	</element>
-
+	<element>
+		<enterprise>16982</enterprise>
+		<id>414</id>
+		<name>tunnelHOPLimit</name>
+		<dataType>unsigned8</dataType>
+		<semantic>identifier</semantic>
+	</element>
 	<element>
 		<enterprise>16982</enterprise>
 		<id>200</id>
