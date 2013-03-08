@@ -123,8 +123,11 @@ int template_table::update_part(std::string path){
 int template_table::dir_check(std::string path, bool new_dir) {
 	size_t pos;
 
+	/* Creating directory, unset the _new_dir property */
+	this->_new_dir = false;
+
 	//std::cout << "PATTH CHECK: \"" << path << "\"\n";
-	if(mkdir(path.c_str(), 0777) != 0){
+	if(mkdir(path.c_str(), 0777) != 0) {
 		if(errno == EEXIST) { /* dir already exists */
 			if (new_dir) {
 				/* Rename the table */
@@ -147,9 +150,6 @@ int template_table::dir_check(std::string path, bool new_dir) {
 					/* Update the path */
 					path[path.length()-1]++;
 				}
-
-				/* Unset the _new_dir property */
-				this->_new_dir = false;
 
 				return this->dir_check(path.c_str(), true);
 			}
@@ -185,6 +185,7 @@ int template_table::store(ipfix_data_set * data_set, std::string path, bool new_
 	uint8_t *data = data_set->records;
 	unsigned int record_cnt = 0;
 	uint16_t element_size = 0;
+
 	if (data == NULL){
 		return 0;
 	}
@@ -248,6 +249,12 @@ void template_table::flush(std::string path)
 	//_tablex->clearData();
 	_rows_count = 0;
 	_rows_in_window = 0;
+
+	/* Data on the disk are consistent. Try to go back to original name */
+	if (this->_orig_name[0] != '\0') {
+		strcpy(this->_name, this->_orig_name);
+		this->_orig_name[0] = '\0';
+	}
 }
 
 int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_config * config){

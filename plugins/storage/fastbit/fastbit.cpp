@@ -464,7 +464,13 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 		
 		//should we create new window? 
 		if (conf->records_window != 0 && rcnt > conf->records_window) {
-			flush_data(conf, oid, templates, false);
+			/* Flush data for all ODID */
+			for(dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++){
+				/* flush data */
+				flush_data(conf, (*dom_id).first, (*dom_id).second, false);
+			}
+
+//			flush_data(conf, oid, templates, false);
 			time ( &(conf->last_flush));
 			update_window_name(conf);
 			dir = dir_hierarchy(conf,(*dom_id).first);
@@ -475,7 +481,13 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 		if (conf->time_window != 0) {
 			time ( &rawtime );
 			if(difftime(rawtime,conf->last_flush) > conf->time_window){
-				flush_data(conf, oid, templates, false);
+				/* Flush data for all ODID */
+				for(dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++){
+					/* flush data */
+					flush_data(conf, (*dom_id).first, (*dom_id).second, false);
+				}
+
+//				flush_data(conf, oid, templates, false);
 				conf->last_flush = conf->last_flush + conf->time_window;
 				while(difftime(rawtime,conf->last_flush) > conf->time_window){
 					conf->last_flush = conf->last_flush + conf->time_window;
