@@ -364,6 +364,24 @@
 		</value>
 	</column>
 	<column>
+		<name>HTTP ST</name>
+		<alias>%httpst</alias>
+		<width>7</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id106</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP HC</name>
+		<alias>%httphc</alias>
+		<width>7</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id107</element>
+		</value>
+	</column>
+	<column>
 		<name>TUN Src IPv6</name>
 		<alias>%tunsa6</alias>
 		<alias>%tunsrcip6</alias>
@@ -604,11 +622,11 @@
 	</format>
 	<format>
 		<formatName>http</formatName>
-		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %sa6 %da6 %flg %pkt %byt %fl %httpua %httpm %httpd %httpurl %httpr %httpct</formatString>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %sa6 %da6 %flg %pkt %byt %fl %httpua %httpm %httpd %httpurl %httpr %httpct %httpst %httphc</formatString>
 	</format>
 	<format>
 		<formatName>http4</formatName>
-		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %flg %pkt %byt %fl %httpua %httpm %httpd %httpurl %httpr %httpct</formatString>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %flg %pkt %byt %fl %httpua %httpm %httpd %httpurl %httpr %httpct %httpst %httphc</formatString>
 	</format>
 	<format>
 		<formatName>tun</formatName>
@@ -616,7 +634,7 @@
 	</format>
 	<format>
 		<formatName>tun2</formatName>
-		<formatString>%ts;%td;%pr;%sa4;%sp;%da4;%dp;%flg;%pkt;%byt;%fl;%tunsa6;%tunsp;%tunda6;%tundp;%tunproto;%tuntype;%tunflags;%tunicmp;%tunhdrs;%tuntrls;%tunsctry;%tundctry;%tunosctry;%tunodctry</formatString>
+		<formatString>%ts;%td;%pr;%sa4;%sp;%da4;%dp;%flg;%pkt;%byt;%fl;%tunsa6;%tunsp;%tunda6;%tundp;%tunproto;%tuntype;%tunflags;%tunicmp;%tunhdrs;%tuntrls;%tunsctry;%tundctry;%tunosctry;%tunodctry;%tunhop;%ttl</formatString>
 	</format>
 
 	<format>

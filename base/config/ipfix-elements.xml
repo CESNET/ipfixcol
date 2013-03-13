@@ -2053,6 +2053,20 @@
 	</element>
 	<element>
 		<enterprise>16982</enterprise>
+		<id>106</id>
+		<name>HTTPStatus</name>
+		<dataType>unsigned16</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>16982</enterprise>
+		<id>107</id>
+		<name>HTTPHeaderCount</name>
+		<dataType>unsigned8</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>16982</enterprise>
 		<id>400</id>
 		<name>tunnelSrcIPv6</name>
 		<dataType>ipv6Address</dataType>
