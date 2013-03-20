@@ -318,7 +318,8 @@ void Configuration::searchForTableParts(stringVector &tables) throw (std::invali
 
 		d = opendir(tables[i].c_str());
 		if (d == NULL) {
-			throw std::invalid_argument("Cannot open directory \"" + tables[i] + "\"");
+			std::cerr << "Cannot open directory \"" << tables[i] << "\"" << std::endl;
+			continue;
 		}
 
 		while((dent = readdir(d)) != NULL) {
