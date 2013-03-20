@@ -340,6 +340,14 @@ private:
      */
     void loadOutputFormat() throw (std::invalid_argument);
 
+    /**
+     * \brief Check that a directory exists and push it into the list if it does
+     *
+     * @param dir Directory to push
+     * @param list Vector to push the directory into
+     */
+    void pushCheckDir(std::string &dir, std::vector<std::string> &list);
+
     stringVector parts;                 /**< Fastbit parts paths to be used*/
     stringSet aggregateColumnsAliases;  /**< Aggregate columns aliases set */
 	uint64_t maxRecords;                /**< Limit number of printed records */

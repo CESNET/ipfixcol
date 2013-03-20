@@ -78,7 +78,7 @@ AC_CHECK_LIB([xml2], [main],
     CFLAGS="`xml2-config --cflags` $CFLAGS"],
     AC_MSG_ERROR([Libxml2 not found ]))
     
-### LibXML2 ###
+### RRD library ###
 AC_SEARCH_LIBS([rrd_create], [rrd],, AC_MSG_ERROR([librrd not found]))
 
 ###################### Check for configure parameters ##########################
@@ -143,7 +143,7 @@ echo "
   $PACKAGE_NAME version $PACKAGE_VERSION
   Prefix........: $prefix
   Distribution..: $DISTRO
-  C++ Compiler..: $CXX $CXXFLAGS $CPPFLAGS
+  C Compiler....: $CC $CFLAGS $CPPFLAGS
   Linker........: $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
   xsltproc......: ${XSLTPROC:-NONE}

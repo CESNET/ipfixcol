@@ -677,6 +677,15 @@ Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(fa
 {
 }
 
+void Configuration::pushCheckDir(std::string &dir, std::vector<std::string> &list)
+{
+	if (!access(dir.c_str(), F_OK)) {
+		list.push_back(dir);
+	} else {
+		std::cerr << "Cannot open directory \"" << dir << "\"" << std::endl;
+	}
+}
+
 void Configuration::processMOption(stringVector &tables, const char *optarg, std::string &optionr)
 {
 	if (optionr.empty()) {
@@ -710,15 +719,17 @@ void Configuration::processMOption(stringVector &tables, const char *optarg, std
 		std::string dir(dname);
 		dir += bname.substr(found + 1, last_pos - found);
 		Utils::sanitizePath(dir);
-		dirs.push_back(dir);
+
+		this->pushCheckDir(dir, dirs);
+
 		bname.resize(found);
 
 		last_pos = found - 1;
 	}
 	/* don't forget last directory */
-	dirs.push_back(dname + bname.substr(0, found));
-	Utils::sanitizePath(dirs[dirs.size()-1]);
-
+	std::string dir(dname + bname.substr(0, found));
+	Utils::sanitizePath(dir);
+	this->pushCheckDir(dir, dirs);
 
 	/* process the -r option */
 	found = optionr.find(':');
