@@ -6,4 +6,5 @@ SUBDIRS = base \
 	tools/fbitconvert \
 	tools/fbitdump \
 	plugins/storage/fastbit \
-	plugins/storage/postgres
+	plugins/storage/postgres \
+	plugins/storage/unirec

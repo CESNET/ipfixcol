@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2008-2012</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>3 July 2012</date>
+		<authorgroup>
+			<author>
+				<personname>
+					<firstname>Petr</firstname>
+					<surname>Velan</surname>
+				</personname>
+				<email>petr.velan@cesnet.cz</email>
+				<contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol-unirec-output</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">UniRec output plugin for IPFIXcol.</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>ipfixcol-unirec-output</refname>
+		<refpurpose>UniRec output plugin for IPFIXcol.</refpurpose>
+	</refnamediv>
+	
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+			The <command>ipfix-unirec-output</command> plugin is an optional part of IPFIXcol (IPFIX collector) framework.
+		</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Configuration</title>
+		<simpara>There are two configuration XML files for ipfixcol that affects plugin usage.
+		First one is internal configuration XML (<filename>/etc/ipfixcol/internalcfg.xml</filename>) where are list of all available plugins for the collecor. 
+		UniRec plugin must be specified here to be usable.
+		</simpara>
+		<simpara><filename>internalcfg.xml</filename> unirec example</simpara>
+		<programlisting>
+	<![CDATA[
+	<storagePlugin>
+		<fileFormat>unirec</fileFormat>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-unirec-output.so</file>
+		<threadName>unirec</threadName>
+	</storagePlugin>
+	]]>
+		</programlisting>
+		<para></para>
+		
+		<simpara>The collector must be configured to use unirec output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
+		The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves. 
+		</simpara>
+		<simpara><filename>startup.xml</filename> unirec example</simpara>
+		<programlisting>
+	<![CDATA[
+	<destination>
+		<name>make unirec from the flow data</name>
+		<fileWriter>
+			<fileFormat>unirec</fileFormat>
+			<IPProtocol>4</IPProtocol>
+			<remoteIPAddress>localhost</remoteIPAddress>
+			<remotePort>3000</remotePort>
+			<timeout>60</timeout>
+			<format>SRC_IP;DST_IP;SRC_PORT;DST_PORT;PROTO;?TCP_FLAGS;?URL</format>
+		</fileWriter>
+	</destination>
+	]]>
+		</programlisting>
+	
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term><command>fileFormat</command></term>
+					<listitem>
+						<simpara>Same as in <filename>internalcfg.xml</filename> file.</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>IPProto</command></term>
+					<listitem>
+						<simpara>IP protocol to use. Possible values are 4, 6 and 64 (6 with IPv4 address mapping).</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>remoteIPAddress</command></term>
+					<listitem>
+						<simpara>IP address or hostname of remote site.</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>remoteIPAddress</command></term>
+					<listitem>
+						<simpara>IP address or hostname of the remote site.</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>remotePort</command></term>
+					<listitem>
+						<simpara>TCP port of the remote site.</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>timeout</command></term>
+					<listitem>
+						<simpara>Timeout before next reconnection attempt.</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>format</command></term>
+					<listitem>
+						<simpara>UniRec format specification of the export format.</simpara>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org/technologies/ipfixcol/">http://www.liberouter.org/technologies/ipfixcol/</link>
+					</term>
+					<listitem>
+						<para>IPFIXcol Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>
