@@ -80,7 +80,7 @@
 	</destination>
 	]]>
 		</programlisting>
-	
+
 		<para>
 			<variablelist>
 				<varlistentry>
@@ -122,11 +122,16 @@
 				<varlistentry>
 					<term><command>format</command></term>
 					<listitem>
-						<simpara>UniRec format specification of the export format.</simpara>
+						<simpara>UniRec format specification of the export format. The variable length elements must be the last ones.</simpara>
 					</listitem>
 				</varlistentry>
 			</variablelist>
 		</para>
+
+		<para></para>
+		<simpara>Elements that can be used in <command>format</command> are defined in <filename>/usr/share/ipfixcol/plugins/unirec-elements.xml</filename> configuration file. Name of the element is used in format string, datatype defines the length of the element (-1 is for variable length element). Ipfix_ident serves to map IPFIX elements to UniRec elements. Multiple comma separated IPFIX elements can be used for one UniRec element.
+		</simpara>
+
 	</refsect1>
 
 	<refsect1>
