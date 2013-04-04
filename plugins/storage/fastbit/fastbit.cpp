@@ -455,9 +455,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 				table_tmp->parse_template(ipfix_msg->data_couple[i].data_template, conf);
 				templates->insert(std::pair<uint16_t,template_table*>(template_id,table_tmp));
 				table = templates->find(template_id);
-
-				/* Do not save to the same directory */
-				conf->new_dir = true;
+				/* New template was created, it creates new directory if necessary */
 			}
 		}
 
@@ -470,7 +468,6 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 				flush_data(conf, (*dom_id).first, (*dom_id).second, false);
 			}
 
-//			flush_data(conf, oid, templates, false);
 			time ( &(conf->last_flush));
 			update_window_name(conf);
 			dir = dir_hierarchy(conf,(*dom_id).first);
@@ -487,7 +484,6 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 					flush_data(conf, (*dom_id).first, (*dom_id).second, false);
 				}
 
-//				flush_data(conf, oid, templates, false);
 				conf->last_flush = conf->last_flush + conf->time_window;
 				while(difftime(rawtime,conf->last_flush) > conf->time_window){
 					conf->last_flush = conf->last_flush + conf->time_window;

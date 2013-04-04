@@ -50,7 +50,7 @@ AC_CONFIG_HEADERS([config.h])
 # Initialization
 CXXFLAGS="-Wall"
 
-RELEASE=2
+RELEASE=3
 AC_SUBST(RELEASE)
 
 # Set user name and email for packaging purposes 

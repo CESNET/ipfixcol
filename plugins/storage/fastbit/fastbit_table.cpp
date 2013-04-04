@@ -130,6 +130,7 @@ int template_table::dir_check(std::string path, bool new_dir) {
 	if(mkdir(path.c_str(), 0777) != 0) {
 		if(errno == EEXIST) { /* dir already exists */
 			if (new_dir) {
+
 				/* Rename the table */
 				int len = strlen(this->_name);
 
@@ -186,12 +187,17 @@ int template_table::store(ipfix_data_set * data_set, std::string path, bool new_
 	unsigned int record_cnt = 0;
 	uint16_t element_size = 0;
 
-	if (data == NULL){
+	if (data == NULL) {
 		return 0;
 	}
 
 	/* When opening new directory, go back to original name (the duplicity should be gone) */
 	if (new_dir && this->_orig_name[0] != '\0') {
+
+		if (this->_rows_in_window > this->_rows_count)	{
+			MSG_WARNING(MSG_MODULE, "Renaming partially stored template. File a bug report.");
+		}
+
 		strcpy(this->_name, this->_orig_name);
 		this->_orig_name[0] = '\0';
 	}
@@ -235,8 +241,7 @@ int template_table::store(ipfix_data_set * data_set, std::string path, bool new_
 }
 
 void template_table::flush(std::string path)
-{
-	//check directory!
+{	//check directory!
 	_rows_in_window += _rows_count;
 	this->dir_check(path + _name, this->_new_dir);
 	//flush data
