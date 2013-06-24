@@ -76,6 +76,8 @@ static char *msg_module = "UDP input";
 struct input_info_list {
 	struct input_info_network info;
 	struct input_info_list *next;
+	uint32_t last_sent;
+	uint16_t packets_sent;
 };
 
 /**
@@ -295,6 +297,12 @@ out:
     return retval;
 }
 
+static uint16_t element_id[20]={\
+		8, 12, 15, 10, 14, 2, 1, 22, 21, 7, 11, 210, 6, 4, 5, 16, 17, 210, 210, 210\
+};
+static uint16_t element_len[20]={\
+		4, 4, 4, 2, 2, 4, 4, 4, 4, 2, 2, 1, 1, 1, 1, 2, 2, 1, 1, 2\
+};
 
 /**
  * \brief Pass input data from the input plugin into the ipfixcol core.
@@ -322,7 +330,6 @@ int get_packet(void *config, struct input_info **info, char **packet)
     if (*packet == NULL) {
         *packet = malloc(BUFF_LEN*sizeof(char));
     }
-
     /* receive packet */
     length = recvfrom(sock, *packet, BUFF_LEN, 0, (struct sockaddr*) &address, &addr_length);
     if (length == -1) {
@@ -332,7 +339,87 @@ int get_packet(void *config, struct input_info **info, char **packet)
     	MSG_ERROR(msg_module, "Failed to receive packet: %s", strerror(errno));
         return INPUT_ERROR;
     }
+    struct ipfix_header *header = (struct ipfix_header *) *packet;
+    /* Netflow v9 packet */
+    if (header->version == htons(9)) {
+    	header->version = htons(IPFIX_VERSION);
+    	memmove(*packet+4, *packet+8, BUFF_LEN-8);
+    	memset(*packet+BUFF_LEN-8, 0, 4);
+    	(header->length)++;
+    	uint8_t *p =  *packet + IPFIX_HEADER_LENGTH;
+    	struct ipfix_set_header *set_header;
+    	while (p < (uint8_t*) *packet + ntohs(header->length)) {
+    	    set_header = (struct ipfix_set_header*) p;
+    	    switch (ntohs(set_header->flowset_id)) {
+    	        case 0:
+    	        	set_header->flowset_id = htons(IPFIX_TEMPLATE_FLOWSET_ID);
+    	            break;
+    	        case 1:
+    	        	set_header->flowset_id = htons(IPFIX_OPTION_FLOWSET_ID);
+    	            break;
+    	        default:
+    	        	break;
+    	    }
+  	        if (ntohs(set_header->length) == 0) {
+  	        	break;
+   	        }
+   	        p += ntohs(set_header->length);
+   	    }
 
+    /* Netflow v5 */
+    } else if (header->version == htons(5)) {
+    	header->version = htons(IPFIX_VERSION);
+    	header->export_time = header->sequence_number;
+    	memmove(*packet+8, *packet+16, BUFF_LEN-16);
+    	memmove(*packet+12, *packet+13, 1);
+    	header->observation_domain_id=header->observation_domain_id&(0xF000);
+    	header->length = htons(IPFIX_HEADER_LENGTH);
+    	/* Creating Template Set according to conf->info_list->info.template_life_packet
+    	 * and template_life_time */
+    	uint32_t last = 0;
+    	if (conf->info_list != NULL) {
+    		if (conf->info_list->packets_sent == strtol(conf->info_list->info.template_life_packet, NULL, 10)) {
+    			last = ntohl(header->export_time);
+    		} else {
+    			last = conf->info_list->last_sent + strtol(conf->info_list->info.template_life_time, NULL, 10);
+    			conf->info_list->packets_sent++;
+    		}
+    	}
+    	if (last <= ntohl(header->export_time)) {
+    		memmove(*packet+IPFIX_HEADER_LENGTH+92, *packet+IPFIX_HEADER_LENGTH, BUFF_LEN-102);
+    		struct ipfix_set_header *set_header;
+//    		SET ID, SET LENGTH
+    		set_header = (struct ipfix_set_header*) (*packet + IPFIX_HEADER_LENGTH);
+    		set_header->flowset_id = htons(IPFIX_TEMPLATE_FLOWSET_ID);
+    		set_header->length = htons(88);
+//    		Template ID, Number of Fields
+    		set_header = (struct ipfix_set_header*) (*packet + IPFIX_HEADER_LENGTH + 4);
+    		set_header->flowset_id = htons(IPFIX_MIN_RECORD_FLOWSET_ID);
+    		set_header->length = htons(20);
+//    		Fill in Template Set
+    		uint8_t i = 0;
+    		for (i = 0; i < 20; i++) {
+    			set_header = (struct ipfix_set_header*) (*packet + IPFIX_HEADER_LENGTH +4*(i+2));
+    			set_header->flowset_id=htons(element_id[i]);
+    			set_header->length=htons(element_len[i]);
+    		}
+    		set_header = (struct ipfix_set_header*) (*packet + IPFIX_HEADER_LENGTH +88);
+    		set_header->flowset_id=htons(IPFIX_MIN_RECORD_FLOWSET_ID);
+    		set_header->length=htons(52);
+    		header->length=htons(IPFIX_HEADER_LENGTH + 88 + 52);
+    		if (conf->info_list != NULL) {
+    			conf->info_list->last_sent = ntohl(header->export_time);
+    			conf->info_list->packets_sent = 1;
+    		}
+    	} else {
+    		memmove(*packet+IPFIX_HEADER_LENGTH + 4, *packet+IPFIX_HEADER_LENGTH, BUFF_LEN-20);
+    		struct ipfix_set_header *set_header;
+    		set_header = (struct ipfix_set_header*) (*packet+IPFIX_HEADER_LENGTH);
+    		set_header->flowset_id=htons(IPFIX_MIN_RECORD_FLOWSET_ID);
+    		set_header->length=htons(52);
+    		header->length=htons(IPFIX_HEADER_LENGTH + 52);
+    	}
+    }
     /* go through input_info_list */
     for (info_list = conf->info_list; info_list != NULL; info_list = info_list->next) {
     	/* ports must match */
@@ -380,6 +467,8 @@ int get_packet(void *config, struct input_info **info, char **packet)
 
     	/* add to list */
     	info_list->next = conf->info_list;
+    	info_list->last_sent = header->export_time;
+    	info_list->packets_sent = 1;
     	conf->info_list = info_list;
     }
     /* pass info to the collector */
