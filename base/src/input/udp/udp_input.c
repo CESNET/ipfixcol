@@ -69,6 +69,76 @@
 /** Identifier to MSG_* macros */
 static char *msg_module = "UDP input";
 
+/** Netflow v5 and v9 identifiers */
+#define NETFLOW_V5_VERSION 5
+#define NETFLOW_V9_VERSION 9
+
+#define NETFLOW_V5_TEMPLATE_LEN 88
+#define NETFLOW_V5_DATA_SET_LEN 52
+#define NETFLOW_V5_NUM_OF_FIELDS 20
+
+#define NETFLOW_V9_TEMPLATE_SET_ID 0
+#define NETFLOW_V9_OPT_TEMPLATE_SET_ID 1
+
+/** IPFIX Element IDs used when creating Template Set */
+#define SRC_IPV4_ADDR 8
+#define DST_IPV4_ADDR 12
+#define NEXTHOP_IPV4_ADDR 15
+#define INGRESS_INTERFACE 10
+#define EGRESS_INTERFACE 14
+#define PACKETS 2
+#define OCTETS 1
+#define FLOW_START 22
+#define FLOW_END 21
+#define SRC_PORT 7
+#define DST_PORT 11
+#define PADDING 210
+#define TCP_FLAGS 6
+#define PROTO 4
+#define TOS 5
+#define SRC_AS 16
+#define DST_AS 17
+
+/** Defines for numbers of bytes */
+#define BYTES_1 1
+#define BYTES_2 2
+#define BYTES_4 4
+#define BYTES_8 8
+#define BYTES_12 12
+
+/* Static creation of Netflow v5 Template Set */
+
+static uint16_t netflow_v5_template[NETFLOW_V5_TEMPLATE_LEN/2]={\
+		IPFIX_TEMPLATE_FLOWSET_ID,   NETFLOW_V5_TEMPLATE_LEN,\
+		IPFIX_MIN_RECORD_FLOWSET_ID, NETFLOW_V5_NUM_OF_FIELDS,
+		SRC_IPV4_ADDR, 				 BYTES_4,\
+		DST_IPV4_ADDR, 				 BYTES_4,\
+		NEXTHOP_IPV4_ADDR, 			 BYTES_4,\
+		INGRESS_INTERFACE, 			 BYTES_2,\
+		EGRESS_INTERFACE, 			 BYTES_2,\
+		PACKETS, 					 BYTES_4,\
+		OCTETS, 					 BYTES_4,\
+		FLOW_START, 				 BYTES_4,\
+		FLOW_END, 					 BYTES_4,\
+		SRC_PORT, 					 BYTES_2,\
+		DST_PORT, 					 BYTES_2,\
+		PADDING, 					 BYTES_1,\
+		TCP_FLAGS, 					 BYTES_1,\
+		PROTO, 						 BYTES_1,\
+		TOS, 						 BYTES_1,\
+		SRC_AS, 					 BYTES_2,\
+		DST_AS, 					 BYTES_2,\
+		PADDING, 					 BYTES_1,\
+		PADDING, 					 BYTES_1,\
+		PADDING, 					 BYTES_2
+};
+
+static uint16_t netflow_v5_data_header[2] = {\
+		IPFIX_MIN_RECORD_FLOWSET_ID, NETFLOW_V5_DATA_SET_LEN
+};
+
+static uint8_t modified = 0;
+
 /**
  * \struct input_info_list
  * \brief  List structure for input info
@@ -297,12 +367,89 @@ out:
 	return retval;
 }
 
-static uint16_t element_id[20]={\
-		8, 12, 15, 10, 14, 2, 1, 22, 21, 7, 11, 210, 6, 4, 5, 16, 17, 210, 210, 210\
-};
-static uint16_t element_len[20]={\
-		4, 4, 4, 2, 2, 4, 4, 4, 4, 2, 2, 1, 1, 1, 1, 2, 2, 1, 1, 2\
-};
+
+void convert_packet(char **packet, struct plugin_conf *conf) {
+	struct ipfix_header *header = (struct ipfix_header *) *packet;
+	switch (htons(header->version)) {
+		/* Netflow v9 packet */
+		case NETFLOW_V9_VERSION:
+			header->version = htons(IPFIX_VERSION);
+			memmove(*packet + BYTES_4, *packet + BYTES_8, BUFF_LEN - BYTES_8);
+			memset(*packet + BUFF_LEN - BYTES_8, 0, BYTES_4);
+			(header->length)++;
+
+			uint8_t *p =  *packet + IPFIX_HEADER_LENGTH;
+			struct ipfix_set_header *set_header;
+			while (p < (uint8_t*) *packet + ntohs(header->length)) {
+				set_header = (struct ipfix_set_header*) p;
+				switch (ntohs(set_header->flowset_id)) {
+					case NETFLOW_V9_TEMPLATE_SET_ID:
+						set_header->flowset_id = htons(IPFIX_TEMPLATE_FLOWSET_ID);
+						break;
+					case NETFLOW_V9_OPT_TEMPLATE_SET_ID:
+						set_header->flowset_id = htons(IPFIX_OPTION_FLOWSET_ID);
+						break;
+					default:
+						break;
+				}
+				if (ntohs(set_header->length) == 0) {
+					break;
+				}
+				p += ntohs(set_header->length);
+			}
+			break;
+
+		/* Netflow v5 packet */
+		case NETFLOW_V5_VERSION:
+			/* Header modification */
+			header->version = htons(IPFIX_VERSION);
+			header->export_time = header->sequence_number;
+			memmove(*packet + BYTES_8, *packet + IPFIX_HEADER_LENGTH, BUFF_LEN - IPFIX_HEADER_LENGTH);
+			memmove(*packet + BYTES_12, *packet + BYTES_12 + BYTES_1, BYTES_1);
+			header->observation_domain_id=header->observation_domain_id&(0xF000);
+
+			if (modified == 0) {
+				modified = 1;
+				int i;
+				for (i = 0; i < NETFLOW_V5_TEMPLATE_LEN/2; i++) {
+					netflow_v5_template[i] = htons(netflow_v5_template[i]);
+				}
+				netflow_v5_data_header[0] = htons(netflow_v5_data_header[0]);
+				netflow_v5_data_header[1] = htons(netflow_v5_data_header[1]);
+			}
+
+			/* Insert Data Set header */
+			memmove(*packet + IPFIX_HEADER_LENGTH + BYTES_4, *packet + IPFIX_HEADER_LENGTH, BUFF_LEN - IPFIX_HEADER_LENGTH - BYTES_4);
+			memcpy(*packet + IPFIX_HEADER_LENGTH, netflow_v5_data_header, BYTES_4);
+
+			/* Check conf->info_list->info.template_life_packet and template_life_time */
+			uint32_t last = 0;
+			if (conf->info_list != NULL) {
+				if (conf->info_list->packets_sent == strtol(conf->info_list->info.template_life_packet, NULL, 10)) {
+					last = ntohl(header->export_time);
+				} else {
+					last = conf->info_list->last_sent + strtol(conf->info_list->info.template_life_time, NULL, 10);
+					conf->info_list->packets_sent++;
+				}
+			}
+			if (last <= ntohl(header->export_time)) {
+				/* Insert Template Set */
+				memmove(*packet + IPFIX_HEADER_LENGTH + NETFLOW_V5_TEMPLATE_LEN, *packet + IPFIX_HEADER_LENGTH, BUFF_LEN - NETFLOW_V5_TEMPLATE_LEN - IPFIX_HEADER_LENGTH);
+				memcpy(*packet + IPFIX_HEADER_LENGTH, netflow_v5_template, NETFLOW_V5_TEMPLATE_LEN);
+
+				if (conf->info_list != NULL) {
+					conf->info_list->last_sent = ntohl(header->export_time);
+					conf->info_list->packets_sent = 1;
+				}
+				header->length=htons(IPFIX_HEADER_LENGTH + NETFLOW_V5_TEMPLATE_LEN + NETFLOW_V5_DATA_SET_LEN);
+			} else {
+				header->length=htons(IPFIX_HEADER_LENGTH + NETFLOW_V5_DATA_SET_LEN);
+			}
+			break;
+		default:
+			break;
+	}
+}
 
 /**
  * \brief Pass input data from the input plugin into the ipfixcol core.
@@ -313,7 +460,7 @@ static uint16_t element_len[20]={\
  * \param[in] config  plugin_conf structure
  * \param[out] info   Information structure describing the source of the data.
  * \param[out] packet Flow information data in the form of IPFIX packet.
- * \return the length of packet on success, INPUT_CLOSE when some connection 
+ * \return the length of packet on success, INPUT_CLOSE when some connection
  *  closed, INPUT_ERROR on error.
  */
 int get_packet(void *config, struct input_info **info, char **packet)
@@ -340,96 +487,8 @@ int get_packet(void *config, struct input_info **info, char **packet)
 		return INPUT_ERROR;
 	}
 
-	struct ipfix_header *header = (struct ipfix_header *) *packet;
-	/* Netflow v9 packet */
-	if (header->version == htons(9)) {
-		header->version = htons(IPFIX_VERSION);
-		memmove(*packet+4, *packet+8, BUFF_LEN-8);
-		memset(*packet+BUFF_LEN-8, 0, 4);
-		(header->length)++;
-
-		uint8_t *p =  *packet + IPFIX_HEADER_LENGTH;
-		struct ipfix_set_header *set_header;
-		while (p < (uint8_t*) *packet + ntohs(header->length)) {
-			set_header = (struct ipfix_set_header*) p;
-
-			switch (ntohs(set_header->flowset_id)) {
-				case 0:
-					set_header->flowset_id = htons(IPFIX_TEMPLATE_FLOWSET_ID);
-					break;
-				case 1:
-					set_header->flowset_id = htons(IPFIX_OPTION_FLOWSET_ID);
-					break;
-				default:
-					break;
-			}
-
-			if (ntohs(set_header->length) == 0) {
-				break;
-			}
-			p += ntohs(set_header->length);
-		}
-
-	/* Netflow v5 */
-	} else if (header->version == htons(5)) {
-		header->version = htons(IPFIX_VERSION);
-		header->export_time = header->sequence_number;
-		memmove(*packet+8, *packet+16, BUFF_LEN-16);
-		memmove(*packet+12, *packet+13, 1);
-		header->observation_domain_id=header->observation_domain_id&(0xF000);
-		header->length = htons(IPFIX_HEADER_LENGTH);
-
-		/* Creating Template Set according to conf->info_list->info.template_life_packet
-		 * and template_life_time */
-		uint32_t last = 0;
-		if (conf->info_list != NULL) {
-			if (conf->info_list->packets_sent == strtol(conf->info_list->info.template_life_packet, NULL, 10)) {
-				last = ntohl(header->export_time);
-			} else {
-				last = conf->info_list->last_sent + strtol(conf->info_list->info.template_life_time, NULL, 10);
-				conf->info_list->packets_sent++;
-			}
-		}
-
-		if (last <= ntohl(header->export_time)) {
-			memmove(*packet+IPFIX_HEADER_LENGTH+92, *packet+IPFIX_HEADER_LENGTH, BUFF_LEN-102);
-			struct ipfix_set_header *set_header;
-
-			/*	SET ID, SET LENGTH */
-			set_header = (struct ipfix_set_header*) (*packet + IPFIX_HEADER_LENGTH);
-			set_header->flowset_id = htons(IPFIX_TEMPLATE_FLOWSET_ID);
-			set_header->length = htons(88);
-
-			/* Template ID, Number of Fields */
-			set_header = (struct ipfix_set_header*) (*packet + IPFIX_HEADER_LENGTH + 4);
-			set_header->flowset_id = htons(IPFIX_MIN_RECORD_FLOWSET_ID);
-			set_header->length = htons(20);
-
-			/* Fill in Template Set */
-			uint8_t i = 0;
-			for (i = 0; i < 20; i++) {
-				set_header = (struct ipfix_set_header*) (*packet + IPFIX_HEADER_LENGTH +4*(i+2));
-				set_header->flowset_id=htons(element_id[i]);
-				set_header->length=htons(element_len[i]);
-			}
-
-			set_header = (struct ipfix_set_header*) (*packet + IPFIX_HEADER_LENGTH +88);
-			set_header->flowset_id=htons(IPFIX_MIN_RECORD_FLOWSET_ID);
-			set_header->length=htons(52);
-			header->length=htons(IPFIX_HEADER_LENGTH + 88 + 52);
-			if (conf->info_list != NULL) {
-				conf->info_list->last_sent = ntohl(header->export_time);
-				conf->info_list->packets_sent = 1;
-			}
-
-		} else {
-			memmove(*packet+IPFIX_HEADER_LENGTH + 4, *packet+IPFIX_HEADER_LENGTH, BUFF_LEN-20);
-			struct ipfix_set_header *set_header;
-			set_header = (struct ipfix_set_header*) (*packet+IPFIX_HEADER_LENGTH);
-			set_header->flowset_id=htons(IPFIX_MIN_RECORD_FLOWSET_ID);
-			set_header->length=htons(52);
-			header->length=htons(IPFIX_HEADER_LENGTH + 52);
-		}
+	if (htons(((struct ipfix_header *)(*packet))->version) != IPFIX_VERSION) {
+		convert_packet(packet, conf);
 	}
 
 	/* go through input_info_list */
@@ -479,7 +538,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
 
 		/* add to list */
 		info_list->next = conf->info_list;
-		info_list->last_sent = header->export_time;
+		info_list->last_sent = ((struct ipfix_header *)(*packet))->export_time;
 		info_list->packets_sent = 1;
 		conf->info_list = info_list;
 	}
