@@ -51,6 +51,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <libtrap/trap.h>
 
 #include "unirec.h"
 
@@ -65,7 +66,7 @@
 static char *msg_module = "unirec";
 
 /**
- * \brief Works as memcpy but converts commond data sizes to to host byteorder
+ * \brief Works as memcpy but converts common data sizes to host byteorder
  *
  * @param dst Destination buffer
  * @param src Source buffer
@@ -94,185 +95,6 @@ static void data_copy(char *dst, char *src, uint16_t length)
 				memcpy(dst, src, length);
 				break;
 			}
-}
-
-/**
- * \brief Create connection to collector
- *
- * The created socket is stored in conf->socket
- * Socket is disconnected on error
- *
- * @param conf Plugin configuration
- * @return 0 on success, 1 on socket error or 2 when target is not listening
- */
-static int tcp_connect(unirec_config *conf)
-{
-	struct addrinfo hints, *addrinfo, *tmp;
-	int ret = 0;
-
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = conf->ip;
-	hints.ai_protocol = IPPROTO_TCP;
-	hints.ai_flags = AI_ADDRCONFIG | conf->flags;
-
-	/* Get server address */
-	ret = getaddrinfo(conf->host, conf->port, &hints, &addrinfo);
-	if (ret != 0) {
-		MSG_ERROR(msg_module, "Cannot get server info: %s", gai_strerror(ret));
-		return 1;
-	}
-
-	/* Try addrinfo strucutres one by one */
-	for (tmp = addrinfo; tmp != NULL; tmp = tmp->ai_next) {
-
-		if (tmp->ai_family != AF_INET && tmp->ai_family != AF_INET6) {
-			continue;
-		}
-
-		/* Print information about target address */
-		char buff[INET6_ADDRSTRLEN];
-		inet_ntop(tmp->ai_family,
-				(tmp->ai_family == AF_INET) ?
-						(void *) &((struct sockaddr_in *) tmp->ai_addr)->sin_addr :
-						(void *) &((struct sockaddr_in6 *) tmp->ai_addr)->sin6_addr,
-				(char *) &buff, sizeof(buff));
-
-		MSG_DEBUG(msg_module, "Connecting to IP (port): %s (%s)", buff, conf->port);
-		MSG_DEBUG(msg_module, "Socket configuration: AI Family: %i, AI Socktype: %i, AI Protocol: %i",
-			tmp->ai_family, tmp->ai_socktype, tmp->ai_protocol);
-
-		/* create socket */
-		conf->socket = socket(addrinfo->ai_family,
-				addrinfo->ai_socktype, addrinfo->ai_protocol);
-		if (conf->socket == -1) {
-			MSG_ERROR(msg_module, "Cannot create new socket: %s", strerror(errno));
-			continue;
-		}
-
-		/* Connect to server*/
-		if (connect(conf->socket, addrinfo->ai_addr, addrinfo->ai_addrlen) == -1) {
-			MSG_ERROR(msg_module, "Cannot connect to collector: %s", strerror(errno));
-			close(conf->socket);
-			continue;
-		}
-
-		/* Connected*/
-		MSG_NOTICE(msg_module, "Successfully connected to collector");
-		break;
-	}
-
-	/* Free allocated resources */
-	freeaddrinfo(addrinfo);
-
-	/* Return error when all addrinfo structures were tried*/
-	if (tmp == NULL) {
-		return 1;
-	}
-
-	return 0;
-}
-
-/**
- * \brief Checks that connection is OK or tries to reconnect
- *
- * @param conf Plugin configuration
- * @return 0 when connection is OK or reestablished, 1 when not
- */
-static int reconnect(unirec_config *conf)
-{
-	/* Check for broken connection */
-	if (conf->lastReconnect != 0) {
-		/* Check whether we need to attempt reconnection */
-		if (conf->lastReconnect + conf->reconnectTimeout <= time(NULL)) {
-			/* Try to reconnect */
-			if (tcp_connect(conf) == 0) {
-				conf->lastReconnect = 0;
-			} else {
-				/* Set new reconnect time and drop packet */
-				conf->lastReconnect = time(NULL);
-				return 1;
-			}
-		} else {
-			/* Timeout not reached, drop packet */
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-/**
- * \brief Sends packet using UDP or TCP as defined in plugin configuration
- *
- * When the collector disconnects, tries to reconnect and resend the data
- *
- * \param data Data to send
- * \param length Length of the data to send
- * \param conf Plugin configuration
- * \return 0 on success, -1 on socket error, 1 when data needs to be resent (after reconnect)
- */
-static int send_packet(char *data, uint16_t length, unirec_config *conf)
-{
-	int ret; /* Return value of sendto */
-	int sent = 0; /* Sent data size */
-
-	/* Check that connection is OK or drop packet */
-	if (reconnect(conf)) {
-		return -1;
-	}
-
-	/* sendto() does not guarantee that everything will be send in one piece */
-	while (sent < length) {
-		/* Send conf->buffer to collector (TCP and SCTP ignores last two arguments) */
-		ret = send(conf->socket, (void *) data + sent, length - sent, MSG_NOSIGNAL | MSG_DONTWAIT);
-
-		/* Check that the data were sent correctly */
-		if (ret == -1) {
-			switch (errno) {
-			case 0: break; /* OK */
-			case EWOULDBLOCK:
-				/* When the sending of the message would block and nothing was sent yet, discard it*/
-				if (sent == 0) {
-					MSG_WARNING(msg_module, "send function would block, skipping packet");
-					return -1;
-				}
-				break;
-			case ECONNRESET:
-			case EINTR:
-			case ENOTCONN:
-			case ENOTSOCK:
-			case EPIPE:
-			case EHOSTUNREACH:
-			case ENETDOWN:
-			case ENETUNREACH:
-			case ENOBUFS:
-			case ENOMEM:
-
-				/* The connection is broken */
-				MSG_WARNING(msg_module, "Destination closed connection");
-
-				/* free resources */
-				close(conf->socket);
-
-				/* Set last connection try time so that we would reconnect immediatelly */
-				conf->lastReconnect = 1;
-
-				/* Say that we should try to connect and send data again */
-				return 1;
-			default:
-				/* Unknown error */
-				MSG_ERROR(msg_module, "Cannot send data to destination: %s", strerror(errno));
-				return -1;
-			}
-		}
-
-		/* No error from sendto(), add sent data count to total */
-		sent += ret;
-	}
-
-	MSG_COMMON(5, "Packet sent to %s on port %s.", conf->host, conf->port);
-
-	return 0;
 }
 
 /**
@@ -377,7 +199,20 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 			}
 
 			/* Copy the value, change byteorder  */
-			data_copy(matchField->value, data_record + offset + size_length, length);
+			if (template->fields[index].ie.id == 8 || 
+				template->fields[index].ie.id == 12 ) { /* IPv4 address */
+				/* Put IPv4 into 128 bits in a special way (see ipaddr.h in Nemea-UniRec for details) */
+				((uint64_t*)matchField->value)[0] = 0;
+				((uint32_t*)matchField->value)[2] = *(uint32_t*)(data_record + offset + size_length);
+				((uint32_t*)matchField->value)[3] = 0xffffffff;
+				matchField->valueSize = 16;								
+			} else if (template->fields[index].ie.id == 27 ||
+					   template->fields[index].ie.id == 28 ) { /* IPv6 address */
+				/* Just copy, don't convert endianness */
+				memcpy(matchField->value, data_record + offset + size_length, length);
+			} else {
+				data_copy(matchField->value, data_record + offset + size_length, length);
+			}
 			matchField->valueFilled = 1;
 		}
 
@@ -441,10 +276,9 @@ static uint16_t unirec_fill_static(uint16_t offset, unirecField *field, unirec_c
 
 	/* Dynamic size elements - fill only size */
 	if (field->valueFilled) {
-		*(uint16_t *) (conf->buffer + offset) = field->valueSize;
-	} else {
-		*(uint16_t *) (conf->buffer + offset) = 0;
+		conf->dynamicPartOffset += field->valueSize;
 	}
+	*(uint16_t *) (conf->buffer + offset) = conf->dynamicPartOffset;
 
 	return 2; /* size is 16bit value */
 }
@@ -491,9 +325,11 @@ static uint16_t unirec_fill_dynamic(uint16_t offset, unirecField *field, unirec_
 static void process_unirec_fields(unirec_config *conf)
 {
 	unirecField *tmp;
-	uint16_t offset = conf->bufferOffset, tmpOffset;
+	uint16_t offset = 0, tmpOffset;
 
 	/* Create UniRec record */
+
+	conf->dynamicPartOffset = 0;
 
 	/* Fill static size values and dynamic lengths */
 	for (tmp = conf->fields; tmp != NULL; tmp = tmp->next) {
@@ -511,9 +347,22 @@ static void process_unirec_fields(unirec_config *conf)
 	for (tmp = conf->fields; tmp != NULL; tmp = tmp->next) {
 		offset += unirec_fill_dynamic(offset, tmp, conf);
 	}
-
-	/* Set the offset + record length to total UniRec buffer length */
-	conf->bufferOffset = offset;
+	
+	/* Send UniRec record */
+// 	printf("Sending record, length: %hu\n", offset);
+// 	int i = 0;
+// 	for ( ; i < offset; i++) {
+// 		printf("%02x ", (int)(unsigned char)conf->buffer[i]);
+// 		if (i % 8 == 7)
+// 			printf("\n");
+// 	}
+	int ret = trap_send_data(0, conf->buffer, offset, conf->timeout);
+// 	printf("\nret: %i\n", ret);
+// 	static int counter = 200;
+// 	if (!counter--) {
+// 		trap_finalize();
+// 		exit(0);
+// 	}
 }
 
 /**
@@ -531,7 +380,6 @@ static int process_data_sets(const struct ipfix_message *ipfix_msg, unirec_confi
 	struct ipfix_template *template;
 	uint32_t offset;
 	uint16_t min_record_length, ret = 0;
-
 
 	data_set = ipfix_msg->data_couple[data_index].data_set;
 
@@ -784,7 +632,7 @@ static int parse_format(unirec_config *conf)
 	confFields = load_elements();
 
 	/* Split string to tokens */
-	for (token = strtok_r(conf->format, ";", &state); token != NULL; token = strtok_r(NULL, ";", &state)) {
+	for (token = strtok_r(conf->format, ",", &state); token != NULL; token = strtok_r(NULL, ",", &state)) {
 
 		/* Create new field element */
 		currentField = malloc(sizeof(unirecField));
@@ -830,6 +678,20 @@ static int parse_format(unirec_config *conf)
 	return 0;
 }
 
+
+// Struct with information about module
+trap_module_info_t module_info = {
+	"ipfixcol UniRec plugin", // Module name
+	// Module description
+	"This is both Nemea module and ipfixcol plugin. It coverts IPFIX records"
+	"to UniRec format for Nemea.\n"
+	"Interfaces:\n"
+	"   Inputs: 0\n"
+	"   Outputs: 1\n",
+	0, // Number of input interfaces
+	1, // Number of output interfaces
+};
+
 /**
  * \brief Storage plugin initialization function.
  *
@@ -846,6 +708,8 @@ int storage_init (char *params, void **config)
 	unirec_config *conf;
 	xmlDocPtr doc;
 	xmlNodePtr cur;
+	char* ifc_params[1] = {NULL};
+	trap_ifc_spec_t ifc_spec = {NULL, ifc_params};
 
 	conf = (unirec_config *) malloc(sizeof(*conf));
 	if (!conf) {
@@ -853,6 +717,8 @@ int storage_init (char *params, void **config)
 		return -1;
 	}
 	memset(conf, 0, sizeof(*conf));
+
+	conf->timeout = DEFAULT_TIMEOUT;
 
 	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
 	if (doc == NULL) {
@@ -874,37 +740,19 @@ int storage_init (char *params, void **config)
 	/* Process the configuration elements */
 	cur = cur->xmlChildrenNode;
 	while (cur != NULL) {
-		if ((!xmlStrcmp(cur->name, (const xmlChar *) "timeout"))) {
+		if ((!xmlStrcmp(cur->name, (const xmlChar *) "TRAPIfcTimeout"))) {
 			char *timeout = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
 			if (timeout != NULL) {
-				conf->reconnectTimeout = atoi(timeout);
+				conf->timeout = atoi(timeout);
 				free(timeout);
 			}
-		} else if ((!xmlStrcmp(cur->name, (const xmlChar *) "remoteIPAddress"))) {
-			if (!conf->host) {
-				conf->host = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+		} else if ((!xmlStrcmp(cur->name, (const xmlChar *) "TRAPIfcType"))) {
+			if (!ifc_spec.types) {
+				ifc_spec.types = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
 			}
-		} else if ((!xmlStrcmp(cur->name, (const xmlChar *) "remotePort"))) {
-			if (!conf->port) {
-				conf->port = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
-			}
-		} else if ((!xmlStrcmp(cur->name, (const xmlChar *) "IPProtocol"))) {
-			char *ipText = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
-			int ip = 0;
-
-			if (ipText != NULL) {
-				ip= atoi(ipText);
-				free(ipText);
-			}
-
-			switch (ip) {
-			case 4: conf->ip = AF_INET; break;
-			case 6: conf->ip = AF_INET6; break;
-			case 64:
-				conf->ip = AF_INET6;
-				conf->flags = AI_V4MAPPED | AI_ALL;
-				break;
-			default: conf->ip = AF_UNSPEC; break;
+		} else if ((!xmlStrcmp(cur->name, (const xmlChar *) "TRAPIfcParams"))) {
+			if (!ifc_spec.params[0]) {
+				ifc_spec.params[0] = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
 			}
 		} else if ((!xmlStrcmp(cur->name, (const xmlChar *) "format"))) {
 			if (!conf->format) {
@@ -921,40 +769,57 @@ int storage_init (char *params, void **config)
 		goto err_xml;
 	}
 
-	if (!conf->host) {
-		MSG_ERROR(msg_module, "Remote host not given");
+	if (!ifc_spec.types) {
+		MSG_ERROR(msg_module, "Type of TRAP interface not given");
+		goto err_xml;
+	}
+	
+	if (!ifc_spec.params[0]) {
+		MSG_ERROR(msg_module, "Parameters of TRAP interface not given");
 		goto err_xml;
 	}
 
-	if (!conf->port) {
-		MSG_ERROR(msg_module, "Remote port not given");
-		goto err_xml;
-	}
-
-
-	MSG_NOTICE(msg_module, "Following configuration is used:\n\thostname: %s\n"
-			"\tport: %s\n\ttimeout: %i\n\tformat: %s",
-			conf->host, conf->port, conf->reconnectTimeout, conf->format);
+	MSG_NOTICE(msg_module, "Following configuration is used:\n\tifc_type: %s\n"
+			"\tifc_params: %s\n\ttimeout: %i\n\tformat: %s",
+			ifc_spec.types, ifc_spec.params[0], conf->timeout, conf->format);
 
 	/* Use default values if not specified in configuration */
-	if (conf->reconnectTimeout == 0) {
-		conf->reconnectTimeout = DEFAULT_TIMEOUT;
+	if (conf->timeout == 0) {
+		conf->timeout = DEFAULT_TIMEOUT;
 	}
 
 	/* Parse UniRec format */
 	if (parse_format(conf)) {
 		goto err_parse;
 	}
-
+	
+	/* Set verbosity of TRAP library */
+	if (verbose == ICMSG_ERROR) {
+		trap_set_verbose_level(-1);
+	} else if (verbose == ICMSG_WARNING) {
+		trap_set_verbose_level(0);
+	} else if (verbose == ICMSG_NOTICE) {
+		trap_set_verbose_level(1);
+	} else if (verbose == ICMSG_DEBUG) {
+		trap_set_verbose_level(2);
+	}
+	MSG_NOTICE(msg_module, "Verbosity level of TRAP set to %i\n", trap_get_verbose_level());
+	
+	/* Initialize TRAP interface */
+	MSG_DEBUG(msg_module, "Initializing TRAP ...\n");
+	if (trap_init(&module_info, ifc_spec) != TRAP_E_OK) {
+		MSG_ERROR(msg_module, "Error in TRAP initialization: (%i) %s\n",
+			trap_last_error, trap_last_error_msg);
+		goto err_parse;
+	}
+	MSG_DEBUG(msg_module, "OK\n");
+	
 	/* Allocate basic buffer for UniRec records */
 	conf->buffer = malloc(100);
 	if (!conf->buffer) {
 		goto err_parse;
 	}
 	conf->bufferSize = 100;
-
-	/* Make the connection attempt when sending first packet */
-	conf->lastReconnect = 1;
 
 	*config = conf;
 
@@ -965,8 +830,6 @@ int storage_init (char *params, void **config)
 
 err_parse:
 	free(conf->format);
-	free(conf->host);
-	free(conf->port);
 
 	/* free fieldList */
 	destroy_fields(conf->fields);
@@ -1012,13 +875,8 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 
 	struct unirec_config *conf = (struct unirec_config*) config;
 
+	/* Process all data in the ipfix packet */
 	process_data_sets(ipfix_msg, conf);
-
-	/* Send the record */
-	send_packet(conf->buffer, conf->bufferOffset, conf);
-
-	/* Remove old data from buffer */
-	conf->bufferOffset = 0;
 
 	return 0;
 }
@@ -1059,9 +917,9 @@ int storage_close (void **config)
 {
 	unirec_config *conf = (unirec_config*) *config;
 
+	trap_finalize();
+
 	free(conf->format);
-	free(conf->host);
-	free(conf->port);
 	free(conf->buffer);
 
 	/* free fieldList */

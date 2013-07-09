@@ -40,7 +40,7 @@
 #ifndef UNIREC_H_
 #define UNIREC_H_
 
-#define DEFAULT_TIMEOUT 60
+#define DEFAULT_TIMEOUT 0 /**< No waiting */
 #define UNIREC_ELEMENTS_FILE "/usr/share/ipfixcol/unirec-elements.txt"
 
 typedef struct ipfixElement {
@@ -71,20 +71,14 @@ typedef struct unirecField {
  */
 typedef struct unirec_config {
 	char				*format;
-	char 				*host;
-	char				*port;
-	uint16_t			reconnectTimeout;
-	time_t				lastReconnect;	/**< Timestamp of last reconnection attempt */
-
-
+	int				timeout; /**< Timeout of write operation on TRAP interface.
+										  Time in microseconds or 0 for no waiting or
+										  -1 for unlimited waiting.*/
+	
 	unirecField			*fields;
 	char 				*buffer;	/**< UniRec ouput buffer */
 	int					bufferSize; /**< UniRec ouput buffer size */
-	int					bufferOffset;	/**< Offset of current buffer position (data length) */
-
-	int					socket;		/**< Connection socket */
-	int 				ip;			/**< IP protocol (AF_INET, ...) */
-	int 				flags;		/**< addrinfo flags */
+	int					dynamicPartOffset;	/**< Offset of current position in dynamic part of record (sum of dynamic field sizes) */
 } unirec_config;
 
 #endif /* UNIREC_H_ */

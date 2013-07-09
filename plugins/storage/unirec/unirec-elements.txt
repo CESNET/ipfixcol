@@ -1,26 +1,13 @@
-#name			datatype	ipfix_ident		description
-Example			4			e0id0			This is just an example of an entry in this list.
+#unirec_name	size		ipfix_ident		description
 SRC_IP			16			e0id8,e0id27	IPv4 or IPv6 source address
 DST_IP			16			e0id12,e0id28	IPv4 or IPv6 destination address
 SRC_PORT		2			e0id7			Transport protocol source port
 DST_PORT		2			e0id11			Transport protocol destination port
-PROTO			1			e0id4			Transport protocol
+PROTOCOL		1			e0id4			Transport protocol
 TCP_FLAGS		1			e0id6			TCP flags
+BYTES			8			e0id1			Number of bytes in flow
+PACKETS			4			e0id2			Number of packets in flow
+TIME_FIRST		8			e0id22			Time of the first packet of a flow (ms since init of exporter, TODO: compute absolute time)
+TIME_LAST		8			e0id21			Time of the last packet of a flow (ms since init of exporter, TODO: compute absolute time)
 URL				-1			e16982id105		HTTP URL
 
-# Valid data types and their size in bytes:
-# int8		1
-# int16		2
-# int32		4
-# int64		8
-# uint8		1
-# uint16	2
-# uint32	4
-# uint64	8
-# float		4
-# double	8
-# char		1
-# ipv4		4
-# ipv6		16
-# ip		16
-# string	dynamic
