@@ -198,19 +198,24 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 				matchField->valueSize = length;
 			}
 
-			/* Copy the value, change byteorder  */
+			/* Copy the value, change byteorder (handle IP addresses specially) */
+			/* IPv4 address */
 			if (template->fields[index].ie.id == 8 || 
-				template->fields[index].ie.id == 12 ) { /* IPv4 address */
+				template->fields[index].ie.id == 12 ) {
 				/* Put IPv4 into 128 bits in a special way (see ipaddr.h in Nemea-UniRec for details) */
 				((uint64_t*)matchField->value)[0] = 0;
 				((uint32_t*)matchField->value)[2] = *(uint32_t*)(data_record + offset + size_length);
 				((uint32_t*)matchField->value)[3] = 0xffffffff;
 				matchField->valueSize = 16;								
-			} else if (template->fields[index].ie.id == 27 ||
-					   template->fields[index].ie.id == 28 ) { /* IPv6 address */
+			}
+			/* IPv6 address */
+			else if (template->fields[index].ie.id == 27 ||
+					   template->fields[index].ie.id == 28 ) {
 				/* Just copy, don't convert endianness */
 				memcpy(matchField->value, data_record + offset + size_length, length);
-			} else {
+			}
+			/* Other fields */
+			else {
 				data_copy(matchField->value, data_record + offset + size_length, length);
 			}
 			matchField->valueFilled = 1;
@@ -315,6 +320,53 @@ static uint16_t unirec_fill_dynamic(uint16_t offset, unirecField *field, unirec_
 	return 0;
 }
 
+
+// find ipfix field (exnterprise numbers not supported for now)
+static void find_field(char *data_record, struct ipfix_template *template, uint32_t id,
+					   char **value, uint16_t *valueSize)
+{
+	uint16_t offset = 0;
+	uint16_t index, count;
+	uint16_t length, size_length;
+
+	/* Go over all fields */
+	for (count = index = 0; count < template->field_count; count++, index++) {
+		
+		length = template->fields[index].ie.length;
+		size_length = 0;
+
+		/* Handle variable length */
+		if (length == 65535) {
+			/* Variable length */
+			length = read8(data_record+offset);
+			size_length = 1;
+
+			if (length == 255) {
+				length = ntohs(read16(data_record+offset+size_length));
+				size_length = 3;
+			}
+		}
+
+		if (template->fields[index].ie.id == id) {
+			/* Field was found */
+			*value = data_record + offset + size_length;
+			*valueSize = length;
+			return;						
+		}
+		
+		/* Skip enterprise element number if necessary*/
+		if (template->fields[index].ie.id >> 15) {
+			index++;
+		}
+
+		/* Skip the length of the value */
+		offset += length + size_length;
+	}
+	
+	*value = NULL;
+	*valueSize = 0;
+}
+
 /**
  * \brief Creates and sends UniRec records
  *
@@ -322,17 +374,87 @@ static uint16_t unirec_fill_dynamic(uint16_t offset, unirecField *field, unirec_
  *
  * @param conf
  */
-static void process_unirec_fields(unirec_config *conf)
+static void process_unirec_fields(char *data_record, struct ipfix_template *template, unirec_config *conf)
 {
 	unirecField *tmp;
 	uint16_t offset = 0, tmpOffset;
 
 	/* Create UniRec record */
-
 	conf->dynamicPartOffset = 0;
 
 	/* Fill static size values and dynamic lengths */
 	for (tmp = conf->fields; tmp != NULL; tmp = tmp->next) {
+		/* Hanlde some fields specially */
+		/* ODID */
+		if (tmp == conf->special_field_odid) {
+			if (!tmp->value) {
+				tmp->value = malloc(4);
+				tmp->valueSize = 4;
+			}
+			*(uint32_t*)tmp->value = conf->odid;
+			tmp->valueFilled = 1;
+		}
+		/* LINK_BIT_FIELD */
+		else if (tmp == conf->special_field_link_bit_field) {
+			if (!tmp->value) {
+				tmp->value = malloc(8);
+				tmp->valueSize = 8;
+			}
+			*(uint32_t*)tmp->value = (uint64_t)(1) << (conf->odid - 1);
+			tmp->valueFilled = 1;
+		}
+		/* TIME_FIRST, TIME_LAST */
+		else if (tmp == conf->special_field_time_first ||
+				 tmp == conf->special_field_time_last) {
+			char *value;
+			uint16_t valueSize;
+			uint32_t sec = 0, frac = 0;
+			if (!tmp->value) {
+				tmp->value = malloc(8);
+				tmp->valueSize = 8;
+			}
+			int a = (tmp == conf->special_field_time_first ? 0 : 1); /* Adding one to ID changes Start to End timestamp */
+				
+			tmp->valueFilled = 1;
+			/* Find timestamp in seconds, milliseconds, microseconds or nanoseconds */
+			if (find_field(data_record, template, 150+a, &value, &valueSize), value != NULL) { /* flowStartSeconds */
+				sec = be64toh(*(uint64_t*)value);
+				frac = 0;
+			} else if (find_field(data_record, template, 152+a, &value, &valueSize), value != NULL) { /* flowStartMillieconds */
+				uint64_t msec = be64toh(*(uint64_t*)value);
+				sec = msec / 1000;
+				frac = (msec % 1000) * (0x0000000100000000L/1000);
+			} else if (find_field(data_record, template, 154+a, &value, &valueSize), value != NULL) { /* flowStartMicroseconds */
+				uint64_t usec = be64toh(*(uint64_t*)value);
+				sec = usec / 1000000;
+				frac = (usec % 1000000) * (0x0000000100000000L/1000000);
+			} else if (find_field(data_record, template, 156+a, &value, &valueSize), value != NULL) { /* flowStartNanoseconds */
+				uint64_t nsec = be64toh(*(uint64_t*)value);
+				sec = nsec / 1000000000;
+				frac = (nsec % 1000000000) * (0x0000000100000000L/1000000000);
+			} else {
+				tmp->valueFilled = 0;
+			}
+			*(uint64_t*)tmp->value = (uint64_t)sec << 32;
+			*(uint64_t*)tmp->value |= (uint64_t)frac & 0x00000000ffffffff;
+		}
+		/* DIR_BIT_FIELD */
+		else if (tmp == conf->special_field_dir_bit_field) {
+			if (!tmp->value) {
+				tmp->value = malloc(1);
+				tmp->valueSize = 1;
+			}
+			char *value;
+			uint16_t valueSize;
+			find_field(data_record, template, 10, &value, &valueSize); /* ingressInterface */
+			if (value != NULL) {
+				*(uint32_t*)tmp->value = (uint8_t)(1) << (*(uint32_t*)value);
+				tmp->valueFilled = 1;
+			} else {
+				tmp->valueFilled = 0;
+			}
+		}
+
 		tmpOffset = unirec_fill_static(offset, tmp, conf);
 		/* Record does not contain required value */
 		if (!tmpOffset) {
@@ -358,7 +480,7 @@ static void process_unirec_fields(unirec_config *conf)
 // 	}
 	int ret = trap_send_data(0, conf->buffer, offset, conf->timeout);
 // 	printf("\nret: %i\n", ret);
-// 	static int counter = 200;
+// 	static int counter = 100;
 // 	if (!counter--) {
 // 		trap_finalize();
 // 		exit(0);
@@ -380,6 +502,8 @@ static int process_data_sets(const struct ipfix_message *ipfix_msg, unirec_confi
 	struct ipfix_template *template;
 	uint32_t offset;
 	uint16_t min_record_length, ret = 0;
+
+	conf->odid = ntohl(ipfix_msg->pkt_header->observation_domain_id);
 
 	data_set = ipfix_msg->data_couple[data_index].data_set;
 
@@ -413,7 +537,7 @@ static int process_data_sets(const struct ipfix_message *ipfix_msg, unirec_confi
 			offset += ret;
 
 			/* Create UniRec record and send it */
-			process_unirec_fields(conf);
+			process_unirec_fields(data_record, template, conf);
 		}
 
 		/* Process next set */
@@ -652,13 +776,33 @@ static int parse_format(unirec_config *conf)
 			currentField->name = strdup(token);
 		}
 
+		printf("name: %s\n", currentField->name);
+		/* Handle special fields */
+		if (strcmp(currentField->name, "ODID") == 0) {
+			conf->special_field_odid = currentField;
+			currentField->size = 4;
+		} else if (strcmp(currentField->name, "TIME_FIRST") == 0) {
+			conf->special_field_time_first = currentField;
+			currentField->size = 8;
+		} else if (strcmp(currentField->name, "TIME_LAST") == 0) {
+			conf->special_field_time_last = currentField;
+			currentField->size = 8;
+		} else if (strcmp(currentField->name, "DIR_BIT_FIELD") == 0) {
+			conf->special_field_dir_bit_field = currentField;
+			currentField->size = 1;
+		} else if (strcmp(currentField->name, "LINK_BIT_FIELD") == 0) {
+			conf->special_field_link_bit_field = currentField;
+			currentField->size = 8;
+		}
 		/* Fill values from configuration file */
-		ret = update_field(&currentField, confFields);
-		if (ret) {
-			MSG_ERROR(msg_module, "Field \"%s\" is not present in UniRec configuration file", currentField->name);
-			destroy_field(currentField);
-			destroy_fields(confFields);
-			return 1;
+		else {
+			ret = update_field(&currentField, confFields);
+			if (ret) {
+				MSG_ERROR(msg_module, "Field \"%s\" is not present in UniRec configuration file", currentField->name);
+				destroy_field(currentField);
+				destroy_fields(confFields);
+				return 1;
+			}
 		}
 
 		/* Add it at the end of the list */

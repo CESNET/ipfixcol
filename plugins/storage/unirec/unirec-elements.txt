@@ -7,7 +7,12 @@ PROTOCOL		1			e0id4			Transport protocol
 TCP_FLAGS		1			e0id6			TCP flags
 BYTES			8			e0id1			Number of bytes in flow
 PACKETS			4			e0id2			Number of packets in flow
-TIME_FIRST		8			e0id22			Time of the first packet of a flow (ms since init of exporter, TODO: compute absolute time)
-TIME_LAST		8			e0id21			Time of the last packet of a flow (ms since init of exporter, TODO: compute absolute time)
 URL				-1			e16982id105		HTTP URL
-
+#
+# Special fields that don't directly map to IPFIX fields (methods to fill them are hard-coded in the plugin):
+# name				depends_on_ipfix_id			description
+# ODID				--							Observation domain ID
+# TIME_FIRST		e0id150|e0id152|e0154|e0156	Time of the first packet of a flow
+# TIME_LAST			e0id151|e0id153|e0155|e0157	Time of the last packet of a flow
+# LINK_BIT_FIELD	--							Bit field where each bit marks whether a flow was captured on corresponding link (filled as (1 << (ODID-1)))
+# DIR_BIT_FIELD		e0id61						Bit field used for detemining incoming/outgoing flow

@@ -79,6 +79,13 @@ typedef struct unirec_config {
 	char 				*buffer;	/**< UniRec ouput buffer */
 	int					bufferSize; /**< UniRec ouput buffer size */
 	int					dynamicPartOffset;	/**< Offset of current position in dynamic part of record (sum of dynamic field sizes) */
+	uint32_t			odid;		/**< Observation domain ID of the last packet */
+	
+	unirecField			*special_field_odid; /**< Pointer to special field ODID */
+	unirecField			*special_field_time_first; /**< Pointer to special field TIME_FIRST */
+	unirecField			*special_field_time_last; /**< Pointer to special field TIME_LAST */
+	unirecField			*special_field_dir_bit_field; /**< Pointer to special field DIR_BIT_FIELD */
+	unirecField			*special_field_link_bit_field; /**< Pointer to special field LINK_BIT_FIELD */
 } unirec_config;
 
 #endif /* UNIREC_H_ */
