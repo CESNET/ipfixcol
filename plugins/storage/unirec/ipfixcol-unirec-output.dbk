@@ -71,10 +71,9 @@
 		<name>make unirec from the flow data</name>
 		<fileWriter>
 			<fileFormat>unirec</fileFormat>
-			<IPProtocol>4</IPProtocol>
-			<remoteIPAddress>localhost</remoteIPAddress>
-			<remotePort>3000</remotePort>
-			<timeout>60</timeout>
+			<TRAPIfcType>t</TRAPIfcType>
+			<TRAPIfcParams>7000,8</TRAPIfcParams>
+			<TRAPIfcTimeout>-2</TRAPIfcTimeout>
 			<format>SRC_IP;DST_IP;SRC_PORT;DST_PORT;PROTO;?TCP_FLAGS;?URL</format>
 		</fileWriter>
 	</destination>
@@ -90,33 +89,21 @@
 					</listitem>
 				</varlistentry>
 				<varlistentry>
-					<term><command>IPProto</command></term>
+					<term><command>TRAPIfcType</command></term>
 					<listitem>
-						<simpara>IP protocol to use. Possible values are 4, 6 and 64 (6 with IPv4 address mapping).</simpara>
+						<simpara>Interface type. "t" is for TCP/IP. "m" is for shared memory, not a tested option.</simpara>
 					</listitem>
 				</varlistentry>
 				<varlistentry>
-					<term><command>remoteIPAddress</command></term>
+					<term><command>TRAPIfcParams</command></term>
 					<listitem>
-						<simpara>IP address or hostname of remote site.</simpara>
+						<simpara>"Port","maximum number of clients".</simpara>
 					</listitem>
 				</varlistentry>
 				<varlistentry>
-					<term><command>remoteIPAddress</command></term>
+					<term><command>TRAPIfcTimeout</command></term>
 					<listitem>
-						<simpara>IP address or hostname of the remote site.</simpara>
-					</listitem>
-				</varlistentry>
-				<varlistentry>
-					<term><command>remotePort</command></term>
-					<listitem>
-						<simpara>TCP port of the remote site.</simpara>
-					</listitem>
-				</varlistentry>
-				<varlistentry>
-					<term><command>timeout</command></term>
-					<listitem>
-						<simpara>Timeout before next reconnection attempt.</simpara>
+						<simpara>Interface timeout setting. -2 ~ "HALFWAIT", wait, but skip missing client. 0 ~ non blocking.</simpara>
 					</listitem>
 				</varlistentry>
 				<varlistentry>
