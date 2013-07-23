@@ -74,7 +74,7 @@
 			<TRAPIfcType>t</TRAPIfcType>
 			<TRAPIfcParams>7000,8</TRAPIfcParams>
 			<TRAPIfcTimeout>-2</TRAPIfcTimeout>
-			<format>SRC_IP;DST_IP;SRC_PORT;DST_PORT;PROTO;?TCP_FLAGS;?URL</format>
+			<format>SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,?TCP_FLAGS,?URL</format>
 		</fileWriter>
 	</destination>
 	]]>
