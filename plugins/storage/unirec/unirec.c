@@ -202,11 +202,12 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 			/* IPv4 address */
 			if (template->fields[index].ie.id == 8 || 
 				template->fields[index].ie.id == 12 ) {
+				matchField->value = realloc(matchField->value, 16);
+				matchField->valueSize = 16;
 				/* Put IPv4 into 128 bits in a special way (see ipaddr.h in Nemea-UniRec for details) */
 				((uint64_t*)matchField->value)[0] = 0;
 				((uint32_t*)matchField->value)[2] = *(uint32_t*)(data_record + offset + size_length);
 				((uint32_t*)matchField->value)[3] = 0xffffffff;
-				matchField->valueSize = 16;								
 			}
 			/* IPv6 address */
 			else if (template->fields[index].ie.id == 27 ||
@@ -448,7 +449,7 @@ static void process_unirec_fields(char *data_record, struct ipfix_template *temp
 			uint16_t valueSize;
 			find_field(data_record, template, 10, &value, &valueSize); /* ingressInterface */
 			if (value != NULL) {
-				*(uint32_t*)tmp->value = (uint8_t)(1) << (*(uint32_t*)value);
+				*(uint8_t*)tmp->value = (uint8_t)(1) << (*(uint32_t*)value);
 				tmp->valueFilled = 1;
 			} else {
 				tmp->valueFilled = 0;
@@ -776,7 +777,6 @@ static int parse_format(unirec_config *conf)
 			currentField->name = strdup(token);
 		}
 
-		printf("name: %s\n", currentField->name);
 		/* Handle special fields */
 		if (strcmp(currentField->name, "ODID") == 0) {
 			conf->special_field_odid = currentField;
