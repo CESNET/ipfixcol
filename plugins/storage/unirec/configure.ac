@@ -38,7 +38,7 @@
 
 AC_PREREQ([2.60])
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol-unirec-output], [0.1.0])
+AC_INIT([ipfixcol-unirec-output], [0.2.0])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 LT_PREREQ([2.2])
 LT_INIT([dlopen disable-static])
@@ -77,12 +77,17 @@ AC_CHECK_LIB([xml2], [main],
     [LIBS="`xml2-config --libs` $LIBS"
     CFLAGS="`xml2-config --cflags` $CFLAGS"],
     AC_MSG_ERROR([Libxml2 not found ]))
-    
+
+### libtrap ###
+AC_SEARCH_LIBS([trap_init],[trap],,
+    AC_MSG_ERROR([libtrap not found ]))
+
+
 ###################### Check for configure parameters ##########################
 AC_ARG_ENABLE([debug], 
         AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
         [CFLAGS="$CFLAGS -Wextra -g"])
-        
+
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([arpa/inet.h inttypes.h string.h unistd.h])
 
@@ -92,6 +97,9 @@ AS_IF([test -d $srcdir/../../../base/headers],
 )
 
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
+
+# Check libtrap headers
+AC_CHECK_HEADERS([libtrap/trap.h], , AC_MSG_ERROR([libtrap/trap.h header missing. Please install libtrap-devel package]), [AC_INCLUDES_DEFAULT])
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 AC_C_INLINE

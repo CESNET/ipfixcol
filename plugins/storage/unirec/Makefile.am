@@ -4,7 +4,7 @@ ipfixcoldir = $(datadir)/ipfixcol
 pluginsdir = $(datadir)/ipfixcol/plugins
 
 plugins_LTLIBRARIES = ipfixcol-unirec-output.la
-ipfixcol_unirec_output_la_LDFLAGS = -module -avoid-version -shared -ltrap -lcommlbr -lrt
+ipfixcol_unirec_output_la_LDFLAGS = -module -avoid-version -shared -ltrap -lrt
 ipfixcol_unirec_output_la_SOURCES = unirec.c unirec.h
 
 MANSRC = ipfixcol-unirec-output.dbk
