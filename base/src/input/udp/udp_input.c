@@ -60,6 +60,7 @@
 #include <libxml/tree.h>
 
 #include <ipfixcol.h>
+#include "sflow.h"
 
 /* input buffer length */
 #define BUFF_LEN 10000
@@ -136,6 +137,12 @@ static uint16_t netflow_v5_template[NETFLOW_V5_TEMPLATE_LEN/2]={\
 static uint16_t netflow_v5_data_header[2] = {\
 		IPFIX_MIN_RECORD_FLOWSET_ID, NETFLOW_V5_DATA_SET_LEN
 };
+
+/* Sequence numbers for NFv5,9 and sFlow */
+static uint32_t seqNo[3] = {0,0,0};
+#define NF5_SEQ_N 0
+#define NF9_SEQ_N 1
+#define SF_SEQ_N  2
 
 static uint8_t modified = 0;
 
@@ -367,18 +374,101 @@ out:
 	return retval;
 }
 
+/**
+ * \brief Convers static arrays from host to network byte order
+ *
+ * Also sets "modified" flag
+ */
+static inline void modify() {
+	modified = 1;
+	int i;
+	for (i = 0; i < NETFLOW_V5_TEMPLATE_LEN/2; i++) {
+		netflow_v5_template[i] = htons(netflow_v5_template[i]);
+	}
+	netflow_v5_data_header[0] = htons(netflow_v5_data_header[0]);
+	netflow_v5_data_header[1] = htons(netflow_v5_data_header[1]);
+}
 
-void convert_packet(char **packet, struct plugin_conf *conf) {
+/**
+ * \brief Inserts Template Set into packet and updates input_info
+ *
+ * Also sets total length of packet
+ *
+ * \param[out] packet Flow information data in the form of IPFIX packet.
+ * \param[in] input_info Structure with informations needed for inserting Template Set
+ * \param[in] numOfFlowSamples Number of flow samples in sFlow datagram
+ * \return Total length of packet
+ */
+inline uint16_t insertTemplateSet(char **packet, char *input_info, int numOfFlowSamples) {
+	/* Template Set insertion if needed */
+	/* Check conf->info_list->info.template_life_packet and template_life_time */
 	struct ipfix_header *header = (struct ipfix_header *) *packet;
+#ifdef SCTP_INPUT_PLUGIN
+	struct input_info_node *info_list = (struct input_info_node *) input_info;
+	uint16_t buff_len = IPFIX_MESSAGE_TOTAL_LENGTH;
+#else
+	struct input_info_list *info_list = (struct input_info_list *) input_info;
+	uint16_t buff_len = BUFF_LEN;
+#endif
+	uint32_t last = 0;
+	if (info_list != NULL) {
+		if (info_list->packets_sent == strtol(info_list->info.template_life_packet, NULL, 10)) {
+			last = ntohl(header->export_time);
+		} else {
+			last = info_list->last_sent + strtol(info_list->info.template_life_time, NULL, 10);
+			if (numOfFlowSamples > 0) {
+				info_list->packets_sent++;
+			}
+		}
+	}
+	if (last <= ntohl(header->export_time)) {
+		/* Make some space for Template Set */
+		memmove(*packet + IPFIX_HEADER_LENGTH + NETFLOW_V5_TEMPLATE_LEN, *packet + IPFIX_HEADER_LENGTH, buff_len - NETFLOW_V5_TEMPLATE_LEN - IPFIX_HEADER_LENGTH);
+		/* Insert Template Set */
+		memcpy(*packet + IPFIX_HEADER_LENGTH, netflow_v5_template, NETFLOW_V5_TEMPLATE_LEN);
+		if (info_list != NULL) {
+			info_list->last_sent = ntohl(header->export_time);
+			info_list->packets_sent = 1;
+		}
+		return htons(IPFIX_HEADER_LENGTH + NETFLOW_V5_TEMPLATE_LEN + (NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
+	} else {
+		return htons(IPFIX_HEADER_LENGTH + (NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
+	}
+}
+
+/**
+ * \brief Converts packet from Netflow v5/v9 or sFlow format to IPFIX format
+ *
+ * Netflow v9 has almost the same format as ipfix but it has different Flowset IDs
+ * and more informations in packet header.
+ * Netflow v5 doesn't have (Option) Template Sets so they must be inserted into packet
+ * with some other data that are missing (data set header etc.). Template is periodicaly
+ * refreshed according to input_info.
+ * sFlow format is very complicated - InMon Corp. source code is used (modified)
+ * which converts it into Netflow v5 packet.
+ *
+ * \param[out] packet Flow information data in the form of IPFIX packet.
+ * \param[in] len Length of packet
+ * \param[in] input_info Information structure storing data needed for refreshing templates
+ */
+void convert_packet(char **packet, ssize_t len, char *input_info) {
+	struct ipfix_header *header = (struct ipfix_header *) *packet;
+#ifdef SCTP_INPUT_PLUGIN
+	struct input_info_node *info_list = (struct input_info_node *) input_info;
+	uint16_t buff_len = IPFIX_MESSAGE_TOTAL_LENGTH;
+#else
+	struct input_info_list *info_list = (struct input_info_list *) input_info;
+	uint16_t buff_len = BUFF_LEN;
+#endif
 	switch (htons(header->version)) {
 		/* Netflow v9 packet */
 		case NETFLOW_V9_VERSION:
 			header->version = htons(IPFIX_VERSION);
-			memmove(*packet + BYTES_4, *packet + BYTES_8, BUFF_LEN - BYTES_8);
-			memset(*packet + BUFF_LEN - BYTES_8, 0, BYTES_4);
+			memmove(*packet + BYTES_4, *packet + BYTES_8, buff_len - BYTES_8);
+			memset(*packet + buff_len - BYTES_8, 0, BYTES_4);
 			(header->length)++;
 
-			uint8_t *p =  *packet + IPFIX_HEADER_LENGTH;
+			uint8_t *p = (uint8_t *) (*packet + IPFIX_HEADER_LENGTH);
 			struct ipfix_set_header *set_header;
 			while (p < (uint8_t*) *packet + ntohs(header->length)) {
 				set_header = (struct ipfix_set_header*) p;
@@ -401,52 +491,42 @@ void convert_packet(char **packet, struct plugin_conf *conf) {
 
 		/* Netflow v5 packet */
 		case NETFLOW_V5_VERSION:
+			if (modified == 0) {
+				modify();
+			}
 			/* Header modification */
 			header->version = htons(IPFIX_VERSION);
 			header->export_time = header->sequence_number;
-			memmove(*packet + BYTES_8, *packet + IPFIX_HEADER_LENGTH, BUFF_LEN - IPFIX_HEADER_LENGTH);
+			memmove(*packet + BYTES_8, *packet + IPFIX_HEADER_LENGTH, buff_len - IPFIX_HEADER_LENGTH);
 			memmove(*packet + BYTES_12, *packet + BYTES_12 + BYTES_1, BYTES_1);
-			header->observation_domain_id=header->observation_domain_id&(0xF000);
-
-			if (modified == 0) {
-				modified = 1;
-				int i;
-				for (i = 0; i < NETFLOW_V5_TEMPLATE_LEN/2; i++) {
-					netflow_v5_template[i] = htons(netflow_v5_template[i]);
-				}
-				netflow_v5_data_header[0] = htons(netflow_v5_data_header[0]);
-				netflow_v5_data_header[1] = htons(netflow_v5_data_header[1]);
-			}
+			header->observation_domain_id = header->observation_domain_id&(0xF000);
 
 			/* Insert Data Set header */
-			memmove(*packet + IPFIX_HEADER_LENGTH + BYTES_4, *packet + IPFIX_HEADER_LENGTH, BUFF_LEN - IPFIX_HEADER_LENGTH - BYTES_4);
+			memmove(*packet + IPFIX_HEADER_LENGTH + BYTES_4, *packet + IPFIX_HEADER_LENGTH, buff_len - IPFIX_HEADER_LENGTH - BYTES_4);
 			memcpy(*packet + IPFIX_HEADER_LENGTH, netflow_v5_data_header, BYTES_4);
 
-			/* Check conf->info_list->info.template_life_packet and template_life_time */
-			uint32_t last = 0;
-			if (conf->info_list != NULL) {
-				if (conf->info_list->packets_sent == strtol(conf->info_list->info.template_life_packet, NULL, 10)) {
-					last = ntohl(header->export_time);
-				} else {
-					last = conf->info_list->last_sent + strtol(conf->info_list->info.template_life_time, NULL, 10);
-					conf->info_list->packets_sent++;
-				}
-			}
-			if (last <= ntohl(header->export_time)) {
-				/* Insert Template Set */
-				memmove(*packet + IPFIX_HEADER_LENGTH + NETFLOW_V5_TEMPLATE_LEN, *packet + IPFIX_HEADER_LENGTH, BUFF_LEN - NETFLOW_V5_TEMPLATE_LEN - IPFIX_HEADER_LENGTH);
-				memcpy(*packet + IPFIX_HEADER_LENGTH, netflow_v5_template, NETFLOW_V5_TEMPLATE_LEN);
-
-				if (conf->info_list != NULL) {
-					conf->info_list->last_sent = ntohl(header->export_time);
-					conf->info_list->packets_sent = 1;
-				}
-				header->length=htons(IPFIX_HEADER_LENGTH + NETFLOW_V5_TEMPLATE_LEN + NETFLOW_V5_DATA_SET_LEN);
-			} else {
-				header->length=htons(IPFIX_HEADER_LENGTH + NETFLOW_V5_DATA_SET_LEN);
-			}
+			/* Template Set insertion (if needed) and setting packet length */
+			header->length = insertTemplateSet(packet,(char *) info_list, 1);
+			header->sequence_number = htonl(seqNo[NF5_SEQ_N]++);
 			break;
+
+		/* SFLOW packet (converted to Netflow v5 like packet */
 		default:
+			if (modified == 0) {
+				modify();
+			}
+			/* Conversion from sflow to Netflow v5 like IPFIX packet */
+			int numOfFlowSamples = Process_sflow(*packet, len);
+
+			/* Observation domain ID is unknown */
+			header->observation_domain_id = 0; // ??
+			header->version = htons(IPFIX_VERSION);
+
+			/* Data Set header is inserted automaticaly with data inside Process_sflow function */
+			/* Template Set insertion (if needed) and setting total packet length */
+			header->length = insertTemplateSet(packet, (char *) info_list, numOfFlowSamples);
+			seqNo[SF_SEQ_N] += numOfFlowSamples;
+			header->sequence_number = htonl(seqNo[SF_SEQ_N]);
 			break;
 	}
 }
@@ -486,9 +566,9 @@ int get_packet(void *config, struct input_info **info, char **packet)
 		MSG_ERROR(msg_module, "Failed to receive packet: %s", strerror(errno));
 		return INPUT_ERROR;
 	}
-
+	/* Convert packet from Netflow v5/v9/sflow to IPFIX format */
 	if (htons(((struct ipfix_header *)(*packet))->version) != IPFIX_VERSION) {
-		convert_packet(packet, conf);
+		convert_packet(packet, length, (char *) conf->info_list);
 	}
 
 	/* go through input_info_list */

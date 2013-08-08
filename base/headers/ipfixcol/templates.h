@@ -87,6 +87,8 @@
 struct ipfix_template {
 	uint8_t template_type;       /**Type of Template - TM_TEMPLATE = Template,
 	                              * TM_OPTIONS_TEMPLATE = Options Template */
+	uint16_t references;		 /** Number of packets referencing to this template */
+	struct ipfix_template *next;
 	time_t last_transmission;    /**Time of last transmission of Template,
 	                              * UDP only */
 	uint32_t last_message;		 /** Message number of last update,
@@ -116,6 +118,7 @@ struct ipfix_template {
  */
 struct ipfix_template_mgr {
 	struct ipfix_template **templates;/**array of pointers to Templates */
+	uint16_t references;  /**number of references to each template */
 	uint16_t max_length;  /**maximum length of array */
 	uint16_t counter;     /**number of templates in array */
 };

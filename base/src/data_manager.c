@@ -211,7 +211,6 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 	struct ipfix_template *template;
 	uint16_t min_data_length;
 	uint16_t data_length;
-
 	/* check for new templates */
 	for (i=0; msg->templ_set[i] != NULL && i<1024; i++) {
 		ptr = (uint8_t*) &msg->templ_set[i]->first_record;
@@ -303,6 +302,20 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 				/* no elements with variable length */
 				records_count += ntohs(msg->data_couple[i].data_set->header.length) / msg->data_couple[i].data_template->data_length;
 			}
+
+			/* Checking Template Set expiration */
+			if ((--(msg->data_couple[i].data_template->references)) == 0) {
+				if (msg->data_couple[i].data_template->next == NULL) {
+					/* If there is no newer Template with the same ID, remove it from template manager */
+					tm_remove_template(template_mgr, msg->data_couple[i].data_template->template_id);
+				} else {
+					/* Replace this Template with next one (with the same ID) */
+					struct ipfix_template *new = msg->data_couple[i].data_template->next;
+					free(msg->data_couple[i].data_template);
+					msg->data_couple[i].data_template = new;
+				}
+			}
+
 		}
 	}
 
@@ -386,7 +399,6 @@ static void* data_manager_thread (void* cfg)
 	struct udp_conf udp_conf;
 	unsigned int index;
 	uint32_t sequence_number = 0, msg_counter = 0;
-
 	/* set the thread name to reflect the configuration */
 	snprintf(config->thread_name, 16, "ipfixcol DM %d", config->observation_domain_id);
 	prctl(PR_SET_NAME, config->thread_name, 0, 0, 0);
@@ -410,7 +422,6 @@ static void* data_manager_thread (void* cfg)
 						sequence_number, ntohl(msg->pkt_header->sequence_number));
 				sequence_number = ntohl(msg->pkt_header->sequence_number);
 			}
-
 			/* Check whether there are withdraw templates (not for UDP) */
 			if (config->input_info->type != SOURCE_TYPE_UDP &&  data_manager_withdraw_templates(msg)) {
 				MSG_NOTICE(msg_module, "Got template withdrawal message. Waiting for storage packets.");
@@ -465,7 +476,6 @@ static void* storage_plugin_thread (void* cfg)
 
 	/* set the thread name to reflect the configuration */
 	prctl(PR_SET_NAME, config->thread_name, 0, 0, 0);
-
     /* loop will break upon receiving NULL from buffer */
 	while (1) {
 		/* get next data */
@@ -525,7 +535,6 @@ struct data_manager_config* data_manager_create (
 	struct storage_list* aux_storage;
 	struct data_manager_config *config;
 	struct storage_thread_conf* plugin_cfg;
-
 	/* prepare Data manager's config structure */
 	config = (struct data_manager_config*) calloc (1, sizeof(struct data_manager_config));
 	if (config == NULL) {
@@ -552,7 +561,8 @@ struct data_manager_config* data_manager_create (
 	config->storage_plugins = NULL;
 	config->plugins_count = 0;
 	config->input_info = input_info;
-	config->template_mgr = tm_create();
+	config->template_mgr = tm_create(atoi(((struct input_info_network *) input_info)->template_life_packet));
+
 
 	/* check whether there is OID specific plugin for this OID */
 	for (aux_storage = storage_plugins; aux_storage != NULL; aux_storage = aux_storage->next) {
