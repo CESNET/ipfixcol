@@ -186,7 +186,7 @@ int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type);
  *
  * @return struct ipfix_template_manager New template manager
  */
-struct ipfix_template_mgr *tm_create();
+struct ipfix_template_mgr *tm_create(uint16_t references);
 
 
 /**

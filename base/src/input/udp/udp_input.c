@@ -107,6 +107,7 @@ static char *msg_module = "UDP input";
 #define BYTES_8 8
 #define BYTES_12 12
 
+
 /* Static creation of Netflow v5 Template Set */
 
 static uint16_t netflow_v5_template[NETFLOW_V5_TEMPLATE_LEN/2]={\
@@ -435,6 +436,7 @@ inline uint16_t insertTemplateSet(char **packet, char *input_info, int numOfFlow
 		return htons(IPFIX_HEADER_LENGTH + (NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
 	}
 }
+
 
 /**
  * \brief Converts packet from Netflow v5/v9 or sFlow format to IPFIX format

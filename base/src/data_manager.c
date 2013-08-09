@@ -159,6 +159,7 @@ static int data_manager_process_one_template(struct ipfix_template_mgr *template
 		/* template already exists */
 		MSG_WARNING(msg_module, "%s ID %i already exists. Rewriting.",
 				(type==TM_TEMPLATE)?"Template":"Options template", template->template_id);
+		MSG_DEBUG(msg_module, "going to update template");
 		template = tm_update_template(template_mgr, tmpl, max_len, type);
 	}
 	if (template == NULL) {
@@ -304,21 +305,53 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 			}
 
 			/* Checking Template Set expiration */
+			MSG_DEBUG(msg_module, "Checking references and followers");
 			if ((--(msg->data_couple[i].data_template->references)) == 0) {
 				if (msg->data_couple[i].data_template->next == NULL) {
 					/* If there is no newer Template with the same ID, remove it from template manager */
+					MSG_DEBUG(msg_module, "Zero references and no follower, going to remove");
 					tm_remove_template(template_mgr, msg->data_couple[i].data_template->template_id);
 				} else {
 					/* Replace this Template with next one (with the same ID) */
-					struct ipfix_template *new = msg->data_couple[i].data_template->next;
-					free(msg->data_couple[i].data_template);
-					msg->data_couple[i].data_template = new;
+					MSG_DEBUG(msg_module, "No references, but has follower(s)");
+					int cnt = 1;
+					struct ipfix_template *last = msg->data_couple[i].data_template;
+					while (last->next != NULL) {
+						last = last->next;
+						cnt++;
+					}
+					int j, count=0;
+					/* the array may have holes, thus the counter */
+					for (j=0; j < template_mgr->max_length && count < template_mgr->counter; j++) {
+						if (template_mgr->templates[j] != NULL) {
+							if (template_mgr->templates[j]->template_id == msg->data_couple[i].data_template->template_id) {
+								break;
+							}
+							count++;
+						}
+					}
+					/* Set the follower as new "main" template on this index */
+					MSG_DEBUG(msg_module, "Setting new template (follower of the old one) with ID %d on index %d",
+							msg->data_couple[i].data_template->template_id, j);
+					struct ipfix_template *old = msg->data_couple[i].data_template;
+					msg->data_couple[i].data_template = msg->data_couple[i].data_template->next;
+					MSG_DEBUG(msg_module, "free(old)");
+					free(old);
+					template_mgr->templates[j] = msg->data_couple[i].data_template;
 				}
+			} else {
+				MSG_DEBUG(msg_module, "Has some reference(s), keep it");
 			}
-
 		}
 	}
-
+	int j, cnt=0;
+	/* the array may have holes, thus the counter */
+	for (j=0; j < template_mgr->max_length && cnt < template_mgr->counter; j++) {
+		if (template_mgr->templates[j] != NULL) {
+			MSG_DEBUG(msg_module, "template %d id: %d", j, template_mgr->templates[j]->template_id);
+			cnt++;
+		}
+	}
 	/* return number of data records */
 	return records_count;
 }
