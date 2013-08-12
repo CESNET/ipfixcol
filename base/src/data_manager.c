@@ -133,6 +133,7 @@ static int data_manager_process_one_template(struct ipfix_template_mgr *template
 				ntohs(template_record->template_id) == IPFIX_OPTION_FLOWSET_ID) &&
 			ntohs(template_record->count) == 0) {
 		/* withdraw template or option template */
+		MSG_DEBUG(msg_module, "removing all templates");
 		tm_remove_all_templates(template_mgr, type);
 		/* don't try to parse the withdraw template */
 		return TM_TEMPLATE_WITHDRAW_LEN;
@@ -159,7 +160,6 @@ static int data_manager_process_one_template(struct ipfix_template_mgr *template
 		/* template already exists */
 		MSG_WARNING(msg_module, "%s ID %i already exists. Rewriting.",
 				(type==TM_TEMPLATE)?"Template":"Options template", template->template_id);
-		MSG_DEBUG(msg_module, "going to update template");
 		template = tm_update_template(template_mgr, tmpl, max_len, type);
 	}
 	if (template == NULL) {
@@ -239,13 +239,19 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 			}
 		}
 	}
-
 	/* add template to message data_couples */
 	for (i=0; msg->data_couple[i].data_set != NULL && i<1023; i++) {
 		msg->data_couple[i].data_template = tm_get_template(template_mgr, ntohs(msg->data_couple[i].data_set->header.flowset_id));
 		if (msg->data_couple[i].data_template == NULL) {
 			MSG_WARNING(msg_module, "Data template with ID %i not found!", ntohs(msg->data_couple[i].data_set->header.flowset_id));
 		} else {
+			/* Increasing number of references to template */
+			if (msg->data_couple[i].data_template != NULL) {
+				msg->data_couple[i].data_template->references++;
+				MSG_DEBUG(msg_module, "Increasing references to template %d: %d",
+					msg->data_couple[i].data_template->template_id, msg->data_couple[i].data_template->references);
+			}
+
 			if ((msg->input_info->type == SOURCE_TYPE_UDP) && /* source UDP */
 					((time(NULL) - msg->data_couple[i].data_template->last_transmission > udp_conf->template_life_time) || /* lifetime expired */
 					(udp_conf->template_life_packet > 0 && /* life packet should be checked */
@@ -303,53 +309,6 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 				/* no elements with variable length */
 				records_count += ntohs(msg->data_couple[i].data_set->header.length) / msg->data_couple[i].data_template->data_length;
 			}
-
-			/* Checking Template Set expiration */
-			MSG_DEBUG(msg_module, "Checking references and followers");
-			if ((--(msg->data_couple[i].data_template->references)) == 0) {
-				if (msg->data_couple[i].data_template->next == NULL) {
-					/* If there is no newer Template with the same ID, remove it from template manager */
-					MSG_DEBUG(msg_module, "Zero references and no follower, going to remove");
-					tm_remove_template(template_mgr, msg->data_couple[i].data_template->template_id);
-				} else {
-					/* Replace this Template with next one (with the same ID) */
-					MSG_DEBUG(msg_module, "No references, but has follower(s)");
-					int cnt = 1;
-					struct ipfix_template *last = msg->data_couple[i].data_template;
-					while (last->next != NULL) {
-						last = last->next;
-						cnt++;
-					}
-					int j, count=0;
-					/* the array may have holes, thus the counter */
-					for (j=0; j < template_mgr->max_length && count < template_mgr->counter; j++) {
-						if (template_mgr->templates[j] != NULL) {
-							if (template_mgr->templates[j]->template_id == msg->data_couple[i].data_template->template_id) {
-								break;
-							}
-							count++;
-						}
-					}
-					/* Set the follower as new "main" template on this index */
-					MSG_DEBUG(msg_module, "Setting new template (follower of the old one) with ID %d on index %d",
-							msg->data_couple[i].data_template->template_id, j);
-					struct ipfix_template *old = msg->data_couple[i].data_template;
-					msg->data_couple[i].data_template = msg->data_couple[i].data_template->next;
-					MSG_DEBUG(msg_module, "free(old)");
-					free(old);
-					template_mgr->templates[j] = msg->data_couple[i].data_template;
-				}
-			} else {
-				MSG_DEBUG(msg_module, "Has some reference(s), keep it");
-			}
-		}
-	}
-	int j, cnt=0;
-	/* the array may have holes, thus the counter */
-	for (j=0; j < template_mgr->max_length && cnt < template_mgr->counter; j++) {
-		if (template_mgr->templates[j] != NULL) {
-			MSG_DEBUG(msg_module, "template %d id: %d", j, template_mgr->templates[j]->template_id);
-			cnt++;
 		}
 	}
 	/* return number of data records */
@@ -465,7 +424,6 @@ static void* data_manager_thread (void* cfg)
 			/* process templates */
 			sequence_number += data_manager_process_templates(config->template_mgr, msg, &udp_conf, msg_counter);
 		}
-
 		/* pass data into the storage plugins */
 		if (rbuffer_write (config->store_queue, msg, config->plugins_count) != 0) {
 			MSG_WARNING(msg_module, "ODID %d: Unable to pass data into the Storage plugins' queue.",
@@ -500,7 +458,6 @@ static void* data_manager_thread (void* cfg)
 	return (NULL);
 }
 
-
 static void* storage_plugin_thread (void* cfg)
 {
     struct storage *config = (struct storage*) cfg; 
@@ -517,13 +474,23 @@ static void* storage_plugin_thread (void* cfg)
 			MSG_NOTICE("storage plugin thread", "No more data from Data manager.");
             break;
 		}
-
 		/* do the job */
 		config->store (config->config, msg, config->thread_config->template_mgr);
 
+		MSG_DEBUG(msg_module, "Data stored");
+
+		if (msg != NULL) {
+			int i;
+			for (i=0; msg->data_couple[i].data_set != NULL && i<1023; i++) {
+				if (msg->data_couple[i].data_template != NULL) {
+					msg->data_couple[i].data_template->references--;
+					MSG_DEBUG(msg_module, "Decreasing references to template %d: %d",
+								msg->data_couple[i].data_template->template_id, msg->data_couple[i].data_template->references);
+				}
+			}
+		}
 		/* all done, mark data as processed */
 		rbuffer_remove_reference(config->thread_config->queue, index, 1);
-
 		/* move the index */
 		index = (index + 1) % config->thread_config->queue->size;
 	}
@@ -594,7 +561,7 @@ struct data_manager_config* data_manager_create (
 	config->storage_plugins = NULL;
 	config->plugins_count = 0;
 	config->input_info = input_info;
-	config->template_mgr = tm_create(atoi(((struct input_info_network *) input_info)->template_life_packet));
+	config->template_mgr = tm_create();
 
 
 	/* check whether there is OID specific plugin for this OID */

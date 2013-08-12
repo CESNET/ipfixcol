@@ -52,7 +52,7 @@
 /** Identifier to MSG_* macros */
 static char *msg_module = "template manager";
 
-struct ipfix_template_mgr *tm_create(uint16_t references) {
+struct ipfix_template_mgr *tm_create() {
 	struct ipfix_template_mgr *template_mgr;
 
 	if ((template_mgr = malloc(sizeof(struct ipfix_template_mgr))) == NULL) {
@@ -61,7 +61,6 @@ struct ipfix_template_mgr *tm_create(uint16_t references) {
 	template_mgr->counter = 0;
 	template_mgr->max_length = 32;
 	template_mgr->templates = calloc(template_mgr->max_length, sizeof(void *));
-	template_mgr->references = references;
 
 	return template_mgr;
 }
@@ -115,7 +114,6 @@ static int tm_fill_template(struct ipfix_template *template, void *template_reco
 	template->template_id = ntohs(tmpl->template_id);
 	template->template_length = template_length;
 	template->data_length = data_length;
-	template->next = NULL;
 
 	/* set type specific attributes */
 	if (type == TM_TEMPLATE) { /* template */
@@ -134,6 +132,8 @@ static int tm_fill_template(struct ipfix_template *template, void *template_reco
 							(uint8_t*)((struct ipfix_options_template_record*) template_record)->fields,
 							template_length - sizeof(struct ipfix_template) + sizeof(template_ie));
 	}
+	template->references = 0;
+	template->next = NULL;
 	return 0;
 }
 
@@ -221,7 +221,6 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 		free(new_tmpl);
 		return NULL;
 	}
-	new_tmpl->references = tm->references;
 
 	/* check whether allocated memory is big enough */
 	if (tm->counter == tm->max_length) {
@@ -264,18 +263,25 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *t
 	}
 	if (tm->templates[i]->references == 0) {
 		if (tm->templates[i]->next == NULL) {
+			/* No previous template */
 			/* remove the old template */
-			if (tm_remove_template(tm, i) != 0) {
+			MSG_DEBUG(msg_module, "No references and no previous template - removing, ID %d", id);
+			if (tm_remove_template(tm, id) != 0) {
 				MSG_WARNING(msg_module, "Cannot remove template %i.", ntohs(((struct ipfix_template_record*) template)->template_id));
 			}
 			/* create a new one */
 			return tm_add_template(tm, template, max_len, type);
 		} else {
+			/* Has some previous template(s) */
+			MSG_DEBUG(msg_module, "No references, but previous template found, ID (%d)", id);
 			struct ipfix_template *new = tm->templates[i]->next;
 			free(tm->templates[i]);
 			tm->templates[i] = new;
 		}
+	} else {
+		MSG_DEBUG(msg_module, "Template %d can't be removed (%d references), it will be marked as old.", id, tm->templates[i]->references);
 	}
+	/* Create new template and place it on beginnig of list */
 	struct ipfix_template *new_templ= NULL;
 	uint32_t data_length = 0;
 	uint32_t tmpl_length;
@@ -298,18 +304,11 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *t
 		free(new_templ);
 		return NULL;
 	}
-	new_templ->references = tm->references;
 
-	int cnt = 1;
-	struct ipfix_template *last = tm->templates[i];
-	while (last->next != NULL) {
-		last = last->next;
-		cnt++;
-	}
-	last->next = new_templ;
-	cnt++;
+	/* Inserting new template */
+	new_templ->next = tm->templates[i];
+	tm->templates[i] = new_templ;
 	MSG_DEBUG(msg_module,"Template with id %d and index %d added to list", id, i);
-	MSG_DEBUG(msg_module, "Tempaltes in list on index %d: %d", i, cnt);
 	return tm->templates[i];
 }
 
@@ -334,8 +333,8 @@ struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, uint16_t t
 
 int tm_remove_template(struct ipfix_template_mgr *tm, uint16_t template_id)
 {
+	MSG_DEBUG(msg_module, "Removing template %d", template_id);
 	int i;
-
 	for (i=0; i < tm->max_length; i++) {
 		if (tm->templates[i] != NULL && tm->templates[i]->template_id == template_id) {
 			struct ipfix_template *next = tm->templates[i];
@@ -356,8 +355,8 @@ int tm_remove_template(struct ipfix_template_mgr *tm, uint16_t template_id)
 
 int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type)
 {
+	MSG_DEBUG(msg_module, "Removing all templates");
 	int i;
-
 	for (i=0; i < tm->max_length; i++) {
 		if ((tm->templates[i] != NULL) && (tm->templates[i]->template_type == type)) {
 			struct ipfix_template *next = tm->templates[i];
