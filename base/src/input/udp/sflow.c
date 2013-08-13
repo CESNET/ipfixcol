@@ -865,13 +865,6 @@ static void decodeIPV6(SFSample *sample)
   -----------------___________________________------------------
 */
 
-static int NFFlowSequenceNo = 0;
-
-#define NETFLOW_V5_DATA_SET_LEN 52
-
-static uint16_t netflow_v5_data_header[2] = {\
-	IPFIX_MIN_RECORD_FLOWSET_ID, NETFLOW_V5_DATA_SET_LEN
-};
 
 static void sendNetFlowDatagram(SFSample *sample, char *packet)
 {
@@ -889,11 +882,9 @@ static void sendNetFlowDatagram(SFSample *sample, char *packet)
   else bytes = sample->sampledPacketSize - sample->stripped - sample->offsetToIPV4;
 
   memset(&pkt, 0, sizeof(pkt));
-  pkt.hdr.version = htons(IPFIX_VERSION);
-  // length will be set in input plugin
+  // version, length and sequence number will be set in input plugin
 //  pkt.hdr.sysUpTime = htonl(now % (3600 * 24)) * 1000;  /* pretend we started at midnight (milliseconds) */
   pkt.hdr.export_time = htonl(now);
-  pkt.hdr.sequence_number = htonl(NFFlowSequenceNo++);
 
   pkt.flow.srcIP = sample->ipsrc.address.ip_v4.addr;
   pkt.flow.dstIP = sample->ipdst.address.ip_v4.addr;
@@ -931,14 +922,6 @@ static void sendNetFlowDatagram(SFSample *sample, char *packet)
   pkt.flow.srcMask = (uint8_t)sample->srcMask;
   pkt.flow.dstMask = (uint8_t)sample->dstMask;
 
-  /* Insert Data Set header */
-#define BUFF_LEN 1000
-  memmove(packet + IPFIX_HEADER_LENGTH + 4, packet + IPFIX_HEADER_LENGTH, BUFF_LEN - IPFIX_HEADER_LENGTH - 4);
-  memcpy(packet + IPFIX_HEADER_LENGTH, netflow_v5_data_header, 4);
-
-  memmove(packet + IPFIX_HEADER_LENGTH + NETFLOW_V5_DATA_SET_LEN, packet + IPFIX_HEADER_LENGTH,
-		  sizeof(packet) - IPFIX_HEADER_LENGTH - NETFLOW_V5_DATA_SET_LEN);
-  memcpy(packet + IPFIX_HEADER_LENGTH, &pkt, sizeof(pkt));
   numOfFlowSamples++;
 }
 

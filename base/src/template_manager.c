@@ -270,7 +270,7 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *t
 				MSG_WARNING(msg_module, "Cannot remove template %i.", ntohs(((struct ipfix_template_record*) template)->template_id));
 			}
 			/* create a new one */
-			MSG_DEBUG(msg_module, "Creatign a new one");
+			MSG_DEBUG(msg_module, "Creating a new one");
 			return tm_add_template(tm, template, max_len, type);
 		} else {
 			/* Has some previous template(s) */
