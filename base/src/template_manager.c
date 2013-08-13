@@ -222,13 +222,14 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 
 	/* check whether allocated memory is big enough */
 	if (tm->counter == tm->max_length) {
-		new_templates = realloc(tm->templates, tm->max_length*2);
+		new_templates = realloc(tm->templates, tm->max_length*2*sizeof(void*));
 		if (new_templates == NULL) {
 			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			free(new_tmpl);
 			return NULL;
 		}
 		tm->templates = new_templates;
+		memset(tm->templates + tm->max_length, 0, tm->max_length * sizeof(void*));
 		tm->max_length *= 2;
 	}
 
