@@ -224,13 +224,14 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 
 	/* check whether allocated memory is big enough */
 	if (tm->counter == tm->max_length) {
-		new_templates = realloc(tm->templates, tm->max_length*2);
+		new_templates = realloc(tm->templates, tm->max_length*2*sizeof(void *));
 		if (new_templates == NULL) {
 			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			free(new_tmpl);
 			return NULL;
 		}
 		tm->templates = new_templates;
+		memset(tm->templates + tm->max_length, 0, tm->max_length * sizeof(void*));
 		tm->max_length *= 2;
 	}
 
@@ -243,7 +244,6 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 			break;
 		}
 	}
-
 	return new_tmpl;
 }
 
@@ -265,11 +265,12 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *t
 		if (tm->templates[i]->next == NULL) {
 			/* No previous template */
 			/* remove the old template */
-			MSG_DEBUG(msg_module, "No references and no previous template - removing, ID %d", id);
+//			MSG_DEBUG(msg_module, "No references and no previous template - removing, ID %d", id);
 			if (tm_remove_template(tm, id) != 0) {
 				MSG_WARNING(msg_module, "Cannot remove template %i.", ntohs(((struct ipfix_template_record*) template)->template_id));
 			}
 			/* create a new one */
+			MSG_DEBUG(msg_module, "Creatign a new one");
 			return tm_add_template(tm, template, max_len, type);
 		} else {
 			/* Has some previous template(s) */
@@ -316,7 +317,6 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *t
 struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, uint16_t template_id)
 {
 	int i, count=0;
-
 	/* the array may have holes, thus the counter */
 	for (i=0; i < tm->max_length && count < tm->counter; i++) {
 		if (tm->templates[i] != NULL) {
@@ -326,14 +326,12 @@ struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, uint16_t t
 			count++;
 		}
 	}
-
 	/* template not found */
 	return NULL;
 }
 
 int tm_remove_template(struct ipfix_template_mgr *tm, uint16_t template_id)
 {
-	MSG_DEBUG(msg_module, "Removing template %d", template_id);
 	int i;
 	for (i=0; i < tm->max_length; i++) {
 		if (tm->templates[i] != NULL && tm->templates[i]->template_id == template_id) {

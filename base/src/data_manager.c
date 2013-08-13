@@ -122,7 +122,6 @@ static int data_manager_process_one_template(struct ipfix_template_mgr *template
 	int ret;
 
 	template_record = (struct ipfix_template_record*) tmpl;
-
 	/* check for withdraw all templates message */
 	/* these templates are no longer used (checked in data_manager_withdraw_templates()) */
 	if (input_info->type == SOURCE_TYPE_UDP && ntohs(template_record->count) == 0) {
@@ -133,7 +132,6 @@ static int data_manager_process_one_template(struct ipfix_template_mgr *template
 				ntohs(template_record->template_id) == IPFIX_OPTION_FLOWSET_ID) &&
 			ntohs(template_record->count) == 0) {
 		/* withdraw template or option template */
-		MSG_DEBUG(msg_module, "removing all templates");
 		tm_remove_all_templates(template_mgr, type);
 		/* don't try to parse the withdraw template */
 		return TM_TEMPLATE_WITHDRAW_LEN;
@@ -225,7 +223,6 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 			}
 		}
 	}
-
 	/* check for new option templates */
 	for (i=0; msg->opt_templ_set[i] != NULL && i<1024; i++) {
 		ptr = (uint8_t*) &msg->opt_templ_set[i]->first_record;
@@ -251,7 +248,6 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 				MSG_DEBUG(msg_module, "Increasing references to template %d: %d",
 					msg->data_couple[i].data_template->template_id, msg->data_couple[i].data_template->references);
 			}
-
 			if ((msg->input_info->type == SOURCE_TYPE_UDP) && /* source UDP */
 					((time(NULL) - msg->data_couple[i].data_template->last_transmission > udp_conf->template_life_time) || /* lifetime expired */
 					(udp_conf->template_life_packet > 0 && /* life packet should be checked */
@@ -423,8 +419,10 @@ static void* data_manager_thread (void* cfg)
 
 			/* process templates */
 			sequence_number += data_manager_process_templates(config->template_mgr, msg, &udp_conf, msg_counter);
+			MSG_DEBUG(msg_module, "data_manager_process_templates() returned");
 		}
 		/* pass data into the storage plugins */
+		MSG_DEBUG(msg_module, "passing data into the storage plugins");
 		if (rbuffer_write (config->store_queue, msg, config->plugins_count) != 0) {
 			MSG_WARNING(msg_module, "ODID %d: Unable to pass data into the Storage plugins' queue.",
 					config->observation_domain_id);
@@ -436,6 +434,7 @@ static void* data_manager_thread (void* cfg)
 		 * data are now in store_queue, so we can remove it from in_queue, but
 		 * we cannot deallocate data - it will be done in store_queue
 		 */
+		MSG_DEBUG(msg_module, "removing data from in_queue");
 		rbuffer_remove_reference (config->in_queue, index, 0);
 
         /* passing NULL message means closing */
@@ -475,6 +474,7 @@ static void* storage_plugin_thread (void* cfg)
             break;
 		}
 		/* do the job */
+		MSG_DEBUG(msg_module, "Doing the job");
 		config->store (config->config, msg, config->thread_config->template_mgr);
 
 		MSG_DEBUG(msg_module, "Data stored");
