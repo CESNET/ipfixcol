@@ -6,4 +6,4 @@ plugins_LTLIBRARIES = ipfixcol-tcp-input.la
 ipfixcol_tcp_input_la_LDFLAGS = -module -avoid-version -shared
 ipfixcol_tcp_input_la_LIBADD = $(TLS_LIBS)
 
-ipfixcol_tcp_input_la_SOURCES = tcp_input.c
+ipfixcol_tcp_input_la_SOURCES = tcp_input.c sflow.c

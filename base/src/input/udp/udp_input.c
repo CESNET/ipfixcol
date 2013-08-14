@@ -61,6 +61,7 @@
 
 #include <ipfixcol.h>
 #include "sflow.h"
+#include "sflowtool.h"
 
 /* input buffer length */
 #define BUFF_LEN 10000
@@ -536,7 +537,10 @@ void convert_packet(char **packet, ssize_t *len, char *input_info) {
 				modify();
 			}
 			/* Conversion from sflow to Netflow v5 like IPFIX packet */
-			numOfFlowSamples = Process_sflow(*packet, *len);
+			if ((numOfFlowSamples = Process_sflow(*packet, *len)) < 0) {
+				header->length = *len -1;
+				return;
+			}
 
 			/* Observation domain ID is unknown */
 			header->observation_domain_id = 0; // ??
@@ -584,6 +588,11 @@ int get_packet(void *config, struct input_info **info, char **packet)
 		}
 		MSG_ERROR(msg_module, "Failed to receive packet: %s", strerror(errno));
 		return INPUT_ERROR;
+	}
+
+	if (length < IPFIX_HEADER_LENGTH) {
+		MSG_ERROR(msg_module, "Packet header is incomplete, skipping");
+		return INPUT_INTR;
 	}
 
 	/* Convert packet from Netflow v5/v9/sflow to IPFIX format */
