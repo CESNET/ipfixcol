@@ -298,7 +298,7 @@ int merge_dirs(const char *srcDir, const char *dstDir) {
 					return NOT_OK;
 				}
 			} else {
-				tablex->addColumn(c->name(), ibis::BYTE);
+				tablex->addColumn(c->name(), c->type());
 				tablex->append(c->name(), 0, part.nRows() - 1, s8);
 			}
 			break;}
@@ -316,7 +316,7 @@ int merge_dirs(const char *srcDir, const char *dstDir) {
 					return NOT_OK;
 				}
 			} else {
-				tablex->addColumn(c->name(), ibis::SHORT);
+				tablex->addColumn(c->name(), c->type());
 				tablex->append(c->name(), 0, part.nRows() - 1, s16);
 			}
 			break;
@@ -335,7 +335,7 @@ int merge_dirs(const char *srcDir, const char *dstDir) {
 					return NOT_OK;
 				}
 			} else {
-				tablex->addColumn(c->name(), ibis::INT);
+				tablex->addColumn(c->name(), c->type());
 				tablex->append(c->name(), 0, part.nRows()-1, s32);
 			}
 			break;}
@@ -353,7 +353,7 @@ int merge_dirs(const char *srcDir, const char *dstDir) {
 					return NOT_OK;
 				}
 			} else {
-				tablex->addColumn(c->name(), ibis::LONG);
+				tablex->addColumn(c->name(), c->type());
 				tablex->append(c->name(), 0, part.nRows()-1, s64);
 			}
 			break;}
