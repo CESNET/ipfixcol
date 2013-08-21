@@ -39,10 +39,13 @@
 AC_PREREQ([2.60])
 
 # Process this file with autoconf to produce a configure script.
-AC_INIT([fbimerge], [0.1])
+AC_INIT([fbitmerge], [0.1])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
-AC_CONFIG_SRCDIR([fbitmerge.cpp])
+AC_CONFIG_SRCDIR([src/fbitmerge.cpp])
 AC_CONFIG_HEADERS([config.h])
+
+RELEASE=2
+AC_SUBST(RELEASE)
 
 # Initialization
 : ${CXXFLAGS=""}
@@ -51,11 +54,11 @@ AC_LANG(C++)
 
 CXX="g++"
 
+# Set user name and email for packaging purposes 
+LBR_SET_CREDENTIALS
+LBR_SET_DISTRO([redhat])
 
 ############################ Check for programs ################################
-
-# Check for flex
-AC_CHECK_PROG(FLEX, flex, flex)
 
 # Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
@@ -64,12 +67,13 @@ AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
 AC_CHECK_PROG(DOXYGEN, doxygen, doxygen)
 AM_CONDITIONAL([HAVE_DOXYGEN], [test -n $DOXYGEN])
 
+# Check for xsltproc
+LBR_CHECK_XSLTPROC
 
 # Check for standard programs
 AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_RANLIB
-AC_PROG_AWK
 
 # Check for latest g++ standard
 LBR_SET_CXXSTD
@@ -85,8 +89,6 @@ AC_SEARCH_LIBS([dlopen], [dl],,
         AC_MSG_ERROR([Required library dl missing]))
 
 ############################# Check for files ##################################
-
-AC_CHECK_FILE([/etc/protocols],[PROTOCOLS=yes], [PROTOCOLS=no])
 
 ###################### Check for configure parameters ##########################
 
@@ -126,29 +128,29 @@ AC_FUNC_MALLOC
 AC_FUNC_MKTIME
 AC_FUNC_REALLOC
 AC_FUNC_STRTOD
-AC_CHECK_FUNCS([htonl inet_ntop gmtime regcomp getline floor memmove memset regcomp select strchr strdup strerror strrchr strstr strtol strtoul strverscmp])
-AC_CHECK_DECL([htobe64], [AC_DEFINE([HAVE_HTOBE64], [1],
-                               [Define if macro htobe64 exists.])],,
-							   [[#include <endian.h>]])
+AC_CHECK_FUNCS([memmove memset])
 
 
 ############################### Set output #####################################
 
 # generate output
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile
+				src/Makefile
+				man/Makefile
+				doc/Makefile
+				fbitmerge.spec])
+
+AM_COND_IF(HAVE_DOXYGEN, AC_CONFIG_FILES([doc/doxyconf]))
 
 AC_OUTPUT
 
 # Print warings
-AS_IF([test -z "$FLEX"], AC_MSG_WARN([Due to missing flex you will not be able to generate scanner from sources.]))
-
-AS_IF([test "x$PROTOCOLS" = xno], AC_MSG_WARN([Due to missing /etc/protocols you will not be able to generate protocols.cpp]))
-
-AS_IF([test -z "$AWK"], AC_MSG_WARN([Due to missing awk you will not be able to generate protocols.cpp from /etc/protocols]))
 
 AM_COND_IF(HAVE_DOXYGEN,, AC_MSG_WARN([Due to missing doxygen you will not able to generate Doxygen documentation.]))
 
 AS_IF([test -z "$RPMBUILD"], AC_MSG_WARN([Due to missing rpmbuild you will not able to generate RPM package.]))
+
+AM_COND_IF(HAVE_XSLTPROC,, AC_MSG_WARN([Due to missing xsltproc you will not able to generate MAN pages.]))
 
 # Print final summary
 echo "
@@ -161,8 +163,5 @@ echo "
   rpmbuild......: ${RPMBUILD:-NONE}
   xsltproc......: ${XSLTPROC:-NONE}
   xsltmanstyle..: $XSLTMANSTYLE
-  flex..........: ${FLEX:-NONE}
-  awk...........: $AWK
-  /etc/protocols: $PROTOCOLS
   Doxygen.......: ${DOXYGEN:-NONE}
 "
