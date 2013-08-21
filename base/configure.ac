@@ -51,7 +51,7 @@ AC_CONFIG_HEADERS([pkgconfig.h])
 # Initialization
 CFLAGS="-Wall"
 
-RELEASE=1
+RELEASE=2
 AC_SUBST(RELEASE)
 
 # Set user name and email for packaging purposes 
