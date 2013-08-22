@@ -9,6 +9,9 @@
 #define FBITMERGE_H_
 
 
+typedef std::map<std::string, int> innerDirMap;
+typedef std::map<std::string, innerDirMap> DIRMAP;
+
 enum {
 	MAX_SEC = 59,
 	MAX_MIN = 59,
@@ -29,7 +32,6 @@ enum {
 
 enum {
 	DIR_NAME_LEN = 14,
-	DIR_NAME_MAX_LEN = 256
 };
 
 enum {

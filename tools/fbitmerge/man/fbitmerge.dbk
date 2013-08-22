@@ -99,12 +99,6 @@
 				</listitem>
 			</varlistentry>
 			
-			<varlistentry>
-				<term>-d </term>
-				<listitem>
-					<simpara>Enable dump mode.</simpara>
-				</listitem>
-			</varlistentry>
 		  </variablelist>
 	</refsect1>
 			

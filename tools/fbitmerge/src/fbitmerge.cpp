@@ -55,15 +55,17 @@
 
 #include <fastbit/ibis.h>
 
-#define ARGUMENTS ":hk:b:p:sm"
+#define ARGUMENTS ":hk:b:p:smd"
 
 static uint8_t separated = 0;
-static bool dumpMode = false;
 
-
-void dbg(std::string text) {
-	return;
-	std::cout << "debug: " << text << std::endl;
+/* \brief Erase and clear stringstream
+ *
+ * \param[in,out] ss stringstream
+ * */
+inline void clear_ss(std::stringstream *ss) {
+	(*ss).str(std::string());
+	(*ss).clear();
 }
 
 
@@ -80,7 +82,6 @@ void usage() {
 	std::cout << "-s\t Separate merging - only prefixed folders can be moved and deleted\n";
 	std::cout << "\t It means that their parent folders are merged separately, NOT together\n";
 	std::cout << "-m\t Move only - don't merge folders, only move all prefixed subdirs into basedir\n";
-	std::cout << "-d\t Enable dump mode\n";
 	std::cout << std::endl;
 }
 
@@ -89,11 +90,10 @@ void usage() {
  * \param[in] dirname directory path
  */
 void remove_folder_tree(const char *dirname) {
-	dbg("remove started");
     DIR *dir;
     struct dirent *subdir;
-    char buff[DIR_NAME_MAX_LEN];
-    memset(buff, 0, DIR_NAME_MAX_LEN);
+    std::stringstream ss;
+    std::string buff;
 
     dir = opendir(dirname);
 	if (dir == NULL) {
@@ -106,18 +106,20 @@ void remove_folder_tree(const char *dirname) {
         if (subdir->d_name[0] == '.') {
         	continue;
         }
-        snprintf(buff, DIR_NAME_MAX_LEN, "%s/%s", dirname, subdir->d_name);
+        ss << dirname << "/" << subdir->d_name;
+        buff = ss.str();
+        ss.str(std::string());
+        ss.clear();
 
         /* If it is a file, remove it. If not, call remove_folder_tree on subfolder */
         if (subdir->d_type == DT_DIR) {
-            remove_folder_tree(buff);
+            remove_folder_tree(buff.c_str());
         } else {
-            unlink(buff);
+            unlink(buff.c_str());
         }
     }
 
     closedir(dir);
-    dbg("remove ending");
     rmdir(dirname);
 }
 
@@ -127,7 +129,6 @@ void remove_folder_tree(const char *dirname) {
  * \return OK on succes, NOT_OK else
  */
 int could_be(char *dirname) {
-	dbg("could_be started");
 	if (strlen(dirname) != DIR_NAME_LEN) {
 		return NOT_OK;
 	}
@@ -176,7 +177,6 @@ int could_be(char *dirname) {
 	if ((*endp != '\0') || (val < 0) || (val > MAX_SEC)) {
 		return NOT_OK;
 	}
-	dbg("could_be ending");
 	return OK;
 }
 
@@ -190,7 +190,6 @@ int could_be(char *dirname) {
  * \return OK on succes, NOT_OK else
  */
 void merge_flowStats(const char *first, const char *second) {
-	dbg("mfS started");
 	std::fstream file_f;
 	std::fstream file_s;
 
@@ -241,7 +240,6 @@ void merge_flowStats(const char *first, const char *second) {
 		file_s << "Lost flows: " << lostFlows << std::endl;
 		file_s.close();
 	}
-	dbg("mfS ending");
 }
 
 /* \brief Merges 2 folders containing fastbit data together (into second folder)
@@ -251,7 +249,6 @@ void merge_flowStats(const char *first, const char *second) {
  * \return OK on succes, NOT_OK else
  */
 int merge_dirs(const char *srcDir, const char *dstDir) {
-	dbg("m_dirs started");
     /* Table initialization */
     ibis::part part(srcDir, static_cast<const char*>(0));
     ibis::bitvector *bv;
@@ -267,9 +264,9 @@ int merge_dirs(const char *srcDir, const char *dstDir) {
     bv = new ibis::bitvector();
     bv->appendFill(1, part.nRows());
 
-    if (!dumpMode) {
-    	tablex = ibis::tablex::create();
-    }
+   	tablex = ibis::tablex::create();
+
+   	std::stringstream ss;
 
     for(i = 0; i < part.nColumns(); i++) {
     	unsigned char *s8;
@@ -277,95 +274,74 @@ int merge_dirs(const char *srcDir, const char *dstDir) {
 		uint32_t *s32;
 		uint64_t *s64;
 		ibis::column *c;
-		char path[DIR_NAME_MAX_LEN];
-		FILE *fd;
 
 		c = part.getColumn(i);
-		snprintf(path, DIR_NAME_MAX_LEN, "%s/%s", dstDir, c->name());
 
 		switch(c->elementSize()) {
 		case BYTES_1: {
 			std::auto_ptr< ibis::array_t<unsigned char> > tmp(part.selectUBytes(c->name(), *bv));
 			s8 = tmp->begin();
-			if (dumpMode) {
-				if ((fd = fopen(path, "a")) != NULL) {
-					for(uint32_t j = 0; j < part.nRows() - 1; j++) {
-						fprintf(fd, "%u\n", s8[j]);
-					}
-					fclose(fd);
-				} else {
-					delete tablex;
-					return NOT_OK;
-				}
-			} else {
-				tablex->addColumn(c->name(), c->type());
-				tablex->append(c->name(), 0, part.nRows() - 1, s8);
-			}
+
+			tablex->addColumn(c->name(), c->type());
+			tablex->append(c->name(), 0, part.nRows(), s8);
 			break;}
 		case BYTES_2: {
 			std::auto_ptr< ibis::array_t<uint16_t> > tmp(part.selectUShorts(c->name(), *bv));
 			s16 = tmp->begin();
-			if (dumpMode) {
-				if ((fd = fopen(path, "a")) != NULL) {
-					for(uint32_t j = 0; j < part.nRows() - 1; j++) {
-						fprintf(fd, "%u\n", s16[j]);
-					}
-					fclose(fd);
-				} else {
-					delete tablex;
-					return NOT_OK;
-				}
-			} else {
-				tablex->addColumn(c->name(), c->type());
-				tablex->append(c->name(), 0, part.nRows() - 1, s16);
-			}
-			break;
-		}
+
+			tablex->addColumn(c->name(), c->type());
+			tablex->append(c->name(), 0, part.nRows(), s16);
+			break;}
 		case BYTES_4: {
 			std::auto_ptr< ibis::array_t<uint32_t> > tmp(part.selectUInts(c->name(), *bv));
 			s32 = tmp->begin();
-			if (dumpMode) {
-				if ((fd = fopen(path, "a")) != NULL) {
-					for(uint32_t j = 0; j < part.nRows() - 1; j++) {
-						fprintf(fd, "%u\n", s32[j]);
-					}
-					fclose(fd);
-				} else {
-					delete tablex;
-					return NOT_OK;
-				}
-			} else {
-				tablex->addColumn(c->name(), c->type());
-				tablex->append(c->name(), 0, part.nRows()-1, s32);
-			}
+
+			tablex->addColumn(c->name(), c->type());
+			tablex->append(c->name(), 0, part.nRows(), s32);
 			break;}
 		case BYTES_8: {
 			std::auto_ptr< ibis::array_t<uint64_t> > tmp(part.selectULongs(c->name(), *bv));
 			s64 = tmp->begin();
-			if (dumpMode) {
-				if ((fd = fopen(path, "a")) != NULL) {
-					for(uint32_t j = 0; j < part.nRows() - 1; j++) {
-						fprintf(fd, "%lu\n", s64[j]);
-					}
-					fclose(fd);
-				} else {
-					delete tablex;
-					return NOT_OK;
-				}
-			} else {
-				tablex->addColumn(c->name(), c->type());
-				tablex->append(c->name(), 0, part.nRows()-1, s64);
-			}
+
+			tablex->addColumn(c->name(), c->type());
+			tablex->append(c->name(), 0, part.nRows(), s64);
 			break;}
 		}
     }
 
-    if (!dumpMode) {
-    	tablex->write(dstDir, 0, 0);
-    }
+    /* Write new rows into dstDir part file */
+   	tablex->write(dstDir, 0, 0);
     delete tablex;
-    dbg("m_dirs ending");
     return OK;
+}
+
+void scan_dir(const char *dirname,const char *srcDir, DIRMAP *bigMap) {
+    ibis::part part(srcDir, static_cast<const char*>(0));
+
+    if (part.nRows() == 0) {
+    	return;
+    }
+
+    for (uint32_t i = 0; i < part.nColumns(); i++) {
+    	ibis::column *c = part.getColumn(i);
+    	(*bigMap)[std::string(dirname)][std::string(c->name())] = c->type();
+    }
+}
+
+
+int same_data(innerDirMap *first, innerDirMap *second) {
+	if ((*first).size() != (*second).size()) {
+		return NOT_OK;
+	}
+	for (innerDirMap::iterator it = (*first).begin(); it != (*first).end(); it++) {
+		if ((*second).find((*it).first) == (*second).end()) {
+			return NOT_OK;
+		}
+		if ((*it).second != (*second)[(*it).first]) {
+			return NOT_OK;
+		}
+	}
+	return OK;
 }
 
 /* \brief Merges 2 folders in format <prefix>YYYYMMDDHHmmSS together
@@ -381,79 +357,140 @@ int merge_dirs(const char *srcDir, const char *dstDir) {
  * \return OK on success, NOT_OK else
  */
 int merge_couple(const char *srcDir, const char *dstDir, const char *workDir) {
-	dbg("m_cpl started");
 	DIR *sdir = NULL;
 	DIR *ddir = NULL;
-	char buff1[DIR_NAME_MAX_LEN];
-	char buff2[DIR_NAME_MAX_LEN];
-	memset(buff1, 0, DIR_NAME_MAX_LEN);
-	memset(buff2, 0, DIR_NAME_MAX_LEN);
+	std::stringstream ss;
+	std::string buff;
 
 	/* Get full paths of folders */
-	snprintf(buff1, DIR_NAME_MAX_LEN, "%s/%s", workDir, srcDir);
-	snprintf(buff2, DIR_NAME_MAX_LEN, "%s/%s", workDir, dstDir);
+	clear_ss(&ss);
+	ss << workDir << "/" << srcDir;
+	buff = ss.str();
 
-	sdir = opendir(buff1);
+	clear_ss(&ss);
+	ss << workDir << "/" << dstDir;
+
+	/* Open them */
+	sdir = opendir(buff.c_str());
 	if (sdir == NULL) {
-		std::cerr << "Error while opening " << buff1 << std::endl;
+		std::cerr << "Error while opening " << buff << std::endl;
 		return NOT_OK;
 	}
-	ddir = opendir(buff2);
+	ddir = opendir(ss.str().c_str());
 	if (ddir == NULL) {
-		std::cerr << "Error while opening " << buff2 << std::endl;
+		std::cerr << "Error while opening " << ss.str() << std::endl;
 		closedir(sdir);
 		return NOT_OK;
 	}
 
-	/* Scan folders in dstDir folder and save them to vector */
+	/* Scan folders in dstDir folder and save them to DIRMAP */
 	struct dirent *subdir = NULL;
-	std::vector<char *> subdirs;
+
+	DIRMAP srcMap, dstMap;
 	while ((subdir = readdir(ddir)) != NULL) {
 		if ((subdir->d_name[0] == '.') || (subdir->d_type != DT_DIR)) {
 			continue;
 		}
-		subdirs.push_back(subdir->d_name);
+		clear_ss(&ss);
+		ss << workDir << "/" << dstDir << "/" << subdir->d_name;
+		scan_dir(subdir->d_name, ss.str().c_str(), &dstMap);
 	}
 
-	/* Scan folders in srcDir and compare names with of dstDir subfolders */
+	/* Now do the same with srcDir */
 	while ((subdir = readdir(sdir)) != NULL) {
 		if ((subdir->d_name[0] == '.') || (subdir->d_type != DT_DIR)) {
 			continue;
 		}
-		uint8_t found = 0;
-		for (uint16_t i = 0; i < subdirs.size(); i++) {
-			if (!strcmp(subdirs[i], subdir->d_name)) {
-				/* Names are the same -> merge them together */
-				snprintf(buff1, DIR_NAME_MAX_LEN, "%s/%s/%s", workDir, srcDir, subdirs[i]);
-				snprintf(buff2, DIR_NAME_MAX_LEN, "%s/%s/%s", workDir, dstDir, subdir->d_name);
-				if (merge_dirs(buff1, buff2) != OK) {
+		clear_ss(&ss);
+		ss << workDir << "/" << srcDir << "/" << subdir->d_name;
+		scan_dir(subdir->d_name, ss.str().c_str(), &srcMap);
+	}
+
+	/* Iterate through whole dstMap and srcMap and find folders with same data (and data types) */
+	for (DIRMAP::iterator dsti = dstMap.begin(); dsti != dstMap.end(); dsti++) {
+		for (DIRMAP::iterator srci = srcMap.begin(); srci != srcMap.end(); srci++) {
+			if (same_data(&((*dsti).second), &((*srci).second)) == OK) {
+				/* If found, merge them */
+				clear_ss(&ss);
+				ss << workDir << "/" << srcDir << "/" << (*srci).first;
+				buff = ss.str();
+				clear_ss(&ss);
+				ss << workDir << "/" << dstDir << "/" << (*dsti).first;
+
+				if (merge_dirs(buff.c_str(), ss.str().c_str()) != OK) {
 					return NOT_OK;
 				}
-				found = 1;
-				break;
+
+				/* We don't need this folder anymore */
+				srcMap.erase((*srci).first);
 			}
 		}
+	}
 
-		/* Folder was not found in dstDir - move it there */
-		if (found == 0) {
-			snprintf(buff1, DIR_NAME_MAX_LEN, "%s/%s/%s", workDir, srcDir, subdir->d_name);
-			snprintf(buff2, DIR_NAME_MAX_LEN, "%s/%s/%s", workDir, dstDir, subdir->d_name);
-			if (rename(buff1, buff2) != 0) {
-				std::cerr << "Can't mvoe folder " << buff1 << std::endl;
+	/* If there is some folder that wasn't merged, just move it to dstDir */
+	/* But we must find unused folder name for it (we dont wan't to rewrite some other folder */
+	for (DIRMAP::iterator srci = srcMap.begin(); srci != srcMap.end(); srci++) {
+		clear_ss(&ss);
+		ss << workDir << "/" << srcDir << "/" << (*srci).first;
+		buff = ss.str();
+		clear_ss(&ss);
+		ss << workDir << "/" << dstDir << "/" << (*srci).first;
+		struct stat st;
+		char suffix = 'a';
+
+		/* Add suffix to the name */
+		while (stat(ss.str().c_str(), &st) == 0) {
+			clear_ss(&ss);
+			ss << workDir << "/" << dstDir << "/" << (*srci).first << suffix;
+			if (suffix == 'z') {
+				suffix = 'A';
+			} else if (suffix == 'Z') {
+				/* \TODO do it better */
+				std::cerr << "Not enought suffixes for folder " << (*srci).first << std::endl;
+				break;
+			} else {
+				suffix++;
+			}
+		}
+		if (rename(buff.c_str(), ss.str().c_str()) != 0) {
+			std::cerr << "Can't move folder " << buff << std::endl;
+		}
+	}
+
+	/* Now merge template directories with same data (and data types) in dstDir */
+	for (DIRMAP::iterator dsti = dstMap.begin(); dsti != dstMap.end(); dsti++) {
+		for (DIRMAP::iterator it = dsti; it != dstMap.end(); it++) {
+			if (it == dsti) {
+				continue;
+			}
+			if (same_data(&((*dsti).second), &((*it).second)) == OK) {
+				clear_ss(&ss);
+				ss << workDir <<  "/" << dstDir << "/" << (*it).first;
+				buff = ss.str();
+				clear_ss(&ss);
+				ss << workDir << "/" << dstDir << "/" << (*dsti).first;
+
+				if (merge_dirs(buff.c_str(), ss.str().c_str()) != OK) {
+					return NOT_OK;
+				}
+				remove_folder_tree(buff.c_str());
+				dstMap.erase((*it).first);
 			}
 		}
 	}
 
 	/* Finally merge flowsStats.txt files */
-	snprintf(buff1, DIR_NAME_MAX_LEN, "%s/%s/flowsStats.txt", workDir, srcDir);
-	snprintf(buff2, DIR_NAME_MAX_LEN, "%s/%s/flowsStats.txt", workDir, dstDir);
+	clear_ss(&ss);
+	ss << workDir << "/" << srcDir << "/" << "flowsStats.txt";
+	buff = ss.str();
+	clear_ss(&ss);
+	ss << workDir << "/" << dstDir << "/" << "flowsStats.txt";
 
-	merge_flowStats(buff1, buff2);
+	merge_flowStats(buff.c_str(), ss.str().c_str());
 
 	closedir(sdir);
 	closedir(ddir);
 
-	dbg("m_cpl ending");
 	return OK;
 }
 
@@ -468,7 +505,6 @@ int merge_couple(const char *srcDir, const char *dstDir, const char *workDir) {
  * \return OK on success, NOT_OK else
  */
 int merge_all(const char *workDir, uint16_t key, const char *prefix) {
-	dbg("m_all started");
 	DIR *dir = NULL;
 	dir = opendir(workDir);
 	if (dir == NULL) {
@@ -506,8 +542,8 @@ int merge_all(const char *workDir, uint16_t key, const char *prefix) {
 	std::map<uint32_t, char *> dirMap;
 	struct dirent *subdir = NULL;
 	char key_str[size+1];
-	char buff1[DIR_NAME_MAX_LEN];
-	char buff2[DIR_NAME_MAX_LEN];
+	std::string buff;
+	std::stringstream ss;
 
 	while ((subdir = readdir(dir)) != NULL) {
 		if (subdir->d_name[0] == '.') {
@@ -524,13 +560,15 @@ int merge_all(const char *workDir, uint16_t key, const char *prefix) {
 		if (dirMap.find(key_int) == dirMap.end()) {
 			dirMap[key_int] = subdir->d_name;
 		} else {
+
 			if (merge_couple(subdir->d_name, dirMap[key_int], workDir) != OK) {
 				return NOT_OK;
 			}
 
 			/* Remove merged src folder */
-			snprintf(buff1, DIR_NAME_MAX_LEN, "%s/%s", workDir, subdir->d_name);
-			remove_folder_tree(buff1);
+			clear_ss(&ss);
+			ss << workDir << "/" << subdir->d_name;
+			remove_folder_tree(ss.str().c_str());
 		}
 	}
 
@@ -538,17 +576,19 @@ int merge_all(const char *workDir, uint16_t key, const char *prefix) {
 	for (std::map<uint32_t, char *>::iterator i = dirMap.begin(); i != dirMap.end(); i++) {
 		char *last = (i->second + prefix_len + size);
 		if (atoi(last) != 0) {
-			snprintf(buff1, DIR_NAME_MAX_LEN, "%s/%s", workDir, i->second);
+			clear_ss(&ss);
+			ss << workDir << "/" << i->second;
+			buff = ss.str();
 			memset(last, ASCII_ZERO, DIR_NAME_LEN - size);
 			memset(last + DIR_NAME_LEN - size, 0, 1);
-			snprintf(buff2, DIR_NAME_MAX_LEN, "%s/%s", workDir, i->second);
-			if (rename(buff1, buff2) != 0) {
-				std::cerr << "Error while moving folder " << buff1 << std::endl;
+			clear_ss(&ss);
+			ss << workDir << "/" << i->second;
+			if (rename(buff.c_str(), ss.str().c_str()) != 0) {
+				std::cerr << "Error while moving folder " << buff << std::endl;
 			}
 		}
 	}
 	closedir(dir);
-	dbg("m_all ending");
 	return OK;
 }
 
@@ -564,12 +604,10 @@ int merge_all(const char *workDir, uint16_t key, const char *prefix) {
  * \param[in] key key value
  */
 int move_prefixed_dirs(const char *baseDir, const char *workDir, const char *prefix, int key) {
-	dbg("moving started");
 	DIR *dir;
 	struct dirent *subdir;
-	char buff1[DIR_NAME_MAX_LEN];
-	char buff2[DIR_NAME_MAX_LEN];
-	memset(buff1, 0, DIR_NAME_MAX_LEN);
+	std::string buff;
+	std::stringstream ss;
 
 	dir = opendir(workDir);
 	if (dir == NULL) {
@@ -584,7 +622,9 @@ int move_prefixed_dirs(const char *baseDir, const char *workDir, const char *pre
 		}
 
 		if (subdir->d_type == DT_DIR) {
-			snprintf(buff1, DIR_NAME_MAX_LEN, "%s/%s", workDir, subdir->d_name);
+			clear_ss(&ss);
+			ss << workDir << "/" << subdir->d_name;
+			buff = ss.str();
 
 			/* No prefix? So guess if it is the right folder */
 			if (prefix == NULL) {
@@ -595,13 +635,14 @@ int move_prefixed_dirs(const char *baseDir, const char *workDir, const char *pre
 						break;
 					}
 					/* Separate NOT set - we can move this dir to baseDir */
-					snprintf(buff2, DIR_NAME_MAX_LEN, "%s/%s", baseDir, subdir->d_name);
+					clear_ss(&ss);
+					ss << baseDir << "/" << subdir->d_name;
 
-					if (rename(buff1, buff2) != 0) {
-						std::cerr << "Error while moving folder " << buff1 << std::endl;
+					if (rename(buff.c_str(), ss.str().c_str()) != 0) {
+						std::cerr << "Error while moving folder " << buff << std::endl;
 					}
 				} else {
-					if (move_prefixed_dirs(baseDir, buff1, prefix, key) != OK) {
+					if (move_prefixed_dirs(baseDir, buff.c_str(), prefix, key) != OK) {
 						return NOT_OK;
 					}
 				}
@@ -610,21 +651,25 @@ int move_prefixed_dirs(const char *baseDir, const char *workDir, const char *pre
 					merge_all(workDir, key, prefix);
 					break;
 				}
-				snprintf(buff2, DIR_NAME_MAX_LEN, "%s/%s", baseDir, subdir->d_name);
-				if (rename(buff1, buff2) != 0) {
-					std::cerr << "Error while moving folder " << buff1 << std::endl;
+				clear_ss(&ss);
+				ss << baseDir << "/" << subdir->d_name;
+				if (rename(buff.c_str(), ss.str().c_str()) != 0) {
+					std::cerr << "Error while moving folder " << buff << std::endl;
 				}
 			} else {
-				if (move_prefixed_dirs(baseDir, buff1, prefix, key) != OK) {
+				if (move_prefixed_dirs(baseDir, buff.c_str(), prefix, key) != OK) {
 					return NOT_OK;
 				}
 			}
 		/* Some file was found - move it to baseDir too (if separate is not set) */
 		} else if (separated == 0) {
-			snprintf(buff1, DIR_NAME_MAX_LEN, "%s/%s", workDir, subdir->d_name);
-			snprintf(buff2, DIR_NAME_MAX_LEN, "%s/%s", baseDir, subdir->d_name);
-			if (rename(buff1, buff2) != 0) {
-				std::cerr << "Error while moving file " << buff1 << std::endl;
+			clear_ss(&ss);
+			ss << workDir << "/" << subdir->d_name;
+			buff = ss.str();
+			clear_ss(&ss);
+			ss << baseDir << "/" << subdir->d_name;
+			if (rename(buff.c_str(), ss.str().c_str()) != 0) {
+				std::cerr << "Error while moving file " << buff << std::endl;
 			}
 		}
 	}
@@ -633,24 +678,24 @@ int move_prefixed_dirs(const char *baseDir, const char *workDir, const char *pre
 	if (!separated) {
 		rmdir(workDir);
 	}
-	dbg("moving ended");
 	return OK;
 }
 
 int main(int argc, char *argv[]) {
-	dbg("program started");
 	if (argc <= 1) {
 		usage();
 		return OK;
 	}
+
 	/* Process arguments */
 	int option;
 	int key = -1;
 	int moveOnly = 0;
-	char basedir[DIR_NAME_MAX_LEN];
+
+	std::string basedir;
 	std::stringstream ss;
 	std::string prefix;
-	memset(basedir, 0, DIR_NAME_MAX_LEN);
+
 	while ((option = getopt(argc, argv, ARGUMENTS)) != -1) {
 		switch (option) {
 		case 'h':
@@ -668,17 +713,19 @@ int main(int argc, char *argv[]) {
 			}
 			break;
 		case 'b':
-			memcpy(basedir, optarg, DIR_NAME_MAX_LEN);
+			ss << optarg;
+			basedir = ss.str();
+			ss.str(std::string());
+			ss.clear();
 			break;
 		case 'p':
 			ss << optarg;
 			prefix = ss.str();
+			ss.str(std::string());
+			ss.clear();
 			break;
 		case 's':
 			separated = 1;
-			break;
-		case 'd':
-			dumpMode = true;
 			break;
 		case 'm':
 			moveOnly = 1;
@@ -694,7 +741,7 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 	}
-	if (strlen(basedir) == 0) {
+	if (basedir.empty()) {
 		std::cerr << "\nBase directory path not set!\n\n";
 		return NOT_OK;
 	}
@@ -708,7 +755,7 @@ int main(int argc, char *argv[]) {
 			std::cerr << "-s and -m arguments can't be set together!\n";
 			return NOT_OK;
 		}
-		if (move_prefixed_dirs(basedir, basedir, (prefix.empty() ? NULL : prefix.c_str()), key) != OK) {
+		if (move_prefixed_dirs(basedir.c_str(), basedir.c_str(), (prefix.empty() ? NULL : prefix.c_str()), key) != OK) {
 			std::cerr << "Moving folders failed\n";
 			return NOT_OK;
 		}
@@ -720,17 +767,13 @@ int main(int argc, char *argv[]) {
 		return NOT_OK;
 	}
 
-	if (move_prefixed_dirs(basedir, basedir, (prefix.empty() ? NULL : prefix.c_str()), key) != OK) {
+	if (move_prefixed_dirs(basedir.c_str(), basedir.c_str(), (prefix.empty() ? NULL : prefix.c_str()), key) != OK) {
 		std::cerr << "Moving folders failed!\n";
 		return NOT_OK;
 	}
-	dbg("directories moved");
 	/* if separate not set merge all in basedir */
 	if (!separated) {
-		dbg("!separated - merge_all");
-		merge_all(basedir, key, prefix.c_str());
-		dbg("!separated - merged");
+		merge_all(basedir.c_str(), key, prefix.c_str());
 	}
-	dbg("program ending");
 	return OK;
 }
