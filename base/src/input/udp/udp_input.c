@@ -421,12 +421,14 @@ inline uint16_t insertTemplateSet(char **packet, char *input_info, int numOfFlow
 
 	uint32_t last = 0;
 	if (info_list != NULL) {
-		if (info_list->packets_sent == strtol(info_list->info.template_life_packet, NULL, 10)) {
-			last = ntohl(header->export_time);
-		} else {
-			last = info_list->last_sent + strtol(info_list->info.template_life_time, NULL, 10);
-			if (numOfFlowSamples > 0) {
-				info_list->packets_sent++;
+		if ((info_list->info.template_life_packet != NULL) && (info_list->info.template_life_time != NULL)) {
+			if (info_list->packets_sent == strtol(info_list->info.template_life_packet, NULL, 10)) {
+				last = ntohl(header->export_time);
+			} else {
+				last = info_list->last_sent + strtol(info_list->info.template_life_time, NULL, 10);
+				if (numOfFlowSamples > 0) {
+					info_list->packets_sent++;
+				}
 			}
 		}
 	}
@@ -527,8 +529,11 @@ void convert_packet(char **packet, ssize_t *len, char *input_info) {
 
 			/* Template Set insertion (if needed) and setting packet length */
 			header->length = insertTemplateSet(packet,(char *) info_list, numOfFlowSamples, len);
-			seqNo[NF5_SEQ_N] += numOfFlowSamples;
+
 			header->sequence_number = htonl(seqNo[NF5_SEQ_N]);
+			if (*len >= htons(header->length)) {
+				seqNo[NF5_SEQ_N] += numOfFlowSamples;
+			}
 			break;
 
 		/* SFLOW packet (converted to Netflow v5 like packet */
@@ -601,10 +606,12 @@ int get_packet(void *config, struct input_info **info, char **packet)
 	}
 
 	/* Check if lengths are the same */
-	if (length != htons(((struct ipfix_header *)*packet)->length)) {
+	if (length < htons(((struct ipfix_header *)*packet)->length)) {
 		MSG_DEBUG(msg_module, "length = %d, header->length = %d", length, htons(((struct ipfix_header *)*packet)->length));
-		MSG_ERROR(msg_module, "Packet is incomplete, skipping");
 		return INPUT_INTR;
+	} else if (length > htons(((struct ipfix_header *)*packet)->length)) {
+		MSG_WARNING(msg_module, "Received more data than packet length, setting right value");
+		length = htons(((struct ipfix_header *)*packet)->length);
 	}
 
 	/* go through input_info_list */
