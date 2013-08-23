@@ -73,7 +73,7 @@
 
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "c:dhv:V"
+#define OPTSTRING "c:dhv:Vs"
 
 /* main loop indicator */
 volatile int done = 0;
@@ -101,7 +101,8 @@ void help ()
 	printf ("  -d        Daemonize\n");
 	printf ("  -h        Print this help\n");
 	printf ("  -v level  Print verbose messages up to specified level\n");
-	printf ("  -V        Print version information\n\n");
+	printf ("  -V        Print version information\n");
+	printf ("  -s        Skip invalid sequence number error (especially when receiving Netflow v9 data format\n\n");
 }
 
 void term_signal_handler(int sig)
@@ -160,6 +161,9 @@ int main (int argc, char* argv[])
 		case 'V':
 			version ();
 			exit (EXIT_SUCCESS);
+			break;
+		case 's':
+			skip_seq_err = 1;
 			break;
 		default:
 			MSG_ERROR(msg_module, "Unknown parameter %c", c);

@@ -167,6 +167,7 @@ static uint32_t seqNo[3] = {0,0,0};
 #define SF_SEQ_N  2
 
 static uint8_t modified = 0;
+static uint8_t inserted = 0;
 
 
 /**
@@ -848,6 +849,7 @@ inline uint16_t insertTemplateSet(char **packet, char *input_info, int numOfFlow
 	memmove(*packet + IPFIX_HEADER_LENGTH + BYTES_4, *packet + IPFIX_HEADER_LENGTH, buff_len - IPFIX_HEADER_LENGTH - BYTES_4);
 	memcpy(*packet + IPFIX_HEADER_LENGTH, netflow_v5_data_header, BYTES_4);
 
+#ifdef UDP_INPUT_PLUGIN
 	uint32_t last = 0;
 	if (info_list != NULL) {
 		if ((info_list->info.template_life_packet != NULL) && (info_list->info.template_life_time != NULL)) {
@@ -862,14 +864,16 @@ inline uint16_t insertTemplateSet(char **packet, char *input_info, int numOfFlow
 		}
 	}
 	if (last <= ntohl(header->export_time)) {
-		/* Make some space for Template Set */
-		memmove(*packet + IPFIX_HEADER_LENGTH + NETFLOW_V5_TEMPLATE_LEN, *packet + IPFIX_HEADER_LENGTH, buff_len - NETFLOW_V5_TEMPLATE_LEN - IPFIX_HEADER_LENGTH);
-		/* Insert Template Set */
-		memcpy(*packet + IPFIX_HEADER_LENGTH, netflow_v5_template, NETFLOW_V5_TEMPLATE_LEN);
 		if (info_list != NULL) {
 			info_list->last_sent = ntohl(header->export_time);
 			info_list->packets_sent = 1;
 		}
+#else
+	if (inserted == 0) {
+		inserted = 1;
+#endif
+		memmove(*packet + IPFIX_HEADER_LENGTH + NETFLOW_V5_TEMPLATE_LEN, *packet + IPFIX_HEADER_LENGTH, buff_len - NETFLOW_V5_TEMPLATE_LEN - IPFIX_HEADER_LENGTH);
+		memcpy(*packet + IPFIX_HEADER_LENGTH, netflow_v5_template, NETFLOW_V5_TEMPLATE_LEN);
 		*len += NETFLOW_V5_TEMPLATE_LEN;
 		return htons(IPFIX_HEADER_LENGTH + NETFLOW_V5_TEMPLATE_LEN + (NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
 	} else {

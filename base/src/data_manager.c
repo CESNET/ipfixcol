@@ -42,6 +42,7 @@
 #include <pthread.h>
 #include <libxml/tree.h>
 #include <sys/prctl.h>
+#include <ipfixcol/verbose.h>
 
 #include "data_manager.h"
 
@@ -406,8 +407,10 @@ static void* data_manager_thread (void* cfg)
 			/* check sequence number */
 			/* \todo handle out of order messages */
 			if (sequence_number != ntohl(msg->pkt_header->sequence_number)) {
-				MSG_WARNING(msg_module, "Sequence number does not match: expected %u, got %u",
+				if (skip_seq_err == 0) {
+					MSG_WARNING(msg_module, "Sequence number does not match: expected %u, got %u",
 						sequence_number, ntohl(msg->pkt_header->sequence_number));
+				}
 				sequence_number = ntohl(msg->pkt_header->sequence_number);
 			}
 			/* Check whether there are withdraw templates (not for UDP) */
