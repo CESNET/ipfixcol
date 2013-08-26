@@ -975,8 +975,10 @@ void convert_packet(char **packet, ssize_t *len, char *input_info) {
 				modify();
 			}
 			/* Conversion from sflow to Netflow v5 like IPFIX packet */
-			if ((numOfFlowSamples = Process_sflow(*packet, *len)) < 0) {
-				header->length = *len -1;
+			numOfFlowSamples = Process_sflow(*packet, *len);
+			if (numOfFlowSamples < 0) {
+				/* Make header->length bigger than packet lenght so error will occur and packet will be skipped */
+				header->length = *len + 1;
 				return;
 			}
 
@@ -985,8 +987,11 @@ void convert_packet(char **packet, ssize_t *len, char *input_info) {
 
 			/* Template Set insertion (if needed) and setting total packet length */
 			header->length = insertTemplateSet(packet,(char *) info_list, numOfFlowSamples, len);
-			seqNo[SF_SEQ_N] += numOfFlowSamples;
+
 			header->sequence_number = htonl(seqNo[SF_SEQ_N]);
+			if (*len >= htons(header->length)) {
+				seqNo[SF_SEQ_N] += numOfFlowSamples;
+			}
 			break;
 	}
 	header->version = htons(IPFIX_VERSION);
@@ -1139,7 +1144,6 @@ int get_packet(void *config, struct input_info **info, char **packet)
     		MSG_DEBUG(msg_module, "length = %d, header->length = %d", length, htons(((struct ipfix_header *)*packet)->length));
     		return INPUT_INTR;
     	} else if (length >  htons(((struct ipfix_header *)*packet)->length)) {
-    		MSG_WARNING(msg_module, "Received more data than packet length, setting right value");
     		length = htons(((struct ipfix_header*)*packet)->length);
     	}
 

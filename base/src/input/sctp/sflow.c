@@ -850,9 +850,11 @@ static void sendNetFlowDatagram(SFSample *sample, char *packet)
   else bytes = sample->sampledPacketSize - sample->stripped - sample->offsetToIPV4;
 
   memset(&pkt, 0, sizeof(pkt));
+
   // version, length and sequence number will be set in input plugin
 //  pkt.hdr.sysUpTime = htonl(now % (3600 * 24)) * 1000;  /* pretend we started at midnight (milliseconds) */
   pkt.hdr.export_time = htonl(now);
+  ((struct ipfix_header *)packet)->export_time = pkt.hdr.export_time;
 
   pkt.flow.srcIP = sample->ipsrc.address.ip_v4.addr;
   pkt.flow.dstIP = sample->ipdst.address.ip_v4.addr;
@@ -890,6 +892,7 @@ static void sendNetFlowDatagram(SFSample *sample, char *packet)
   pkt.flow.srcMask = (uint8_t)sample->srcMask;
   pkt.flow.dstMask = (uint8_t)sample->dstMask;
 
+  memcpy(packet + IPFIX_HEADER_LENGTH + numOfFlowSamples*sizeof(pkt.flow), &pkt.flow, sizeof(pkt.flow));
   numOfFlowSamples++;
 }
 
@@ -927,17 +930,6 @@ static void skipBytes(SFSample *sample, uint32_t skip) {
     SFABORT(sample, SF_ABORT_EOS);
   }
 }
-
-//void sf_log_percentage(SFSample *sample, char *fieldName)
-//{
-//  getData32(sample);
-//}
-//
-
-//void sf_log_nextMAC(SFSample *sample, char *fieldName)
-//{
-//  skipBytes(sample, 6);
-//}
 
 static uint32_t getString(SFSample *sample, char *buf, uint32_t bufLen) {
   uint32_t len, read_len;
@@ -1688,7 +1680,6 @@ static void readFlowSample(SFSample *sample, int expanded, char *packet)
   uint32_t num_elements, sampleLength;
   u_char *sampleStart;
 
-  MSG_DEBUG("my_dbg", "INSIDE ReadFlowSample1");
   sampleLength = getData32(sample);
   sampleStart = (u_char *)sample->datap;
   sample->samplesGenerated = getData32(sample);
@@ -1728,7 +1719,6 @@ static void readFlowSample(SFSample *sample, int expanded, char *packet)
   num_elements = getData32(sample);
   {
     uint32_t el;
-    MSG_DEBUG("my_dbg", "ReadFlowSample1: iterating %d times", num_elements);
     for(el = 0; el < num_elements; el++) {
       uint32_t tag, length;
       u_char *start;
@@ -1774,19 +1764,12 @@ static void readFlowSample(SFSample *sample, int expanded, char *packet)
 	  }
 	}
   lengthCheck(sample, "flow_sample", sampleStart, sampleLength);
-  MSG_DEBUG("my_dbg", "ReadFlowSample1: SampleFilter before");
+
   if(sampleFilterOK(sample)) {
-	  MSG_DEBUG("my_dbg", "ReadFlowSample1: SampleFIlter OK");
-	  if(sfConfig.netFlowOutputSocket && sample->gotIPV4) {
-		  MSG_DEBUG("my_dbg", "Sending");
+	  if (sample->gotIPV4) {
 		  sendNetFlowDatagram(sample, packet);
-	  } else {
-		  MSG_DEBUG("my_dbg", "NOT sending");
 	  }
-  } else {
-	  MSG_DEBUG("my_dbg", "NOT OK");
   }
-  MSG_DEBUG("my_dbg", "ReadFlowSample1: end");
 }
 
 /*_________________---------------------------__________________
@@ -1821,48 +1804,34 @@ static void readSFlowDatagram(SFSample *sample, char *packet)
   /* now iterate and pull out the flows and counters samples */
   {
     uint32_t samp = 0;
-    MSG_DEBUG("my_dbg", "Samples in packet: %d", samplesInPacket);
     for(; samp < samplesInPacket; samp++) {
       if((u_char *)sample->datap >= sample->endp) {
     	  return; // error - unexpected end
       }
+
       // just read the tag, then call the approriate decode fn
       sample->sampleType = getData32(sample);
-      MSG_DEBUG("my_dbg", "%d. iteration: sampleType == %d", samp+1, sample->sampleType);
       if(sample->datagramVersion >= 5) {
     	  switch(sample->sampleType) {
-    	  	  case SFLFLOW_SAMPLE: MSG_DEBUG("my_dbg", "ReadFlowSample1");
-    	  		  readFlowSample(sample, NO, packet); break;
-    	  	  case SFLFLOW_SAMPLE_EXPANDED: MSG_DEBUG("my_dbg", "ReadFlowSample2");
-    	  		  readFlowSample(sample, YES, packet); break;
-    	  	  default: MSG_DEBUG("my_dbg", "SKIP");
-    	  		  skipBytes(sample, getData32(sample)); break;
+    	  	  case SFLFLOW_SAMPLE: readFlowSample(sample, NO, packet); break;
+    	  	  case SFLFLOW_SAMPLE_EXPANDED: readFlowSample(sample, YES, packet); break;
+    	  	  default: skipBytes(sample, getData32(sample)); break;
     	  }
       } else {
     	  switch(sample->sampleType) {
-    	  	  case FLOWSAMPLE: MSG_DEBUG("my_dbg", "ReadFlowSample3");
-    	  		  readFlowSample_v2v4(sample, packet); break;
-    	  	  case COUNTERSSAMPLE: MSG_DEBUG("my_dbg", "SKIP2");
-    	  	  	  skipBytes(sample, getData32(sample)); break;
-    	  	  default: MSG_DEBUG("my_dbg", "unexpected sample type"); break;
+    	  	  case FLOWSAMPLE: readFlowSample_v2v4(sample, packet); break;
+    	  	  case COUNTERSSAMPLE: skipBytes(sample, getData32(sample)); break;
+    	  	  default: break;
     	  }
       }
     }
   }
 }
 
-#define IPFIX_HEADER_LENGTH 16
-
 int Process_sflow(void *packet, ssize_t packet_len) {
 
 SFSample 	sample;
 int 		exceptionVal;
-	MSG_DEBUG("my_dbg", "IN Process_sflow()");
-
-	if (packet_len < (IPFIX_HEADER_LENGTH + sizeof(SFSample))) {
-		MSG_DEBUG("my_dbg", "packet_len %d < header+sizeof %d", packet_len, IPFIX_HEADER_LENGTH + sizeof(SFSample));
-		return -1;
-	}
 
 	memset(&sample, 0, sizeof(sample));
 	if ((sample.rawSample = malloc(sizeof(packet))) == NULL) {
@@ -1878,9 +1847,7 @@ int 		exceptionVal;
 		sample.datap = (uint32_t *)sample.rawSample;
 		sample.endp = (u_char *)sample.rawSample + sample.rawSampleLen;
 		readSFlowDatagram(&sample, packet);
-	} else {
-		MSG_DEBUG("my_dbg", "error exception %d", exceptionVal);
 	}
-	MSG_DEBUG("my_dbg", "Return %d", numOfFlowSamples);
+
 	return numOfFlowSamples;
 } // End of Process_sflow
