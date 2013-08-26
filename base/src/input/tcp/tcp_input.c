@@ -60,6 +60,7 @@
 #include <signal.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
+#include <time.h>
 
 #include <ipfixcol.h>
 #include "sflow.h"
@@ -95,9 +96,9 @@ static char *msg_module = "TCP input";
 #define NETFLOW_V5_VERSION 5
 #define NETFLOW_V9_VERSION 9
 
-#define NETFLOW_V5_TEMPLATE_LEN 88
-#define NETFLOW_V5_DATA_SET_LEN 48
-#define NETFLOW_V5_NUM_OF_FIELDS 20
+#define NETFLOW_V5_TEMPLATE_LEN 76
+#define NETFLOW_V5_DATA_SET_LEN 44
+#define NETFLOW_V5_NUM_OF_FIELDS 17
 
 #define NETFLOW_V9_TEMPLATE_SET_ID 0
 #define NETFLOW_V9_OPT_TEMPLATE_SET_ID 1
@@ -150,10 +151,7 @@ static uint16_t netflow_v5_template[NETFLOW_V5_TEMPLATE_LEN/2]={\
 		PROTO, 						 BYTES_1,\
 		TOS, 						 BYTES_1,\
 		SRC_AS, 					 BYTES_2,\
-		DST_AS, 					 BYTES_2,\
-		PADDING, 					 BYTES_1,\
-		PADDING, 					 BYTES_1,\
-		PADDING, 					 BYTES_2
+		DST_AS, 					 BYTES_2
 };
 
 static uint16_t netflow_v5_data_header[2] = {\
@@ -844,10 +842,19 @@ inline uint16_t insertTemplateSet(char **packet, char *input_info, int numOfFlow
 	struct input_info_list *info_list = (struct input_info_list *) input_info;
 	uint16_t buff_len = BUFF_LEN;
 #endif
+	int i;
+	for (i = numOfFlowSamples - 1; i > 0; i--) {
+		uint32_t pos = IPFIX_HEADER_LENGTH + i * (NETFLOW_V5_DATA_SET_LEN + BYTES_4);
+		memmove(*packet + pos - BYTES_4, *packet + pos, (numOfFlowSamples - i) * NETFLOW_V5_DATA_SET_LEN);
+	}
 	/* Insert Data Set header */
-	netflow_v5_data_header[1] = htons(NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples + SET_HEADER_LEN);
-	memmove(*packet + IPFIX_HEADER_LENGTH + BYTES_4, *packet + IPFIX_HEADER_LENGTH, buff_len - IPFIX_HEADER_LENGTH - BYTES_4);
-	memcpy(*packet + IPFIX_HEADER_LENGTH, netflow_v5_data_header, BYTES_4);
+	if (numOfFlowSamples > 0) {
+		netflow_v5_data_header[1] = htons(NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples + SET_HEADER_LEN);
+		memmove(*packet + IPFIX_HEADER_LENGTH + BYTES_4, *packet + IPFIX_HEADER_LENGTH, buff_len - IPFIX_HEADER_LENGTH - BYTES_4);
+		memcpy(*packet + IPFIX_HEADER_LENGTH, netflow_v5_data_header, BYTES_4);
+	} else {
+		*len = IPFIX_HEADER_LENGTH;
+	}
 
 #ifdef UDP_INPUT_PLUGIN
 	uint32_t last = 0;
@@ -992,6 +999,8 @@ void convert_packet(char **packet, ssize_t *len, char *input_info) {
 			if (*len >= htons(header->length)) {
 				seqNo[SF_SEQ_N] += numOfFlowSamples;
 			}
+
+			header->export_time = htonl((uint32_t) time(NULL));
 			break;
 	}
 	header->version = htons(IPFIX_VERSION);

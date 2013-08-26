@@ -892,6 +892,9 @@ static void sendNetFlowDatagram(SFSample *sample, char *packet)
   pkt.flow.srcMask = (uint8_t)sample->srcMask;
   pkt.flow.dstMask = (uint8_t)sample->dstMask;
 
+  pkt.flow.firstTime = htonl((uint32_t) time(NULL));
+  pkt.flow.lastTime = htonl((uint32_t) time(NULL));
+
   memcpy(packet + IPFIX_HEADER_LENGTH + numOfFlowSamples*sizeof(pkt.flow), &pkt.flow, sizeof(pkt.flow));
   numOfFlowSamples++;
 }
