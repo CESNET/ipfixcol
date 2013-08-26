@@ -72,29 +72,36 @@ static char *msg_module = "unirec";
  * @param src Source buffer
  * @param length Data length
  */
-static void data_copy(char *dst, char *src, uint16_t length)
+static void data_copy(char *dst, char *src, uint16_t length, uint16_t convert)
 {
+	/* simple copy without byteorder change */
+	if (!convert) {
+		memcpy(dst, src, length);
+		return;
+	}
+
+	/* copy with byteorder change for known value sizes */
 	switch (length) {
-			case (1):
-				*dst = read8(src);
-				break;
-			case (2):
-				*(uint16_t *) dst = ntohs(read16(src));
-				break;
-			case (4):
-				*(uint32_t *) dst = ntohl(read32(src));
-				break;
-			case (8):
-				*(uint64_t *) dst = be64toh(read64(src));
-				break;
-			case (16):
-				*(uint64_t *) dst = be64toh(read64(src+8));
-				*(uint64_t *) (dst+8) = be64toh(read64(src));
+		case (1):
+			*dst = read8(src);
 			break;
-			default:
-				memcpy(dst, src, length);
-				break;
-			}
+		case (2):
+			*(uint16_t *) dst = ntohs(read16(src));
+			break;
+		case (4):
+			*(uint32_t *) dst = ntohl(read32(src));
+			break;
+		case (8):
+			*(uint64_t *) dst = be64toh(read64(src));
+			break;
+		case (16):
+			*(uint64_t *) dst = be64toh(read64(src+8));
+			*(uint64_t *) (dst+8) = be64toh(read64(src));
+			break;
+		default:
+			memcpy(dst, src, length);
+			break;
+	}
 }
 
 /**
@@ -215,9 +222,9 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 				/* Just copy, don't convert endianness */
 				memcpy(matchField->value, data_record + offset + size_length, length);
 			}
-			/* Other fields */
+			/* Other fields, detect variable length using size_length */
 			else {
-				data_copy(matchField->value, data_record + offset + size_length, length);
+				data_copy(matchField->value, data_record + offset + size_length, length, size_length?0:1);
 			}
 			matchField->valueFilled = 1;
 		}
