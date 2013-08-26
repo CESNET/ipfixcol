@@ -876,13 +876,10 @@ void convert_packet(char **packet, ssize_t *len, char *input_info) {
 				modify();
 			}
 			numOfFlowSamples = ntohs(header->length);
-
 			/* Header modification */
 			header->export_time = header->sequence_number;
-
 			memmove(*packet + BYTES_8, *packet + IPFIX_HEADER_LENGTH, buff_len - IPFIX_HEADER_LENGTH);
 			memmove(*packet + BYTES_12, *packet + BYTES_12 + BYTES_1, BYTES_1);
-
 			header->observation_domain_id = header->observation_domain_id&(0xF000);
 
 			/* Update real packet length because of memmove() */
@@ -903,8 +900,10 @@ void convert_packet(char **packet, ssize_t *len, char *input_info) {
 				modify();
 			}
 			/* Conversion from sflow to Netflow v5 like IPFIX packet */
-			if ((numOfFlowSamples = Process_sflow(*packet, *len)) < 0) {
-				header->length = *len -1;
+			numOfFlowSamples = Process_sflow(*packet, *len);
+			if (numOfFlowSamples < 0) {
+				/* Make header->length bigger than packet lenght so error will occur and packet will be skipped */
+				header->length = *len + 1;
 				return;
 			}
 
@@ -913,8 +912,11 @@ void convert_packet(char **packet, ssize_t *len, char *input_info) {
 
 			/* Template Set insertion (if needed) and setting total packet length */
 			header->length = insertTemplateSet(packet,(char *) info_list, numOfFlowSamples, len);
-			seqNo[SF_SEQ_N] += numOfFlowSamples;
+
 			header->sequence_number = htonl(seqNo[SF_SEQ_N]);
+			if (*len >= htons(header->length)) {
+				seqNo[SF_SEQ_N] += numOfFlowSamples;
+			}
 			break;
 	}
 	header->version = htons(IPFIX_VERSION);
@@ -1031,7 +1033,6 @@ wait_for_data:
 		MSG_ERROR(msg_module, "Packet is incomplete, skipping");
 		return INPUT_INTR;
 	} else if (msg_length > htons(((struct ipfix_header *)*packet)->length)) {
-		MSG_WARNING(msg_module, "Received more data than packet length, setting right value");
 		msg_length = htons(((struct ipfix_header *)*packet)->length);
 	}
 
