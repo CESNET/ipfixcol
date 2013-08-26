@@ -263,7 +263,6 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
         p += ntohs(set_header->length);
     }
 
-
 	if (rbuffer_write (config->in_queue, msg, 1) != 0) {
 		MSG_WARNING(msg_module, "Unable to write into Data manager's input queue, skipping data.");
 		free (packet);

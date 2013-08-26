@@ -43,6 +43,7 @@
 
 extern int verbose;
 extern int use_syslog;
+extern int skip_seq_err;
 
 typedef enum {
 	ICMSG_ERROR,

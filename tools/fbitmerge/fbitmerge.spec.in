@@ -1,0 +1,39 @@
+Summary: Tool for merging fastbit data.
+Name: @PACKAGE_NAME@
+Version: @PACKAGE_VERSION@
+Release: @RELEASE@
+URL: http://www.liberouter.org/
+Source: http://homeproj.cesnet.cz/rpm/liberouter/stable/SOURCES/%{name}-%{version}-%{release}.tar.gz
+Group: Liberouter
+License: BSD
+Vendor: CESNET, z.s.p.o.
+Packager: @USERNAME@ <@USERMAIL@>
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
+
+BuildRequires: gcc-c++ make doxygen pkgconfig
+Requires: fastbit-liberouter, libfastbit = ibis1.3.5.1
+BuildRequires: fastbit-liberouter-devel, libfastbit-devel = ibis1.3.5.1
+
+%description
+Tool for merging fastbit data.
+
+%prep
+%setup
+
+%post
+
+%preun
+
+%postun
+
+%build
+%configure --with-distro=@DISTRO@
+make
+make man
+
+%install
+make DESTDIR=%buildroot install
+
+%files
+%_bindir/fbitmerge
+%_mandir/man1/fbitmerge.1.gz

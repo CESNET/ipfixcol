@@ -47,6 +47,7 @@ int verbose = ICMSG_ERROR;
 
 /* Do not use syslog unless specified otherwise */
 int use_syslog = 0;
+int skip_seq_err = 0;
 
 void icmsg_print(ICMSG_LEVEL lvl, const char *format, ...)
 {

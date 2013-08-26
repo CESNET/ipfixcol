@@ -48,7 +48,7 @@
         <cmdsynopsis>
             <command>ipfixcol</command>
             <arg>-c file</arg>
-            <arg>-dhV</arg>
+            <arg>-dhVs</arg>
             <arg>-v level</arg>
         </cmdsynopsis>
     </refsynopsisdiv>
@@ -102,6 +102,15 @@
 					<simpara>
 						Set ipfixcol verbosity level to <replaceable class="parameter">level</replaceable>. The higher the number, the more information is printed.
 						Level 0 shows only errors, level 1 shows warnings, level 2 shows notices, level 3 shows debug messages.
+					</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-s </term>
+				<listitem>
+					<simpara>
+						Skip invalid sequence number error (especially when receiving Netflow v9 data format).
 					</simpara>
 				</listitem>
 			</varlistentry>

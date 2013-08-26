@@ -42,6 +42,7 @@
 #include <pthread.h>
 #include <libxml/tree.h>
 #include <sys/prctl.h>
+#include <ipfixcol/verbose.h>
 
 #include "data_manager.h"
 
@@ -246,6 +247,9 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 		if (msg->data_couple[i].data_template == NULL) {
 			MSG_WARNING(msg_module, "Data template with ID %i not found!", ntohs(msg->data_couple[i].data_set->header.flowset_id));
 		} else {
+			/* Increasing number of references to template */
+			msg->data_couple[i].data_template->references++;
+
 			if ((msg->input_info->type == SOURCE_TYPE_UDP) && /* source UDP */
 					((time(NULL) - msg->data_couple[i].data_template->last_transmission > udp_conf->template_life_time) || /* lifetime expired */
 					(udp_conf->template_life_packet > 0 && /* life packet should be checked */
@@ -406,8 +410,10 @@ static void* data_manager_thread (void* cfg)
 			/* check sequence number */
 			/* \todo handle out of order messages */
 			if (sequence_number != ntohl(msg->pkt_header->sequence_number)) {
-				MSG_WARNING(msg_module, "Sequence number does not match: expected %u, got %u",
+				if (skip_seq_err == 0) {
+					MSG_WARNING(msg_module, "Sequence number does not match: expected %u, got %u",
 						sequence_number, ntohl(msg->pkt_header->sequence_number));
+				}
 				sequence_number = ntohl(msg->pkt_header->sequence_number);
 			}
 
@@ -456,12 +462,12 @@ static void* data_manager_thread (void* cfg)
 	return (NULL);
 }
 
-
 static void* storage_plugin_thread (void* cfg)
 {
     struct storage *config = (struct storage*) cfg; 
 	struct ipfix_message* msg;
 	unsigned int index = config->thread_config->queue->read_offset;
+	int i;
 
 	/* set the thread name to reflect the configuration */
 	prctl(PR_SET_NAME, config->thread_name, 0, 0, 0);
@@ -477,6 +483,12 @@ static void* storage_plugin_thread (void* cfg)
 
 		/* do the job */
 		config->store (config->config, msg, config->thread_config->template_mgr);
+
+		for (i=0; msg->data_couple[i].data_set != NULL && i<1023; i++) {
+			if (msg->data_couple[i].data_template != NULL) {
+				msg->data_couple[i].data_template->references--;
+			}
+		}
 
 		/* all done, mark data as processed */
 		rbuffer_remove_reference(config->thread_config->queue, index, 1);
