@@ -244,6 +244,7 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 			break;
 		}
 	}
+
 	return new_tmpl;
 }
 
@@ -261,6 +262,7 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *t
 			count++;
 		}
 	}
+
 	if (tm->templates[i]->references == 0) {
 		if (tm->templates[i]->next == NULL) {
 			/* No previous template */
@@ -282,7 +284,8 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *t
 	} else {
 		MSG_DEBUG(msg_module, "Template %d can't be removed (%d references), it will be marked as old.", id, tm->templates[i]->references);
 	}
-	/* Create new template and place it on beginnig of list */
+
+	/* Create new template and place it on beginning of list */
 	struct ipfix_template *new_templ= NULL;
 	uint32_t data_length = 0;
 	uint32_t tmpl_length;
@@ -317,6 +320,7 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *t
 struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, uint16_t template_id)
 {
 	int i, count=0;
+
 	/* the array may have holes, thus the counter */
 	for (i=0; i < tm->max_length && count < tm->counter; i++) {
 		if (tm->templates[i] != NULL) {
@@ -326,6 +330,7 @@ struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, uint16_t t
 			count++;
 		}
 	}
+
 	/* template not found */
 	return NULL;
 }
@@ -354,6 +359,7 @@ int tm_remove_template(struct ipfix_template_mgr *tm, uint16_t template_id)
 int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type)
 {
 	MSG_DEBUG(msg_module, "Removing all templates");
+
 	int i;
 	for (i=0; i < tm->max_length; i++) {
 		if ((tm->templates[i] != NULL) && (tm->templates[i]->template_type == type)) {

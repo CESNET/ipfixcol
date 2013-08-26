@@ -123,6 +123,7 @@ static int data_manager_process_one_template(struct ipfix_template_mgr *template
 	int ret;
 
 	template_record = (struct ipfix_template_record*) tmpl;
+
 	/* check for withdraw all templates message */
 	/* these templates are no longer used (checked in data_manager_withdraw_templates()) */
 	if (input_info->type == SOURCE_TYPE_UDP && ntohs(template_record->count) == 0) {
@@ -211,6 +212,7 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 	struct ipfix_template *template;
 	uint16_t min_data_length;
 	uint16_t data_length;
+
 	/* check for new templates */
 	for (i=0; msg->templ_set[i] != NULL && i<1024; i++) {
 		ptr = (uint8_t*) &msg->templ_set[i]->first_record;
@@ -224,6 +226,7 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 			}
 		}
 	}
+
 	/* check for new option templates */
 	for (i=0; msg->opt_templ_set[i] != NULL && i<1024; i++) {
 		ptr = (uint8_t*) &msg->opt_templ_set[i]->first_record;
@@ -237,6 +240,7 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 			}
 		}
 	}
+
 	/* add template to message data_couples */
 	for (i=0; msg->data_couple[i].data_set != NULL && i<1023; i++) {
 		msg->data_couple[i].data_template = tm_get_template(template_mgr, ntohs(msg->data_couple[i].data_set->header.flowset_id));
@@ -244,11 +248,8 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 			MSG_WARNING(msg_module, "Data template with ID %i not found!", ntohs(msg->data_couple[i].data_set->header.flowset_id));
 		} else {
 			/* Increasing number of references to template */
-			if (msg->data_couple[i].data_template != NULL) {
-				msg->data_couple[i].data_template->references++;
-				MSG_DEBUG(msg_module, "Increasing references to template %d: %d",
-					msg->data_couple[i].data_template->template_id, msg->data_couple[i].data_template->references);
-			}
+			msg->data_couple[i].data_template->references++;
+
 			if ((msg->input_info->type == SOURCE_TYPE_UDP) && /* source UDP */
 					((time(NULL) - msg->data_couple[i].data_template->last_transmission > udp_conf->template_life_time) || /* lifetime expired */
 					(udp_conf->template_life_packet > 0 && /* life packet should be checked */
@@ -308,6 +309,7 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 			}
 		}
 	}
+
 	/* return number of data records */
 	return records_count;
 }
@@ -388,6 +390,7 @@ static void* data_manager_thread (void* cfg)
 	struct udp_conf udp_conf;
 	unsigned int index;
 	uint32_t sequence_number = 0, msg_counter = 0;
+
 	/* set the thread name to reflect the configuration */
 	snprintf(config->thread_name, 16, "ipfixcol DM %d", config->observation_domain_id);
 	prctl(PR_SET_NAME, config->thread_name, 0, 0, 0);
@@ -413,6 +416,7 @@ static void* data_manager_thread (void* cfg)
 				}
 				sequence_number = ntohl(msg->pkt_header->sequence_number);
 			}
+
 			/* Check whether there are withdraw templates (not for UDP) */
 			if (config->input_info->type != SOURCE_TYPE_UDP &&  data_manager_withdraw_templates(msg)) {
 				MSG_NOTICE(msg_module, "Got template withdrawal message. Waiting for storage packets.");
@@ -423,6 +427,7 @@ static void* data_manager_thread (void* cfg)
 			/* process templates */
 			sequence_number += data_manager_process_templates(config->template_mgr, msg, &udp_conf, msg_counter);
 		}
+
 		/* pass data into the storage plugins */
 		if (rbuffer_write (config->store_queue, msg, config->plugins_count) != 0) {
 			MSG_WARNING(msg_module, "ODID %d: Unable to pass data into the Storage plugins' queue.",
@@ -462,9 +467,11 @@ static void* storage_plugin_thread (void* cfg)
     struct storage *config = (struct storage*) cfg; 
 	struct ipfix_message* msg;
 	unsigned int index = config->thread_config->queue->read_offset;
+	int i;
 
 	/* set the thread name to reflect the configuration */
 	prctl(PR_SET_NAME, config->thread_name, 0, 0, 0);
+
     /* loop will break upon receiving NULL from buffer */
 	while (1) {
 		/* get next data */
@@ -473,23 +480,19 @@ static void* storage_plugin_thread (void* cfg)
 			MSG_NOTICE("storage plugin thread", "No more data from Data manager.");
             break;
 		}
+
 		/* do the job */
 		config->store (config->config, msg, config->thread_config->template_mgr);
 
-		MSG_DEBUG(msg_module, "Data stored");
-
-		if (msg != NULL) {
-			int i;
-			for (i=0; msg->data_couple[i].data_set != NULL && i<1023; i++) {
-				if (msg->data_couple[i].data_template != NULL) {
-					msg->data_couple[i].data_template->references--;
-					MSG_DEBUG(msg_module, "Decreasing references to template %d: %d",
-								msg->data_couple[i].data_template->template_id, msg->data_couple[i].data_template->references);
-				}
+		for (i=0; msg->data_couple[i].data_set != NULL && i<1023; i++) {
+			if (msg->data_couple[i].data_template != NULL) {
+				msg->data_couple[i].data_template->references--;
 			}
 		}
+
 		/* all done, mark data as processed */
 		rbuffer_remove_reference(config->thread_config->queue, index, 1);
+
 		/* move the index */
 		index = (index + 1) % config->thread_config->queue->size;
 	}
@@ -534,6 +537,7 @@ struct data_manager_config* data_manager_create (
 	struct storage_list* aux_storage;
 	struct data_manager_config *config;
 	struct storage_thread_conf* plugin_cfg;
+
 	/* prepare Data manager's config structure */
 	config = (struct data_manager_config*) calloc (1, sizeof(struct data_manager_config));
 	if (config == NULL) {
@@ -561,7 +565,6 @@ struct data_manager_config* data_manager_create (
 	config->plugins_count = 0;
 	config->input_info = input_info;
 	config->template_mgr = tm_create();
-
 
 	/* check whether there is OID specific plugin for this OID */
 	for (aux_storage = storage_plugins; aux_storage != NULL; aux_storage = aux_storage->next) {
