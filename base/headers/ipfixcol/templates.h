@@ -123,6 +123,20 @@ struct ipfix_template_mgr {
 	uint16_t counter;     /**number of templates in array */
 };
 
+
+/**
+ * \brief Function for creating new template
+ *
+ * \param[in]  tmp Pointer where new Template Record starts.
+ * \param[in]  max_len Maximum length of the template. Typically length
+ * to the end of the Template Set.
+ * \param[in]  type Type of the Template Record. TM_TEMPLATE = Template,
+ * TM_OPTIONS_TEMPLATE = Options Template.
+ * \return Pointer to new ipfix_template on success, NULL otherwise
+ */
+struct ipfix_template *tm_create_template(void *tmp, int max_len, int type);
+
+
 /**
  * \brief Function for adding new templates.
  *

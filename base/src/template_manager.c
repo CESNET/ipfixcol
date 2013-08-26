@@ -196,13 +196,11 @@ static uint16_t tm_template_length(struct ipfix_template_record *template, int m
 	return tmpl_length;
 }
 
-struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *template, int max_len, int type)
+struct ipfix_template *tm_create_template(void *template, int max_len, int type)
 {
 	struct ipfix_template *new_tmpl = NULL;
-	struct ipfix_template **new_templates = NULL;
 	uint32_t data_length = 0;
 	uint32_t tmpl_length;
-	int i;
 
 	tmpl_length = tm_template_length(template, max_len, type, &data_length);
 	if (tmpl_length == 0) {
@@ -219,6 +217,21 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 
 	if (tm_fill_template(new_tmpl, template, tmpl_length, data_length, type) == 1) {
 		free(new_tmpl);
+		return NULL;
+	}
+
+	return new_tmpl;
+}
+
+struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *template, int max_len, int type)
+{
+	struct ipfix_template *new_tmpl = NULL;
+	struct ipfix_template **new_templates = NULL;
+	uint32_t data_length = 0;
+	uint32_t tmpl_length;
+	int i;
+
+	if ((new_tmpl = tm_create_template(template, max_len, type)) == NULL) {
 		return NULL;
 	}
 
@@ -286,33 +299,18 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *t
 	}
 
 	/* Create new template and place it on beginning of list */
-	struct ipfix_template *new_templ= NULL;
-	uint32_t data_length = 0;
-	uint32_t tmpl_length;
+	struct ipfix_template *new_tmpl = NULL;
 
-	tmpl_length = tm_template_length(template, max_len, type, &data_length);
-	if (tmpl_length == 0) {
-		/* template->count probably points beyond current set area */
-		MSG_WARNING(msg_module, "Template %d is malformed (bad template count), skipping.",
-				ntohs(((struct ipfix_template_record *) template)->template_id));
-		return NULL;
-	}
-
-	/* allocate memory for new template */
-	if ((new_templ = malloc(tmpl_length)) == NULL) {
-		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
-	}
-
-	/* fill in new template */
-	if (tm_fill_template(new_templ, template, tmpl_length, data_length, type) == 1) {
-		free(new_templ);
+	if ((new_tmpl = tm_create_template(template, max_len, type)) == NULL) {
 		return NULL;
 	}
 
 	/* Inserting new template */
-	new_templ->next = tm->templates[i];
-	tm->templates[i] = new_templ;
+	new_tmpl->next = tm->templates[i];
+	tm->templates[i] = new_tmpl;
+
 	MSG_DEBUG(msg_module,"Template with id %d and index %d added to list", id, i);
+
 	return tm->templates[i];
 }
 
