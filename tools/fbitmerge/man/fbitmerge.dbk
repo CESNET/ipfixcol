@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2008-2011</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>18 August 2013</date>
+		<authorgroup>
+			<author>
+                <personname>
+    				<firstname>Michal</firstname>
+	    			<surname>Kozubik</surname>
+                </personname>
+				<!--<email></email> -->
+                <contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>fbitmerge</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">fbitmerge utility</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>fbitmerge</refname>
+		<refpurpose>Tool for merging FastBit data</refpurpose>
+	</refnamediv>
+    
+    <refsynopsisdiv>
+        <cmdsynopsis>
+            <command>fbitmerge</command>
+            <arg>options</arg>
+            <arg>filter</arg>
+        </cmdsynopsis>
+    </refsynopsisdiv>
+
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+			The <command>fbitmerge</command> is a part of IPFIXcol (IPFIX collector). 
+			The tool uses FastBit library to read and merge data.
+		</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Options</title>
+		<variablelist>
+			<varlistentry>
+				<term>-h</term>
+				<listitem>
+					<simpara>Print basic usage and options.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+			  <term>-b <replaceable class="parameter">basedir</replaceable></term>
+				<listitem>
+					<simpara>Base directory path. Sets path to the base directory where data will be merged.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+			  <term>-k <replaceable class="parameter">key </replaceable></term>
+				<listitem>
+					<simpara>Merging key. h = hour, d = day, m = month, y = year.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-p <replaceable class="parameter">prefix</replaceable></term>
+				<listitem>
+					<simpara>Prefix of folders with fastbit data (default = none).</simpara>
+					<simpara>!! If there are prefixed folders but prefix is not set, data from these folders will be lost and error may occur!</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-s </term>
+				<listitem>
+				  <simpara>Separate merging - only prefixed folders can be moved and deleted.</simpara>
+				  <simpara>It means that their parent folders are merged separately, NOT together.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-m</term>
+				<listitem>
+					<simpara>Move only - don't merge directories, only move all prefixed (sub)folders into basedir.</simpara>
+				</listitem>
+			</varlistentry>
+			
+		  </variablelist>
+	</refsect1>
+			
+	<refsect1>
+		<title>Examples</title>
+		<literallayout>fbitmerge -b /dir/subdir/subdir-with-ic-prefixed-folders/ -k h -p ic
+Move all subfolders from subdir-with-ic-prefixed-folders in format icYYYYMMDDHHmmSS into /dir/subdir and then merge them by hour</literallayout>
+
+		<literallayout>fbitmerge -b /dir/ -k day -p ic -s
+Goes through all /dir/ subfolders and when it founds folder with subfolders in format icYYYYMMDDHHmmSS, merges this folders in place, not together</literallayout>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>fbitdump</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org/technologies/ipfixcol/">http://www.liberouter.org/technologies/ipfixcol/</link>
+					</term>
+					<listitem>
+						<para>IPFIXCOL Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>
