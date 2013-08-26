@@ -409,13 +409,13 @@ inline uint16_t insertTemplateSet(char **packet, char *input_info, int numOfFlow
 	/* Check conf->info_list->info.template_life_packet and template_life_time */
 	struct ipfix_header *header = (struct ipfix_header *) *packet;
 #ifdef SCTP_INPUT_PLUGIN
-	struct input_info_node *info_list = (struct input_info_node *) input_info;
 	uint16_t buff_len = IPFIX_MESSAGE_TOTAL_LENGTH;
 #else
 	struct input_info_list *info_list = (struct input_info_list *) input_info;
 	uint16_t buff_len = BUFF_LEN;
 #endif
 	int i;
+	/* Remove last 4 bytes (padding) of each data record in packet */
 	for (i = numOfFlowSamples - 1; i > 0; i--) {
 		uint32_t pos = IPFIX_HEADER_LENGTH + i * (NETFLOW_V5_DATA_SET_LEN + BYTES_4);
 		memmove(*packet + pos - BYTES_4, *packet + pos, (numOfFlowSamples - i) * NETFLOW_V5_DATA_SET_LEN);
@@ -432,17 +432,19 @@ inline uint16_t insertTemplateSet(char **packet, char *input_info, int numOfFlow
 #ifdef UDP_INPUT_PLUGIN
 	uint32_t last = 0;
 	if (info_list != NULL) {
-		if ((info_list->info.template_life_packet != NULL) && (info_list->info.template_life_time != NULL)) {
+		if (info_list->info.template_life_packet != NULL) {
 			if (info_list->packets_sent == strtol(info_list->info.template_life_packet, NULL, 10)) {
 				last = ntohl(header->export_time);
-			} else {
-				last = info_list->last_sent + strtol(info_list->info.template_life_time, NULL, 10);
-				if (numOfFlowSamples > 0) {
-					info_list->packets_sent++;
-				}
+			}
+		}
+		if ((last == 0) && (info_list->info.template_life_time != NULL)) {
+			last = info_list->last_sent + strtol(info_list->info.template_life_time, NULL, 10);
+			if (numOfFlowSamples > 0) {
+				info_list->packets_sent++;
 			}
 		}
 	}
+
 	if (last <= ntohl(header->export_time)) {
 		if (info_list != NULL) {
 			info_list->last_sent = ntohl(header->export_time);
@@ -565,6 +567,8 @@ void convert_packet(char **packet, ssize_t *len, char *input_info) {
 			/* Observation domain ID is unknown */
 			header->observation_domain_id = 0; // ??
 
+			header->export_time = htonl((uint32_t) time(NULL));
+
 			/* Template Set insertion (if needed) and setting total packet length */
 			header->length = insertTemplateSet(packet,(char *) info_list, numOfFlowSamples, len);
 
@@ -573,7 +577,6 @@ void convert_packet(char **packet, ssize_t *len, char *input_info) {
 				seqNo[SF_SEQ_N] += numOfFlowSamples;
 			}
 
-			header->export_time = htonl((uint32_t) time(NULL));
 			break;
 	}
 	header->version = htons(IPFIX_VERSION);
