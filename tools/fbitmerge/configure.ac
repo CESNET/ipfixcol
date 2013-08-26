@@ -44,7 +44,7 @@ AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 AC_CONFIG_SRCDIR([src/fbitmerge.cpp])
 AC_CONFIG_HEADERS([config.h])
 
-RELEASE=2
+RELEASE=1
 AC_SUBST(RELEASE)
 
 # Initialization

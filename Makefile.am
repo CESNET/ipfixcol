@@ -5,6 +5,7 @@ EXTRA_DIST = README
 SUBDIRS = base \
 	tools/fbitconvert \
 	tools/fbitdump \
+	tools/fbitmerge \
 	plugins/storage/fastbit \
 	plugins/storage/postgres \
 	plugins/storage/unirec

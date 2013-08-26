@@ -39,7 +39,7 @@
 AC_PREREQ([2.60])
 
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol], [0.5.4])
+AC_INIT([ipfixcol], [0.5.5])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 LT_PREREQ([2.2])
 LT_INIT([dlopen disable-static])
@@ -51,7 +51,7 @@ AC_CONFIG_HEADERS([pkgconfig.h])
 # Initialization
 CFLAGS="-Wall"
 
-RELEASE=2
+RELEASE=1
 AC_SUBST(RELEASE)
 
 # Set user name and email for packaging purposes 

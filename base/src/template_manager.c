@@ -282,10 +282,10 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *t
 			/* remove the old template */
 //			MSG_DEBUG(msg_module, "No references and no previous template - removing, ID %d", id);
 			if (tm_remove_template(tm, id) != 0) {
-				MSG_WARNING(msg_module, "Cannot remove template %i.", ntohs(((struct ipfix_template_record*) template)->template_id));
+				MSG_WARNING(msg_module, "Cannot remove template %i.", id);
 			}
 			/* create a new one */
-			MSG_DEBUG(msg_module, "Creating a new one");
+			MSG_DEBUG(msg_module, "Creating new template %d", id);
 			return tm_add_template(tm, template, max_len, type);
 		} else {
 			/* Has some previous template(s) */
@@ -356,7 +356,7 @@ int tm_remove_template(struct ipfix_template_mgr *tm, uint16_t template_id)
 
 int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type)
 {
-	MSG_DEBUG(msg_module, "Removing all templates");
+	MSG_DEBUG(msg_module, "Removing all %stemplates", (type == TM_TEMPLATE)?"":"option ");
 
 	int i;
 	for (i=0; i < tm->max_length; i++) {
