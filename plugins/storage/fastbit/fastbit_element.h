@@ -299,6 +299,7 @@ class el_blob : public element
 public:
 	el_blob(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
 	virtual uint16_t fill(uint8_t * data);
+	virtual ~el_blob();
 
 protected:
 	bool _var_size;
@@ -308,13 +309,6 @@ protected:
 	char *_sp_buffer;
 	uint16_t _sp_buffer_size;
 	uint16_t _sp_buffer_offset;
-
-	/**
-	 * \brief Function to free both buffers used by this class
-	 *
-	 * Calls parent function free_buffer
-	 */
-	virtual void free_buffer();
 
 	/**
 	 * \brief Overloaded flush function to write the sp buffer

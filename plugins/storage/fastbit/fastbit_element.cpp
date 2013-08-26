@@ -412,6 +412,14 @@ int el_blob::flush(std::string path)
 
 		/* Close the file */
 		fclose(f);
+
+		/* Reset buffer */
+		_sp_buffer_offset = 0;
+
+		/* TODO
+		 * It is necessary to get the offset right before next write to disk
+		 * Get the size of the element on disk and use it to calculate offset
+		 */
 	}
 
 	/* Call parent function to write the data buffer */
@@ -420,11 +428,7 @@ int el_blob::flush(std::string path)
 	return 0;
 }
 
-void el_blob::free_buffer()
-{
-	/* Call the parent */
-	element::free_buffer();
-
+el_blob::~el_blob() {
 	/* Free sp buffer */
 	free(_sp_buffer);
 }
