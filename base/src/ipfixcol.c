@@ -96,13 +96,13 @@ void version ()
  */
 void help ()
 {
-	printf ("Usage: %s [-c file] [-dhV] [-v level]\n", PACKAGE);
+	printf ("Usage: %s [-c file] [-dhVs] [-v level]\n", PACKAGE);
 	printf ("  -c file   Path to configuration file (%s by default)\n", DEFAULT_CONFIG_FILE);
 	printf ("  -d        Daemonize\n");
 	printf ("  -h        Print this help\n");
 	printf ("  -v level  Print verbose messages up to specified level\n");
 	printf ("  -V        Print version information\n");
-	printf ("  -s        Skip invalid sequence number error (especially when receiving Netflow v9 data format\n\n");
+	printf ("  -s        Skip invalid sequence number error (especially when receiving Netflow v9 data format)\n\n");
 }
 
 void term_signal_handler(int sig)

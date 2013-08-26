@@ -110,7 +110,7 @@
 				<term>-s </term>
 				<listitem>
 					<simpara>
-						Skip invalid sequence number error (especially when receiving Netflow v9 data format.
+						Skip invalid sequence number error (especially when receiving Netflow v9 data format).
 					</simpara>
 				</listitem>
 			</varlistentry>
