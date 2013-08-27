@@ -56,6 +56,7 @@ typedef struct unirecField {
 	char *value;				/**< Value of the field */
 	uint16_t valueSize;			/**< Size of the value */
 	uint8_t valueFilled;		/**< Is the value filled? */
+	uint16_t valueBufferSize;	/**< Size of the buffer for value */
 
 	/**< Number of ipfix elements */
 	int ipfixCount;
@@ -65,11 +66,12 @@ typedef struct unirecField {
 
 
 /**
- * \struct config
+ * \struct interface
  *
  * \brief UniRec storage plugin specific "config" structure
  */
-typedef struct unirec_config {
+typedef struct ifc_config {
+	int				number;	/**< Number of output interface */
 	char				*format;
 	int				timeout; /**< Timeout of write operation on TRAP interface.
 										  Time in microseconds or 0 for no waiting or
@@ -77,8 +79,8 @@ typedef struct unirec_config {
 	
 	unirecField			*fields;
 	char 				*buffer;	/**< UniRec ouput buffer */
-	int					bufferSize; /**< UniRec ouput buffer size */
-	int					dynamicPartOffset;	/**< Offset of current position in dynamic part of record (sum of dynamic field sizes) */
+	int				bufferSize;		/**< UniRec ouput buffer size */
+	int				dynamicPartOffset;	/**< Offset of current position in dynamic part of record (sum of dynamic field sizes) */
 	uint32_t			odid;		/**< Observation domain ID of the last packet */
 	
 	unirecField			*special_field_odid; /**< Pointer to special field ODID */
@@ -86,6 +88,18 @@ typedef struct unirec_config {
 	unirecField			*special_field_time_last; /**< Pointer to special field TIME_LAST */
 	unirecField			*special_field_dir_bit_field; /**< Pointer to special field DIR_BIT_FIELD */
 	unirecField			*special_field_link_bit_field; /**< Pointer to special field LINK_BIT_FIELD */
+} ifc_config;
+
+/**
+ * \struct config
+ *
+ * \brief Main UniRec storage plugin config structure
+ */
+typedef struct unirec_config {
+	int ifc_count;		/**< Interface count */
+	ifc_config *ifc;	/**< Array of interface config structures */
 } unirec_config;
+
+
 
 #endif /* UNIREC_H_ */
