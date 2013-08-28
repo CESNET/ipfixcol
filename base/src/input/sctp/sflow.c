@@ -1841,11 +1841,13 @@ SFSample 	sample;
 int 		exceptionVal;
 
 	memset(&sample, 0, sizeof(sample));
-	if ((sample.rawSample = malloc(sizeof(packet))) == NULL) {
-		MSG_ERROR("sFlow conversion", "malloc() error");
+
+	if ((sample.rawSample = malloc(packet_len)) == NULL) {
+		printf("Warning: sFlow rawSample malloc() failed");
+		sample.rawSample = packet;
+	} else {
+		memcpy(sample.rawSample, packet, packet_len);
 	}
-	memcpy(sample.rawSample, packet, sizeof(packet));
-	sample.rawSample = packet;
 	sample.rawSampleLen = packet_len;
 
 	numOfFlowSamples = 0;
@@ -1855,6 +1857,8 @@ int 		exceptionVal;
 		sample.endp = (u_char *)sample.rawSample + sample.rawSampleLen;
 		readSFlowDatagram(&sample, packet);
 	}
-
+	if (sample.rawSample != packet) {
+		free(sample.rawSample);
+	}
 	return numOfFlowSamples;
 } // End of Process_sflow

@@ -102,7 +102,7 @@ static char *msg_module = "sctp input";
 #define NETFLOW_V9_VERSION 9
 
 #define NETFLOW_V5_TEMPLATE_LEN 76
-#define NETFLOW_V5_DATA_SET_LEN 44
+#define NETFLOW_V5_DATA_SET_LEN 52
 #define NETFLOW_V5_NUM_OF_FIELDS 17
 
 #define NETFLOW_V9_TEMPLATE_SET_ID 0
@@ -138,7 +138,6 @@ static char *msg_module = "sctp input";
 #define BYTES_8 8
 #define BYTES_12 12
 
-
 /* Static creation of Netflow v5 Template Set */
 
 static uint16_t netflow_v5_template[NETFLOW_V5_TEMPLATE_LEN/2]={\
@@ -151,8 +150,8 @@ static uint16_t netflow_v5_template[NETFLOW_V5_TEMPLATE_LEN/2]={\
 		EGRESS_INTERFACE, 			 BYTES_2,\
 		PACKETS, 					 BYTES_4,\
 		OCTETS, 					 BYTES_4,\
-		FLOW_START, 				 BYTES_4,\
-		FLOW_END, 					 BYTES_4,\
+		FLOW_START, 				 BYTES_8,\
+		FLOW_END, 					 BYTES_8,\
 		SRC_PORT, 					 BYTES_2,\
 		DST_PORT, 					 BYTES_2,\
 		PADDING, 					 BYTES_1,\
@@ -899,6 +898,12 @@ void convert_packet(char **packet, ssize_t *len, char *input_info) {
 			if (modified == 0) {
 				modify();
 			}
+			uint64_t sysUp = ntohl(*((uint32_t *) (((uint8_t *)header) + 4)));
+			uint64_t unSec = ntohl(*((uint32_t *) (((uint8_t *)header) + 8)));
+			uint64_t unNsec = ntohl(*((uint32_t *) (((uint8_t *)header) + 12)));
+
+			uint64_t time_header = (unSec * 1000) + unNsec/1000000;
+
 			numOfFlowSamples = ntohs(header->length);
 			/* Header modification */
 			header->export_time = header->sequence_number;
@@ -910,22 +915,21 @@ void convert_packet(char **packet, ssize_t *len, char *input_info) {
 			*len = *len - BYTES_8;
 
 			/* We need to resize time element (first and last seen) fron 32 bit to 64 bit */
-			uint8_t *pkt = (uint8_t *)*packet + IPFIX_HEADER_LENGTH;
 			int i;
+			uint8_t *pkt;
 			uint16_t shifted = 0;
-			struct timespec tp;
 			for (i = numOfFlowSamples - 1; i >= 0; i--) {
 				/* Resize each timestamp in each data record to 64 bit */
-				pkt = *packet + IPFIX_HEADER_LENGTH + (i * (NETFLOW_V5_DATA_SET_LEN - BYTES_4));
-				memmove(pkt + LAST_OFFSET + BYTES_8, pkt + LAST_OFFSET + BYTES_4,
-						(shifted * (NETFLOW_V5_DATA_SET_LEN + BYTES_4)) + (NETFLOW_V5_DATA_SET_LEN - LAST_OFFSET));
-				memmove(pkt + FIRST_OFFSET + BYTES_8, pkt + FIRST_OFFSET + BYTES_4,
-						(shifted * (NETFLOW_V5_DATA_SET_LEN + BYTES_4)) + (NETFLOW_V5_DATA_SET_LEN - FIRST_OFFSET));
+				pkt = (uint8_t *) (*packet + IPFIX_HEADER_LENGTH + (i * (NETFLOW_V5_DATA_SET_LEN - BYTES_4)));
+				uint64_t first = ntohl(*((uint32_t *) (pkt + FIRST_OFFSET)));
+				uint64_t last  = ntohl(*((uint32_t *) (pkt + LAST_OFFSET)));
 
-				/* Set current time because Nf5 sends only SysUpTime in record */
-				clock_gettime(CLOCK_REALTIME, &tp);
-				*((uint64_t *)(pkt + FIRST_OFFSET)) = htobe64((tp.tv_sec * 1000) + (tp.tv_nsec/1000000));
-				*((uint64_t *)(pkt + LAST_OFFSET + BYTES_4)) = htobe64((tp.tv_sec * 1000) + (tp.tv_nsec/1000000));
+				memmove(pkt + LAST_OFFSET + BYTES_8, pkt + LAST_OFFSET,
+						(shifted * (NETFLOW_V5_DATA_SET_LEN + BYTES_4)) + (NETFLOW_V5_DATA_SET_LEN - LAST_OFFSET));
+
+				/* Set time values */
+				*((uint64_t *)(pkt + FIRST_OFFSET)) = htobe64(time_header - (sysUp - first));
+				*((uint64_t *)(pkt + LAST_OFFSET + BYTES_4)) = htobe64(time_header - (sysUp - last));
 				shifted++;
 			}
 
