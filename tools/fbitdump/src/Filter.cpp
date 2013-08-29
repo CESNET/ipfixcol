@@ -178,50 +178,73 @@ std::string Filter::parse_ipv6(std::string addr)
 	ss.clear();
 
 	ss << part1 << " and " << this->secondPart << " " << this->cmp << " "<< part2 << " ) ";
-
+	this->secondPart = "";
 	return ss.str();
 }
 
 
 std::string Filter::parse_number(std::string number)
 {
+	std::stringstream ss;
 	switch (number[number.length() - 1]) {
 	case 'k':
 	case 'K':
-		return number.substr(0, number.length() - 1) + "000";
+		ss << number.substr(0, number.length() - 1) + "000";
+		break;
 	case 'm':
 	case 'M':
-		return number.substr(0, number.length() - 1) + "000000";
+		ss << number.substr(0, number.length() - 1) + "000000";
+		break;
 	case 'g':
 	case 'G':
-		return number.substr(0, number.length() - 1) + "000000000";
+		ss << number.substr(0, number.length() - 1) + "000000000";
+		break;
 	case 't':
 	case 'T':
-		return number.substr(0, number.length() - 1) + "000000000000";
+		ss << number.substr(0, number.length() - 1) + "000000000000";
+		break;
 	default:
-		return number;
+		ss << number;
+		break;
 	}
+	if (this->secondPart.length() > 0) {
+		if (!this->cmp.compare("!=")) {
+			ss << " and ";
+		} else {
+			ss << " or ";
+		}
+		ss << this->secondPart << " " << this->cmp << " "<< number << " ) ";
+		this->secondPart = "";
+	}
+	return ss.str();
 }
 
 std::string Filter::parse_column(std::string strcol)
 {
 	Column *col = NULL;
+	std::stringstream ss;
+	if (!strcol.compare("%port")) {
+		this->secondPart = *(Column(this->actualConf->getXMLConfiguration(), "%dp", false).getColumns().begin());
+		std::cout << "second part == " << this->secondPart << std::endl;
+		strcol = "%sp";
+		ss << " ( ";
+	}
 	try {
 		col = new Column(this->actualConf->getXMLConfiguration(), strcol, false);
 	} catch (std::exception &e){
 		std::string err = std::string("Filter column '") + strcol + "' not found!";
 		throw std::invalid_argument(err);
 	}
+
 	stringSet cols = col->getColumns();
 	if (!col->isOperation()) {
 		if (cols.size() > 1) {
 			stringSet::iterator ii = cols.begin();
 			this->secondPart = *(++ii);
-			std::stringstream ss;
-			ss << " ( " << *cols.begin();
-			return ss.str();
+			ss << " ( ";
 		}
-		return *cols.begin();
+		ss << *cols.begin();
+		return ss.str();
 	} else {
 		std::string err = std::string("Computed column '") + strcol + "' cannot be used for filtering!";
 		delete col;
