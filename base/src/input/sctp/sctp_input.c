@@ -108,6 +108,10 @@ static char *msg_module = "sctp input";
 #define NETFLOW_V9_TEMPLATE_SET_ID 0
 #define NETFLOW_V9_OPT_TEMPLATE_SET_ID 1
 
+/* Offsets of timestamps in netflow v5 data record */
+#define FIRST_OFFSET 24
+#define LAST_OFFSET 28
+
 /** IPFIX Element IDs used when creating Template Set */
 #define SRC_IPV4_ADDR 8
 #define DST_IPV4_ADDR 12
@@ -116,8 +120,8 @@ static char *msg_module = "sctp input";
 #define EGRESS_INTERFACE 14
 #define PACKETS 2
 #define OCTETS 1
-#define FLOW_START 22
-#define FLOW_END 21
+#define FLOW_START 152
+#define FLOW_END 153
 #define SRC_PORT 7
 #define DST_PORT 11
 #define PADDING 210
@@ -766,10 +770,11 @@ inline uint16_t insertTemplateSet(char **packet, char *input_info, int numOfFlow
 	struct input_info_list *info_list = (struct input_info_list *) input_info;
 	uint16_t buff_len = BUFF_LEN;
 #endif
-	int i;
+
 	/* Remove last 4 bytes (padding) of each data record in packet */
+	int i;
 	for (i = numOfFlowSamples - 1; i > 0; i--) {
-		uint32_t pos = IPFIX_HEADER_LENGTH + i * (NETFLOW_V5_DATA_SET_LEN + BYTES_4);
+		uint32_t pos = IPFIX_HEADER_LENGTH + (i * (NETFLOW_V5_DATA_SET_LEN + BYTES_4));
 		memmove(*packet + pos - BYTES_4, *packet + pos, (numOfFlowSamples - i) * NETFLOW_V5_DATA_SET_LEN);
 	}
 	/* Insert Data Set header */
@@ -783,6 +788,17 @@ inline uint16_t insertTemplateSet(char **packet, char *input_info, int numOfFlow
 
 #ifdef UDP_INPUT_PLUGIN
 	uint32_t last = 0;
+	if ((info_list == NULL) || ((info_list->info.template_life_packet == NULL) && (info_list->info.template_life_time == NULL))) {
+		if (inserted == 0) {
+			inserted = 1;
+			memmove(*packet + IPFIX_HEADER_LENGTH + NETFLOW_V5_TEMPLATE_LEN, *packet + IPFIX_HEADER_LENGTH, buff_len - NETFLOW_V5_TEMPLATE_LEN - IPFIX_HEADER_LENGTH);
+			memcpy(*packet + IPFIX_HEADER_LENGTH, netflow_v5_template, NETFLOW_V5_TEMPLATE_LEN);
+			*len += NETFLOW_V5_TEMPLATE_LEN;
+			return htons(IPFIX_HEADER_LENGTH + NETFLOW_V5_TEMPLATE_LEN + (NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
+		} else {
+			return htons(IPFIX_HEADER_LENGTH + (NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
+		}
+	}
 	if (info_list != NULL) {
 		if (info_list->info.template_life_packet != NULL) {
 			if (info_list->packets_sent == strtol(info_list->info.template_life_packet, NULL, 10)) {
@@ -796,7 +812,6 @@ inline uint16_t insertTemplateSet(char **packet, char *input_info, int numOfFlow
 			}
 		}
 	}
-
 	if (last <= ntohl(header->export_time)) {
 		if (info_list != NULL) {
 			info_list->last_sent = ntohl(header->export_time);
@@ -814,6 +829,7 @@ inline uint16_t insertTemplateSet(char **packet, char *input_info, int numOfFlow
 		return htons(IPFIX_HEADER_LENGTH + (NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
 	}
 }
+
 
 /**
  * \brief Converts packet from Netflow v5/v9 or sFlow format to IPFIX format
@@ -893,6 +909,29 @@ void convert_packet(char **packet, ssize_t *len, char *input_info) {
 			/* Update real packet length because of memmove() */
 			*len = *len - BYTES_8;
 
+			/* We need to resize time element (first and last seen) fron 32 bit to 64 bit */
+			uint8_t *pkt = (uint8_t *)*packet + IPFIX_HEADER_LENGTH;
+			int i;
+			uint16_t shifted = 0;
+			struct timespec tp;
+			for (i = numOfFlowSamples - 1; i >= 0; i--) {
+				/* Resize each timestamp in each data record to 64 bit */
+				pkt = *packet + IPFIX_HEADER_LENGTH + (i * (NETFLOW_V5_DATA_SET_LEN - BYTES_4));
+				memmove(pkt + LAST_OFFSET + BYTES_8, pkt + LAST_OFFSET + BYTES_4,
+						(shifted * (NETFLOW_V5_DATA_SET_LEN + BYTES_4)) + (NETFLOW_V5_DATA_SET_LEN - LAST_OFFSET));
+				memmove(pkt + FIRST_OFFSET + BYTES_8, pkt + FIRST_OFFSET + BYTES_4,
+						(shifted * (NETFLOW_V5_DATA_SET_LEN + BYTES_4)) + (NETFLOW_V5_DATA_SET_LEN - FIRST_OFFSET));
+
+				/* Set current time because Nf5 sends only SysUpTime in record */
+				clock_gettime(CLOCK_REALTIME, &tp);
+				*((uint64_t *)(pkt + FIRST_OFFSET)) = htobe64((tp.tv_sec * 1000) + (tp.tv_nsec/1000000));
+				*((uint64_t *)(pkt + LAST_OFFSET + BYTES_4)) = htobe64((tp.tv_sec * 1000) + (tp.tv_nsec/1000000));
+				shifted++;
+			}
+
+			/* Set right packet length according to memmoves */
+			*len += shifted * BYTES_8;
+
 			/* Template Set insertion (if needed) and setting packet length */
 			header->length = insertTemplateSet(packet,(char *) info_list, numOfFlowSamples, len);
 
@@ -900,6 +939,7 @@ void convert_packet(char **packet, ssize_t *len, char *input_info) {
 			if (*len >= htons(header->length)) {
 				seqNo[NF5_SEQ_N] += numOfFlowSamples;
 			}
+
 			break;
 
 		/* SFLOW packet (converted to Netflow v5 like packet */

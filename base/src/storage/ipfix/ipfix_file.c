@@ -208,12 +208,12 @@ int storage_init(char *params, void **config)
 	}
 
 	/* output file path + timestamp */
-	conf->file = (char *) malloc(strlen((char *) conf->xml_file)+12);
+	conf->file = (char *) malloc(strlen((char *) conf->xml_file)+13);
 	if (conf->file == NULL) {
 		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		goto err_init;
 	}
-	memset(conf->file, 0, strlen((char *) conf->xml_file)+14);
+	memset(conf->file, 0, strlen((char *) conf->xml_file)+13);
 
 	/* copy file path, skip "file:" at the beginning of the URI */
 	strcpy(conf->file, (char *) conf->xml_file + 5);

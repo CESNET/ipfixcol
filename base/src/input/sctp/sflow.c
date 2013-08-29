@@ -31,6 +31,7 @@ extern "C" {
 #include <sys/poll.h>
 #include <netinet/in_systm.h>
 #include <netinet/in.h>
+#include <endian.h>
 #endif
 
 #include "sflow.h" // sFlow v5
@@ -349,8 +350,8 @@ typedef struct _NFFlow5 {
   uint16_t if_out;
   uint32_t frames;
   uint32_t bytes;
-  uint32_t firstTime;
-  uint32_t lastTime;
+  uint64_t firstTime;
+  uint64_t lastTime;
   uint16_t srcPort;
   uint16_t dstPort;
   uint8_t pad1;
@@ -892,8 +893,11 @@ static void sendNetFlowDatagram(SFSample *sample, char *packet)
   pkt.flow.srcMask = (uint8_t)sample->srcMask;
   pkt.flow.dstMask = (uint8_t)sample->dstMask;
 
-  pkt.flow.firstTime = htonl((uint32_t) time(NULL));
-  pkt.flow.lastTime = htonl((uint32_t) time(NULL));
+  struct timespec tp;
+  clock_gettime(CLOCK_REALTIME, &tp);
+
+  pkt.flow.firstTime = htobe64((tp.tv_sec * 1000) + (tp.tv_nsec/1000000));
+  pkt.flow.lastTime = htobe64((tp.tv_sec * 1000) + (tp.tv_nsec/1000000));
 
   memcpy(packet + IPFIX_HEADER_LENGTH + numOfFlowSamples*sizeof(pkt.flow), &pkt.flow, sizeof(pkt.flow));
   numOfFlowSamples++;
