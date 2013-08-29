@@ -16,8 +16,8 @@ void * thread_rescan_func( void * ptr ) {
 	char * ptrc;
 	FILE * stat_file;
 	int rescan;
-	int64_t size;
-	int64_t size2;
+	int64_t size=0;
+	int64_t size2=0;
 	struct sigaction action;
 	
 	sigemptyset(&action.sa_mask);
@@ -43,6 +43,7 @@ void * thread_rescan_func( void * ptr ) {
 		if( rescan ) {
 			VERBOSE( 2, "S | initial scanning             %s\n", dir->name);
 			scan_dir( data, dir->name, 1 );
+			VERBOSE( 3, "S | done                         %s\n", dir->name);
 		}
 		// or we can just open stat file and read size of data from it
 		else {
@@ -57,12 +58,35 @@ void * thread_rescan_func( void * ptr ) {
 		// pipe thread is doing for us list of directories which are worthy of rescan
 		// so we wait for signal from pipe that list is ready
 		if( sem_wait( &data->sem_rescan ) == -1 ) break;
-			
 		// list is ready, rescan it
 		while( data->queue_rescan->directory != NULL ) {
 			VERBOSE( 2, "S | scanning                     %s\n", data->queue_rescan->directory->name);
-			
+				
+			if( asprintf( &dir_name, "%s/stat.txt", data->queue_rescan->directory->name ) == -1 ) {
+				ERROR;
+				continue;
+			}
+			if( access( dir_name, F_OK ) == 0 ) {
+				stat_file = fopen( dir_name, "r" );
+				if( stat_file != NULL ) {
+					pthread_mutex_lock( &data->mutex_file );
+					fscanf( stat_file, "%" SCNd64, &size2 );
+					pthread_mutex_unlock( &data->mutex_file );
+					fclose( stat_file );
+				}
+				else {
+					ERROR;
+					continue;
+				}
+			}
+
 			size = scan_dir( data, data->queue_rescan->directory->name, 0 );			
+
+			size -= size2;
+
+			pthread_mutex_lock( &data->mutex_mem );
+			data->total_size += size;
+			pthread_mutex_unlock( &data->mutex_mem );
 			
 			dir = data->queue_watch->directory;
 			while( dir != NULL ) {
@@ -76,7 +100,6 @@ void * thread_rescan_func( void * ptr ) {
 					
 				ptrc = strrchr( stat_file_dir, '/' );
 				ptrc[0] = '\0';
-//					printf( "\t%s\n", stat_file_dir );
 
 				if( asprintf( &dir_name, "%s/stat.txt", stat_file_dir ) == -1 ) {
 					ERROR;
@@ -100,7 +123,6 @@ void * thread_rescan_func( void * ptr ) {
 				fprintf( stat_file, "%" PRId64, size2 );
 				pthread_mutex_unlock( &data->mutex_file );
 				fclose( stat_file );
-//				printf( "\tUpdating size in %s\n", dir_name );
 				free( dir_name );
 			}
 		
@@ -113,6 +135,7 @@ void * thread_rescan_func( void * ptr ) {
 		}
 		
 		
+
 	}
 	return NULL;	
 }
@@ -196,7 +219,10 @@ int64_t scan_dir( struct s_data * data, char * dir_name, int force ) {
 		data->total_size += size_files;
 		pthread_mutex_unlock( &data->mutex_mem );
 	}
-	size = (size_dirs + size_files) - size;
+	
+	size = (size_dirs + size_files);// - size;
+	
+
 
 	stat_file = fopen( child, "w" );
 	if( stat_file == NULL ) {
@@ -207,6 +233,10 @@ int64_t scan_dir( struct s_data * data, char * dir_name, int force ) {
 	free( child );
 	fprintf( stat_file, "%" PRId64, (size_dirs + size_files) );
 	fclose( stat_file );
+
+	if( ( size_dirs == 0 ) && ( size_files == 0 ) ) {
+		return 0;
+	}
 
 	return size;
 }

@@ -42,6 +42,8 @@
  *
  * This documents provides documentation of IPFIX Dump utility (ipfixdump).
  */
+#include <fstream>
+#include <iostream>
 
 #include "Configuration.h"
 #include "TableManager.h"
@@ -66,6 +68,8 @@ int main(int argc, char *argv[])
 	/* create configuration to work with */
 	Configuration conf;
 
+	std::ofstream pipe;
+
 	/* process configuration and check whether to end the program */
 	try {
 		if (conf.init(argc, argv))
@@ -89,11 +93,30 @@ int main(int argc, char *argv[])
 		/* check whether to delete indexes */
 		if (conf.getDeleteIndexes()) {
 			IndexManager::deleteIndexes(conf, tm);
+			
+			if (access (conf.pipe_name.c_str(), F_OK ) == 0 ) {
+				ibis::partList parts = tm.getParts();
+				pipe.open( conf.pipe_name.c_str() );
+
+				for (ibis::partList::iterator partIt = parts.begin(); partIt != parts.end(); partIt++) {
+					pipe << (*partIt)->currentDataDir() << "\n";		
+				}
+				pipe.close();
+			}
 		}
 
 		/* check whether to build indexes */
 		if (conf.getCreateIndexes()) {
 			IndexManager::createIndexes(conf, tm);
+			if (access (conf.pipe_name.c_str(), F_OK ) == 0 ) {
+				ibis::partList parts = tm.getParts();
+				pipe.open( conf.pipe_name.c_str() );
+
+				for (ibis::partList::iterator partIt = parts.begin(); partIt != parts.end(); partIt++) {
+					pipe << (*partIt)->currentDataDir() << "\n";		
+				}
+				pipe.close();
+			}
 		}
 
 		/* check whether to print template information */

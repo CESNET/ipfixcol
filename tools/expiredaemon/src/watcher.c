@@ -211,7 +211,9 @@ void * thread_inotify_func( void * ptr ){
 				free( stat_file_dir );
 				// cya our beloved data!
 				inotify_delete_dir( data->queue_delete->directory->name );
+				printf( "\t\tSize: %" PRId64 " - %"PRId64" = ", (data->total_size/(1024*1024)), (stat_size/(1024*1024)) );
 				data->total_size -= stat_size;
+				printf( "%"PRId64"\n", (data->total_size/(1024*1024)) );
 				buffer_rm_dir( data->queue_delete );
 			}
 		

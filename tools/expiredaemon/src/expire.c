@@ -47,7 +47,7 @@ void term_signal_handler(int sig)
 int main (int argc, char **argv) {
 	int c;
 	int force_rescan = 0;
-	char pipe_name[100] = "/var/tmp/exiredaemon-queue";
+	char pipe_name[100] = "/var/tmp/expiredaemon-queue";
 	int dir_count = 1;
 	int dir_depth = 1;
 	

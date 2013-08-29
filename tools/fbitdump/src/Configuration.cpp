@@ -204,6 +204,17 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		case 'o': /* output format */
 				this->format = optarg;
 			break;
+		case 'p':
+			if (optarg == std::string("")) {
+				throw std::invalid_argument("-p requires a path to open, empty string given");
+			}
+			if (access ( optarg, F_OK ) != 0 ) {
+				throw std::invalid_argument("Cannot access pipe");	
+			}		
+			this->pipe_name = optarg;
+
+			break;
+
 		case 'v':
 			NOT_SUPPORTED
 			break;
@@ -239,6 +250,10 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			return 1;
 			break;
 		}
+	}
+
+	if (this->pipe_name == std::string("") ) {
+		this->pipe_name = "/var/tmp/expiredaemon-queue";
 	}
 
 	/* open XML configuration file */
