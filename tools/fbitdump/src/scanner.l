@@ -79,7 +79,7 @@ _WHITESPACE " "+|\t+
 {_IPv4}         { yylval->s = new std::string(yytext); return token::IPv4; }
 {_IPv6}         { yylval->s = new std::string(yytext); return token::IPv6; }
 {_TIMESTAMP}    { yylval->s = new std::string(yytext); return token::TIMESTAMP; }
-{_CMP}          { yylval->s = new std::string(yytext); filter.set_cmp(yytext); return token::CMP; }
+{_CMP}          { yylval->s = new std::string(yytext); return token::CMP; }
 {_OPERATOR}   	{ yylval->s = new std::string(yytext); return token::OPERATOR; }
 {_BITOPERATOR} 	{ yylval->s = new std::string(yytext); return token::BITOPERATOR; }
 {_BRACKET}		{ return yytext[0]; }

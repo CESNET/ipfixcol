@@ -65,6 +65,12 @@ namespace fbitdump {
 class Configuration;
 class Cursor;
 
+struct _parserStruct {
+	uint16_t type;
+	uint16_t nParts;
+	std::vector<std::string> parts;
+};
+
 /**
  * \brief Class managing filter
  *
@@ -120,22 +126,88 @@ public:
 	 */
 	bool isValid(Cursor &cur) const;
 
+	/**
+	 * \brief Parses number (kK -> 000, mM -> 000000 ...) and fills parser structure
+	 *
+	 * @param ps Parser structure with information needed for creating expressions
+	 * @param number
+	 */
+	void parseNumber(struct _parserStruct *ps, std::string number);
 
-	std::string parse_number(std::string number);
+	/**
+	 * \brief Parses IPv4 address
+	 *
+	 * Converts IPv4 address from text into numeric format and saves it into parser structure
+	 *
+	 * @param ps Parser structure
+	 * @param addr Address in text format
+	 */
+	void parseIPv4(struct _parserStruct *ps, std::string addr);
 
-	std::string parse_ipv4(std::string addr);
+	/**
+	 * \brief Parses IPv6 address
+	 *
+	 * Converts IPv6 address from text into numeric (two 64b values) and saves it into parser structure
+	 *
+	 * @param ps Parser structure
+	 * @param addr Address in text format
+	 */
+	void parseIPv6(struct _parserStruct *ps, std::string addr);
 
-	std::string parse_ipv6(std::string addr);
+	/**
+	 * \brief Parses timestamp in format %Y/%m/%d.%H:%M:%S
+	 *
+	 * @param ps Parser structure
+	 * @param timestamp
+	 */
+	void parseTimestamp(struct _parserStruct *ps, std::string timesamp);
 
-	std::string parse_timestamp(std::string timesamp);
+	/**
+	 * \brief Parses column
+	 *
+	 * Converts column alias into right name and saves all its parts into parser structure
+	 *
+	 * @param ps Parser structure
+	 * @param strcol Column alias
+	 */
+	void parseColumn(struct _parserStruct *ps, std::string strcol);
 
-	std::string parse_column(std::string strcol);
+	/**
+	 * \brief Only fills parser structure with column name
+	 *
+	 * @param ps Parser structure
+	 * @param strcol Column name
+	 */
+	void parseRawcolumn(struct _parserStruct *ps, std::string strcol);
+
+	/**
+	 * \brief Parses expression "column BITOPERATOR value" into parser structure
+	 *
+	 * @param ps Output parser structure
+	 * @param left Input parser structure
+	 * @param right Input parser structure
+	 * @param op Operator
+	 */
+	void parseBitColVal(struct _parserStruct *ps, struct _parserStruct *left, std::string op, struct _parserStruct *right);
+
+	/**
+	 * \brief Parses final expression "column CMP value" into string
+	 *
+	 * @param left Input parser structure
+	 * @param right Input parser structure
+	 * @param cmp Comparison
+	 * @return Filter text in string form
+	 */
+	std::string parseExp(struct _parserStruct *left, std::string cmp, struct _parserStruct *right);
 
 	yyscan_t scaninfo;	/**< lexer context */
 
-	void set_filterString(std::string newFilter);
-
-	void set_cmp(std::string newCmp);
+	/**
+	 * \brief Sets new filter string
+	 *
+	 * @param newFilter New filter string
+	 */
+	void setFilterString(std::string newFilter);
 
 private:
 	/**
@@ -157,11 +229,7 @@ private:
 
 	Configuration *actualConf; /**< Used configuration for getting column names while parsing filter */
 
-	std::string secondPart; /**< Buffer for columns with more parts (IPv6...) */
-
 	std::string filterString; /**< String for fastbit condition */
-
-	std::string cmp;
 };
 
 }  // namespace fbitdump

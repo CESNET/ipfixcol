@@ -53,6 +53,7 @@
 /* Forward declaration of Filter in fbitdump namespace*/
 namespace fbitdump {
 	class Filter;
+	struct _parserStruct;
 }
 }
 
@@ -75,6 +76,7 @@ namespace fbitdump {
 /* this is to be used for yylval type. */
 %union {
 	std::string *s;
+	struct fbitdump::_parserStruct *ps;
 }
 
 /* tokens that are later also included in lexer */
@@ -91,7 +93,8 @@ namespace fbitdump {
 %token <s> EOL			"end of line"
 %token END 0			"end of file"
 
-%type <s> explist exp value column start
+%type <s> explist exp start
+%type <ps> value column 
 
 %{
 /* yylex function declaration */
@@ -113,7 +116,7 @@ void parser::Parser::error(location const &loc, const std::string &msg) {
 %start start;
 
 start:
-	explist { filter.set_filterString(*$1); delete $1;}
+	explist { filter.setFilterString(*$1); delete $1;}
 	;
  
 explist:
@@ -123,22 +126,22 @@ explist:
 
 exp:
 	  '(' exp ')' { $$ = new std::string("( " + *$2 + " )"); delete $2; } 
-	| column CMP value {  $$ = new std::string(*$1 + " " + *$2 + " " + *$3); delete $1; delete $2; delete $3; }
-	| value CMP column {  $$ = new std::string(*$1 + " " + *$2 + " " + *$3); delete $1; delete $2; delete $3; }
-	| column CMP column { $$ = new std::string(*$1 + " " + *$2 + " " + *$3); delete $1; delete $2; delete $3; }
+	| column CMP value {  $$ = new std::string(filter.parseExp($1, *$2, $3)); delete $1; delete $2; delete $3; }
+	| value CMP column {  $$ = new std::string(filter.parseExp($3, *$2, $1)); delete $1; delete $2; delete $3; }
+	| column CMP column { $$ = new std::string(filter.parseExp($1, *$2, $3)); delete $1; delete $2; delete $3; }
     ;
 
 value:
-	  NUMBER { $$ = new std::string(filter.parse_number(*$1)); delete $1; }
-	| IPv4 { $$ = new std::string(filter.parse_ipv4(*$1)); delete $1; }
-	| IPv6 { $$ = new std::string(filter.parse_ipv6(*$1)); delete $1; }
-	| TIMESTAMP { $$ = new std::string(filter.parse_timestamp(*$1)); delete $1; }
+	  NUMBER { $$ = new fbitdump::_parserStruct; filter.parseNumber($$, *$1); delete $1; }
+	| IPv4 { $$ = new fbitdump::_parserStruct; filter.parseIPv4($$, *$1); delete $1; }
+	| IPv6 { $$ = new fbitdump::_parserStruct; filter.parseIPv6($$, *$1); delete $1; }
+	| TIMESTAMP { $$ = new fbitdump::_parserStruct; filter.parseTimestamp($$, *$1); delete $1; }
 	;
 	
 column:
-	  COLUMN { $$ = new std::string(filter.parse_column(*$1)); delete $1; }
-	| RAWCOLUMN { $$ = new std::string(*$1); delete $1; }
-	| column BITOPERATOR value { $$ = new std::string(*$1 + " " + *$2 + " " + *$3); delete $1; delete $2; delete $3; }
+	  COLUMN { $$ = new fbitdump::_parserStruct; filter.parseColumn($$, *$1); delete $1; }
+	| RAWCOLUMN { $$ = new fbitdump::_parserStruct; filter.parseRawcolumn($$, *$1); delete $1; }
+	| column BITOPERATOR value { $$ = new fbitdump::_parserStruct; filter.parseBitColVal($$, $1, *$2, $3); delete $1; delete $2; delete $3; }
 	;
 
 %%

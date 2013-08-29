@@ -72,7 +72,7 @@ bool Filter::isValid(Cursor &cur) const
 	return true;
 }
 
-void Filter::set_filterString(std::string newFilter)
+void Filter::setFilterString(std::string newFilter)
 {
 	this->filterString = newFilter;
 }
@@ -91,6 +91,7 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		input = tw + input;
 	}
 
+	/* We need access to configuration in parseColumn() function */
 	this->actualConf = &conf;
 
 	/* Initialise lexer structure (buffers, etc) */
@@ -114,7 +115,7 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 	/* clear the context */
 	yylex_destroy(this->scaninfo);
 
-	std::cout << "Filtr: " << this->filterString << std::endl;
+	std::cout << "\nFilter: " << this->filterString << std::endl;
 #ifdef DEBUG
 	std::cerr << "Using filter: '" << filter << "'" << std::endl;
 #endif
@@ -131,104 +132,102 @@ time_t Filter::parseTimestamp(std::string str) const throw (std::invalid_argumen
 	return mktime(&ctime);
 }
 
-std::string Filter::parse_timestamp(std::string timestamp)
+void Filter::parseTimestamp(struct _parserStruct *ps, std::string timestamp)
 {
+	/* Get time in seconds */
 	time_t ntime = parseTimestamp(timestamp);
 
+	/* Sec -> ms -> string */
 	std::ostringstream ss;
 	ss << ntime * 1000;
 
-	return ss.str();
+	/* Set right values of parser structure */
+	ps->type = TIMESTAMP;
+	ps->nParts = 1;
+	ps->parts.push_back(ss.str());
 }
 
-std::string Filter::parse_ipv4(std::string addr)
+void Filter::parseIPv4(struct _parserStruct *ps, std::string addr)
 {
+	/* Parse IPv4 address */
 	struct in_addr address;
 	std::stringstream ss;
 
+	/* Convert from address format into numeric fotmat */
 	inet_pton(AF_INET, addr.c_str(), &address);
 
+	/* Get it in host byte order */
 	uint32_t addrNum = ntohl(address.s_addr);
 
+	/* Integer to string */
 	ss << addrNum;
 
-	return ss.str();
+	/* Set right values of parser structure */
+	ps->type = IPv4;
+	ps->nParts = 1;
+	ps->parts.push_back(ss.str());
 }
 
-std::string Filter::parse_ipv6(std::string addr)
+void Filter::parseIPv6(struct _parserStruct *ps, std::string addr)
 {
+	/* Parse IPv6 address */
 	uint64_t address[2];
+	std::stringstream ss;
 
+	/* Convert from address format into numeric format (we need 128b) */
 	inet_pton(AF_INET6, addr.c_str(), address);
 
-	std::stringstream ss;
-	std::string part1;
-	std::string part2;
-
+	/* Save first part of address into parser structure string vector */
 	ss << be64toh(address[0]);
-	part1 = ss.str();
+	ps->parts.push_back(ss.str());
 
+	/* Clear stringstream */
 	ss.str(std::string());
 	ss.clear();
 
+	/* Save second part */
 	ss << be64toh(address[1]);
-	part2 = ss.str();
+	ps->parts.push_back(ss.str());
 
-	ss.str(std::string());
-	ss.clear();
-
-	ss << part1 << " and " << this->secondPart << " " << this->cmp << " "<< part2 << " ) ";
-	this->secondPart = "";
-	return ss.str();
+	/* Set right values of parser structure */
+	ps->type = IPv6;
+	ps->nParts = 2;
 }
 
-
-std::string Filter::parse_number(std::string number)
+void Filter::parseNumber(struct _parserStruct *ps, std::string number)
 {
-	std::stringstream ss;
+	/* If there is some suffix (kKmMgG) convert it into number */
 	switch (number[number.length() - 1]) {
 	case 'k':
 	case 'K':
-		ss << number.substr(0, number.length() - 1) + "000";
+		number = number.substr(0, number.length() - 1) + "000";
 		break;
 	case 'm':
 	case 'M':
-		ss << number.substr(0, number.length() - 1) + "000000";
+		number = number.substr(0, number.length() - 1) + "000000";
 		break;
 	case 'g':
 	case 'G':
-		ss << number.substr(0, number.length() - 1) + "000000000";
+		number = number.substr(0, number.length() - 1) + "000000000";
 		break;
 	case 't':
 	case 'T':
-		ss << number.substr(0, number.length() - 1) + "000000000000";
+		number = number.substr(0, number.length() - 1) + "000000000000";
 		break;
 	default:
-		ss << number;
 		break;
 	}
-	if (this->secondPart.length() > 0) {
-		if (!this->cmp.compare("!=")) {
-			ss << " and ";
-		} else {
-			ss << " or ";
-		}
-		ss << this->secondPart << " " << this->cmp << " "<< number << " ) ";
-		this->secondPart = "";
-	}
-	return ss.str();
+
+	/* Set right values of parser structure */
+	ps->type = NUMBER;
+	ps->nParts = 1;
+	ps->parts.push_back(number);
 }
 
-std::string Filter::parse_column(std::string strcol)
+void Filter::parseColumn(struct _parserStruct *ps, std::string strcol)
 {
+	/* Get right column (find entered alias in xml file) */
 	Column *col = NULL;
-	std::stringstream ss;
-	if (!strcol.compare("%port")) {
-		this->secondPart = *(Column(this->actualConf->getXMLConfiguration(), "%dp", false).getColumns().begin());
-		std::cout << "second part == " << this->secondPart << std::endl;
-		strcol = "%sp";
-		ss << " ( ";
-	}
 	try {
 		col = new Column(this->actualConf->getXMLConfiguration(), strcol, false);
 	} catch (std::exception &e){
@@ -236,27 +235,91 @@ std::string Filter::parse_column(std::string strcol)
 		throw std::invalid_argument(err);
 	}
 
+	/* Save all its parts into string vector of parser structure */
+	ps->nParts = 0;
 	stringSet cols = col->getColumns();
 	if (!col->isOperation()) {
-		if (cols.size() > 1) {
-			stringSet::iterator ii = cols.begin();
-			this->secondPart = *(++ii);
-			ss << " ( ";
+		for (stringSet::iterator ii = cols.begin(); ii != cols.end(); ii++) {
+			ps->parts.push_back(*ii);
+			ps->nParts++;
 		}
-		ss << *cols.begin();
-		return ss.str();
 	} else {
 		std::string err = std::string("Computed column '") + strcol + "' cannot be used for filtering!";
 		delete col;
 		throw std::invalid_argument(err);
 	}
 	delete col;
-	return std::string("");
+
+	/* Set type of structure */
+	ps->type = COLUMN;
 }
 
-void Filter::set_cmp(std::string newCmp)
+void Filter::parseRawcolumn(struct _parserStruct *ps, std::string strcol)
 {
-	this->cmp = newCmp;
+	ps->nParts = 1;
+	ps->type = RAWCOLUMN;
+	ps->parts.push_back(strcol);
+}
+
+void Filter::parseBitColVal(struct _parserStruct *ps, struct _parserStruct *left, std::string op, struct _parserStruct *right)
+{
+	/* Parse expression "column BITOPERATOR value" */
+
+	/* Set type of structure */
+	ps->type = BITCOLVAL;
+	ps->nParts = 0;
+
+	/* Get maximum size of string vectors */
+	uint16_t max = (left->nParts > right->nParts ? left->nParts : right->nParts);
+	std::cout << "max: " << max << std::endl;
+	for (uint16_t i = 0, j = 0; (i < max) && (j < max); i++, j++) {
+		/* If one string vector is at the end but second not, duplicate its last value */
+		if (i == left->nParts) {
+			i--;
+		}
+		if (j == right->nParts) {
+			j--;
+		}
+
+		/* Create new expression and save it into parser structure */
+		std::stringstream ss;
+		ss << "( " << left->parts[i] << " " << op << " " << right->parts[j] << " ) ";
+
+		ps->nParts++;
+		ps->parts.push_back(ss.str());
+	}
+}
+
+std::string Filter::parseExp(struct _parserStruct *left, std::string cmp, struct _parserStruct *right)
+{
+	/* Parser expression "column CMP value" */
+	std::stringstream ss;
+	if ((left->nParts == 1) && (right->nParts == 1)) {
+		ss << left->parts[0] << " " << cmp << " " << right->parts[0] << " ";
+	} else {
+		uint16_t max = (left->nParts > right->nParts ? left->nParts : right->nParts);
+		ss << "(";
+		for (uint16_t i = 0, j = 0; (i < max) && (j < max); i++, j++) {
+			/* If one string vector is at the end but second not, duplicate its last value */
+			if (i == left->nParts) {
+				i--;
+			}
+			if (j == right->nParts) {
+				j--;
+			}
+
+			/* If needed, insert operator "and" */
+			if (i > 0) {
+				ss << " and ";
+			}
+
+			/* Add string into stringstream */
+			ss << "( " << left->parts[i] << " " << cmp << " " << right->parts[i] << " )";
+		}
+		ss << ") ";
+	}
+	/* Return created expression */
+	return ss.str();
 }
 
 Filter::Filter(Configuration &conf) throw (std::invalid_argument)
