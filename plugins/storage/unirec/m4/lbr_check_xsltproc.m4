@@ -53,8 +53,17 @@ if test -n "$XSLTPROC"; then
                 AC_MSG_ERROR(["Docbook XSL stylesheet for man pages not found!"])
             fi
             ;;
+	debian )
+	    if test -f /usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl; then
+		XSLTMANSTYLE="/usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl"
+		XSLTHTMLSTYLE="/usr/share/xml/docbook/stylesheet/docbook-xsl/html/docbook.xsl"
+		XSLTXHTMLSTYLE="/usr/share/xml/docbook/stylesheet/docbook-xsl/xhtml/docbook.xsl"
+	    else
+		AC_MSG_ERROR(["Docbook XSL stylesheet for man pages not found!"])
+	    fi
+	    ;;
         * )
-            AC_MSG_ERROR([Unsupported Linux distribuition])
+            AC_MSG_ERROR([Unsupported Linux distribution])
             ;;
     esac
 
