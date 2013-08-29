@@ -64,17 +64,29 @@
 		<simpara>The collector must be configured to use unirec output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
 		The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves. 
 		</simpara>
-		<simpara><filename>startup.xml</filename> unirec example</simpara>
+		<simpara><filename>startup.xml</filename> unirec example with 2 output interfaces</simpara>
 		<programlisting>
 	<![CDATA[
 	<destination>
 		<name>make unirec from the flow data</name>
 		<fileWriter>
 			<fileFormat>unirec</fileFormat>
-			<TRAPIfcType>t</TRAPIfcType>
-			<TRAPIfcParams>7000,8</TRAPIfcParams>
-			<TRAPIfcTimeout>-2</TRAPIfcTimeout>
-			<format>SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,?TCP_FLAGS,?URL</format>
+			<interface>
+				<type>t</type>
+				<params>7000,8</params>
+				<ifcTimeout>0</ifcTimeout>
+				<flushTimeout>10000000</flushTimeout>
+				<bufferSwitch>1</bufferSwitch>
+				<format>SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,?TCP_FLAGS</format>
+			</interface>
+			<interface>
+				<type>t</type>
+				<params>7001,8</params>
+				<ifcTimeout>0</ifcTimeout>
+				<flushTimeout>10000000</flushTimeout>
+				<bufferSwitch>1</bufferSwitch>
+				<format>SRC_IP,DST_IP,SRC_PORT,DST_PORT,PROTOCOL,?TCP_FLAGS,?URL</format>
+			</interface>
 		</fileWriter>
 	</destination>
 	]]>
@@ -89,27 +101,51 @@
 					</listitem>
 				</varlistentry>
 				<varlistentry>
-					<term><command>TRAPIfcType</command></term>
+					<term><command>interface</command></term>
+					<listitem>
+						<simpara>Create new interface with following parameters.</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>type</command></term>
 					<listitem>
 						<simpara>Interface type. "t" is for TCP/IP. "m" is for shared memory, not a tested option.</simpara>
 					</listitem>
 				</varlistentry>
 				<varlistentry>
-					<term><command>TRAPIfcParams</command></term>
+					<term><command>params</command></term>
 					<listitem>
 						<simpara>"Port","maximum number of clients".</simpara>
 					</listitem>
 				</varlistentry>
 				<varlistentry>
-					<term><command>TRAPIfcTimeout</command></term>
+					<term><command>ifcTimeout</command></term>
 					<listitem>
 						<simpara>Interface timeout setting. -2 ~ "HALFWAIT", wait, but skip missing client. 0 ~ non blocking.</simpara>
 					</listitem>
 				</varlistentry>
 				<varlistentry>
+					<term><command>flushTimeout</command></term>
+					<listitem>
+						<simpara>Interface buffer flush timeout setting in microseconds.</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>bufferSwitch</command></term>
+					<listitem>
+						<simpara>Interface buffer switch setting. 1 is for "ON". 0 is for "OFF". Default is "ON".</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
 					<term><command>format</command></term>
 					<listitem>
-						<simpara>UniRec format specification of the export format. The variable length elements must be the last ones.</simpara>
+						<simpara>UniRec format specification of the export format. Elements must be sorted in specific way:
+							<simplelist type='horiz' columns='1'>
+								<member>1. Dynamic size elements must be after static size elements.</member>
+								<member>2. Elements must be sorted by size from largest to smallest.</member>
+								<member>3. Elements with identical size must be sorted alphabeticaly.</member>
+							</simplelist>
+						</simpara>
 					</listitem>
 				</varlistentry>
 			</variablelist>
