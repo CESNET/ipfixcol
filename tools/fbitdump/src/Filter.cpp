@@ -91,7 +91,6 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		input = tw + input;
 	}
 
-	this->filterString = "1 = 1";
 	this->actualConf = &conf;
 
 	/* Initialise lexer structure (buffers, etc) */
@@ -104,7 +103,10 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 	parser::Parser parser(*this);
 
 	/* run run parser */
-	int ret = parser.parse();
+	if (parser.parse() != 0) {
+		std::cerr << "Error while parsing filter, using default \"1 = 1\"\n";
+		this->filterString = "1 = 1";
+	}
 
 	yy_flush_buffer(bp, this->scaninfo);
 	yy_delete_buffer(bp, this->scaninfo);
@@ -175,7 +177,7 @@ std::string Filter::parse_ipv6(std::string addr)
 	ss.str(std::string());
 	ss.clear();
 
-	ss << "part1 = " << part1 << " and part2 = " << part2;
+	ss << part1 << " and " << this->secondPart << " " << this->cmp << " "<< part2 << " ) ";
 
 	return ss.str();
 }
@@ -212,6 +214,13 @@ std::string Filter::parse_column(std::string strcol)
 	}
 	stringSet cols = col->getColumns();
 	if (!col->isOperation()) {
+		if (cols.size() > 1) {
+			stringSet::iterator ii = cols.begin();
+			this->secondPart = *(++ii);
+			std::stringstream ss;
+			ss << " ( " << *cols.begin();
+			return ss.str();
+		}
 		return *cols.begin();
 	} else {
 		std::string err = std::string("Computed column '") + strcol + "' cannot be used for filtering!";
@@ -220,6 +229,11 @@ std::string Filter::parse_column(std::string strcol)
 	}
 	delete col;
 	return std::string("");
+}
+
+void Filter::set_cmp(std::string newCmp)
+{
+	this->cmp = newCmp;
 }
 
 Filter::Filter(Configuration &conf) throw (std::invalid_argument)

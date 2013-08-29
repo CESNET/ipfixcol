@@ -118,14 +118,14 @@ start:
  
 explist:
 	  exp { $$ = $1; }
-	| explist OPERATOR exp { $$ = new std::string(*$1 + " OPERATOR " + *$3); delete $1; delete $2; delete $3; }
+	| explist OPERATOR exp { $$ = new std::string(*$1 + " " + *$2 + " " + *$3); delete $1; delete $2; delete $3; }
 	;
 
 exp:
 	  '(' exp ')' { $$ = new std::string("( " + *$2 + " )"); delete $2; } 
-	| column CMP value { $$ = new std::string(*$1 + " " + *$2 + " " + *$3); delete $1; delete $2; delete $3; }
-	| value CMP column { $$ = new std::string(*$1 + " CMP " + *$3); delete $1; delete $2; delete $3; }
-	| column CMP column { $$ = new std::string(*$1 + " CMP " + *$3); delete $1; delete $2; delete $3; }
+	| column CMP value {  $$ = new std::string(*$1 + " " + *$2 + " " + *$3); delete $1; delete $2; delete $3; }
+	| value CMP column {  $$ = new std::string(*$1 + " " + *$2 + " " + *$3); delete $1; delete $2; delete $3; }
+	| column CMP column { $$ = new std::string(*$1 + " " + *$2 + " " + *$3); delete $1; delete $2; delete $3; }
     ;
 
 value:
@@ -138,7 +138,7 @@ value:
 column:
 	  COLUMN { $$ = new std::string(filter.parse_column(*$1)); delete $1; }
 	| RAWCOLUMN { $$ = new std::string(*$1); delete $1; }
-	| column BITOPERATOR value { $$ = new std::string(*$1 + " BITOPERATOR " + *$3); delete $1; delete $2; delete $3; }
+	| column BITOPERATOR value { $$ = new std::string(*$1 + " " + *$2 + " " + *$3); delete $1; delete $2; delete $3; }
 	;
 
 %%

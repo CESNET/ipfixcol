@@ -135,10 +135,9 @@ public:
 
 	void set_filterString(std::string newFilter);
 
+	void set_cmp(std::string newCmp);
+
 private:
-
-	Configuration *actualConf;
-
 	/**
 	 * \brief Initialise the filter
 	 *
@@ -156,7 +155,13 @@ private:
 	 */
 	time_t parseTimestamp(std::string str) const throw (std::invalid_argument);
 
+	Configuration *actualConf; /**< Used configuration for getting column names while parsing filter */
+
+	std::string secondPart; /**< Buffer for columns with more parts (IPv6...) */
+
 	std::string filterString; /**< String for fastbit condition */
+
+	std::string cmp;
 };
 
 }  // namespace fbitdump
