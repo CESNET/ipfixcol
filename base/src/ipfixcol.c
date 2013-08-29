@@ -73,13 +73,16 @@
 
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "c:dhv:Vs"
+#define OPTSTRING "c:dhv:Vsr:"
 
 /* main loop indicator */
 volatile int done = 0;
 
 /** Identifier to MSG_* macros */
 static char *msg_module = "main";
+
+/** Ring buffer size */
+int ring_buffer_size = 8192;
 
 /**
  * \brief Print program version information
@@ -102,7 +105,8 @@ void help ()
 	printf ("  -h        Print this help\n");
 	printf ("  -v level  Print verbose messages up to specified level\n");
 	printf ("  -V        Print version information\n");
-	printf ("  -s        Skip invalid sequence number error (especially when receiving Netflow v9 data format)\n\n");
+	printf ("  -s        Skip invalid sequence number error (especially when receiving Netflow v9 data format)\n");
+	printf ("  -r        Ring buffer size\n\n");
 }
 
 void term_signal_handler(int sig)
@@ -141,6 +145,8 @@ int main (int argc, char* argv[])
 	input.dll_handler = NULL;
 	input.config = NULL;
 
+	int ring_buffer_size = 8192;
+
 	/* parse command line parameters */
 	while ((c = getopt (argc, argv, OPTSTRING)) != -1) {
 		switch (c) {
@@ -164,6 +170,9 @@ int main (int argc, char* argv[])
 			break;
 		case 's':
 			skip_seq_err = 1;
+			break;
+		case 'r':
+			ring_buffer_size = atoi (optarg);
 			break;
 		default:
 			MSG_ERROR(msg_module, "Unknown parameter %c", c);

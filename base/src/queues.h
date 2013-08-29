@@ -44,8 +44,6 @@
 
 #include "ipfixcol.h"
 
-#define RING_BUFFER_SIZE 8192
-
 /**
  * \brief Simple ring buffer for passing data between one write thread and one
  * or more read threads.

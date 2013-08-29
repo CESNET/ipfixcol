@@ -59,6 +59,9 @@
 /** Path to default (if not specified) user configuration file */
 #define DEFAULT_CONFIG_FILE "/etc/ipfixcol/startup.xml"
 
+/** Ring buffer size */
+int ring_buffer_size;
+
 /**
  * \brief Storage and Input plugin xml configuration
  */

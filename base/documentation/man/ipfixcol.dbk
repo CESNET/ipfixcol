@@ -115,6 +115,15 @@
 				</listitem>
 			</varlistentry>
 
+			<varlistentry>
+				<term>-r <replaceable class="parameter">size</replaceable></term>
+				<listitem>
+					<simpara>
+						<replaceable class="parameter">Size</replaceable> of ring buffer.
+					</simpara>
+				</listitem>
+			</varlistentry>
+
 		</variablelist>
 	</refsect1>
 

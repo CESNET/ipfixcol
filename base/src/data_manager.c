@@ -49,6 +49,9 @@
 /** Identifier to MSG_* macros */
 static char *msg_module = "data manager";
 
+/** Ring buffer size */
+extern int ring_buffer_size;
+
 /**
  * \brief
  *
@@ -546,14 +549,14 @@ struct data_manager_config* data_manager_create (
 	}
 
 	/* initiate queue to communicate with IPFIX preprocessor */
-	config->in_queue = rbuffer_init(RING_BUFFER_SIZE);
+	config->in_queue = rbuffer_init(ring_buffer_size);
 	if (config->in_queue == NULL) {
 		MSG_ERROR(msg_module, "Unable to initiate queue for communication with IPFIX preprocessor.");
 		data_manager_free (config);
 		return (NULL);
 	}
 	/* initiate queue to communicate with storage plugins' threads */
-	config->store_queue = rbuffer_init(RING_BUFFER_SIZE);
+	config->store_queue = rbuffer_init(ring_buffer_size);
 	if (config->store_queue == NULL) {
 		MSG_ERROR(msg_module, "Unable to initiate queue for communication with Storage plugins.");
 		data_manager_free (config);
