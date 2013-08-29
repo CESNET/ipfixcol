@@ -66,7 +66,7 @@
 namespace fbitdump {
 
 /* this is needed for the lexer: new yylex function prototype */
-#define YY_DECL int yylex(std::string &arg)
+//#define YY_DECL int yylex(std::string &arg)
 
 enum yytokentype
 {

@@ -46,11 +46,20 @@
 #include "typedefs.h"
 #include "scanner.h"
 
-/* yylex is not in the header, declare it separately */
-extern YY_DECL;
-
 namespace fbitdump
 {
+
+void Filter::error(const parser::location& loc, const std::string& msg)
+{
+	//std::cerr << "error at " << loc << ": " << s << std::endl;
+	std::cerr << loc << ": " << msg << std::endl;
+}
+
+void Filter::error (const std::string& msg)
+{
+	std::cerr << msg << std::endl;
+}
+
 
 const std::string Filter::getFilter() const
 {
@@ -61,6 +70,11 @@ bool Filter::isValid(Cursor &cur) const
 {
 	// TODO add this functiononality
 	return true;
+}
+
+void Filter::set_filterString(std::string newFilter)
+{
+	this->filterString = newFilter;
 }
 
 void Filter::init(Configuration &conf) throw (std::invalid_argument)
@@ -77,124 +91,31 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		input = tw + input;
 	}
 
-	YY_BUFFER_STATE bp;
-	int c;
-	std::string arg;
-	Column *col = NULL;
+	this->filterString = "1 = 1";
+	this->actualConf = &conf;
 
-	bp = yy_scan_string(input.c_str());
-	yy_switch_to_buffer(bp);
+	/* Initialise lexer structure (buffers, etc) */
+	yylex_init(&this->scaninfo);
 
-	try {
-		while ((c = yylex(arg)) != 0) {
-			switch (c) {
-			case COLUMN: {
-				/* get real columns */
-				try {
-					col = new Column(conf.getXMLConfiguration(), arg, false);
-				} catch (std::exception &e) {
-					/* rethrow the exception */
-					std::string err = std::string("Filter column '") + arg + "' not found!";
-					throw std::invalid_argument(err);
-				}
-				stringSet cols = col->getColumns();
-				if (!col->isOperation()) { /* plain value */
-					filter += *cols.begin() + " ";
-				} else { /* operation */
-					/* \TODO  save for post-filtering */
-					std::string err = std::string("Computed column '") + arg + "' cannot be used for filtering.";
-					/* delete column before throwing an exception */
-					delete col;
-					throw std::invalid_argument(err);
-				}
-				delete col;
+	YY_BUFFER_STATE bp = yy_scan_string(input.c_str(), this->scaninfo);
+	yy_switch_to_buffer(bp, this->scaninfo);
 
-				break;}
-			case IPv4:{
-				/* convert ipv4 address to uint32_t */
-				struct in_addr addr;
-				std::stringstream ss;
-				/* convert ipv4 address, returns network byte order */
-				inet_pton(AF_INET, arg.c_str(), &addr);
-				/* convert to host byte order */
-				uint32_t addrNum = ntohl(addr.s_addr);
-				/* integer to string */
-				ss << addrNum;
-				filter += ss.str() + " ";
-				break;}
-			case NUMBER:
-				switch (arg[arg.length()-1]) {
-				case 'k':
-				case 'K':
-					filter += arg.substr(0, arg.length()-1) + "000";
-					break;
-				case 'm':
-				case 'M':
-					filter += arg.substr(0, arg.length()-1) + "000000";
-					break;
-				case 'g':
-				case 'G':
-					filter += arg.substr(0, arg.length()-1) + "000000000";
-					break;
-				case 't':
-				case 'T':
-					filter += arg.substr(0, arg.length()-1) + "000000000000";
-					break;
-				default:
-					filter += arg;
-					break;
-				}
-				filter += " ";
-				break;
-				case TIMESTAMP: {
-					time_t ntime = parseTimestamp(arg);
+	/* create the parser, Filter is its param (it will provide scaninfo to the lexer) */
+	parser::Parser parser(*this);
 
-					std::ostringstream ss;
-					ss << ntime*1000; /* \TODO use ms only for miliseconds timetamp columns */
+	/* run run parser */
+	int ret = parser.parse();
 
-					filter += ss.str() + " ";
+	yy_flush_buffer(bp, this->scaninfo);
+	yy_delete_buffer(bp, this->scaninfo);
 
-					break;}
-				/*		case RAWCOLUMN:
-				std::cout << "raw column: ";
-				break;
-			case OPERATOR:
-				std::cout << "operator: ";
-				break;
-			case CMP:
-				std::cout << "comparison: ";
-				break;*/
-				case BRACKET:
-					filter += arg + " ";
-					break;
-				case OTHER:
-					throw std::invalid_argument(std::string("Wrong filter string: '") + arg + "'");
-					break;
-				default:
-					filter += arg + " ";
-					break;
-			}
-		}
+	/* clear the context */
+	yylex_destroy(this->scaninfo);
 
-	} catch (std::invalid_argument &e) {
-		/* free flex allocated resources */
-		yy_flush_buffer(bp);
-		yy_delete_buffer(bp);
-		yylex_destroy();
-
-		/* send the exception up */
-		throw;
-	}
-
-	/* free flex allocated resources */
-	yy_flush_buffer(bp);
-	yy_delete_buffer(bp);
-	yylex_destroy();
-
+	std::cout << "Filtr: " << this->filterString << std::endl;
 #ifdef DEBUG
 	std::cerr << "Using filter: '" << filter << "'" << std::endl;
 #endif
-	this->filterString = filter;
 }
 
 time_t Filter::parseTimestamp(std::string str) const throw (std::invalid_argument)
@@ -206,6 +127,99 @@ time_t Filter::parseTimestamp(std::string str) const throw (std::invalid_argumen
 	}
 
 	return mktime(&ctime);
+}
+
+std::string Filter::parse_timestamp(std::string timestamp)
+{
+	time_t ntime = parseTimestamp(timestamp);
+
+	std::ostringstream ss;
+	ss << ntime * 1000;
+
+	return ss.str();
+}
+
+std::string Filter::parse_ipv4(std::string addr)
+{
+	struct in_addr address;
+	std::stringstream ss;
+
+	inet_pton(AF_INET, addr.c_str(), &address);
+
+	uint32_t addrNum = ntohl(address.s_addr);
+
+	ss << addrNum;
+
+	return ss.str();
+}
+
+std::string Filter::parse_ipv6(std::string addr)
+{
+	uint64_t address[2];
+
+	inet_pton(AF_INET6, addr.c_str(), address);
+
+	std::stringstream ss;
+	std::string part1;
+	std::string part2;
+
+	ss << be64toh(address[0]);
+	part1 = ss.str();
+
+	ss.str(std::string());
+	ss.clear();
+
+	ss << be64toh(address[1]);
+	part2 = ss.str();
+
+	ss.str(std::string());
+	ss.clear();
+
+	ss << "part1 = " << part1 << " and part2 = " << part2;
+
+	return ss.str();
+}
+
+
+std::string Filter::parse_number(std::string number)
+{
+	switch (number[number.length() - 1]) {
+	case 'k':
+	case 'K':
+		return number.substr(0, number.length() - 1) + "000";
+	case 'm':
+	case 'M':
+		return number.substr(0, number.length() - 1) + "000000";
+	case 'g':
+	case 'G':
+		return number.substr(0, number.length() - 1) + "000000000";
+	case 't':
+	case 'T':
+		return number.substr(0, number.length() - 1) + "000000000000";
+	default:
+		return number;
+	}
+}
+
+std::string Filter::parse_column(std::string strcol)
+{
+	Column *col = NULL;
+	try {
+		col = new Column(this->actualConf->getXMLConfiguration(), strcol, false);
+	} catch (std::exception &e){
+		std::string err = std::string("Filter column '") + strcol + "' not found!";
+		throw std::invalid_argument(err);
+	}
+	stringSet cols = col->getColumns();
+	if (!col->isOperation()) {
+		return *cols.begin();
+	} else {
+		std::string err = std::string("Computed column '") + strcol + "' cannot be used for filtering!";
+		delete col;
+		throw std::invalid_argument(err);
+	}
+	delete col;
+	return std::string("");
 }
 
 Filter::Filter(Configuration &conf) throw (std::invalid_argument)

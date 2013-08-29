@@ -43,6 +43,18 @@
 #include "typedefs.h"
 #include "Configuration.h"
 #include "Cursor.h"
+#include "parser.h"
+
+/* both parser.y and scanner.l use this, but there is
+ * no logical connection to Filter class */
+#define YY_DECL int yylex(parser::Parser::semantic_type *yylval, \
+    parser::Parser::location_type *yylloc, \
+    fbitdump::Filter &filter, \
+    yyscan_t yyscanner)
+
+/* this is defined in scanner.h, however including it here would result
+ * in inluding it back in scanner.c which is BAD */
+typedef void* yyscan_t;
 
 /**
  * \brief Namespace of the fbitdump utility
@@ -61,6 +73,20 @@ class Cursor;
 class Filter
 {
 public:
+
+	/**
+	 * \brief Print error with location
+	 * @param loc location of the error
+	 * @param msg error message
+	 */
+    void error(const parser::location &loc, const std::string &msg);
+
+    /**
+     * \brief Print error message
+     * @param msg message to print
+     */
+    void error(const std::string &msg);
+
 
 	/**
 	 * \brief Constructor
@@ -94,7 +120,24 @@ public:
 	 */
 	bool isValid(Cursor &cur) const;
 
+
+	std::string parse_number(std::string number);
+
+	std::string parse_ipv4(std::string addr);
+
+	std::string parse_ipv6(std::string addr);
+
+	std::string parse_timestamp(std::string timesamp);
+
+	std::string parse_column(std::string strcol);
+
+	yyscan_t scaninfo;	/**< lexer context */
+
+	void set_filterString(std::string newFilter);
+
 private:
+
+	Configuration *actualConf;
 
 	/**
 	 * \brief Initialise the filter

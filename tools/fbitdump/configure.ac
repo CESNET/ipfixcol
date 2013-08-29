@@ -63,6 +63,9 @@ LBR_SET_DISTRO([redhat])
 # Check for flex
 AC_CHECK_PROG(FLEX, flex, flex)
 
+# Check fol bison
+AC_CHECK_PROG(BISON, bison, bison -v)
+
 # Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
 
@@ -158,6 +161,8 @@ AC_OUTPUT
 # Print warings
 AS_IF([test -z "$FLEX"], AC_MSG_WARN([Due to missing flex you will not be able to generate scanner from sources.]))
 
+AS_IF([test -z "$BISON"], AC_MSG_WARN([Due to missing bison you will not be able to generate parser from sources.]))
+
 AS_IF([test "x$PROTOCOLS" = xno], AC_MSG_WARN([Due to missing /etc/protocols you will not be able to generate protocols.cpp]))
 
 AS_IF([test -z "$AWK"], AC_MSG_WARN([Due to missing awk you will not be able to generate protocols.cpp from /etc/protocols]))
@@ -180,6 +185,7 @@ echo "
   xsltproc......: ${XSLTPROC:-NONE}
   xsltmanstyle..: $XSLTMANSTYLE
   flex..........: ${FLEX:-NONE}
+  bison.........: ${BISON:-NONE}
   awk...........: $AWK
   /etc/protocols: $PROTOCOLS
   Doxygen.......: ${DOXYGEN:-NONE}
