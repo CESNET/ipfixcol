@@ -129,6 +129,7 @@ exp:
 	| column CMP value {  $$ = new std::string(filter.parseExp($1, *$2, $3)); delete $1; delete $2; delete $3; }
 	| value CMP column {  $$ = new std::string(filter.parseExp($3, *$2, $1)); delete $1; delete $2; delete $3; }
 	| column CMP column { $$ = new std::string(filter.parseExp($1, *$2, $3)); delete $1; delete $2; delete $3; }
+	| column value { $$ = new std::string(filter.parseExp($1, "=", $2)); delete $1; delete $2; }
     ;
 
 value:
