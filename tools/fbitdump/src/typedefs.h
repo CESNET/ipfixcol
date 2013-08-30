@@ -76,8 +76,8 @@ enum yytokentype
 	RAWCOLUMN = 261,
 	OPERATOR = 262,
 	IPv4 = 263,
-	BRACKET = 265,
-	TIMESTAMP = 266,
+	BRACKET = 264,
+	TIMESTAMP = 265,
 	OTHER = 300
 };
 
