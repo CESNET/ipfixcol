@@ -119,7 +119,7 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		yylex_destroy(this->scaninfo);
 	}
 
-	std::cout << "\nFilter: " << this->filterString << std::endl;
+//	std::cout << "\nFilter: " << this->filterString << std::endl;
 #ifdef DEBUG
 	std::cerr << "Using filter: '" << filter << "'" << std::endl;
 #endif
@@ -136,7 +136,7 @@ time_t Filter::parseTimestamp(std::string str) const throw (std::invalid_argumen
 	return mktime(&ctime);
 }
 
-void Filter::parseTimestamp(struct _parserStruct *ps, std::string timestamp)
+void Filter::parseTimestamp(parserStruct *ps, std::string timestamp)
 {
 	if (ps == NULL) {
 		return;
@@ -155,24 +155,21 @@ void Filter::parseTimestamp(struct _parserStruct *ps, std::string timestamp)
 	ps->parts.push_back(ss.str());
 }
 
-void Filter::parseIPv4(struct _parserStruct *ps, std::string addr)
+void Filter::parseIPv4(parserStruct *ps, std::string addr)
 {
 	if (ps == NULL) {
 		return;
 	}
 
 	/* Parse IPv4 address */
-	struct in_addr address;
+	uint32_t address;
 	std::stringstream ss;
 
 	/* Convert from address format into numeric fotmat */
 	inet_pton(AF_INET, addr.c_str(), &address);
 
-	/* Get it in host byte order */
-	uint32_t addrNum = ntohl(address.s_addr);
-
-	/* Integer to string */
-	ss << addrNum;
+	/* Swap byte order and convert address from int to string */
+	ss << ntohl(address);
 
 	/* Set right values of parser structure */
 	ps->type = PT_IPv4;
@@ -180,7 +177,7 @@ void Filter::parseIPv4(struct _parserStruct *ps, std::string addr)
 	ps->parts.push_back(ss.str());
 }
 
-void Filter::parseIPv6(struct _parserStruct *ps, std::string addr)
+void Filter::parseIPv6(parserStruct *ps, std::string addr)
 {
 	if (ps == NULL) {
 
@@ -210,7 +207,7 @@ void Filter::parseIPv6(struct _parserStruct *ps, std::string addr)
 	ps->nParts = 2;
 }
 
-void Filter::parseNumber(struct _parserStruct *ps, std::string number)
+void Filter::parseNumber(parserStruct *ps, std::string number)
 {
 	if (ps == NULL) {
 		return;
@@ -244,7 +241,7 @@ void Filter::parseNumber(struct _parserStruct *ps, std::string number)
 	ps->parts.push_back(number);
 }
 
-bool Filter::parseColumnGroup(struct _parserStruct *ps, std::string alias, bool aggeregate)
+bool Filter::parseColumnGroup(parserStruct *ps, std::string alias, bool aggeregate)
 {
 	if (ps == NULL) {
 		return false;
@@ -276,7 +273,7 @@ bool Filter::parseColumnGroup(struct _parserStruct *ps, std::string alias, bool 
 	return true;
 }
 
-void Filter::parseColumn(struct _parserStruct *ps, std::string strcol)
+void Filter::parseColumn(parserStruct *ps, std::string alias)
 {
 	if (ps == NULL) {
 		return;
@@ -285,12 +282,12 @@ void Filter::parseColumn(struct _parserStruct *ps, std::string strcol)
 	/* Get right column (find entered alias in xml file) */
 	Column *col = NULL;
 	try {
-		col = new Column(this->actualConf->getXMLConfiguration(), strcol, false);
+		col = new Column(this->actualConf->getXMLConfiguration(), alias, false);
 	} catch (std::exception &e){
 		/* If column not found, check column groups */
-		if (this->parseColumnGroup(ps, strcol, false) == false) {
+		if (this->parseColumnGroup(ps, alias, false) == false) {
 			/* No column, no column group, error */
-			std::string err = std::string("Filter column '") + strcol + "' not found!";
+			std::string err = std::string("Filter column '") + alias + "' not found!";
 			throw std::invalid_argument(err);
 		}
 		return;
@@ -300,12 +297,12 @@ void Filter::parseColumn(struct _parserStruct *ps, std::string strcol)
 	stringSet cols = col->getColumns();
 	if (!col->isOperation()) {
 		/* Iterate through all aliases */
-		for (stringSet::iterator ii = cols.begin(); ii != cols.end(); ii++) {
-			ps->parts.push_back(*ii);
+		for (stringSet::iterator it = cols.begin(); it != cols.end(); it++) {
+			ps->parts.push_back(*it);
 			ps->nParts++;
 		}
 	} else {
-		std::string err = std::string("Computed column '") + strcol + "' cannot be used for filtering!";
+		std::string err = std::string("Computed column '") + alias + "' cannot be used for filtering!";
 		delete col;
 		throw std::invalid_argument(err);
 	}
@@ -315,27 +312,24 @@ void Filter::parseColumn(struct _parserStruct *ps, std::string strcol)
 	ps->type = PT_COLUMN;
 }
 
-void Filter::parseRawcolumn(struct _parserStruct *ps, std::string strcol)
+void Filter::parseRawcolumn(parserStruct *ps, std::string colname)
 {
 	if (ps == NULL) {
 		return;
 	}
 	ps->nParts = 1;
 	ps->type = PT_RAWCOLUMN;
-	ps->parts.push_back(strcol);
+	ps->parts.push_back(colname);
 }
 
-void Filter::parseBitColVal(struct _parserStruct *ps, struct _parserStruct *left, std::string op, struct _parserStruct *right)
+void Filter::parseBitColVal(parserStruct *ps, parserStruct *left, std::string op, parserStruct *right)
 {
 	if ((ps == NULL) || (left == NULL) || (right == NULL)) {
 		return;
 	}
 	/* Parse expression "column BITOPERATOR value" */
 
-	/* Set type of structure */
-	ps->type = PT_BITCOLVAL;
 	ps->nParts = 0;
-
 	/* Iterate through all parts */
 	for (uint16_t i = 0, j = 0; (i < left->nParts) || (j < right->nParts); i++, j++) {
 		/* If one string vector is at the end but second not, duplicate its last value */
@@ -351,17 +345,19 @@ void Filter::parseBitColVal(struct _parserStruct *ps, struct _parserStruct *left
 		ps->parts.push_back(
 				std::string("( " + left->parts[i] + " " + op + " " + right->parts[j] + " ) "));
 	}
+
+	/* Set type of structure */
+	ps->type = PT_BITCOLVAL;
 }
 
-std::string Filter::parseExp(struct _parserStruct *left, std::string cmp, struct _parserStruct *right)
+std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *right)
 {
 	if ((left == NULL) || (right == NULL)) {
 		return "";
 	}
 
 	/* Parser expression "column CMP value" */
-	std::string exp;
-	std::string op;
+	std::string exp, op;
 
 	if ((left->nParts == 1) && (right->nParts == 1)) {
 		exp += left->parts[0] + " " + cmp + " " + right->parts[0] + " ";
@@ -385,12 +381,13 @@ std::string Filter::parseExp(struct _parserStruct *left, std::string cmp, struct
 				j--;
 			}
 
-			/* Add string into stringstream */
+			/* Add part into expression */
 			exp += "( " + left->parts[i] + " " + cmp + " " + right->parts[j] + " ) " + op;
 		}
 		/* Remove last operator and close bracket */
 		exp = exp.substr(0, exp.length() - op.length() - 1) + ") ";
 	}
+
 	/* Return created expression */
 	return exp;
 }

@@ -65,6 +65,7 @@ namespace fbitdump {
 class Configuration;
 class Cursor;
 
+/* Enum for parserStruct type */
 enum partsType {
 	PT_COLUMN,
 	PT_GROUP,
@@ -77,11 +78,12 @@ enum partsType {
 	PT_TIMESTAMP
 };
 
-struct _parserStruct {
+/* Struct for parsing data from bison parser */
+typedef struct _parserStruct {
 	partsType type;
 	uint16_t nParts;
 	std::vector<std::string> parts;
-};
+} parserStruct;
 
 /**
  * \brief Class managing filter
@@ -144,7 +146,7 @@ public:
 	 * @param ps Parser structure with information needed for creating expressions
 	 * @param number
 	 */
-	void parseNumber(struct _parserStruct *ps, std::string number);
+	void parseNumber(parserStruct *ps, std::string number);
 
 	/**
 	 * \brief Parses IPv4 address
@@ -154,7 +156,7 @@ public:
 	 * @param ps Parser structure
 	 * @param addr Address in text format
 	 */
-	void parseIPv4(struct _parserStruct *ps, std::string addr);
+	void parseIPv4(parserStruct *ps, std::string addr);
 
 	/**
 	 * \brief Parses IPv6 address
@@ -164,7 +166,7 @@ public:
 	 * @param ps Parser structure
 	 * @param addr Address in text format
 	 */
-	void parseIPv6(struct _parserStruct *ps, std::string addr);
+	void parseIPv6(parserStruct *ps, std::string addr);
 
 	/**
 	 * \brief Parses timestamp in format %Y/%m/%d.%H:%M:%S
@@ -172,7 +174,7 @@ public:
 	 * @param ps Parser structure
 	 * @param timestamp
 	 */
-	void parseTimestamp(struct _parserStruct *ps, std::string timesamp);
+	void parseTimestamp(parserStruct *ps, std::string timesamp);
 
 	/**
 	 * \brief Parses column
@@ -180,18 +182,28 @@ public:
 	 * Converts column alias into right name and saves all its parts into parser structure
 	 *
 	 * @param ps Parser structure
-	 * @param strcol Column alias
+	 * @param alias Column alias
 	 */
-	void parseColumn(struct _parserStruct *ps, std::string strcol);
+	void parseColumn(parserStruct *ps, std::string alias);
 
-	bool parseColumnGroup(struct _parserStruct *ps, std::string alias, bool aggeregate);
+	/**
+	 * \brief Parses column group
+	 *
+	 * If column group with given alias is found, parseColumn is called on each member.
+	 *
+	 * @param ps Parser structure
+	 * @param alias Column group alias
+	 * @bool aggregate Aggregation option
+	 * @return True when succesful
+	 */
+	bool parseColumnGroup(parserStruct *ps, std::string alias, bool aggeregate);
 	/**
 	 * \brief Only fills parser structure with column name
 	 *
 	 * @param ps Parser structure
 	 * @param strcol Column name
 	 */
-	void parseRawcolumn(struct _parserStruct *ps, std::string strcol);
+	void parseRawcolumn(parserStruct *ps, std::string strcol);
 
 	/**
 	 * \brief Parses expression "column BITOPERATOR value" into parser structure
@@ -201,7 +213,7 @@ public:
 	 * @param right Input parser structure
 	 * @param op Operator
 	 */
-	void parseBitColVal(struct _parserStruct *ps, struct _parserStruct *left, std::string op, struct _parserStruct *right);
+	void parseBitColVal(parserStruct *ps, parserStruct *left, std::string op, parserStruct *right);
 
 	/**
 	 * \brief Parses final expression "column CMP value" into string
@@ -211,7 +223,7 @@ public:
 	 * @param cmp Comparison
 	 * @return Filter text in string form
 	 */
-	std::string parseExp(struct _parserStruct *left, std::string cmp, struct _parserStruct *right);
+	std::string parseExp(parserStruct *left, std::string cmp, parserStruct *right);
 
 	yyscan_t scaninfo;	/**< lexer context */
 
