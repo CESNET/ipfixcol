@@ -121,7 +121,7 @@ start:
  
 explist:
 	  exp { $$ = $1; }
-	| explist OPERATOR exp { $$ = new std::string(*$1 + " " + *$2 + " " + *$3); delete $1; delete $2; delete $3; }
+	| explist OPERATOR exp { $$ = new std::string(*$1 + *$2 + " " + *$3); delete $1; delete $2; delete $3; }
 	;
 
 exp:

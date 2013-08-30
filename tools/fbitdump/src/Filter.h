@@ -65,8 +65,20 @@ namespace fbitdump {
 class Configuration;
 class Cursor;
 
+enum partsType {
+	PT_COLUMN,
+	PT_GROUP,
+	PT_RAWCOLUMN,
+	PT_NUMBER,
+	PT_CMP,
+	PT_BITCOLVAL,
+	PT_IPv4,
+	PT_IPv6,
+	PT_TIMESTAMP
+};
+
 struct _parserStruct {
-	uint16_t type;
+	partsType type;
 	uint16_t nParts;
 	std::vector<std::string> parts;
 };
@@ -226,6 +238,8 @@ private:
 	 * @param str String with text representation of the timestamp
 	 * @return Number of seconds in timestamp
 	 */
+
+
 	time_t parseTimestamp(std::string str) const throw (std::invalid_argument);
 
 	Configuration *actualConf; /**< Used configuration for getting column names while parsing filter */

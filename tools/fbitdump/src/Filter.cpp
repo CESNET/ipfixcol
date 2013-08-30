@@ -141,15 +141,16 @@ void Filter::parseTimestamp(struct _parserStruct *ps, std::string timestamp)
 	if (ps == NULL) {
 		return;
 	}
+	std::ostringstream ss;
+
 	/* Get time in seconds */
 	time_t ntime = parseTimestamp(timestamp);
 
 	/* Sec -> ms -> string */
-	std::ostringstream ss;
 	ss << ntime * 1000;
 
 	/* Set right values of parser structure */
-	ps->type = TIMESTAMP;
+	ps->type = PT_TIMESTAMP;
 	ps->nParts = 1;
 	ps->parts.push_back(ss.str());
 }
@@ -174,7 +175,7 @@ void Filter::parseIPv4(struct _parserStruct *ps, std::string addr)
 	ss << addrNum;
 
 	/* Set right values of parser structure */
-	ps->type = IPv4;
+	ps->type = PT_IPv4;
 	ps->nParts = 1;
 	ps->parts.push_back(ss.str());
 }
@@ -205,7 +206,7 @@ void Filter::parseIPv6(struct _parserStruct *ps, std::string addr)
 	ps->parts.push_back(ss.str());
 
 	/* Set right values of parser structure */
-	ps->type = IPv6;
+	ps->type = PT_IPv6;
 	ps->nParts = 2;
 }
 
@@ -238,7 +239,7 @@ void Filter::parseNumber(struct _parserStruct *ps, std::string number)
 	}
 
 	/* Set right values of parser structure */
-	ps->type = NUMBER;
+	ps->type = PT_NUMBER;
 	ps->nParts = 1;
 	ps->parts.push_back(number);
 }
@@ -254,7 +255,7 @@ bool Filter::parseColumnGroup(struct _parserStruct *ps, std::string alias, bool 
 
 	/* check what we found */
 	if (column == NULL) {
-		throw std::invalid_argument(std::string("Column '") + alias + "' not defined");
+		std::cerr << "Column group '" << alias << "' not defined";
 		return false;
 	}
 
@@ -269,6 +270,9 @@ bool Filter::parseColumnGroup(struct _parserStruct *ps, std::string alias, bool 
 	for (pugi::xml_node_iterator it = members.begin(); it != members.end(); it++) {
 		this->parseColumn(ps, it->child_value());
 	}
+
+	/* Set type of structure */
+	ps->type = PT_GROUP;
 	return true;
 }
 
@@ -283,7 +287,9 @@ void Filter::parseColumn(struct _parserStruct *ps, std::string strcol)
 	try {
 		col = new Column(this->actualConf->getXMLConfiguration(), strcol, false);
 	} catch (std::exception &e){
+		/* If column not found, check column groups */
 		if (this->parseColumnGroup(ps, strcol, false) == false) {
+			/* No column, no column group, error */
 			std::string err = std::string("Filter column '") + strcol + "' not found!";
 			throw std::invalid_argument(err);
 		}
@@ -293,6 +299,7 @@ void Filter::parseColumn(struct _parserStruct *ps, std::string strcol)
 	/* Save all its parts into string vector of parser structure */
 	stringSet cols = col->getColumns();
 	if (!col->isOperation()) {
+		/* Iterate through all aliases */
 		for (stringSet::iterator ii = cols.begin(); ii != cols.end(); ii++) {
 			ps->parts.push_back(*ii);
 			ps->nParts++;
@@ -305,7 +312,7 @@ void Filter::parseColumn(struct _parserStruct *ps, std::string strcol)
 	delete col;
 
 	/* Set type of structure */
-	ps->type = COLUMN;
+	ps->type = PT_COLUMN;
 }
 
 void Filter::parseRawcolumn(struct _parserStruct *ps, std::string strcol)
@@ -314,7 +321,7 @@ void Filter::parseRawcolumn(struct _parserStruct *ps, std::string strcol)
 		return;
 	}
 	ps->nParts = 1;
-	ps->type = RAWCOLUMN;
+	ps->type = PT_RAWCOLUMN;
 	ps->parts.push_back(strcol);
 }
 
@@ -326,13 +333,11 @@ void Filter::parseBitColVal(struct _parserStruct *ps, struct _parserStruct *left
 	/* Parse expression "column BITOPERATOR value" */
 
 	/* Set type of structure */
-	ps->type = BITCOLVAL;
+	ps->type = PT_BITCOLVAL;
 	ps->nParts = 0;
 
-	/* Get maximum size of string vectors */
-	uint16_t max = (left->nParts > right->nParts ? left->nParts : right->nParts);
-	std::cout << "max: " << max << std::endl;
-	for (uint16_t i = 0, j = 0; (i < max) && (j < max); i++, j++) {
+	/* Iterate through all parts */
+	for (uint16_t i = 0, j = 0; (i < left->nParts) || (j < right->nParts); i++, j++) {
 		/* If one string vector is at the end but second not, duplicate its last value */
 		if (i == left->nParts) {
 			i--;
@@ -342,11 +347,9 @@ void Filter::parseBitColVal(struct _parserStruct *ps, struct _parserStruct *left
 		}
 
 		/* Create new expression and save it into parser structure */
-		std::stringstream ss;
-		ss << "( " << left->parts[i] << " " << op << " " << right->parts[j] << " ) ";
-
 		ps->nParts++;
-		ps->parts.push_back(ss.str());
+		ps->parts.push_back(
+				std::string("( " + left->parts[i] + " " + op + " " + right->parts[j] + " ) "));
 	}
 }
 
@@ -357,13 +360,23 @@ std::string Filter::parseExp(struct _parserStruct *left, std::string cmp, struct
 	}
 
 	/* Parser expression "column CMP value" */
-	std::stringstream ss;
+	std::string exp;
+	std::string op;
+
 	if ((left->nParts == 1) && (right->nParts == 1)) {
-		ss << left->parts[0] << " " << cmp << " " << right->parts[0] << " ";
+		exp += left->parts[0] + " " + cmp + " " + right->parts[0] + " ";
 	} else {
-		uint16_t max = (left->nParts > right->nParts ? left->nParts : right->nParts);
-		ss << "(";
-		for (uint16_t i = 0, j = 0; (i < max) && (j < max); i++, j++) {
+		exp += "(";
+
+		/* Set operator */
+		if (left->type == PT_GROUP) {
+			op = "or ";
+		} else {
+			op = "and ";
+		}
+
+		/* Create expression */
+		for (uint16_t i = 0, j = 0; (i < left->nParts) || (j < right->nParts); i++, j++) {
 			/* If one string vector is at the end but second not, duplicate its last value */
 			if (i == left->nParts) {
 				i--;
@@ -372,18 +385,14 @@ std::string Filter::parseExp(struct _parserStruct *left, std::string cmp, struct
 				j--;
 			}
 
-			/* If needed, insert operator "and" */
-			if ((i > 0) || (j > 0)) {
-				ss << " and ";
-			}
-
 			/* Add string into stringstream */
-			ss << "( " << left->parts[i] << " " << cmp << " " << right->parts[j] << " )";
+			exp += "( " + left->parts[i] + " " + cmp + " " + right->parts[j] + " ) " + op;
 		}
-		ss << ") ";
+		/* Remove last operator and close bracket */
+		exp = exp.substr(0, exp.length() - op.length() - 1) + ") ";
 	}
 	/* Return created expression */
-	return ss.str();
+	return exp;
 }
 
 Filter::Filter(Configuration &conf) throw (std::invalid_argument)
