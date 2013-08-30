@@ -262,7 +262,7 @@ el_text::el_text(int size, int en, int id, uint32_t buf_size) {
 int el_text::append_str(void *data, int size) {
 	//check buffer space
 	if (_filled + size + 1 >= _buf_max) { // 1 = terminating zero
-		_buf_max = _buf_max + (100 * size); //TODO
+		_buf_max = _buf_max + (100 * size) + 1; //TODO
 		_buffer = (char *) realloc(_buffer, _size * _buf_max);
 	}
 
