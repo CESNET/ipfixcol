@@ -94,26 +94,30 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 	/* We need access to configuration in parseColumn() function */
 	this->actualConf = &conf;
 
-	/* Initialise lexer structure (buffers, etc) */
-	yylex_init(&this->scaninfo);
+	if (conf.getFilter().compare("1=1") == 0) {
+		this->setFilterString("1 = 1");
+	} else {
+		/* Initialise lexer structure (buffers, etc) */
+		yylex_init(&this->scaninfo);
 
-	YY_BUFFER_STATE bp = yy_scan_string(input.c_str(), this->scaninfo);
-	yy_switch_to_buffer(bp, this->scaninfo);
+		YY_BUFFER_STATE bp = yy_scan_string(input.c_str(), this->scaninfo);
+		yy_switch_to_buffer(bp, this->scaninfo);
 
-	/* create the parser, Filter is its param (it will provide scaninfo to the lexer) */
-	parser::Parser parser(*this);
+		/* create the parser, Filter is its param (it will provide scaninfo to the lexer) */
+		parser::Parser parser(*this);
 
-	/* run run parser */
-	if (parser.parse() != 0) {
-		std::cerr << "Error while parsing filter, using default \"1 = 1\"\n";
-		this->filterString = "1 = 1";
+		/* run run parser */
+		if (parser.parse() != 0) {
+			std::cerr << "Error while parsing filter, using default \"1 = 1\"\n";
+			this->filterString = "1 = 1";
+		}
+
+		yy_flush_buffer(bp, this->scaninfo);
+		yy_delete_buffer(bp, this->scaninfo);
+
+		/* clear the context */
+		yylex_destroy(this->scaninfo);
 	}
-
-	yy_flush_buffer(bp, this->scaninfo);
-	yy_delete_buffer(bp, this->scaninfo);
-
-	/* clear the context */
-	yylex_destroy(this->scaninfo);
 
 	std::cout << "\nFilter: " << this->filterString << std::endl;
 #ifdef DEBUG
@@ -134,6 +138,9 @@ time_t Filter::parseTimestamp(std::string str) const throw (std::invalid_argumen
 
 void Filter::parseTimestamp(struct _parserStruct *ps, std::string timestamp)
 {
+	if (ps == NULL) {
+		return;
+	}
 	/* Get time in seconds */
 	time_t ntime = parseTimestamp(timestamp);
 
@@ -149,6 +156,10 @@ void Filter::parseTimestamp(struct _parserStruct *ps, std::string timestamp)
 
 void Filter::parseIPv4(struct _parserStruct *ps, std::string addr)
 {
+	if (ps == NULL) {
+		return;
+	}
+
 	/* Parse IPv4 address */
 	struct in_addr address;
 	std::stringstream ss;
@@ -170,6 +181,10 @@ void Filter::parseIPv4(struct _parserStruct *ps, std::string addr)
 
 void Filter::parseIPv6(struct _parserStruct *ps, std::string addr)
 {
+	if (ps == NULL) {
+
+	}
+
 	/* Parse IPv6 address */
 	uint64_t address[2];
 	std::stringstream ss;
@@ -196,6 +211,10 @@ void Filter::parseIPv6(struct _parserStruct *ps, std::string addr)
 
 void Filter::parseNumber(struct _parserStruct *ps, std::string number)
 {
+	if (ps == NULL) {
+		return;
+	}
+
 	/* If there is some suffix (kKmMgG) convert it into number */
 	switch (number[number.length() - 1]) {
 	case 'k':
@@ -224,19 +243,54 @@ void Filter::parseNumber(struct _parserStruct *ps, std::string number)
 	ps->parts.push_back(number);
 }
 
+bool Filter::parseColumnGroup(struct _parserStruct *ps, std::string alias, bool aggeregate)
+{
+	if (ps == NULL) {
+		return false;
+	}
+
+	/* search xml for a group alias */
+	pugi::xpath_node column = this->actualConf->getXMLConfiguration().select_single_node(("/configuration/groups/group[alias='"+alias+"']").c_str());
+
+	/* check what we found */
+	if (column == NULL) {
+		throw std::invalid_argument(std::string("Column '") + alias + "' not defined");
+		return false;
+	}
+
+	/* Check if "members" node exists */
+	pugi::xml_node members = column.node().child("members");
+	if (members == NULL) {
+		std::cerr << "Wrong XML file, no \"members\" child in group " << alias << "!\n";
+		return false;
+	}
+
+	/* Get members aliases and parse them */
+	for (pugi::xml_node_iterator it = members.begin(); it != members.end(); it++) {
+		this->parseColumn(ps, it->child_value());
+	}
+	return true;
+}
+
 void Filter::parseColumn(struct _parserStruct *ps, std::string strcol)
 {
+	if (ps == NULL) {
+		return;
+	}
+
 	/* Get right column (find entered alias in xml file) */
 	Column *col = NULL;
 	try {
 		col = new Column(this->actualConf->getXMLConfiguration(), strcol, false);
 	} catch (std::exception &e){
-		std::string err = std::string("Filter column '") + strcol + "' not found!";
-		throw std::invalid_argument(err);
+		if (this->parseColumnGroup(ps, strcol, false) == false) {
+			std::string err = std::string("Filter column '") + strcol + "' not found!";
+			throw std::invalid_argument(err);
+		}
+		return;
 	}
 
 	/* Save all its parts into string vector of parser structure */
-	ps->nParts = 0;
 	stringSet cols = col->getColumns();
 	if (!col->isOperation()) {
 		for (stringSet::iterator ii = cols.begin(); ii != cols.end(); ii++) {
@@ -256,6 +310,9 @@ void Filter::parseColumn(struct _parserStruct *ps, std::string strcol)
 
 void Filter::parseRawcolumn(struct _parserStruct *ps, std::string strcol)
 {
+	if (ps == NULL) {
+		return;
+	}
 	ps->nParts = 1;
 	ps->type = RAWCOLUMN;
 	ps->parts.push_back(strcol);
@@ -263,6 +320,9 @@ void Filter::parseRawcolumn(struct _parserStruct *ps, std::string strcol)
 
 void Filter::parseBitColVal(struct _parserStruct *ps, struct _parserStruct *left, std::string op, struct _parserStruct *right)
 {
+	if ((ps == NULL) || (left == NULL) || (right == NULL)) {
+		return;
+	}
 	/* Parse expression "column BITOPERATOR value" */
 
 	/* Set type of structure */
@@ -292,6 +352,10 @@ void Filter::parseBitColVal(struct _parserStruct *ps, struct _parserStruct *left
 
 std::string Filter::parseExp(struct _parserStruct *left, std::string cmp, struct _parserStruct *right)
 {
+	if ((left == NULL) || (right == NULL)) {
+		return "";
+	}
+
 	/* Parser expression "column CMP value" */
 	std::stringstream ss;
 	if ((left->nParts == 1) && (right->nParts == 1)) {
@@ -309,12 +373,12 @@ std::string Filter::parseExp(struct _parserStruct *left, std::string cmp, struct
 			}
 
 			/* If needed, insert operator "and" */
-			if (i > 0) {
+			if ((i > 0) || (j > 0)) {
 				ss << " and ";
 			}
 
 			/* Add string into stringstream */
-			ss << "( " << left->parts[i] << " " << cmp << " " << right->parts[i] << " )";
+			ss << "( " << left->parts[i] << " " << cmp << " " << right->parts[j] << " )";
 		}
 		ss << ") ";
 	}

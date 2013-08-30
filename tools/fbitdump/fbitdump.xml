@@ -554,6 +554,17 @@
 
 </columns>
 
+<groups>
+	<group>
+		<name>Port</name>
+		<alias>%port</alias>
+		<members>
+			<member>%dp</member>
+			<member>%sp</member>
+		</members>
+	</group>
+</groups>
+			
 <!-- summary section contain aliases of columns that can be used for statistics summary, i.e. totals
 	only plain columns can be used -->
 <summary>

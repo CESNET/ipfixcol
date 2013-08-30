@@ -139,7 +139,7 @@ value:
 	;
 	
 column:
-	  COLUMN { $$ = new fbitdump::_parserStruct; filter.parseColumn($$, *$1); delete $1; }
+	  COLUMN { $$ = new fbitdump::_parserStruct; $$->nParts = 0; filter.parseColumn($$, *$1); delete $1; }
 	| RAWCOLUMN { $$ = new fbitdump::_parserStruct; filter.parseRawcolumn($$, *$1); delete $1; }
 	| column BITOPERATOR value { $$ = new fbitdump::_parserStruct; filter.parseBitColVal($$, $1, *$2, $3); delete $1; delete $2; delete $3; }
 	;

@@ -172,6 +172,7 @@ public:
 	 */
 	void parseColumn(struct _parserStruct *ps, std::string strcol);
 
+	bool parseColumnGroup(struct _parserStruct *ps, std::string alias, bool aggeregate);
 	/**
 	 * \brief Only fills parser structure with column name
 	 *

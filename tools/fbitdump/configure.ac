@@ -64,7 +64,7 @@ LBR_SET_DISTRO([redhat])
 AC_CHECK_PROG(FLEX, flex, flex)
 
 # Check fol bison
-AC_CHECK_PROG(BISON, bison, bison -v)
+AC_CHECK_PROG(BISON, bison, bison)
 
 # Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
