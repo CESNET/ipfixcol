@@ -177,6 +177,7 @@ int main (int argc, char **argv) {
 		data->dir_count = dir_count;
 		data->total_size = 0;
 		data->all_ok = 1;
+		data->max_size = size*1024*1024;
 		
 		if( access( pipe_name, F_OK ) != -1 ) {
 			// file exists
@@ -218,7 +219,6 @@ int main (int argc, char **argv) {
 		
 		strcpy( data->pipe_name, pipe_name );
 		
-		data->max_size = size;
 		
 		pthread_create( &data->thread_rescan, NULL, &thread_rescan_func, ( void * ) data );
 		pthread_create( &data->thread_pipe, NULL, &thread_pipe_func, ( void * ) data );

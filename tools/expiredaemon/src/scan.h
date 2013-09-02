@@ -19,7 +19,7 @@
 };*/
 
 void * thread_rescan_func( void * ptr );
-int64_t scan_dir( struct s_data * data, char * dir_name, int force );
+int64_t scan_dir( struct s_data * data, char * dir_name );
 
 #endif	/* SCAN_H */
 
