@@ -74,7 +74,9 @@ enum partsType {
 	PT_CMP,
 	PT_BITCOLVAL,
 	PT_IPv4,
+	PT_IPv4_SUB,
 	PT_IPv6,
+	PT_IPv6_SUB,
 	PT_TIMESTAMP
 };
 
@@ -159,6 +161,14 @@ public:
 	void parseIPv4(parserStruct *ps, std::string addr);
 
 	/**
+	 * \brief Parses IPv4 address and its subnet mask
+	 *
+	 * @param ps Parser structure
+	 * @param addr Address in text format
+	 */
+	void parseIPv4Sub(parserStruct *ps, std::string addr);
+
+	/**
 	 * \brief Parses IPv6 address
 	 *
 	 * Converts IPv6 address from text into numeric (two 64b values) and saves it into parser structure
@@ -167,6 +177,14 @@ public:
 	 * @param addr Address in text format
 	 */
 	void parseIPv6(parserStruct *ps, std::string addr);
+
+	/**
+	 * \brief Parses IPv6 address and its subnet mask
+	 *
+	 * @param ps Parser structure
+	 * @param addr Address in text format
+	 */
+	void parseIPv6Sub(parserStruct *ps, std::string addr);
 
 	/**
 	 * \brief Parses timestamp in format %Y/%m/%d.%H:%M:%S
@@ -225,6 +243,23 @@ public:
 	 */
 	std::string parseExp(parserStruct *left, std::string cmp, parserStruct *right);
 
+	/**
+	 * \brief Adds comparison and calls parseExp(left, cmp, right)
+	 *
+	 * @param left Input parser structure
+	 * @param right Input parser structure
+	 * @return Filter text in string form
+	 */
+	std::string parseExp(parserStruct *left, parserStruct *right);
+
+	/**
+	 * \brief Parses final expression "column value" when IP with subnet is given
+	 *
+	 * @param left Input parser structure
+	 * @param right Input parser structure
+	 */
+	std::string parseExpSub(parserStruct *left, parserStruct *right);
+
 	yyscan_t scaninfo;	/**< lexer context */
 
 	/**
@@ -232,6 +267,8 @@ public:
 	 *
 	 * @param newFilter New filter string
 	 */
+
+	void parseString(parserStruct *ps, std::string text);
 	void setFilterString(std::string newFilter);
 
 private:
@@ -251,6 +288,9 @@ private:
 	 * @return Number of seconds in timestamp
 	 */
 
+	std::string parseIPv4(std::string addr);
+
+	void parseIPv6(std::string addr, std::string& part1, std::string& part2);
 
 	time_t parseTimestamp(std::string str) const throw (std::invalid_argument);
 

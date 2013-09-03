@@ -119,7 +119,8 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		yylex_destroy(this->scaninfo);
 	}
 
-//	std::cout << "\nFilter: " << this->filterString << std::endl;
+	std::cout << "\nFilter: " << this->filterString << std::endl;
+
 #ifdef DEBUG
 	std::cerr << "Using filter: '" << filter << "'" << std::endl;
 #endif
@@ -155,13 +156,9 @@ void Filter::parseTimestamp(parserStruct *ps, std::string timestamp)
 	ps->parts.push_back(ss.str());
 }
 
-void Filter::parseIPv4(parserStruct *ps, std::string addr)
+/* private */
+std::string Filter::parseIPv4(std::string addr)
 {
-	if (ps == NULL) {
-		return;
-	}
-
-	/* Parse IPv4 address */
 	uint32_t address;
 	std::stringstream ss;
 
@@ -171,28 +168,71 @@ void Filter::parseIPv4(parserStruct *ps, std::string addr)
 	/* Swap byte order and convert address from int to string */
 	ss << ntohl(address);
 
+	return ss.str();
+}
+
+void Filter::parseIPv4(parserStruct *ps, std::string addr)
+{
+	if (ps == NULL) {
+		return;
+	}
+
 	/* Set right values of parser structure */
 	ps->type = PT_IPv4;
 	ps->nParts = 1;
-	ps->parts.push_back(ss.str());
+	ps->parts.push_back(parseIPv4(addr));
 }
 
-void Filter::parseIPv6(parserStruct *ps, std::string addr)
+void Filter::parseIPv4Sub(parserStruct *ps, std::string addr)
 {
-	if (ps == NULL) {
+	uint8_t subnetPos;
+	uint16_t subnet;
+	uint32_t min, max, addrInt;
+	std::stringstream ss;
+	struct in_addr subnetIP;
 
-	}
+	/* Get subnet number */
+	subnetPos = addr.find('/') + 1;
+	subnet = std::atoi(addr.substr(subnetPos, addr.length() - 1).c_str());
 
-	/* Parse IPv6 address */
+	/* Get mask IP */
+	subnetIP.s_addr = ~0;
+	subnetIP.s_addr <<= 32 - subnet;
+
+	/* Parse IP address without subnet */
+	addrInt = atoi(this->parseIPv4(addr.substr(0, subnetPos - 1)).c_str());
+
+	/* Calculate minimal and maximal host address */
+	min = addrInt & subnetIP.s_addr;
+	max = min | (~subnetIP.s_addr);
+
+	ss << min;
+	ps->parts.push_back(ss.str());
+
+	ss.str(std::string());
+	ss.clear();
+
+	ss << max;
+	ps->parts.push_back(ss.str());
+
+	/* Fill in parser structure */
+	ps->nParts = 2;
+	ps->type = PT_IPv4_SUB;
+}
+
+/* private */
+void Filter::parseIPv6(std::string addr, std::string& part1, std::string& part2)
+{
 	uint64_t address[2];
 	std::stringstream ss;
+	std::string ip6;
 
 	/* Convert from address format into numeric format (we need 128b) */
 	inet_pton(AF_INET6, addr.c_str(), address);
 
 	/* Save first part of address into parser structure string vector */
 	ss << be64toh(address[0]);
-	ps->parts.push_back(ss.str());
+	part1 = ss.str();
 
 	/* Clear stringstream */
 	ss.str(std::string());
@@ -200,11 +240,75 @@ void Filter::parseIPv6(parserStruct *ps, std::string addr)
 
 	/* Save second part */
 	ss << be64toh(address[1]);
-	ps->parts.push_back(ss.str());
+	part2 = ss.str();
+}
+
+void Filter::parseIPv6(parserStruct *ps, std::string addr)
+{
+	if (ps == NULL) {
+
+	}
+	std::string part1, part2;
+
+	/* Parse IPv6 address */
+	parseIPv6(addr, part1, part2);
+
+	ps->parts.push_back(part1);
+	ps->parts.push_back(part2);
 
 	/* Set right values of parser structure */
 	ps->type = PT_IPv6;
 	ps->nParts = 2;
+}
+
+/* TODO: */
+void Filter::parseIPv6Sub(parserStruct *ps, std::string addr)
+{
+	uint8_t subnetPos, i;
+	uint16_t subnet;
+	uint64_t min[2], max[2], subnetIP[2];
+	std::string part1, part2;
+	std::stringstream ss;
+
+	/* Get subnet number */
+	subnetPos = addr.find('/') + 1;
+	subnet = std::atoi(addr.substr(subnetPos, addr.length() - 1).c_str());
+
+	/* Set subnet address */
+	subnetIP[0] = ~0;
+	subnetIP[1] = ~0;
+
+	if (subnet > 64) {
+		subnetIP[1] <<= 64 - (subnet - 64);
+	} else {
+		subnetIP[1] = 0;
+		subnetIP[0] = 64 - subnet;
+	}
+
+	/* Parse IP address to calculate minimal and maximal host address */
+	this->parseIPv6(addr.substr(0, subnetPos - 1), part1, part2);
+
+	/* Calculate minimal and maximal host address for both parts */
+	for (i = 0; i < 2; i++) {
+		min[i] = atol(part1.c_str()) & subnetIP[i];
+		max[i] = min[i] | (~subnetIP[i]);
+
+		ss.str(std::string());
+		ss.clear();
+
+		ss << min[i];
+		ps->parts.push_back(ss.str());
+
+		ss.str(std::string());
+		ss.clear();
+
+		ss << max[i];
+		ps->parts.push_back(ss.str());
+	}
+
+	/* Fill in parser structure */
+	ps->nParts = 4;
+	ps->type = PT_IPv6_SUB;
 }
 
 void Filter::parseNumber(parserStruct *ps, std::string number)
@@ -356,6 +460,13 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 		return "";
 	}
 
+	switch (right->type) {
+	case PT_IPv4_SUB:
+	case PT_IPv6_SUB:
+		return this->parseExpSub(left, right);
+	default:
+		break;
+	}
 	/* Parser expression "column CMP value" */
 	std::string exp, op;
 
@@ -382,6 +493,7 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 			}
 
 			/* Add part into expression */
+
 			exp += "( " + left->parts[i] + " " + cmp + " " + right->parts[j] + " ) " + op;
 		}
 		/* Remove last operator and close bracket */
@@ -390,6 +502,33 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 
 	/* Return created expression */
 	return exp;
+}
+
+std::string Filter::parseExp(parserStruct *left, parserStruct *right)
+{
+	return this->parseExp(left, " = ", right);
+}
+
+std::string Filter::parseExpSub(parserStruct *left, parserStruct *right)
+{
+	int i, rightPos = 0;
+	std::string exp, op;
+	op = "and ";
+	exp = "(";
+	for (i = 0; i < left->nParts; i++) {
+		exp += "( " + left->parts[i] + " > " + right->parts[rightPos++] + " ) " + op;
+		exp += "( " + left->parts[i] + " < " + right->parts[rightPos++] + " ) " + op;
+	}
+	exp = exp.substr(0, exp.length() - op.length() - 1) + ") ";
+	return exp;
+}
+
+void Filter::parseString(parserStruct *ps, std::string text)
+{
+	ps->nParts = 0;
+
+	/* ps->type = PT_PROTO, PT_URL.... */
+	std::cout << "parseString: " << text << std::endl;
 }
 
 Filter::Filter(Configuration &conf) throw (std::invalid_argument)

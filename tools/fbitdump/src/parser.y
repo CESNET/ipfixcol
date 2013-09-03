@@ -87,10 +87,13 @@ namespace fbitdump {
 %token <s> OPERATOR		"operator"
 %token <s> BITOPERATOR	"bit operator"
 %token <s> IPv4			"IPv4 address"
+%token <s> IPv4_SUB		"IPv4 address with subnet"
 %token <s> IPv6			"IPv6 address"
+%token <s> IPv6_SUB		"IPv6 address with subnet"
 %token <s> TIMESTAMP	"timestamp"
 %token <s> OTHER		"symbol"
 %token <s> EOL			"end of line"
+%token <s> STRING		"string"
 %token END 0			"end of file"
 
 %type <s> explist exp start
@@ -129,14 +132,17 @@ exp:
 	| column CMP value {  $$ = new std::string(filter.parseExp($1, *$2, $3)); delete $1; delete $2; delete $3; }
 	| value CMP column {  $$ = new std::string(filter.parseExp($3, *$2, $1)); delete $1; delete $2; delete $3; }
 	| column CMP column { $$ = new std::string(filter.parseExp($1, *$2, $3)); delete $1; delete $2; delete $3; }
-	| column value { $$ = new std::string(filter.parseExp($1, "=", $2)); delete $1; delete $2; }
+	| column value { $$ = new std::string(filter.parseExp($1, $2)); delete $1; delete $2; }
     ;
 
 value:
 	  NUMBER { $$ = new fbitdump::_parserStruct; filter.parseNumber($$, *$1); delete $1; }
 	| IPv4 { $$ = new fbitdump::_parserStruct; filter.parseIPv4($$, *$1); delete $1; }
+	| IPv4_SUB { $$ = new fbitdump::_parserStruct; filter.parseIPv4Sub($$, *$1); delete $1; }
 	| IPv6 { $$ = new fbitdump::_parserStruct; filter.parseIPv6($$, *$1); delete $1; }
+	| IPv6_SUB { $$ = new fbitdump::_parserStruct; filter.parseIPv6Sub($$, *$1); delete $1; }
 	| TIMESTAMP { $$ = new fbitdump::_parserStruct; filter.parseTimestamp($$, *$1); delete $1; }
+	| STRING { $$ = new fbitdump::_parserStruct; filter.parseString($$, *$1); delete $1; }
 	;
 	
 column:
