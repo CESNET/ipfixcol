@@ -80,7 +80,7 @@ void * thread_rescan_func( void * ptr ) {
 					continue;
 				}
 			}
-			
+			free( dir_name );	
 			size = scan_dir( data, data->queue_rescan->directory->name );			
 			size = size - size2;
 			
