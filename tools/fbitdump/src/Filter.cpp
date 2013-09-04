@@ -410,6 +410,15 @@ void Filter::parseColumn(parserStruct *ps, std::string alias)
 		delete col;
 		throw std::invalid_argument(err);
 	}
+
+	/* DELETE this part after resolving how to get colType (propably from XML file */
+	if (alias.compare("%proto") == 0) {
+		ps->colType = CT_PROTO;
+	} else if (alias.compare("%flg") == 0) {
+		ps->colType = CT_FLAGS;
+	}
+	/* STOP deleting here */
+
 	delete col;
 
 	/* Set type of structure */
@@ -463,12 +472,24 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 	switch (right->type) {
 	case PT_IPv4_SUB:
 	case PT_IPv6_SUB:
+		/* If it is IPv4/6 address with subnet, we need to parse it (get minimal and maximal host address) */
 		return this->parseExpSub(left, right);
+		break;
+	case PT_STRING:
+		/* If it is string, we need to parse it
+		 * Type may transform from string to number (if coltype is PT_PROTO) - we can't change cmp to LIKE here */
+		this->parseString(right, left->colType);
+		break;
 	default:
 		break;
 	}
 	/* Parser expression "column CMP value" */
 	std::string exp, op;
+
+	/* Value is really string, we can change cmp to "LIKE" now */
+	if (right->type == PT_STRING) {
+		cmp = " LIKE ";
+	}
 
 	if ((left->nParts == 1) && (right->nParts == 1)) {
 		exp += left->parts[0] + " " + cmp + " " + right->parts[0] + " ";
@@ -525,10 +546,91 @@ std::string Filter::parseExpSub(parserStruct *left, parserStruct *right)
 
 void Filter::parseString(parserStruct *ps, std::string text)
 {
-	ps->nParts = 0;
+	ps->nParts = 1;
+	ps->type = PT_STRING;
+	ps->parts.push_back(text);
+}
 
-	/* ps->type = PT_PROTO, PT_URL.... */
-	std::cout << "parseString: " << text << std::endl;
+std::string getProtoNum(std::string name)
+{
+	if (name.compare("TCP") == 0) {
+		return "6";
+	} else {
+		return "";
+	}
+}
+
+void Filter::parseString(parserStruct *ps, colsType type)
+{
+	std::string num;
+	switch (type) {
+	case CT_PROTO:
+		num = getProtoNum(ps->parts[0]);
+		if (!num.empty()) {
+			ps->parts[0] = num;
+			ps->type = PT_NUMBER;
+		}
+		break;
+	case CT_FLAGS:
+		ps->parts[0] = this->parseFlags(ps->parts[0]);
+		ps->type = PT_NUMBER;
+		break;
+	case CT_URL:
+		break;
+	case CT_DNS:
+		break;
+	default:
+		break;
+	}
+}
+
+std::string Filter::parseFlags(std::string strFlags)
+{
+	int i;
+	std::stringstream ss;
+	uint16_t intFlags;
+
+	/* Convert flags from string into numeric form
+	 * 000001 FIN.
+	 * 000010 SYN
+	 * 000100 RESET
+	 * 001000 PUSH
+	 * 010000 ACK
+     * 100000 URGENT
+	 */
+	intFlags = 0;
+	for (i = 0; i < strFlags.length(); i++) {
+		switch (strFlags[i]) {
+		case 'f':
+		case 'F':
+			intFlags |= 1;
+			break;
+		case 's':
+		case 'S':
+			intFlags |= 2;
+			break;
+		case 'r':
+		case 'R':
+			intFlags |= 4;
+			break;
+		case 'p':
+		case 'P':
+			intFlags |= 8;
+			break;
+		case 'a':
+		case 'A':
+			intFlags |= 16;
+			break;
+		case 'u':
+		case 'U':
+			intFlags |= 32;
+			break;
+		}
+	}
+
+	ss << intFlags;
+	return ss.str();
+
 }
 
 Filter::Filter(Configuration &conf) throw (std::invalid_argument)

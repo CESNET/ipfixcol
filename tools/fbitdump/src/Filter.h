@@ -77,12 +77,21 @@ enum partsType {
 	PT_IPv4_SUB,
 	PT_IPv6,
 	PT_IPv6_SUB,
-	PT_TIMESTAMP
+	PT_TIMESTAMP,
+	PT_STRING,
+};
+
+enum colsType {
+	CT_PROTO,
+	CT_FLAGS,
+	CT_URL,
+	CT_DNS
 };
 
 /* Struct for parsing data from bison parser */
 typedef struct _parserStruct {
 	partsType type;
+	colsType colType;
 	uint16_t nParts;
 	std::vector<std::string> parts;
 } parserStruct;
@@ -269,6 +278,10 @@ public:
 	 */
 
 	void parseString(parserStruct *ps, std::string text);
+	void parseString(parserStruct *ps, colsType type);
+
+	std::string parseFlags(std::string strFlags);
+
 	void setFilterString(std::string newFilter);
 
 private:
