@@ -370,6 +370,10 @@ uint16_t el_blob::fill(uint8_t * data)
 	if (_filled + _true_size >= _buf_max) {
 		_buf_max += 100*_true_size; // TODO find some better constant
 		_buffer = (char *) realloc(_buffer, _buf_max);
+		if (_buffer == NULL) {
+			perror("realloc blob buffer");
+			exit(-1);
+		}
 	}
 
 	memcpy(&(_buffer[_filled]), data + _offset, _true_size);
@@ -381,6 +385,10 @@ uint16_t el_blob::fill(uint8_t * data)
 	if (_sp_buffer_offset + 8 >= _sp_buffer_size) {
 		_sp_buffer_size *= 2; /* Double the buffer */
 		_sp_buffer = (char *) realloc(_sp_buffer, _sp_buffer_size);
+		if (_sp_buffer == NULL) {
+			perror("realloc blob sp buffer");
+			exit(-1);
+		}
 	}
 
 	/* Update the sp buffer */
@@ -395,7 +403,7 @@ int el_blob::flush(std::string path)
 {
 	FILE *f;
 	size_t check;
-
+	
 	if (_filled > 0 && _sp_buffer != NULL) {
 		f = fopen((path +"/"+_name+".sp").c_str(),"a+");
 		if (f == NULL) {
@@ -414,7 +422,7 @@ int el_blob::flush(std::string path)
 		fclose(f);
 
 		/* Reset buffer */
-		_sp_buffer_offset = 0;
+		_sp_buffer_offset = 8;
 
 		/* TODO
 		 * It is necessary to get the offset right before next write to disk

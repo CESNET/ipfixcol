@@ -301,15 +301,6 @@ public:
 	virtual uint16_t fill(uint8_t * data);
 	virtual ~el_blob();
 
-protected:
-	bool _var_size;
-	uint16_t _true_size;
-	uint8_t uint_value;
-
-	char *_sp_buffer;
-	uint16_t _sp_buffer_size;
-	uint16_t _sp_buffer_offset;
-
 	/**
 	 * \brief Overloaded flush function to write the sp buffer
 	 *
@@ -320,6 +311,15 @@ protected:
 	 */
 	virtual int flush(std::string path);
 
+protected:
+	bool _var_size;
+	uint16_t _true_size;
+	uint8_t uint_value;
+
+	char *_sp_buffer;
+	uint32_t _sp_buffer_size;
+	uint32_t _sp_buffer_offset;
+	
 	int set_type(){
 		_type=ibis::BLOB;
 		return 0;
