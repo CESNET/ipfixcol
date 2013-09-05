@@ -42,12 +42,13 @@ void * thread_rescan_func( void * ptr ) {
 		// if there is force rescan, we rescan
 		if( rescan ) {
 			VERBOSE( 2, "S | initial scanning             %s\n", dir->name);
-			scan_dir( data, dir->name, 1 );
+			data->total_size += scan_dir( data, dir->name );
 			VERBOSE( 3, "S | done                         %s\n", dir->name);
 		}
 		// or we can just open stat file and read size of data from it
 		else {
-			fscanf( stat_file, "%" SCNu64, &data->total_size );
+			fscanf( stat_file, "%" SCNu64, &size );
+			data->total_size += size;
 		}
 		if( stat_file ) {
 			fclose( stat_file );
@@ -61,12 +62,12 @@ void * thread_rescan_func( void * ptr ) {
 		// list is ready, rescan it
 		while( data->queue_rescan->directory != NULL ) {
 			VERBOSE( 2, "S | scanning                     %s\n", data->queue_rescan->directory->name);
-				
+			size2=0;
 			if( asprintf( &dir_name, "%s/stat.txt", data->queue_rescan->directory->name ) == -1 ) {
 				ERROR;
 				continue;
 			}
-			if( access( dir_name, F_OK ) == 0 ) {
+			if( access( dir_name, R_OK ) == 0 ) {
 				stat_file = fopen( dir_name, "r" );
 				if( stat_file != NULL ) {
 					pthread_mutex_lock( &data->mutex_file );
@@ -79,15 +80,16 @@ void * thread_rescan_func( void * ptr ) {
 					continue;
 				}
 			}
-
-			size = scan_dir( data, data->queue_rescan->directory->name, 0 );			
-
-			size -= size2;
-
+			free( dir_name );	
+			size = scan_dir( data, data->queue_rescan->directory->name );			
+			size = size - size2;
+			
+			
 			pthread_mutex_lock( &data->mutex_mem );
 			data->total_size += size;
 			pthread_mutex_unlock( &data->mutex_mem );
 			
+			// get root directory of scanned directory
 			dir = data->queue_watch->directory;
 			while( dir != NULL ) {
 				if( strncmp( dir->name, data->queue_rescan->directory->name, strlen( dir->name ) ) == 0 ) break;
@@ -96,8 +98,10 @@ void * thread_rescan_func( void * ptr ) {
 			}
 			stat_file_dir = strdup( data->queue_rescan->directory->name );
 			
+			
 			while( strcmp( dir->name, stat_file_dir ) != 0 ) {
-					
+				size2 = 0;
+				
 				ptrc = strrchr( stat_file_dir, '/' );
 				ptrc[0] = '\0';
 
@@ -128,7 +132,7 @@ void * thread_rescan_func( void * ptr ) {
 		
 			free( stat_file_dir );
 			
-			VERBOSE( 3, "S | done                         %s\n", data->queue_rescan->directory->name);
+			VERBOSE( 3, "S | done                         %s\n", data->queue_rescan->directory->name );
 			pthread_mutex_lock( &data->mutex_mem );
 			buffer_rm_dir( data->queue_rescan );
 			pthread_mutex_unlock( &data->mutex_mem );
@@ -147,17 +151,13 @@ void * thread_rescan_func( void * ptr ) {
  * @param dir_name
  * @return 
  */
-int64_t scan_dir( struct s_data * data, char * dir_name, int force ) {
+int64_t scan_dir( struct s_data * data, char * dir_name ) {
 	char * child;
-	FILE * stat_file;
 	DIR * rdir;
+	FILE * stat_file;
 	int64_t size = 0;
-	int64_t size_files = 0;
-	int64_t size_dirs = 0;
 	struct dirent * file;
 	struct stat file_stat;
-	
-	
 	
 	rdir = opendir( dir_name );
 	if( rdir == NULL ) {
@@ -190,11 +190,11 @@ int64_t scan_dir( struct s_data * data, char * dir_name, int force ) {
 		}
 
 		if( file->d_type == DT_DIR ) {
-			size_dirs +=scan_dir( data, child, force );
+			size +=scan_dir( data, child );
 		}
 		else {
 			stat( child, &file_stat );
-			size_files += file_stat.st_size;
+			size += file_stat.st_size;
 		}
 		free( child );
 		
@@ -202,41 +202,21 @@ int64_t scan_dir( struct s_data * data, char * dir_name, int force ) {
 	
 	closedir( rdir );
 	
-
 	if( asprintf( &child, "%s/stat.txt", dir_name ) == -1 ) {
 		ERROR;
 
 		return size;
 	}
 	
-	if( !force && ( access( child, F_OK ) == 0 ) ) {
-		stat_file = fopen( child, "r" );
-		fscanf( stat_file, "%" SCNd64, &size );
-		fclose( stat_file );
-	}
-	else {
-		pthread_mutex_lock( &data->mutex_mem );
-		data->total_size += size_files;
-		pthread_mutex_unlock( &data->mutex_mem );
-	}
-	
-	size = (size_dirs + size_files);// - size;
-	
-
-
 	stat_file = fopen( child, "w" );
 	if( stat_file == NULL ) {
 		ERROR;
 
-		return size;
-	}
-	free( child );
-	fprintf( stat_file, "%" PRId64, (size_dirs + size_files) );
-	fclose( stat_file );
-
-	if( ( size_dirs == 0 ) && ( size_files == 0 ) ) {
 		return 0;
 	}
+	free( child );
+	fprintf( stat_file, "%" PRId64, size );
+	fclose( stat_file );
 
 	return size;
 }

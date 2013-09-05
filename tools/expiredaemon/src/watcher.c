@@ -29,10 +29,10 @@ void * thread_inotify_func( void * ptr ){
 	ssize_t read_len;
 	FILE * fifo;
 	FILE * stat_file;
-	long stat_size;
+	int64_t stat_size;
 	char * stat_file_name;
 	char * stat_file_dir;
-	uint64_t size = 0;
+	int64_t size = 0;
 	struct sigaction action;
 	char * ptrc;
 	
@@ -56,7 +56,7 @@ void * thread_inotify_func( void * ptr ){
 	}
 	while( !done ) {
 		if( ( read_len = read( data->inotify_fd, buffer, BUFFLEN ) ) == -1) continue;
-//		printf( "\t\t%d\n", __LINE__ );
+		
 		fifo = fopen( data->pipe_name, "w");
 		// magic
 		for (p = buffer; p < buffer + read_len; ) {
@@ -65,15 +65,13 @@ void * thread_inotify_func( void * ptr ){
 				p += sizeof(struct inotify_event) + event->len;
 				continue;
 			}
-	
+
 			dir_inotify = data->queue_inotify->directory;
 			
 			while( ( dir_inotify != NULL ) && ( dir_inotify->inotify_wd != event->wd ) ) {
 				dir_inotify = dir_inotify->next;
 			}
 			p += sizeof(struct inotify_event) + event->len;
-			
-//		printf( "\t\t%d\n", __LINE__ );
 			
 			if( dir_inotify == NULL ) continue;
 
@@ -83,11 +81,12 @@ void * thread_inotify_func( void * ptr ){
 					continue;
 				}
 				
+				// get date from directory name
 				for( i = 0; event->name[i] != '\0'; i++ ) {
 					if( ( event->name[i] >= '0' ) && ( event->name[i] <= '9')  ) break;
 				}
 				
-				// get directory data from inotify queue
+				// ??? check if directory exists in buffer
 				dir_inotify2 = data->queue_inotify->directory;
 				while( dir_inotify2 != NULL ) {
 					if( strcmp( child_name, dir_inotify2->name ) == 0 ) break;
@@ -102,6 +101,7 @@ void * thread_inotify_func( void * ptr ){
 				 * idea, but it would cause multiple rescan for one directory (for every new or changed file)
                  */
 				dir_inotify2 = buffer_inotify_add_watch( data->queue_inotify, child_name, dir_inotify->depth+1, dir_inotify, atol(event->name+i), data->inotify_fd );
+				
 				if( dir_inotify2->depth == data->dir_depth ) {
 					VERBOSE( 2, "W | New data                     %s\n", child_name);
 					dir_inotify2 = NULL;
@@ -110,7 +110,6 @@ void * thread_inotify_func( void * ptr ){
 						dir_inotify = dir_inotify->parent;
 					}
 					dir_inotify2 = dir_inotify;
-//		printf( "\t\t%d\n", __LINE__ );
 					// get oldest directory 
 					while( dir_inotify2->depth != data->dir_depth ) {
 						dir_inotify3 = dir_inotify2;
@@ -121,8 +120,6 @@ void * thread_inotify_func( void * ptr ){
 						}
 
 					}
-					
-//		printf( "\t\t%d\n", __LINE__ );
 					// rescan oldest directory
 					fprintf(fifo, "%s\n", dir_inotify2->name );
 					
@@ -144,18 +141,21 @@ void * thread_inotify_func( void * ptr ){
 			}
 	
 			// remove files
-			while( !done && ( data->total_size > (data->max_size*1024*1024) ) ) {
+			while( !done && ( data->total_size >= data->max_size ) ) {
 				// check if delete queue is empty
 				if( data->queue_delete->directory == NULL ) {
 					gen_delete_queue( data );
 				}
 				
 				// get size of directory we want to delete
-				asprintf( &stat_file_name, "%s/stat.txt", data->queue_delete->directory->name );
+				if( asprintf( &stat_file_name, "%s/stat.txt", data->queue_delete->directory->name ) == -1 ) {
+					ERROR;
+					continue;
+				}
 				stat_file = fopen( stat_file_name, "r" );
 				if( stat_file != NULL ) {
 					pthread_mutex_lock( &data->mutex_file );
-					fscanf( stat_file, "%" SCNu64, &stat_size );
+					fscanf( stat_file, "%" SCNd64, &stat_size );
 					pthread_mutex_unlock( &data->mutex_file );
 					fclose( stat_file );
 				}
@@ -165,7 +165,6 @@ void * thread_inotify_func( void * ptr ){
 					stat_size = 0;
 				}
 				
-				VERBOSE( 1,"D | -%6.2fMB                    %s\n", ((float)stat_size/(1024*1024.0)), data->queue_delete->directory->name	 );
 				
 				free( stat_file_name );
 				
@@ -191,7 +190,7 @@ void * thread_inotify_func( void * ptr ){
 					stat_file = fopen( stat_file_name, "r" );
 					if( stat_file != NULL ) {
 						pthread_mutex_lock( &data->mutex_file );
-						fscanf( stat_file, "%" SCNu64, &size );
+						fscanf( stat_file, "%" SCNd64, &size );
 						pthread_mutex_unlock( &data->mutex_file );
 						fclose( stat_file );
 					}
@@ -202,7 +201,7 @@ void * thread_inotify_func( void * ptr ){
 					size -= stat_size;
 					stat_file = fopen( stat_file_name, "w" );
 					pthread_mutex_lock( &data->mutex_file );
-					fprintf( stat_file, "%" PRIu64, size );
+					fprintf( stat_file, "%" PRId64, size );
 					pthread_mutex_unlock( &data->mutex_file );
 					fclose( stat_file );
 //					printf( "\tUpdating size in %s\n", stat_file_name );
@@ -211,9 +210,10 @@ void * thread_inotify_func( void * ptr ){
 				free( stat_file_dir );
 				// cya our beloved data!
 				inotify_delete_dir( data->queue_delete->directory->name );
-				printf( "\t\tSize: %" PRId64 " - %"PRId64" = ", (data->total_size/(1024*1024)), (stat_size/(1024*1024)) );
+				pthread_mutex_lock( &data->mutex_mem );
+				VERBOSE( 1,"D | -%6.2fMB                    %s\n", ((float)stat_size/(1024*1024.0)), data->queue_delete->directory->name );
 				data->total_size -= stat_size;
-				printf( "%"PRId64"\n", (data->total_size/(1024*1024)) );
+				pthread_mutex_unlock( &data->mutex_mem );
 				buffer_rm_dir( data->queue_delete );
 			}
 		
@@ -419,3 +419,4 @@ void inotify_delete_dir( const char * name ) {
 		ERROR;
 	}
 }
+

@@ -47,8 +47,8 @@ void * gen_delete_queue( struct s_data * data ) {
 
 		// if delete queue is empty, copy there tmp queue
 		if( data->queue_delete->directory == NULL ) {
-			//memcpy( data->queue_delete, tmp_queue, sizeof( struct s_buffer ) );
-			*data->queue_delete = *tmp_queue;
+			memcpy( data->queue_delete, tmp_queue, sizeof( struct s_buffer ) );
+			//*data->queue_delete = *tmp_queue;
 			free( tmp_queue );
 		}
 		else {
