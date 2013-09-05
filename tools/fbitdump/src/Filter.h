@@ -280,6 +280,7 @@ public:
 	void parseString(parserStruct *ps, std::string text);
 	void parseString(parserStruct *ps, colsType type);
 
+	std::string getProtoNum(std::string name);
 	std::string parseFlags(std::string strFlags);
 
 	void setFilterString(std::string newFilter);

@@ -45,6 +45,7 @@
 #include "Column.h"
 #include "typedefs.h"
 #include "scanner.h"
+#include "protocols.h"
 
 namespace fbitdump
 {
@@ -261,7 +262,6 @@ void Filter::parseIPv6(parserStruct *ps, std::string addr)
 	ps->nParts = 2;
 }
 
-/* TODO: */
 void Filter::parseIPv6Sub(parserStruct *ps, std::string addr)
 {
 	uint8_t subnetPos, i;
@@ -551,15 +551,6 @@ void Filter::parseString(parserStruct *ps, std::string text)
 	ps->parts.push_back(text);
 }
 
-std::string getProtoNum(std::string name)
-{
-	if (name.compare("TCP") == 0) {
-		return "6";
-	} else {
-		return "";
-	}
-}
-
 void Filter::parseString(parserStruct *ps, colsType type)
 {
 	std::string num;
@@ -584,11 +575,24 @@ void Filter::parseString(parserStruct *ps, colsType type)
 	}
 }
 
-std::string Filter::parseFlags(std::string strFlags)
+std::string Filter::getProtoNum(std::string name)
 {
 	int i;
 	std::stringstream ss;
-	uint16_t intFlags;
+
+	for (i = 0; i < 138; i++) {
+		if (name.compare(protocols[i]) == 0) {
+			ss << i;
+			return ss.str();
+		}
+	}
+	return "";
+}
+
+std::string Filter::parseFlags(std::string strFlags)
+{
+	uint16_t i, intFlags;
+	std::stringstream ss;
 
 	/* Convert flags from string into numeric form
 	 * 000001 FIN.
