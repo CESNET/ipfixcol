@@ -411,13 +411,7 @@ void Filter::parseColumn(parserStruct *ps, std::string alias)
 		throw std::invalid_argument(err);
 	}
 
-	/* DELETE this part after resolving how to get colType (propably from XML file */
-	if (alias.compare("%proto") == 0) {
-		ps->colType = CT_PROTO;
-	} else if (alias.compare("%flg") == 0) {
-		ps->colType = CT_FLAGS;
-	}
-	/* STOP deleting here */
+	ps->colType = col->getSemantics();
 
 	delete col;
 
@@ -478,7 +472,7 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 	case PT_STRING:
 		/* If it is string, we need to parse it
 		 * Type may transform from string to number (if coltype is PT_PROTO) - we can't change cmp to LIKE here */
-		this->parseString(right, left->colType);
+		this->parseStringType(right, left->colType);
 		break;
 	default:
 		break;
@@ -551,27 +545,28 @@ void Filter::parseString(parserStruct *ps, std::string text)
 	ps->parts.push_back(text);
 }
 
-void Filter::parseString(parserStruct *ps, colsType type)
+void Filter::parseStringType(parserStruct *ps, std::string type)
 {
 	std::string num;
-	switch (type) {
-	case CT_PROTO:
+	if (type.empty()) {
+		return;
+	} else if (type == "protocol") {
+		/* It should be protocol name - we need to convert it into number */
 		num = getProtoNum(ps->parts[0]);
+
 		if (!num.empty()) {
 			ps->parts[0] = num;
 			ps->type = PT_NUMBER;
 		}
-		break;
-	case CT_FLAGS:
-		ps->parts[0] = this->parseFlags(ps->parts[0]);
+	} else if (type == "tcpflags") {
+		/* TCP flags in string form (AR etc.) - convert it into number */
+		num = this->parseFlags(ps->parts[0]);
+
+		ps->parts[0] = num;
 		ps->type = PT_NUMBER;
-		break;
-	case CT_URL:
-		break;
-	case CT_DNS:
-		break;
-	default:
-		break;
+	} else {
+		/* For all other columns with string value it stays as it is */
+		ps->type = PT_STRING;
 	}
 }
 

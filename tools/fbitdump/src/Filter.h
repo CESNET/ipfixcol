@@ -81,18 +81,11 @@ enum partsType {
 	PT_STRING,
 };
 
-enum colsType {
-	CT_PROTO,
-	CT_FLAGS,
-	CT_URL,
-	CT_DNS
-};
-
 /* Struct for parsing data from bison parser */
 typedef struct _parserStruct {
 	partsType type;
-	colsType colType;
 	uint16_t nParts;
+	std::string colType;
 	std::vector<std::string> parts;
 } parserStruct;
 
@@ -278,7 +271,8 @@ public:
 	 */
 
 	void parseString(parserStruct *ps, std::string text);
-	void parseString(parserStruct *ps, colsType type);
+
+	void parseStringType(parserStruct *ps, std::string type);
 
 	std::string getProtoNum(std::string name);
 	std::string parseFlags(std::string strFlags);
