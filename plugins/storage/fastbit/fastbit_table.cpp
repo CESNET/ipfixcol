@@ -237,6 +237,7 @@ int template_table::store(ipfix_data_set * data_set, std::string path, bool new_
 			// update the -part.txt file so that the data is ready for processing
 			this->update_part(path + _name);
 			_rows_count = 0;
+			_rows_in_window = 0;
 		}
 	}
 	return record_cnt;
