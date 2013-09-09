@@ -234,6 +234,8 @@ int template_table::store(ipfix_data_set * data_set, std::string path, bool new_
 				(*el_it)->flush(path + _name);
 			}
 			//std::cout << "BUFFER SIZE -> FLUSH: WRITEN " << _name << " rows: " << _rows_count << std::endl;
+			// update the -part.txt file so that the data is ready for processing
+			this->update_part(path + _name);
 			_rows_count = 0;
 		}
 	}
@@ -241,7 +243,14 @@ int template_table::store(ipfix_data_set * data_set, std::string path, bool new_
 }
 
 void template_table::flush(std::string path)
-{	//check directory!
+{
+	// check that there is something to flush
+	if (_rows_count <= 0) {
+		// nothing to do
+		return;
+	}
+
+	//check directory!
 	_rows_in_window += _rows_count;
 	this->dir_check(path + _name, this->_new_dir);
 	//flush data
