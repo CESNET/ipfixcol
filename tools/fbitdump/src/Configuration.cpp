@@ -70,6 +70,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	std::string optionm;	/* optarg value for option -m */
 	std::string optionr;	/* optarg value for option -r */
 	char *indexes = NULL;	/* indexes optarg to be parsed later */
+	bool print_semantics = false;
 
 //	Configuration * Configuration::instance;
 
@@ -247,6 +248,9 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		case 'T': /* Template information */
 			this->templateInfo = true;
 			break;
+		case 'S': /* Template information */
+			print_semantics = true;
+			break;
 		default:
 			help ();
 			return 1;
@@ -314,6 +318,14 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 
 	/* parse output format string */
 	this->parseFormat(this->format);
+
+	if( print_semantics ) {
+		std::cout << "Available semantics: " <<  std::endl;
+		for( auto iter = this->plugins.begin(); iter != this->plugins.end(); ++iter ) {
+			std::cout << "\t" << iter->first << std::endl;
+		}
+		return 1;
+	}
 
 	/* search for table parts in specified directories */
 	this->searchForTableParts(tables);
@@ -435,7 +447,9 @@ void Configuration::parseFormat(std::string format)
 					removeNext = true;
 				}
 				else {
-					col->format = this->plugins[col->getSemantics()];
+					if( this->plugins.find( col->getSemantics()) != this->plugins.end()) {
+						col->format = this->plugins[col->getSemantics()];
+					}
 					this->columns.push_back(col);
 					removeNext = false;
 				}
@@ -700,6 +714,7 @@ void Configuration::help() const
 	<< "                yyyy/MM/dd.hh:mm:ss[-yyyy/MM/dd.hh:mm:ss]" << std::endl
 	<< "-C <path>       path to configuration file. Default is " << CONFIG_XML << std::endl
 	<< "-T              print information about templates in directories specified by -R" << std::endl
+	<< "-S              print available semantics" << std::endl
 	;
 }
 
