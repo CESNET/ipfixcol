@@ -6,7 +6,7 @@ bin_SCRIPTS = tools/fbitexpire
 rpmspec = $(PACKAGE_TARNAME).spec
 RPMDIR = RPMBUILD
 
-SUBDIRS = 3rdparty src
+SUBDIRS = 3rdparty src src/plugins
 
 if HAVE_XSLTPROC
 SUBDIRS += man

@@ -40,7 +40,6 @@ fbitdump_SOURCES = \
 	scanner.cpp \
 	scanner.h
 
-
 MAINTAINERCLEANFILES = scanner.h scanner.cpp protocols.cpp
 EXTRA_DIST = scanner.h scanner.cpp scanner.l protocols.cpp
 # Such scripts for which a build rule has been supplied need to be deleted explicitly using CLEANFILES (see Clean), and their sources have to be distributed, usually with EXTRA_DIST (see Basics of Distribution).

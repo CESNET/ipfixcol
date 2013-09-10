@@ -292,6 +292,15 @@
 		</value>
 	</column>
 	<column>
+		<name>Frag ID</name>
+		<alias>%fragid</alias>
+		<width>7</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e0id54</element>
+		</value>
+	</column>
+	<column>
 		<name>sGeo</name>
 		<alias>%sgeo</alias>
 		<width>4</width>
@@ -324,7 +333,7 @@
 		<width>11</width>
 		<default-value>-</default-value>
 		<value type="plain">
-			<element>e16982id101</element>
+			<element semantics="httprt">e16982id101</element>
 		</value>
 	</column>
 	<column>
@@ -552,6 +561,226 @@
 		</value>
 	</column>
 
+	<column>
+		<name>HTTP RT</name>
+		<alias>%httprt</alias>
+		<width>7</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element semantics="httprt">e16982id500</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Host</name>
+		<alias>%httph</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id501</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Path</name>
+		<alias>%httpp</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id502</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP AgentID</name>
+		<alias>%httpaid</alias>
+		<width>6</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id503</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Agent</name>
+		<alias>%httpa</alias>
+		<width>48</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id504</element>
+		</value>
+	</column>
+
+	<column>
+		<name>HTTP Ref</name>
+		<alias>%ihttpref</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id3</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Code</name>
+		<alias>%ihttpc</alias>
+		<width>9</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id12</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Type</name>
+		<alias>%ihttpt</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id10</element>
+		</value>
+	</column>
+
+	<column>
+		<name>HTTP RT</name>
+		<alias>%ihttprt</alias>
+		<width>7</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id4</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Host</name>
+		<alias>%ihttph</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id1</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Path</name>
+		<alias>%ihttpp</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id2</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP AgentID</name>
+		<alias>%ihttpaid</alias>
+		<width>6</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id21</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Agent</name>
+		<alias>%ihttpa</alias>
+		<width>48</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id20</element>
+		</value>
+	</column>
+
+	<column>
+		<name>HTTP Ref</name>
+		<alias>%httpref</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id505</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Code</name>
+		<alias>%httpc</alias>
+		<width>9</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id506</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Type</name>
+		<alias>%httpt</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id507</element>
+		</value>
+	</column>
+	<column>
+		<name>DNS Ans</name>
+		<alias>%dnsans</alias>
+		<width>7</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id0</element>
+		</value>
+	</column>
+	<column>
+		<name>DNS RCode</name>
+		<alias>%dnsrcode</alias>
+		<width>9</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id1</element>
+		</value>
+	</column>
+	<column>
+		<name>DNS Name</name>
+		<alias>%dnsname</alias>
+		<width>20</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id2</element>
+		</value>
+	</column>
+	<column>
+		<name>DNS QType</name>
+		<alias>%dnsqtype</alias>
+		<width>9</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id3</element>
+		</value>
+	</column>
+	<column>
+		<name>DNS Class</name>
+		<alias>%dnsclass</alias>
+		<width>9</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id4</element>
+		</value>
+	</column>
+	<column>
+		<name>DNS RR TTL</name>
+		<alias>%dnsrrttl</alias>
+		<width>9</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id5</element>
+		</value>
+	</column>
+	<column>
+		<name>DNS RLen</name>
+		<alias>%dnsrlen</alias>
+		<width>8</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id6</element>
+		</value>
+	</column>
+	<column>
+		<name>DNS RData</name>
+		<alias>%dnsrdata</alias>
+		<width>30</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id7</element>
+		</value>
+	</column>
+
 </columns>
 
 <!-- summary section contain aliases of columns that can be used for statistics summary, i.e. totals
@@ -586,7 +815,7 @@
 	</format>
 	<format>
 		<formatName>extra</formatName>
-		<formatString>%ts %td %pr %sa4 -> %da4 %sa6 -> %da6 %sp %dp %flg %tos %pkt %byt %bps %pps %bpp %icmptype %sas %das %in %out %fl</formatString>
+		<formatString>%ts %td %pr %sa4 -> %da4 %sa6 -> %da6 %sp %dp %flg %tos %pkt %byt %bps %pps %bpp %icmptype %sas %das %in %out %fragid %fl</formatString>
 	</format>
 	<format>
 		<formatName>line4</formatName>
@@ -602,7 +831,7 @@
 	</format>
 	<format>
 		<formatName>extra4</formatName>
-		<formatString>%ts %td %pr %sa4:%sp -> %da4:%dp %flg %tos %pkt %byt %bps %pps %bpp %icmptype %sas %das %in %out %fl</formatString>
+		<formatString>%ts %td %pr %sa4:%sp -> %da4:%dp %flg %tos %pkt %byt %bps %pps %bpp %icmptype %sas %das %in %out %fragid %fl</formatString>
 	</format>
 	<format>
 		<formatName>line6</formatName>
@@ -612,13 +841,13 @@
 		<formatName>long6</formatName>
 		<formatString>%ts %td %pr %sa6:%sp -> %da6:%dp %flg %tos %pkt %byt %fl</formatString>
 	</format>
-		<format>
-		<formatName>extended4</formatName>
+	<format>
+		<formatName>extended6</formatName>
 		<formatString>%ts %td %pr %sa6:%sp -> %da6:%dp %flg %tos %pkt %byt %bps %pps %bpp %fl</formatString>
 	</format>
 	<format>
-		<formatName>extra4</formatName>
-		<formatString>%ts %td %pr %sa6:%sp -> %da6:%dp %flg %tos %pkt %byt %bps %pps %bpp %icmptype %sas %das %in %out %fl</formatString>
+		<formatName>extra6</formatName>
+		<formatString>%ts %td %pr %sa6:%sp -> %da6:%dp %flg %tos %pkt %byt %bps %pps %bpp %icmptype %sas %das %in %out %fragid %fl</formatString>
 	</format>
 	<format>
 		<formatName>http</formatName>
@@ -641,6 +870,27 @@
 		<formatName>app</formatName>
 		<formatString>%ts %td %pr %sa4:%sp -> %da4:%dp %flg %pkt %byt %fl %appname %apppid %appuid %appmatch</formatString>
 	</format>
-
+	<format>
+		<formatName>http4-all</formatName>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %httpua %httpm %httpd %httpurl %httpr %httpct %httpst %httphc %httprt %httph %httpp %httpa %httpref %httpc %httpt</formatString>
+	</format>
+	<format>
+		<formatName>http4-invea</formatName>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %httprt %httph %httpp %httpref %httpc %httpt %httpa</formatString>
+	</format>
+	<format>
+		<formatName>dns4</formatName>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %dnsans %dnsrcode %dnsname %dnsqtype %dnsclass %dnsrrttl %dnsrlen %dnsrdata</formatString>
+	</format>
+	<format>
+		<formatName>ihttp4-invea</formatName>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %ihttprt %ihttph %ihttpp %ihttpref %ihttpc %ihttpt %ihttpa</formatString>
+	</format>
 </output>
+<plugins>
+	<plugin>
+		<name>httprt</name>
+		<path>/usr/local/share/fbitdump/plugins/httprt.so</path>
+	</plugin>
+</plugins>
 </configuration>

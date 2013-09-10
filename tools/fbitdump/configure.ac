@@ -40,6 +40,7 @@ AC_PREREQ([2.60])
 
 # Process this file with autoconf to produce a configure script.
 AC_INIT([fbitdump], [0.3.4])
+LT_INIT([dlopen disable-static])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 AC_CONFIG_SRCDIR([src/fbitdump.cpp])
 AC_CONFIG_HEADERS([config.h])
@@ -51,7 +52,7 @@ AC_SUBST(RELEASE)
 : ${CXXFLAGS=""}
 AM_CXXFLAGS="-Wall -O2"
 AC_LANG(C++)
-
+CC="gcc"
 CXX="g++"
 
 # Set user name and email for packaging purposes 
@@ -146,6 +147,7 @@ AC_CHECK_DECL([htobe64], [AC_DEFINE([HAVE_HTOBE64], [1],
 # generate output
 AC_CONFIG_FILES([Makefile
 				src/Makefile
+				src/plugins/Makefile
 				3rdparty/Makefile
 				man/Makefile
 				doc/Makefile
