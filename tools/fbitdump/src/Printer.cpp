@@ -186,37 +186,12 @@ const std::string Printer::printValue(const Column *col, const Cursor *cur) cons
 	}
 
 	std::string valueStr;
-	char * (*f)( const union plugin_arg *);
 	char * buff;
 
 	if (!col->getSemantics().empty() && ( col->getSemantics() != "flows" ) && ( this->conf.plugins.find(col->getSemantics()) != this->conf.plugins.end())) {
-/*		if (col->getSemantics() == "ipv4") {
-			valueStr = printIPv4(val->value[0].uint32);
-		} else if (col->getSemantics() == "tmstmp64") {
-			valueStr = printTimestamp64(val->value[0].uint64);
-		} else if (col->getSemantics() == "tmstmp32") {
-			valueStr = printTimestamp32(val->value[0].uint32);
-		} else if (col->getSemantics() == "ipv6") {
-			valueStr = printIPv6(val->value[0].uint64, val->value[1].uint64);
-		} else if (col->getSemantics() == "protocol") {
-			if (!conf.getPlainNumbers()) {
-				valueStr = protocols[val->value[0].uint8];
-			} else {
-				static std::stringstream ss;
-				ss << (uint16_t) val->value[0].uint8;
-				valueStr = ss.str();
-				ss.str("");
-			}
-		} else if (col->getSemantics() == "tcpflags") {
-			valueStr = printTCPFlags(val->value[0].uint8);
-		} else if (col->getSemantics() == "duration") {
-			valueStr = printDuration(val->value[0].uint64);
-		}*/
-	//	f = col->format;
 		buff = col->format( (const plugin_arg * )val->value, (int) this->conf.getPlainNumbers() );
 		valueStr.append(buff);
 		free( buff );
-
 	} else {
 		valueStr = val->toString(conf.getPlainNumbers());
 		/* when printing statistics, add percent part */
@@ -243,31 +218,7 @@ const std::string Printer::printValue(const Column *col, const Cursor *cur) cons
 /* copy output stream and format */
 Printer::Printer(std::ostream &out, Configuration &conf):
 		out(out), conf(conf), percentageWidth(8)
-{
-/*	if (col->getSemantics() == "ipv4") {
-			valueStr = printIPv4(val->value[0].uint32);
-		} else if (col->getSemantics() == "tmstmp64") {
-			valueStr = printTimestamp64(val->value[0].uint64);
-		} else if (col->getSemantics() == "tmstmp32") {
-			valueStr = printTimestamp32(val->value[0].uint32);
-		} else if (col->getSemantics() == "ipv6") {
-			valueStr = printIPv6(val->value[0].uint64, val->value[1].uint64);
-		} else if (col->getSemantics() == "protocol") {
-			if (!conf.getPlainNumbers()) {
-				valueStr = protocols[val->value[0].uint8];
-			} else {
-				static std::stringstream ss;
-				ss << (uint16_t) val->value[0].uint8;
-				valueStr = ss.str();
-				ss.str("");
-			}
-		} else if (col->getSemantics() == "tcpflags") {
-			valueStr = printTCPFlags(val->value[0].uint8);
-		} else if (col->getSemantics() == "duration") {
-			valueStr = printDuration(val->value[0].uint64);
-		}*/
-	
-}
+{}
 
 
 }
