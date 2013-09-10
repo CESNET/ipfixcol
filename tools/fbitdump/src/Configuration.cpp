@@ -282,7 +282,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	this->parseIndexColumns(indexes);
 	free(indexes);
 
-	this->initModules();
+	this->loadModules();
 
 	/* read filter */
 	if (optind < argc) {
@@ -926,7 +926,7 @@ Resolver *Configuration::getResolver() const
 	return this->resolver;
 }
 
-void Configuration::initModules()
+void Configuration::loadModules()
 {
 	pugi::xpath_node_set nodes = this->getXMLConfiguration().select_nodes("/configuration/plugins/plugin");
 	std::string path;
@@ -963,6 +963,13 @@ void Configuration::initModules()
 	}
 }
 
+void Configuration::unloadModules() {
+	while (!this->plugins_handles.empty()) {
+		dlclose(this->plugins_handles.front());
+		plugins_handles.pop();
+	}
+}
+
 Configuration::~Configuration()
 {
 	/* delete columns */
@@ -970,6 +977,7 @@ Configuration::~Configuration()
 		delete *it;
 	}
 
+	this->unloadModules();
 	delete this->resolver;
 	delete this->orderColumn;
 }

@@ -269,7 +269,8 @@ public:
 	std::map<std::string, char *(*)(const union plugin_arg *, int)> plugins;
 	std::queue<void *> plugins_handles;
 private:
-	void initModules();
+	void loadModules();
+	void unloadModules();
 
     /**
      * \brief Prints help to standard output
