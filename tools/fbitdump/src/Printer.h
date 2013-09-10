@@ -113,7 +113,7 @@ private:
 	 * @param address integer format address
 	 * @return String with printable address
 	 */
-	const std::string printIPv4(uint32_t address) const;
+//	const char * printIPv4(union plugin_arg * val);
 
 	/**
 	 * \brief Print formatted IPv6 address
@@ -122,7 +122,7 @@ private:
 	 * @param part2 second half of ipv6 address
 	 * @return String with printable address
 	 */
-	const std::string printIPv6(uint64_t part1, uint64_t part2) const;
+//	const char * printIPv6(union plugin_arg * val);
 
 	/**
 	 * \brief Print formatted timestamp
@@ -133,7 +133,7 @@ private:
 	 * @param msec miliseconds
 	 * @return String with printable timestamp
 	 */
-	const std::string printTimestamp(struct tm *tm, uint64_t msec) const;
+//	const char * printTimestamp(union plugin_arg * val);
 
 	/**
 	 * \brief Print formatted timestamp from seconds
@@ -141,7 +141,7 @@ private:
 	 * @param timestamp uint32_t number of seconds
 	 * @return String with printable timestamp
 	 */
-	const std::string printTimestamp32(uint32_t timestamp) const;
+//	const char * printTimestamp32(union plugin_arg * val);
 
 	/**
 	 * \brief Print formatted timestamp from miliseconds
@@ -149,7 +149,7 @@ private:
 	 * @param timestamp uint64_t number of miliseconds
 	 * @return String with printable timestamp
 	 */
-	const std::string printTimestamp64(uint64_t timestamp) const;
+//	const char * printTimestamp64(union plugin_arg * val);
 
 	/**
 	 * \brief Print formatted TCP flags
@@ -157,7 +157,7 @@ private:
 	 * @param flags unsigned char value
 	 * @return String with printable flags
 	 */
-	const std::string printTCPFlags(unsigned char flags) const;
+//	const char * printTCPFlags(unsigned char flags);
 
 	/**
 	 * \brief Print duration as decimal number
@@ -165,7 +165,9 @@ private:
 	 * @param duration
 	 * @return String with duration
 	 */
-	const std::string printDuration(uint64_t duration) const;
+//	const char * printDuration(union plugin_arg * val);
+
+//	const char * printProtocol(union plugin_arg * val);
 
 	std::ostream &out; /**< Stream to write to */
 	Configuration &conf; /**< program configuration */

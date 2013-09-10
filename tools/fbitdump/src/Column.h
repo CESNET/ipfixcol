@@ -43,6 +43,7 @@
 #include "typedefs.h"
 #include "Values.h"
 #include "Cursor.h"
+#include "plugins/plugin_header.h"
 
 namespace fbitdump {
 
@@ -183,6 +184,8 @@ public:
 	 * Frees AST
 	 */
 	~Column();
+
+	char * (*format)( const union plugin_arg * val, int);
 
 private:
 

@@ -49,6 +49,8 @@
 #include "Resolver.h"
 #include "Printer.h"
 #include "Utils.h"
+#include "plugins/plugin_header.h"
+#include "DefaultOutput.h"
 
 namespace fbitdump
 {
@@ -184,9 +186,11 @@ const std::string Printer::printValue(const Column *col, const Cursor *cur) cons
 	}
 
 	std::string valueStr;
+	char * (*f)( const union plugin_arg *);
+	char * buff;
 
-	if (!col->getSemantics().empty() && col->getSemantics() != "flows") {
-		if (col->getSemantics() == "ipv4") {
+	if (!col->getSemantics().empty() && ( col->getSemantics() != "flows" ) && ( this->conf.plugins.find(col->getSemantics()) != this->conf.plugins.end())) {
+/*		if (col->getSemantics() == "ipv4") {
 			valueStr = printIPv4(val->value[0].uint32);
 		} else if (col->getSemantics() == "tmstmp64") {
 			valueStr = printTimestamp64(val->value[0].uint64);
@@ -207,7 +211,12 @@ const std::string Printer::printValue(const Column *col, const Cursor *cur) cons
 			valueStr = printTCPFlags(val->value[0].uint8);
 		} else if (col->getSemantics() == "duration") {
 			valueStr = printDuration(val->value[0].uint64);
-		}
+		}*/
+	//	f = col->format;
+		buff = col->format( (const plugin_arg * )val->value, (int) this->conf.getPlainNumbers() );
+		valueStr.append(buff);
+		free( buff );
+
 	} else {
 		valueStr = val->toString(conf.getPlainNumbers());
 		/* when printing statistics, add percent part */
@@ -231,146 +240,34 @@ const std::string Printer::printValue(const Column *col, const Cursor *cur) cons
 
 }
 
-const std::string Printer::printIPv4(uint32_t address) const
-{
-	int ret;
-	Resolver *resolver;
-
-	resolver = this->conf.getResolver();
-
-	/* translate IP address to domain name, if user wishes so */
-	if (resolver != NULL) {
-		std::string host;
-
-		ret = resolver->reverseLookup(address, host);
-		if (ret == true) {
-			return host;
-		}
-
-		/* Error during DNS lookup, print IP address instead */
-	}
-
-	/*
-	 * user don't want to see domain names, or DNS is somehow broken.
-	 * print just IP address
-	 */
-	char buf[INET_ADDRSTRLEN];
-	struct in_addr in_addr;
-
-	in_addr.s_addr = htonl(address);
-	inet_ntop(AF_INET, &in_addr, buf, INET_ADDRSTRLEN);
-
-	/* IP address in printable form */
-	return buf;
-}
-
-const std::string Printer::printIPv6(uint64_t part1, uint64_t part2) const
-{
-	int ret;
-	Resolver *resolver;
-
-	resolver = this->conf.getResolver();
-
-	/* translate IP address to domain name, if user wishes so */
-	if (resolver != NULL) {
-		std::string host;
-
-		ret = resolver->reverseLookup6(part1, part2, host);
-		if (ret == true) {
-			return host;
-		}
-
-		/* Error during DNS lookup, print IP address instead */
-	}
-
-	/*
-	 * user don't want to see domain names, or DNS is somehow broken.
-	 * print just IP address
-	 */
-	char buf[INET6_ADDRSTRLEN];
-	struct in6_addr in6_addr;
-
-	*((uint64_t*) &in6_addr.s6_addr) = htobe64(part1);
-	*(((uint64_t*) &in6_addr.s6_addr)+1) = htobe64(part2);
-	inet_ntop(AF_INET6, &in6_addr, buf, INET6_ADDRSTRLEN);
-
-	return buf;
-}
-
-const std::string Printer::printTimestamp32(uint32_t timestamp) const
-{
-	time_t timesec = timestamp;
-	struct tm *tm = localtime(&timesec);
-
-	return this->printTimestamp(tm, 0);
-}
-
-const std::string Printer::printTimestamp64(uint64_t timestamp) const
-{
-	time_t timesec = timestamp/1000;
-	uint64_t msec = timestamp % 1000;
-	struct tm *tm = localtime(&timesec);
-
-	return this->printTimestamp(tm, msec);
-}
-
-const std::string Printer::printTimestamp(struct tm *tm, uint64_t msec) const
-{
-	char buff[23];
-
-	strftime(buff, sizeof(buff), "%Y-%m-%d %T", tm);
-	/* append miliseconds */
-	sprintf(&buff[19], ".%03u", (unsigned int) msec);
-
-	return buff;
-}
-
-const std::string Printer::printTCPFlags(unsigned char flags) const
-{
-	std::string result = "......";
-
-	if (flags & 0x20) {
-		result[0] = 'U';
-	}
-	if (flags & 0x10) {
-		result[1] = 'A';
-	}
-	if (flags & 0x08) {
-		result[2] = 'P';
-	}
-	if (flags & 0x04) {
-		result[3] = 'R';
-	}
-	if (flags & 0x02) {
-		result[4] = 'S';
-	}
-	if (flags & 0x01) {
-		result[5] = 'F';
-	}
-
-	return result;
-}
-
-const std::string Printer::printDuration(uint64_t duration) const
-{
-	static std::ostringstream ss;
-	static std::string str;
-	ss << std::fixed;
-	ss.precision(3);
-
-	ss << (float) duration/1000;
-
-	str = ss.str();
-	ss.str("");
-
-	return str;
-}
-
 /* copy output stream and format */
 Printer::Printer(std::ostream &out, Configuration &conf):
 		out(out), conf(conf), percentageWidth(8)
-{}
-
+{
+/*	if (col->getSemantics() == "ipv4") {
+			valueStr = printIPv4(val->value[0].uint32);
+		} else if (col->getSemantics() == "tmstmp64") {
+			valueStr = printTimestamp64(val->value[0].uint64);
+		} else if (col->getSemantics() == "tmstmp32") {
+			valueStr = printTimestamp32(val->value[0].uint32);
+		} else if (col->getSemantics() == "ipv6") {
+			valueStr = printIPv6(val->value[0].uint64, val->value[1].uint64);
+		} else if (col->getSemantics() == "protocol") {
+			if (!conf.getPlainNumbers()) {
+				valueStr = protocols[val->value[0].uint8];
+			} else {
+				static std::stringstream ss;
+				ss << (uint16_t) val->value[0].uint8;
+				valueStr = ss.str();
+				ss.str("");
+			}
+		} else if (col->getSemantics() == "tcpflags") {
+			valueStr = printTCPFlags(val->value[0].uint8);
+		} else if (col->getSemantics() == "duration") {
+			valueStr = printDuration(val->value[0].uint64);
+		}*/
+	
+}
 
 
 }

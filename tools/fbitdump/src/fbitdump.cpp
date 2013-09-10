@@ -63,11 +63,13 @@ int main(int argc, char *argv[])
 //	ibis::fileManager::instance().printStatus(std::cout);
 
 	//ibis::gVerbose = 7;
+
+
 	ibis::gParameters().add("fileManager.minMapSize", "50");
 
 	/* create configuration to work with */
 	Configuration conf;
-
+	Configuration::instance = &conf;
 	std::ofstream pipe;
 
 	/* process configuration and check whether to end the program */
@@ -79,6 +81,8 @@ int main(int argc, char *argv[])
 		std::cerr << e.what() << std::endl;
 		return 1;
 	}
+
+	
 
 	try {
 		/* create filter */

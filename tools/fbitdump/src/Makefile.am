@@ -9,6 +9,8 @@ fbitdump_SOURCES = \
 	Configuration.h \
 	Cursor.cpp \
 	Cursor.h \
+	DefaultOutput.cpp \
+	DefaultOutput.h \
 	fbitdump.cpp \
 	Filter.cpp \
 	Filter.h \

@@ -44,8 +44,8 @@
 #include "typedefs.h"
 #include "Column.h"
 #include "Resolver.h"
-
-
+#include <queue>
+#include "plugins/plugin_header.h"
 namespace fbitdump {
 
 /** Acceptable command-line parameters */
@@ -263,7 +263,13 @@ public:
 	 * \ brief For communication with expire daemon
 	 */
 	std::string pipe_name;
+	
+	static Configuration * instance;
+    
+	std::map<std::string, char *(*)(const union plugin_arg *, int)> plugins;
+	std::queue<void *> plugins_handles;
 private:
+	void initModules();
 
     /**
      * \brief Prints help to standard output

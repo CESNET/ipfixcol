@@ -51,8 +51,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <dlfcn.h>
 #include "Utils.h"
-
+#include "DefaultOutput.h"
 
 namespace fbitdump {
 
@@ -70,6 +71,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	std::string optionr;	/* optarg value for option -r */
 	char *indexes = NULL;	/* indexes optarg to be parsed later */
 
+//	Configuration * Configuration::instance;
 
 	if (argc == 1) {
 		help();
@@ -276,6 +278,8 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	this->parseIndexColumns(indexes);
 	free(indexes);
 
+	this->initModules();
+
 	/* read filter */
 	if (optind < argc) {
 		this->filter = argv[optind];
@@ -297,6 +301,14 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		this->filter = "1=1";
 	}
 
+	this->plugins["ipv4"] = printIPv4;
+	this->plugins["ipv6"] = printIPv6;
+	this->plugins["tmstmp64"] = printTimestamp64;
+	this->plugins["tmstmp32"] = printTimestamp32;
+	this->plugins["protocol"] = printProtocol;
+	this->plugins["tcpflags"] = printTCPFlags;
+	this->plugins["duration"] = printDuration;
+
 	/* prepare output format string from configuration file */
 	this->loadOutputFormat();
 
@@ -305,6 +317,11 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 
 	/* search for table parts in specified directories */
 	this->searchForTableParts(tables);
+
+	this->instance = this;
+
+	
+
 
 	return 0;
 }
@@ -408,14 +425,17 @@ void Configuration::parseFormat(std::string format)
 						ok = false;
 						break;
 					}
+
 				} while (false);
 
+				
 				/* use the column only if everything was ok */
 				if (!ok) {
 					delete col;
 					removeNext = true;
 				}
 				else {
+					col->format = this->plugins[col->getSemantics()];
 					this->columns.push_back(col);
 					removeNext = false;
 				}
@@ -429,6 +449,7 @@ void Configuration::parseFormat(std::string format)
 			col = new Column(format.substr(0, matches[0].rm_so));
 			this->columns.push_back(col);
 		}
+		
 	}
 	/* free created regular expression */
 	regfree(&reg);
@@ -890,6 +911,43 @@ Resolver *Configuration::getResolver() const
 	return this->resolver;
 }
 
+void Configuration::initModules()
+{
+	pugi::xpath_node_set nodes = this->getXMLConfiguration().select_nodes("/configuration/plugins/plugin");
+	std::string path;
+	void * handle;
+	char * (*format)(const union plugin_arg *, int);
+
+	for (pugi::xpath_node_set::const_iterator ii = nodes.begin(); ii != nodes.end(); ii++) {
+		pugi::xpath_node node = *ii;
+		if (this->plugins.find(node.node().child_value("name")) != this->plugins.end()) {
+			std::cerr << "Duplicit module names" << node.node().child_value("name") << std::endl;
+			continue;
+		}
+		path = node.node().child_value("path");
+
+		if (access(path.c_str(), X_OK) != 0) {
+			std::cerr << "Cannot access " << path << std::endl;
+		}
+		
+		handle = dlopen(path.c_str(), RTLD_LAZY);
+		if (!handle) {
+			std::cerr << dlerror() << std::endl;
+			continue;
+		}		
+
+		*(void **)(&format) = dlsym( handle, "format" );
+		if( format == NULL ) {
+			std::cerr << "No \"format\" function in plugin " << path << std::endl;
+			dlclose(handle);
+			continue;
+		}
+
+		this->plugins[node.node().child_value("name")] = format;
+		this->plugins_handles.push(handle);
+	}
+}
+
 Configuration::~Configuration()
 {
 	/* delete columns */
@@ -901,4 +959,6 @@ Configuration::~Configuration()
 	delete this->orderColumn;
 }
 
+/* Static variable with Configuration object */
+Configuration * Configuration::instance;
 } /* end of fbitdump namespace */
