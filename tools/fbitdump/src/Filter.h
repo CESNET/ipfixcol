@@ -79,6 +79,8 @@ enum partsType {
 	PT_IPv6_SUB,
 	PT_TIMESTAMP,
 	PT_STRING,
+	PT_HOSTNAME,
+	PT_HOSTNAME6
 };
 
 /* Struct for parsing data from bison parser */
@@ -262,6 +264,7 @@ public:
 	 */
 	std::string parseExpSub(parserStruct *left, parserStruct *right);
 
+	std::string parseExpHost6(parserStruct *left, std::string cmp, parserStruct *right);
 	yyscan_t scaninfo;	/**< lexer context */
 
 	/**
@@ -271,11 +274,6 @@ public:
 	 */
 
 	void parseString(parserStruct *ps, std::string text);
-
-	void parseStringType(parserStruct *ps, std::string type);
-
-	std::string getProtoNum(std::string name);
-	std::string parseFlags(std::string strFlags);
 
 	void setFilterString(std::string newFilter);
 
@@ -301,6 +299,16 @@ private:
 	void parseIPv6(std::string addr, std::string& part1, std::string& part2);
 
 	time_t parseTimestamp(std::string str) const throw (std::invalid_argument);
+
+	void parseStringType(parserStruct *ps, std::string type);
+
+	std::string getProtoNum(std::string name);
+
+	std::string parseFlags(std::string strFlags);
+
+	void parseHostname(parserStruct *ps, uint8_t af_type);
+
+	void parseHostname6(parserStruct *ps);
 
 	Configuration *actualConf; /**< Used configuration for getting column names while parsing filter */
 

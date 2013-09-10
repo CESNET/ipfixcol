@@ -39,6 +39,10 @@
 #include <iostream>
 #include <arpa/inet.h>
 #include <time.h>
+#include <strings.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 #include "Filter.h"
 #include "Configuration.h"
@@ -463,16 +467,23 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 		return "";
 	}
 
+	if (right->type == PT_STRING) {
+		/* If it is string, we need to parse it
+		 * Type may transform from string to number (if coltype is PT_PROTO) - we can't change cmp to LIKE here */
+		this->parseStringType(right, left->colType);
+	}
+
 	switch (right->type) {
 	case PT_IPv4_SUB:
 	case PT_IPv6_SUB:
 		/* If it is IPv4/6 address with subnet, we need to parse it (get minimal and maximal host address) */
 		return this->parseExpSub(left, right);
-		break;
+	case PT_HOSTNAME6:
+		/* If it was IPv6 hostname, we need to combine "and" and "or" operators - parse it somewhere else */
+		return this->parseExpHost6(left, cmp, right);
 	case PT_STRING:
-		/* If it is string, we need to parse it
-		 * Type may transform from string to number (if coltype is PT_PROTO) - we can't change cmp to LIKE here */
-		this->parseStringType(right, left->colType);
+		/* Value is really string, we can change cmp to "LIKE" now */
+		cmp = " LIKE ";
 		break;
 	default:
 		break;
@@ -480,18 +491,13 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 	/* Parser expression "column CMP value" */
 	std::string exp, op;
 
-	/* Value is really string, we can change cmp to "LIKE" now */
-	if (right->type == PT_STRING) {
-		cmp = " LIKE ";
-	}
-
 	if ((left->nParts == 1) && (right->nParts == 1)) {
 		exp += left->parts[0] + " " + cmp + " " + right->parts[0] + " ";
 	} else {
 		exp += "(";
 
 		/* Set operator */
-		if (left->type == PT_GROUP) {
+		if ((left->type == PT_GROUP) || (right->type == PT_HOSTNAME)) {
 			op = "or ";
 		} else {
 			op = "and ";
@@ -528,13 +534,45 @@ std::string Filter::parseExpSub(parserStruct *left, parserStruct *right)
 {
 	int i, rightPos = 0;
 	std::string exp, op;
-	op = "and ";
+
+	/* Openning bracket */
 	exp = "(";
+
+	/* Create expression */
 	for (i = 0; i < left->nParts; i++) {
-		exp += "( " + left->parts[i] + " > " + right->parts[rightPos++] + " ) " + op;
-		exp += "( " + left->parts[i] + " < " + right->parts[rightPos++] + " ) " + op;
+		exp += "( " + left->parts[i] + " > " + right->parts[rightPos++] + " ) and ";
+		exp += "( " + left->parts[i] + " < " + right->parts[rightPos++] + " ) and ";
 	}
-	exp = exp.substr(0, exp.length() - op.length() - 1) + ") ";
+
+	/* Remove last "and" and insert closing bracket */
+	exp = exp.substr(0, exp.length() - 5) + ") ";
+
+	return exp;
+}
+
+std::string Filter::parseExpHost6(parserStruct *left, std::string cmp, parserStruct *right)
+{
+	int i = 0, leftPos = 0;
+	std::string exp;
+
+	/* Openning bracket */
+	exp = "(";
+
+	/* Create expression */
+	while (i < right->nParts) {
+		exp += "( ";
+		exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + " and ";
+		exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + " ) or ";
+
+		/* If all column parts were used, jump to start and use them again */
+		if (leftPos == left->nParts) {
+			leftPos = 0;
+		}
+	}
+
+	/* Remove last "or", insert closing bracket */
+	exp = exp.substr(0, exp.length() - 4) + ") ";
+
 	return exp;
 }
 
@@ -564,6 +602,12 @@ void Filter::parseStringType(parserStruct *ps, std::string type)
 
 		ps->parts[0] = num;
 		ps->type = PT_NUMBER;
+	} else if (type == "ipv4") {
+		this->parseHostname(ps, AF_INET);
+		ps->type = PT_HOSTNAME;
+	} else if (type == "ipv6") {
+		this->parseHostname(ps, AF_INET6);
+		ps->type = PT_HOSTNAME6;
 	} else {
 		/* For all other columns with string value it stays as it is */
 		ps->type = PT_STRING;
@@ -576,7 +620,7 @@ std::string Filter::getProtoNum(std::string name)
 	std::stringstream ss;
 
 	for (i = 0; i < 138; i++) {
-		if (name.compare(protocols[i]) == 0) {
+		if (strcasecmp(name.c_str(), protocols[i]) == 0) {
 			ss << i;
 			return ss.str();
 		}
@@ -629,6 +673,84 @@ std::string Filter::parseFlags(std::string strFlags)
 
 	ss << intFlags;
 	return ss.str();
+
+}
+
+void Filter::parseHostname(parserStruct *ps, uint8_t af_type)
+{
+	int ret;
+	struct addrinfo *result, *tmp;
+	struct addrinfo hints;
+	std::stringstream ss;
+	std::string address, last, last2;
+	void *addr;
+	char ipstr[INET6_ADDRSTRLEN];
+
+	memset(&hints, 0, sizeof(hints));
+
+	/* Set input structure values */
+	hints.ai_family = af_type;
+	hints.ai_protocol = 0;
+
+	/* Get all addresses according to hostname */
+	ret = getaddrinfo(ps->parts[0].c_str(), "domain", &hints, &result);
+
+	if (ret != 0) {
+		std::cerr << "Unable to resolve address '" << ps->parts[0] << "': " << gai_strerror(ret);
+	}
+
+	/* Erase parts */
+	ps->parts.pop_back();
+	ps->nParts = 0;
+
+	/* Iterate through all addresses and save them into parser structure */
+	for (tmp = result; tmp != NULL; tmp = tmp->ai_next) {
+		if (af_type == AF_INET) {
+			/* IPv4 */
+			/* Get numeric address */
+			struct sockaddr_in *ipv4 = (struct sockaddr_in *) tmp->ai_addr;
+			addr = &(ipv4->sin_addr);
+
+			/* Convert it into string and parse it */
+			inet_ntop(tmp->ai_family, addr, ipstr, sizeof(ipstr));
+
+			address = this->parseIPv4(ipstr);
+
+			/* Each address is contained twice (don't know why) - check if previous addr is the same */
+			if (address != last) {
+				/* Save address */
+				ps->parts.push_back(address);
+				ps->nParts++;
+			}
+
+			last = address;
+		} else {
+			/* IPv6 */
+			/* Get numeric address */
+			struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *) tmp->ai_addr;
+			addr = &(ipv6->sin6_addr);
+
+			/* Convert it into string and parse it */
+			inet_ntop(tmp->ai_family, addr, ipstr, sizeof(ipstr));
+
+			std::string part1, part2;
+
+			this->parseIPv6(ipstr, part1, part2);
+
+			if ((part1 != last) || (part2 != last2)) {
+				/* Save address */
+				ps->parts.push_back(part1);
+				ps->parts.push_back(part2);
+				ps->nParts += 2;
+			}
+
+			last = part1;
+			last2 = part2;
+		}
+		tmp = tmp->ai_next;
+	}
+
+	freeaddrinfo(result);
 
 }
 
