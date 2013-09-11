@@ -42,6 +42,8 @@ AC_PREREQ([2.60])
 AC_INIT([fbitdump], [0.3.4])
 LT_INIT([dlopen disable-static])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
+
+AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/fbitdump.cpp])
 AC_CONFIG_HEADERS([config.h])
 
@@ -77,7 +79,7 @@ LBR_CHECK_XSLTPROC
 # Check for standard programs
 AC_PROG_CXX
 AC_PROG_INSTALL
-AC_PROG_RANLIB
+AC_PROG_LIBTOOL
 AC_PROG_AWK
 
 # Check for latest g++ standard
