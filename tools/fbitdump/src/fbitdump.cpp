@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 
 	/* create configuration to work with */
 	Configuration conf;
-	Configuration::instance = &conf;
+//	Configuration::instance = &conf;
 	std::ofstream pipe;
 
 	/* process configuration and check whether to end the program */
@@ -86,16 +86,22 @@ int main(int argc, char *argv[])
 
 	try {
 		/* create filter */
+		std::cout << "Creating filter...                                     \r";
+		std::cout.flush();
 		Filter filter(conf);
 
+		std::cout << "Initializing printer...                                     \r";
+		std::cout.flush();
 		/* initialise printer */
 		Printer print(std::cout, conf);
-
+		std::cout << "Initializing tables...                                     \r";
+		std::cout.flush();
 		/* initialise tables */
 		TableManager tm(conf);
-
 		/* check whether to delete indexes */
 		if (conf.getDeleteIndexes()) {
+			std::cout << "Deleting indexes...                                     \r";
+			std::cout.flush();
 			IndexManager::deleteIndexes(conf, tm);
 			
 			if (access (conf.pipe_name.c_str(), F_OK ) == 0 ) {
@@ -111,6 +117,8 @@ int main(int argc, char *argv[])
 
 		/* check whether to build indexes */
 		if (conf.getCreateIndexes()) {
+			std::cout << "Building indexes...                                     \r";
+			std::cout.flush();
 			IndexManager::createIndexes(conf, tm);
 			if (access (conf.pipe_name.c_str(), F_OK ) == 0 ) {
 				ibis::partList parts = tm.getParts();
@@ -125,6 +133,8 @@ int main(int argc, char *argv[])
 
 		/* check whether to print template information */
 		if (conf.getTemplateInfo()) {
+			std::cout << "Printing templates...                                     \r";
+			std::cout.flush();
 			TemplateInfo::printTemplates(tm, conf);
 		}
 
@@ -132,6 +142,7 @@ int main(int argc, char *argv[])
 		if (!conf.getDeleteIndexes() && !conf.getCreateIndexes() && !conf.getTemplateInfo()) {
 			/* do the work */
 			if (conf.getAggregate()) {
+				std::cout << "agregate" << std::endl;
 				tm.aggregate(conf.getAggregateColumns(), conf.getSummaryColumns(), filter);
 			} else {
 				tm.filter(filter);

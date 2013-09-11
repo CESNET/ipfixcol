@@ -263,11 +263,12 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	}
 
 	/* open XML configuration file */
+	std::cout << "Parsing configuration...                                     \r";
+	std::cout.flush();
 	if (!this->doc.load_file(this->getXmlConfPath())) {
 		std::string err = std::string("XML '") + this->getXmlConfPath() + "' with columns configuration cannot be loaded!";
 		throw std::invalid_argument(err);
 	}
-
 	if (!optionM.empty()) {
 		/* process -M option, this option depends on -r or -R */
 		processMOption(tables, optionM.c_str(), optionr);
@@ -277,13 +278,15 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	if (this->optm) {
 		this->processmOption(optionm);
 	}
-
+	std::cout << "Parsing column indexes...                                     \r";
+	std::cout.flush();
 	/* parse indexes line */
 	this->parseIndexColumns(indexes);
 	free(indexes);
 
+	std::cout << "Loading modules...                                     \r";
+	std::cout.flush();
 	this->loadModules();
-
 	/* read filter */
 	if (optind < argc) {
 		this->filter = argv[optind];
@@ -313,23 +316,25 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	this->plugins["tcpflags"] = printTCPFlags;
 	this->plugins["duration"] = printDuration;
 
+	std::cout << "Preparing output format...                                     \r";
+	std::cout.flush();
 	/* prepare output format string from configuration file */
 	this->loadOutputFormat();
 
 	/* parse output format string */
 	this->parseFormat(this->format);
-
 	if( print_semantics ) {
 		std::cout << "Available semantics: " <<  std::endl;
-		for( auto iter = this->plugins.begin(); iter != this->plugins.end(); ++iter ) {
+		for( std::map<std::string, char *(*)(const union plugin_arg *, int)>::iterator iter = this->plugins.begin(); iter != this->plugins.end(); ++iter ) {
 			std::cout << "\t" << iter->first << std::endl;
 		}
 		return 1;
 	}
 
+	std::cout << "Searching for table parts...                                     \r";
+	std::cout.flush();
 	/* search for table parts in specified directories */
 	this->searchForTableParts(tables);
-
 	this->instance = this;
 
 	
@@ -345,7 +350,6 @@ void Configuration::searchForTableParts(stringVector &tables) throw (std::invali
 	if (tables.size() < 1) {
 		throw std::invalid_argument("Input file(s) must be specified");
 	}
-
 	/* go over all requested directories */
 	for (size_t i = 0; i < tables.size(); i++) {
 		/* check whether it is fastbit part */
@@ -369,12 +373,16 @@ void Configuration::searchForTableParts(stringVector &tables) throw (std::invali
 		while((dent = readdir(d)) != NULL) {
 			/* construct directory path */
 			std::string tablePath = tables[i] + std::string(dent->d_name);
+			
+			
 			if (stat(tablePath.c_str(), &statbuf) == -1) {
 				std::cerr << "Cannot stat " << dent->d_name << std::endl;
 				continue;
 			}
 
 			if (S_ISDIR(statbuf.st_mode) && strcmp(dent->d_name, ".") && strcmp(dent->d_name, "..")) {
+				std::cout << "Searching for table parts in " << tablePath << "                                   \r";
+				std::cout.flush();
 				Utils::sanitizePath(tablePath);
 
 				/* test whether the directory is fastbit part */

@@ -64,6 +64,7 @@ void IndexManager::createIndexes(Configuration &conf, TableManager &tm)
 {
 	ibis::partList parts = tm.getParts();
 	stringSet indexes = conf.getColumnIndexes();
+
 	for (ibis::partList::iterator partIt = parts.begin(); partIt != parts.end(); partIt++) {
 		std::cout << "Building indexes on part " << (*partIt)->currentDataDir() << " ... ";
 		if (indexes.size() == 0) {

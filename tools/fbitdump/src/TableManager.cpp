@@ -135,7 +135,8 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 			iterPos++;
 			continue;
 		}
-
+		std::cout << "#";
+		std::cout.flush();
 		/* add current part */
 		used[iterPos] = true;
 		pList.push_back(parts.at(iterPos));
@@ -215,9 +216,30 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 void TableManager::filter(Filter &filter)
 {
 	Table *table;
-
+	int barWidth = 50;
+	int size = conf.getColumns().size();
+	int i = 0;
+	
 	stringSet columnNames;
+	
+	
 	for (columnVector::const_iterator it = conf.getColumns().begin(); it != conf.getColumns().end(); it++) {
+
+		// print progress bar
+		float progress = ((double)i/size);
+
+		std::cout << "Initializing filter [";
+		int pos = barWidth * progress;
+		for (int x = 0; x < barWidth; ++x) {
+			if (x < pos) std::cout << "=";
+			else if (x == pos) std::cout << ">";
+			else std::cout << " ";
+		}
+		std::cout << "] " << int(progress * 100.0) << " %          \r";
+		std::cout.flush();
+		
+		i++;
+
 		/* don't add flows as count(*) */
 		if (!(*it)->isSeparator() && (*it)->getSemantics() == "flows") {
 			continue;
@@ -226,11 +248,34 @@ void TableManager::filter(Filter &filter)
 		if (tmp.size() > 0) {
 			columnNames.insert(tmp.begin(), tmp.end());
 		}
+
 	}
-
+	std::cout << "Initializing filter [";
+	for (int x = 0; x < barWidth; ++x) {
+		std::cout << "=";
+	}
+	std::cout << "] DONE                                                             " << "\r";
+	//std::cout.flush();
+	
 	/* go over all parts */
-	for (ibis::partList::const_iterator it = this->parts.begin(); it != this->parts.end(); it++) {
 
+	i = 0;
+	size = this->parts.size();
+	for (ibis::partList::const_iterator it = this->parts.begin(); it != this->parts.end(); it++) {
+		float progress = ((double)i/size);
+
+		std::cout << "Applying filter     [";
+		int pos = barWidth * progress;
+		for (int x = 0; x < barWidth; ++x) {
+			if (x < pos) std::cout << "=";
+			else if (x == pos) std::cout << ">";
+			else std::cout << " ";
+		}
+		std::cout << "] " << int(progress * 100.0) << " %          \r";
+		std::cout.flush();
+
+		i++;
+		
 		/* create table for each part */
 		table = new Table(*it);
 
@@ -243,6 +288,12 @@ void TableManager::filter(Filter &filter)
 		std::cerr << "Created new table, MB in use: " << ibis::fileManager::bytesInUse()/1000000 << std::endl;
 #endif
 	}
+	std::cout << "Applying filter     [";
+	for (int x = 0; x < barWidth; ++x) {
+		std::cout << "=";
+	}
+	std::cout << "] DONE                                                             " << "\r";
+	std::cout.flush();
 }
 
 TableManagerCursor *TableManager::createCursor()
@@ -286,9 +337,11 @@ TableManager::TableManager(Configuration &conf): conf(conf), tableSummary(NULL)
 {
 	std::string tmp;
 	ibis::part *part;
-
+	size_t size = this->conf.getPartsNames().size();
+	int barWidth = 50;
 	/* open configured parts */
 	for (size_t i = 0; i < this->conf.getPartsNames().size(); i++) {
+		
 		tmp = this->conf.getPartsNames()[i];
 #ifdef DEBUG
 		std::cerr << "Loading table part from: " << tmp << std::endl;
@@ -297,13 +350,35 @@ TableManager::TableManager(Configuration &conf): conf(conf), tableSummary(NULL)
 		if (part != NULL) {
 			this->parts.push_back(part);
 
+			// print progress bar
+			float progress = ((double)i/size);
+			
+			std::cout << "Initializing tables [";
+			int pos = barWidth * progress;
+			for (int x = 0; x < barWidth; ++x) {
+				if (x < pos) std::cout << "=";
+				else if (x == pos) std::cout << ">";
+				else std::cout << " ";
+			}
+			std::cout << "] " << int(progress * 100.0) << " % " << tmp.c_str() << "       \r";
+			std::cout.flush();
+
+			
+
 			/* clear reference for next loop */
 			part = NULL;
 		} else {
 			std::cerr << "Cannot open table part: " << tmp << std::endl;
 		}
-	}
 
+		
+	}
+	std::cout << "Initializing tables [";
+	for (int x = 0; x < barWidth; ++x) {
+		std::cout << "=";
+	}
+	std::cout << "] DONE                                                             " << "\r";
+	std::cout.flush();
 	/* create order by string list if necessary */
 	if (conf.getOptionm()) {
 		this->orderColumns = conf.getOrderByColumn()->getColumns();
