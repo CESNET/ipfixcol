@@ -57,12 +57,12 @@ namespace fbitdump
 void Filter::error(const parser::location& loc, const std::string& msg)
 {
 	//std::cerr << "error at " << loc << ": " << s << std::endl;
-	std::cerr << loc << ": " << msg << std::endl;
+//	std::cerr << loc << ": " << msg << std::endl;
 }
 
 void Filter::error (const std::string& msg)
 {
-	std::cerr << msg << std::endl;
+//	std::cerr << msg << std::endl;
 }
 
 
@@ -113,8 +113,7 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 
 		/* run run parser */
 		if (parser.parse() != 0) {
-			std::cerr << "Error while parsing filter, using default \"1 = 1\"\n";
-			this->filterString = "1 = 1";
+			throw std::invalid_argument(std::string("Error while parsing filter!"));
 		}
 
 		yy_flush_buffer(bp, this->scaninfo);
@@ -124,7 +123,7 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		yylex_destroy(this->scaninfo);
 	}
 
-	std::cout << "\nFilter: " << this->filterString << std::endl;
+//	std::cout << "\nFilter: " << this->filterString << std::endl;
 
 #ifdef DEBUG
 	std::cerr << "Using filter: '" << filter << "'" << std::endl;

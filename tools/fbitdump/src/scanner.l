@@ -66,7 +66,7 @@ _OPERATOR AND|OR|and|or
 _BITOPERATOR &|"|"
 _BRACKET "("|")"
 _WHITESPACE " "+|\t+
-_STRING [^ ]+
+_STRING [^ =><!]+|!
 %%
 
 %{
