@@ -65,22 +65,6 @@
 
 namespace fbitdump {
 
-/* this is needed for the lexer: new yylex function prototype */
-#define YY_DECL int yylex(std::string &arg)
-
-enum yytokentype
-{
-	COLUMN = 258,
-	NUMBER = 259,
-	CMP = 260,
-	RAWCOLUMN = 261,
-	OPERATOR = 262,
-	IPv4 = 263,
-	BRACKET = 264,
-	TIMESTAMP = 265,
-	OTHER = 300
-};
-
 typedef std::vector<std::string> stringVector;
 typedef std::set<std::string> stringSet;
 typedef std::map<std::string, int> namesColumnsMap;

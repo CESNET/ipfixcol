@@ -37,26 +37,58 @@
  *
  */
 %{
-#include "typedefs.h"
-%}
- 
-%option noyywrap nounput
-/*nodefault*/
+#include <iostream>
+#include <string>
+#include "Filter.h"
+#include "parser.h"
 
+/* this is called on every action - updates location */
+#define YY_USER_ACTION yylloc->columns(yyleng);
+
+/* typedef to simplify token usage */
+typedef parser::Parser::token token;
+%}
+
+/* do not use yywrap, unput, default functions. make lexer reentrant */
+%option noyywrap nounput nodefault reentrant
+
+/* regexp aliases */
+_COLUMN %[a-zA-Z0-9]+
+_RAWCOLUMN e[0-9]+id[0-9]+(p[0-9]+)?
+_NUMBER [0-9]+[kKmMgGtT]{0,1}
+_IPv4 (25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}
+_IPv4_SUB (25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}\/(3[0-2]|[1-2][0-9]|[1-9])
+_IPv6 ((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?
+_IPv6_SUB ((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\/(12[0-8]|1[0-1][0-9]|[1-9][0-9]|[1-9])
+_TIMESTAMP [0-9]{4}"/"[0-9]{2}"/"[0-9]{2}\.[0-9]{2}:[0-9]{2}:[0-9]{2}
+_CMP ">"|"<"|"="|"=="|"=>"|"<="|">="|"=>"|"!="
+_OPERATOR AND|OR|and|or
+_BITOPERATOR &|"|"
+_BRACKET "("|")"
+_WHITESPACE " "+|\t+
+_STRING [^ =><!]+|!
 %%
 
-%[a-zA-Z0-9]+		{ arg = yytext; return fbitdump::COLUMN; }
-e[0-9]+id[0-9]+(p[0-9]+)?		{ arg = yytext; return fbitdump::RAWCOLUMN; }
-" "+|\t+|\n+		{/* ignore spaces and newlines */}
-[0-9]+[kKmMgGtT]{0,1}	{ arg = yytext; return fbitdump::NUMBER; }
-[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}	{ arg = yytext; return fbitdump::IPv4; }
-[0-9]{4}"/"[0-9]{2}"/"[0-9]{2}\.[0-9]{2}:[0-9]{2}:[0-9]{2}	{ arg = yytext; return fbitdump::TIMESTAMP; }
-">"|"<"|"="|"==" |
-"=>"|"<="|">=" | 
-"=>"|"!="			{ arg = yytext; return fbitdump::CMP; }
-AND|OR|and|or|&|"|"	{ arg = yytext; return fbitdump::OPERATOR; }
-"("|")"				{ arg = yytext; return fbitdump::BRACKET; }
-.					{ arg = yytext; return fbitdump::OTHER; }
+%{
+    /* initialise locations */
+    yylloc->step();
+%}
+
+{_COLUMN}       { yylval->s = new std::string(yytext); return token::COLUMN; }
+{_RAWCOLUMN}    { yylval->s = new std::string(yytext); return token::RAWCOLUMN; }
+{_WHITESPACE} 	{ yylloc->step(); /* update location even when skipping the input */ }
+\n+             { yylloc->lines(yyleng); /* update location on newline */ }
+{_NUMBER} 	    { yylval->s = new std::string(yytext); return token::NUMBER; }
+{_IPv4}         { yylval->s = new std::string(yytext); return token::IPv4; }
+{_IPv4_SUB}     { yylval->s = new std::string(yytext); return token::IPv4_SUB; }
+{_IPv6}         { yylval->s = new std::string(yytext); return token::IPv6; }
+{_IPv6_SUB}     { yylval->s = new std::string(yytext); return token::IPv6_SUB; }
+{_TIMESTAMP}    { yylval->s = new std::string(yytext); return token::TIMESTAMP; }
+{_CMP}          { yylval->s = new std::string(yytext); return token::CMP; }
+{_OPERATOR}   	{ yylval->s = new std::string(yytext); return token::OPERATOR; }
+{_BITOPERATOR} 	{ yylval->s = new std::string(yytext); return token::BITOPERATOR; }
+{_BRACKET}		{ return yytext[0]; }
+{_STRING}		{ yylval->s = new std::string(yytext); return token::STRING; }
 
 %%
  
