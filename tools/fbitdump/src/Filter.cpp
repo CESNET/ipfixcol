@@ -141,10 +141,10 @@ time_t Filter::parseTimestamp(std::string str) const throw (std::invalid_argumen
 	return mktime(&ctime);
 }
 
-void Filter::parseTimestamp(parserStruct *ps, std::string timestamp)
+void Filter::parseTimestamp(parserStruct *ps, std::string timestamp) const throw (std::invalid_argument)
 {
 	if (ps == NULL) {
-		return;
+		throw std::invalid_argument(std::string("Cannot parse timestamp '") + timestamp + "'");
 	}
 	std::ostringstream ss;
 
@@ -161,7 +161,7 @@ void Filter::parseTimestamp(parserStruct *ps, std::string timestamp)
 }
 
 /* private */
-std::string Filter::parseIPv4(std::string addr)
+std::string Filter::parseIPv4(std::string addr) const
 {
 	uint32_t address;
 	std::stringstream ss;
@@ -175,10 +175,10 @@ std::string Filter::parseIPv4(std::string addr)
 	return ss.str();
 }
 
-void Filter::parseIPv4(parserStruct *ps, std::string addr)
+void Filter::parseIPv4(parserStruct *ps, std::string addr) const throw (std::invalid_argument)
 {
 	if (ps == NULL) {
-		return;
+		throw std::invalid_argument(std::string("Cannot parse IPv4 address, NULL parser structure"));
 	}
 
 	/* Set right values of parser structure */
@@ -187,8 +187,12 @@ void Filter::parseIPv4(parserStruct *ps, std::string addr)
 	ps->parts.push_back(parseIPv4(addr));
 }
 
-void Filter::parseIPv4Sub(parserStruct *ps, std::string addr)
+void Filter::parseIPv4Sub(parserStruct *ps, std::string addr) const throw (std::invalid_argument)
 {
+	if (ps == NULL) {
+		throw std::invalid_argument(std::string("Cannot parse IPv4 address (with subnet), NULL parser structure"));
+	}
+
 	uint8_t subnetPos;
 	uint16_t subnet;
 	uint32_t min, max, addrInt;
@@ -225,7 +229,7 @@ void Filter::parseIPv4Sub(parserStruct *ps, std::string addr)
 }
 
 /* private */
-void Filter::parseIPv6(std::string addr, std::string& part1, std::string& part2)
+void Filter::parseIPv6(std::string addr, std::string& part1, std::string& part2) const
 {
 	uint64_t address[2];
 	std::stringstream ss;
@@ -247,11 +251,12 @@ void Filter::parseIPv6(std::string addr, std::string& part1, std::string& part2)
 	part2 = ss.str();
 }
 
-void Filter::parseIPv6(parserStruct *ps, std::string addr)
+void Filter::parseIPv6(parserStruct *ps, std::string addr) const throw (std::invalid_argument)
 {
 	if (ps == NULL) {
-
+		throw std::invalid_argument(std::string("Cannot parse IPv6 address, NULL parser structure"));
 	}
+
 	std::string part1, part2;
 
 	/* Parse IPv6 address */
@@ -265,8 +270,12 @@ void Filter::parseIPv6(parserStruct *ps, std::string addr)
 	ps->nParts = 2;
 }
 
-void Filter::parseIPv6Sub(parserStruct *ps, std::string addr)
+void Filter::parseIPv6Sub(parserStruct *ps, std::string addr) const throw (std::invalid_argument)
 {
+	if (ps == NULL) {
+		throw std::invalid_argument(std::string("Cannot parse IPv6 address (with subnet), NULL parser structure"));
+	}
+
 	uint8_t subnetPos, i;
 	uint16_t subnet;
 	uint64_t min[2], max[2], subnetIP[2];
@@ -314,10 +323,10 @@ void Filter::parseIPv6Sub(parserStruct *ps, std::string addr)
 	ps->type = PT_IPv6_SUB;
 }
 
-void Filter::parseNumber(parserStruct *ps, std::string number)
+void Filter::parseNumber(parserStruct *ps, std::string number) const throw (std::invalid_argument)
 {
 	if (ps == NULL) {
-		return;
+		throw std::invalid_argument(std::string("Cannot parse number, NULL parser structure"));
 	}
 
 	/* If there is some suffix (kKmMgG) convert it into number */
@@ -348,7 +357,7 @@ void Filter::parseNumber(parserStruct *ps, std::string number)
 	ps->parts.push_back(number);
 }
 
-bool Filter::parseColumnGroup(parserStruct *ps, std::string alias, bool aggeregate)
+bool Filter::parseColumnGroup(parserStruct *ps, std::string alias, bool aggeregate) const
 {
 	if (ps == NULL) {
 		return false;
@@ -380,10 +389,10 @@ bool Filter::parseColumnGroup(parserStruct *ps, std::string alias, bool aggerega
 	return true;
 }
 
-void Filter::parseColumn(parserStruct *ps, std::string alias)
+void Filter::parseColumn(parserStruct *ps, std::string alias) const throw (std::invalid_argument)
 {
 	if (ps == NULL) {
-		return;
+		throw std::invalid_argument(std::string("Cannot parse column, NULL parser structure"));
 	}
 
 	/* Get right column (find entered alias in xml file) */
@@ -422,20 +431,20 @@ void Filter::parseColumn(parserStruct *ps, std::string alias)
 	ps->type = PT_COLUMN;
 }
 
-void Filter::parseRawcolumn(parserStruct *ps, std::string colname)
+void Filter::parseRawcolumn(parserStruct *ps, std::string colname) const throw (std::invalid_argument)
 {
 	if (ps == NULL) {
-		return;
+		throw std::invalid_argument(std::string("Cannot parse raw column, NULL parser structure"));
 	}
 	ps->nParts = 1;
 	ps->type = PT_RAWCOLUMN;
 	ps->parts.push_back(colname);
 }
 
-void Filter::parseBitColVal(parserStruct *ps, parserStruct *left, std::string op, parserStruct *right)
+void Filter::parseBitColVal(parserStruct *ps, parserStruct *left, std::string op, parserStruct *right) const throw (std::invalid_argument)
 {
 	if ((ps == NULL) || (left == NULL) || (right == NULL)) {
-		return;
+		throw std::invalid_argument(std::string("Cannot parse column with bit operator, NULL parser structure"));
 	}
 	/* Parse expression "column BITOPERATOR value" */
 
@@ -460,10 +469,10 @@ void Filter::parseBitColVal(parserStruct *ps, parserStruct *left, std::string op
 	ps->type = PT_BITCOLVAL;
 }
 
-std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *right)
+std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *right) const throw (std::invalid_argument)
 {
 	if ((left == NULL) || (right == NULL)) {
-		return "";
+		throw std::invalid_argument(std::string("Cannot parse expression, NULL parser structure"));
 	}
 
 	if (right->type == PT_STRING) {
@@ -524,13 +533,17 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 	return exp;
 }
 
-std::string Filter::parseExp(parserStruct *left, parserStruct *right)
+std::string Filter::parseExp(parserStruct *left, parserStruct *right) const
 {
 	return this->parseExp(left, " = ", right);
 }
 
-std::string Filter::parseExpSub(parserStruct *left, parserStruct *right)
+std::string Filter::parseExpSub(parserStruct *left, parserStruct *right) const throw (std::invalid_argument)
 {
+	if (left == NULL || right == NULL) {
+		throw std::invalid_argument(std::string("Cannot parse expression with subnet, NULL parser structure"));
+	}
+
 	int i, rightPos = 0;
 	std::string exp, op;
 
@@ -549,8 +562,12 @@ std::string Filter::parseExpSub(parserStruct *left, parserStruct *right)
 	return exp;
 }
 
-std::string Filter::parseExpHost6(parserStruct *left, std::string cmp, parserStruct *right)
+std::string Filter::parseExpHost6(parserStruct *left, std::string cmp, parserStruct *right) const throw (std::invalid_argument)
 {
+	if (left == NULL || right == NULL) {
+		throw std::invalid_argument(std::string("Cannot parse hostname (IPv6) expression, NULL parser structure"));
+	}
+
 	int i = 0, leftPos = 0;
 	std::string exp;
 
@@ -575,16 +592,24 @@ std::string Filter::parseExpHost6(parserStruct *left, std::string cmp, parserStr
 	return exp;
 }
 
-void Filter::parseString(parserStruct *ps, std::string text)
+void Filter::parseString(parserStruct *ps, std::string text) const throw (std::invalid_argument)
 {
+	if (ps == NULL) {
+		throw std::invalid_argument(std::string("Cannot parse string, NULL parser structure"));
+	}
 	ps->nParts = 1;
 	ps->type = PT_STRING;
 	ps->parts.push_back(text);
 }
 
-void Filter::parseStringType(parserStruct *ps, std::string type)
+void Filter::parseStringType(parserStruct *ps, std::string type) const throw (std::invalid_argument)
 {
+	if (ps == NULL) {
+		throw std::invalid_argument(std::string("Cannot parse string by type, NULL parser structure"));
+	}
+
 	std::string num;
+
 	if (type.empty()) {
 		return;
 	} else if (type == "protocol") {
@@ -613,7 +638,7 @@ void Filter::parseStringType(parserStruct *ps, std::string type)
 	}
 }
 
-std::string Filter::getProtoNum(std::string name)
+std::string Filter::getProtoNum(std::string name) const
 {
 	int i;
 	std::stringstream ss;
@@ -627,7 +652,7 @@ std::string Filter::getProtoNum(std::string name)
 	return "";
 }
 
-std::string Filter::parseFlags(std::string strFlags)
+std::string Filter::parseFlags(std::string strFlags) const
 {
 	uint16_t i, intFlags;
 	std::stringstream ss;
@@ -675,8 +700,12 @@ std::string Filter::parseFlags(std::string strFlags)
 
 }
 
-void Filter::parseHostname(parserStruct *ps, uint8_t af_type)
+void Filter::parseHostname(parserStruct *ps, uint8_t af_type) const throw (std::invalid_argument)
 {
+	if (ps == NULL) {
+		throw std::invalid_argument(std::string("Cannot parse hostname, NULL parser structure"));
+	}
+
 	int ret;
 	struct addrinfo *result, *tmp;
 	struct addrinfo hints;
@@ -695,7 +724,7 @@ void Filter::parseHostname(parserStruct *ps, uint8_t af_type)
 	ret = getaddrinfo(ps->parts[0].c_str(), "domain", &hints, &result);
 
 	if (ret != 0) {
-		std::cerr << "Unable to resolve address '" << ps->parts[0] << "': " << gai_strerror(ret);
+		throw std::invalid_argument(std::string("Unable to resolve address " + ps->parts[0]));
 	}
 
 	/* Erase parts */
@@ -748,9 +777,7 @@ void Filter::parseHostname(parserStruct *ps, uint8_t af_type)
 		}
 		tmp = tmp->ai_next;
 	}
-
 	freeaddrinfo(result);
-
 }
 
 Filter::Filter(Configuration &conf) throw (std::invalid_argument)
