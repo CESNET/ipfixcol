@@ -333,7 +333,7 @@
 		<width>11</width>
 		<default-value>-</default-value>
 		<value type="plain">
-			<element semantics="httprt">e16982id101</element>
+			<element>e16982id101</element>
 		</value>
 	</column>
 	<column>
@@ -780,6 +780,106 @@
 			<element>e8057id7</element>
 		</value>
 	</column>
+	
+	<column>
+		<name>TCP RTT</name>
+		<alias>%tcprtt</alias>
+		<width>7</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id600</element>
+		</value>
+	</column>
+	<column>
+		<name>TCP SRT</name>
+		<alias>%tcpsrt</alias>
+		<width>7</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id601</element>
+		</value>
+	</column>
+	<column>
+		<name>TCP CRT</name>
+		<alias>%tcpcrt</alias>
+		<width>7</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id602</element>
+		</value>
+	</column>
+	<column>
+		<name>Jitter dev</name>
+		<alias>%jitterdev</alias>
+		<width>10</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id603</element>
+		</value>
+	</column>
+	<column>
+		<name>Jitter avg</name>
+		<alias>%jitteravg</alias>
+		<width>10</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id604</element>
+		</value>
+	</column>
+	<column>
+		<name>Jitter min</name>
+		<alias>%jittermin</alias>
+		<width>10</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id605</element>
+		</value>
+	</column>
+	<column>
+		<name>Jitter max</name>
+		<alias>%jittermax</alias>
+		<width>10</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id606</element>
+		</value>
+	</column>
+	<column>
+		<name>Delay dev</name>
+		<alias>%delaydev</alias>
+		<width>9</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id607</element>
+		</value>
+	</column>
+	<column>
+		<name>Delay avg</name>
+		<alias>%delayavg</alias>
+		<width>9</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id608</element>
+		</value>
+	</column>
+	<column>
+		<name>Delay min</name>
+		<alias>%delaymin</alias>
+		<width>9</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id609</element>
+		</value>
+	</column>
+	<column>
+		<name>Delay max</name>
+		<alias>%delaymax</alias>
+		<width>9</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id610</element>
+		</value>
+	</column>
 
 </columns>
 
@@ -897,6 +997,11 @@
 		<formatName>ihttp4-invea</formatName>
 		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %ihttprt %ihttph %ihttpp %ihttpref %ihttpc %ihttpt %ihttpa</formatString>
 	</format>
+	<format>
+		<formatName>perf</formatName>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %tcprtt %tcpsrt %tcpcrt %jitterdev %jitteravg %jittermin %jittermax %delaydev %delayavg %delaymin %delaymax</formatString>
+	</format>
+
 </output>
 <plugins>
 	<plugin>
