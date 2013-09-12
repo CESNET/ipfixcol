@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	
+
 
 	try {
 		/* create filter */
@@ -103,13 +103,13 @@ int main(int argc, char *argv[])
 			std::cout << "Deleting indexes...                                     \r";
 			std::cout.flush();
 			IndexManager::deleteIndexes(conf, tm);
-			
+
 			if (access (conf.pipe_name.c_str(), F_OK ) == 0 ) {
 				ibis::partList parts = tm.getParts();
 				pipe.open( conf.pipe_name.c_str() );
 
 				for (ibis::partList::iterator partIt = parts.begin(); partIt != parts.end(); partIt++) {
-					pipe << (*partIt)->currentDataDir() << "\n";		
+					pipe << (*partIt)->currentDataDir() << "\n";
 				}
 				pipe.close();
 			}
@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
 				pipe.open( conf.pipe_name.c_str() );
 
 				for (ibis::partList::iterator partIt = parts.begin(); partIt != parts.end(); partIt++) {
-					pipe << (*partIt)->currentDataDir() << "\n";		
+					pipe << (*partIt)->currentDataDir() << "\n";
 				}
 				pipe.close();
 			}
@@ -142,7 +142,8 @@ int main(int argc, char *argv[])
 		if (!conf.getDeleteIndexes() && !conf.getCreateIndexes() && !conf.getTemplateInfo()) {
 			/* do the work */
 			if (conf.getAggregate()) {
-				std::cout << "agregate" << std::endl;
+				std::cout << "Aggregating tables...                                                                    \r";
+				std::cout.flush();
 				tm.aggregate(conf.getAggregateColumns(), conf.getSummaryColumns(), filter);
 			} else {
 				tm.filter(filter);

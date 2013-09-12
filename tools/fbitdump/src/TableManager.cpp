@@ -135,8 +135,7 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 			iterPos++;
 			continue;
 		}
-		std::cout << "#";
-		std::cout.flush();
+
 		/* add current part */
 		used[iterPos] = true;
 		pList.push_back(parts.at(iterPos));

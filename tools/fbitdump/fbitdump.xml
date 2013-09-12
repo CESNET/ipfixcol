@@ -619,10 +619,10 @@
 	<column>
 		<name>HTTP Code</name>
 		<alias>%ihttpc</alias>
-		<width>9</width>
+		<width>15</width>
 		<default-value>-</default-value>
 		<value type="plain">
-			<element>e39499id12</element>
+			<element semantics="http_status_code">e39499id12</element>
 		</value>
 	</column>
 	<column>
@@ -641,7 +641,7 @@
 		<width>7</width>
 		<default-value>-</default-value>
 		<value type="plain">
-			<element>e39499id4</element>
+			<element semantics="httprt">e39499id4</element>
 		</value>
 	</column>
 	<column>
@@ -693,10 +693,10 @@
 	<column>
 		<name>HTTP Code</name>
 		<alias>%httpc</alias>
-		<width>9</width>
+		<width>15</width>
 		<default-value>-</default-value>
 		<value type="plain">
-			<element>e16982id506</element>
+			<element semantics="http_status_code">e16982id506</element>
 		</value>
 	</column>
 	<column>
@@ -780,7 +780,7 @@
 			<element>e8057id7</element>
 		</value>
 	</column>
-	
+
 	<column>
 		<name>TCP RTT</name>
 		<alias>%tcprtt</alias>
@@ -893,7 +893,7 @@
 		</members>
 	</group>
 </groups>
-			
+
 <!-- summary section contain aliases of columns that can be used for statistics summary, i.e. totals
 	only plain columns can be used -->
 <summary>
@@ -1007,6 +1007,10 @@
 	<plugin>
 		<name>httprt</name>
 		<path>/usr/share/fbitdump/plugins/httprt.so</path>
+	</plugin>
+	<plugin>
+		<name>http_status_code</name>
+		<path>/usr/share/fbitdump/plugins/http_status_code.so</path>
 	</plugin>
 </plugins>
 </configuration>
