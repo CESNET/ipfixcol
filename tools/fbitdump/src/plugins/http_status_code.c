@@ -132,7 +132,7 @@ char *format( const union plugin_arg * arg, int plain_numbers ) {
 			str = "505 HTTP Version Not Supported";
 			break;
 		default:
-			snprintf(num, sizeof(num), "%i", arg[0].uint32);
+			snprintf(num, sizeof(num), "%u", arg[0].uint32);
 			str = num;
 			break;
 	}
