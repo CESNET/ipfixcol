@@ -1006,7 +1006,7 @@
 <plugins>
 	<plugin>
 		<name>httprt</name>
-		<path>/usr/local/share/fbitdump/plugins/httprt.so</path>
+		<path>/usr/share/fbitdump/plugins/httprt.so</path>
 	</plugin>
 </plugins>
 </configuration>
