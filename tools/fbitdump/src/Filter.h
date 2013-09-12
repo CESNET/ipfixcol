@@ -152,7 +152,7 @@ public:
 	 * @param ps Parser structure with information needed for creating expressions
 	 * @param number
 	 */
-	void parseNumber(parserStruct *ps, std::string number);
+	void parseNumber(parserStruct *ps, std::string number) const throw (std::invalid_argument);
 
 	/**
 	 * \brief Parses IPv4 address
@@ -162,7 +162,7 @@ public:
 	 * @param ps Parser structure
 	 * @param addr Address in text format
 	 */
-	void parseIPv4(parserStruct *ps, std::string addr);
+	void parseIPv4(parserStruct *ps, std::string addr) const throw (std::invalid_argument);
 
 	/**
 	 * \brief Parses IPv4 address and its subnet mask
@@ -170,7 +170,7 @@ public:
 	 * @param ps Parser structure
 	 * @param addr Address in text format
 	 */
-	void parseIPv4Sub(parserStruct *ps, std::string addr);
+	void parseIPv4Sub(parserStruct *ps, std::string addr) const throw (std::invalid_argument);
 
 	/**
 	 * \brief Parses IPv6 address
@@ -180,7 +180,7 @@ public:
 	 * @param ps Parser structure
 	 * @param addr Address in text format
 	 */
-	void parseIPv6(parserStruct *ps, std::string addr);
+	void parseIPv6(parserStruct *ps, std::string addr) const throw (std::invalid_argument);
 
 	/**
 	 * \brief Parses IPv6 address and its subnet mask
@@ -188,7 +188,7 @@ public:
 	 * @param ps Parser structure
 	 * @param addr Address in text format
 	 */
-	void parseIPv6Sub(parserStruct *ps, std::string addr);
+	void parseIPv6Sub(parserStruct *ps, std::string addr) const throw (std::invalid_argument);
 
 	/**
 	 * \brief Parses timestamp in format %Y/%m/%d.%H:%M:%S
@@ -196,7 +196,7 @@ public:
 	 * @param ps Parser structure
 	 * @param timestamp
 	 */
-	void parseTimestamp(parserStruct *ps, std::string timesamp);
+	void parseTimestamp(parserStruct *ps, std::string timesamp) const throw (std::invalid_argument);
 
 	/**
 	 * \brief Parses column
@@ -206,7 +206,7 @@ public:
 	 * @param ps Parser structure
 	 * @param alias Column alias
 	 */
-	void parseColumn(parserStruct *ps, std::string alias);
+	void parseColumn(parserStruct *ps, std::string alias) const throw (std::invalid_argument);
 
 	/**
 	 * \brief Parses column group
@@ -218,14 +218,14 @@ public:
 	 * @bool aggregate Aggregation option
 	 * @return True when succesful
 	 */
-	bool parseColumnGroup(parserStruct *ps, std::string alias, bool aggeregate);
+	bool parseColumnGroup(parserStruct *ps, std::string alias, bool aggeregate) const;
 	/**
 	 * \brief Only fills parser structure with column name
 	 *
 	 * @param ps Parser structure
 	 * @param strcol Column name
 	 */
-	void parseRawcolumn(parserStruct *ps, std::string strcol);
+	void parseRawcolumn(parserStruct *ps, std::string strcol) const throw (std::invalid_argument);
 
 	/**
 	 * \brief Parses expression "column BITOPERATOR value" into parser structure
@@ -235,7 +235,7 @@ public:
 	 * @param right Input parser structure
 	 * @param op Operator
 	 */
-	void parseBitColVal(parserStruct *ps, parserStruct *left, std::string op, parserStruct *right);
+	void parseBitColVal(parserStruct *ps, parserStruct *left, std::string op, parserStruct *right) const throw (std::invalid_argument);
 
 	/**
 	 * \brief Parses final expression "column CMP value" into string
@@ -245,7 +245,7 @@ public:
 	 * @param cmp Comparison
 	 * @return Filter text in string form
 	 */
-	std::string parseExp(parserStruct *left, std::string cmp, parserStruct *right);
+	std::string parseExp(parserStruct *left, std::string cmp, parserStruct *right) const throw (std::invalid_argument);
 
 	/**
 	 * \brief Adds comparison and calls parseExp(left, cmp, right)
@@ -254,7 +254,7 @@ public:
 	 * @param right Input parser structure
 	 * @return Filter text in string form
 	 */
-	std::string parseExp(parserStruct *left, parserStruct *right);
+	std::string parseExp(parserStruct *left, parserStruct *right) const;
 
 	/**
 	 * \brief Parses final expression "column value" when IP with subnet is given
@@ -262,19 +262,32 @@ public:
 	 * @param left Input parser structure
 	 * @param right Input parser structure
 	 */
-	std::string parseExpSub(parserStruct *left, parserStruct *right);
+	std::string parseExpSub(parserStruct *left, parserStruct *right) const throw (std::invalid_argument);
 
-	std::string parseExpHost6(parserStruct *left, std::string cmp, parserStruct *right);
+	/**
+	 * \brief Parses final expression when IPv6 is given as hostname
+	 *
+	 * @param left Input parser structure
+	 * @param right Input parser structure
+	 * @param cmp comparison
+	 */
+	std::string parseExpHost6(parserStruct *left, std::string cmp, parserStruct *right) const throw (std::invalid_argument);
+
 	yyscan_t scaninfo;	/**< lexer context */
+
+	/**
+	 * \brief Parses string (only fills parser structure)
+	 *
+	 * @param ps Parser structure
+	 * @param text String from parser
+	 */
+	void parseString(parserStruct *ps, std::string text) const throw (std::invalid_argument);
 
 	/**
 	 * \brief Sets new filter string
 	 *
 	 * @param newFilter New filter string
 	 */
-
-	void parseString(parserStruct *ps, std::string text);
-
 	void setFilterString(std::string newFilter);
 
 private:
@@ -288,27 +301,61 @@ private:
 	void init(Configuration &conf) throw (std::invalid_argument);
 
 	/**
+	 * \brief Parses IPv4 address and returns its numerical value as string
+	 *
+	 * @param[in] addr IPv4 address
+	 * @return Numerical value as string
+	 */
+	std::string parseIPv4(std::string addr) const;
+
+	/**
+	 * \brief Parses IPv6 address and return its numerical value as string
+	 *
+	 * @param[in] addr IPv6 address
+	 * @param[out] part1 First part of address
+	 * @param[out] part2 Second part of address
+	 */
+	void parseIPv6(std::string addr, std::string& part1, std::string& part2) const;
+
+	/**
 	 * \brief Parse timestamp to number of seconds
 	 *
 	 * @param str String with text representation of the timestamp
 	 * @return Number of seconds in timestamp
 	 */
-
-	std::string parseIPv4(std::string addr);
-
-	void parseIPv6(std::string addr, std::string& part1, std::string& part2);
-
 	time_t parseTimestamp(std::string str) const throw (std::invalid_argument);
 
-	void parseStringType(parserStruct *ps, std::string type);
+	/**
+	 * \brief Decides how to parse string according to type
+	 *
+	 * @param ps Parser structure
+	 * @param[in] type Column type
+	 */
+	void parseStringType(parserStruct *ps, std::string type) const throw (std::invalid_argument);
 
-	std::string getProtoNum(std::string name);
+	/**
+	 * \brief Converts protocol name into numeric form
+	 *
+	 * @param[in] name Protocol name
+	 * @return Protocol number (as string)
+	 */
+	std::string getProtoNum(std::string name) const;
 
-	std::string parseFlags(std::string strFlags);
+	/**
+	 * \brief Parses flags in text form (AR...) and returns their numeric form
+	 *
+	 * @param[in] strFlags Flags in text form
+	 * @return Flags in numeric form
+	 */
+	std::string parseFlags(std::string strFlags) const;
 
-	void parseHostname(parserStruct *ps, uint8_t af_type);
-
-	void parseHostname6(parserStruct *ps);
+	/**
+	 * \brief Parses hostname and converts it into ip addresses
+	 *
+	 * @param ps Parser struct
+	 * @param af_type Type of address (AF_INET or AF_INET6)
+	 */
+	void parseHostname(parserStruct *ps, uint8_t af_type) const throw (std::invalid_argument);
 
 	Configuration *actualConf; /**< Used configuration for getting column names while parsing filter */
 
