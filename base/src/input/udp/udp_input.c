@@ -157,7 +157,14 @@ static uint32_t seqNo[3] = {0,0,0};
 
 static uint8_t modified = 0;
 static uint8_t inserted = 0;
-static int templLen[100][2] = {{0,0}};
+
+struct templates_s {
+	uint8_t cols;
+	uint32_t max;
+	int *templ;
+};
+
+static struct templates_s templates;
 
 /**
  * \struct input_info_list
@@ -366,6 +373,20 @@ out:
 	/* free the global variables that may have been allocated by the xml parser */
 	xmlCleanupParser();
 
+	/* allocate memory for templates */
+	templates.max = 30;
+	templates.cols = 2;
+	templates.templ = malloc(templates.max * templates.cols * sizeof(int));
+
+	if (templates.templ == NULL) {
+		MSG_ERROR(msg_module, "Malloc() for templates failed!");
+		retval = 1;
+	}
+	int i;
+	for (i = 0; i < (templates.max * templates.cols); i++) {
+		templates.templ[i] = 0;
+	}
+
 	/* free input_info when error occured */
 	if (retval != 0 && conf != NULL) {
 		if (conf->info.template_life_time != NULL) {
@@ -494,7 +515,7 @@ uint16_t insertTemplateSet(char **packet, char *input_info, int numOfFlowSamples
  *
  * \param templSet pointer to Template Set
  */
-void insert_timestamp_template(struct ipfix_set_header *templSet)
+int insert_timestamp_template(struct ipfix_set_header *templSet)
 {
 	struct ipfix_set_header *tmp;
 	uint16_t len, num, i, id;
@@ -512,9 +533,26 @@ void insert_timestamp_template(struct ipfix_set_header *templSet)
 	    id = ntohs(tmp->flowset_id) - IPFIX_MIN_RECORD_FLOWSET_ID;
 	    num = ntohs(tmp->length);
 
+	    if (id >= templates.max) {
+	    	templates.max += 20;
+	    	templates.templ = realloc(templates.templ, templates.max * templates.cols * sizeof(int));
+
+	    	if (templates.templ == NULL) {
+	    		MSG_ERROR(msg_module, "Realloc() failed!");
+	    		return 1;
+	    	}
+	    	int i;
+	    	for (i = (templates.max - 20) * templates.cols; i < templates.max * templates.cols; i++) {
+	    			templates.templ[i] = 0;
+	    	}
+	    }
+
+	    int len = templates.cols * id;
+	    int pos = len + 1;
+
 	    /* Set default values for length and timestamp position */
-	    templLen[id][0] = 0;
-	    templLen[id][1] = -1;
+	    templates.templ[len] = 0;
+	    templates.templ[pos] = -1;
 
 	    /* Iterate through all elements */
 	    for (i = 0; i < num; i++) {
@@ -523,28 +561,29 @@ void insert_timestamp_template(struct ipfix_set_header *templSet)
 	        /* We are looking for timestamps - elements with id 21 (end) and 22 (start) */
 	        if (ntohs(tmp->flowset_id) == NETFLOW_V9_END_ELEM) {
 	        	/* We don't know which one comes first so we need to check it */
-	        	if (templLen[id][1] == -1) {
-	        		templLen[id][1] = templLen[id][0];
+	        	if (templates.templ[pos] == -1) {
+	        		templates.templ[pos] = templates.templ[len];
 	        	}
 
 	        	/* Change element ID and element length (32b -> 64b) */
 	        	tmp->flowset_id = htons(FLOW_END);
 	        	tmp->length = htons(BYTES_8);
-	        	templLen[id][0] += BYTES_4;
+	        	templates.templ[len] += BYTES_4;
 	        } else if (ntohs(tmp->flowset_id) == NETFLOW_V9_START_ELEM) {
 	        	/* Do the same thing for element 22 */
-	        	if (templLen[id][1] == -1) {
-					templLen[id][1] = templLen[id][0];
+	        	if (templates.templ[pos] == -1) {
+					templates.templ[pos] = templates.templ[len];
 				}
 
 	        	tmp->flowset_id = htons(FLOW_START);
 	        	tmp->length = htons(BYTES_8);
-	        	templLen[id][0] += BYTES_4;
+	        	templates.templ[len] += BYTES_4;
 	        } else {
-	        	templLen[id][0] += ntohs(tmp->length);
+	        	templates.templ[len] += ntohs(tmp->length);
 	        }
 	    }
 	}
+	return 0;
 }
 
 /* \brief Inserts 64b timestamps into netflow v9 Data Set
@@ -568,11 +607,14 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
 	id = ntohs(tmp->flowset_id) - IPFIX_MIN_RECORD_FLOWSET_ID;
 	len = ntohs(tmp->length) - 4;
 
+	int lenIndex = templates.cols * id;
+	int posIndex = lenIndex + 1;
+
 	/* Get number of data records using the same template */
-	if (templLen[id][0] <= 0) {
+	if (templates.templ[lenIndex] <= 0) {
 		return 0;
 	}
-	num = len / templLen[id][0];
+	num = len / templates.templ[lenIndex];
 	if (num == 0) {
 		return 0;
 	}
@@ -582,12 +624,12 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
 
 	/* Iterate through all data records */
 	shifted = 0;
-	first_offset = templLen[id][1];
+	first_offset = templates.templ[posIndex];
 	last_offset = first_offset + 4;
 
 	for (i = num - 1; i >= 0; i--) {
 		/* Resize each timestamp in each data record to 64 bit */
-		pkt = (uint8_t *) dataSet + BYTES_4 + (i * templLen[id][0]);
+		pkt = (uint8_t *) dataSet + BYTES_4 + (i * templates.templ[lenIndex]);
 		uint64_t first = ntohl(*((uint32_t *) (pkt + first_offset)));
 		uint64_t last  = ntohl(*((uint32_t *) (pkt + last_offset)));
 
@@ -600,8 +642,8 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
 		 * all data/template sets behind this set must be shifted: (remaining - len)
 		 */
 		memmove(pkt + last_offset + BYTES_8, pkt + last_offset,
-				(shifted * (templLen[id][0] + BYTES_8)) + (templLen[id][0] + BYTES_4 - last_offset) +
-				(remaining - len));
+				(shifted * (templates.templ[lenIndex] + BYTES_8)) +
+				(templates.templ[lenIndex] + BYTES_4 - last_offset) +	(remaining - len));
 
 		/* Set time values */
 		*((uint64_t *)(pkt + first_offset)) = htobe64(time_header + first);
@@ -669,7 +711,9 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 					case NETFLOW_V9_TEMPLATE_SET_ID:
 						set_header->flowset_id = htons(IPFIX_TEMPLATE_FLOWSET_ID);
 						if (ntohs(set_header->length) > 0) {
-							insert_timestamp_template(set_header);
+							if (insert_timestamp_template(set_header) != 0) {
+								return;
+							}
 						}
 						break;
 					case NETFLOW_V9_OPT_TEMPLATE_SET_ID:
@@ -935,6 +979,7 @@ int input_close(void **config)
 
 	/* free allocated structures */
 	free(*config);
+	free(templates.templ);
 
 	MSG_NOTICE(msg_module, "All allocated resources have been freed");
 
