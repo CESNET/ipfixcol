@@ -142,7 +142,8 @@ void delete_queue( struct s_data * data, char * dir_name, int depth, struct s_bu
 
 		// skip "." and ".."
 		if( ( strcmp( ".", file->d_name ) == 0 ) ||
-			( strcmp( "..", file->d_name ) == 0 )
+			( strcmp( "..", file->d_name ) == 0 ) ||
+			( strcmp( "stat.txt", file->d_name ) == 0 )
 		  ) {
 			continue;
 		}
@@ -178,7 +179,36 @@ void delete_queue( struct s_data * data, char * dir_name, int depth, struct s_bu
 			}
 		}
 		free( child_name );
-		
+	}
+	if( buffer == NULL ) {
+		rewinddir(rdir);
+		while( 1 ) {
+			file = readdir( rdir );
+			if( file == NULL ) {
+				if( errno ) {
+					fprintf( stderr, "delete_queue(): readdir(): %s: %s\n", dir_name ,strerror( errno ) );
+					
+				}
+				break;
+			}
+			
+			if( file == NULL ) break; // reached end of directory
+
+			// skip "." and ".."
+			if( ( strcmp( ".", file->d_name ) == 0 ) ||
+				( strcmp( "..", file->d_name ) == 0 )
+			  ) {
+				continue;
+			}
+
+			if( asprintf( &child_name, "%s/%s", dir_name, file->d_name ) == -1 ) {
+				fprintf( stderr, "delete_queue: asprintf error alocation\n" );
+				continue;
+			}
+
+
+			unlink(child_name);
+		}
 	}
 	closedir( rdir );
 	if( depth == data->dir_depth ) {
