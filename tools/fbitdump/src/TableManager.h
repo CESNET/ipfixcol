@@ -46,7 +46,7 @@
 #include "Table.h"
 #include "TableManagerCursor.h"
 #include "TableSummary.h"
-
+#include "Utils.h"
 /**
  * \brief Namespace of the fbitdump utility
  */

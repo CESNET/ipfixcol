@@ -21,19 +21,19 @@ extern "C" {
 
 using namespace fbitdump;
 
-char * printProtocol(const union plugin_arg * val, int plain_numbers);
-char * printIPv4(const union plugin_arg * val, int plain_numbers);
+void printProtocol(const union plugin_arg * val, int plain_numbers, char * buff);
+void printIPv4(const union plugin_arg * val, int plain_numbers, char * buff);
 
-char * printIPv6(const union plugin_arg * val, int plain_numbers);
+void printIPv6(const union plugin_arg * val, int plain_numbers, char * buff);
 
-char * printTimestamp32(const union plugin_arg * va, int plain_numbers);
-char * printTimestamp64(const union plugin_arg * val, int plain_numbers);
+void printTimestamp32(const union plugin_arg * va, int plain_numbers, char * buff);
+void printTimestamp64(const union plugin_arg * val, int plain_numbers, char * buff);
 
-char * printTimestamp(struct tm *tm, uint64_t msec );
+void printTimestamp(struct tm *tm, uint64_t msec, char * buff );
 
-char * printTCPFlags(const union plugin_arg * val, int plain_numbers);
+void printTCPFlags(const union plugin_arg * val, int plain_numbers, char * buff);
 
-char * printDuration(const union plugin_arg * val, int plain_numbers);
+void printDuration(const union plugin_arg * val, int plain_numbers, char * buff);
 
 
 

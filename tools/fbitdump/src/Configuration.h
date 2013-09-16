@@ -266,11 +266,12 @@ public:
 	
 	static Configuration * instance;
     
-	std::map<std::string, char *(*)(const union plugin_arg *, int)> plugins;
+	std::map<std::string, void (*)(const union plugin_arg *, int, char*)> plugins;
 	std::queue<void *> plugins_handles;
+    void unloadModules();
 private:
 	void loadModules();
-	void unloadModules();
+	
 
     /**
      * \brief Prints help to standard output

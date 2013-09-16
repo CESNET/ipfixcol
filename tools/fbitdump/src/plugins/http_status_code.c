@@ -2,8 +2,7 @@
 #include <stdio.h>
 #include "plugin_header.h"
 
-char *format( const union plugin_arg * arg, int plain_numbers ) {
-	char *out = NULL;
+void format( const union plugin_arg * arg, int plain_numbers, char * out ) {
 	char *str = NULL;
 	char num[15];
 
@@ -137,6 +136,5 @@ char *format( const union plugin_arg * arg, int plain_numbers ) {
 			break;
 	}
 
-	asprintf(&out, "%s", str);
-	return out;
+	snprintf(out, PLUGIN_BUFFER_SIZE, "%s", str);
 }

@@ -185,7 +185,7 @@ public:
 	 */
 	~Column();
 
-	char * (*format)( const union plugin_arg * val, int);
+	void (*format)( const union plugin_arg * val, int, char*);
 
 private:
 

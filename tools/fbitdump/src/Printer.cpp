@@ -174,6 +174,8 @@ void Printer::printRow(const Cursor *cur) const
 
 const std::string Printer::printValue(const Column *col, const Cursor *cur) const
 {
+	static char plugin_buffer[PLUGIN_BUFFER_SIZE];
+
 	if (col->isSeparator()) {
 		return col->getName();
 	}
@@ -186,12 +188,11 @@ const std::string Printer::printValue(const Column *col, const Cursor *cur) cons
 	}
 
 	std::string valueStr;
-	char * buff;
 
-	if (!col->getSemantics().empty() && ( col->getSemantics() != "flows" ) && ( this->conf.plugins.find(col->getSemantics()) != this->conf.plugins.end())) {
-		buff = col->format( (const plugin_arg * )val->value, (int) this->conf.getPlainNumbers() );
-		valueStr.append(buff);
-		free( buff );
+	if (!col->getSemantics().empty() && ( col->getSemantics() != "flows" ) && ( col->format != NULL)) {
+		col->format( (const plugin_arg * )val->value, (int) this->conf.getPlainNumbers(), plugin_buffer );
+		valueStr.append(plugin_buffer);
+		
 	} else {
 		valueStr = val->toString(conf.getPlainNumbers());
 		/* when printing statistics, add percent part */

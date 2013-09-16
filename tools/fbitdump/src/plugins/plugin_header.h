@@ -3,6 +3,8 @@
 #include "../protocols.h"
 #include <inttypes.h>
 
+#define PLUGIN_BUFFER_SIZE 50
+
 union plugin_arg
 {
 	char int8;
@@ -17,7 +19,7 @@ union plugin_arg
 	double dbl;
 } ;
 
-char * format( const union plugin_arg * arg, int plain_numbers );
+void format( const union plugin_arg * arg, int plain_numbers, char * buffer );
 
 
 #endif

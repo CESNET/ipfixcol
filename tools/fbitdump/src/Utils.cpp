@@ -41,10 +41,41 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <errno.h>
+#include <sys/ioctl.h>
+
+
+#define PROGRESSBAR_SIZE 50
 
 namespace fbitdump {
 namespace Utils {
 
+
+void progressBar(std::string prefix, std::string suffix, int max, int actual) {
+	static struct winsize w;
+	static int ok = 0;
+
+	if( ok == 0 ) {
+		ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+		ok = 1;
+	}
+	float progress = ((double)actual/max);
+
+	std::cout << prefix << "[";
+	int pos = PROGRESSBAR_SIZE * progress;
+	for (int x = 0; x < PROGRESSBAR_SIZE; ++x) {
+		if (x < pos) std::cout << "=";
+		else if (x == pos) std::cout << ">";
+		else std::cout << " ";
+	}
+	std::cout << "] " << int(progress * 100.0) << " % " << suffix;
+	std::cout.width(w.ws_col-(PROGRESSBAR_SIZE+prefix.size()+suffix.size()+7));
+//	std::cout.fill( ' ');
+	std::cout << "\r";
+	
+
+//	std::cout << "!!!" << env << "!!!" << std::endl << std::endl;
+	std::cout.flush();
+}
 
 /**
  * \brief Splits string into different tokens by comma

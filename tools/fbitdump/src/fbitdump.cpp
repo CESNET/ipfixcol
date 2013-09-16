@@ -74,8 +74,9 @@ int main(int argc, char *argv[])
 
 	/* process configuration and check whether to end the program */
 	try {
-		if (conf.init(argc, argv))
+		if (conf.init(argc, argv)) {
 			return 0; /* standard program end (help requested, ...) */
+		}
 	} catch (std::exception &e) {
 		/* inicialization error: print it and exit */
 		std::cerr << e.what() << std::endl;

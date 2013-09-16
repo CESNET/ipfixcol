@@ -51,24 +51,26 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 	stringSet partCols;
 	Table *table;
 	ibis::partList parts; /* this overrides class attribute parts */
-
+	int i=0;
+	size_t size = 0;
 	/* omit parts that don't have necessary summary columns */
 	/* strip summary columns of aggregation functions to get plain names */
 	stringSet sCols;
 	for (stringSet::const_iterator it = summaryColumns.begin(); it != summaryColumns.end(); it++) {
 		int begin = it->find_first_of('(') + 1;
 		int end = it->find_first_of(')');
-
 		std::string tmp = it->substr(begin, end-begin);
 		if (tmp != "*") { /* ignore column * used for flows aggregation */
 			sCols.insert(tmp);
 		}
 	}
-
+	i=0;
+	size = this->parts.size();
 	/* filter out parts */
 	for (size_t i = 0; i < this->parts.size(); i++) {
 		/* put columns from part to set */
 		stringSet partColumns;
+		Utils::progressBar( "Aggregating [1/2]  ", "   ", size, i );
 		for (size_t j = 0; j < this->parts[i]->columnNames().size(); j++) {
 			partColumns.insert(this->parts[i]->columnNames()[j]);
 		}
@@ -84,8 +86,10 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 		} else {
 			std::cerr << "Ommiting part " << this->parts[i]->currentDataDir() << ", does not have column '" << *difference.begin() << "'" << std::endl;
 		}
-	}
 
+	}
+	i=0;
+	size = parts.size();
 	/* go over all parts and build vector of intersection between part columns and aggregation columns */
 	/* put together the parts that have same intersection - this ensures for example that ipv4 and ipv6 are aggregate separately by default */
 	for (size_t i = 0; i < parts.size(); i++) {
@@ -114,6 +118,8 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 
 		/* cleanup for next iteration */
 		partCols.clear();
+
+		Utils::progressBar( "Aggregating [2/2]  ", "   ", size, i );
 	}
 
 	/* group parts with same intersection to one table */
@@ -126,7 +132,6 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 	for (size_t i = 0; i < partsCount; i++) {
 		used[i] = false;
 	}
-
 	/* go over all parts (theirs intersections), empty intersections are ignored */
 	for (std::vector<stringSet>::const_iterator outerIter = colIntersect.begin(); outerIter != colIntersect.end(); outerIter++) {
 		/* work with current intersection only if it has not been used before */
@@ -225,17 +230,7 @@ void TableManager::filter(Filter &filter)
 	for (columnVector::const_iterator it = conf.getColumns().begin(); it != conf.getColumns().end(); it++) {
 
 		// print progress bar
-		float progress = ((double)i/size);
-
-		std::cout << "Initializing filter [";
-		int pos = barWidth * progress;
-		for (int x = 0; x < barWidth; ++x) {
-			if (x < pos) std::cout << "=";
-			else if (x == pos) std::cout << ">";
-			else std::cout << " ";
-		}
-		std::cout << "] " << int(progress * 100.0) << " %          \r";
-		std::cout.flush();
+		Utils::progressBar( "Initializing filter", "   ", size, i );
 		
 		i++;
 
@@ -249,11 +244,7 @@ void TableManager::filter(Filter &filter)
 		}
 
 	}
-	std::cout << "Initializing filter [";
-	for (int x = 0; x < barWidth; ++x) {
-		std::cout << "=";
-	}
-	std::cout << "] DONE                                                             " << "\r";
+	//Utils::progressBar( "Initializing filter", "DONE", 1, 1 );
 	//std::cout.flush();
 	
 	/* go over all parts */
@@ -261,18 +252,7 @@ void TableManager::filter(Filter &filter)
 	i = 0;
 	size = this->parts.size();
 	for (ibis::partList::const_iterator it = this->parts.begin(); it != this->parts.end(); it++) {
-		float progress = ((double)i/size);
-
-		std::cout << "Applying filter     [";
-		int pos = barWidth * progress;
-		for (int x = 0; x < barWidth; ++x) {
-			if (x < pos) std::cout << "=";
-			else if (x == pos) std::cout << ">";
-			else std::cout << " ";
-		}
-		std::cout << "] " << int(progress * 100.0) << " %          \r";
-		std::cout.flush();
-
+		Utils::progressBar( "Applying filter    ", "   ", size, i );
 		i++;
 		
 		/* create table for each part */
@@ -287,12 +267,7 @@ void TableManager::filter(Filter &filter)
 		std::cerr << "Created new table, MB in use: " << ibis::fileManager::bytesInUse()/1000000 << std::endl;
 #endif
 	}
-	std::cout << "Applying filter     [";
-	for (int x = 0; x < barWidth; ++x) {
-		std::cout << "=";
-	}
-	std::cout << "] DONE                                                             " << "\r";
-	std::cout.flush();
+	//Utils::progressBar( "Applying filter    ", "DONE", size, i );
 }
 
 TableManagerCursor *TableManager::createCursor()
@@ -349,20 +324,7 @@ TableManager::TableManager(Configuration &conf): conf(conf), tableSummary(NULL)
 		if (part != NULL) {
 			this->parts.push_back(part);
 
-			// print progress bar
-			float progress = ((double)i/size);
-			
-			std::cout << "Initializing tables [";
-			int pos = barWidth * progress;
-			for (int x = 0; x < barWidth; ++x) {
-				if (x < pos) std::cout << "=";
-				else if (x == pos) std::cout << ">";
-				else std::cout << " ";
-			}
-			std::cout << "] " << int(progress * 100.0) << " % " << tmp.c_str() << "       \r";
-			std::cout.flush();
-
-			
+			Utils::progressBar("Initializing tables", tmp.c_str(), size, i );
 
 			/* clear reference for next loop */
 			part = NULL;
@@ -372,12 +334,6 @@ TableManager::TableManager(Configuration &conf): conf(conf), tableSummary(NULL)
 
 		
 	}
-	std::cout << "Initializing tables [";
-	for (int x = 0; x < barWidth; ++x) {
-		std::cout << "=";
-	}
-	std::cout << "] DONE                                                             " << "\r";
-	std::cout.flush();
 	/* create order by string list if necessary */
 	if (conf.getOptionm()) {
 		this->orderColumns = conf.getOrderByColumn()->getColumns();

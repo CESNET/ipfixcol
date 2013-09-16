@@ -325,7 +325,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	this->parseFormat(this->format);
 	if( print_semantics ) {
 		std::cout << "Available semantics: " <<  std::endl;
-		for( std::map<std::string, char *(*)(const union plugin_arg *, int)>::iterator iter = this->plugins.begin(); iter != this->plugins.end(); ++iter ) {
+		for( std::map<std::string, void(*)(const union plugin_arg *, int, char*)>::iterator iter = this->plugins.begin(); iter != this->plugins.end(); ++iter ) {
 			std::cout << "\t" << iter->first << std::endl;
 		}
 		return 1;
@@ -938,8 +938,9 @@ void Configuration::loadModules()
 {
 	pugi::xpath_node_set nodes = this->getXMLConfiguration().select_nodes("/configuration/plugins/plugin");
 	std::string path;
+	char * error;
 	void * handle;
-	char * (*format)(const union plugin_arg *, int);
+	void (*format)(const union plugin_arg *, int, char *);
 
 	for (pugi::xpath_node_set::const_iterator ii = nodes.begin(); ii != nodes.end(); ii++) {
 		pugi::xpath_node node = *ii;
@@ -965,7 +966,6 @@ void Configuration::loadModules()
 			dlclose(handle);
 			continue;
 		}
-
 		this->plugins[node.node().child_value("name")] = format;
 		this->plugins_handles.push(handle);
 	}
@@ -984,7 +984,6 @@ Configuration::~Configuration()
 	for (columnVector::const_iterator it = columns.begin(); it != columns.end(); it++) {
 		delete *it;
 	}
-
 	this->unloadModules();
 	delete this->resolver;
 	delete this->orderColumn;

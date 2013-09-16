@@ -10,19 +10,15 @@
 
 using namespace fbitdump;
 
-char * printProtocol(const union plugin_arg * val, int plain_numbers) {
-	char * ret;
-
+void printProtocol(const union plugin_arg * val, int plain_numbers, char * ret) {
 	if (!Configuration::instance->getPlainNumbers()) {
-		asprintf( &ret, "%s", protocols[val[0].uint8] );
+		snprintf( ret, PLUGIN_BUFFER_SIZE, "%s", protocols[val[0].uint8] );
 	} else {
-		asprintf( &ret, "%d", (uint16_t)val[0].uint8 );
+		snprintf( ret, PLUGIN_BUFFER_SIZE, "%d", (uint16_t)val[0].uint8 );
 	}
-
-	return ret;
 }
 
-char * printIPv4(const union plugin_arg * val, int plain_numbers)
+void printIPv4(const union plugin_arg * val, int plain_numbers, char * buf)
 {
 	int ret;
 	Resolver *resolver;
@@ -35,7 +31,7 @@ char * printIPv4(const union plugin_arg * val, int plain_numbers)
 
 		ret = resolver->reverseLookup(val[0].uint32, host);
 		if (ret == true) {
-			return strdup( host.c_str() );
+			snprintf( buf, PLUGIN_BUFFER_SIZE, "%s", host.c_str() );
 		}
 
 		/* Error during DNS lookup, print IP address instead */
@@ -45,17 +41,13 @@ char * printIPv4(const union plugin_arg * val, int plain_numbers)
 	 * user don't want to see domain names, or DNS is somehow broken.
 	 * print just IP address
 	 */
-	char * buf = (char *)malloc( sizeof( char ) * INET_ADDRSTRLEN );
 	struct in_addr in_addr;
 
 	in_addr.s_addr = htonl(val[0].uint32);
 	inet_ntop(AF_INET, &in_addr, buf, INET_ADDRSTRLEN);
-
-	/* IP address in printable form */
-	return buf;
 }
 
-char * printIPv6(const union plugin_arg * val, int plain_numbers)
+void printIPv6(const union plugin_arg * val, int plain_numbers, char * buf)
 {
 	int ret;
 	Resolver *resolver;
@@ -68,7 +60,7 @@ char * printIPv6(const union plugin_arg * val, int plain_numbers)
 
 		ret = resolver->reverseLookup6(val[0].uint64, val[1].uint64, host);
 		if (ret == true) {
-			return strdup( host.c_str() );
+			snprintf( buf, PLUGIN_BUFFER_SIZE, "%s", host.c_str() );
 		}
 
 		/* Error during DNS lookup, print IP address instead */
@@ -78,47 +70,41 @@ char * printIPv6(const union plugin_arg * val, int plain_numbers)
 	 * user don't want to see domain names, or DNS is somehow broken.
 	 * print just IP address
 	 */
-	char * buf = (char *)malloc( sizeof( char ) * INET6_ADDRSTRLEN );
 	struct in6_addr in6_addr;
 
 	*((uint64_t*) &in6_addr.s6_addr) = htobe64(val[0].uint64);
 	*(((uint64_t*) &in6_addr.s6_addr)+1) = htobe64(val[1].uint64);
 	inet_ntop(AF_INET6, &in6_addr, buf, INET6_ADDRSTRLEN);
-
-	return buf;
 }
 
-char * printTimestamp32(const union plugin_arg * val, int plain_numbers)
+void printTimestamp32(const union plugin_arg * val, int plain_numbers, char * buf)
 {
 	time_t timesec = val[0].uint32;
 	struct tm *tm = localtime(&timesec);
 
-	return printTimestamp(tm, 0);
+	printTimestamp(tm, 0, buf);
 }
 
-char * printTimestamp64(const union plugin_arg * val, int plain_numbers)
+void printTimestamp64(const union plugin_arg * val, int plain_numbers, char * buf)
 {
 	time_t timesec = val[0].uint64/1000;
 	uint64_t msec = val[0].uint64 % 1000;
 	struct tm *tm = localtime(&timesec);
 
-	return printTimestamp(tm, msec);
+	printTimestamp(tm, msec, buf);
 }
 
-char * printTimestamp(struct tm *tm, uint64_t msec)
+void printTimestamp(struct tm *tm, uint64_t msec, char * buff)
 {
-	char buff[23];
 
 	strftime(buff, sizeof(buff), "%Y-%m-%d %T", tm);
 	/* append miliseconds */
 	sprintf(&buff[19], ".%03u", (const unsigned int) msec);
-
-	return strdup(buff);
 }
 
-char * printTCPFlags(const union plugin_arg * val, int plain_numbers)
+void printTCPFlags(const union plugin_arg * val, int plain_numbers, char * result)
 {
-	std::string result = "......";
+	sprintf( result, "%s", "......" );
 
 	if (val[0].uint8 & 0x20) {
 		result[0] = 'U';
@@ -138,11 +124,9 @@ char * printTCPFlags(const union plugin_arg * val, int plain_numbers)
 	if (val[0].uint8 & 0x01) {
 		result[5] = 'F';
 	}
-
-	return strdup( result.c_str() );
 }
 
-char * printDuration(const union plugin_arg * val, int plain_numbers)
+void printDuration(const union plugin_arg * val, int plain_numbers, char * buff)
 {
 	static std::ostringstream ss;
 	static std::string str;
@@ -154,5 +138,5 @@ char * printDuration(const union plugin_arg * val, int plain_numbers)
 	str = ss.str();
 	ss.str("");
 
-	return strdup( str.c_str() );
+	snprintf( buff, PLUGIN_BUFFER_SIZE, "%s", str.c_str() );
 }
