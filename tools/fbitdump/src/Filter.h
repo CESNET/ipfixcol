@@ -331,7 +331,7 @@ private:
 	 * @param ps Parser structure
 	 * @param[in] type Column type
 	 */
-	void parseStringType(parserStruct *ps, std::string type) const throw (std::invalid_argument);
+	void parseStringType(parserStruct *ps, std::string type, std::string &cmp) const throw (std::invalid_argument);
 
 	/**
 	 * \brief Converts protocol name into numeric form

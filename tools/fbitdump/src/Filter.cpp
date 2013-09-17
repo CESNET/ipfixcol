@@ -123,6 +123,7 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		yylex_destroy(this->scaninfo);
 	}
 
+//	std::cout << "					\n";
 //	std::cout << "\nFilter: " << this->filterString << std::endl;
 
 #ifdef DEBUG
@@ -478,7 +479,9 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 	if (right->type == PT_STRING) {
 		/* If it is string, we need to parse it
 		 * Type may transform from string to number (if coltype is PT_PROTO) - we can't change cmp to LIKE here */
-		this->parseStringType(right, left->colType);
+		this->parseStringType(right, left->colType, cmp);
+	} else if (cmp.empty()) {
+		cmp = "=";
 	}
 
 	switch (right->type) {
@@ -535,7 +538,7 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 
 std::string Filter::parseExp(parserStruct *left, parserStruct *right) const
 {
-	return this->parseExp(left, " = ", right);
+	return this->parseExp(left, "", right);
 }
 
 std::string Filter::parseExpSub(parserStruct *left, parserStruct *right) const throw (std::invalid_argument)
@@ -602,7 +605,7 @@ void Filter::parseString(parserStruct *ps, std::string text) const throw (std::i
 	ps->parts.push_back(text);
 }
 
-void Filter::parseStringType(parserStruct *ps, std::string type) const throw (std::invalid_argument)
+void Filter::parseStringType(parserStruct *ps, std::string type, std::string &cmp) const throw (std::invalid_argument)
 {
 	if (ps == NULL) {
 		throw std::invalid_argument(std::string("Cannot parse string by type, NULL parser structure"));
@@ -610,9 +613,7 @@ void Filter::parseStringType(parserStruct *ps, std::string type) const throw (st
 
 	std::string num;
 
-	if (type.empty()) {
-		return;
-	} else if (type == "protocol") {
+	if (type == "protocol") {
 		/* It should be protocol name - we need to convert it into number */
 		num = getProtoNum(ps->parts[0]);
 
@@ -634,6 +635,14 @@ void Filter::parseStringType(parserStruct *ps, std::string type) const throw (st
 		ps->type = PT_HOSTNAME6;
 	} else {
 		/* For all other columns with string value it stays as it is */
+		if (cmp.empty()) {
+			ps->parts[0] = "'%" + ps->parts[0] + "%'";
+		} else if (cmp == ">") {
+			ps->parts[0] = "'%" + ps->parts[0] + "'";
+		} else if (cmp == "<") {
+			ps->parts[0] = "'" + ps->parts[0] + "%'";
+		}
+		cmp = "LIKE";
 		ps->type = PT_STRING;
 	}
 }
