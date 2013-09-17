@@ -715,7 +715,7 @@ err_sockaddr6_case:
 		MSG_ERROR(msg_module, "Malloc() for templates failed!");
 		goto err_listen;
 	}
-	int i;
+
 	for (i = 0; i < (templates.max * templates.cols); i++) {
 		templates.templ[i] = 0;
 	}
