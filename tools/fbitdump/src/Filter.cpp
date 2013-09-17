@@ -418,10 +418,14 @@ void Filter::parseColumn(parserStruct *ps, std::string alias) const throw (std::
 			ps->parts.push_back(*it);
 			ps->nParts++;
 		}
+		ps->type = PT_COLUMN;
 	} else {
-		std::string err = std::string("Computed column '") + alias + "' cannot be used for filtering!";
-		delete col;
-		throw std::invalid_argument(err);
+		ps->parts.push_back(col->getElement());
+		ps->nParts = 1;
+		ps->type = PT_COMPUTED;
+//		std::string err = std::string("Computed column '") + alias + "' cannot be used for filtering!";
+//		delete col;
+//		throw std::invalid_argument(err);
 	}
 
 	ps->colType = col->getSemantics();
@@ -429,7 +433,7 @@ void Filter::parseColumn(parserStruct *ps, std::string alias) const throw (std::
 	delete col;
 
 	/* Set type of structure */
-	ps->type = PT_COLUMN;
+
 }
 
 void Filter::parseRawcolumn(parserStruct *ps, std::string colname) const throw (std::invalid_argument)

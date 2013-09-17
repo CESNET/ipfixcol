@@ -141,6 +141,7 @@ Column::AST* Column::createOperationElement(pugi::xml_node operation, const pugi
 	AST *ast = new AST;
 	pugi::xpath_node arg1, arg2;
 	std::string type;
+	std::stringstream ss;
 
 	/* set type and operation */
 	ast->type = fbitdump::Column::AST::operationType;
@@ -154,14 +155,20 @@ Column::AST* Column::createOperationElement(pugi::xml_node operation, const pugi
 	/* get argument type */
 	type = arg1.node().child("value").attribute("type").value();
 
+	this->element += "( ";
+
 	/* add argument to AST */
 	if (type == "operation") {
 		ast->left = createOperationElement(arg1.node().child("value").child("operation"), doc);
 	} else if (type == "plain"){
 		ast->left = createValueElement(arg1.node().child("value").child("element"), doc);
+		this->element += ast->left->value;
 	} else {
 		std::cerr << "Value of type operation contains node of type " << type << std::endl;
 	}
+
+	ss << " " << ast->operation << " ";
+	this->element += ss.str();
 
 	/* same for the second argument */
 	type = arg2.node().child("value").attribute("type").value();
@@ -170,10 +177,12 @@ Column::AST* Column::createOperationElement(pugi::xml_node operation, const pugi
 		ast->right = createOperationElement(arg2.node().child("value").child("operation"), doc);
 	} else if (type == "plain"){
 		ast->right = createValueElement(arg2.node().child("value").child("element"), doc);
+		this->element += ast->right->value;
 	} else {
 		std::cerr << "Value of type operation contains node of type '" << type << "'" << std::endl;
 	}
 
+	this->element += " )";
 	return ast;
 }
 

@@ -80,7 +80,8 @@ enum partsType {
 	PT_TIMESTAMP,
 	PT_STRING,
 	PT_HOSTNAME,
-	PT_HOSTNAME6
+	PT_HOSTNAME6,
+	PT_COMPUTED
 };
 
 /* Struct for parsing data from bison parser */
