@@ -88,6 +88,9 @@
 			</itemizedlist>
 		</para>
 		<simpara>
+			Section <emphasis>&lt;groups&gt;</emphasis> is used to define column groups (e.g. source port + destination port)
+		</simpara>
+		<simpara>
 			Section <emphasis>&lt;summary&gt;</emphasis> is used to specify which columns are considered summary columns. Each column is specified by its alias inside element <emphasis>&lt;column&gt;</emphasis>.
 			Summary columns are used in statistics mode to provide percentage information and also in total summary below the printed records.
 		</simpara>
@@ -125,9 +128,19 @@ Bytes per packet column. The column value is computed from number of bytes (%byt
 	<value type="plain">
 		<element semantics="ipv6" parts="2">e0id28</element>
 	</value>
-</column>
-]]>
+</column>]]>
 		</literallayout>
+		<literallayout>
+<![CDATA[Group for filtering source and destination port together by %port alias.
+<group>
+	<name>Port</name>
+	<alias>%port</alias>
+	<members>
+		<member>%dp</member>
+		<member>%sp</member>
+	</members>
+</group>]]>
+	</literallayout>
 	</refsect1>
 
 	<refsect1>

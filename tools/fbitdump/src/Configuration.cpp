@@ -54,6 +54,7 @@
 #include <dlfcn.h>
 #include "Utils.h"
 #include "DefaultOutput.h"
+#include "Verbose.h"
 
 namespace fbitdump {
 
@@ -219,7 +220,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			break;
 
 		case 'v':
-			NOT_SUPPORTED
+			verbose = atoi(optarg);
 			break;
 		case 'Z':
 			NOT_SUPPORTED
@@ -669,6 +670,7 @@ void Configuration::help() const
 	std::cout
 	<< "usage "<< PACKAGE <<" [options] [\"filter\"]" << std::endl
 	<< "-h              this text you see right here" << std::endl
+	<< "-v <level>      Set level of verbose." << std::endl
 	<< "-V              Print version and exit." << std::endl
 	<< "-a              Aggregate netflow data." << std::endl
 	<< "-A [<expr>]     How to aggregate: ',' sep list of tags see man fbitdump(1)" << std::endl

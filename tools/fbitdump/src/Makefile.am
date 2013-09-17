@@ -41,6 +41,8 @@ fbitdump_SOURCES = \
 	Utils.h \
 	Values.cpp \
 	Values.h \
+	Verbose.cpp \
+	Verbose.h \
 	scanner.cpp \
 	scanner.h \
 	parser.h \

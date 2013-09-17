@@ -63,6 +63,13 @@
 			</varlistentry>
 			
 			<varlistentry>
+				<term>-v <replaceable class="parameter">level</replaceable></term>
+				<listitem>
+					<simpara>Set verbose level.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
 				<term>-V</term>
 				<listitem>
 					<simpara>Print version and exit.</simpara>
