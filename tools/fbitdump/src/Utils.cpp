@@ -43,7 +43,6 @@
 #include <errno.h>
 #include <sys/ioctl.h>
 
-
 #define PROGRESSBAR_SIZE 50
 
 namespace fbitdump {
@@ -53,7 +52,8 @@ namespace Utils {
 void progressBar(std::string prefix, std::string suffix, int max, int actual) {
 	static struct winsize w;
 	static int ok = 0;
-
+	if(!isatty(fileno(stdout)))
+		return;
 	if( ok == 0 ) {
 		ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 		ok = 1;

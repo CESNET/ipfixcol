@@ -46,7 +46,6 @@ namespace fbitdump {
 void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumns,
 		Filter &filter)
 {
-
 	std::vector<stringSet> colIntersect;
 	stringSet partCols;
 	Table *table;
@@ -63,7 +62,7 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 			sCols.insert(tmp);
 		}
 	}
-	i=0;
+
 	size = this->parts.size();
 	/* filter out parts */
 	for (size_t i = 0; i < this->parts.size(); i++) {
@@ -87,7 +86,6 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 		}
 
 	}
-	i=0;
 	size = parts.size();
 	/* go over all parts and build vector of intersection between part columns and aggregation columns */
 	/* put together the parts that have same intersection - this ensures for example that ipv4 and ipv6 are aggregate separately by default */
