@@ -51,7 +51,6 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 	stringSet partCols;
 	Table *table;
 	ibis::partList parts; /* this overrides class attribute parts */
-	int i=0;
 	size_t size = 0;
 	/* omit parts that don't have necessary summary columns */
 	/* strip summary columns of aggregation functions to get plain names */
@@ -220,7 +219,6 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 void TableManager::filter(Filter &filter)
 {
 	Table *table;
-	int barWidth = 50;
 	int size = conf.getColumns().size();
 	int i = 0;
 	
@@ -312,7 +310,6 @@ TableManager::TableManager(Configuration &conf): conf(conf), tableSummary(NULL)
 	std::string tmp;
 	ibis::part *part;
 	size_t size = this->conf.getPartsNames().size();
-	int barWidth = 50;
 	/* open configured parts */
 	for (size_t i = 0; i < this->conf.getPartsNames().size(); i++) {
 		

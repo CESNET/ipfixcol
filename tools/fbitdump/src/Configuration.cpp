@@ -940,7 +940,6 @@ void Configuration::loadModules()
 {
 	pugi::xpath_node_set nodes = this->getXMLConfiguration().select_nodes("/configuration/plugins/plugin");
 	std::string path;
-	char * error;
 	void * handle;
 	void (*format)(const union plugin_arg *, int, char *);
 
