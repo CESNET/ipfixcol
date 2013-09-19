@@ -139,82 +139,84 @@ void * thread_inotify_func( void * ptr ){
 				free( child_name );
 		
 			}
-	
+			
 			// remove files
-			while( !done && ( data->total_size >= data->max_size ) ) {
-				// check if delete queue is empty
-				if( data->queue_delete->directory == NULL ) {
-					gen_delete_queue( data );
-				}
-				
-				// get size of directory we want to delete
-				if( asprintf( &stat_file_name, "%s/stat.txt", data->queue_delete->directory->name ) == -1 ) {
-					ERROR;
-					continue;
-				}
-				stat_file = fopen( stat_file_name, "r" );
-				if( stat_file != NULL ) {
-					pthread_mutex_lock( &data->mutex_file );
-					fscanf( stat_file, "%" SCNd64, &stat_size );
-					pthread_mutex_unlock( &data->mutex_file );
-					fclose( stat_file );
-				}
-				else {
-					// if we want to delete folder and stat.txt does not exists, we don't know if size of directory was counted in total size
-					// so my solution is to set size to 0 and after removing deduct 0
-					stat_size = 0;
-				}
-				
-				
-				free( stat_file_name );
-				
-				dir = data->queue_watch->directory;
-				while( dir != NULL ) {
-					if( strncmp( dir->name, data->queue_delete->directory->name, strlen( dir->name ) ) == 0 ) break;
+			if( data->total_size >= data->max_size ) {
+				while( !done && ( data->total_size >= data->watermark ) ) {
+					// check if delete queue is empty
+					if( data->queue_delete->directory == NULL ) {
+						gen_delete_queue( data );
+					}
 					
-					dir = dir->next;
-				}
-				stat_file_dir = strdup( data->queue_delete->directory->name );
-				
-				while( strcmp( dir->name, stat_file_dir ) != 0 ) {
-					
-					ptrc = strrchr( stat_file_dir, '/' );
-					ptrc[0] = '\0';
-//					printf( "\t%s\n", stat_file_dir );
-
-					if( asprintf( &stat_file_name, "%s/stat.txt", stat_file_dir ) == -1 ) {
+					// get size of directory we want to delete
+					if( asprintf( &stat_file_name, "%s/stat.txt", data->queue_delete->directory->name ) == -1 ) {
 						ERROR;
 						continue;
 					}
-
 					stat_file = fopen( stat_file_name, "r" );
 					if( stat_file != NULL ) {
 						pthread_mutex_lock( &data->mutex_file );
-						fscanf( stat_file, "%" SCNd64, &size );
+						fscanf( stat_file, "%" SCNd64, &stat_size );
 						pthread_mutex_unlock( &data->mutex_file );
 						fclose( stat_file );
 					}
 					else {
-						ERROR;
-						size = 0;
+						// if we want to delete folder and stat.txt does not exists, we don't know if size of directory was counted in total size
+						// so my solution is to set size to 0 and after removing deduct 0
+						stat_size = 0;
 					}
-					size -= stat_size;
-					stat_file = fopen( stat_file_name, "w" );
-					pthread_mutex_lock( &data->mutex_file );
-					fprintf( stat_file, "%" PRId64, size );
-					pthread_mutex_unlock( &data->mutex_file );
-					fclose( stat_file );
-//					printf( "\tUpdating size in %s\n", stat_file_name );
+					
+					
 					free( stat_file_name );
+					
+					dir = data->queue_watch->directory;
+					while( dir != NULL ) {
+						if( strncmp( dir->name, data->queue_delete->directory->name, strlen( dir->name ) ) == 0 ) break;
+						
+						dir = dir->next;
+					}
+					stat_file_dir = strdup( data->queue_delete->directory->name );
+					
+					while( strcmp( dir->name, stat_file_dir ) != 0 ) {
+						
+						ptrc = strrchr( stat_file_dir, '/' );
+						ptrc[0] = '\0';
+	//					printf( "\t%s\n", stat_file_dir );
+
+						if( asprintf( &stat_file_name, "%s/stat.txt", stat_file_dir ) == -1 ) {
+							ERROR;
+							continue;
+						}
+
+						stat_file = fopen( stat_file_name, "r" );
+						if( stat_file != NULL ) {
+							pthread_mutex_lock( &data->mutex_file );
+							fscanf( stat_file, "%" SCNd64, &size );
+							pthread_mutex_unlock( &data->mutex_file );
+							fclose( stat_file );
+						}
+						else {
+							ERROR;
+							size = 0;
+						}
+						size -= stat_size;
+						stat_file = fopen( stat_file_name, "w" );
+						pthread_mutex_lock( &data->mutex_file );
+						fprintf( stat_file, "%" PRId64, size );
+						pthread_mutex_unlock( &data->mutex_file );
+						fclose( stat_file );
+	//					printf( "\tUpdating size in %s\n", stat_file_name );
+						free( stat_file_name );
+					}
+					free( stat_file_dir );
+					// cya our beloved data!
+					inotify_delete_dir( data->queue_delete->directory->name );
+					pthread_mutex_lock( &data->mutex_mem );
+					VERBOSE( 1,"D | -%6.2fMB                    %s\n", ((float)stat_size/(1024*1024.0)), data->queue_delete->directory->name );
+					data->total_size -= stat_size;
+					pthread_mutex_unlock( &data->mutex_mem );
+					buffer_rm_dir( data->queue_delete );
 				}
-				free( stat_file_dir );
-				// cya our beloved data!
-				inotify_delete_dir( data->queue_delete->directory->name );
-				pthread_mutex_lock( &data->mutex_mem );
-				VERBOSE( 1,"D | -%6.2fMB                    %s\n", ((float)stat_size/(1024*1024.0)), data->queue_delete->directory->name );
-				data->total_size -= stat_size;
-				pthread_mutex_unlock( &data->mutex_mem );
-				buffer_rm_dir( data->queue_delete );
 			}
 		
 		}

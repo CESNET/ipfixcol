@@ -30,7 +30,8 @@ void print_help( void )
 			"  -p, --pipe=NAME               Pipe name, default is ./expiredaemon_ipfix_col\n"
 			"  -d, --depth=DEPTH             Dept of watched directories, default 1\n"
 			"  -c, --count=COUNT             Count of watched directories, default 1\n"
-			"  -s, --max-size=SIZE           Max size of all directories in MB\n\n"
+			"  -s, --max-size=SIZE           Max size of all directories in MB\n"
+			"  -w, --watermark               Watermark limit\n\n"
 			""
 			"");
 }
@@ -56,6 +57,7 @@ int main (int argc, char **argv) {
 	sigset_t action;
 	int sig;
 	
+	long watermark = 0;
 	long size = 0;
 	int rescan = 0;
 	int daemon = 0;
@@ -79,7 +81,7 @@ int main (int argc, char **argv) {
 	
 	while (1)
 	{
-		c = getopt_long(argc, argv, "rhvfp:d:c:s:V:", long_options, &option_index);
+		c = getopt_long(argc, argv, "rhvfp:d:c:s:V:w:", long_options, &option_index);
         if (c == -1)
             break;
 		
@@ -117,6 +119,10 @@ int main (int argc, char **argv) {
 				break;
 			case 'V':
 				verbose = atol( optarg );
+				break;
+			case 'w':
+				daemon = 1;
+				watermark = atol( optarg );
 				break;
 		}
 	}
@@ -157,6 +163,8 @@ int main (int argc, char **argv) {
 	}
 	
 	if( daemon ) {
+		if( watermark == 0 )
+			watermark = size;
 		if( size <= 0 ) {
 			printf( "You have to enter maximal directory size.\n" );
 			return 1;

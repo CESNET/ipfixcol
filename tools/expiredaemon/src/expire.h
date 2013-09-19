@@ -52,6 +52,8 @@ struct s_data {
 	volatile int all_ok;
 	
 	uint64_t total_size;
+	uint64_t watermark;
+
 	int force_rescan;
 	int dir_depth;
 	int dir_count;
