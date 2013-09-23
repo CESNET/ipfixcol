@@ -56,13 +56,12 @@ namespace fbitdump
 
 void Filter::error(const parser::location& loc, const std::string& msg)
 {
-	//std::cerr << "error at " << loc << ": " << s << std::endl;
-//	std::cerr << loc << ": " << msg << std::endl;
+	std::cerr << "error at " << loc << ": " << msg << std::endl;
 }
 
 void Filter::error (const std::string& msg)
 {
-//	std::cerr << msg << std::endl;
+	std::cerr << msg << std::endl;
 }
 
 
@@ -84,7 +83,7 @@ void Filter::setFilterString(std::string newFilter)
 
 void Filter::init(Configuration &conf) throw (std::invalid_argument)
 {
-	std::string input = conf.getFilter(), filter, tw;
+	std::string input = conf.getFilter(), tw;
 
 	/* incorporate time windows argument in filter */
 	if (!conf.getTimeWindowStart().empty()) {
@@ -127,7 +126,7 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 //	std::cout << "\nFilter: " << this->filterString << std::endl;
 
 #ifdef DEBUG
-	std::cerr << "Using filter: '" << filter << "'" << std::endl;
+	std::cerr << "Using filter: '" << this->filterString << "'" << std::endl;
 #endif
 }
 
@@ -503,7 +502,7 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 
 	/* Parser expression "column CMP value" */
 	if ((left->nParts == 1) && (right->nParts == 1)) {
-		return left->parts[0] + " " + cmp + " " + right->parts[0] + " ";
+		return left->parts[0] + " " + cmp + " " + right->parts[0];
 	}
 
 	std::string exp, op;
