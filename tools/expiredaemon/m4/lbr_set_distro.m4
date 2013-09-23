@@ -29,6 +29,8 @@ elif test -f /etc/mandrake-release; then
 	DISTRO='mandrake'
 elif test -f /etc/debian_version; then
 	DISTRO=debian
+elif test -f /etc/arch-release; then
+	DISTRO=arch
 fi
 # Check if distribution was specified manually
 AC_ARG_WITH([distro],
