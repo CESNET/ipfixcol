@@ -97,7 +97,7 @@ void printTimestamp64(const union plugin_arg * val, int plain_numbers, char * bu
 void printTimestamp(struct tm *tm, uint64_t msec, char * buff)
 {
 
-	strftime(buff, sizeof(buff), "%Y-%m-%d %T", tm);
+	strftime(buff, 20, "%Y-%m-%d %H:%M:%S", tm);
 	/* append miliseconds */
 	sprintf(&buff[19], ".%03u", (const unsigned int) msec);
 }

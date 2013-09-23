@@ -99,6 +99,9 @@ namespace fbitdump {
 %type <s> explist exp start
 %type <ps> value column 
 
+/* operators for joining exps are left-associative, therefore the rule "explist OPERATOR explist" always reduces */
+%left OPERATOR
+
 %{
 /* yylex function declaration */
 extern YY_DECL;
@@ -121,15 +124,15 @@ void parser::Parser::error(location const &loc, const std::string &msg) {
 start:
 	explist { filter.setFilterString(*$1); delete $1;}
 	;
- 
+
 explist:
 	  exp { $$ = $1; }
-	| explist OPERATOR exp { $$ = new std::string(*$1 + *$2 + " " + *$3); delete $1; delete $2; delete $3; }
+	| '(' explist ')' { $$ = new std::string("(" + *$2 + ")"); delete $2; }
+	| explist OPERATOR explist { $$ = new std::string(*$1 + " " + *$2 + " " + *$3); delete $1; delete $2; delete $3; }
 	;
 
 exp:
-	  '(' exp ')' { $$ = new std::string("( " + *$2 + " )"); delete $2; } 
-	| column CMP value {  $$ = new std::string(filter.parseExp($1, *$2, $3)); delete $1; delete $2; delete $3; }
+	  column CMP value {  $$ = new std::string(filter.parseExp($1, *$2, $3)); delete $1; delete $2; delete $3; }
 	| value CMP column {  $$ = new std::string(filter.parseExp($3, *$2, $1)); delete $1; delete $2; delete $3; }
 	| column CMP column { $$ = new std::string(filter.parseExp($1, *$2, $3)); delete $1; delete $2; delete $3; }
 	| column value { $$ = new std::string(filter.parseExp($1, $2)); delete $1; delete $2; }
