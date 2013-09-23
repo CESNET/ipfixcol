@@ -123,6 +123,7 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		yylex_destroy(this->scaninfo);
 	}
 
+//	std::cout << "					\n";
 //	std::cout << "\nFilter: " << this->filterString << std::endl;
 
 #ifdef DEBUG
@@ -233,7 +234,6 @@ void Filter::parseIPv6(std::string addr, std::string& part1, std::string& part2)
 {
 	uint64_t address[2];
 	std::stringstream ss;
-	std::string ip6;
 
 	/* Convert from address format into numeric format (we need 128b) */
 	inet_pton(AF_INET6, addr.c_str(), address);
@@ -417,10 +417,11 @@ void Filter::parseColumn(parserStruct *ps, std::string alias) const throw (std::
 			ps->parts.push_back(*it);
 			ps->nParts++;
 		}
+		ps->type = PT_COLUMN;
 	} else {
-		std::string err = std::string("Computed column '") + alias + "' cannot be used for filtering!";
-		delete col;
-		throw std::invalid_argument(err);
+		ps->parts.push_back(col->getElement());
+		ps->nParts = 1;
+		ps->type = PT_COMPUTED;
 	}
 
 	ps->colType = col->getSemantics();
@@ -428,7 +429,7 @@ void Filter::parseColumn(parserStruct *ps, std::string alias) const throw (std::
 	delete col;
 
 	/* Set type of structure */
-	ps->type = PT_COLUMN;
+
 }
 
 void Filter::parseRawcolumn(parserStruct *ps, std::string colname) const throw (std::invalid_argument)
@@ -436,6 +437,7 @@ void Filter::parseRawcolumn(parserStruct *ps, std::string colname) const throw (
 	if (ps == NULL) {
 		throw std::invalid_argument(std::string("Cannot parse raw column, NULL parser structure"));
 	}
+
 	ps->nParts = 1;
 	ps->type = PT_RAWCOLUMN;
 	ps->parts.push_back(colname);
@@ -478,7 +480,9 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 	if (right->type == PT_STRING) {
 		/* If it is string, we need to parse it
 		 * Type may transform from string to number (if coltype is PT_PROTO) - we can't change cmp to LIKE here */
-		this->parseStringType(right, left->colType);
+		this->parseStringType(right, left->colType, cmp);
+	} else if (cmp.empty()) {
+		cmp = "=";
 	}
 
 	switch (right->type) {
@@ -496,38 +500,40 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 	default:
 		break;
 	}
+
 	/* Parser expression "column CMP value" */
+	if ((left->nParts == 1) && (right->nParts == 1)) {
+		return left->parts[0] + " " + cmp + " " + right->parts[0] + " ";
+	}
+
 	std::string exp, op;
 
-	if ((left->nParts == 1) && (right->nParts == 1)) {
-		exp += left->parts[0] + " " + cmp + " " + right->parts[0] + " ";
+	/* Set operator */
+	if ((left->type == PT_GROUP) || (right->type == PT_HOSTNAME)) {
+		op = "or ";
 	} else {
-		exp += "(";
-
-		/* Set operator */
-		if ((left->type == PT_GROUP) || (right->type == PT_HOSTNAME)) {
-			op = "or ";
-		} else {
-			op = "and ";
-		}
-
-		/* Create expression */
-		for (uint16_t i = 0, j = 0; (i < left->nParts) || (j < right->nParts); i++, j++) {
-			/* If one string vector is at the end but second not, duplicate its last value */
-			if (i == left->nParts) {
-				i--;
-			}
-			if (j == right->nParts) {
-				j--;
-			}
-
-			/* Add part into expression */
-
-			exp += "( " + left->parts[i] + " " + cmp + " " + right->parts[j] + " ) " + op;
-		}
-		/* Remove last operator and close bracket */
-		exp = exp.substr(0, exp.length() - op.length() - 1) + ") ";
+		op = "and ";
 	}
+
+	exp += "(";
+
+	/* Create expression */
+	for (uint16_t i = 0, j = 0; (i < left->nParts) || (j < right->nParts); i++, j++) {
+		/* If one string vector is at the end but second not, duplicate its last value */
+		if (i == left->nParts) {
+			i--;
+		}
+		if (j == right->nParts) {
+			j--;
+		}
+
+		/* Add part into expression */
+
+		exp += "( " + left->parts[i] + " " + cmp + " " + right->parts[j] + " ) " + op;
+	}
+
+	/* Remove last operator and close bracket */
+	exp = exp.substr(0, exp.length() - op.length() - 1) + ") ";
 
 	/* Return created expression */
 	return exp;
@@ -535,7 +541,7 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 
 std::string Filter::parseExp(parserStruct *left, parserStruct *right) const
 {
-	return this->parseExp(left, " = ", right);
+	return this->parseExp(left, "", right);
 }
 
 std::string Filter::parseExpSub(parserStruct *left, parserStruct *right) const throw (std::invalid_argument)
@@ -597,12 +603,13 @@ void Filter::parseString(parserStruct *ps, std::string text) const throw (std::i
 	if (ps == NULL) {
 		throw std::invalid_argument(std::string("Cannot parse string, NULL parser structure"));
 	}
+
 	ps->nParts = 1;
 	ps->type = PT_STRING;
 	ps->parts.push_back(text);
 }
 
-void Filter::parseStringType(parserStruct *ps, std::string type) const throw (std::invalid_argument)
+void Filter::parseStringType(parserStruct *ps, std::string type, std::string &cmp) const throw (std::invalid_argument)
 {
 	if (ps == NULL) {
 		throw std::invalid_argument(std::string("Cannot parse string by type, NULL parser structure"));
@@ -610,9 +617,7 @@ void Filter::parseStringType(parserStruct *ps, std::string type) const throw (st
 
 	std::string num;
 
-	if (type.empty()) {
-		return;
-	} else if (type == "protocol") {
+	if (type == "protocol") {
 		/* It should be protocol name - we need to convert it into number */
 		num = getProtoNum(ps->parts[0]);
 
@@ -626,18 +631,32 @@ void Filter::parseStringType(parserStruct *ps, std::string type) const throw (st
 
 		ps->parts[0] = num;
 		ps->type = PT_NUMBER;
+
 	} else if (type == "ipv4") {
+		/* Parse hostname for IPv4 */
 		this->parseHostname(ps, AF_INET);
 		ps->type = PT_HOSTNAME;
+
 	} else if (type == "ipv6") {
+		/* Parse hostname for IPv6 */
 		this->parseHostname(ps, AF_INET6);
 		ps->type = PT_HOSTNAME6;
+
 	} else {
 		/* For all other columns with string value it stays as it is */
+		if (cmp.empty()) {
+			ps->parts[0] = "'%" + ps->parts[0] + "%'";
+		} else if (cmp == ">") {
+			ps->parts[0] = "'%" + ps->parts[0] + "'";
+		} else if (cmp == "<") {
+			ps->parts[0] = "'" + ps->parts[0] + "%'";
+		}
+		cmp = "LIKE";
 		ps->type = PT_STRING;
 	}
 }
 
+/* temporary solution */
 std::string Filter::getProtoNum(std::string name) const
 {
 	int i;
@@ -709,10 +728,8 @@ void Filter::parseHostname(parserStruct *ps, uint8_t af_type) const throw (std::
 	int ret;
 	struct addrinfo *result, *tmp;
 	struct addrinfo hints;
-	std::stringstream ss;
-	std::string address, last, last2;
+	std::string address, part1, part2, last1, last2;
 	void *addr;
-	char ipstr[INET6_ADDRSTRLEN];
 
 	memset(&hints, 0, sizeof(hints));
 
@@ -739,40 +756,44 @@ void Filter::parseHostname(parserStruct *ps, uint8_t af_type) const throw (std::
 			struct sockaddr_in *ipv4 = (struct sockaddr_in *) tmp->ai_addr;
 			addr = &(ipv4->sin_addr);
 
-			/* Convert it into string and parse it */
-			inet_ntop(tmp->ai_family, addr, ipstr, sizeof(ipstr));
-
-			address = this->parseIPv4(ipstr);
+			/* Int to string */
+			std::stringstream ss;
+			ss << ntohl(*((uint32_t *) addr));
+			address = ss.str();
 
 			/* Each address is contained twice (don't know why) - check if previous addr is the same */
-			if (address != last) {
+			if (address != last1) {
 				/* Save address */
 				ps->parts.push_back(address);
 				ps->nParts++;
 			}
 
-			last = address;
+			last1 = address;
 		} else {
 			/* IPv6 */
 			/* Get numeric address */
 			struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *) tmp->ai_addr;
 			addr = &(ipv6->sin6_addr);
 
-			/* Convert it into string and parse it */
-			inet_ntop(tmp->ai_family, addr, ipstr, sizeof(ipstr));
+			/* Int to str both parts of address */
+			std::stringstream ss;
+			ss << be64toh(*(( uint64_t *) addr));
+			part1 = ss.str();
 
-			std::string part1, part2;
+			ss.str(std::string());
+			ss.clear();
 
-			this->parseIPv6(ipstr, part1, part2);
+			ss << be64toh(*(((uint64_t *) addr) + 1));
+			part2 = ss.str();
 
-			if ((part1 != last) || (part2 != last2)) {
+			if ((part1 != last1) || (part2 != last2)) {
 				/* Save address */
 				ps->parts.push_back(part1);
 				ps->parts.push_back(part2);
 				ps->nParts += 2;
 			}
 
-			last = part1;
+			last1 = part1;
 			last2 = part2;
 		}
 		tmp = tmp->ai_next;
