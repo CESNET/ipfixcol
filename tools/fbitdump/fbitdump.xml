@@ -780,6 +780,24 @@
 			<element>e8057id7</element>
 		</value>
 	</column>
+	<column>
+		<name>DNS PSize</name>
+		<alias>%dnspsize</alias>
+		<width>9</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id8</element>
+		</value>
+	</column>
+	<column>
+		<name>DNS DNSSEC</name>
+		<alias>%dnsdo</alias>
+		<width>12</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id9</element>
+		</value>
+	</column>
 
 	<column>
 		<name>TCP RTT</name>
@@ -991,7 +1009,7 @@
 	</format>
 	<format>
 		<formatName>dns4</formatName>
-		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %dnsans %dnsrcode %dnsname %dnsqtype %dnsclass %dnsrrttl %dnsrlen %dnsrdata</formatString>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %dnsans %dnsrcode %dnsname %dnsqtype %dnsclass %dnsrrttl %dnsdo %dnspsize %dnsrlen %dnsrdata</formatString>
 	</format>
 	<format>
 		<formatName>ihttp4-invea</formatName>
