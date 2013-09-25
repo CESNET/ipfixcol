@@ -162,14 +162,12 @@ int main(int argc, char *argv[])
 			} else {
 				tm.filter(filter);
 			}
-			
-
-			/* Remove progressbar */
-			std::cout.fill(' ');
-			std::cout.width(50);
-			std::cout << "\r";
-			std::cout.flush();
-			
+			if(isatty(fileno(stdout))) {
+				std::cout.width(80);
+				std::cout.fill( ' ');
+				std::cout << "\r";
+				std::cout.flush();
+			}
 			/* print tables */
 			print.print(tm);
 		}

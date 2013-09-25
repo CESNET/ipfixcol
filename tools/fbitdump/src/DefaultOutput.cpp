@@ -11,7 +11,7 @@
 using namespace fbitdump;
 
 void printProtocol(const union plugin_arg * val, int plain_numbers, char * ret) {
-	if (!Configuration::instance->getPlainNumbers()) {
+	if (!plain_numbers) {
 		snprintf( ret, PLUGIN_BUFFER_SIZE, "%s", protocols[val[0].uint8] );
 	} else {
 		snprintf( ret, PLUGIN_BUFFER_SIZE, "%d", (uint16_t)val[0].uint8 );
@@ -32,6 +32,7 @@ void printIPv4(const union plugin_arg * val, int plain_numbers, char * buf)
 		ret = resolver->reverseLookup(val[0].uint32, host);
 		if (ret == true) {
 			snprintf( buf, PLUGIN_BUFFER_SIZE, "%s", host.c_str() );
+			return;
 		}
 
 		/* Error during DNS lookup, print IP address instead */
