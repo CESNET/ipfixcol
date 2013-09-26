@@ -123,7 +123,6 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		yylex_destroy(this->scaninfo);
 	}
 
-	std::cout << "                           \r";
 	MSG_FILTER(this->filterString.c_str());
 
 #ifdef DEBUG
