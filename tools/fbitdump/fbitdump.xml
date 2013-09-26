@@ -723,7 +723,7 @@
 		<width>9</width>
 		<default-value>-</default-value>
 		<value type="plain">
-			<element>e8057id1</element>
+			<element semantics="dns_rcode" >e8057id1</element>
 		</value>
 	</column>
 	<column>
@@ -778,6 +778,24 @@
 		<default-value>-</default-value>
 		<value type="plain">
 			<element>e8057id7</element>
+		</value>
+	</column>
+	<column>
+		<name>DNS PSize</name>
+		<alias>%dnspsize</alias>
+		<width>9</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id8</element>
+		</value>
+	</column>
+	<column>
+		<name>DNS DNSSEC</name>
+		<alias>%dnsdo</alias>
+		<width>12</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id9</element>
 		</value>
 	</column>
 
@@ -991,7 +1009,7 @@
 	</format>
 	<format>
 		<formatName>dns4</formatName>
-		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %dnsans %dnsrcode %dnsname %dnsqtype %dnsclass %dnsrrttl %dnsrlen %dnsrdata</formatString>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %dnsans %dnsrcode %dnsname %dnsqtype %dnsclass %dnsrrttl %dnsdo %dnspsize %dnsrlen %dnsrdata</formatString>
 	</format>
 	<format>
 		<formatName>ihttp4-invea</formatName>
@@ -1011,6 +1029,10 @@
 	<plugin>
 		<name>http_status_code</name>
 		<path>/usr/share/fbitdump/plugins/http_status_code.so</path>
+	</plugin>
+	<plugin>
+		<name>dns_rcode</name>
+		<path>/usr/share/fbitdump/plugins/dns_rcode.so</path>
 	</plugin>
 </plugins>
 </configuration>

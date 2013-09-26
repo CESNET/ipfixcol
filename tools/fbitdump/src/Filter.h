@@ -80,7 +80,8 @@ enum partsType {
 	PT_TIMESTAMP,
 	PT_STRING,
 	PT_HOSTNAME,
-	PT_HOSTNAME6
+	PT_HOSTNAME6,
+	PT_COMPUTED
 };
 
 /* Struct for parsing data from bison parser */
@@ -331,7 +332,7 @@ private:
 	 * @param ps Parser structure
 	 * @param[in] type Column type
 	 */
-	void parseStringType(parserStruct *ps, std::string type) const throw (std::invalid_argument);
+	void parseStringType(parserStruct *ps, std::string type, std::string &cmp) const throw (std::invalid_argument);
 
 	/**
 	 * \brief Converts protocol name into numeric form

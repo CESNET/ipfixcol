@@ -162,7 +162,12 @@ int main(int argc, char *argv[])
 			} else {
 				tm.filter(filter);
 			}
-
+			if(isatty(fileno(stdout))) {
+				std::cout.width(80);
+				std::cout.fill( ' ');
+				std::cout << "\r";
+				std::cout.flush();
+			}
 			/* print tables */
 			print.print(tm);
 		}

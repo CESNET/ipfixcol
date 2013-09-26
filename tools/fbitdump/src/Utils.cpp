@@ -69,7 +69,7 @@ void progressBar(std::string prefix, std::string suffix, int max, int actual) {
 	}
 	std::cout << "] " << int(progress * 100.0) << " % " << suffix;
 	std::cout.width(w.ws_col-(PROGRESSBAR_SIZE+prefix.size()+suffix.size()+7));
-//	std::cout.fill( ' ');
+	std::cout.fill( ' ');
 	std::cout << "\r";
 	
 
