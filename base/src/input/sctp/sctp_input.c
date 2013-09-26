@@ -758,7 +758,7 @@ wait_for_data:
 
 	/* Convert packet from Netflow v5/v9/sflow to IPFIX format */
 	if (htons(((struct ipfix_header *)(*packet))->version) != IPFIX_VERSION) {
-		convert_packet(packet, (ssize_t *) &msg_length, (char *) conf->input_info_list);
+		convert_packet(packet, (ssize_t *) &msg_length, NULL);
 	}
 
 	/* Check if lengths are the same */

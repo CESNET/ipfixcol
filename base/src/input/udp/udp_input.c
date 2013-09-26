@@ -252,6 +252,13 @@ int input_init(char *params, void **config)
 
 		inet_ntop(AF_INET6, &conf->info.dst_addr.ipv6, dst_addr, INET6_ADDRSTRLEN);
 	}
+
+	if (convert_init(UDP_PLUGIN, BUFF_LEN) != 0) {
+		MSG_ERROR(msg_module, "Error when initializing templates!");
+		retval = 1;
+		goto out;
+	}
+
 	/* print info */
 	MSG_NOTICE(msg_module, "UDP input plugin listening on address %s, port %s", dst_addr, port);
 
@@ -281,12 +288,6 @@ out:
 
 	/* free the global variables that may have been allocated by the xml parser */
 	xmlCleanupParser();
-
-	if (convert_init(UDP_PLUGIN, BUFF_LEN) != 0) {
-		MSG_ERROR(msg_module, "Error when initializing templates!");
-		retval = 1;
-	}
-
 
 	/* free input_info when error occured */
 	if (retval != 0 && conf != NULL) {

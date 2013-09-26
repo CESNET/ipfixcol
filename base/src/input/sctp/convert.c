@@ -1,3 +1,42 @@
+/**
+ * \file convert.c
+ * \author Michal Kozubik <kozubik.michal@gmail.com>
+ * \brief Packet conversion from Netflow v5/v9 or sFlow to IPFIX format.
+ *
+ * Copyright (C) 2011 CESNET, z.s.p.o.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is, and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
 #include <ipfixcol.h>
 #include <stdlib.h>
 #include <string.h>
@@ -89,7 +128,6 @@ static uint32_t seqNo[3] = {0,0,0};
 #define NF9_SEQ_N 1
 #define SF_SEQ_N  2
 
-static uint8_t modified = 0;
 static uint8_t inserted = 0;
 static uint8_t plugin = UDP_PLUGIN;
 static uint32_t buff_len = 0;
@@ -99,10 +137,10 @@ static uint32_t buff_len = 0;
  * \brief  List structure for input info
  */
 struct input_info_list {
-	struct input_info_network info;
-	struct input_info_list *next;
-	uint32_t last_sent;
-	uint16_t packets_sent;
+  struct input_info_network info;
+  struct input_info_list *next;
+  uint32_t last_sent;
+  uint16_t packets_sent;
 };
 
 struct templates_s {
@@ -112,59 +150,72 @@ struct templates_s {
 };
 
 static struct templates_s templates;
-
-int convert_init(int in_plugin, int len) {
-	templates.max = 30;
-	templates.cols = 2;
-	templates.templ = malloc(templates.max * templates.cols * sizeof(int));
-
-	if (templates.templ == NULL) {
-		return 1;
-	}
-	int i;
-	for (i = 0; i < (templates.max * templates.cols); i++) {
-		templates.templ[i] = 0;
-	}
-	buff_len = len;
-	plugin = in_plugin;
-	return 0;
-}
-
-int templates_realloc() {
-	templates.max += 20;
-	templates.templ = realloc(templates.templ, templates.max * templates.cols * sizeof(int));
-
-	if (templates.templ == NULL) {
-		return 1;
-	}
-	int i;
-	for (i = (templates.max - 20) * templates.cols; i < templates.max * templates.cols; i++) {
-			templates.templ[i] = 0;
-	}
-	return 0;
-}
-
-void convert_close() {
-	free(templates.templ);
-}
+static struct input_info_list *info_list;
 
 /**
  * \brief Convers static arrays from host to network byte order
  *
- * Also sets "modified" flag
  */
 inline void modify()
 {
-	if (modified == 1) {
-		return;
-	}
-	modified = 1;
 	int i;
 	for (i = 0; i < NETFLOW_V5_TEMPLATE_LEN/2; i++) {
 		netflow_v5_template[i] = htons(netflow_v5_template[i]);
 	}
 	netflow_v5_data_header[0] = htons(netflow_v5_data_header[0]);
 	netflow_v5_data_header[1] = htons(netflow_v5_data_header[1]);
+}
+
+int convert_init(int in_plugin, int len) {
+	/* Initialize templates structure */
+	templates.max = 30;
+	templates.cols = 2;
+
+	/* Allocate memory */
+	templates.templ = malloc(templates.max * templates.cols * sizeof(int));
+
+	if (templates.templ == NULL) {
+		return 1;
+	}
+
+	/* Initialize allocated memory */
+	int i;
+	for (i = 0; i < (templates.max * templates.cols); i++) {
+		templates.templ[i] = 0;
+	}
+
+	/* Fill in static variables */
+	buff_len = len;
+	plugin = in_plugin;
+
+	/* Modify static variables for template & data set insertion */
+	modify();
+
+	return 0;
+}
+
+int templates_realloc() {
+	/* More templates are needed, realloc memory */
+	templates.max += 20;
+
+	templates.templ = realloc(templates.templ, templates.max * templates.cols * sizeof(int));
+
+	if (templates.templ == NULL) {
+		return 1;
+	}
+
+	/* Initialize allocated memory */
+	int i;
+	for (i = (templates.max - 20) * templates.cols; i < templates.max * templates.cols; i++) {
+			templates.templ[i] = 0;
+	}
+
+	return 0;
+}
+
+void convert_close() {
+	/* Free allocated memory */
+	free(templates.templ);
 }
 
 /**
@@ -177,7 +228,7 @@ inline void modify()
  * \param[in] numOfFlowSamples Number of flow samples in sFlow datagram
  * \return Total length of packet
  */
-uint16_t insert_template_set(char **packet, char *input_info, int numOfFlowSamples, ssize_t *len)
+uint16_t insert_template_set(char **packet, int numOfFlowSamples, ssize_t *len)
 {
 	/* Template Set insertion if needed */
 	/* Check conf->info_list->info.template_life_packet and template_life_time */
@@ -200,7 +251,6 @@ uint16_t insert_template_set(char **packet, char *input_info, int numOfFlowSampl
 	}
 
 	if (plugin == UDP_PLUGIN) {
-		struct input_info_list *info_list = (struct input_info_list *) input_info;
 		uint32_t last = 0;
 		if ((info_list == NULL) || ((info_list != NULL) && (info_list->info.template_life_packet == NULL) && (info_list->info.template_life_time == NULL))) {
 			if (inserted == 0) {
@@ -416,10 +466,11 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
  * \param[in] len Length of packet
  * \param[in] input_info Information structure storing data needed for refreshing templates
  */
-void convert_packet(char **packet, ssize_t *len, char *info_list)
+void convert_packet(char **packet, ssize_t *len, char *input_info)
 {
 	struct ipfix_header *header = (struct ipfix_header *) *packet;
 	int numOfFlowSamples = 0;
+	info_list = (struct input_info_list *) input_info;
 	switch (htons(header->version)) {
 		/* Netflow v9 packet */
 		case NETFLOW_V9_VERSION: {
@@ -479,10 +530,7 @@ void convert_packet(char **packet, ssize_t *len, char *info_list)
 			break; }
 
 		/* Netflow v5 packet */
-		case NETFLOW_V5_VERSION:
-			if (modified == 0) {
-				modify();
-			}
+		case NETFLOW_V5_VERSION: {
 			uint64_t sysUp = ntohl(*((uint32_t *) (((uint8_t *)header) + 4)));
 			uint64_t unSec = ntohl(*((uint32_t *) (((uint8_t *)header) + 8)));
 			uint64_t unNsec = ntohl(*((uint32_t *) (((uint8_t *)header) + 12)));
@@ -522,20 +570,17 @@ void convert_packet(char **packet, ssize_t *len, char *info_list)
 			*len += shifted * BYTES_8;
 
 			/* Template Set insertion (if needed) and setting packet length */
-			header->length = insert_template_set(packet,(char *) info_list, numOfFlowSamples, len);
+			header->length = insert_template_set(packet, numOfFlowSamples, len);
 
 			header->sequence_number = htonl(seqNo[NF5_SEQ_N]);
 			if (*len >= htons(header->length)) {
 				seqNo[NF5_SEQ_N] += numOfFlowSamples;
 			}
 
-			break;
+			break; }
 
 		/* SFLOW packet (converted to Netflow v5 like packet */
 		default:
-			if (modified == 0) {
-				modify();
-			}
 			/* Conversion from sflow to Netflow v5 like IPFIX packet */
 			numOfFlowSamples = Process_sflow(*packet, *len);
 			if (numOfFlowSamples < 0) {
@@ -550,7 +595,7 @@ void convert_packet(char **packet, ssize_t *len, char *info_list)
 			header->export_time = htonl((uint32_t) time(NULL));
 
 			/* Template Set insertion (if needed) and setting total packet length */
-			header->length = insert_template_set(packet,(char *) info_list, numOfFlowSamples, len);
+			header->length = insert_template_set(packet, numOfFlowSamples, len);
 
 			header->sequence_number = htonl(seqNo[SF_SEQ_N]);
 			if (*len >= htons(header->length)) {
