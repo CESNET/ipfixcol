@@ -54,6 +54,7 @@ typedef enum {
  * @param module Identification of program part that generated this message
  * @param format
  */
+#define MSG_FILTER(module, format, ...) if (verbose >= ICMSG_ERROR) icmsg_print("FILTER", module, format, ##__VA_ARGS__)
 #define MSG_ERROR(module, format, ...) if (verbose >= ICMSG_ERROR) icmsg_print("ERROR", module, format, ##__VA_ARGS__)
 #define MSG_WARNING(module, format, ...) if (verbose >= ICMSG_WARNING) icmsg_print("WARNING", module, format, ## __VA_ARGS__)
 #define MSG_NOTICE(module, format, ...) if (verbose >= ICMSG_NOTICE) icmsg_print("NOTICE", module, format, ## __VA_ARGS__)
