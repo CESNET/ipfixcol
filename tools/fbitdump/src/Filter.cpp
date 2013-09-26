@@ -50,6 +50,7 @@
 #include "typedefs.h"
 #include "scanner.h"
 #include "protocols.h"
+#include "Verbose.h"
 
 namespace fbitdump
 {
@@ -122,8 +123,8 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		yylex_destroy(this->scaninfo);
 	}
 
-//	std::cout << "					\n";
-//	std::cout << "\nFilter: " << this->filterString << std::endl;
+	std::cout << "                           \r";
+	MSG_FILTER(this->filterString.c_str());
 
 #ifdef DEBUG
 	std::cerr << "Using filter: '" << this->filterString << "'" << std::endl;

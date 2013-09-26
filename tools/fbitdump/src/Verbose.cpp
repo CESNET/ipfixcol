@@ -49,7 +49,10 @@ int verbose = ICMSG_ERROR;
 
 void icmsg_print(const char *type, const char *module, const char *format, ...)
 {
-	std::cout << type << ": " << module << ": ";
+	std::cout << type << ": ";
+	if (module != NULL) {
+		std::cout << module << ": ";
+	}
 
 	va_list ap;
 
