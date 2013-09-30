@@ -48,6 +48,12 @@
 namespace fbitdump {
 namespace Utils {
 
+void printStatus( std::string status ) {
+	if(isatty(fileno(stdout))) {
+			std::cout << status << "...                                     \r";
+			std::cout.flush();
+	}
+}
 
 void progressBar(std::string prefix, std::string suffix, int max, int actual) {
 	static struct winsize w;

@@ -264,10 +264,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	}
 
 	/* open XML configuration file */
-	if(isatty(fileno(stdout))) {
-		std::cout << "Parsing configuration...                                     \r";
-		std::cout.flush();
-	}
+	Utils::printStatus( "Parsing configuration");
 	if (!this->doc.load_file(this->getXmlConfPath())) {
 		std::string err = std::string("XML '") + this->getXmlConfPath() + "' with columns configuration cannot be loaded!";
 		throw std::invalid_argument(err);
@@ -281,18 +278,14 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	if (this->optm) {
 		this->processmOption(optionm);
 	}
-	if(isatty(fileno(stdout))) {
-		std::cout << "Parsing column indexes...                                     \r";
-		std::cout.flush();
-	}
+	Utils::printStatus( "Parsing column indexes");
+
 	/* parse indexes line */
 	this->parseIndexColumns(indexes);
 	free(indexes);
 
-	if(isatty(fileno(stdout))) {
-		std::cout << "Loading modules...                                     \r";
-		std::cout.flush();
-	}
+	Utils::printStatus( "Loading modules");
+
 	this->loadModules();
 	/* read filter */
 	if (optind < argc) {
@@ -323,10 +316,8 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	this->plugins["tcpflags"] = printTCPFlags;
 	this->plugins["duration"] = printDuration;
 
-	if(isatty(fileno(stdout))) {
-		std::cout << "Preparing output format...                                     \r";
-		std::cout.flush();
-	}
+	Utils::printStatus( "Preparing output format");
+
 	/* prepare output format string from configuration file */
 	this->loadOutputFormat();
 
@@ -340,10 +331,8 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		return 1;
 	}
 
-	if(isatty(fileno(stdout))) {
-		std::cout << "Searching for table parts...                                     \r";
-		std::cout.flush();
-	}
+	Utils::printStatus( "Searching for table parts");
+
 	/* search for table parts in specified directories */
 	this->searchForTableParts(tables);
 	this->instance = this;
@@ -392,10 +381,9 @@ void Configuration::searchForTableParts(stringVector &tables) throw (std::invali
 			}
 
 			if (S_ISDIR(statbuf.st_mode) && strcmp(dent->d_name, ".") && strcmp(dent->d_name, "..")) {
-				if(isatty(fileno(stdout))) {
-					std::cout << "Searching for table parts in " << tablePath << "                                   \r";
-					std::cout.flush();
-				}
+				std::string status;
+				status = "Searching for table parts in " + tablePath;
+				Utils::printStatus( status );
 				Utils::sanitizePath(tablePath);
 
 				/* test whether the directory is fastbit part */

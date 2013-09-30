@@ -87,29 +87,21 @@ int main(int argc, char *argv[])
 
 	try {
 		/* create filter */
-		if(isatty(fileno(stdout))) {
-			std::cout << "Creating filter...                                     \r";
-			std::cout.flush();
-		}
+		Utils::printStatus( "Creating filter");
+
 		Filter filter(conf);
-		if(isatty(fileno(stdout))) {
-			std::cout << "Initializing printer...                                     \r";
-			std::cout.flush();
-		}
+		Utils::printStatus( "Initializing printer");
+
 		/* initialise printer */
 		Printer print(std::cout, conf);
-		if(isatty(fileno(stdout))) {
-			std::cout << "Initializing tables...                                     \r";
-			std::cout.flush();
-		}
+		Utils::printStatus( "Initializing tables");
+
 		/* initialise tables */
 		TableManager tm(conf);
 		/* check whether to delete indexes */
 		if (conf.getDeleteIndexes()) {
-			if(isatty(fileno(stdout))) {
-				std::cout << "Deleting indexes...                                     \r";
-				std::cout.flush();
-			}
+			Utils::printStatus( "Deleting indexes");
+
 			IndexManager::deleteIndexes(conf, tm);
 
 			if (access (conf.pipe_name.c_str(), F_OK ) == 0 ) {
@@ -125,10 +117,8 @@ int main(int argc, char *argv[])
 
 		/* check whether to build indexes */
 		if (conf.getCreateIndexes()) {
-			if(isatty(fileno(stdout))) {
-				std::cout << "Building indexes...                                     \r";
-				std::cout.flush();
-			}
+			Utils::printStatus( "Building indexes");
+
 			IndexManager::createIndexes(conf, tm);
 			if (access (conf.pipe_name.c_str(), F_OK ) == 0 ) {
 				ibis::partList parts = tm.getParts();
@@ -143,10 +133,8 @@ int main(int argc, char *argv[])
 
 		/* check whether to print template information */
 		if (conf.getTemplateInfo()) {
-			if(isatty(fileno(stdout))) {
-				std::cout << "Printing templates...                                     \r";
-				std::cout.flush();
-			}
+			Utils::printStatus( "Printing templates");
+
 			TemplateInfo::printTemplates(tm, conf);
 		}
 
@@ -154,14 +142,13 @@ int main(int argc, char *argv[])
 		if (!conf.getDeleteIndexes() && !conf.getCreateIndexes() && !conf.getTemplateInfo()) {
 			/* do the work */
 			if (conf.getAggregate()) {
-				if(isatty(fileno(stdout))) {
-					std::cout << "Aggregating tables...                                                                    \r";
-					std::cout.flush();
-				}
+				Utils::printStatus( "Aggregating tables");
 				tm.aggregate(conf.getAggregateColumns(), conf.getSummaryColumns(), filter);
 			} else {
 				tm.filter(filter);
 			}
+
+			/* clear line with spaces - removing progressbar if anny */
 			if(isatty(fileno(stdout))) {
 				std::cout.width(80);
 				std::cout.fill( ' ');

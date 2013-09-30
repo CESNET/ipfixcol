@@ -45,6 +45,8 @@
 namespace fbitdump {
 
 namespace Utils {
+
+void printStatus( std::string status );
 void progressBar(std::string prefix, std::string suffix, int max, int actual);
 /**
  * \brief Formats number 'num' to ostringstream 'ss'
