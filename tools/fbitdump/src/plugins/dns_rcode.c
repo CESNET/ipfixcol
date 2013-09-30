@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "plugin_header.h"
 
-void format( const union plugin_arg * arg, int plain_numbers, char *out)
+void format( const union plugin_arg * arg, int plain_numbers, char out[PLUGIN_BUFFER_SIZE])
 {
 	char *str = NULL;
 	char num[PLUGIN_BUFFER_SIZE];

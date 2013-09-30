@@ -10,7 +10,7 @@
 
 using namespace fbitdump;
 
-void printProtocol(const union plugin_arg * val, int plain_numbers, char * ret) {
+void printProtocol(const union plugin_arg * val, int plain_numbers, char ret[PLUGIN_BUFFER_SIZE]) {
 	if (!plain_numbers) {
 		snprintf( ret, PLUGIN_BUFFER_SIZE, "%s", protocols[val[0].uint8] );
 	} else {
@@ -18,7 +18,7 @@ void printProtocol(const union plugin_arg * val, int plain_numbers, char * ret) 
 	}
 }
 
-void printIPv4(const union plugin_arg * val, int plain_numbers, char * buf)
+void printIPv4(const union plugin_arg * val, int plain_numbers, char buf[PLUGIN_BUFFER_SIZE])
 {
 	int ret;
 	Resolver *resolver;
@@ -48,7 +48,7 @@ void printIPv4(const union plugin_arg * val, int plain_numbers, char * buf)
 	inet_ntop(AF_INET, &in_addr, buf, INET_ADDRSTRLEN);
 }
 
-void printIPv6(const union plugin_arg * val, int plain_numbers, char * buf)
+void printIPv6(const union plugin_arg * val, int plain_numbers, char buf[PLUGIN_BUFFER_SIZE])
 {
 	int ret;
 	Resolver *resolver;
@@ -78,7 +78,7 @@ void printIPv6(const union plugin_arg * val, int plain_numbers, char * buf)
 	inet_ntop(AF_INET6, &in6_addr, buf, INET6_ADDRSTRLEN);
 }
 
-void printTimestamp32(const union plugin_arg * val, int plain_numbers, char * buf)
+void printTimestamp32(const union plugin_arg * val, int plain_numbers, char buf[PLUGIN_BUFFER_SIZE])
 {
 	time_t timesec = val[0].uint32;
 	struct tm *tm = localtime(&timesec);
@@ -86,7 +86,7 @@ void printTimestamp32(const union plugin_arg * val, int plain_numbers, char * bu
 	printTimestamp(tm, 0, buf);
 }
 
-void printTimestamp64(const union plugin_arg * val, int plain_numbers, char * buf)
+void printTimestamp64(const union plugin_arg * val, int plain_numbers, char buf[PLUGIN_BUFFER_SIZE])
 {
 	time_t timesec = val[0].uint64/1000;
 	uint64_t msec = val[0].uint64 % 1000;
@@ -95,7 +95,7 @@ void printTimestamp64(const union plugin_arg * val, int plain_numbers, char * bu
 	printTimestamp(tm, msec, buf);
 }
 
-void printTimestamp(struct tm *tm, uint64_t msec, char * buff)
+void printTimestamp(struct tm *tm, uint64_t msec, char buff[PLUGIN_BUFFER_SIZE])
 {
 
 	strftime(buff, 20, "%Y-%m-%d %H:%M:%S", tm);
@@ -103,7 +103,7 @@ void printTimestamp(struct tm *tm, uint64_t msec, char * buff)
 	sprintf(&buff[19], ".%03u", (const unsigned int) msec);
 }
 
-void printTCPFlags(const union plugin_arg * val, int plain_numbers, char * result)
+void printTCPFlags(const union plugin_arg * val, int plain_numbers, char result[PLUGIN_BUFFER_SIZE])
 {
 	sprintf( result, "%s", "......" );
 
@@ -127,7 +127,7 @@ void printTCPFlags(const union plugin_arg * val, int plain_numbers, char * resul
 	}
 }
 
-void printDuration(const union plugin_arg * val, int plain_numbers, char * buff)
+void printDuration(const union plugin_arg * val, int plain_numbers, char buff[PLUGIN_BUFFER_SIZE])
 {
 	static std::ostringstream ss;
 	static std::string str;

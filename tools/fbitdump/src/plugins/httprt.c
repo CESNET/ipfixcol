@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "plugin_header.h"
 
-void format( const union plugin_arg * arg, int plain_numbers, char * buff ) {
+void format( const union plugin_arg * arg, int plain_numbers, char buff[PLUGIN_BUFFER_SIZE] ) {
 	char out[PLUGIN_BUFFER_SIZE]={0};
 	char *methods[]={"GET", "POST", "HTTP", "HEAD", "PUT", "OPTIONS", "DELETE", "TRACE", "CONNECT", "PATCH"};
 

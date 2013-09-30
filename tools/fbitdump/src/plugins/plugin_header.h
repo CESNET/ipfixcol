@@ -19,7 +19,7 @@ union plugin_arg
 	double dbl;
 } ;
 
-void format( const union plugin_arg * arg, int plain_numbers, char * buffer );
+void format( const union plugin_arg * arg, int plain_numbers, char buffer[PLUGIN_BUFFER_SIZE] );
 
 
 #endif
