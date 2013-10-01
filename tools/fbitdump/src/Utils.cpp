@@ -49,10 +49,19 @@ namespace fbitdump {
 namespace Utils {
 
 void printStatus( std::string status ) {
-	if(isatty(fileno(stdout))) {
-			std::cout << status << "...                                     \r";
-			std::cout.flush();
+	static struct winsize w;
+	static int ok = 0;
+	if(!isatty(fileno(stdout)))
+		return;
+	if( ok == 0 ) {
+		ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+		ok = 1;
 	}
+	std::cout << status << "...";
+	std::cout.width(w.ws_col-(status.size()+3));
+	std::cout.fill( ' ');
+	std::cout << "\r";
+	std::cout.flush();
 }
 
 void progressBar(std::string prefix, std::string suffix, int max, int actual) {
