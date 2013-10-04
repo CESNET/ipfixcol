@@ -43,6 +43,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <stdlib.h>
 
 #include "Filter.h"
 #include "Configuration.h"
@@ -122,12 +123,8 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		yylex_destroy(this->scaninfo);
 	}
 
-//	std::cout << "					\n";
-//	std::cout << "\nFilter: " << this->filterString << std::endl;
+	std::cerr << "FILTER: " << this->filterString << std::endl;
 
-#ifdef DEBUG
-	std::cerr << "Using filter: '" << this->filterString << "'" << std::endl;
-#endif
 }
 
 time_t Filter::parseTimestamp(std::string str) const throw (std::invalid_argument)
@@ -361,7 +358,7 @@ void Filter::parseHex(parserStruct *ps, std::string number) const throw (std::in
 	if (ps == NULL) {
 		throw std::invalid_argument(std::string("Cannot parse hexa number, NULL parser structure"));
 	}
-#include <stdlib.h>
+
 	std::stringstream ss;
 	ss << strtol(number.c_str(), NULL, 16);
 
@@ -524,9 +521,9 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 
 	/* Set operator */
 	if ((left->type == PT_GROUP) || (right->type == PT_HOSTNAME)) {
-		op = "or ";
+		op = " or ";
 	} else {
-		op = "and ";
+		op = " and ";
 	}
 
 	exp += "(";
@@ -543,11 +540,11 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 
 		/* Add part into expression */
 
-		exp += "( " + left->parts[i] + " " + cmp + " " + right->parts[j] + " ) " + op;
+		exp += "(" + left->parts[i] + " " + cmp + " " + right->parts[j] + ")" + op;
 	}
 
 	/* Remove last operator and close bracket */
-	exp = exp.substr(0, exp.length() - op.length() - 1) + ") ";
+	exp = exp.substr(0, exp.length() - op.length()) + ")";
 
 	/* Return created expression */
 	return exp;
@@ -572,8 +569,8 @@ std::string Filter::parseExpSub(parserStruct *left, parserStruct *right) const t
 
 	/* Create expression */
 	for (i = 0; i < left->nParts; i++) {
-		exp += "( " + left->parts[i] + " > " + right->parts[rightPos++] + " ) and ";
-		exp += "( " + left->parts[i] + " < " + right->parts[rightPos++] + " ) and ";
+		exp += "(" + left->parts[i] + " > " + right->parts[rightPos++] + ") and ";
+		exp += "(" + left->parts[i] + " < " + right->parts[rightPos++] + ") and ";
 	}
 
 	/* Remove last "and" and insert closing bracket */
@@ -596,9 +593,9 @@ std::string Filter::parseExpHost6(parserStruct *left, std::string cmp, parserStr
 
 	/* Create expression */
 	while (i < right->nParts) {
-		exp += "( ";
+		exp += "(";
 		exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + " and ";
-		exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + " ) or ";
+		exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + ") or ";
 
 		/* If all column parts were used, jump to start and use them again */
 		if (leftPos == left->nParts) {
@@ -650,11 +647,13 @@ void Filter::parseStringType(parserStruct *ps, std::string type, std::string &cm
 		/* Parse hostname for IPv4 */
 		this->parseHostname(ps, AF_INET);
 		ps->type = PT_HOSTNAME;
+		cmp = "=";
 
 	} else if (type == "ipv6") {
 		/* Parse hostname for IPv6 */
 		this->parseHostname(ps, AF_INET6);
 		ps->type = PT_HOSTNAME6;
+		cmp = "=";
 
 	} else {
 		/* For all other columns with string value it stays as it is */
@@ -813,6 +812,39 @@ void Filter::parseHostname(parserStruct *ps, uint8_t af_type) const throw (std::
 		tmp = tmp->ai_next;
 	}
 	freeaddrinfo(result);
+}
+
+void Filter::parseListAdd(std::vector<parserStruct *> *list, parserStruct *value) const throw (std::invalid_argument)
+{
+	if (list == NULL || value == NULL) {
+		throw std::invalid_argument(std::string("Cannot add to list, NULL parser structure"));
+	}
+
+	/* Add new parser structure into list */
+	list->push_back(value);
+}
+
+std::string Filter::parseExpList(std::vector<parserStruct *> *list) const throw (std::invalid_argument)
+{
+	if (list == NULL) {
+		throw std::invalid_argument(std::string("Cannot parse expression with list, NULL parser structure"));
+	}
+
+	/* Go through all structures in vector and parse them with column on first position */
+	std::string exp = "(";
+
+	while (list->size() > 1) {
+		exp += "(" + this->parseExp(list->front(), list->back()) + ") or ";
+
+		/* We don't need this structure anymore - free memory and remove it from list */
+		delete list->back();
+		list->pop_back();
+	}
+
+	/* Remove last " or " and close bracket */
+	exp = exp.substr(0, exp.length() - 4) + ") ";
+
+	return exp;
 }
 
 Filter::Filter(Configuration &conf) throw (std::invalid_argument)

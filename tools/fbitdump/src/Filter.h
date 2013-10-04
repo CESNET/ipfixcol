@@ -81,7 +81,8 @@ enum partsType {
 	PT_STRING,
 	PT_HOSTNAME,
 	PT_HOSTNAME6,
-	PT_COMPUTED
+	PT_COMPUTED,
+	PT_LIST
 };
 
 /* Struct for parsing data from bison parser */
@@ -290,6 +291,21 @@ public:
 	 * @param text String from parser
 	 */
 	void parseString(parserStruct *ps, std::string text) const throw (std::invalid_argument);
+
+	/**
+	 * \brief Insert new structure into list (%column in value value value....)
+	 *
+	 * @param list Vector of all structures in list expression
+	 * @param value Parser structure to be added into list
+	 */
+	void parseListAdd(std::vector<parserStruct *> *list, parserStruct *value) const throw (std::invalid_argument);
+
+	/**
+	 * \brief Parse list expression - goes throught all structures in list and parses them with column
+	 *
+	 * @param list Vector of all structures in list expression
+	 */
+	std::string parseExpList(std::vector<parserStruct *> *list) const throw (std::invalid_argument);
 
 	/**
 	 * \brief Sets new filter string
