@@ -356,6 +356,21 @@ void Filter::parseNumber(parserStruct *ps, std::string number) const throw (std:
 	ps->parts.push_back(number);
 }
 
+void Filter::parseHex(parserStruct *ps, std::string number) const throw (std::invalid_argument)
+{
+	if (ps == NULL) {
+		throw std::invalid_argument(std::string("Cannot parse hexa number, NULL parser structure"));
+	}
+#include <stdlib.h>
+	std::stringstream ss;
+	ss << strtol(number.c_str(), NULL, 16);
+
+	/* Set right values of parser structure */
+	ps->type = PT_NUMBER;
+	ps->nParts = 1;
+	ps->parts.push_back(ss.str());
+}
+
 bool Filter::parseColumnGroup(parserStruct *ps, std::string alias, bool aggeregate) const
 {
 	if (ps == NULL) {

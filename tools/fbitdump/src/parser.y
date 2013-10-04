@@ -82,6 +82,7 @@ namespace fbitdump {
 /* tokens that are later also included in lexer */
 %token <s> COLUMN		"column"
 %token <s> NUMBER		"number"
+%token <s> HEXNUM		"hexa number"
 %token <s> CMP			"comparison"
 %token <s> RAWCOLUMN	"raw column"
 %token <s> OPERATOR		"operator"
@@ -140,6 +141,7 @@ exp:
 
 value:
 	  NUMBER { $$ = new fbitdump::_parserStruct; filter.parseNumber($$, *$1); delete $1; }
+	| HEXNUM { $$ = new fbitdump::_parserStruct; filter.parseHex($$, *$1); delete $1; }
 	| IPv4 { $$ = new fbitdump::_parserStruct; filter.parseIPv4($$, *$1); delete $1; }
 	| IPv4_SUB { $$ = new fbitdump::_parserStruct; filter.parseIPv4Sub($$, *$1); delete $1; }
 	| IPv6 { $$ = new fbitdump::_parserStruct; filter.parseIPv6($$, *$1); delete $1; }

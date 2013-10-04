@@ -156,6 +156,13 @@ public:
 	void parseNumber(parserStruct *ps, std::string number) const throw (std::invalid_argument);
 
 	/**
+	 * \brief Parses number in hexadecimal format and fills parser structure
+	 *
+	 * @param ps Parser structure
+	 * @param number Hexadecimal number
+	 */
+	void parseHex(parserStruct *ps, std::string number) const throw (std::invalid_argument);
+	/**
 	 * \brief Parses IPv4 address
 	 *
 	 * Converts IPv4 address from text into numeric format and saves it into parser structure
