@@ -61,6 +61,7 @@ namespace fbitdump {
 #include <string>
 #include <iostream> 
 #include "Filter.h"
+#include <vector>
 
 /* this is a workaround for %lex-param which takes only last 
    part of filter.scaninfo: scaninfo */
@@ -77,11 +78,13 @@ namespace fbitdump {
 %union {
 	std::string *s;
 	struct fbitdump::_parserStruct *ps;
+	std::vector<struct fbitdump::_parserStruct *> *v;
 }
 
 /* tokens that are later also included in lexer */
 %token <s> COLUMN		"column"
 %token <s> NUMBER		"number"
+%token <s> HEXNUM		"hexa number"
 %token <s> CMP			"comparison"
 %token <s> RAWCOLUMN	"raw column"
 %token <s> OPERATOR		"operator"
@@ -94,10 +97,12 @@ namespace fbitdump {
 %token <s> OTHER		"symbol"
 %token <s> EOL			"end of line"
 %token <s> STRING		"string"
+%token <s> IN			"in list"
 %token END 0			"end of file"
 
 %type <s> explist exp start
-%type <ps> value column 
+%type <ps> value column
+%type <v> list
 
 /* operators for joining exps are left-associative, therefore the rule "explist OPERATOR explist" always reduces */
 %left OPERATOR
@@ -127,6 +132,7 @@ start:
 
 explist:
 	  exp { $$ = $1; }
+	| list { $$ = new std::string(filter.parseExpList($1)); delete $1; }
 	| '(' explist ')' { $$ = new std::string("(" + *$2 + ")"); delete $2; }
 	| explist OPERATOR explist { $$ = new std::string(*$1 + " " + *$2 + " " + *$3); delete $1; delete $2; delete $3; }
 	;
@@ -138,8 +144,14 @@ exp:
 	| column value { $$ = new std::string(filter.parseExp($1, $2)); delete $1; delete $2; }
     ;
 
+list:
+	  list value { $$ = $1; filter.parseListAdd($$, $2); }
+	|  column IN value { $$ = new std::vector<fbitdump::_parserStruct *>; filter.parseListAdd($$, $1); filter.parseListAdd($$, $3); delete $2; }
+	;
+
 value:
 	  NUMBER { $$ = new fbitdump::_parserStruct; filter.parseNumber($$, *$1); delete $1; }
+	| HEXNUM { $$ = new fbitdump::_parserStruct; filter.parseHex($$, *$1); delete $1; }
 	| IPv4 { $$ = new fbitdump::_parserStruct; filter.parseIPv4($$, *$1); delete $1; }
 	| IPv4_SUB { $$ = new fbitdump::_parserStruct; filter.parseIPv4Sub($$, *$1); delete $1; }
 	| IPv6 { $$ = new fbitdump::_parserStruct; filter.parseIPv6($$, *$1); delete $1; }
