@@ -320,17 +320,23 @@
 			<emphasis>and</emphasis> or <emphasis>or</emphasis> keyword. This is case independent.</simpara>
 		<simpara>Unlike nfdump, <emphasis>expr</emphasis> consists of</simpara>
 		<simpara><emphasis>%column</emphasis> <emphasis>cmp</emphasis> <emphasis>value</emphasis></simpara>
-		<simpara><emphasis>%column</emphasis> is an element alias prefixed with %. %column element must not be a computed value, that is a value that is not directly stored.
-		Alternately it is possible to specify the element name in e[x]id[y] format, where [x] means enterprise number and [y] element ID</simpara>
+		<simpara>where <emphasis>cmp</emphasis> is not required (it will be added implicitly)</simpara>
+		<simpara><emphasis>%column</emphasis> is an element alias prefixed with %. %column element can be a computed value, that is a value that is not directly stored.
+		Alternately it is possible to specify the element name in e[x]id[y] format, where [x] means enterprise number and [y] element ID.
+		It is also possible to specifi group of columns (e.g. <emphasis>%port</emphasis> for source and destination port)</simpara>
 		<simpara><emphasis>cmp</emphasis> is one of '=', '==', '&lt;', '&gt;', '&lt;=', '&gt;=', '!='</simpara> 
 		<simpara><emphasis>value</emphasis> is value of the column to compare with. The value can be specified as one of:</simpara>
 		<simplelist>
 				<member>Decimal number, optionally with one of [kKmMgGtT] suffix</member>
+				<member>Hexadecimal number in 0x.... format</member>
 				<member>IPv4 address in decimal format</member>
+				<member>IPv6 address in decimal format</member>
+				<member>IPv4/v6 address in decimal format with subnet (address/xx)</member>
+				<member>Hostname</member>
 				<member>Timestamp in yyyy/MM/dd.hh:mm:ss format</member>
+				<member>String value which can contain % to filter by substrings</member>
 		</simplelist>
 		<simpara>Indexes will be built automatically on columns specified in filter clause, thus first query for any data without indexes might run longer.</simpara>
-		<simpara>The filter is currently missing support for subnets. However, it is possible to specify whole network range with "%srcip4 &gt; IP_START AND %srcip4 &lt; IP_END".</simpara>
 	</refsect1>
 
 	<refsect1>
