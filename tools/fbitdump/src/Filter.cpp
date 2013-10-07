@@ -493,7 +493,8 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 		/* If it is string, we need to parse it
 		 * Type may transform from string to number (if coltype is PT_PROTO) - we can't change cmp to LIKE here */
 		this->parseStringType(right, left->colType, cmp);
-	} else if (cmp.empty()) {
+    }
+	if (cmp.empty()) {
 		cmp = "=";
 	}
 
@@ -648,13 +649,11 @@ void Filter::parseStringType(parserStruct *ps, std::string type, std::string &cm
 		/* Parse hostname for IPv4 */
 		this->parseHostname(ps, AF_INET);
 		ps->type = PT_HOSTNAME;
-		cmp = "=";
 
 	} else if (type == "ipv6") {
 		/* Parse hostname for IPv6 */
 		this->parseHostname(ps, AF_INET6);
 		ps->type = PT_HOSTNAME6;
-		cmp = "=";
 
 	} else {
 		/* For all other columns with string value it stays as it is */

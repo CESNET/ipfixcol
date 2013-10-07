@@ -320,11 +320,20 @@
 			<emphasis>and</emphasis> or <emphasis>or</emphasis> keyword. This is case independent.</simpara>
 		<simpara>Unlike nfdump, <emphasis>expr</emphasis> consists of</simpara>
 		<simpara><emphasis>%column</emphasis> <emphasis>cmp</emphasis> <emphasis>value</emphasis></simpara>
+        <simpara><emphasis>value</emphasis> <emphasis>cmp</emphasis> <emphasis>%column</emphasis></simpara>
+        <simpara><emphasis>%column</emphasis> <emphasis>cmp</emphasis> <emphasis>%column</emphasis></simpara>
 		<simpara>where <emphasis>cmp</emphasis> is not required (it will be added implicitly)</simpara>
 		<simpara><emphasis>%column</emphasis> is an element alias prefixed with %. %column element can be a computed value, that is a value that is not directly stored.
 		Alternately it is possible to specify the element name in e[x]id[y] format, where [x] means enterprise number and [y] element ID.
 		It is also possible to specifi group of columns (e.g. <emphasis>%port</emphasis> for source and destination port)</simpara>
-		<simpara><emphasis>cmp</emphasis> is one of '=', '==', '&lt;', '&gt;', '&lt;=', '&gt;=', '!='</simpara> 
+		<simpara><emphasis>cmp</emphasis> is one of '=', '==', '&lt;', '&gt;', '&lt;=', '&gt;=', '!='.
+        When filtering by string, '%' mark can be automatically inserted to the end or/and beginning of string value according to <emphasis>cmp</emphasis>:</simpara> 
+        <simplelist>
+                <member><emphasis>cmp</emphasis> is empty - looking for texts containing given string, '%' is inserted at both ends of string</member>
+                <member><emphasis>cmp</emphasis> is '=' - looking for exact match</member>
+                <member><emphasis>cmp</emphasis> is '&gt;' - looking for texts starting with given string, '%' is inserted at the beginning</member>
+                <member><emphasis>cmp</emphasis> is '&lt;' - looking for texts ending with given string, '%' is inserted at the end</member>
+        </simplelist>
 		<simpara><emphasis>value</emphasis> is value of the column to compare with. The value can be specified as one of:</simpara>
 		<simplelist>
 				<member>Decimal number, optionally with one of [kKmMgGtT] suffix</member>
@@ -334,8 +343,10 @@
 				<member>IPv4/v6 address in decimal format with subnet (address/xx)</member>
 				<member>Hostname</member>
 				<member>Timestamp in yyyy/MM/dd.hh:mm:ss format</member>
-				<member>String value which can contain % to filter by substrings</member>
+				<member>String value which can contain '%' to filter by substrings</member>
 		</simplelist>
+        <simpara>Brackets '(' and ')' are also supported and can be used for creating complicated filter.</simpara>
+        
 		<simpara>Indexes will be built automatically on columns specified in filter clause, thus first query for any data without indexes might run longer.</simpara>
 	</refsect1>
 
