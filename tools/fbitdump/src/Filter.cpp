@@ -506,10 +506,6 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 	case PT_HOSTNAME6:
 		/* If it was IPv6 hostname, we need to combine "and" and "or" operators - parse it somewhere else */
 		return this->parseExpHost6(left, cmp, right);
-	case PT_STRING:
-		/* Value is really string, we can change cmp to "LIKE" now */
-		cmp = " LIKE ";
-		break;
 	default:
 		break;
 	}
@@ -664,7 +660,9 @@ void Filter::parseStringType(parserStruct *ps, std::string type, std::string &cm
 		} else if (cmp == "<") {
 			ps->parts[0] = "'" + ps->parts[0] + "%'";
 		}
-		cmp = "LIKE";
+        if (cmp != "!=") {
+            cmp = "LIKE";
+        }
 		ps->type = PT_STRING;
 	}
 }
