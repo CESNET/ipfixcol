@@ -502,7 +502,7 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 	case PT_IPv4_SUB:
 	case PT_IPv6_SUB:
 		/* If it is IPv4/6 address with subnet, we need to parse it (get minimal and maximal host address) */
-		return this->parseExpSub(left, right);
+		return this->parseExpSub(left, cmp, right);
 	case PT_HOSTNAME6:
 		/* If it was IPv6 hostname, we need to combine "and" and "or" operators - parse it somewhere else */
 		return this->parseExpHost6(left, cmp, right);
@@ -553,26 +553,35 @@ std::string Filter::parseExp(parserStruct *left, parserStruct *right) const
 	return this->parseExp(left, "", right);
 }
 
-std::string Filter::parseExpSub(parserStruct *left, parserStruct *right) const throw (std::invalid_argument)
+std::string Filter::parseExpSub(parserStruct *left, std::string cmp, parserStruct *right) const throw (std::invalid_argument)
 {
 	if (left == NULL || right == NULL) {
 		throw std::invalid_argument(std::string("Cannot parse expression with subnet, NULL parser structure"));
 	}
 
 	int i, rightPos = 0;
-	std::string exp, op;
+	std::string exp, op, cmp1, cmp2;
 
+    if (cmp == "!=") {
+        cmp1 = " <= ";
+        cmp2 = " >= ";
+        op = " or ";
+    } else {
+        cmp1 = " > ";
+        cmp2 = " < ";
+        op = " and ";
+    }
 	/* Openning bracket */
 	exp = "(";
 
 	/* Create expression */
 	for (i = 0; i < left->nParts; i++) {
-		exp += "(" + left->parts[i] + " > " + right->parts[rightPos++] + ") and ";
-		exp += "(" + left->parts[i] + " < " + right->parts[rightPos++] + ") and ";
+		exp += "(" + left->parts[i] + cmp1 + right->parts[rightPos++] + ")" + op;
+		exp += "(" + left->parts[i] + cmp2 + right->parts[rightPos++] + ")" + op;
 	}
 
 	/* Remove last "and" and insert closing bracket */
-	exp = exp.substr(0, exp.length() - 5) + ") ";
+	exp = exp.substr(0, exp.length() - op.length()) + ") ";
 
 	return exp;
 }
@@ -660,7 +669,9 @@ void Filter::parseStringType(parserStruct *ps, std::string type, std::string &cm
 		} else if (cmp == "<") {
 			ps->parts[0] = "'" + ps->parts[0] + "%'";
 		}
-        if (cmp != "!=") {
+        if (cmp == "!=") {
+            cmp = "NOT LIKE";
+        } else {
             cmp = "LIKE";
         }
 		ps->type = PT_STRING;

@@ -270,8 +270,9 @@ public:
 	 *
 	 * @param left Input parser structure
 	 * @param right Input parser structure
+         * @param cmp comparison 
 	 */
-	std::string parseExpSub(parserStruct *left, parserStruct *right) const throw (std::invalid_argument);
+	std::string parseExpSub(parserStruct *left, std::string cmp, parserStruct *right) const throw (std::invalid_argument);
 
 	/**
 	 * \brief Parses final expression when IPv6 is given as hostname
