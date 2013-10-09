@@ -62,6 +62,16 @@
 # endif
 #endif
 
+/* We need be64toh macro */
+#ifndef HAVE_BE64TOH
+# if __BYTE_ORDER == __LITTLE_ENDIAN
+#  define be64toh(x) __bswap_64 (x)
+# else
+#  define be64toh(x) (x)
+# endif
+#endif
+
+
 
 namespace fbitdump {
 

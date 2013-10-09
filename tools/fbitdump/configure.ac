@@ -143,8 +143,11 @@ AC_FUNC_REALLOC
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([htonl inet_ntop gmtime regcomp getline floor memmove memset regcomp select strchr strdup strerror strrchr strstr strtol strtoul strverscmp])
 AC_CHECK_DECL([htobe64], [AC_DEFINE([HAVE_HTOBE64], [1],
-                               [Define if macro htobe64 exists.])],,
-							   [[#include <endian.h>]])
+                         [Define if macro htobe64 exists.])],,
+			 [[#include <endian.h>]])
+AC_CHECK_DECL([betoh64], [AC_DEFINE([HAVE_BETOH64], [1],
+                         [Define if macro betoh64 exists.])],,
+			 [[#include <endian.h>]])
 
 
 ############################### Set output #####################################
