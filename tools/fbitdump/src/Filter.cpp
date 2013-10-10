@@ -670,7 +670,8 @@ void Filter::parseStringType(parserStruct *ps, std::string type, std::string &cm
 			ps->parts[0] = "'" + ps->parts[0] + "%'";
 		}
         if (cmp == "!=") {
-            cmp = "NOT LIKE";
+//        	Not supported
+//            cmp = "NOT LIKE";
         } else {
             cmp = "LIKE";
         }
