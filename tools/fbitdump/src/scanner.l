@@ -66,6 +66,7 @@ _CMP ">"|"<"|"="|"=="|"=>"|"<="|">="|"=>"|"!="
 _OPERATOR AND|OR|and|or
 _BITOPERATOR &|"|"
 _IN in|IN
+_NOT not|NOT
 _BRACKET "("|")"
 _WHITESPACE " "+|\t+
 _STRING [^ =><!()]+|!
@@ -91,6 +92,7 @@ _STRING [^ =><!()]+|!
 {_OPERATOR}   	{ yylval->s = new std::string(yytext); return token::OPERATOR; }
 {_BITOPERATOR} 	{ yylval->s = new std::string(yytext); return token::BITOPERATOR; }
 {_IN}			{ yylval->s = new std::string(yytext); return token::IN; }
+{_NOT}			{ yylval->s = new std::string(yytext); return token::NOT; }
 {_BRACKET}		{ return yytext[0]; }
 {_STRING}		{ yylval->s = new std::string(yytext); return token::STRING; }
 

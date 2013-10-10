@@ -98,6 +98,7 @@ namespace fbitdump {
 %token <s> EOL			"end of line"
 %token <s> STRING		"string"
 %token <s> IN			"in list"
+%token <s> NOT			"not"
 %token END 0			"end of file"
 
 %type <s> explist exp start
@@ -146,8 +147,10 @@ exp:
 
 list:
 	  list value { $$ = $1; filter.parseListAdd($$, $2); }
-	|  column IN value { $$ = new std::vector<fbitdump::_parserStruct *>; filter.parseListAdd($$, $1); filter.parseListAdd($$, $3); delete $2; }
+	| column IN value { $$ = new std::vector<fbitdump::_parserStruct *>; filter.parseListCreate($$, "in", $1); filter.parseListAdd($$, $3); delete $2; }
+	| column NOT IN value { $$ = new std::vector<fbitdump::_parserStruct *>; filter.parseListCreate($$, "not in", $1); filter.parseListAdd($$, $4); delete $2; delete $3; }
 	;
+
 
 value:
 	  NUMBER { $$ = new fbitdump::_parserStruct; filter.parseNumber($$, *$1); delete $1; }

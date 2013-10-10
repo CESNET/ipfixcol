@@ -123,7 +123,6 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		/* clear the context */
 		yylex_destroy(this->scaninfo);
 	}
-
 	MSG_FILTER(this->filterString.c_str());
 
 }
@@ -518,7 +517,7 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 	std::string exp, op;
 
 	/* Set operator */
-	if ((left->type == PT_GROUP) || (right->type == PT_HOSTNAME)) {
+	if ((left->type == PT_GROUP) || (right->type == PT_HOSTNAME) || (right->type == PT_IPv6)) {
 		op = " or ";
 	} else {
 		op = " and ";
@@ -823,10 +822,19 @@ void Filter::parseHostname(parserStruct *ps, uint8_t af_type) const throw (std::
 	freeaddrinfo(result);
 }
 
+void Filter::parseListCreate(std::vector<parserStruct *> *list, std::string cmp, parserStruct *column) const throw (std::invalid_argument)
+{
+	if (list == NULL || column == NULL) {
+		throw std::invalid_argument(std::string("Cannot create list, NULL list or parser structure"));
+	}
+	column->parts.push_back(cmp);
+	list->push_back(column);
+}
+
 void Filter::parseListAdd(std::vector<parserStruct *> *list, parserStruct *value) const throw (std::invalid_argument)
 {
 	if (list == NULL || value == NULL) {
-		throw std::invalid_argument(std::string("Cannot add to list, NULL parser structure"));
+		throw std::invalid_argument(std::string("Cannot add to list, NULL list parser structure"));
 	}
 
 	/* Add new parser structure into list */
@@ -840,10 +848,17 @@ std::string Filter::parseExpList(std::vector<parserStruct *> *list) const throw 
 	}
 
 	/* Go through all structures in vector and parse them with column on first position */
-	std::string exp = "(";
+	std::string cmp = "=", op = " or ", exp = "(";
+
+
+	if (list->front()->parts.back() != "in") {
+		cmp = "!=";
+		op = " and ";
+	}
 
 	while (list->size() > 1) {
-		exp += "(" + this->parseExp(list->front(), list->back()) + ") or ";
+
+		exp += "(" + this->parseExp(list->front(), cmp, list->back()) + ")" + op;
 
 		/* We don't need this structure anymore - free memory and remove it from list */
 		delete list->back();
@@ -851,7 +866,7 @@ std::string Filter::parseExpList(std::vector<parserStruct *> *list) const throw 
 	}
 
 	/* Remove last " or " and close bracket */
-	exp = exp.substr(0, exp.length() - 4) + ") ";
+	exp = exp.substr(0, exp.length() - op.length()) + ") ";
 
 	return exp;
 }

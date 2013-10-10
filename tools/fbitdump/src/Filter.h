@@ -294,6 +294,15 @@ public:
 	void parseString(parserStruct *ps, std::string text) const throw (std::invalid_argument);
 
 	/**
+	 * \brief Create new list and store cmp ("in" or "not in") behind last member of column->parts
+	 *
+	 * @param list Vector of all structures in list expression
+	 * @param cmp "in" or "not in"
+	 * @param column Parser structure to be added into list
+	 */
+	void parseListCreate(std::vector<parserStruct *> *list, std::string cmp, parserStruct *column) const throw (std::invalid_argument);
+
+	/**
 	 * \brief Insert new structure into list (%column in value value value....)
 	 *
 	 * @param list Vector of all structures in list expression
