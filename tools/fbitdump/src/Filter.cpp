@@ -517,7 +517,8 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 	std::string exp, op;
 
 	/* Set operator */
-	if ((left->type == PT_GROUP) || (right->type == PT_HOSTNAME) || (right->type == PT_IPv6)) {
+	if ((left->type == PT_GROUP) || (right->type == PT_HOSTNAME) ||
+		((right->type == PT_IPv6) && (cmp == "!="))) {
 		op = " or ";
 	} else {
 		op = " and ";
