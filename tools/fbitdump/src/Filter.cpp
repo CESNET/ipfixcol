@@ -511,7 +511,11 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 
 	/* Parser expression "column CMP value" */
 	if ((left->nParts == 1) && (right->nParts == 1)) {
-		return left->parts[0] + " " + cmp + " " + right->parts[0];
+        if (right->type == PT_STRING && cmp == "!=") {
+            return "not (" + left->parts[0] + " LIKE " + right->parts[0] + ")";
+        } else {
+            return left->parts[0] + " " + cmp + " " + right->parts[0];
+        }
 	}
 
 	std::string exp, op;
@@ -537,8 +541,11 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 		}
 
 		/* Add part into expression */
-
-		exp += "(" + left->parts[i] + " " + cmp + " " + right->parts[j] + ")" + op;
+        if (right->type == PT_STRING && cmp == "!=") {
+            exp += "(not (" + left->parts[0] + " LIKE " + right->parts[0] + "))" + op;
+        } else {
+            exp += "(" + left->parts[i] + " " + cmp + " " + right->parts[j] + ")" + op;
+        }
 	}
 
 	/* Remove last operator and close bracket */
@@ -576,6 +583,9 @@ std::string Filter::parseExpSub(parserStruct *left, std::string cmp, parserStruc
 
 	/* Create expression */
 	for (i = 0; i < left->nParts; i++) {
+        if (cmp == "!=") {
+            exp += "( not (" + left->parts[i] + " not NULL ))" + op;
+        }
 		exp += "(" + left->parts[i] + cmp1 + right->parts[rightPos++] + ")" + op;
 		exp += "(" + left->parts[i] + cmp2 + right->parts[rightPos++] + ")" + op;
 	}
