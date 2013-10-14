@@ -509,16 +509,22 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 		break;
 	}
 
+    std::string exp = "", op;
+   
+    if (cmp == "!=") {
+        for (uint16_t i = 0; i < left->nParts; i++) {
+            exp += "(not (" + left->parts[i] + " not NULL)) or ";
+        }   
+    }
+    
 	/* Parser expression "column CMP value" */
 	if ((left->nParts == 1) && (right->nParts == 1)) {
         if (right->type == PT_STRING && cmp == "!=") {
-            return "not (" + left->parts[0] + " LIKE " + right->parts[0] + ")";
+            return exp + "not (" + left->parts[0] + " LIKE " + right->parts[0] + ")";
         } else {
-            return left->parts[0] + " " + cmp + " " + right->parts[0];
+            return exp + left->parts[0] + " " + cmp + " " + right->parts[0];
         }
 	}
-
-	std::string exp, op;
 
 	/* Set operator */
 	if ((left->type == PT_GROUP) || (right->type == PT_HOSTNAME) ||
@@ -529,7 +535,7 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 	}
 
 	exp += "(";
-
+    
 	/* Create expression */
 	for (uint16_t i = 0, j = 0; (i < left->nParts) || (j < right->nParts); i++, j++) {
 		/* If one string vector is at the end but second not, duplicate its last value */
@@ -584,7 +590,7 @@ std::string Filter::parseExpSub(parserStruct *left, std::string cmp, parserStruc
 	/* Create expression */
 	for (i = 0; i < left->nParts; i++) {
         if (cmp == "!=") {
-            exp += "( not (" + left->parts[i] + " not NULL ))" + op;
+            exp += "(not (" + left->parts[i] + " not NULL))" + op;
         }
 		exp += "(" + left->parts[i] + cmp1 + right->parts[rightPos++] + ")" + op;
 		exp += "(" + left->parts[i] + cmp2 + right->parts[rightPos++] + ")" + op;
@@ -603,16 +609,25 @@ std::string Filter::parseExpHost6(parserStruct *left, std::string cmp, parserStr
 	}
 
 	int i = 0, leftPos = 0;
-	std::string exp;
+	std::string exp, op1 = " and ", op2 = " or ";
 
 	/* Openning bracket */
 	exp = "(";
 
+    if (cmp == "!=") {
+        op1 = " or ";
+        op2 = " and ";
+        for (i = 0; i < left->nParts; i++) {
+            exp += "(not (" + left->parts[i] + " not NULL)) or ";
+        }
+        i = 0;
+    }
+    
 	/* Create expression */
 	while (i < right->nParts) {
 		exp += "(";
-		exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + " and ";
-		exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + ") or ";
+		exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + op1;
+		exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + ")" + op2;
 
 		/* If all column parts were used, jump to start and use them again */
 		if (leftPos == left->nParts) {
@@ -621,7 +636,7 @@ std::string Filter::parseExpHost6(parserStruct *left, std::string cmp, parserStr
 	}
 
 	/* Remove last "or", insert closing bracket */
-	exp = exp.substr(0, exp.length() - 4) + ") ";
+	exp = exp.substr(0, exp.length() - op2.length()) + ") ";
 
 	return exp;
 }
