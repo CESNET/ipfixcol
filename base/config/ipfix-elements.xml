@@ -2383,5 +2383,12 @@
 		<dataType>unsigned8</dataType>
 		<semantic></semantic>
 	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>10</id>
+		<name>DNSTransactionID</name>
+		<dataType>unsigned16</dataType>
+		<semantic></semantic>
+	</element>
 
 </ipfix-elements>

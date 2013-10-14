@@ -798,6 +798,15 @@
 			<element>e8057id9</element>
 		</value>
 	</column>
+	<column>
+		<name>DNS ID</name>
+		<alias>%dnsid</alias>
+		<width>6</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id10</element>
+		</value>
+	</column>
 
 	<column>
 		<name>TCP RTT</name>
@@ -1009,7 +1018,7 @@
 	</format>
 	<format>
 		<formatName>dns4</formatName>
-		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %dnsans %dnsrcode %dnsname %dnsqtype %dnsclass %dnsrrttl %dnsdo %dnspsize %dnsrlen %dnsrdata</formatString>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %dnsans %dnsrcode %dnsname %dnsqtype %dnsclass %dnsrrttl %dnsdo %dnspsize %dnsid %dnsrlen %dnsrdata</formatString>
 	</format>
 	<format>
 		<formatName>ihttp4-invea</formatName>
