@@ -133,6 +133,7 @@ start:
 
 explist:
 	  exp { $$ = $1; }
+    | NOT exp { $$ = new std::string("NOT (" + *$2 + ")"); delete $1; delete $2; }
 	| list { $$ = new std::string(filter.parseExpList($1)); delete $1; }
 	| '(' explist ')' { $$ = new std::string("(" + *$2 + ")"); delete $2; }
 	| explist OPERATOR explist { $$ = new std::string(*$1 + " " + *$2 + " " + *$3); delete $1; delete $2; delete $3; }
