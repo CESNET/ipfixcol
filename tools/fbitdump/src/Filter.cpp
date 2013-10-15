@@ -519,11 +519,11 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
     
 	/* Parser expression "column CMP value" */
 	if ((left->nParts == 1) && (right->nParts == 1)) {
-        if (right->type == PT_STRING && cmp == "!=") {
-            return exp + "not (" + left->parts[0] + " LIKE " + right->parts[0] + "))";
-        } else {
-            return exp + left->parts[0] + " " + cmp + " " + right->parts[0];
-        }
+	        if (right->type == PT_STRING && cmp == "!=") {
+			return exp + "not (" + left->parts[0] + " LIKE " + right->parts[0] + "))";
+	        } else {
+			return exp + left->parts[0] + " " + cmp + " " + right->parts[0] + ((cmp == "!=")? ")" : "" );
+		}
 	}
 
 	/* Set operator */
