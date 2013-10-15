@@ -319,9 +319,9 @@
 		<simpara>Any filter consists of one or more expression <emphasis>expr</emphasis>. Any number of <emphasis>expr</emphasis> can be linked together with 
 			<emphasis>and</emphasis> or <emphasis>or</emphasis> keyword. This is case independent.</simpara>
 		<simpara>Unlike nfdump, <emphasis>expr</emphasis> consists of</simpara>
-		<simpara><emphasis>%column</emphasis> <emphasis>cmp</emphasis> <emphasis>value</emphasis></simpara>
-        <simpara><emphasis>value</emphasis> <emphasis>cmp</emphasis> <emphasis>%column</emphasis></simpara>
-        <simpara><emphasis>%column</emphasis> <emphasis>cmp</emphasis> <emphasis>%column</emphasis></simpara>
+		<simpara>[NOT] <emphasis>%column</emphasis> <emphasis>cmp</emphasis> <emphasis>value</emphasis></simpara>
+        <simpara>[NOT] <emphasis>value</emphasis> <emphasis>cmp</emphasis> <emphasis>%column</emphasis></simpara>
+        <simpara>[NOT] <emphasis>%column</emphasis> <emphasis>cmp</emphasis> <emphasis>%column</emphasis></simpara>
 		<simpara>where <emphasis>cmp</emphasis> is not required (it will be added implicitly)</simpara>
 		<simpara><emphasis>%column</emphasis> is an element alias prefixed with %. %column element can be a computed value, that is a value that is not directly stored.
 		Alternately it is possible to specify the element name in e[x]id[y] format, where [x] means enterprise number and [y] element ID.
@@ -345,6 +345,8 @@
 				<member>Timestamp in yyyy/MM/dd.hh:mm:ss format</member>
 				<member>String value which can contain '%' to filter by substrings</member>
 		</simplelist>
+		<simpara>When filter contains <emphasis>NOT</emphasis>, whole expression is negated.</simpara>
+			
         <simpara>Brackets '(' and ')' are also supported and can be used for creating complicated filter.</simpara>
         
 		<simpara>Indexes will be built automatically on columns specified in filter clause, thus first query for any data without indexes might run longer.</simpara>
