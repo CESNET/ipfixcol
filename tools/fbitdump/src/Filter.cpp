@@ -513,14 +513,14 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
    
     if (cmp == "!=") {
         for (uint16_t i = 0; i < left->nParts; i++) {
-            exp += "(not (" + left->parts[i] + " not NULL)) or ";
+            exp += "((not (" + left->parts[i] + " not NULL)) or ";
         }   
     }
     
 	/* Parser expression "column CMP value" */
 	if ((left->nParts == 1) && (right->nParts == 1)) {
         if (right->type == PT_STRING && cmp == "!=") {
-            return exp + "not (" + left->parts[0] + " LIKE " + right->parts[0] + ")";
+            return exp + "not (" + left->parts[0] + " LIKE " + right->parts[0] + "))";
         } else {
             return exp + left->parts[0] + " " + cmp + " " + right->parts[0];
         }
@@ -556,6 +556,11 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 
 	/* Remove last operator and close bracket */
 	exp = exp.substr(0, exp.length() - op.length()) + ")";
+
+	/* Add closing bracket for != operator */
+	if (cmp == "!=") {
+		exp += ")";
+	}
 
 	/* Return created expression */
 	return exp;
