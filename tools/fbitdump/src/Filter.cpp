@@ -512,7 +512,7 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 
 	if (cmp == "!=") {
 		for (uint16_t i = 0; i < left->nParts; i++) {
-			exp += "(not (" + left->parts[i] + " NOT NULL)) or ";
+			exp += "(not EXISTS(" + left->parts[i] + ")) or ";
 		}
 	}
 
@@ -587,7 +587,7 @@ std::string Filter::parseExpSub(parserStruct *left, std::string cmp, parserStruc
 	/* Create expression */
 	for (i = 0; i < left->nParts; i++) {
 		if (cmp == "!=") {
-			exp += "(not (" + left->parts[i] + " not NULL))" + op;
+			exp += "(not EXISTS(" + left->parts[i] + "))" + op;
 		}
 		exp += "(" + left->parts[i] + cmp1 + right->parts[rightPos++] + ")" + op;
 		exp += "(" + left->parts[i] + cmp2 + right->parts[rightPos++] + ")" + op;
@@ -615,7 +615,7 @@ std::string Filter::parseExpHost6(parserStruct *left, std::string cmp, parserStr
 		op1 = " or ";
 		op2 = " and ";
 		for (i = 0; i < left->nParts; i++) {
-			exp += "(not (" + left->parts[i] + " not NULL)) or ";
+			exp += "(not EXISTS(" + left->parts[i] + ")) or ";
 		}
 		i = 0;
 	}
