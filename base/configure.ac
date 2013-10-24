@@ -168,7 +168,12 @@ AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_FUNC_FORK
 AC_CHECK_FUNCS([localtime_r memset pathconf select socket strchr strdup strerror strrchr strtol])
-
+AC_CHECK_DECL([htobe64], [AC_DEFINE([HAVE_HTOBE64], [1],
+                         [Define if macro htobe64 exists.])],,
+			 [[#include <endian.h>]])
+AC_CHECK_DECL([be64toh], [AC_DEFINE([HAVE_BE64TOH], [1],
+                         [Define if macro be64toh exists.])],,
+			 [[#include <endian.h>]])
 
 # generate output
 AC_CONFIG_FILES([Makefile
