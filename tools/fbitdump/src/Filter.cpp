@@ -895,6 +895,22 @@ std::string Filter::parseExpList(std::vector<parserStruct *> *list) const throw 
 	return exp;
 }
 
+std::string Filter::parseExists(parserStruct* ps) const throw (std::invalid_argument)
+{
+	if (ps == NULL) {
+		throw std::invalid_argument(std::string("Cannot parse exists expression, NULL parser structure"));
+	}
+	std::string exp = "(", op = " and ";
+	uint16_t i;
+	for (i = 0; i < ps->nParts; i++) {
+		exp += "EXISTS(" + ps->parts[i] + ")" + op;
+	}
+	
+	exp = exp.substr(0, exp.length() - op.length()) + ")";
+	
+	return exp;
+}
+
 Filter::Filter(Configuration &conf) throw (std::invalid_argument)
 {
 	init(conf);
