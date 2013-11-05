@@ -67,6 +67,7 @@ _OPERATOR AND|OR|and|or|xor|XOR
 _BITOPERATOR &|"|"
 _IN in|IN
 _NOT not|NOT
+_EXISTS exists|EXISTS
 _BRACKET "("|")"
 _WHITESPACE " "+|\t+
 _STRING [^ =><!()]+|!
@@ -93,6 +94,7 @@ _STRING [^ =><!()]+|!
 {_BITOPERATOR} 	{ yylval->s = new std::string(yytext); return token::BITOPERATOR; }
 {_IN}			{ yylval->s = new std::string(yytext); return token::IN; }
 {_NOT}			{ yylval->s = new std::string(yytext); return token::NOT; }
+{_EXISTS}		{ yylval->s = new std::string(yytext); return token::EXISTS; }
 {_BRACKET}		{ return yytext[0]; }
 {_STRING}		{ yylval->s = new std::string(yytext); return token::STRING; }
 

@@ -322,6 +322,7 @@
 		<simpara>[NOT] <emphasis>%column</emphasis> <emphasis>cmp</emphasis> <emphasis>value</emphasis></simpara>
         <simpara>[NOT] <emphasis>value</emphasis> <emphasis>cmp</emphasis> <emphasis>%column</emphasis></simpara>
         <simpara>[NOT] <emphasis>%column</emphasis> <emphasis>cmp</emphasis> <emphasis>%column</emphasis></simpara>
+		<simpara>[NOT] <emphasis>exists</emphasis> <emphasis>%column</emphasis></simpara>
 		<simpara>where <emphasis>cmp</emphasis> is not required (it will be added implicitly)</simpara>
 		<simpara><emphasis>%column</emphasis> is an element alias prefixed with %. %column element can be a computed value, that is a value that is not directly stored.
 		Alternately it is possible to specify the element name in e[x]id[y] format, where [x] means enterprise number and [y] element ID.
@@ -345,6 +346,8 @@
 				<member>Timestamp in yyyy/MM/dd.hh:mm:ss format</member>
 				<member>String value which can contain '%' to filter by substrings</member>
 		</simplelist>
+		<simpara><emphasis>exists</emphasis> specifies that selected column MUST exist (it can't be NULL)</simpara>
+		
 		<simpara>When filter contains <emphasis>NOT</emphasis>, whole expression is negated.</simpara>
 			
         <simpara>Brackets '(' and ')' are also supported and can be used for creating complicated filter.</simpara>

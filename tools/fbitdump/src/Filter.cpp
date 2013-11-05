@@ -510,19 +510,21 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 
 	std::string exp = "(", op;
 
-	if (cmp == "!=") {
-		for (uint16_t i = 0; i < left->nParts; i++) {
-			exp += "(not EXISTS(" + left->parts[i] + ")) or ";
-		}
-	}
-
 	/* Parser expression "column CMP value" */
 	if ((left->nParts == 1) && (right->nParts == 1)) {
-		if (right->type == PT_STRING && cmp == "!=") {
-			return exp + "(not (" + left->parts[0] + " LIKE " + right->parts[0] + ")))";
+		if (cmp == "!=") {
+			exp += "NOT EXISTS(" + left->parts[0] + ") or ";
+
+			if (right->type == PT_STRING) {
+				exp += "(not (" + left->parts[0] + " LIKE " + right->parts[0] + ")))";
+				return exp;
+			}
+
 		} else {
-			return exp + left->parts[0] + " " + cmp + " " + right->parts[0] + ")";
+			exp += "EXISTS(" + left->parts[0] + ") and ";
 		}
+		exp += "(" + left->parts[0] + " " + cmp + " " + right->parts[0] + "))";
+		return exp;
 	}
 
 	/* Set operator */
@@ -544,10 +546,16 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 		}
 
 		/* Add part into expression */
-		if (right->type == PT_STRING && cmp == "!=") {
-			exp += "(not (" + left->parts[0] + " LIKE " + right->parts[0] + "))" + op;
+		if (cmp == "!=") {
+			exp += "(NOT EXISTS(" + left->parts[0] + ") or ";
+			if (right->type == PT_STRING) {
+				exp += "(not (" + left->parts[0] + " LIKE " + right->parts[0] + "))" + op;
+			} else {
+				exp += "(" + left->parts[i] + " " + cmp + " " + right->parts[j] + "))" + op;
+			}
 		} else {
-			exp += "(" + left->parts[i] + " " + cmp + " " + right->parts[j] + ")" + op;
+			exp += "(EXISTS(" + left->parts[i] + ") and ";
+			exp += "(" + left->parts[i] + " " + cmp + " " + right->parts[j] + "))" + op;
 		}
 	}
 
@@ -587,10 +595,12 @@ std::string Filter::parseExpSub(parserStruct *left, std::string cmp, parserStruc
 	/* Create expression */
 	for (i = 0; i < left->nParts; i++) {
 		if (cmp == "!=") {
-			exp += "(not EXISTS(" + left->parts[i] + "))" + op;
+			exp += "(NOT EXISTS(" + left->parts[i] + ") or (";
+		} else {
+			exp += "(EXISTS(" + left->parts[i] + ") and (";
 		}
 		exp += "(" + left->parts[i] + cmp1 + right->parts[rightPos++] + ")" + op;
-		exp += "(" + left->parts[i] + cmp2 + right->parts[rightPos++] + ")" + op;
+		exp += "(" + left->parts[i] + cmp2 + right->parts[rightPos++] + ")))" + op;
 	}
 
 	/* Remove last "and" and insert closing bracket */
@@ -614,17 +624,21 @@ std::string Filter::parseExpHost6(parserStruct *left, std::string cmp, parserStr
 	if (cmp == "!=") {
 		op1 = " or ";
 		op2 = " and ";
-		for (i = 0; i < left->nParts; i++) {
-			exp += "(not EXISTS(" + left->parts[i] + ")) or ";
-		}
-		i = 0;
 	}
 
 	/* Create expression */
 	while (i < right->nParts) {
-		exp += "(";
-		exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + op1;
-		exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + ")" + op2;
+		if (cmp == "!=") {
+			exp += "(NOT EXISTS(" + left->parts[leftPos] + ") or (";
+			exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + "))" + op1;
+			exp += "(NOT EXISTS(" + left->parts[leftPos] + ") or (";
+			exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + "))" + op2;
+		} else {
+			exp += "(EXISTS(" + left->parts[leftPos] + ") and (";
+			exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + "))" + op1;
+			exp += "(EXISTS(" + left->parts[leftPos] + ") and (";
+			exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + "))" + op2;
+		}
 
 		/* If all column parts were used, jump to start and use them again */
 		if (leftPos == left->nParts) {
@@ -892,6 +906,22 @@ std::string Filter::parseExpList(std::vector<parserStruct *> *list) const throw 
 	/* Remove last " or " and close bracket */
 	exp = exp.substr(0, exp.length() - op.length()) + ") ";
 
+	return exp;
+}
+
+std::string Filter::parseExists(parserStruct* ps) const throw (std::invalid_argument)
+{
+	if (ps == NULL) {
+		throw std::invalid_argument(std::string("Cannot parse exists expression, NULL parser structure"));
+	}
+	std::string exp = "(", op = " and ";
+	uint16_t i;
+	for (i = 0; i < ps->nParts; i++) {
+		exp += "EXISTS(" + ps->parts[i] + ")" + op;
+	}
+	
+	exp = exp.substr(0, exp.length() - op.length()) + ")";
+	
 	return exp;
 }
 
