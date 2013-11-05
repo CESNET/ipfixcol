@@ -53,6 +53,26 @@
 /** IPFIX identification (NetFlow version 10) */
 #define IPFIX_VERSION 0x000a
 
+
+/* We need be64toh macro */
+#ifndef HAVE_HTOBE64
+# if __BYTE_ORDER == __LITTLE_ENDIAN
+#  define htobe64(x) __bswap_64 (x)
+# else
+#  define htobe64(x) (x)
+# endif
+#endif
+
+/* We need be64toh macro */
+#ifndef HAVE_BE64TOH
+# if __BYTE_ORDER == __LITTLE_ENDIAN
+#  define be64toh(x) __bswap_64 (x)
+# else
+#  define be64toh(x) (x)
+# endif
+#endif
+
+
 /**
  * \struct ipfix_header
  * \brief IPFIX header structure
