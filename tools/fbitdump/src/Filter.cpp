@@ -133,7 +133,7 @@ time_t Filter::parseTimestamp(std::string str) const throw (std::invalid_argumen
 	if (strptime(str.c_str(), "%Y/%m/%d.%H:%M:%S", &ctime) == NULL) {
 		throw std::invalid_argument(std::string("Cannot parse timestamp '") + str + "'");
 	}
-	ctime.tm_isdst = 1;
+	ctime.tm_isdst = 0;
 
 	return mktime(&ctime);
 }
