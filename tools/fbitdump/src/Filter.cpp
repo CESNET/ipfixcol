@@ -508,7 +508,7 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 			break;
 	}
 
-	std::string exp = "(", op;
+	std::string exp = "(", op, opGroup;
 
 	/* Parser expression "column CMP value" */
 	if ((left->nParts == 1) && (right->nParts == 1)) {
@@ -528,11 +528,16 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 	}
 
 	/* Set operator */
-	if ((left->type == PT_GROUP) || (right->type == PT_HOSTNAME) ||
-			((right->type == PT_IPv6) && (cmp == "!="))) {
+	if (right->type == PT_HOSTNAME || (right->type == PT_IPv6 && cmp == "!=")) {
 		op = " or ";
 	} else {
 		op = " and ";
+	}
+
+	if (cmp == "!=") {
+		opGroup = " and ";
+	} else {
+		opGroup = " or ";
 	}
 
 	/* Create expression */
@@ -543,13 +548,21 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 		}
 		if (j == right->nParts) {
 			j--;
+			if (left->type == PT_GROUP) {
+				j = 0;
+				exp = exp.substr(0, exp.length() - op.length()) + ")" + opGroup;
+			}
+		}
+
+		if (j == 0 && left->type == PT_GROUP) {
+			exp += "(";
 		}
 
 		/* Add part into expression */
 		if (cmp == "!=") {
 			exp += "(NOT EXISTS(" + left->parts[0] + ") or ";
 			if (right->type == PT_STRING) {
-				exp += "(not (" + left->parts[0] + " LIKE " + right->parts[0] + "))" + op;
+				exp += "(not (" + left->parts[0] + " LIKE " + right->parts[0] + ")))" + op;
 			} else {
 				exp += "(" + left->parts[i] + " " + cmp + " " + right->parts[j] + "))" + op;
 			}
@@ -560,7 +573,11 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 	}
 
 	/* Remove last operator and close bracket */
-	exp = exp.substr(0, exp.length() - op.length()) + ")";
+	if (left->type == PT_GROUP) {
+		exp = exp = exp.substr(0, exp.length() - op.length()) + "))";
+	} else {
+		exp = exp.substr(0, exp.length() - op.length()) + ")";
+	}
 
 	/* Return created expression */
 	return exp;
