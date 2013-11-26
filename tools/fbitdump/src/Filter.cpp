@@ -509,7 +509,7 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 			break;
 	}
 
-	std::string exp = "(", op;
+	std::string exp = "(", op, opGroup;
 
 	/* Parser expression "column CMP value" */
 	if ((left->nParts == 1) && (right->nParts == 1)) {
@@ -529,11 +529,16 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 	}
 
 	/* Set operator */
-	if ((left->type == PT_GROUP) || (right->type == PT_HOSTNAME) ||
-			((right->type == PT_IPv6) && (cmp == "!="))) {
+	if (right->type == PT_HOSTNAME || (right->type == PT_IPv6 && cmp == "!=")) {
 		op = " or ";
 	} else {
 		op = " and ";
+	}
+
+	if (cmp == "!=") {
+		opGroup = " and ";
+	} else {
+		opGroup = " or ";
 	}
 
 	/* Create expression */
@@ -544,13 +549,21 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 		}
 		if (j == right->nParts) {
 			j--;
+			if (left->type == PT_GROUP) {
+				j = 0;
+				exp = exp.substr(0, exp.length() - op.length()) + ")" + opGroup;
+			}
+		}
+
+		if (j == 0 && left->type == PT_GROUP) {
+			exp += "(";
 		}
 
 		/* Add part into expression */
 		if (cmp == "!=") {
 			exp += "(NOT EXISTS(" + left->parts[0] + ") or ";
 			if (right->type == PT_STRING) {
-				exp += "(not (" + left->parts[0] + " LIKE " + right->parts[0] + "))" + op;
+				exp += "(not (" + left->parts[0] + " LIKE " + right->parts[0] + ")))" + op;
 			} else {
 				exp += "(" + left->parts[i] + " " + cmp + " " + right->parts[j] + "))" + op;
 			}
@@ -561,7 +574,11 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 	}
 
 	/* Remove last operator and close bracket */
-	exp = exp.substr(0, exp.length() - op.length()) + ")";
+	if (left->type == PT_GROUP) {
+		exp = exp = exp.substr(0, exp.length() - op.length()) + "))";
+	} else {
+		exp = exp.substr(0, exp.length() - op.length()) + ")";
+	}
 
 	/* Return created expression */
 	return exp;
@@ -579,33 +596,60 @@ std::string Filter::parseExpSub(parserStruct *left, std::string cmp, parserStruc
 	}
 
 	int i, rightPos = 0;
-	std::string exp, op, cmp1, cmp2;
+	std::string exp, op, opGroup, cmp1, cmp2;
 
 	if (cmp == "!=") {
 		cmp1 = " <= ";
 		cmp2 = " >= ";
 		op = " or ";
+		opGroup = " and ";
 	} else {
 		cmp1 = " > ";
 		cmp2 = " < ";
 		op = " and ";
+		opGroup = " or ";
 	}
+
 	/* Openning bracket */
 	exp = "(";
 
 	/* Create expression */
 	for (i = 0; i < left->nParts; i++) {
+		/* Check if left structure is group of columns and add openning bracket for group */
+		if (rightPos == 0 && left->type == PT_GROUP) {
+			exp += "(";
+		}
+
+		/* Insert (NOT) EXISTS according to comparison operator */
 		if (cmp == "!=") {
 			exp += "(NOT EXISTS(" + left->parts[i] + ") or (";
 		} else {
 			exp += "(EXISTS(" + left->parts[i] + ") and (";
 		}
+
+		/* Add values from right parser structure */
 		exp += "(" + left->parts[i] + cmp1 + right->parts[rightPos++] + ")" + op;
 		exp += "(" + left->parts[i] + cmp2 + right->parts[rightPos++] + ")))" + op;
+
+		/* If rightPos is at the end of right->parts, reset this counter */
+		if (rightPos >= right->nParts) {
+			/* Close group and insert according operator (and | or) */
+			if (left->type == PT_GROUP) {
+				exp = exp.substr(0, exp.length() - op.length()) + ")" + opGroup;
+			}
+			rightPos = 0;
+		}
 	}
 
-	/* Remove last "and" and insert closing bracket */
-	exp = exp.substr(0, exp.length() - op.length()) + ") ";
+	/* Remove last operator */
+	if (left->type == PT_GROUP) {
+		exp = exp.substr(0, exp.length() - opGroup.length());
+	} else {
+		exp = exp.substr(0, exp.length() - op.length());
+	}
+
+	/* Insert closing bracket */
+	exp += ") ";
 
 	return exp;
 }
