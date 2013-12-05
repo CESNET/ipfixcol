@@ -907,6 +907,24 @@
 			<element>e16982id610</element>
 		</value>
 	</column>
+	<column>
+		<name>SYN size</name>
+		<alias>%synsize</alias>
+		<width>8</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id700</element>
+		</value>
+	</column>
+	<column>
+		<name>TCP win</name>
+		<alias>%winsize</alias>
+		<width>7</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id701</element>
+		</value>
+	</column>
 
 </columns>
 
