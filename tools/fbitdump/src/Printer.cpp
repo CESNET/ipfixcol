@@ -50,7 +50,6 @@
 #include "Printer.h"
 #include "Utils.h"
 #include "plugins/plugin_header.h"
-#include "DefaultOutput.h"
 
 namespace fbitdump
 {

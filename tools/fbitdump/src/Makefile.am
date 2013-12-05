@@ -13,8 +13,6 @@ fbitdump_SOURCES = \
 	Configuration.h \
 	Cursor.cpp \
 	Cursor.h \
-	DefaultOutput.cpp \
-	DefaultOutput.h \
 	DefaultPlugin.cpp \
 	DefaultPlugin.h \
 	fbitdump.cpp \

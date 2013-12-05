@@ -53,7 +53,6 @@
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include "Utils.h"
-#include "DefaultOutput.h"
 #include "DefaultPlugin.h"
 #include "Verbose.h"
 
