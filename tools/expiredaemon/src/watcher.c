@@ -35,6 +35,9 @@ void * thread_inotify_func( void * ptr ){
 	int64_t size = 0;
 	struct sigaction action;
 	char * ptrc;
+
+	struct dirent * file_info;
+	DIR * dirptr;
 	
 	sigemptyset(&action.sa_mask);
 	action.sa_flags = 0;
@@ -99,9 +102,11 @@ void * thread_inotify_func( void * ptr ){
 				 * If we have new directory on watched depth, we will add it to inotify queue, then remove oldest directory
 				 * and rescan removed directory. We DO NOT monitor inotify events from directory in inotify queue. That was in first
 				 * idea, but it would cause multiple rescan for one directory (for every new or changed file)
-                 */
+             */
 				dir_inotify2 = buffer_inotify_add_watch( data->queue_inotify, child_name, dir_inotify->depth+1, dir_inotify, atol(event->name+i), data->inotify_fd );
 				
+repeat:
+
 				if( dir_inotify2->depth == data->dir_depth ) {
 					VERBOSE( 2, "W | New data                     %s\n", child_name);
 					dir_inotify2 = NULL;
@@ -128,16 +133,47 @@ void * thread_inotify_func( void * ptr ){
 					buffer_inotify_rm_recursive( data->queue_inotify, dir_inotify2, data->inotify_fd );
 					pthread_mutex_unlock( &data->mutex_mem );
 				}
-				else {
-					asprintf( &stat_file_name, "%s/stat.txt", child_name );
+				else if( dir_inotify2->depth <00 data->dir_depth ) {
+					if( asprintf( &stat_file_name, "%s/stat.txt", child_name )== -1 ) {
+						ERROR;
+						continue;
+					}
+
 					stat_file = fopen( stat_file_name, "w" );
+					if( stat_file == NULL ) {
+
+						ERROR;
+						VERBOSE( 1, "E | %s\n", stat_file_name);
+						free( stat_file_name );
+						continue;
+					}
 					fprintf( stat_file, "0" );
 					fclose( stat_file );
 					free( stat_file_name );
+
+					dirptr = opendir( child_name );
+					if( dirptr == NULL ) {
+						ERROR;
+					}
+
+					errno = 0;
+					if( ( file_info = readdir( dirptr ) ) != NULL ) {
+						if( asprintf( &child_name, "%s/%s", child_name, file_info->d_name ) == -1 ) {
+							ERROR;
+							continue;
+						}
+						for( i = 0; file_info->d_name[i] != '\0'; i++ ) {
+							if( ( file_info->d_name[i] >= '0' ) && ( file_info->d_name[i] <= '9')  ) break;
+						}
+						dir_inotify2 = buffer_inotify_add_watch( data->queue_inotify, child_name, dir_inotify2->depth+1, dir_inotify2, atol(file_info->d_name+i), data->inotify_fd );
+						goto repeat;
+					}
+					else {
+						ERROR;
+					}
 				}
 				
 				free( child_name );
-		
 			}
 			
 			// remove files
