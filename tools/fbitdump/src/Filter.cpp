@@ -90,7 +90,7 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 	if (!conf.getTimeWindowStart().empty()) {
 		tw = "(%ts >= " + conf.getTimeWindowStart();
 		if (!conf.getTimeWindowEnd().empty()) {
-			tw += "AND %te <= " + conf.getTimeWindowEnd();
+			tw += " AND %te <= " + conf.getTimeWindowEnd();
 		}
 		tw += ") AND ";
 		input = tw + input;
