@@ -191,16 +191,6 @@ int main (int argc, char* argv[])
 	sigaction(SIGQUIT, &action, NULL);
 	sigaction(SIGTERM, &action, NULL);
 
-	/* daemonize */
-	if (daemonize) {
-		closelog();
-		MSG_SYSLOG_INIT(PACKAGE);
-		/* and send all following messages to the syslog */
-		if (daemon (1, 0)) {
-			MSG_ERROR(msg_module, "%s", strerror(errno));
-		}
-	}
-
 	/*
 	 * this initialize the library and check potential ABI mismatches
 	 * between the version it was compiled for and the actual shared
@@ -404,6 +394,16 @@ int main (int argc, char* argv[])
 		MSG_ERROR(msg_module, "[%d] Loading storage xml_conf(s) failed.", proc_id);
 		retval = EXIT_FAILURE;
 		goto cleanup;
+	}
+
+	/* daemonize */
+	if (daemonize) {
+		closelog();
+		MSG_SYSLOG_INIT(PACKAGE);
+		/* and send all following messages to the syslog */
+		if (daemon (1, 0)) {
+			MSG_ERROR(msg_module, "%s", strerror(errno));
+		}
 	}
 
 	/*

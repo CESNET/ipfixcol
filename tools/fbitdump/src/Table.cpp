@@ -212,6 +212,7 @@ void Table::queueQuery(std::string select, const Filter &filter)
 void Table::doQuery()
 {
 	if (!queryDone) {
+		bool missing = false;
 		/* do select */
 		ibis::table *tmpTable = this->table;
 		this->table = this->table->select(this->select.c_str(), this->usedFilter->getFilter().c_str());
@@ -228,12 +229,20 @@ void Table::doQuery()
 					orderByList.push_back(s);
 					direc.push_back(this->orderAsc);
 				} catch (std::out_of_range &e) {
-					std::cerr << "Cannot order by column '" << *it << "' (not present in the table)" << std::endl;
+					missing = true;
+					break;
+//					std::cerr << "Cannot order by column '" << *it << "' (not present in the table)" << std::endl;
 				}
 			}
 
-			/* order the table */
-			this->table->orderby(orderByList, direc);
+			/* Column for ordering is missing - we don't need this table */
+			if (missing) {
+				delete this->table;
+				this->table = NULL;
+			} else {
+				/* order the table */
+				this->table->orderby(orderByList, direc);
+			}
 		}
 
 		/* delete original table */

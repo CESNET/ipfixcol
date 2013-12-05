@@ -1,10 +1,9 @@
-/*
- * Author: Radek Krejci <rkrejci@cesnet.cz>
- * The main devel header for IPFIX Collector.
+/**
+ * \file convert.h
+ * \author Michal Kozubik <kozubik.michal@gmail.com>
+ * \brief Packet conversion from Netflow v5/v9 or sFlow to IPFIX format.
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
- *
- * LICENSE TERMS
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,7 +23,7 @@
  * License (GPL) version 2 or later, in which case the provisions
  * of the GPL apply INSTEAD OF those given above.
  *
- * This software is provided ``as is'', and any express or implied
+ * This software is provided ``as is, and any express or implied
  * warranties, including, but not limited to, the implied warranties of
  * merchantability and fitness for a particular purpose are disclaimed.
  * In no event shall the company or contributors be liable for any
@@ -38,32 +37,42 @@
  *
  */
 
-#ifndef IPFIXCOL_H_
-#define IPFIXCOL_H_
+#ifndef __CONVERT_H
+#define __CONVERT_H
+
+enum {
+	UDP_PLUGIN,
+	TCP_PLUGIN,
+	SCTP_PLUGIN
+};
 
 /**
- * \mainpage IPFIX Collector Developer's Documentation
- *
- * This documents provides documentation of IPFIX Collector (ipfixcol). We
- * provides public API of the collector's input plugins as well as its storage
- * (output) plugins.
- */
+  * \brief Prepare static variables used for inserting template and data sets
+  *  
+  *  Also allocate memory for templates
+  *
+  *  \param[in] in_plugin Type of input plugin (UDP_PLUGIN...)
+  *  \param[in] len Length of buff used in plugins
+  *  \return 0 on success
+  */
+int convert_init(int in_plugin, int len);
 
 /**
- * \defgroup publicAPIs Public ipfixcol's APIs
- * \brief APIs for connecting plugins into the ipfixcol.
- */
+  * \brief Main function for packet conversion
+  *
+  * \param[in] packet Received packet
+  * \param[in] len Packet length from function recvfrom etc.
+  * \param[in] info_list info_list structure (used only in UDP_PLUGIN)
+  */
+void convert_packet(char **packet, ssize_t *len, char *input_info);
 
 /**
- * \defgroup inputPlugins ipficol's Input Plugins
- * \brief Input plugins for the ipfixcol.
- */
+  * \brief Reallocate memory for templates
+  * 
+  * \return 0 on success
+  */
 
-#include <ipfixcol/input.h>
-#include <ipfixcol/storage.h>
-#include <ipfixcol/ipfix.h>
-#include <ipfixcol/templates.h>
-#include <ipfixcol/verbose.h>
-#include <ipfixcol/centos5.h>
+void convert_close();
 
-#endif /* IPFIXCOL_H_ */
+
+#endif

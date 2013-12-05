@@ -222,7 +222,9 @@ int process_startup_xml(char *params, struct fastbit_config* c){
 
 	if(doc){
 		/*load element types from xml */
-		load_types_from_xml(c);
+		if (load_types_from_xml(c) != 0) {
+			return 1;
+		}
 
 		pugi::xpath_node ie = doc.select_single_node("fileWriter");
 		path=ie.node().child_value("path");
