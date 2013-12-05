@@ -99,6 +99,7 @@ namespace fbitdump {
 %token <s> STRING		"string"
 %token <s> IN			"in list"
 %token <s> NOT			"not"
+%token <s> EXISTS		"exists"
 %token END 0			"end of file"
 
 %type <s> explist exp start
@@ -133,7 +134,9 @@ start:
 
 explist:
 	  exp { $$ = $1; }
+	| NOT exp { $$ = new std::string("NOT (" + *$2 + ")"); delete $1; delete $2; }
 	| list { $$ = new std::string(filter.parseExpList($1)); delete $1; }
+	| NOT list { $$ = new std::string("NOT" + filter.parseExpList($2)); delete $2; }
 	| '(' explist ')' { $$ = new std::string("(" + *$2 + ")"); delete $2; }
 	| explist OPERATOR explist { $$ = new std::string(*$1 + " " + *$2 + " " + *$3); delete $1; delete $2; delete $3; }
 	;
@@ -143,6 +146,7 @@ exp:
 	| value CMP column {  $$ = new std::string(filter.parseExp($3, *$2, $1)); delete $1; delete $2; delete $3; }
 	| column CMP column { $$ = new std::string(filter.parseExp($1, *$2, $3)); delete $1; delete $2; delete $3; }
 	| column value { $$ = new std::string(filter.parseExp($1, $2)); delete $1; delete $2; }
+	| EXISTS column { $$ = new std::string(filter.parseExists($2)); delete $1; delete $2; }
     ;
 
 list:

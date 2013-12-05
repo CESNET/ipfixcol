@@ -48,13 +48,21 @@ extern "C" {
 
 int load_types_from_xml(struct fastbit_config *conf) {
 	pugi::xml_document doc;
+	pugi::xml_parse_result result;
 	uint32_t en;
 	uint16_t id;
 	enum store_type type;
 	std::string str_value;
 
-	if (!doc.load_file("/etc/ipfixcol/ipfix-elements.xml")) return -1;
+	result = doc.load_file("/etc/ipfixcol/ipfix-elements.xml");
 
+	/* Check for errors */
+	if (!result) {
+		MSG_ERROR(MSG_MODULE, "/etc/ipfixcol/ipfix-elements.xml parsed with errors!");
+		MSG_ERROR(MSG_MODULE, "Error description: %s", result.description());
+
+		return -1;
+	}
 
 	pugi::xpath_node_set elements = doc.select_nodes("/ipfix-elements/element");
 	for (pugi::xpath_node_set::const_iterator it = elements.begin(); it != elements.end(); ++it)

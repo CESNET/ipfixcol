@@ -61,11 +61,10 @@ void Filter::error(const parser::location& loc, const std::string& msg)
 	std::cerr << "error at " << loc << ": " << msg << std::endl;
 }
 
-void Filter::error (const std::string& msg)
+void Filter::error(const std::string& msg)
 {
 	std::cerr << msg << std::endl;
 }
-
 
 const std::string Filter::getFilter() const
 {
@@ -91,7 +90,7 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 	if (!conf.getTimeWindowStart().empty()) {
 		tw = "(%ts >= " + conf.getTimeWindowStart();
 		if (!conf.getTimeWindowEnd().empty()) {
-			tw += "AND %te <= " + conf.getTimeWindowEnd();
+			tw += " AND %te <= " + conf.getTimeWindowEnd();
 		}
 		tw += ") AND ";
 		input = tw + input;
@@ -134,6 +133,7 @@ time_t Filter::parseTimestamp(std::string str) const throw (std::invalid_argumen
 	if (strptime(str.c_str(), "%Y/%m/%d.%H:%M:%S", &ctime) == NULL) {
 		throw std::invalid_argument(std::string("Cannot parse timestamp '") + str + "'");
 	}
+	ctime.tm_isdst = 0;
 
 	return mktime(&ctime);
 }
@@ -327,24 +327,24 @@ void Filter::parseNumber(parserStruct *ps, std::string number) const throw (std:
 
 	/* If there is some suffix (kKmMgG) convert it into number */
 	switch (number[number.length() - 1]) {
-	case 'k':
-	case 'K':
-		number = number.substr(0, number.length() - 1) + "000";
-		break;
-	case 'm':
-	case 'M':
-		number = number.substr(0, number.length() - 1) + "000000";
-		break;
-	case 'g':
-	case 'G':
-		number = number.substr(0, number.length() - 1) + "000000000";
-		break;
-	case 't':
-	case 'T':
-		number = number.substr(0, number.length() - 1) + "000000000000";
-		break;
-	default:
-		break;
+		case 'k':
+		case 'K':
+			number = number.substr(0, number.length() - 1) + "000";
+			break;
+		case 'm':
+		case 'M':
+			number = number.substr(0, number.length() - 1) + "000000";
+			break;
+		case 'g':
+		case 'G':
+			number = number.substr(0, number.length() - 1) + "000000000";
+			break;
+		case 't':
+		case 'T':
+			number = number.substr(0, number.length() - 1) + "000000000000";
+			break;
+		default:
+			break;
 	}
 
 	/* Set right values of parser structure */
@@ -375,7 +375,7 @@ bool Filter::parseColumnGroup(parserStruct *ps, std::string alias, bool aggerega
 	}
 
 	/* search xml for a group alias */
-	pugi::xpath_node column = this->actualConf->getXMLConfiguration().select_single_node(("/configuration/groups/group[alias='"+alias+"']").c_str());
+	pugi::xpath_node column = this->actualConf->getXMLConfiguration().select_single_node(("/configuration/groups/group[alias='" + alias + "']").c_str());
 
 	/* check what we found */
 	if (column == NULL) {
@@ -410,7 +410,7 @@ void Filter::parseColumn(parserStruct *ps, std::string alias) const throw (std::
 	Column *col = NULL;
 	try {
 		col = new Column(this->actualConf->getXMLConfiguration(), alias, false);
-	} catch (std::exception &e){
+	} catch (std::exception &e) {
 		/* If column not found, check column groups */
 		if (this->parseColumnGroup(ps, alias, false) == false) {
 			/* No column, no column group, error */
@@ -492,43 +492,54 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 		/* If it is string, we need to parse it
 		 * Type may transform from string to number (if coltype is PT_PROTO) - we can't change cmp to LIKE here */
 		this->parseStringType(right, left->colType, cmp);
-    }
+	}
 	if (cmp.empty()) {
 		cmp = "=";
 	}
 
 	switch (right->type) {
-	case PT_IPv4_SUB:
-	case PT_IPv6_SUB:
-		/* If it is IPv4/6 address with subnet, we need to parse it (get minimal and maximal host address) */
-		return this->parseExpSub(left, cmp, right);
-	case PT_HOSTNAME6:
-		/* If it was IPv6 hostname, we need to combine "and" and "or" operators - parse it somewhere else */
-		return this->parseExpHost6(left, cmp, right);
-	default:
-		break;
+		case PT_IPv4_SUB:
+		case PT_IPv6_SUB:
+			/* If it is IPv4/6 address with subnet, we need to parse it (get minimal and maximal host address) */
+			return this->parseExpSub(left, cmp, right);
+		case PT_HOSTNAME6:
+			/* If it was IPv6 hostname, we need to combine "and" and "or" operators - parse it somewhere else */
+			return this->parseExpHost6(left, cmp, right);
+		default:
+			break;
 	}
+
+	std::string exp = "(", op, opGroup;
 
 	/* Parser expression "column CMP value" */
 	if ((left->nParts == 1) && (right->nParts == 1)) {
-        if (right->type == PT_STRING && cmp == "!=") {
-            return "not (" + left->parts[0] + " LIKE " + right->parts[0] + ")";
-        } else {
-            return left->parts[0] + " " + cmp + " " + right->parts[0];
-        }
+		if (cmp == "!=") {
+			exp += "NOT EXISTS(" + left->parts[0] + ") or ";
+
+			if (right->type == PT_STRING) {
+				exp += "(not (" + left->parts[0] + " LIKE " + right->parts[0] + ")))";
+				return exp;
+			}
+
+		} else {
+			exp += "EXISTS(" + left->parts[0] + ") and ";
+		}
+		exp += "(" + left->parts[0] + " " + cmp + " " + right->parts[0] + "))";
+		return exp;
 	}
 
-	std::string exp, op;
-
 	/* Set operator */
-	if ((left->type == PT_GROUP) || (right->type == PT_HOSTNAME) ||
-		((right->type == PT_IPv6) && (cmp == "!="))) {
+	if (right->type == PT_HOSTNAME || (right->type == PT_IPv6 && cmp == "!=")) {
 		op = " or ";
 	} else {
 		op = " and ";
 	}
 
-	exp += "(";
+	if (cmp == "!=") {
+		opGroup = " and ";
+	} else {
+		opGroup = " or ";
+	}
 
 	/* Create expression */
 	for (uint16_t i = 0, j = 0; (i < left->nParts) || (j < right->nParts); i++, j++) {
@@ -538,18 +549,36 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 		}
 		if (j == right->nParts) {
 			j--;
+			if (left->type == PT_GROUP) {
+				j = 0;
+				exp = exp.substr(0, exp.length() - op.length()) + ")" + opGroup;
+			}
+		}
+
+		if (j == 0 && left->type == PT_GROUP) {
+			exp += "(";
 		}
 
 		/* Add part into expression */
-        if (right->type == PT_STRING && cmp == "!=") {
-            exp += "(not (" + left->parts[0] + " LIKE " + right->parts[0] + "))" + op;
-        } else {
-            exp += "(" + left->parts[i] + " " + cmp + " " + right->parts[j] + ")" + op;
-        }
+		if (cmp == "!=") {
+			exp += "(NOT EXISTS(" + left->parts[0] + ") or ";
+			if (right->type == PT_STRING) {
+				exp += "(not (" + left->parts[0] + " LIKE " + right->parts[0] + ")))" + op;
+			} else {
+				exp += "(" + left->parts[i] + " " + cmp + " " + right->parts[j] + "))" + op;
+			}
+		} else {
+			exp += "(EXISTS(" + left->parts[i] + ") and ";
+			exp += "(" + left->parts[i] + " " + cmp + " " + right->parts[j] + "))" + op;
+		}
 	}
 
 	/* Remove last operator and close bracket */
-	exp = exp.substr(0, exp.length() - op.length()) + ")";
+	if (left->type == PT_GROUP) {
+		exp = exp = exp.substr(0, exp.length() - op.length()) + "))";
+	} else {
+		exp = exp.substr(0, exp.length() - op.length()) + ")";
+	}
 
 	/* Return created expression */
 	return exp;
@@ -567,31 +596,60 @@ std::string Filter::parseExpSub(parserStruct *left, std::string cmp, parserStruc
 	}
 
 	int i, rightPos = 0;
-	std::string exp, op, cmp1, cmp2;
+	std::string exp, op, opGroup, cmp1, cmp2;
 
-    if (cmp == "!=") {
-        cmp1 = " <= ";
-        cmp2 = " >= ";
-        op = " or ";
-    } else {
-        cmp1 = " > ";
-        cmp2 = " < ";
-        op = " and ";
-    }
+	if (cmp == "!=") {
+		cmp1 = " <= ";
+		cmp2 = " >= ";
+		op = " or ";
+		opGroup = " and ";
+	} else {
+		cmp1 = " > ";
+		cmp2 = " < ";
+		op = " and ";
+		opGroup = " or ";
+	}
+
 	/* Openning bracket */
 	exp = "(";
 
 	/* Create expression */
 	for (i = 0; i < left->nParts; i++) {
-        if (cmp == "!=") {
-            exp += "( not (" + left->parts[i] + " not NULL ))" + op;
-        }
+		/* Check if left structure is group of columns and add openning bracket for group */
+		if (rightPos == 0 && left->type == PT_GROUP) {
+			exp += "(";
+		}
+
+		/* Insert (NOT) EXISTS according to comparison operator */
+		if (cmp == "!=") {
+			exp += "(NOT EXISTS(" + left->parts[i] + ") or (";
+		} else {
+			exp += "(EXISTS(" + left->parts[i] + ") and (";
+		}
+
+		/* Add values from right parser structure */
 		exp += "(" + left->parts[i] + cmp1 + right->parts[rightPos++] + ")" + op;
-		exp += "(" + left->parts[i] + cmp2 + right->parts[rightPos++] + ")" + op;
+		exp += "(" + left->parts[i] + cmp2 + right->parts[rightPos++] + ")))" + op;
+
+		/* If rightPos is at the end of right->parts, reset this counter */
+		if (rightPos >= right->nParts) {
+			/* Close group and insert according operator (and | or) */
+			if (left->type == PT_GROUP) {
+				exp = exp.substr(0, exp.length() - op.length()) + ")" + opGroup;
+			}
+			rightPos = 0;
+		}
 	}
 
-	/* Remove last "and" and insert closing bracket */
-	exp = exp.substr(0, exp.length() - op.length()) + ") ";
+	/* Remove last operator */
+	if (left->type == PT_GROUP) {
+		exp = exp.substr(0, exp.length() - opGroup.length());
+	} else {
+		exp = exp.substr(0, exp.length() - op.length());
+	}
+
+	/* Insert closing bracket */
+	exp += ") ";
 
 	return exp;
 }
@@ -603,16 +661,29 @@ std::string Filter::parseExpHost6(parserStruct *left, std::string cmp, parserStr
 	}
 
 	int i = 0, leftPos = 0;
-	std::string exp;
+	std::string exp, op1 = " and ", op2 = " or ";
 
 	/* Openning bracket */
 	exp = "(";
 
+	if (cmp == "!=") {
+		op1 = " or ";
+		op2 = " and ";
+	}
+
 	/* Create expression */
 	while (i < right->nParts) {
-		exp += "(";
-		exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + " and ";
-		exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + ") or ";
+		if (cmp == "!=") {
+			exp += "(NOT EXISTS(" + left->parts[leftPos] + ") or (";
+			exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + "))" + op1;
+			exp += "(NOT EXISTS(" + left->parts[leftPos] + ") or (";
+			exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + "))" + op2;
+		} else {
+			exp += "(EXISTS(" + left->parts[leftPos] + ") and (";
+			exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + "))" + op1;
+			exp += "(EXISTS(" + left->parts[leftPos] + ") and (";
+			exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + "))" + op2;
+		}
 
 		/* If all column parts were used, jump to start and use them again */
 		if (leftPos == left->nParts) {
@@ -621,7 +692,7 @@ std::string Filter::parseExpHost6(parserStruct *left, std::string cmp, parserStr
 	}
 
 	/* Remove last "or", insert closing bracket */
-	exp = exp.substr(0, exp.length() - 4) + ") ";
+	exp = exp.substr(0, exp.length() - op2.length()) + ") ";
 
 	return exp;
 }
@@ -679,12 +750,12 @@ void Filter::parseStringType(parserStruct *ps, std::string type, std::string &cm
 		} else if (cmp == "<") {
 			ps->parts[0] = "'" + ps->parts[0] + "%'";
 		}
-        if (cmp == "!=") {
-//        	Not supported
-//            cmp = "NOT LIKE";
-        } else {
-            cmp = "LIKE";
-        }
+		if (cmp == "!=") {
+			//        	Not supported
+			//            cmp = "NOT LIKE";
+		} else {
+			cmp = "LIKE";
+		}
 		ps->type = PT_STRING;
 	}
 }
@@ -715,35 +786,35 @@ std::string Filter::parseFlags(std::string strFlags) const
 	 * 000100 RESET
 	 * 001000 PUSH
 	 * 010000 ACK
-     * 100000 URGENT
+	 * 100000 URGENT
 	 */
 	intFlags = 0;
 	for (i = 0; i < strFlags.length(); i++) {
 		switch (strFlags[i]) {
-		case 'f':
-		case 'F':
-			intFlags |= 1;
-			break;
-		case 's':
-		case 'S':
-			intFlags |= 2;
-			break;
-		case 'r':
-		case 'R':
-			intFlags |= 4;
-			break;
-		case 'p':
-		case 'P':
-			intFlags |= 8;
-			break;
-		case 'a':
-		case 'A':
-			intFlags |= 16;
-			break;
-		case 'u':
-		case 'U':
-			intFlags |= 32;
-			break;
+			case 'f':
+			case 'F':
+				intFlags |= 1;
+				break;
+			case 's':
+			case 'S':
+				intFlags |= 2;
+				break;
+			case 'r':
+			case 'R':
+				intFlags |= 4;
+				break;
+			case 'p':
+			case 'P':
+				intFlags |= 8;
+				break;
+			case 'a':
+			case 'A':
+				intFlags |= 16;
+				break;
+			case 'u':
+			case 'U':
+				intFlags |= 32;
+				break;
 		}
 	}
 
@@ -764,7 +835,7 @@ void Filter::parseHostname(parserStruct *ps, uint8_t af_type) const throw (std::
 	std::string address, part1, part2, last1, last2;
 	void *addr;
 
-	memset(&hints, 0, sizeof(hints));
+	memset(&hints, 0, sizeof (hints));
 
 	/* Set input structure values */
 	hints.ai_family = af_type;
@@ -810,7 +881,7 @@ void Filter::parseHostname(parserStruct *ps, uint8_t af_type) const throw (std::
 
 			/* Int to str both parts of address */
 			std::stringstream ss;
-			ss << be64toh(*(( uint64_t *) addr));
+			ss << be64toh(*((uint64_t *) addr));
 			part1 = ss.str();
 
 			ss.str(std::string());
@@ -880,6 +951,22 @@ std::string Filter::parseExpList(std::vector<parserStruct *> *list) const throw 
 	/* Remove last " or " and close bracket */
 	exp = exp.substr(0, exp.length() - op.length()) + ") ";
 
+	return exp;
+}
+
+std::string Filter::parseExists(parserStruct* ps) const throw (std::invalid_argument)
+{
+	if (ps == NULL) {
+		throw std::invalid_argument(std::string("Cannot parse exists expression, NULL parser structure"));
+	}
+	std::string exp = "(", op = " and ";
+	uint16_t i;
+	for (i = 0; i < ps->nParts; i++) {
+		exp += "EXISTS(" + ps->parts[i] + ")" + op;
+	}
+	
+	exp = exp.substr(0, exp.length() - op.length()) + ")";
+	
 	return exp;
 }
 

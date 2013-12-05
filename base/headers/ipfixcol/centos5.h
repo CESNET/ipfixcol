@@ -1,10 +1,9 @@
-/*
- * Author: Radek Krejci <rkrejci@cesnet.cz>
- * The main devel header for IPFIX Collector.
+/**
+ * \file centos5.h
+ * \author Michal Kozubik <kozubik.michal@gmail.com>
+ * \brief htobe64 and be64toh macros
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
- *
- * LICENSE TERMS
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,7 +23,7 @@
  * License (GPL) version 2 or later, in which case the provisions
  * of the GPL apply INSTEAD OF those given above.
  *
- * This software is provided ``as is'', and any express or implied
+ * This software is provided ``as is, and any express or implied
  * warranties, including, but not limited to, the implied warranties of
  * merchantability and fitness for a particular purpose are disclaimed.
  * In no event shall the company or contributors be liable for any
@@ -38,32 +37,28 @@
  *
  */
 
-#ifndef IPFIXCOL_H_
-#define IPFIXCOL_H_
 
-/**
- * \mainpage IPFIX Collector Developer's Documentation
- *
- * This documents provides documentation of IPFIX Collector (ipfixcol). We
- * provides public API of the collector's input plugins as well as its storage
- * (output) plugins.
- */
+#ifndef CENTOS5_H_
+#define CENTOS5_H_
 
-/**
- * \defgroup publicAPIs Public ipfixcol's APIs
- * \brief APIs for connecting plugins into the ipfixcol.
- */
 
-/**
- * \defgroup inputPlugins ipficol's Input Plugins
- * \brief Input plugins for the ipfixcol.
- */
+/* We need be64toh macro */
+#ifndef HAVE_HTOBE64
+# if __BYTE_ORDER == __LITTLE_ENDIAN
+#  define htobe64(x) __bswap_64 (x)
+# else
+#  define htobe64(x) (x)
+# endif
+#endif
 
-#include <ipfixcol/input.h>
-#include <ipfixcol/storage.h>
-#include <ipfixcol/ipfix.h>
-#include <ipfixcol/templates.h>
-#include <ipfixcol/verbose.h>
-#include <ipfixcol/centos5.h>
+/* We need be64toh macro */
+#ifndef HAVE_BE64TOH
+# if __BYTE_ORDER == __LITTLE_ENDIAN
+#  define be64toh(x) __bswap_64 (x)
+# else
+#  define be64toh(x) (x)
+# endif
+#endif
 
-#endif /* IPFIXCOL_H_ */
+
+#endif /* CENTOS5_H_ */

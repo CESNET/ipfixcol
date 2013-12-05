@@ -39,7 +39,7 @@
 AC_PREREQ([2.60])
 
 # Process this file with autoconf to produce a configure script.
-AC_INIT([fbitdump], [0.3.5])
+AC_INIT([fbitdump], [0.3.7])
 LT_INIT([dlopen disable-static])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 
@@ -145,8 +145,8 @@ AC_CHECK_FUNCS([htonl inet_ntop gmtime regcomp getline floor memmove memset regc
 AC_CHECK_DECL([htobe64], [AC_DEFINE([HAVE_HTOBE64], [1],
                          [Define if macro htobe64 exists.])],,
 			 [[#include <endian.h>]])
-AC_CHECK_DECL([betoh64], [AC_DEFINE([HAVE_BETOH64], [1],
-                         [Define if macro betoh64 exists.])],,
+AC_CHECK_DECL([be64toh], [AC_DEFINE([HAVE_BE64TOH], [1],
+                         [Define if macro be64toh exists.])],,
 			 [[#include <endian.h>]])
 
 

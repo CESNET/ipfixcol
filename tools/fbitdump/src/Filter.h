@@ -316,6 +316,13 @@ public:
 	 * @param list Vector of all structures in list expression
 	 */
 	std::string parseExpList(std::vector<parserStruct *> *list) const throw (std::invalid_argument);
+	
+	/**
+	 * \brief Parse 'exists column' expression
+	 * 
+	 * @param ps Parser structure
+	 */
+	std::string parseExists(parserStruct *ps) const throw (std::invalid_argument);
 
 	/**
 	 * \brief Sets new filter string

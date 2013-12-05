@@ -39,7 +39,7 @@ start() {
 
 	# Create pid file when the start was successful
 	if [ $RETVAL -eq 0 ]; then
-		echo `ps ax | grep -E "$prog$params$" | sed 's/^ *//g' | cut --delimiter=' ' -f 1` > $pidfile
+		echo -n `ps ax | grep -E "$prog$params$" | sed 's/^ *//g' | cut --delimiter=' ' -f 1` > $pidfile
 	fi
 	return $RETVAL
 }
