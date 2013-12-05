@@ -318,6 +318,92 @@ void Filter::parseIPv6Sub(parserStruct *ps, std::string addr) const throw (std::
 	ps->type = PT_IPv6_SUB;
 }
 
+
+
+void Filter::parseHostname(parserStruct *ps, uint8_t af_type) const throw (std::invalid_argument)
+{
+	if (ps == NULL) {
+		throw std::invalid_argument(std::string("Cannot parse hostname, NULL parser structure"));
+	}
+	int ret;
+	struct addrinfo *result, *tmp;
+	struct addrinfo hints;
+	std::string address, part1, part2, last1, last2;
+	void *addr;
+
+	memset(&hints, 0, sizeof (hints));
+
+	/* Set input structure values */
+	hints.ai_family = af_type;
+	hints.ai_protocol = 0;
+
+	/* Get all addresses according to hostname */
+	ret = getaddrinfo(ps->parts[0].c_str(), "domain", &hints, &result);
+
+	if (ret != 0) {
+		throw std::invalid_argument(std::string("Unable to resolve address " + ps->parts[0]));
+	}
+
+	/* Erase parts */
+	ps->parts.pop_back();
+	ps->nParts = 0;
+
+	/* Iterate through all addresses and save them into parser structure */
+	for (tmp = result; tmp != NULL; tmp = tmp->ai_next) {
+		if (af_type == AF_INET) {
+			/* IPv4 */
+			/* Get numeric address */
+			struct sockaddr_in *ipv4 = (struct sockaddr_in *) tmp->ai_addr;
+			addr = &(ipv4->sin_addr);
+
+			/* Int to string */
+			std::stringstream ss;
+			ss << ntohl(*((uint32_t *) addr));
+			address = ss.str();
+
+			/* Each address is contained twice (don't know why) - check if previous addr is the same */
+			if (address != last1) {
+				/* Save address */
+				ps->parts.push_back(address);
+				ps->nParts++;
+			}
+
+			last1 = address;
+		} else {
+			/* IPv6 */
+			/* Get numeric address */
+			struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *) tmp->ai_addr;
+			addr = &(ipv6->sin6_addr);
+
+			/* Int to str both parts of address */
+			std::stringstream ss;
+			ss << be64toh(*((uint64_t *) addr));
+			part1 = ss.str();
+
+			ss.str(std::string());
+			ss.clear();
+
+			ss << be64toh(*(((uint64_t *) addr) + 1));
+			part2 = ss.str();
+
+			if ((part1 != last1) || (part2 != last2)) {
+				/* Save address */
+				ps->parts.push_back(part1);
+				ps->parts.push_back(part2);
+				ps->nParts += 2;
+			}
+
+			last1 = part1;
+			last2 = part2;
+		}
+		tmp = tmp->ai_next;
+	}
+	freeaddrinfo(result);
+
+	ps->type = (af_type == AF_INET) ? PT_HOSTNAME : PT_HOSTNAME6;
+}
+
+
 void Filter::parseNumber(parserStruct *ps, std::string number) const throw (std::invalid_argument)
 {
 	if (ps == NULL) {
@@ -434,8 +520,10 @@ void Filter::parseColumn(parserStruct *ps, std::string alias) const throw (std::
 		ps->type = PT_COMPUTED;
 	}
 
+	if (this->actualConf->plugins_parse.find(col->getSemantics()) != this->actualConf->plugins_parse.end()) {
+		ps->parse = this->actualConf->plugins_parse[col->getSemantics()];
+	}
 	ps->colType = col->getSemantics();
-
 	delete col;
 
 	/* Set type of structure */
@@ -489,8 +577,20 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 
 	if (right->type == PT_STRING) {
 		/* If it is string, we need to parse it
-		 * Type may transform from string to number (if coltype is PT_PROTO) - we can't change cmp to LIKE here */
-		this->parseStringType(right, left->colType, cmp);
+		 * Type may transform from string to number (if coltype is PT_PROTO) - we can't change cmp to LIKE here.
+		 *
+		 * Column::parse function (from plugins) takes "char *input" and "char[size] output" but for parsing
+		 * hostnames we need function that fills parser structure with translated addresses
+		 *
+		 * For all other string values, parse function from plugin is called
+		 */
+		if (!left->colType.empty() && left->colType == "ipv4") {
+			this->parseHostname(right, AF_INET);
+		} else if (!left->colType.empty() && left->colType == "ipv6") {
+			this->parseHostname(right, AF_INET6);
+		} else {
+			this->parseStringType(right, left->parse, cmp);
+		}
 	}
 	if (cmp.empty()) {
 		cmp = "=";
@@ -707,40 +807,22 @@ void Filter::parseString(parserStruct *ps, std::string text) const throw (std::i
 	ps->parts.push_back(text);
 }
 
-void Filter::parseStringType(parserStruct *ps, std::string type, std::string &cmp) const throw (std::invalid_argument)
+void Filter::parseStringType(parserStruct *ps, void (*parse)(char *input, char *out), std::string &cmp) const throw (std::invalid_argument)
 {
 	if (ps == NULL) {
 		throw std::invalid_argument(std::string("Cannot parse string by type, NULL parser structure"));
 	}
 
-	std::string num;
-
-	if (type == "protocol") {
-		/* It should be protocol name - we need to convert it into number */
-		num = getProtoNum(ps->parts[0]);
-
-		if (!num.empty()) {
-			ps->parts[0] = num;
+	if (parse != NULL) {
+		char buff[PLUGIN_BUFFER_SIZE];
+		parse((char *) ps->parts[0].c_str(), buff);
+		if (strlen(buff) > 0) {
+			ps->parts[0] = std::string(buff);
 			ps->type = PT_NUMBER;
 		}
-	} else if (type == "tcpflags") {
-		/* TCP flags in string form (AR etc.) - convert it into number */
-		num = this->parseFlags(ps->parts[0]);
+	}
 
-		ps->parts[0] = num;
-		ps->type = PT_NUMBER;
-
-	} else if (type == "ipv4") {
-		/* Parse hostname for IPv4 */
-		this->parseHostname(ps, AF_INET);
-		ps->type = PT_HOSTNAME;
-
-	} else if (type == "ipv6") {
-		/* Parse hostname for IPv6 */
-		this->parseHostname(ps, AF_INET6);
-		ps->type = PT_HOSTNAME6;
-
-	} else {
+	if (ps->type == PT_STRING) {
 		/* For all other columns with string value it stays as it is */
 		if (cmp.empty()) {
 			ps->parts[0] = "'%" + ps->parts[0] + "%'";
@@ -755,153 +837,7 @@ void Filter::parseStringType(parserStruct *ps, std::string type, std::string &cm
 		} else {
 			cmp = "LIKE";
 		}
-		ps->type = PT_STRING;
 	}
-}
-
-/* temporary solution */
-std::string Filter::getProtoNum(std::string name) const
-{
-	int i;
-	std::stringstream ss;
-
-	for (i = 0; i < 138; i++) {
-		if (strcasecmp(name.c_str(), protocols[i]) == 0) {
-			ss << i;
-			return ss.str();
-		}
-	}
-	return "";
-}
-
-std::string Filter::parseFlags(std::string strFlags) const
-{
-	uint16_t i, intFlags;
-	std::stringstream ss;
-
-	/* Convert flags from string into numeric form
-	 * 000001 FIN.
-	 * 000010 SYN
-	 * 000100 RESET
-	 * 001000 PUSH
-	 * 010000 ACK
-	 * 100000 URGENT
-	 */
-	intFlags = 0;
-	for (i = 0; i < strFlags.length(); i++) {
-		switch (strFlags[i]) {
-			case 'f':
-			case 'F':
-				intFlags |= 1;
-				break;
-			case 's':
-			case 'S':
-				intFlags |= 2;
-				break;
-			case 'r':
-			case 'R':
-				intFlags |= 4;
-				break;
-			case 'p':
-			case 'P':
-				intFlags |= 8;
-				break;
-			case 'a':
-			case 'A':
-				intFlags |= 16;
-				break;
-			case 'u':
-			case 'U':
-				intFlags |= 32;
-				break;
-		}
-	}
-
-	ss << intFlags;
-	return ss.str();
-
-}
-
-void Filter::parseHostname(parserStruct *ps, uint8_t af_type) const throw (std::invalid_argument)
-{
-	if (ps == NULL) {
-		throw std::invalid_argument(std::string("Cannot parse hostname, NULL parser structure"));
-	}
-
-	int ret;
-	struct addrinfo *result, *tmp;
-	struct addrinfo hints;
-	std::string address, part1, part2, last1, last2;
-	void *addr;
-
-	memset(&hints, 0, sizeof (hints));
-
-	/* Set input structure values */
-	hints.ai_family = af_type;
-	hints.ai_protocol = 0;
-
-	/* Get all addresses according to hostname */
-	ret = getaddrinfo(ps->parts[0].c_str(), "domain", &hints, &result);
-
-	if (ret != 0) {
-		throw std::invalid_argument(std::string("Unable to resolve address " + ps->parts[0]));
-	}
-
-	/* Erase parts */
-	ps->parts.pop_back();
-	ps->nParts = 0;
-
-	/* Iterate through all addresses and save them into parser structure */
-	for (tmp = result; tmp != NULL; tmp = tmp->ai_next) {
-		if (af_type == AF_INET) {
-			/* IPv4 */
-			/* Get numeric address */
-			struct sockaddr_in *ipv4 = (struct sockaddr_in *) tmp->ai_addr;
-			addr = &(ipv4->sin_addr);
-
-			/* Int to string */
-			std::stringstream ss;
-			ss << ntohl(*((uint32_t *) addr));
-			address = ss.str();
-
-			/* Each address is contained twice (don't know why) - check if previous addr is the same */
-			if (address != last1) {
-				/* Save address */
-				ps->parts.push_back(address);
-				ps->nParts++;
-			}
-
-			last1 = address;
-		} else {
-			/* IPv6 */
-			/* Get numeric address */
-			struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *) tmp->ai_addr;
-			addr = &(ipv6->sin6_addr);
-
-			/* Int to str both parts of address */
-			std::stringstream ss;
-			ss << be64toh(*((uint64_t *) addr));
-			part1 = ss.str();
-
-			ss.str(std::string());
-			ss.clear();
-
-			ss << be64toh(*(((uint64_t *) addr) + 1));
-			part2 = ss.str();
-
-			if ((part1 != last1) || (part2 != last2)) {
-				/* Save address */
-				ps->parts.push_back(part1);
-				ps->parts.push_back(part2);
-				ps->nParts += 2;
-			}
-
-			last1 = part1;
-			last2 = part2;
-		}
-		tmp = tmp->ai_next;
-	}
-	freeaddrinfo(result);
 }
 
 void Filter::parseListCreate(std::vector<parserStruct *> *list, std::string cmp, parserStruct *column) const throw (std::invalid_argument)

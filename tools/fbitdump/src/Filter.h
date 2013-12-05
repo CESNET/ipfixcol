@@ -90,6 +90,7 @@ typedef struct _parserStruct {
 	partsType type;
 	uint16_t nParts;
 	std::string colType;
+	void (*parse)(char *input, char *out);
 	std::vector<std::string> parts;
 } parserStruct;
 
@@ -372,23 +373,7 @@ private:
 	 * @param ps Parser structure
 	 * @param[in] type Column type
 	 */
-	void parseStringType(parserStruct *ps, std::string type, std::string &cmp) const throw (std::invalid_argument);
-
-	/**
-	 * \brief Converts protocol name into numeric form
-	 *
-	 * @param[in] name Protocol name
-	 * @return Protocol number (as string)
-	 */
-	std::string getProtoNum(std::string name) const;
-
-	/**
-	 * \brief Parses flags in text form (AR...) and returns their numeric form
-	 *
-	 * @param[in] strFlags Flags in text form
-	 * @return Flags in numeric form
-	 */
-	std::string parseFlags(std::string strFlags) const;
+	void parseStringType(parserStruct *ps, void (*parse)(char *input, char *out), std::string &cmp) const throw (std::invalid_argument);
 
 	/**
 	 * \brief Parses hostname and converts it into ip addresses
