@@ -85,6 +85,10 @@ void Filter::setFilterString(std::string newFilter)
 void Filter::init(Configuration &conf) throw (std::invalid_argument)
 {
 	std::string input = conf.getFilter(), tw;
+	
+	if (input == "1=1") {
+		input.clear();
+	}
 
 	/* incorporate time windows argument in filter */
 	if (!conf.getTimeWindowStart().empty()) {
@@ -92,14 +96,18 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		if (!conf.getTimeWindowEnd().empty()) {
 			tw += " AND %te <= " + conf.getTimeWindowEnd();
 		}
-		tw += ") AND ";
-		input = tw + input;
+		tw += ")";
+		if (input.empty()) {
+			input = tw;
+		} else {
+			input = tw + " AND " + input;
+		}
 	}
 
 	/* We need access to configuration in parseColumn() function */
 	this->actualConf = &conf;
 
-	if (conf.getFilter().compare("1=1") == 0) {
+	if (input.empty()) {
 		this->setFilterString("1 = 1");
 	} else {
 		/* Initialise lexer structure (buffers, etc) */
