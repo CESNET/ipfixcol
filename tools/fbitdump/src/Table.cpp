@@ -75,12 +75,6 @@ void Table::aggregate(const stringSet &aggregateColumns, const stringSet &summar
 		return;
 	}
 
-	if (aggregateColumns.size() == 0) {
-		delete this->table;
-		this->table = NULL;
-		return;
-	}
-
 	std::string colNames;
 	stringPairVector combined, sColumns, aColumns;
 	size_t i = 0;

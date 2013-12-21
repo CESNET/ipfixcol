@@ -201,12 +201,14 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 #endif
 
 		/* create table for each partList */
-		table = new Table(pList);
+		if (!outerIter->empty()) {
+			table = new Table(pList);
 
-		/* aggregate the table, use only present aggregation columns */
-		table->aggregate(*outerIter, summaryColumns, filter);
-		table->orderBy(this->orderColumns, this->orderAsc);
-		this->tables.push_back(table);
+			/* aggregate the table, use only present aggregation columns */
+			table->aggregate(*outerIter, summaryColumns, filter);
+			table->orderBy(this->orderColumns, this->orderAsc);
+			this->tables.push_back(table);
+		}
 
 		/* and clear the part list */
 		pList.clear();
