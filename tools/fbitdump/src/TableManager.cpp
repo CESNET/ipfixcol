@@ -201,7 +201,7 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 #endif
 
 		/* create table for each partList */
-		if (!outerIter->empty()) {
+		if (!outerIter->empty() || aggregateColumns.empty()) {
 			table = new Table(pList);
 
 			/* aggregate the table, use only present aggregation columns */
