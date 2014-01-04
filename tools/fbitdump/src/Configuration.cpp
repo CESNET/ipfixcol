@@ -673,7 +673,7 @@ void Configuration::help() const
 	<< "-v <level>      Set level of verbose." << std::endl
 	<< "-V              Print version and exit." << std::endl
 	<< "-a              Aggregate netflow data." << std::endl
-	<< "-A [<expr>]     How to aggregate: ',' sep list of tags see man fbitdump(1)" << std::endl
+	<< "-A[<expr>]      How to aggregate: ',' sep list of tags see man fbitdump(1)" << std::endl
 //	<< "                or subnet aggregation: srcip4/24, srcip6/64." << std::endl
 	//<< "-b              Aggregate netflow records as bidirectional flows." << std::endl
 	//<< "-B              Aggregate netflow records as bidirectional flows - Guess direction." << std::endl
