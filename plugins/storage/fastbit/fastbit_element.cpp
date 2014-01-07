@@ -574,13 +574,14 @@ int el_sint::set_type() {
 }
 
 el_sint::el_sint(int size , int en, int id, uint32_t buf_size) {
-		_size = size;
-		_filled = 0;
-		_buffer = NULL;
-		setName(en, id);
-		this->set_type();
-		if (buf_size == 0) {
-			 buf_size = RESERVED_SPACE;
-		}
-		allocate_buffer(buf_size);
+	_real_size = size;
+	_size = 0;
+	_filled = 0;
+	_buffer = NULL;
+	setName(en, id);
+	this->set_type();
+	if (buf_size == 0) {
+		 buf_size = RESERVED_SPACE;
 	}
+	allocate_buffer(buf_size);
+}
