@@ -47,6 +47,7 @@ namespace fbitdump
 void Column::init(const pugi::xml_document &doc, const std::string &alias, bool aggregate) throw(std::invalid_argument)
 {
 	this->format = NULL;
+	this->parse = NULL;
 
 	/* search xml for an alias */
 	pugi::xpath_node column = doc.select_single_node(("/configuration/columns/column[alias='"+alias+"']").c_str());

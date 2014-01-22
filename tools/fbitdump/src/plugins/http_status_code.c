@@ -138,3 +138,95 @@ void format( const union plugin_arg * arg, int plain_numbers, char out[PLUGIN_BU
 
 	snprintf(out, PLUGIN_BUFFER_SIZE, "%s", str);
 }
+
+void parse(char *input, char out[PLUGIN_BUFFER_SIZE])
+{
+	int code;
+	if (!strcasecmp(input, "Continue")) {
+		code = 100;
+	} else if (!strcasecmp(input, "Switching Protocols")) {
+		code = 101;
+	} else if (!strcasecmp(input, "OK")) {
+		code = 200;
+	} else if (!strcasecmp(input, "Created")) {
+		code = 201;
+	} else if (!strcasecmp(input, "Accepted")) {
+		code = 202;
+	} else if (!strcasecmp(input, "Non-Authoritative Information")) {
+		code = 203;
+	} else if (!strcasecmp(input, "No Content")) {
+		code = 204;
+	} else if (!strcasecmp(input, "Reset Content")) {
+		code = 205;
+	} else if (!strcasecmp(input, "Partial Content")) {
+		code = 206;
+	} else if (!strcasecmp(input, "Multiple Choices")) {
+		code = 300;
+	} else if (!strcasecmp(input, "Moved Permanently")) {
+		code = 301;
+	} else if (!strcasecmp(input, "Found")) {
+		code = 302;
+	} else if (!strcasecmp(input, "See Other")) {
+		code = 303;
+	} else if (!strcasecmp(input, "Not Modified")) {
+		code = 304;
+	} else if (!strcasecmp(input, "Use Proxy")) {
+		code = 305;
+	} else if (!strcasecmp(input, "(Unused)")) {
+		code = 306;
+	} else if (!strcasecmp(input, "Temporary Redirect")) {
+		code = 307;
+	} else if (!strcasecmp(input, "Bad Request")) {
+		code = 400;
+	} else if (!strcasecmp(input, "Unauthorized")) {
+		code = 401;
+	} else if (!strcasecmp(input, "Payment Required")) {
+		code = 402;
+	} else if (!strcasecmp(input, "Forbidden")) {
+		code = 403;
+	} else if (!strcasecmp(input, "Not Found")) {
+		code = 404;
+	} else if (!strcasecmp(input, "Method Not Allowed")) {
+		code = 405;
+	} else if (!strcasecmp(input, "Not Acceptable")) {
+		code = 406;
+	} else if (!strcasecmp(input, "Proxy Authentication Required")) {
+		code = 407;
+	} else if (!strcasecmp(input, "Request Timeout")) {
+		code = 408;
+	} else if (!strcasecmp(input, "Conflict")) {
+		code = 409;
+	} else if (!strcasecmp(input, "Gone")) {
+		code = 410;
+	} else if (!strcasecmp(input, "Length Required")) {
+		code = 411;
+	} else if (!strcasecmp(input, "Precondition Failed")) {
+		code = 412;
+	} else if (!strcasecmp(input, "Request Entity Too Large")) {
+		code = 413;
+	} else if (!strcasecmp(input, "Request-URI Too Long")) {
+		code = 414;
+	} else if (!strcasecmp(input, "Unsupported Media Type")) {
+		code = 415;
+	} else if (!strcasecmp(input, "Requested Range Not Satisfiable")) {
+		code = 416;
+	} else if (!strcasecmp(input, "Expectation Failed")) {
+		code = 405;
+	} else if (!strcasecmp(input, "Internal Server Error")) {
+		code = 500;
+	} else if (!strcasecmp(input, "Not Implemented")) {
+		code = 501;
+	} else if (!strcasecmp(input, "Bad Gateway")) {
+		code = 502;
+	} else if (!strcasecmp(input, "Service Unavailable")) {
+		code = 503;
+	} else if (!strcasecmp(input, "Gateway Timeout")) {
+		code = 504;
+	} else if (!strcasecmp(input, "HTTP Version Not Supported")) {
+		code = 505;
+	} else {
+		snprintf(out, PLUGIN_BUFFER_SIZE, "");
+		return;
+	}
+	snprintf(out, PLUGIN_BUFFER_SIZE, "%d", code);
+}

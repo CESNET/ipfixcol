@@ -53,7 +53,7 @@
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include "Utils.h"
-#include "DefaultOutput.h"
+#include "DefaultPlugin.h"
 #include "Verbose.h"
 
 namespace fbitdump {
@@ -308,13 +308,16 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		this->filter = "1=1";
 	}
 
-	this->plugins["ipv4"] = printIPv4;
-	this->plugins["ipv6"] = printIPv6;
-	this->plugins["tmstmp64"] = printTimestamp64;
-	this->plugins["tmstmp32"] = printTimestamp32;
-	this->plugins["protocol"] = printProtocol;
-	this->plugins["tcpflags"] = printTCPFlags;
-	this->plugins["duration"] = printDuration;
+	this->plugins_format["ipv4"] = printIPv4;
+	this->plugins_format["ipv6"] = printIPv6;
+	this->plugins_format["tmstmp64"] = printTimestamp64;
+	this->plugins_format["tmstmp32"] = printTimestamp32;
+	this->plugins_format["protocol"] = printProtocol;
+	this->plugins_format["tcpflags"] = printTCPFlags;
+	this->plugins_format["duration"] = printDuration;
+
+	this->plugins_parse["tcpflags"] = parseFlags;
+	this->plugins_parse["protocol"] = parseProto;
 
 	Utils::printStatus( "Preparing output format");
 
@@ -325,7 +328,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	this->parseFormat(this->format);
 	if( print_semantics ) {
 		std::cout << "Available semantics: " <<  std::endl;
-		for( std::map<std::string, void(*)(const union plugin_arg *, int, char*)>::iterator iter = this->plugins.begin(); iter != this->plugins.end(); ++iter ) {
+		for( std::map<std::string, void(*)(const union plugin_arg *, int, char*)>::iterator iter = this->plugins_format.begin(); iter != this->plugins_format.end(); ++iter ) {
 			std::cout << "\t" << iter->first << std::endl;
 		}
 		return 1;
@@ -456,8 +459,8 @@ void Configuration::parseFormat(std::string format)
 					removeNext = true;
 				}
 				else {
-					if( this->plugins.find( col->getSemantics()) != this->plugins.end()) {
-						col->format = this->plugins[col->getSemantics()];
+					if( this->plugins_format.find( col->getSemantics()) != this->plugins_format.end()) {
+						col->format = this->plugins_format[col->getSemantics()];
 					}
 					this->columns.push_back(col);
 					removeNext = false;
@@ -942,10 +945,11 @@ void Configuration::loadModules()
 	std::string path;
 	void * handle;
 	void (*format)(const union plugin_arg *, int, char *);
+	void (*parse)(char *input, char *out);
 
 	for (pugi::xpath_node_set::const_iterator ii = nodes.begin(); ii != nodes.end(); ii++) {
 		pugi::xpath_node node = *ii;
-		if (this->plugins.find(node.node().child_value("name")) != this->plugins.end()) {
+		if (this->plugins_format.find(node.node().child_value("name")) != this->plugins_format.end()) {
 			std::cerr << "Duplicit module names" << node.node().child_value("name") << std::endl;
 			continue;
 		}
@@ -967,7 +971,16 @@ void Configuration::loadModules()
 			dlclose(handle);
 			continue;
 		}
-		this->plugins[node.node().child_value("name")] = format;
+
+		*(void **)(&parse) = dlsym(handle, "parse");
+		if (parse == NULL) {
+			std::cerr << "No \"parse\" function in plugin " << path << std::endl;
+			dlclose(handle);
+			continue;
+		}
+
+		this->plugins_format[node.node().child_value("name")] = format;
+		this->plugins_parse[node.node().child_value("name")] = parse;
 		this->plugins_handles.push(handle);
 	}
 }

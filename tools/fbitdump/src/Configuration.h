@@ -266,7 +266,8 @@ public:
 	
 	static Configuration * instance;
     
-	std::map<std::string, void (*)(const union plugin_arg *, int, char*)> plugins;
+	std::map<std::string, void (*)(const union plugin_arg *, int, char*)> plugins_format;
+	std::map<std::string, void (*)(char *, char*)> plugins_parse;
 	std::queue<void *> plugins_handles;
     void unloadModules();
 private:
