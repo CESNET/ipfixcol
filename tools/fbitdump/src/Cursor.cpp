@@ -142,6 +142,10 @@ bool Cursor::getColumn(std::string name, Values &value, int part) const
 	case ibis::BLOB:
 		value.type = ibis::BLOB;
 		ret = this->cursor->getColumnAsOpaque(colNum, value.opaque);
+		if (ret >= 0) {
+			value.value[part].blob.ptr = value.opaque.address();
+			value.value[part].blob.length = value.opaque.size();
+		}
 		break;
 	case ibis::UNKNOWN_TYPE:
 		/* column not found in DB */

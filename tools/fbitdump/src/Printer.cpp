@@ -211,6 +211,9 @@ const std::string Printer::printValue(const Column *col, const Cursor *cur) cons
 	/* clean value variable */
 	delete val;
 
+	/* empty the plugin_buffer */
+	plugin_buffer[0] = '\0';
+
 	return valueStr;
 
 }

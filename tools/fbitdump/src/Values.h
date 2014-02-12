@@ -68,6 +68,10 @@ public:
 		uint64_t uint64;
 		float flt;
 		double dbl;
+		struct {
+			uint64_t length;
+			const char *ptr;
+		} blob;
 	} value[MAX_PARTS];
 	std::string string;
 	ibis::opaque opaque;

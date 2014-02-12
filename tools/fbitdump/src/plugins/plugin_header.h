@@ -17,6 +17,10 @@ union plugin_arg
 	uint64_t uint64;
 	float flt;
 	double dbl;
+	struct {
+		uint64_t length;
+		const char *ptr;
+	} blob;
 } ;
 
 void format( const union plugin_arg * arg, int plain_numbers, char buffer[PLUGIN_BUFFER_SIZE] );
