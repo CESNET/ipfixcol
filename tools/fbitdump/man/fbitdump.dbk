@@ -361,6 +361,51 @@
 	</refsect1>
 
 	<refsect1>
+		<title>Plugins</title>
+		<simpara>Fbitdump supports input and output plugins. Input plugins are used for parsing data from given filter and output plugins are used for valid formatting printed data.</simpara>
+		<simpara>Plugin names and paths must be specified in <citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry> file.</simpara>
+		<simpara>Fbitdump already contains one default plugin for parsing and formatting data for columns without specified plugin.</simpara>
+		<simpara>Each plugin must have functions <emphasis>parse</emphasis> (for input) and <emphasis>format</emphasis> (for output).</simpara>
+		<simpara>Parsing: </simpara>
+		<simplelist>
+		<member>void <emphasis>parse</emphasis>(char *input, char out[PLUGIN_BUFFER_SIZE])</member>
+		</simplelist>
+		<simpara>Where</simpara>
+		<simplelist>
+			<member><emphasis>*input</emphasis> is string to format (e.g. http status)</member>
+			<member><emphasis>out</emphasis>[] is formatted output</member>
+		</simplelist>
+		<simpara>Formatting: </simpara>
+		<simplelist>
+		<member>void <emphasis>format</emphasis>(const union plugin_arg *arg, int plain_numbers, char buffer[PLUGIN_BUFFER_SIZE])</member>
+		</simplelist>
+		<simpara>Where</simpara>
+		<simplelist>
+			<member><emphasis>*arg</emphasis> is union with data to format</member>
+			<member><emphasis>plain_numbers</emphasis> indicates if output should be decoded to string or not</member>
+			<member><emphasis>buffer</emphasis>[] is formatted output</member>
+		</simplelist>
+		<simpara>Description of union plugin_arg:</simpara>
+		<simpara>union plugin_arg {</simpara>
+		<simplelist>
+			<member>char     int8;</member>
+			<member>unsigned char uint8;</member>
+			<member>int16_t  int16;</member>
+			<member>uint16_t uint16;</member>
+			<member>int32_t  int32;</member>
+			<member>uint32_t uint32;</member>
+			<member>int64_t  int64;</member>
+			<member>uint64_t uint64;</member>
+			<member>float    flt;</member>
+			<member>double   dbl;</member>
+			<member>struct {</member>
+			<member>    uint64_t   length;</member>
+			<member>    const char *ptr;</member>
+			<member>} blob;</member>
+		</simplelist>
+		<simpara>}</simpara>
+	</refsect1>
+	<refsect1>
 		<title>Examples</title>
 		<literallayout>fbitdump -R /dir/dir-with-templates/template -o line4 "%dstport = 80" -c 100
 Read one template folder, corresponds to -r nfcapd.xxxx in nfdump and filtering for specific template, i.e. ICMP. Outputs first 100 flows with destination port 80 using line4 format</literallayout>

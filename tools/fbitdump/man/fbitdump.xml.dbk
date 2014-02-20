@@ -100,6 +100,16 @@
 			and <emphasis>&lt;formatString&gt;</emphasis>, which defines the output format to be used for this format.
 		</simpara>
 	</refsect1>
+	
+	<refsect1>
+		<title>Plugins</title>
+		<simpara>Plugins are used for parsing input and formatting output. For detailed informations see <citerefentry><refentrytitle>fbitdump</refentrytitle><manvolnum>1</manvolnum></citerefentry></simpara>
+		<simpara>Each plugin record must contain following children:</simpara>
+		<simplelist> 
+			<member><emphasis>&lt;name&gt;</emphasis>: plugin name</member>
+			<member><emphasis>&lt;path&gt;</emphasis>: location of *.so file</member>
+		</simplelist>
+	</refsect1>
 
 	<refsect1>
 		<title>Examples</title>
@@ -141,6 +151,15 @@ Bytes per packet column. The column value is computed from number of bytes (%byt
 	</members>
 </group>]]>
 	</literallayout>
+	<literallayout>
+<![CDATA[Plugin for parsing input and formatting output.
+<plugins>
+	<plugin>
+		<name>Test_plugin</name>
+		<path>/path/to/so/file/file.so</path>
+	</plugin>
+</plugins>]]>
+	</literallayout>	
 	</refsect1>
 
 	<refsect1>
