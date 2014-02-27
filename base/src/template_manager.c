@@ -97,7 +97,8 @@ struct ipfix_template_mgr_record *tm_record_lookup_insert(struct ipfix_template_
 		if ((tmr = tm_record_create()) == NULL) {
 			return NULL;
 		}
-		uint64_t insert_table_key = ((uint64_t) key->odid << 32) | key->crc;
+		uint64_t table_key = ((uint64_t) key->odid << 32) | key->crc;
+		tmr->key = table_key;
 		int i;
 		for (i = 0; i < 20; ++i) {
 			if (tm->tms[i] == NULL) {
@@ -386,7 +387,6 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 struct ipfix_template *tm_record_get_template(struct ipfix_template_mgr_record *tmr, uint16_t template_id)
 {
 	int i, count=0;
-
 	/* the array may have holes, thus the counter */
 	for (i=0; i < tmr->max_length && count < tmr->counter; i++) {
 		if (tmr->templates[i] != NULL) {
@@ -513,9 +513,20 @@ int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type)
 struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, struct ipfix_template_key *key)
 {
 	struct ipfix_template_mgr_record *tmr = tm_record_lookup(tm, key);
-
 	if (tmr == NULL) {
 		return NULL;
 	}
 	return tm_record_get_template(tmr, key->tid);
+}
+
+void tm_template_reference_inc(struct ipfix_template *templ)
+{
+	templ->references++;
+}
+
+void tm_template_reference_dec(struct ipfix_template *templ)
+{
+	if (templ->references > 0) {
+		templ->references--;
+	}
 }
