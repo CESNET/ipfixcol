@@ -531,6 +531,8 @@ void Filter::parseColumn(parserStruct *ps, std::string alias) const throw (std::
 
 	if (this->actualConf->plugins_parse.find(col->getSemantics()) != this->actualConf->plugins_parse.end()) {
 		ps->parse = this->actualConf->plugins_parse[col->getSemantics()];
+	} else {
+		ps->parse = NULL;
 	}
 	ps->colType = col->getSemantics();
 	delete col;
