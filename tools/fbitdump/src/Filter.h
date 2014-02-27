@@ -383,6 +383,14 @@ private:
 	 */
 	void parseHostname(parserStruct *ps, uint8_t af_type) const throw (std::invalid_argument);
 
+	/**
+	 * \brief If type is PT_BITCOLVAL, return only column part of this expression
+	 *
+	 * @param name Expression
+	 * @param type Type of column
+	 */
+	std::string onlyCol(std::string &name, partsType type) const;
+
 	Configuration *actualConf; /**< Used configuration for getting column names while parsing filter */
 
 	std::string filterString; /**< String for fastbit condition */
