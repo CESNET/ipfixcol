@@ -118,9 +118,20 @@ struct ipfix_template {
  * \brief Template Manager structure.
  */
 struct ipfix_template_mgr {
+	struct ipfix_template_mgr_record **tms;
+};
+
+struct ipfix_template_key {
+	uint32_t odid;
+	uint32_t crc;
+	uint32_t tid;
+};
+
+struct ipfix_template_mgr_record {
 	struct ipfix_template **templates;/**array of pointers to Templates */
 	uint16_t max_length;  /**maximum length of array */
 	uint16_t counter;     /**number of templates in array */
+	uint64_t key;
 };
 
 
@@ -150,7 +161,7 @@ struct ipfix_template *tm_create_template(void *tmp, int max_len, int type);
  * \return Pointer to new ipfix_template on success, NULL otherwise
  */
 struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm,
-                                          void *tmp, int max_len, int type);
+                                          void *tmp, int max_len, int type, struct ipfix_template_key *key);
 
 /**
  * \brief Function for updating an existing templates.
@@ -162,7 +173,7 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm,
  * \return updated ipfix_template on success, NULL if error occurs.
  */
 struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm,
-                                          void *tmp, int max_len, int type);
+                                          void *tmp, int max_len, int type, struct ipfix_template_key *key);
 
 /**
  * \brief Function for specific Template lookup.
@@ -173,7 +184,7 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm,
  * Template.
  */
 struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm,
-                                                      uint16_t template_id);
+                                                      struct ipfix_template_key *key);
 
 /**
  * \brief Function for removing Temaplates.
@@ -182,7 +193,7 @@ struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm,
  * \param[in]  template_id ID of the Template that we want to remove.
  * \return 0 on success, negative value otherwise.
  */
-int tm_remove_template(struct ipfix_template_mgr *tm, uint16_t template_id);
+int tm_remove_template(struct ipfix_template_mgr *tm, struct ipfix_template_key *key);
 
 /**
  * \brief Function for removing all Temaplates of specific type.

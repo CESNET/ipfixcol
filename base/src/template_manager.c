@@ -52,26 +52,61 @@
 /** Identifier to MSG_* macros */
 static char *msg_module = "template manager";
 
-struct ipfix_template_mgr *tm_create() {
-	struct ipfix_template_mgr *template_mgr;
+/**
+ * Create new template managers record
+ */
+struct ipfix_template_mgr_record *tm_record_create() {
+	struct ipfix_template_mgr_record *tmr;
 
-	if ((template_mgr = malloc(sizeof(struct ipfix_template_mgr))) == NULL) {
+	if ((tmr = malloc(sizeof(struct ipfix_template_mgr))) == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 	}
-	template_mgr->counter = 0;
-	template_mgr->max_length = 32;
-	template_mgr->templates = calloc(template_mgr->max_length, sizeof(void *));
 
-	return template_mgr;
+	tmr->counter = 0;
+	tmr->max_length = 32;
+	tmr->templates = calloc(tmr->max_length, sizeof(void *));
+
+	return tmr;
 }
 
-void tm_destroy(struct ipfix_template_mgr *tm)
+
+/**
+ * Find template managers record in template manager
+ */
+struct ipfix_template_mgr_record *tm_record_lookup(struct ipfix_template_mgr *tm, struct ipfix_template_key *key)
 {
-	tm_remove_all_templates(tm, TM_TEMPLATE);  /* Templates */
-	tm_remove_all_templates(tm, TM_OPTIONS_TEMPLATE);  /* Options Templates */
-	free(tm->templates);
-	free(tm);
-	return;
+	int i;
+	uint64_t table_key = ((uint64_t) key->odid << 32) | key->crc;
+	for (i = 0; i < 20; ++i) {
+		if (tm->tms[i] != NULL && tm->tms[i]->key == table_key) {
+			return tm->tms[i];
+		}
+	}
+	return NULL;
+}
+
+
+/**
+ * Find (or insert of not found) template managers record in template manager
+ */
+struct ipfix_template_mgr_record *tm_record_lookup_insert(struct ipfix_template_mgr *tm, struct ipfix_template_key *key)
+{
+	struct ipfix_template_mgr_record *tmr = tm_record_lookup(tm, key);
+
+	if (tmr == NULL) {
+		if ((tmr = tm_record_create()) == NULL) {
+			return NULL;
+		}
+		uint64_t insert_table_key = ((uint64_t) key->odid << 32) | key->crc;
+		int i;
+		for (i = 0; i < 20; ++i) {
+			if (tm->tms[i] == NULL) {
+				tm->tms[i] = tmr;
+				return tmr;
+			}
+		}
+	}
+	return tmr;
 }
 
 /**
@@ -196,6 +231,9 @@ static uint16_t tm_template_length(struct ipfix_template_record *template, int m
 	return tmpl_length;
 }
 
+/**
+ * Create new ipfix template
+ */
 struct ipfix_template *tm_create_template(void *template, int max_len, int type)
 {
 	struct ipfix_template *new_tmpl = NULL;
@@ -223,12 +261,14 @@ struct ipfix_template *tm_create_template(void *template, int max_len, int type)
 	return new_tmpl;
 }
 
-struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *template, int max_len, int type)
+
+/**
+ * Add new template into template managers record
+ */
+struct ipfix_template *tm_record_add_template(struct ipfix_template_mgr_record *tmr, void *template, int max_len, int type)
 {
 	struct ipfix_template *new_tmpl = NULL;
 	struct ipfix_template **new_templates = NULL;
-	uint32_t data_length = 0;
-	uint32_t tmpl_length;
 	int i;
 
 	if ((new_tmpl = tm_create_template(template, max_len, type)) == NULL) {
@@ -236,24 +276,24 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 	}
 
 	/* check whether allocated memory is big enough */
-	if (tm->counter == tm->max_length) {
-		new_templates = realloc(tm->templates, tm->max_length*2*sizeof(void *));
+	if (tmr->counter == tmr->max_length) {
+		new_templates = realloc(tmr->templates, tmr->max_length*2*sizeof(void *));
 		if (new_templates == NULL) {
 			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			free(new_tmpl);
 			return NULL;
 		}
-		tm->templates = new_templates;
-		memset(tm->templates + tm->max_length, 0, tm->max_length * sizeof(void*));
-		tm->max_length *= 2;
+		tmr->templates = new_templates;
+		memset(tmr->templates + tmr->max_length, 0, tmr->max_length * sizeof(void*));
+		tmr->max_length *= 2;
 	}
 
-	/* add template to manager (first position available) */
-	for (i = 0; i < tm->max_length; i++) {
-		if (tm->templates[i] == NULL) {
-			tm->templates[i] = new_tmpl;
+	/* add template to managers record (first position available) */
+	for (i = 0; i < tmr->max_length; i++) {
+		if (tmr->templates[i] == NULL) {
+			tmr->templates[i] = new_tmpl;
 			/* increase the counter */
-			tm->counter++;
+			tmr->counter++;
 			break;
 		}
 	}
@@ -261,41 +301,67 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 	return new_tmpl;
 }
 
+/**
+ * Remove template from template managers record
+ */
+int tm_record_remove_template(struct ipfix_template_mgr_record *tmr, uint16_t template_id)
+{
+	int i;
+	for (i=0; i < tmr->max_length; i++) {
+		if (tmr->templates[i] != NULL && tmr->templates[i]->template_id == template_id) {
+			struct ipfix_template *next = tmr->templates[i];
+			while (next->next != NULL) {
+				tmr->templates[i] = next->next;
+				free(next);
+				next = tmr->templates[i];
+			}
+			free(tmr->templates[i]);
+			tmr->templates[i] = NULL;
+			tmr->counter--;
+			return 0;
+		}
+	}
+	/* template not found */
+	return 1;
+}
 
-struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *template, int max_len, int type)
+/**
+ * Update template in template managers record
+ */
+struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_record *tmr, void *template, int max_len, int type)
 {
 	uint32_t id = ntohs(((struct ipfix_template_record *) template)->template_id);
 	int i, count=0;
 	/* the array may have holes, thus the counter */
-	for (i=0; i < tm->max_length && count < tm->counter; i++) {
-		if (tm->templates[i] != NULL) {
-			if (tm->templates[i]->template_id == id) {
+	for (i=0; i < tmr->max_length && count < tmr->counter; i++) {
+		if (tmr->templates[i] != NULL) {
+			if (tmr->templates[i]->template_id == id) {
 				break;
 			}
 			count++;
 		}
 	}
 
-	if (tm->templates[i]->references == 0) {
-		if (tm->templates[i]->next == NULL) {
+	if (tmr->templates[i]->references == 0) {
+		if (tmr->templates[i]->next == NULL) {
 			/* No previous template */
 			/* remove the old template */
 //			MSG_DEBUG(msg_module, "No references and no previous template - removing, ID %d", id);
-			if (tm_remove_template(tm, id) != 0) {
+			if (tm_record_remove_template(tmr, id) != 0) {
 				MSG_WARNING(msg_module, "Cannot remove template %i.", id);
 			}
 			/* create a new one */
 			MSG_DEBUG(msg_module, "Creating new template %d", id);
-			return tm_add_template(tm, template, max_len, type);
+			return tm_record_add_template(tmr, template, max_len, type);
 		} else {
 			/* Has some previous template(s) */
 			MSG_DEBUG(msg_module, "No references, but previous template found, ID (%d)", id);
-			struct ipfix_template *new = tm->templates[i]->next;
-			free(tm->templates[i]);
-			tm->templates[i] = new;
+			struct ipfix_template *new = tmr->templates[i]->next;
+			free(tmr->templates[i]);
+			tmr->templates[i] = new;
 		}
 	} else {
-		MSG_DEBUG(msg_module, "Template %d can't be removed (%d references), it will be marked as old.", id, tm->templates[i]->references);
+		MSG_DEBUG(msg_module, "Template %d can't be removed (%d references), it will be marked as old.", id, tmr->templates[i]->references);
 	}
 
 	/* Create new template and place it on beginning of list */
@@ -306,24 +372,26 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *t
 	}
 
 	/* Inserting new template */
-	new_tmpl->next = tm->templates[i];
-	tm->templates[i] = new_tmpl;
+	new_tmpl->next = tmr->templates[i];
+	tmr->templates[i] = new_tmpl;
 
 	MSG_DEBUG(msg_module,"Template with id %d and index %d added to list", id, i);
 
-	return tm->templates[i];
+	return tmr->templates[i];
 }
 
-
-struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, uint16_t template_id)
+/**
+ * Get pointer to template in template managers record
+ */
+struct ipfix_template *tm_record_get_template(struct ipfix_template_mgr_record *tmr, uint16_t template_id)
 {
 	int i, count=0;
 
 	/* the array may have holes, thus the counter */
-	for (i=0; i < tm->max_length && count < tm->counter; i++) {
-		if (tm->templates[i] != NULL) {
-			if (tm->templates[i]->template_id == template_id) {
-				return tm->templates[i];
+	for (i=0; i < tmr->max_length && count < tmr->counter; i++) {
+		if (tmr->templates[i] != NULL) {
+			if (tmr->templates[i]->template_id == template_id) {
+				return tmr->templates[i];
 			}
 			count++;
 		}
@@ -333,43 +401,121 @@ struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, uint16_t t
 	return NULL;
 }
 
-int tm_remove_template(struct ipfix_template_mgr *tm, uint16_t template_id)
-{
-	int i;
-	for (i=0; i < tm->max_length; i++) {
-		if (tm->templates[i] != NULL && tm->templates[i]->template_id == template_id) {
-			struct ipfix_template *next = tm->templates[i];
-			while (next->next != NULL) {
-				tm->templates[i] = next->next;
-				free(next);
-				next = tm->templates[i];
-			}
-			free(tm->templates[i]);
-			tm->templates[i] = NULL;
-			tm->counter--;
-			return 0;
-		}
-	}
-	/* template not found */
-	return 1;
-}
-
-int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type)
+int tm_record_remove_all_templates(struct ipfix_template_mgr_record *tmr, int type)
 {
 	MSG_DEBUG(msg_module, "Removing all %stemplates", (type == TM_TEMPLATE)?"":"option ");
 
 	int i;
-	for (i=0; i < tm->max_length; i++) {
-		if ((tm->templates[i] != NULL) && (tm->templates[i]->template_type == type)) {
-			struct ipfix_template *next = tm->templates[i];
+	for (i=0; i < tmr->max_length; i++) {
+		if ((tmr->templates[i] != NULL) && (tmr->templates[i]->template_type == type)) {
+			struct ipfix_template *next = tmr->templates[i];
 			while (next->next != NULL) {
-				tm->templates[i] = next->next;
+				tmr->templates[i] = next->next;
 				free(next);
-				next = tm->templates[i];
+				next = tmr->templates[i];
 			}
-			free(tm->templates[i]);
-			tm->templates[i] = NULL;
+			free(tmr->templates[i]);
+			tmr->templates[i] = NULL;
 		}
 	}
 	return 0;
+}
+
+/**
+ * Destroy template managers record
+ */
+void tm_record_destroy(struct ipfix_template_mgr_record *tmr)
+{
+	tm_record_remove_all_templates(tmr, TM_TEMPLATE);  /* Templates */
+	tm_record_remove_all_templates(tmr, TM_OPTIONS_TEMPLATE);  /* Options Templates */
+	free(tmr->templates);
+	free(tmr);
+	return;
+}
+
+/**
+ * Create global template manager
+ */
+struct ipfix_template_mgr *tm_create() {
+	struct ipfix_template_mgr *tm;
+
+	if ((tm = malloc(sizeof(struct ipfix_template_mgr))) == NULL) {
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+	}
+
+
+	tm->tms = calloc(20, sizeof(void *));
+	return tm;
+}
+
+/**
+ * Destroy global template manager
+ */
+void tm_destroy(struct ipfix_template_mgr *tm)
+{
+	(void) tm;
+	/* dodělat */
+}
+
+
+/**
+ * Add new template into template manager
+ */
+struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *template, int max_len, int type, struct ipfix_template_key *key)
+{
+	struct ipfix_template_mgr_record *tmr = tm_record_lookup_insert(tm, key);
+
+	if (tmr == NULL) {
+		return NULL;
+	}
+	return tm_record_add_template(tmr, template, max_len, type);
+}
+
+/**
+ * Update template in template manager
+ */
+struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *template, int max_len, int type, struct ipfix_template_key *key)
+{
+	struct ipfix_template_mgr_record *tmr = tm_record_lookup_insert(tm, key);
+
+	if (tmr == NULL) {
+		return NULL;
+	}
+	return tm_record_update_template(tmr, template, max_len, type);
+
+}
+
+/**
+ * Remove template from template manager
+ */
+int tm_remove_template(struct ipfix_template_mgr *tm, struct ipfix_template_key *key)
+{
+	uint64_t table_key = (uint64_t) key->odid << 32 | key->crc;
+	struct ipfix_template_mgr_record *tmr = tm_record_lookup(tm, &table_key);
+
+	if (tmr == NULL) {
+		return 1;
+	}
+	return tm_record_remove_template(tmr, key->tid);
+}
+
+int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type)
+{
+	(void) tm;
+	(void) type;
+	/* dodělat */
+	return 0;
+}
+
+/**
+ * Get pointer to template in template manager
+ */
+struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, struct ipfix_template_key *key)
+{
+	struct ipfix_template_mgr_record *tmr = tm_record_lookup(tm, key);
+
+	if (tmr == NULL) {
+		return NULL;
+	}
+	return tm_record_get_template(tmr, key->tid);
 }

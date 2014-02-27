@@ -126,6 +126,10 @@ static int data_manager_process_one_template(struct ipfix_template_mgr *template
 	int ret;
 
 	template_record = (struct ipfix_template_record*) tmpl;
+	struct ipfix_template_key key;
+	key.odid = 0;
+	key.crc = 0;
+	key.tid = ntohs(template_record->template_id);
 
 	/* check for withdraw all templates message */
 	/* these templates are no longer used (checked in data_manager_withdraw_templates()) */
@@ -142,7 +146,7 @@ static int data_manager_process_one_template(struct ipfix_template_mgr *template
 		return TM_TEMPLATE_WITHDRAW_LEN;
 		/* check for withdraw template message */
 	} else if (ntohs(template_record->count) == 0) {
-		ret = tm_remove_template(template_mgr, ntohs(template_record->template_id));
+		ret = tm_remove_template(template_mgr, &key);
 		/* Log error when removing unknown template */
 		if (ret == 1) {
 			MSG_WARNING(msg_module, "%s withdraw message received for unknown Template ID: %u",
@@ -150,20 +154,20 @@ static int data_manager_process_one_template(struct ipfix_template_mgr *template
 		}
 		return TM_TEMPLATE_WITHDRAW_LEN;
 		/* check whether template exists */
-	} else if ((template = tm_get_template(template_mgr, ntohs(template_record->template_id))) == NULL) {
+	} else if ((template = tm_get_template(template_mgr, &key)) == NULL) {
 		/* add template */
 		/* check that the template has valid ID ( < 256 ) */
 		if (ntohs(template_record->template_id) < 256) {
 			MSG_WARNING(msg_module, "%s ID %i is reserved and not valid for data set!", (type==TM_TEMPLATE)?"Template":"Options template", ntohs(template_record->template_id));
 		} else {
 			MSG_NOTICE(msg_module, "New %s ID %i", (type==TM_TEMPLATE)?"template":"options template", ntohs(template_record->template_id));
-			template = tm_add_template(template_mgr, tmpl, max_len, type);
+			template = tm_add_template(template_mgr, tmpl, max_len, type, &key);
 		}
 	} else {
 		/* template already exists */
 		MSG_WARNING(msg_module, "%s ID %i already exists. Rewriting.",
 				(type==TM_TEMPLATE)?"Template":"Options template", template->template_id);
-		template = tm_update_template(template_mgr, tmpl, max_len, type);
+		template = tm_update_template(template_mgr, tmpl, max_len, type, &key);
 	}
 	if (template == NULL) {
 		MSG_WARNING(msg_module, "Cannot parse %s set, skipping to next set",
@@ -215,6 +219,10 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 	struct ipfix_template *template;
 	uint16_t min_data_length;
 	uint16_t data_length;
+	struct ipfix_template_key key;
+	key.odid = 0;
+	key.crc = 0;
+
 
 	/* check for new templates */
 	for (i=0; msg->templ_set[i] != NULL && i<1024; i++) {
@@ -246,9 +254,10 @@ static uint32_t data_manager_process_templates(struct ipfix_template_mgr *templa
 
 	/* add template to message data_couples */
 	for (i=0; msg->data_couple[i].data_set != NULL && i<1023; i++) {
-		msg->data_couple[i].data_template = tm_get_template(template_mgr, ntohs(msg->data_couple[i].data_set->header.flowset_id));
+		key.tid = ntohs(msg->data_couple[i].data_set->header.flowset_id);
+		msg->data_couple[i].data_template = tm_get_template(template_mgr, &key);
 		if (msg->data_couple[i].data_template == NULL) {
-			MSG_WARNING(msg_module, "Data template with ID %i not found!", ntohs(msg->data_couple[i].data_set->header.flowset_id));
+			MSG_WARNING(msg_module, "Data template with ID %i not found!", key.tid);
 		} else {
 			/* Increasing number of references to template */
 			msg->data_couple[i].data_template->references++;
