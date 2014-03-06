@@ -62,89 +62,35 @@ struct udp_conf {
 	uint16_t options_template_life_packet;
 };
 
-/**
- * \brief List of data manager configurations
- */
-static struct data_manager_config *data_mngmts = NULL;
-
+static struct ring_buffer *preprocessor_out_queue = NULL;
 static struct ipfix_template_manager *tm = NULL;
 
-/**
- * \brief Search for Data manager handling specified Observation Domain ID
- *
- * \todo: improve search e.g. by some kind of sorting data_managers
- *
- * @param[in] id Observation domain ID of wanted Data manager.
- * @return Desired Data manager's configuration structure if exists, NULL if
- * there is no Data manager for specified Observation domain ID
- */
-static struct data_manager_config *get_data_mngmt_config (uint32_t id)
-{
-	struct data_manager_config *aux_cfg = data_mngmts;
 
-	while (aux_cfg) {
-		if (aux_cfg->observation_domain_id == id) {
-			break;
-		}
-		aux_cfg = aux_cfg->next;
+/**
+ * \brief Preprocessor has only one output queue. This function sets the queue for preprocessor.
+ *
+ * @param out_queue preprocessor's output queue
+ * @return 0 on success, negative value otherwise
+ */
+int set_preprocessor_output_queue(struct ring_buffer *out_queue)
+{
+	if (preprocessor_out_queue) {
+		MSG_WARNING(msg_module, "Redefining preprocessor's output queue.");
 	}
 
-	return (aux_cfg);
+	preprocessor_out_queue = out_queue;
+
+	return 0;
 }
 
 /**
- * \brief Search for Data manager handling input specified by 
- * input_info structure
+ * \brief Returns pointer to preprocessors output queue.
  *
- * @param[in] info Structure input_info specifying data manager
- * @param[out] prev Data manager configuration preceeding the desired one
- * @return Desired Data manager's configuration structure if exists, NULL 
- * otherwise
+ * @return preprocessors output queue
  */
-static struct data_manager_config *get_data_mngmt_by_input_info (struct input_info *info, struct data_manager_config **prev)
+struct ring_buffer *get_preprocessor_output_queue()
 {
-    struct data_manager_config *aux_cfg = data_mngmts;
-    struct input_info_network *ii_network1, *ii_network2;
-
-	while (aux_cfg) {
-        /* input types must match */
-        if (aux_cfg->input_info->type == info->type) {
-            /* file names must match for files */
-            if (info->type == SOURCE_TYPE_IPFIX_FILE && 
-                strcmp(((struct input_info_file*) info)->name, ((struct input_info_file*) aux_cfg->input_info)->name) == 0) {
-                break;
-            } else {/* we have struct input_info_network */
-                ii_network1 = (struct input_info_network*) aux_cfg->input_info;
-                ii_network2 = (struct input_info_network*) info;
-                /* ports and protocols must match */
-
-                if (ii_network1->dst_port == ii_network2->dst_port && 
-                        ii_network1->src_port == ii_network2->src_port &&
-                        ii_network1->l3_proto == ii_network2->l3_proto) {
-                    /* compare addresses, dependent on IP protocol version*/
-                    if (ii_network1->l3_proto == 4) {
-                        if (ii_network1->src_addr.ipv4.s_addr == ii_network2->src_addr.ipv4.s_addr) {
-                            break;
-                        }
-                    } else {
-                        if (ii_network1->src_addr.ipv6.s6_addr32[0] == ii_network2->src_addr.ipv6.s6_addr32[0] &&
-                            ii_network1->src_addr.ipv6.s6_addr32[1] == ii_network2->src_addr.ipv6.s6_addr32[1] &&
-                            ii_network1->src_addr.ipv6.s6_addr32[2] == ii_network2->src_addr.ipv6.s6_addr32[2] &&
-                            ii_network1->src_addr.ipv6.s6_addr32[3] == ii_network2->src_addr.ipv6.s6_addr32[3]) {
-                            break;
-                        }
-                    }
-                }
-	    	}
-        }
-        /* save previous configuration */
-        *prev = aux_cfg;
-
-		aux_cfg = aux_cfg->next;
-	}
-
-	return (aux_cfg);
- 
+	return preprocessor_out_queue;
 }
 
 /**
@@ -400,39 +346,6 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 	return records_count;
 }
 
-void preprocessor_parse_templates(struct ipfix_message* msg, struct ipfix_template_manager *tm, struct input_info *input_info)
-{
-	/* Check whether there are withdraw templates (not for UDP) */
-//	if (input_info->type != SOURCE_TYPE_UDP &&  data_manager_withdraw_templates(msg)) {
-//		MSG_NOTICE(msg_module, "Got template withdrawal message. Waiting for storage packets.");
-//		/* wait for storage plugins to consume all pending messages */
-//		while (rbuffer_wait_empty(config->store_queue));
-//	}
-
-	/* process templates */
-//	sequence_number += data_manager_process_templates(config->template_mgr, msg, &udp_conf, msg_counter);
-}
-
-
-/**
- * \brief Closes all data managers
- *
- * Calls the data_manager_close function on all open managers.
- *
- * @return void
- */
-void preprocessor_close()
-{
-	struct data_manager_config *aux_cfg = data_mngmts, *tmp_cfg;
-
-	while (aux_cfg) {
-        tmp_cfg = aux_cfg;
-        aux_cfg = aux_cfg->next;
-        data_manager_close(&tmp_cfg);
-	}
-    data_mngmts = NULL;
-    return;    
-}
 
 void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins)
 {
@@ -446,26 +359,6 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 	struct ipfix_template_key key;
 	key.odid = 0;
 	key.crc = 0;
-
-	/* connection closed, close data manager */
-    if (packet == NULL) {
-        config = get_data_mngmt_by_input_info (input_info, &prev_config);
-
-        if (!config) {
-        	MSG_WARNING(msg_module, "Data manager NOT found, probably more exporters with same OID.");
-        	return;
-        }
-        /* remove data manager from the list */
-        if (prev_config == NULL) {
-        	data_mngmts = config->next;
-        } else {
-            prev_config->next = config->next;
-        }
-
-        /* close and free data manager */
-        data_manager_close(&config);
-        return;
-    }
 
 	msg = (struct ipfix_message*) calloc (1, sizeof (struct ipfix_message));
 	msg->pkt_header = (struct ipfix_header*) packet;
@@ -489,32 +382,6 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		free (packet);
 		return;
 	}
-
-	/* get appropriate data manager's config according to Observation domain ID */
-	config = get_data_mngmt_config (ntohl(msg->pkt_header->observation_domain_id));
-	if (config == NULL) {
-		/*
-		 * no data manager config for this observation domain ID found -
-		 * we have a new observation domain ID, so create new data manager for
-		 * it
-		 */
-		config = data_manager_create (ntohl(msg->pkt_header->observation_domain_id), storage_plugins, input_info);
-		if (config == NULL) {
-			MSG_WARNING(msg_module, "Unable to create data manager for Observation Domain ID %d, skipping data.",
-					ntohl(msg->pkt_header->observation_domain_id));
-			free (msg);
-			/* free packet here, it was not passed anywhere */
-			free (packet);
-			return;
-		}
-
-	    /* add config to data_mngmts structure */
-    	config->next = data_mngmts;
-        data_mngmts = config;
-
-        MSG_NOTICE(msg_module, "Created new Data manager for ODID %i", ntohl(msg->pkt_header->observation_domain_id));
-	}
-
 
 	/* process IPFIX packet and fillup the ipfix_message structure */
     uint8_t *p = packet + IPFIX_HEADER_LENGTH;
@@ -558,8 +425,14 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
     preprocessor_udp_init((struct input_info_network*) input_info, &udp_conf);
     preprocessor_process_templates(tm, msg, &udp_conf);
 
-	if (rbuffer_write (config->in_queue, msg, 1) != 0) {
+    /* Send data to the first intermediate plugin */
+	if (rbuffer_write(preprocessor_out_queue, msg, 1) != 0) {
 		MSG_WARNING(msg_module, "Unable to write into Data manager's input queue, skipping data.");
 		free (packet);
 	}
+}
+
+void preprocessor_close()
+{
+	return;
 }

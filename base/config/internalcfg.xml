@@ -59,4 +59,10 @@
 		<file>/usr/share/ipfixcol/plugins/ipfixcol-ipfixviewer-output.so</file>
 		<threadName>view</threadName>
 	</storagePlugin>
+
+	<intermediatePlugin>
+                <name>dummy_ip</name>
+                <file>/usr/share/ipfixcol/plugins/ipfixcol-dummy-inter.so</file>
+                <threadName>dummy_inter</threadName>
+        </intermediatePlugin>	
 </ipfixcol>

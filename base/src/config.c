@@ -547,6 +547,196 @@ cleanup:
 	return (retval);
 }
 
+
+/**
+ * \brief Prepare basic information needed to dynamically load intermediate plugins.
+ * This information is get from the user configuration (given as parameter) and from
+ * internal configuration of the ipfixmed.
+ *
+ * @param[in] config User XML configuration.
+ * @return List of information about intermediate plugins,
+ * NULL in case of error.
+ */
+struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config)
+{
+	int i;
+	xmlXPathContextPtr internal_ctxt = NULL;
+	xmlXPathContextPtr config_ctxt = NULL;
+	xmlXPathObjectPtr xpath_obj_ipinter = NULL;
+	xmlXPathObjectPtr xpath_obj_ipuser = NULL;
+	xmlXPathObjectPtr xpath_obj_core = NULL;
+
+	struct plugin_xml_conf_list *plugins = NULL;
+	struct plugin_xml_conf_list *aux_plugin = NULL;
+	xmlNodePtr node;
+	xmlNodePtr plugin_config;
+	xmlNodePtr plugin_config_internal;
+	xmlChar *plugin_name = NULL;
+	xmlChar *plugin_file = NULL;
+	xmlDocPtr xmldata = NULL;
+	uint8_t hit = 0;
+
+	/* initiate internal config - open xml file, get xmlDoc and prepare xpath context for it */
+	if ((internal_ctxt = ic_init(BAD_CAST "cesnet-ipfixcol-int")) == NULL) {
+		goto cleanup;
+	}
+
+	/* get the list of supported intermediate plugins description from internal config */
+	xpath_obj_ipinter = xmlXPathEvalExpression(BAD_CAST "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:intermediatePlugin", internal_ctxt);
+	if (xpath_obj_ipinter != NULL) {
+		if (xmlXPathNodeSetIsEmpty (xpath_obj_ipinter->nodesetval)) {
+			MSG_ERROR(msg_module, "No list of supported Intermediate formats found in internal configuration!");
+			goto cleanup;
+		}
+	}
+
+	/* create xpath evaluation context of user configuration */
+	if ((config_ctxt = xmlXPathNewContext(config)) == NULL) {
+		MSG_ERROR(msg_module, "Unable to create XPath context for user configuration (%s:%d).", __FILE__, __LINE__);
+		goto cleanup;
+	}
+
+	/* register namespace for the context of internal configuration file */
+	if (xmlXPathRegisterNs(config_ctxt, BAD_CAST "ietf-ipfix", BAD_CAST "urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp") != 0) {
+		MSG_ERROR(msg_module, "Unable to register namespace for user configuration (%s:%d).", __FILE__, __LINE__);
+		goto cleanup;
+	}
+
+	/* look for <intermediatePlugin> in user config */
+	xpath_obj_ipuser = xmlXPathEvalExpression(BAD_CAST "/ietf-ipfix:ipfix/ietf-ipfix:intermediatePlugin", config_ctxt);
+	if (xpath_obj_ipuser != NULL) {
+		if (xmlXPathNodeSetIsEmpty(xpath_obj_ipuser->nodesetval)) {
+			MSG_ERROR(msg_module, "No exporting process defined in user configuration!");
+			goto cleanup;
+		}
+	}
+
+	/* look for <ipfixmedCore> */
+	xpath_obj_core = xmlXPathEvalExpression(BAD_CAST "/ietf-ipfix:ipfix/ietf-ipfix:ipfixcolCore", config_ctxt);
+	if (xpath_obj_core != NULL) {
+		if (xmlXPathNodeSetIsEmpty(xpath_obj_core->nodesetval)) {
+			MSG_ERROR(msg_module, "No intermediate plugin in user configuration!");
+			goto cleanup;
+		}
+	}
+
+
+	node = xpath_obj_core->nodesetval->nodeTab[0]->children;
+
+	while (node != NULL) {
+
+		plugin_name = NULL;
+		plugin_file = NULL;
+		xmldata = NULL;
+		hit = 0;
+
+		if (!xmlStrncmp(node->name, BAD_CAST "plugin", strlen("plugin") + 1)) {
+			if (node->children->content) {
+				/* name of the Intermediate Process */
+				plugin_name = xmlNodeListGetString(config, node->children, 1);
+
+				if (plugin_name) {
+					/* find internal configuration for this Intermediate plugin */
+					for (i = 0; i < xpath_obj_ipinter->nodesetval->nodeNr; i++) {
+						plugin_config_internal = xpath_obj_ipinter->nodesetval->nodeTab[i]->children;
+
+						while (plugin_config_internal) {
+							if ((!xmlStrncmp(plugin_config_internal->name, BAD_CAST "name", strlen("name") + 1)) &&
+								(!xmlStrncmp(plugin_config_internal->children->content, plugin_name, xmlStrlen(plugin_name)))) {
+								hit = 1;
+							}
+							if (!xmlStrncmp(plugin_config_internal->name, BAD_CAST "file", strlen("file") + 1)) {
+								plugin_file = xmlNodeListGetString(plugin_config_internal->doc, plugin_config_internal->children, 1);
+							}
+
+							plugin_config_internal = plugin_config_internal->next;
+						}
+
+						if (!hit) {
+							xmlFree(plugin_file);
+							continue;
+						}
+
+						break;
+					}
+				}
+
+				/* find plugin specific configuration (from startup.xml) */
+				for (i = 0; i < xpath_obj_ipuser->nodesetval->nodeNr; i++) {
+					plugin_config = xpath_obj_ipuser->nodesetval->nodeTab[i]->children;
+
+					while (plugin_config) {
+						if (!xmlStrncmp(plugin_config->name, plugin_name, xmlStrlen(plugin_name) + 1)) {
+							xmldata = xmlNewDoc(BAD_CAST "1.0");
+							xmlDocSetRootElement(xmldata, xmlCopyNode(plugin_config, 1));
+							break;
+						}
+
+						plugin_config = plugin_config->next;
+					}
+				}
+			}
+		}
+
+		if (!plugin_file && !plugin_name && !xmldata) {
+			node = node->next;
+			continue;
+		}
+
+		aux_plugin = (struct plugin_xml_conf_list *) malloc(sizeof(*aux_plugin));
+		if (!aux_plugin) {
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+			goto cleanup;
+		}
+		memset(aux_plugin, 0, sizeof(*aux_plugin));
+
+		aux_plugin->config.file = (char *) plugin_file;
+		strncpy(aux_plugin->config.name, (char *) plugin_name, 16);
+		aux_plugin->config.xmldata = xmldata;
+
+		xmlFree(plugin_name);
+
+		if (plugins) {
+			plugins->next = aux_plugin;
+		} else {
+			plugins = aux_plugin;
+		}
+
+		node = node->next;
+	}
+
+
+
+	/* inform that everything was done but no valid plugin has been found */
+	if (plugins == NULL) {
+		MSG_WARNING(msg_module, "No valid intermediate plugin specification for the mediator found.");
+	}
+
+	cleanup:
+	/* Cleanup of XPath data */
+	if (xpath_obj_core) {
+		xmlXPathFreeObject (xpath_obj_core);
+	}
+	if (xpath_obj_ipinter) {
+		xmlXPathFreeObject (xpath_obj_ipinter);
+	}
+	if (xpath_obj_ipuser) {
+		xmlXPathFreeObject(xpath_obj_ipuser);
+	}
+	if (config_ctxt) {
+		xmlXPathFreeContext (config_ctxt);
+	}
+	if (internal_ctxt) {
+		xmlFreeDoc (internal_ctxt->doc);
+		xmlXPathFreeContext (internal_ctxt);
+	}
+
+
+	return (plugins);
+}
+
+/**@}*/
+
 /**
  * @brief Get list of \<collectingPrecoess\>es from user configuration.
  * @param doc User XML configuration.

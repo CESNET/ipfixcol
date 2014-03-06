@@ -86,7 +86,7 @@
  */
 struct ipfix_template {
 	uint32_t references;		 /** Number of packets referencing to this template */
-	struct ipfix_template *next;
+	struct ipfix_template *next; /** Pointer to older template with the same template id */
 
 	uint8_t template_type;       /**Type of Template - TM_TEMPLATE = Template,
 	                              * TM_OPTIONS_TEMPLATE = Options Template */
@@ -118,20 +118,28 @@ struct ipfix_template {
  * \brief Template Manager structure.
  */
 struct ipfix_template_mgr {
-	struct ipfix_template_mgr_record **tms;
+	struct ipfix_template_mgr_record **tms; /** list of template managers record for each source */
 };
 
+/**
+ * \struct ipfix_template_key
+ * \brief Unique identifier of template in Template Manager
+ */
 struct ipfix_template_key {
-	uint32_t odid;
-	uint32_t crc;
-	uint32_t tid;
+	uint32_t odid; 	/** Observation Domain ID */
+	uint32_t crc;  	/** CRC from source IP address */
+	uint32_t tid;	/** Template ID */
 };
 
+/**
+ * \struct ipfix_template_mgr_record
+ * \brief Record of Template Managers structure
+ */
 struct ipfix_template_mgr_record {
 	struct ipfix_template **templates;/**array of pointers to Templates */
 	uint16_t max_length;  /**maximum length of array */
 	uint16_t counter;     /**number of templates in array */
-	uint64_t key;
+	uint64_t key;		  /** unique identifier (combination of odid and crc from ipfix_template_key) */
 };
 
 

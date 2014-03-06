@@ -187,6 +187,7 @@ AC_CONFIG_FILES([Makefile
 				src/input/sctp/Makefile
 				src/storage/ipfix/Makefile
 				src/storage/dummy/Makefile
+				src/intermediate/dummy/Makefile
 				config/Makefile
 				headers/Makefile
 				documentation/doxygen/Makefile

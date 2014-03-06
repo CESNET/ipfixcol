@@ -119,11 +119,34 @@ struct storage {
 };
 
 /**
+ * \brief Intermediate plugin handler structure.
+ */
+struct intermediate {
+	void *ip_config;		/**< config structure of intermediate process */
+	void *config;           /**< intermediate plugin's config structure */
+	int (*intermediate_plugin_init)(char *, void *, void **);
+	int (*process_message)(void *, void *);
+	int (*intermediate_plugin_close)(void *);
+	void *dll_handler;
+	struct plugin_xml_conf *xml_conf;
+    char thread_name[16];	/**< Name for storage threads (from configuration) */
+};
+
+/**
  * \brief Storage plugin handler structure list
  */
 struct storage_list {
 	struct storage storage;
 	struct storage_list *next;
+};
+
+/**
+ * \brief Intermediate plugin handler structure list
+ */
+struct intermediate_list {
+	struct intermediate intermediate;
+	struct intermediate_list *prev;
+	struct intermediate_list *next;
 };
 
 /**
@@ -160,6 +183,17 @@ struct plugin_xml_conf_list* get_input_plugins(xmlNodePtr collectorNode);
  * NULL in case of error.
  */
 struct plugin_xml_conf_list* get_storage_plugins(xmlNodePtr collectorNode, xmlDocPtr config);
+
+/**
+ * \brief Prepare basic information needed to dynamically load intermediate plugins.
+ * This information is get from the user configuration (given as parameter) and from
+ * internal configuration of the ipfixmed.
+ *
+ * @param[in] config User XML configuration.
+ * @return List of information about intermediate plugins,
+ * NULL in case of error.
+ */
+struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config);
 
 /**@}*/
 

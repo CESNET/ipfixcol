@@ -56,15 +56,15 @@ static char *msg_module = "template manager";
  * Create new template managers record
  */
 struct ipfix_template_mgr_record *tm_record_create() {
-	struct ipfix_template_mgr_record *tmr;
+	struct ipfix_template_mgr_record *tmr = NULL;
 
-	if ((tmr = malloc(sizeof(struct ipfix_template_mgr))) == NULL) {
+	if ((tmr = calloc(1, sizeof(struct ipfix_template_mgr))) == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 	}
 
 	tmr->counter = 0;
 	tmr->max_length = 32;
-	tmr->templates = calloc(tmr->max_length, sizeof(void *));
+	tmr->templates = calloc(tmr->max_length, sizeof(struct ipfix_template_mgr_record *));
 
 	return tmr;
 }

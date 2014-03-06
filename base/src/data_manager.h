@@ -81,8 +81,7 @@ struct data_manager_config {
  */
 struct data_manager_config* data_manager_create (
     uint32_t observation_domain_id,
-    struct storage_list* storage_plugins,
-    struct input_info *input_info);
+    struct storage_list* storage_plugins);
 
 /**
  * \brief Closes data manager specified by its configuration

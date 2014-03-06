@@ -62,6 +62,23 @@
 void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins);
 
 /**
+ * \brief Preprocessor has only one output queue. This function sets the queue for preprocessor.
+ *
+ * @param out_queue preprocessor's output queue
+ * @return 0 on success, negative value otherwise
+ */
+int set_preprocessor_output_queue(struct ring_buffer *out_queue);
+
+
+/**
+ * \brief Returns pointer to preprocessors output queue.
+ *
+ * @return preprocessors output queue
+ */
+struct ring_buffer *get_preprocessor_output_queue();
+
+
+/**
  * \brief Close all data managers and their storage plugins
  *
  * @return void

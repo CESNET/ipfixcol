@@ -106,67 +106,6 @@ static inline void data_manager_free (struct data_manager_config* config)
 }
 
 /**
- * \brief Check whether there is at least one template withdraw
- *
- * @param[in] msg IPFIX message
- * @return int Return 1 when template withdraw message found, 0 otherwise
- */
-static int data_manager_withdraw_templates(struct ipfix_message *msg) {
-	struct ipfix_template_record *template_record;
-	struct ipfix_options_template_record *options_template_record;
-	int i;
-
-	/* check for template withdraw messagess (no other templates should be in the set) */
-	for (i=0; msg->templ_set[i] != NULL && i<1024; i++) {
-		template_record = &msg->templ_set[i]->first_record;
-		if (ntohs(template_record->count) == 0) {
-			return 1;
-		}
-	}
-
-	/* check for options template withdraw messagess */
-	for (i=0; msg->opt_templ_set[i] != NULL && i<1024; i++) {
-			options_template_record = &msg->opt_templ_set[i]->first_record;
-			if (ntohs(options_template_record->count) == 0) {
-				return 1;
-			}
-	}
-	return 0;
-}
-
-/**
- * \brief Fill in udp_info structure when managing UDP input
- *
- * @param[in] input_info 	Input information from input plugin
- * @param[in,out] udp_conf 	UDP template configuration structure to be filled in
- * @return void
- */
-static void data_manager_udp_init (struct input_info_network *input_info, struct udp_conf *udp_conf) {
-	if (input_info->type == SOURCE_TYPE_UDP) {
-		if (((struct input_info_network*) input_info)->template_life_time != NULL) {
-			udp_conf->template_life_time = atoi(((struct input_info_network*) input_info)->template_life_time);
-		} else {
-			udp_conf->template_life_time = TM_UDP_TIMEOUT;
-		}
-		if (input_info->template_life_packet != NULL) {
-			udp_conf->template_life_packet = atoi(input_info->template_life_packet);
-		} else {
-			udp_conf->template_life_packet = 0;
-		}
-		if (input_info->options_template_life_time != NULL) {
-			udp_conf->options_template_life_time = atoi(((struct input_info_network*) input_info)->options_template_life_time);
-		} else {
-			udp_conf->options_template_life_time = TM_UDP_TIMEOUT;
-		}
-		if (input_info->options_template_life_packet != NULL) {
-			udp_conf->options_template_life_packet = atoi(input_info->options_template_life_packet);
-		} else {
-			udp_conf->options_template_life_packet = 0;
-		}
-	}
-}
-
-/**
  * \brief Thread routine for new Data manager (new Observation Domain ID).
  *
  * @param[in] config Data manager configuration (is internally typecasted to
@@ -177,16 +116,14 @@ static void* data_manager_thread (void* cfg)
 	struct data_manager_config *config = (struct data_manager_config*) cfg;
     struct storage_list *aux_storage = config->storage_plugins;
 	struct ipfix_message *msg;
-	struct udp_conf udp_conf;
 	unsigned int index;
-	uint32_t sequence_number = 0, msg_counter = 0;
 
 	/* set the thread name to reflect the configuration */
 	snprintf(config->thread_name, 16, "ipfixcol DM %d", config->observation_domain_id);
 	prctl(PR_SET_NAME, config->thread_name, 0, 0, 0);
 
 	/* initialise UDP timeouts */
-	data_manager_udp_init((struct input_info_network*) config->input_info, &udp_conf);
+//	data_manager_udp_init((struct input_info_network*) config->input_info, &udp_conf);
 
 	/* loop will break upon receiving NULL from buffer */
 	while (1) {
@@ -194,31 +131,6 @@ static void* data_manager_thread (void* cfg)
 
 		/* read new data */
 		msg = rbuffer_read (config->in_queue, &index);
-		if (msg != NULL) {
-//			msg_counter++;
-//
-//			/* check sequence number */
-//			/* \todo handle out of order messages */
-//			if (sequence_number != ntohl(msg->pkt_header->sequence_number)) {
-//				if (skip_seq_err == 0) {
-//					MSG_WARNING(msg_module, "Sequence number does not match: expected %u, got %u",
-//						sequence_number, ntohl(msg->pkt_header->sequence_number));
-//				}
-//				sequence_number = ntohl(msg->pkt_header->sequence_number);
-//			}
-//
-//			/* Check whether there are withdraw templates (not for UDP) */
-//			if (config->input_info->type != SOURCE_TYPE_UDP &&  data_manager_withdraw_templates(msg)) {
-//				MSG_NOTICE(msg_module, "Got template withdrawal message. Waiting for storage packets.");
-//				/* wait for storage plugins to consume all pending messages */
-//				while (rbuffer_wait_empty(config->store_queue));
-//			}
-//
-//			/* process templates */
-//			sequence_number += data_manager_process_templates(config->template_mgr, msg, &udp_conf, msg_counter);
-		}
-
-		/* pass data into the storage plugins */
 		if (rbuffer_write (config->store_queue, msg, config->plugins_count) != 0) {
 			MSG_WARNING(msg_module, "ODID %d: Unable to pass data into the Storage plugins' queue.",
 					config->observation_domain_id);
@@ -271,6 +183,7 @@ static void* storage_plugin_thread (void* cfg)
             break;
 		}
 
+
 		/* do the job */
 		config->store (config->config, msg, config->thread_config->template_mgr);
 
@@ -281,7 +194,7 @@ static void* storage_plugin_thread (void* cfg)
 		}
 
 		/* all done, mark data as processed */
-		rbuffer_remove_reference(config->thread_config->queue, index, 1);
+//		rbuffer_remove_reference(config->thread_config->queue, index, 1);
 
 		/* move the index */
 		index = (index + 1) % config->thread_config->queue->size;
@@ -299,9 +212,13 @@ static void* storage_plugin_thread (void* cfg)
 void data_manager_close (struct data_manager_config **config)
 {
     /* close data manager thread - write NULL  */
-    rbuffer_write((*config)->in_queue, NULL, 1);
+    rbuffer_write((*config)->in_queue, NULL, (*config)->plugins_count);
     pthread_join((*config)->thread_id, NULL);
+
+
+    rbuffer_free((*config)->in_queue);
     /* deallocate config structure */
+
     data_manager_free(*config);
     *config = NULL;
 
@@ -319,12 +236,12 @@ void data_manager_close (struct data_manager_config **config)
  */
 struct data_manager_config* data_manager_create (
     uint32_t observation_domain_id,
-    struct storage_list* storage_plugins,
-    struct input_info *input_info)
+    struct storage_list* storage_plugins)
 {
 	xmlChar *plugin_params;
 	int retval, oid_specific_plugins = 0;
 	struct storage_list* aux_storage;
+	struct storage_list *aux_storage_list;
 	struct data_manager_config *config;
 	struct storage_thread_conf* plugin_cfg;
 
@@ -353,8 +270,8 @@ struct data_manager_config* data_manager_create (
 	config->observation_domain_id = observation_domain_id;
 	config->storage_plugins = NULL;
 	config->plugins_count = 0;
-	config->input_info = input_info;
-	config->template_mgr = tm_create();
+//	config->input_info = input_info;
+//	config->template_mgr = tm_create();
 
 	/* check whether there is OID specific plugin for this OID */
 	for (aux_storage = storage_plugins; aux_storage != NULL; aux_storage = aux_storage->next) {
@@ -365,15 +282,16 @@ struct data_manager_config* data_manager_create (
 	}
 
 	/* initiate all storage plugins */
-	while (storage_plugins) {
+	aux_storage_list = storage_plugins;
+	while (aux_storage_list) {
 
 		/* check whether storage plugin is ment for this OID */
-		if ((storage_plugins->storage.xml_conf->observation_domain_id != NULL && /* OID set and does not match */
-			atol(storage_plugins->storage.xml_conf->observation_domain_id) != config->observation_domain_id) ||
-			(storage_plugins->storage.xml_conf->observation_domain_id == NULL && /* OID not set, but specific plugin(s) found*/
+		if ((aux_storage_list->storage.xml_conf->observation_domain_id != NULL && /* OID set and does not match */
+			atol(aux_storage_list->storage.xml_conf->observation_domain_id) != config->observation_domain_id) ||
+			(aux_storage_list->storage.xml_conf->observation_domain_id == NULL && /* OID not set, but specific plugin(s) found*/
 			oid_specific_plugins > 0)) {
 			/* skip to next storage plugin */
-			storage_plugins = storage_plugins->next;
+			aux_storage_list = aux_storage_list->next;
 			continue;
 		}
 
@@ -381,12 +299,12 @@ struct data_manager_config* data_manager_create (
 		aux_storage = (struct storage_list*) malloc (sizeof(struct storage_list));
 		if (aux_storage == NULL) {
 			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
-			storage_plugins = storage_plugins->next;
+			aux_storage_list = aux_storage_list->next;
 			continue;
 		}
 
 		/* copy the original storage_structure */
-		memcpy (aux_storage, storage_plugins, sizeof(struct storage_list));
+		memcpy (aux_storage, aux_storage_list, sizeof(struct storage_list));
 
 		/* initiate storage plugin */
 		xmlDocDumpMemory (aux_storage->storage.xml_conf->xmldata, &plugin_params, NULL);
@@ -394,7 +312,7 @@ struct data_manager_config* data_manager_create (
 		if (retval != 0) {
 			MSG_WARNING(msg_module, "Initiating storage plugin failed.");
 			xmlFree (plugin_params);
-			storage_plugins = storage_plugins->next;
+			aux_storage_list = aux_storage_list->next;
 			continue;
 		}
 		xmlFree (plugin_params);
@@ -411,18 +329,18 @@ struct data_manager_config* data_manager_create (
 		if (plugin_cfg == NULL) {
 			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			aux_storage->storage.close (&(aux_storage->storage.config));
-			storage_plugins = storage_plugins->next;
+			aux_storage_list = aux_storage_list->next;
 			continue;
 		}
 		plugin_cfg->queue = config->store_queue;
-		plugin_cfg->template_mgr = config->template_mgr;
+//		plugin_cfg->template_mgr = config->template_mgr;
 		aux_storage->storage.thread_config = plugin_cfg;
 		if (pthread_create(&(plugin_cfg->thread_id), NULL, &storage_plugin_thread, (void*) &aux_storage->storage) != 0) {
 			MSG_ERROR(msg_module, "Unable to create storage plugin thread.");
 			aux_storage->storage.close (&(aux_storage->storage.config));
 			free (plugin_cfg);
 			aux_storage->storage.thread_config = NULL;
-			storage_plugins = storage_plugins->next;
+			aux_storage_list = aux_storage_list->next;
 			continue;
 		}
 
@@ -431,7 +349,7 @@ struct data_manager_config* data_manager_create (
 		config->plugins_count++;
 
 		/* continue on the following storage plugin */
-		storage_plugins = storage_plugins->next;
+		aux_storage_list = aux_storage_list->next;
 	}
 
 	/* check if at least one storage plugin initiated */

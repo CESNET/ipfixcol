@@ -102,4 +102,17 @@
 			</fileWriter>
 		</destination>
 	</exportingProcess>
+	
+	<ipfixcolCore>
+                <!-- use Anonymization intermediate plugin -->
+                <plugin>dummy_ip</plugin>
+        </ipfixcolCore>
+        <intermediatePlugin>
+                <!-- Configuration for Anonymization Intermediate Plugin -->
+                <dummy_ip>
+                        <!-- Type of the anonymization function.
+                             Another option is "truncation" -->
+                        <type>cryptopan</type>
+                </dummy_ip>
+        </intermediatePlugin>
 </ipfix>
