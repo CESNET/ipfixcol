@@ -63,7 +63,7 @@ struct udp_conf {
 };
 
 static struct ring_buffer *preprocessor_out_queue = NULL;
-static struct ipfix_template_manager *tm = NULL;
+static struct ipfix_template_mgr *tm = NULL;
 
 
 /**
@@ -350,15 +350,11 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins)
 {
 	struct ipfix_message* msg;
-	struct data_manager_config *config = NULL, *prev_config = NULL;
 
 	if (input_info == NULL || storage_plugins == NULL) {
 		MSG_WARNING(msg_module, "Invalid parameters in function preprocessor_parse_msg().");
 		return;
 	}
-	struct ipfix_template_key key;
-	key.odid = 0;
-	key.crc = 0;
 
 	msg = (struct ipfix_message*) calloc (1, sizeof (struct ipfix_message));
 	msg->pkt_header = (struct ipfix_header*) packet;

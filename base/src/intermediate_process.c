@@ -86,8 +86,6 @@ void *ip_loop(void *config)
 		if (!message) {
 			/* terminating mediator */
 			MSG_DEBUG(msg_module, "NULL message, terminating intermediate process.");
-			/* pass NULL message to the next intermediate process and terminate this thread */
-			pass_message(config, NULL);
 			break;
 		}
 
@@ -172,6 +170,7 @@ int pass_message(void *config, struct ipfix_message *message)
 	conf = (struct ip_config *) config;
 
 	if (message == NULL) {
+		MSG_WARNING(msg_module, "NULL message from intermediate plugin, skipping.");
 		return 0;
 	}
 	ret = rbuffer_write(conf->out_queue, message, 1);
@@ -227,7 +226,7 @@ int ip_destroy(void *config)
 		free(conf->xmldata);
 	}
 
-	/* free input queue (output queue will be freed by next intermediate process */
+	/* free input queue (output queue will be freed by next intermediate process) */
 	rbuffer_free(conf->in_queue);
 
 	free(conf);

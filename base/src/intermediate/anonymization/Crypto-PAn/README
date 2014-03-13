@@ -1,0 +1,69 @@
+1. Introduction
+
+This is an implementation of the cryptography based prefix-preserving trace
+anonymization technique described in "Prefix-Preserving IP Address
+Anonymization: Measurement-based Security Evaluation and a New Cryptography-
+based Scheme" authored by Jun Xu, Jinliang Fan, Mostafa Ammar and Sue Moon.
+In this implementation, we use Rijndael cipher(AES algorithm) as underlying 
+pseudorandom function. 
+
+
+2. Files
+
+The package contains following files
+
+README		this file
+DISCLAIMER      standard disclaimer
+rijndael.h
+rijndael.cpp	Szymon Stefanek(stefanek@tin.it)'s C++ implementation of the 
+    		Rijndael cipher(now becomes AES) based on Vincent Rijmen and 
+		K.U.Leuven implementation 2.4.
+panonymizer.h
+panonymizer.cpp Our implementation of the prefix-preserving IP anonymizer 
+		using Rijndael cipher as pseudorandom function. The two files 
+		implement class PAnonymizer. Class PAnonymizer needs a 256-bit 
+		key for initialization before being used to anonymize IP 
+		addresses in prefix-preserving manner.
+sample.cpp	This is a sample program to illustrate the use of class 
+		PAnonymizer. The program reads in an example trace file 
+		"sample_trace_raw.dat", anonymizes the IP addresses in the
+		trace file, and output the sanitized trace file to the 
+		standard out. You can redirect the output to a file if you
+		like. The key in the file are settable.
+sample_trace_raw.dat	This is an example raw trace file. Each line of the 
+		trace is in the format of "time  packetsize  a.b.c.d", where 
+		"a.b.c.d" is IP address. The sanitized trace has the same 
+		format, preserving everything except the IP addresses, which 
+		are anonymized.  
+sample_trace_anonymized.dat  This is the output when running the sample 
+		program upon "sample_trace_raw.dat".
+Makefile	The makefile to generate "sample", the executable of 
+		sample.cpp. 
+
+
+3. Compile and run the sample program
+
+To compile the sample program "sample.cpp", run
+
+make all
+
+To run the sample program, run
+
+sample sample_trace_raw.dat
+
+The sanitized version of "sample_trace_raw.dat" is wrote to standard output.
+You can redirect the output to a file and compare it with file
+"sample_trace_anonymized.dat". They should be the same.
+
+
+4. Tailor the sample program for you own needs.
+
+To sanitize your own traces, you need to change file "sample.cpp" to reflect 
+your trace formats. You also need to provide your own 256-bit key in the
+program when creating an instance of class PAnonymizer. 
+
+
+5. Contact
+
+Please contact Jinliang Fan(jlfan@cc.gatech.edu) if you have questions about 
+the programs. Your comments are highly appreciated.

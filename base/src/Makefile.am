@@ -1,4 +1,8 @@
-SUBDIRS = . input/tcp input/udp input/ipfix storage/ipfix storage/dummy ipfixviewer
+SUBDIRS = . \
+	input/tcp input/udp input/ipfix \
+	intermediate/anonymization intermediate/dummy \
+	storage/ipfix storage/dummy \
+	ipfixviewer
 
 if HAVE_SCTP
 SUBDIRS += input/sctp
@@ -15,6 +19,8 @@ ipfixcol_SOURCES = \
 	data_manager.h \
 	intermediate_process.c \
 	intermediate_process.h \
+	ipfix_message.c \
+	ipfix_message.h \
 	ipfixcol.c \
 	output_manager.c \
 	output_manager.h \

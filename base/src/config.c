@@ -606,7 +606,7 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config)
 	xpath_obj_ipuser = xmlXPathEvalExpression(BAD_CAST "/ietf-ipfix:ipfix/ietf-ipfix:intermediatePlugin", config_ctxt);
 	if (xpath_obj_ipuser != NULL) {
 		if (xmlXPathNodeSetIsEmpty(xpath_obj_ipuser->nodesetval)) {
-			MSG_ERROR(msg_module, "No exporting process defined in user configuration!");
+			MSG_NOTICE(msg_module, "No intermediate plugin found in user configuration!");
 			goto cleanup;
 		}
 	}
@@ -615,7 +615,7 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config)
 	xpath_obj_core = xmlXPathEvalExpression(BAD_CAST "/ietf-ipfix:ipfix/ietf-ipfix:ipfixcolCore", config_ctxt);
 	if (xpath_obj_core != NULL) {
 		if (xmlXPathNodeSetIsEmpty(xpath_obj_core->nodesetval)) {
-			MSG_ERROR(msg_module, "No intermediate plugin in user configuration!");
+			MSG_NOTICE(msg_module, "No intermediate plugin set in user configuration!");
 			goto cleanup;
 		}
 	}

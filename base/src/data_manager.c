@@ -122,15 +122,13 @@ static void* data_manager_thread (void* cfg)
 	snprintf(config->thread_name, 16, "ipfixcol DM %d", config->observation_domain_id);
 	prctl(PR_SET_NAME, config->thread_name, 0, 0, 0);
 
-	/* initialise UDP timeouts */
-//	data_manager_udp_init((struct input_info_network*) config->input_info, &udp_conf);
-
 	/* loop will break upon receiving NULL from buffer */
 	while (1) {
         index = -1;
 
 		/* read new data */
 		msg = rbuffer_read (config->in_queue, &index);
+
 		if (rbuffer_write (config->store_queue, msg, config->plugins_count) != 0) {
 			MSG_WARNING(msg_module, "ODID %d: Unable to pass data into the Storage plugins' queue.",
 					config->observation_domain_id);
@@ -183,7 +181,6 @@ static void* storage_plugin_thread (void* cfg)
             break;
 		}
 
-
 		/* do the job */
 		config->store (config->config, msg, config->thread_config->template_mgr);
 
@@ -194,7 +191,7 @@ static void* storage_plugin_thread (void* cfg)
 		}
 
 		/* all done, mark data as processed */
-//		rbuffer_remove_reference(config->thread_config->queue, index, 1);
+		rbuffer_remove_reference(config->thread_config->queue, index, 0);
 
 		/* move the index */
 		index = (index + 1) % config->thread_config->queue->size;
@@ -215,8 +212,6 @@ void data_manager_close (struct data_manager_config **config)
     rbuffer_write((*config)->in_queue, NULL, (*config)->plugins_count);
     pthread_join((*config)->thread_id, NULL);
 
-
-    rbuffer_free((*config)->in_queue);
     /* deallocate config structure */
 
     data_manager_free(*config);

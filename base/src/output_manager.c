@@ -30,7 +30,7 @@ struct output_manager_config {
 	pthread_t thread_id;              /* manager's thread ID */
 };
 
-char *msg_module = "output_manager";
+char *msg_module = "output manager";
 
 
 /**
@@ -91,9 +91,10 @@ static void *output_manager_plugin_thread(void* config)
 	while (1) {
 		/* get next data */
 		msg = rbuffer_read(conf->in_queue, &index);
+
 		if (!msg) {
 			MSG_NOTICE(msg_module, "No more data from core.");
-            break;
+			break;
 		}
 
 		/* get appropriate data manager's config according to Observation domain ID */
@@ -121,6 +122,10 @@ static void *output_manager_plugin_thread(void* config)
 			MSG_WARNING(msg_module, "Unable to write into Data manager's input queue, skipping data.");
 			free(msg);
 		}
+
+		rbuffer_remove_reference(conf->in_queue, index, 0);
+
+		index = (index + 1) % conf->in_queue->size;
 	}
 
 	MSG_NOTICE(msg_module, "Closing Output Manager's thread.");
@@ -142,49 +147,42 @@ int output_manager_create(struct storage_list *storages, struct ring_buffer *in_
 	struct output_manager_config *conf;
 	int retval;
 
-	conf = (struct output_manager_config *) malloc(sizeof(*conf));
+	/* Allocate new Output Manager's configuration */
+	conf = (struct output_manager_config *) calloc(1, sizeof(*conf));
 	if (!conf) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
-	memset(conf, 0, sizeof(*conf));
 
 	conf->storage_plugins = storages;
 	conf->in_queue = in_queue;
 
-	conf->data_managers = NULL;
-	conf->last = NULL;
-
+	/* Create Output Manager's thread */
 	retval = pthread_create(&(conf->thread_id), NULL, &output_manager_plugin_thread, (void *) conf);
 	if (retval != 0) {
 		MSG_ERROR(msg_module, "Unable to create storage plugin thread.");
-		goto err_thread;
+		free(conf);
+		return -1;
 	}
 
 	*config = conf;
-
 	return 0;
-
-err_thread:
-	free(conf);
-	return -1;
 }
 
 void output_manager_close(struct output_manager_config *manager) {
 	struct data_manager_config *aux_config = manager->data_managers, *tmp = NULL;
+
+	/* Stop Output Manager's thread and free input buffer */
+	rbuffer_write(manager->in_queue, NULL, 1);
+	pthread_join(manager->thread_id, NULL);
+	rbuffer_free(manager->in_queue);
+
+	/* Close all data managers */
 	while (aux_config) {
 		tmp = aux_config;
 		aux_config = aux_config->next;
 		data_manager_close(&tmp);
 	}
 
-	manager->data_managers = NULL;
-	manager->last = NULL;
-
-	rbuffer_write(manager->in_queue, NULL, 1);
-
-	pthread_join(manager->thread_id, NULL);
-
-	rbuffer_free(manager->in_queue);
 	free(manager);
 }

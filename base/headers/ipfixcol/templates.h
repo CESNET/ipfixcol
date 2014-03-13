@@ -79,7 +79,7 @@
 #define TM_TEMPLATE_WITHDRAW_LEN 4
 
 /**
- * \struct ipfix_template_t
+ * \struct ipfix_template
  * \brief Structure for storing Template Record/Options Template Record
  *
  * All data in this structure are in host byte order
@@ -114,11 +114,11 @@ struct ipfix_template {
 };
 
 /**
- * \struct ipfix_template_mgr_t
+ * \struct ipfix_template_mgr
  * \brief Template Manager structure.
  */
 struct ipfix_template_mgr {
-	struct ipfix_template_mgr_record **tms; /** list of template managers record for each source */
+	struct ipfix_template_mgr_record **tms; /** list of template manager's record for each source */
 };
 
 /**
@@ -133,7 +133,7 @@ struct ipfix_template_key {
 
 /**
  * \struct ipfix_template_mgr_record
- * \brief Record of Template Managers structure
+ * \brief Record of Template Manager's structure
  */
 struct ipfix_template_mgr_record {
 	struct ipfix_template **templates;/**array of pointers to Templates */
@@ -159,13 +159,13 @@ struct ipfix_template *tm_create_template(void *tmp, int max_len, int type);
 /**
  * \brief Function for adding new templates.
  *
- * \param[in]  tm Data Manager specific structure for storing Templates.
- * \param[in]  template Pointer where new Template Record starts.
+ * \param[in]  tm Template Manager
+ * \param[in]  tmp Pointer where new Template Record starts.
  * \param[in]  max_len Maximum length of the template. Typically length
  * to the end of the Template Set.
- * \param[in]  tmp Pointer where new Template Record starts.
  * \param[in]  type Type of the Template Record. TM_TEMPLATE = Template,
  * TM_OPTIONS_TEMPLATE = Options Template.
+ * \param[in]  key Unique identifier of template in Template Manager
  * \return Pointer to new ipfix_template on success, NULL otherwise
  */
 struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm,
@@ -174,10 +174,13 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm,
 /**
  * \brief Function for updating an existing templates.
  *
- * \param[in]  tm Data Manager specific structure for storing Templates.
+ * \param[in]  tm Template Manager
  * \param[in]  tmp Pointer where new Template Record starts.
+ * \param[in]  max_len Maximum length of the template. Typically length
+ * to the end of the Template Set.
  * \param[in]  type Type of the Template Record. TM_TEMPLATE = Template,
  * TM_OPTIONS_TEMPLATE = Options Template.
+ * \param[in]  key Unique identifier of template in Template Manager
  * \return updated ipfix_template on success, NULL if error occurs.
  */
 struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm,
@@ -186,19 +189,18 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm,
 /**
  * \brief Function for specific Template lookup.
  *
- * \param[in]  tm Data Manager specific structure for storing Templates.
- * \param[in]  template_id ID of the Template that we are interested in.
+ * \param[in]  tm Template Manager
+ * \param[in]  key Unique identifier of template in Template Manager
  * \return pointer on the Temaplate on success, NULL if there is no such
  * Template.
  */
-struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm,
-                                                      struct ipfix_template_key *key);
+struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, struct ipfix_template_key *key);
 
 /**
  * \brief Function for removing Temaplates.
  *
- * \param[in]  tm Data Manager specific structure for storing Templates.
- * \param[in]  template_id ID of the Template that we want to remove.
+ * \param[in]  tm Template Manager
+ * \param[in]  key Unique identifier of template in Template Manager
  * \return 0 on success, negative value otherwise.
  */
 int tm_remove_template(struct ipfix_template_mgr *tm, struct ipfix_template_key *key);
@@ -206,7 +208,7 @@ int tm_remove_template(struct ipfix_template_mgr *tm, struct ipfix_template_key 
 /**
  * \brief Function for removing all Temaplates of specific type.
  *
- * \param[in]  tm Data Manager specific structure for storing Templates.
+ * \param[in]  tm Template Manager
  * \param[in]  type type of the template to withdraw. TM_TEMPLATE = Template,
  * TM_OPTIONS_TEMPLATE = Options Template.
  * \return 0 on success, negative value otherwise.
@@ -217,16 +219,38 @@ int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type);
 /**
  * \brief Create new template manager and set default values
  *
- * @return struct ipfix_template_manager New template manager
+ * \return struct ipfix_template_mgr New template manager
  */
 struct ipfix_template_mgr *tm_create();
 
+/**
+ * \brief Determines whether specific template contains given field
+ *
+ * \param[in]  templ template
+ * \param[in]  field field
+ * \return 0 on success, negative value otherwise.
+ */
+int template_contains_field(struct ipfix_template *templ, uint16_t field);
+
+
+/**
+ * \brief Increment number of references to template
+ *
+ * \param[in] templ template
+ */
+void tm_template_reference_inc(struct ipfix_template *templ);
+
+/**
+ * \brief Decrement number of references to template
+ *
+ * \param[in] templ template
+ */
+void tm_template_reference_dec(struct ipfix_template *templ);
 
 /**
  * \brief Destroys and frees specified template manager
  *
- * @param[in] ipfix_template_mgr Template manager to be destroyed
- * @return void
+ * \param[in] ipfix_template_mgr Template manager to be destroyed
  */
 void tm_destroy(struct ipfix_template_mgr *tm);
 

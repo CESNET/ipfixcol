@@ -53,25 +53,31 @@
 static char *msg_module = "template manager";
 
 /**
- * Create new template managers record
+ * \brief Create new Template Manager's record
  */
-struct ipfix_template_mgr_record *tm_record_create() {
+struct ipfix_template_mgr_record *tm_record_create()
+{
 	struct ipfix_template_mgr_record *tmr = NULL;
 
-	if ((tmr = calloc(1, sizeof(struct ipfix_template_mgr))) == NULL) {
+	if ((tmr = calloc(1, sizeof(struct ipfix_template_mgr_record))) == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 	}
 
+	/* Allocate space for templates */
 	tmr->counter = 0;
 	tmr->max_length = 32;
-	tmr->templates = calloc(tmr->max_length, sizeof(struct ipfix_template_mgr_record *));
+	tmr->templates = calloc(tmr->max_length, sizeof(struct ipfix_template *));
 
 	return tmr;
 }
 
 
 /**
- * Find template managers record in template manager
+ * \brief Find template managers record in template manager
+ *
+ * \param[in] tm Template Manager
+ * \param[in] key Unique identifier of template in Template Manager
+ * \return pointer to Template Manager's record
  */
 struct ipfix_template_mgr_record *tm_record_lookup(struct ipfix_template_mgr *tm, struct ipfix_template_key *key)
 {
@@ -87,7 +93,11 @@ struct ipfix_template_mgr_record *tm_record_lookup(struct ipfix_template_mgr *tm
 
 
 /**
- * Find (or insert of not found) template managers record in template manager
+ * \brief Find (or insert if not found) template managers record in template manager
+ *
+ * \param[in] tm Template Manager
+ * \param[in] key Unique identifier of template in Template Manager
+ * \return pointer to Template Manager's record
  */
 struct ipfix_template_mgr_record *tm_record_lookup_insert(struct ipfix_template_mgr *tm, struct ipfix_template_key *key)
 {
@@ -112,6 +122,10 @@ struct ipfix_template_mgr_record *tm_record_lookup_insert(struct ipfix_template_
 
 /**
  * \brief Copy ipfix_template fields and convert them to host byte order
+ *
+ * \param[out] to Destination
+ * \param[in] from Source
+ * \param[in] length template size
  */
 static void tm_copy_fields(uint8_t *to, uint8_t *from, uint16_t length)
 {
@@ -233,7 +247,12 @@ static uint16_t tm_template_length(struct ipfix_template_record *template, int m
 }
 
 /**
- * Create new ipfix template
+ * \brief Create new ipfix template
+ *
+ * \param[in] template ipfix template data
+ * \param[in] max_len maximum length of template
+ * \param[in] type type of template (template/option template)
+ * \return pointer to new ipfix template
  */
 struct ipfix_template *tm_create_template(void *template, int max_len, int type)
 {
@@ -264,7 +283,13 @@ struct ipfix_template *tm_create_template(void *template, int max_len, int type)
 
 
 /**
- * Add new template into template managers record
+ * \brief Add new template into Template Manager's record
+ *
+ * \param[in] tmr Template Manager's record
+ * \param[in] template ipfix template which will be inserted into tmr
+ * \param[in] max_len maximum size of template
+ * \param[in] type type of template (template/option template)
+ * \return pointer to added template
  */
 struct ipfix_template *tm_record_add_template(struct ipfix_template_mgr_record *tmr, void *template, int max_len, int type)
 {
@@ -303,7 +328,11 @@ struct ipfix_template *tm_record_add_template(struct ipfix_template_mgr_record *
 }
 
 /**
- * Remove template from template managers record
+ * \brief Remove template from Template Manager's record
+ *
+ * \param[in] tmr Template Manager's record
+ * \param[in] template_id Identification number of template
+ * \return 0 if template was found, 1 otherwise
  */
 int tm_record_remove_template(struct ipfix_template_mgr_record *tmr, uint16_t template_id)
 {
@@ -327,7 +356,13 @@ int tm_record_remove_template(struct ipfix_template_mgr_record *tmr, uint16_t te
 }
 
 /**
- * Update template in template managers record
+ * \brief Update template in template managers record
+ *
+ * \param[in] tmr Template Manager's record
+ * \param[in] template ipfix template record
+ * \param[in] max_len maximum size of template
+ * \param[in] type type of template (template/option template)
+ * \return pointer to updated template
  */
 struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_record *tmr, void *template, int max_len, int type)
 {
@@ -382,7 +417,11 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 }
 
 /**
- * Get pointer to template in template managers record
+ * \brief Get pointer to template in Template Manager's record
+ *
+ * \param[in] tmr Template Manager's record
+ * \param[in] template_id Identification number of template
+ * \return pointer to ipfix template
  */
 struct ipfix_template *tm_record_get_template(struct ipfix_template_mgr_record *tmr, uint16_t template_id)
 {
@@ -401,7 +440,13 @@ struct ipfix_template *tm_record_get_template(struct ipfix_template_mgr_record *
 	return NULL;
 }
 
-int tm_record_remove_all_templates(struct ipfix_template_mgr_record *tmr, int type)
+/**
+ * \brief Remove all templates from Template Manager's record
+ *
+ * \param[in] tmr Template Manager's record
+ * \param[in] type Type of templates to remove
+ */
+void tm_record_remove_all_templates(struct ipfix_template_mgr_record *tmr, int type)
 {
 	MSG_DEBUG(msg_module, "Removing all %stemplates", (type == TM_TEMPLATE)?"":"option ");
 
@@ -418,11 +463,12 @@ int tm_record_remove_all_templates(struct ipfix_template_mgr_record *tmr, int ty
 			tmr->templates[i] = NULL;
 		}
 	}
-	return 0;
 }
 
 /**
- * Destroy template managers record
+ * \brief Destroy Template Manager's record
+ *
+ * \param[in] tmr Template Manager's record
  */
 void tm_record_destroy(struct ipfix_template_mgr_record *tmr)
 {
@@ -434,7 +480,9 @@ void tm_record_destroy(struct ipfix_template_mgr_record *tmr)
 }
 
 /**
- * Create global template manager
+ * \brief Create global Template Manager
+ *
+ * \return pointer to created Template Manager
  */
 struct ipfix_template_mgr *tm_create() {
 	struct ipfix_template_mgr *tm;
@@ -443,23 +491,25 @@ struct ipfix_template_mgr *tm_create() {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 	}
 
-
-	tm->tms = calloc(20, sizeof(void *));
+	/* TODO: add counter etc. as in template_mgr_record!!! */
+	tm->tms = calloc(20, sizeof(struct ipfix_template_mgr_record *));
 	return tm;
 }
 
 /**
- * Destroy global template manager
+ * \brief Destroy global template manager
+ *
+ * \para[in] tm Template Manager
  */
 void tm_destroy(struct ipfix_template_mgr *tm)
 {
+	/* TODO !!! */
 	(void) tm;
-	/* dodělat */
 }
 
 
 /**
- * Add new template into template manager
+ * \brief Add new template into template manager
  */
 struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *template, int max_len, int type, struct ipfix_template_key *key)
 {
@@ -472,7 +522,7 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 }
 
 /**
- * Update template in template manager
+ * \brief Update template in template manager
  */
 struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *template, int max_len, int type, struct ipfix_template_key *key)
 {
@@ -486,12 +536,11 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *t
 }
 
 /**
- * Remove template from template manager
+ * \brief Remove template from template manager
  */
 int tm_remove_template(struct ipfix_template_mgr *tm, struct ipfix_template_key *key)
 {
-	uint64_t table_key = (uint64_t) key->odid << 32 | key->crc;
-	struct ipfix_template_mgr_record *tmr = tm_record_lookup(tm, &table_key);
+	struct ipfix_template_mgr_record *tmr = tm_record_lookup(tm, key);
 
 	if (tmr == NULL) {
 		return 1;
@@ -508,7 +557,7 @@ int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type)
 }
 
 /**
- * Get pointer to template in template manager
+ * \brief Get pointer to template in template manager
  */
 struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, struct ipfix_template_key *key)
 {
@@ -519,14 +568,80 @@ struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, struct ipf
 	return tm_record_get_template(tmr, key->tid);
 }
 
+/**
+ * \brief Increment number of references to template
+ */
 void tm_template_reference_inc(struct ipfix_template *templ)
 {
 	templ->references++;
 }
 
+/**
+ * \brief Decrement number of references to template
+ */
 void tm_template_reference_dec(struct ipfix_template *templ)
 {
 	if (templ->references > 0) {
 		templ->references--;
 	}
+}
+
+/**
+ * \brief Determines whether specific template contains given field
+ */
+int template_contains_field(struct ipfix_template *templ, uint16_t field)
+{
+	uint8_t *p;
+	uint8_t variable_length = 0;
+	uint16_t fields = 0;
+	uint8_t hit = 0;
+
+	if (!templ) {
+		return -1;
+	}
+
+	uint16_t ie_id;
+	uint16_t field_length;
+	uint16_t total_length = 0;
+
+	if (templ->template_type == TM_OPTIONS_TEMPLATE) {
+		p = (uint8_t *) ((struct ipfix_options_template_record*) templ)->fields;
+	} else {
+		p = (uint8_t *) templ->fields;
+	}
+
+	while (fields < templ->field_count) {
+		ie_id = *((uint16_t *) p);            /* read IE ID */
+		field_length = *((uint16_t *) (p+2)); /* read field length */
+
+		if (ie_id == field) {
+			/* we have found the field! */
+			hit = 1;
+			break;
+		}
+
+		/* count total length, if we don't find element with variable length */
+		if (field_length == 65535) {
+			variable_length = 1;
+		} else {
+			total_length += field_length;
+		}
+
+		/* no luck, move to the next field */
+		p += 4;
+
+		/* check whether there is Enterprise Bit set */
+		if (ie_id & 0x8000) {
+			p += 4;
+		}
+
+		fields += 1;
+	}
+
+	if (hit) {
+		return (!variable_length) ? total_length : 0;
+	}
+
+	/* this template doesn't contain specified field */
+	return -1;
 }
