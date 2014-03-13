@@ -104,15 +104,22 @@
 	</exportingProcess>
 	
 	<ipfixcolCore>
-                <!-- use Anonymization intermediate plugin -->
-                <plugin>dummy_ip</plugin>
-        </ipfixcolCore>
-        <intermediatePlugin>
+		<!-- list of active intermediate plugins -->
+		<plugin>dummy_ip</plugin>
+	</ipfixcolCore> 
+	
+	<intermediatePlugin>
+		<dummy_ip>
+		</dummy_ip>
+	</intermediatePlugin>
+	
+	<intermediatePlugin>
                 <!-- Configuration for Anonymization Intermediate Plugin -->
-                <dummy_ip>
+                <anonymization_ip>
                         <!-- Type of the anonymization function.
                              Another option is "truncation" -->
                         <type>cryptopan</type>
-                </dummy_ip>
+                </anonymization_ip>
         </intermediatePlugin>
+
 </ipfix>

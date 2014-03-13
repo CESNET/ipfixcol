@@ -59,10 +59,24 @@
 		<file>/usr/share/ipfixcol/plugins/ipfixcol-ipfixviewer-output.so</file>
 		<threadName>view</threadName>
 	</storagePlugin>
-
+	
+	<!-- Intermediate Plugins -->
 	<intermediatePlugin>
-                <name>dummy_ip</name>
-                <file>/usr/share/ipfixcol/plugins/ipfixcol-dummy-inter.so</file>
-                <threadName>dummy_inter</threadName>
-        </intermediatePlugin>	
+		<name>dummy_ip</name>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-dummy-inter.so</file>
+		<threadName>dummy_inter</threadName>
+	</intermediatePlugin>
+	
+	<intermediatePlugin>
+		<name>anonymization_ip</name>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-anonymization-inter.so</file>
+		<threadName>anon_inter</threadName>
+	</intermediatePlugin>
+<!--
+	<intermediatePlugin>
+		<name>joinflows_ip</name>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-joinflows-inter.so</file>
+		<threadName>join_inter</threadName>
+	</intermediatePlugin>
+-->
 </ipfixcol>
