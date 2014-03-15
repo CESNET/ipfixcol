@@ -94,6 +94,18 @@ struct ring_buffer *get_preprocessor_output_queue()
 }
 
 /**
+ * \brief Compute 32b CRC from source address and source port
+ * 
+ * @param input_info Input informations
+ * @return crc32
+ */
+uint32_t preprocessor_compute_crc(struct input_info_network *input_info)
+{
+	/* TODO */
+	(void) input_info;
+	return 0;
+}
+/**
  * \brief Fill in udp_info structure when managing UDP input
  *
  * @param[in] input_info 	Input information from input plugin
@@ -134,19 +146,19 @@ static void preprocessor_udp_init (struct input_info_network *input_info, struct
  * \param[in] type type of the template
  * \param[in] msg_counter message counter
  * \param[in] input_info input info structure
+ * \param[in] key template key with filled crc and odid
  * \return length of the template
  */
-static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void *tmpl, int max_len, int type, uint32_t msg_counter, struct input_info *input_info)
+static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void *tmpl, int max_len, int type, 
+	uint32_t msg_counter, struct input_info *input_info, struct ipfix_template_key *key)
 {
 	struct ipfix_template_record *template_record;
 	struct ipfix_template *template;
 	int ret;
 
 	template_record = (struct ipfix_template_record*) tmpl;
-	struct ipfix_template_key key;
-	key.odid = 0;
-	key.crc = 0;
-	key.tid = ntohs(template_record->template_id);
+	
+	key->tid = ntohs(template_record->template_id);
 
 	/* check for withdraw all templates message */
 	/* these templates are no longer used (checked in data_manager_withdraw_templates()) */
@@ -163,7 +175,7 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 		return TM_TEMPLATE_WITHDRAW_LEN;
 		/* check for withdraw template message */
 	} else if (ntohs(template_record->count) == 0) {
-		ret = tm_remove_template(tm, &key);
+		ret = tm_remove_template(tm, key);
 		/* Log error when removing unknown template */
 		if (ret == 1) {
 			MSG_WARNING(msg_module, "%s withdraw message received for unknown Template ID: %u",
@@ -171,20 +183,20 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 		}
 		return TM_TEMPLATE_WITHDRAW_LEN;
 		/* check whether template exists */
-	} else if ((template = tm_get_template(tm, &key)) == NULL) {
+	} else if ((template = tm_get_template(tm, key)) == NULL) {
 		/* add template */
 		/* check that the template has valid ID ( < 256 ) */
 		if (ntohs(template_record->template_id) < 256) {
 			MSG_WARNING(msg_module, "%s ID %i is reserved and not valid for data set!", (type==TM_TEMPLATE)?"Template":"Options template", ntohs(template_record->template_id));
 		} else {
 			MSG_NOTICE(msg_module, "New %s ID %i", (type==TM_TEMPLATE)?"template":"options template", ntohs(template_record->template_id));
-			template = tm_add_template(tm, tmpl, max_len, type, &key);
+			template = tm_add_template(tm, tmpl, max_len, type, key);
 		}
 	} else {
 		/* template already exists */
 		MSG_WARNING(msg_module, "%s ID %i already exists. Rewriting.",
 				(type==TM_TEMPLATE)?"Template":"Options template", template->template_id);
-		template = tm_update_template(tm, tmpl, max_len, type, &key);
+		template = tm_update_template(tm, tmpl, max_len, type, key);
 	}
 	if (template == NULL) {
 		MSG_WARNING(msg_module, "Cannot parse %s set, skipping to next set",
@@ -221,10 +233,9 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
  *
  * @param[in,out] template_mgr	Template manager
  * @param[in] msg IPFIX			message
- * @param[in] udp_conf			UDP template configuration
  * @return uint32_t Number of received data records
  */
-static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *template_mgr, struct ipfix_message *msg, struct udp_conf *udp_conf)
+static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *template_mgr, struct ipfix_message *msg)
 {
 	uint8_t *ptr;
 	uint32_t records_count = 0;
@@ -239,17 +250,20 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 	uint16_t data_length;
 	uint32_t msg_counter = 0;
 
+	struct udp_conf udp_conf;
 	struct ipfix_template_key key;
-	key.odid = 0;
-	key.crc = 0;
+	
+	key.odid = ntohl(msg->pkt_header->observation_domain_id);
+	key.crc = preprocessor_compute_crc((struct input_info_network *) msg->input_info);
 
+	preprocessor_udp_init((struct input_info_network *) msg->input_info, &udp_conf);
 
 	/* check for new templates */
 	for (i=0; msg->templ_set[i] != NULL && i<1024; i++) {
 		ptr = (uint8_t*) &msg->templ_set[i]->first_record;
 		while (ptr < (uint8_t*) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) {
 			max_len = ((uint8_t *) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) - ptr;
-			ret = preprocessor_process_one_template(template_mgr, ptr, max_len, TM_TEMPLATE, msg_counter, msg->input_info);
+			ret = preprocessor_process_one_template(template_mgr, ptr, max_len, TM_TEMPLATE, msg_counter, msg->input_info, &key);
 			if (ret == 0) {
 				break;
 			} else {
@@ -263,7 +277,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 		ptr = (uint8_t*) &msg->opt_templ_set[i]->first_record;
 		max_len = ((uint8_t *) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) - ptr;
 		while (ptr < (uint8_t*) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) {
-			ret = preprocessor_process_one_template(template_mgr, ptr, max_len, TM_OPTIONS_TEMPLATE, msg_counter, msg->input_info);
+			ret = preprocessor_process_one_template(template_mgr, ptr, max_len, TM_OPTIONS_TEMPLATE, msg_counter, msg->input_info, &key);
 			if (ret == 0) {
 				break;
 			} else {
@@ -283,9 +297,9 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 			msg->data_couple[i].data_template->references++;
 
 			if ((msg->input_info->type == SOURCE_TYPE_UDP) && /* source UDP */
-					((time(NULL) - msg->data_couple[i].data_template->last_transmission > udp_conf->template_life_time) || /* lifetime expired */
-					(udp_conf->template_life_packet > 0 && /* life packet should be checked */
-					(uint32_t) (msg_counter - msg->data_couple[i].data_template->last_message) > udp_conf->template_life_packet))) {
+					((time(NULL) - msg->data_couple[i].data_template->last_transmission > udp_conf.template_life_time) || /* lifetime expired */
+					(udp_conf.template_life_packet > 0 && /* life packet should be checked */
+					(uint32_t) (msg_counter - msg->data_couple[i].data_template->last_message) > udp_conf.template_life_packet))) {
 				MSG_WARNING(msg_module, "Data template ID %i expired! Using old template.",
 				                                               msg->data_couple[i].data_template->template_id);
 			}
@@ -417,9 +431,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
     	}
     }
 
-    struct udp_conf udp_conf;
-    preprocessor_udp_init((struct input_info_network*) input_info, &udp_conf);
-    preprocessor_process_templates(tm, msg, &udp_conf);
+    preprocessor_process_templates(tm, msg);
 
     /* Send data to the first intermediate plugin */
 	if (rbuffer_write(preprocessor_out_queue, msg, 1) != 0) {
