@@ -75,7 +75,6 @@ struct data_manager_config {
  * handled by this data manager
  * @param[in] storage_plugins List of storage plugins that should be opened by
  * this data manager
- * @param[in] input_info Input information from input plugin
  * @return data_manager_config Configuration strucutre on success, NULL
  * otherwise
  */
