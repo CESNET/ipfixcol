@@ -48,6 +48,21 @@
 #include "config.h"
 #include "queues.h"
 #include "preprocessor.h"
+#include "data_manager.h"
+
+/**
+ * \struct output_mm_config
+ *
+ * Contains all configuration of output managers' manager.
+ */
+struct output_manager_config {
+	struct data_manager_config *data_managers;      /* output managers */
+	struct data_manager_config *last;
+	struct storage_list *storage_plugins;    /* list of storage structures */
+	struct ring_buffer *in_queue;     /* input queue */
+	pthread_t thread_id;              /* manager's thread ID */
+};
+
 
 /**
  * \brief Creates new Output Manager
@@ -64,8 +79,7 @@ int output_manager_create(struct storage_list *storages, struct ring_buffer *in_
  * \brief Closes output manager specified by its configuration
  *
  * @param[in] config Configuration of the output manager to be closed
- * @return 0 on success, negative value otherwise
  */
-int output_manager_close(void *config);
+void output_manager_close(void *config);
 
 #endif /* OUTPUT_MANAGER_H_ */

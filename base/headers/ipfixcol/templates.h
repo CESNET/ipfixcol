@@ -118,7 +118,8 @@ struct ipfix_template {
  * \brief Template Manager structure.
  */
 struct ipfix_template_mgr {
-	struct ipfix_template_mgr_record **tms; /** list of template manager's record for each source */
+	struct ipfix_template_mgr_record *first; /** list of template manager's record for each source */
+	struct ipfix_template_mgr_record *last;  /** last member of list */
 };
 
 /**
@@ -140,6 +141,7 @@ struct ipfix_template_mgr_record {
 	uint16_t max_length;  /**maximum length of array */
 	uint16_t counter;     /**number of templates in array */
 	uint64_t key;		  /** unique identifier (combination of odid and crc from ipfix_template_key) */
+	struct ipfix_template_mgr_record *next; /** pointer to next record in template manager's list */
 };
 
 

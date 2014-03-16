@@ -47,20 +47,7 @@
 #include <ipfixcol.h>
 
 #include "data_manager.h"
-
-
-/**
- * \struct output_mm_config
- *
- * Contains all configuration of output managers' manager.
- */
-struct output_manager_config {
-	struct data_manager_config *data_managers;      /* output managers */
-	struct data_manager_config *last;
-	struct storage_list *storage_plugins;    /* list of storage structures */
-	struct ring_buffer *in_queue;     /* input queue */
-	pthread_t thread_id;              /* manager's thread ID */
-};
+#include "output_manager.h"
 
 char *msg_module = "output manager";
 
@@ -201,7 +188,13 @@ int output_manager_create(struct storage_list *storages, struct ring_buffer *in_
 	return 0;
 }
 
-void output_manager_close(struct output_manager_config *manager) {
+/**
+ * \brief Close Ouput Manager and all Data Managers
+ * 
+ * @param config Output Manager's configuration
+ */
+void output_manager_close(void *config) {
+	struct output_manager_config *manager = (struct output_manager_config *) config;
 	struct data_manager_config *aux_config = manager->data_managers, *tmp = NULL;
 
 	/* Stop Output Manager's thread and free input buffer */

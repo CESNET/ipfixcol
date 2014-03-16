@@ -81,13 +81,15 @@ struct ipfix_template_mgr_record *tm_record_create()
  */
 struct ipfix_template_mgr_record *tm_record_lookup(struct ipfix_template_mgr *tm, struct ipfix_template_key *key)
 {
-	int i;
+	struct ipfix_template_mgr_record *tmp_rec;
 	uint64_t table_key = ((uint64_t) key->odid << 32) | key->crc;
-	for (i = 0; i < 20; ++i) {
-		if (tm->tms[i] != NULL && tm->tms[i]->key == table_key) {
-			return tm->tms[i];
+	
+	for (tmp_rec = tm->first; tmp_rec != NULL; tmp_rec = tmp_rec->next) {
+		if (tmp_rec->key == table_key) {
+			return tmp_rec;
 		}
 	}
+	
 	return NULL;
 }
 
@@ -103,20 +105,25 @@ struct ipfix_template_mgr_record *tm_record_lookup_insert(struct ipfix_template_
 {
 	struct ipfix_template_mgr_record *tmr = tm_record_lookup(tm, key);
 
+	/* Template Manager's record not found - create a new one */
 	if (tmr == NULL) {
 		if ((tmr = tm_record_create()) == NULL) {
 			return NULL;
 		}
 		uint64_t table_key = ((uint64_t) key->odid << 32) | key->crc;
 		tmr->key = table_key;
-		int i;
-		for (i = 0; i < 20; ++i) {
-			if (tm->tms[i] == NULL) {
-				tm->tms[i] = tmr;
-				return tmr;
-			}
+		tmr->next = NULL;
+		
+		/* Insert new record at the end of list */
+		if (tm->first == NULL) {
+			tm->first = tmr;
+		} else {
+			tm->last->next = tmr;
 		}
+		
+		tm->last = tmr;
 	}
+	
 	return tmr;
 }
 
@@ -491,8 +498,9 @@ struct ipfix_template_mgr *tm_create() {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 	}
 
-	/* TODO: add counter etc. as in template_mgr_record!!! */
-	tm->tms = calloc(20, sizeof(struct ipfix_template_mgr_record *));
+	/* Allocate space for Template Manager's records */
+	tm->first = NULL;
+	tm->last = NULL;
 	return tm;
 }
 
@@ -503,8 +511,19 @@ struct ipfix_template_mgr *tm_create() {
  */
 void tm_destroy(struct ipfix_template_mgr *tm)
 {
-	/* TODO !!! */
-	(void) tm;
+	if (tm == NULL) {
+		return;
+	}
+	struct ipfix_template_mgr_record *tmp_rec = tm->first;
+	
+	while (tmp_rec) {
+		tmp_rec = tmp_rec->next;
+		tm_record_destroy(tm->first);
+		tm->first = tmp_rec;
+	}
+	
+	free(tm);
+	tm = NULL;
 }
 
 

@@ -634,9 +634,7 @@ cleanup:
 
 	/* Close whole Output Manager (including Data Managers) */
 	if (output_manager_config) {
-		if (output_manager_close(output_manager_config) != 0) {
-			MSG_ERROR(msg_module, "[%d] Closing Output Managers' Manager failed.", proc_id);
-		}
+		output_manager_close(output_manager_config);
 	}
 
 	while (storage_plugins) { /* while is just for sure, it should be always one */
