@@ -51,9 +51,10 @@ static char *msg_module = "dummy Intermediate Process";
 struct dummy_ip_config {
 	char *params;
 	void *ip_config;
+	uint32_t ip_id;
 };
 
-int intermediate_plugin_init(char *params, void *ip_config, void **config)
+int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, void **config)
 {
 	struct dummy_ip_config *conf;
 
@@ -65,6 +66,7 @@ int intermediate_plugin_init(char *params, void *ip_config, void **config)
 
 	conf->params = params;
 	conf->ip_config = ip_config;
+	conf->ip_id = ip_id;
 
 	*config = conf;
 

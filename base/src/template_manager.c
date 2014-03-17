@@ -664,3 +664,37 @@ int template_contains_field(struct ipfix_template *templ, uint16_t field)
 	/* this template doesn't contain specified field */
 	return -1;
 }
+
+
+/**
+ * \brief Make ipfix_template_key from ODID, crc and template id
+ * 
+ * @param odid Observation Domain ID
+ * @param crc  CRC from source IP and source port
+ * @param tid  Template ID
+ * @return pointer to ipfix_template_key
+ */
+struct ipfix_template_key *tm_key_create(uint32_t odid, uint32_t crc, uint32_t tid)
+{
+	struct ipfix_template_key *key = malloc(sizeof(struct ipfix_template_key));
+	if (key == NULL) {
+		return NULL;
+	}
+	
+	key->crc = crc;
+	key->odid = odid;
+	key->tid = tid;
+	
+	return key;
+}
+
+/**
+ * \brief Destroy ipfix_template_key structure
+ * 
+ * @param key IPFIX template key
+ */
+void tm_key_destroy(struct ipfix_template_key *key)
+{
+	free(key);
+	key = NULL;
+}

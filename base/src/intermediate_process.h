@@ -59,11 +59,12 @@
  * \param[in] out_queue output queue
  * \param[in] intermediate intermediate plugin structure
  * \param[in] xmldata XML configuration for this plugin
+ * \param[in] ip_id source ID for creating templates
  * \param[out] config configuration structure
  * \return 0 on success, negative value otherwise
  */
 int ip_init(struct ring_buffer *in_queue, struct ring_buffer *out_queue,
-		struct intermediate *intermediate, char *xmldata, void **config);
+		struct intermediate *intermediate, char *xmldata, uint32_t ip_id, void **config);
 
 
 /**

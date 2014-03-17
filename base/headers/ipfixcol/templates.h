@@ -256,6 +256,23 @@ void tm_template_reference_dec(struct ipfix_template *templ);
  */
 void tm_destroy(struct ipfix_template_mgr *tm);
 
+/**
+ * \brief Make ipfix_template_key from ODID, crc and template id
+ * 
+ * @param odid Observation Domain ID
+ * @param crc  CRC from source IP and source port
+ * @param tid  Template ID
+ * @return pointer to ipfix_template_key
+ */
+struct ipfix_template_key *tm_key_create(uint32_t odid, uint32_t crc, uint32_t tid);
+
+/**
+ * \brief Destroy ipfix_template_key structure
+ * 
+ * @param key IPFIX template key
+ */
+void tm_key_destroy(struct ipfix_template_key *key);
+
 
 #endif /* IPFIXCOL_TEMPLATES_H_ */
 

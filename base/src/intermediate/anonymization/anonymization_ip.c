@@ -118,6 +118,7 @@ struct anonymization_ip_config {
 	char *params;         /* XML configuration */
 	void *ip_config;      /* config structure for Intermediate Process */
 	uint8_t type;         /* anonymization type */
+	uint32_t ip_id;       /* Intermediate plugin source ID into template manager */
 };
 
 
@@ -152,10 +153,11 @@ static void truncate_IPv6Address(uint8_t *data)
  *
  * \param[in] params configuration xml for the plugin
  * \param[in] ip_config configuration structure of corresponding intermediate process
+ * \param[in] ip_id source ID into template manager for creating templates
  * \param[out] config configuration structure
  * \return 0 on success, negative value otherwise
  */
-int intermediate_plugin_init(char *params, void *ip_config, void **config)
+int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, void **config)
 {
 	struct anonymization_ip_config *conf;
 	int retval;
@@ -229,6 +231,7 @@ int intermediate_plugin_init(char *params, void *ip_config, void **config)
 
 	conf->params = params;
 	conf->ip_config = ip_config;
+	conf->ip_id = ip_id;
 
 	xmlFreeDoc(doc);
 

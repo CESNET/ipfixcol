@@ -141,6 +141,7 @@ int main (int argc, char* argv[])
 	struct ring_buffer *in_queue = NULL, *out_queue = NULL, *aux_queue = NULL, *preprocessor_output_queue = NULL;
 	void *output_manager_config = NULL;
 	uint8_t core_initialized = 0;
+	uint32_t ip_id = 0;
 
 	xmlXPathObjectPtr collectors;
 	xmlNodePtr collector_node;
@@ -538,7 +539,11 @@ int main (int argc, char* argv[])
 			ip_init(in_queue, out_queue,
 					&(aux_intermediate_list->intermediate),
 					(char *) ip_params,
+					ip_id,
 					&(aux_intermediate_list->intermediate.ip_config));
+			
+			/* Increment source ID for next Intermediate Process */
+			ip_id++;
 
 			/* output queue of one Intermediate Process is an input queue of another */
 			aux_queue = out_queue;

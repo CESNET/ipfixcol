@@ -75,6 +75,7 @@ struct joinflows_ip_config {
 	uint8_t odid_counter;
 	struct source sources[128];
 	uint32_t sequence_number;
+	uint32_t ip_id;
 };
 
 static void joinflows_copy_fields(uint8_t *to, uint8_t *from, uint16_t length)
@@ -349,7 +350,7 @@ static int joinflows_process_message(struct ipfix_template_mgr *tm, struct sourc
 }
 
 
-int intermediate_plugin_init(char *params, void *ip_config, void **config)
+int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, void **config)
 {
 	struct joinflows_ip_config *conf;
 	int retval;
@@ -366,6 +367,7 @@ int intermediate_plugin_init(char *params, void *ip_config, void **config)
 
 	conf->params = params;
 	conf->ip_config = ip_config;
+	conf->ip_id = ip_id;
 
     /* parse params */
     xmlDoc *doc = NULL;
