@@ -389,6 +389,11 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 {
 	struct ipfix_message* msg;
 
+	if (packet == NULL) {
+		MSG_NOTICE(msg_module, "Received empty message");
+		return;
+	}
+
 	if (input_info == NULL || storage_plugins == NULL) {
 		MSG_WARNING(msg_module, "Invalid parameters in function preprocessor_parse_msg().");
 		return;
