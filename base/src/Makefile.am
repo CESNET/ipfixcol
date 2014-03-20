@@ -15,6 +15,8 @@ AM_CFLAGS = -rdynamic -g
 ipfixcol_SOURCES = \
 	config.c \
 	config.h \
+	crc.c \
+	crc.h \
 	data_manager.c \
 	data_manager.h \
 	intermediate_process.c \

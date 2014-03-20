@@ -46,6 +46,7 @@
 #include "data_manager.h"
 #include "queues.h"
 #include "ipfixcol.h"
+#include "crc.h"
 
 /** Identifier to MSG_* macros */
 static char *msg_module = "preprocessor";
@@ -67,12 +68,12 @@ static struct ipfix_template_mgr *tm = NULL;
 
 
 /**
- * \brief Preprocessor has only one output queue. This function sets the queue for preprocessor.
+ * \brief This function sets the queue for preprocessor and inits crc computing.
  *
  * @param out_queue preprocessor's output queue
  * @return 0 on success, negative value otherwise
  */
-int set_preprocessor_output_queue(struct ring_buffer *out_queue)
+int preprocessor_init(struct ring_buffer *out_queue)
 {
 	if (preprocessor_out_queue) {
 		MSG_WARNING(msg_module, "Redefining preprocessor's output queue.");
@@ -80,6 +81,7 @@ int set_preprocessor_output_queue(struct ring_buffer *out_queue)
 
 	preprocessor_out_queue = out_queue;
 
+	crcInit();
 	return 0;
 }
 
@@ -101,9 +103,19 @@ struct ring_buffer *get_preprocessor_output_queue()
  */
 uint32_t preprocessor_compute_crc(struct input_info_network *input_info)
 {
-	/* TODO */
-	(void) input_info;
-	return 0;
+	uint8_t buff[145];
+	uint8_t size;
+	if (input_info->l3_proto == 4) { /* IPv4 */
+		memcpy(buff, &(input_info->src_addr.ipv4.s_addr), 32);
+		size = 48;
+	} else { /* IPv6 */
+		memcpy(buff, &(input_info->src_addr.ipv6), 128);
+		size = 128;
+	}
+	memcpy(buff + size - 16, &(input_info->src_port), 16);
+	buff[size] = '\0';
+
+	return crcFast(buff, size);
 }
 /**
  * \brief Fill in udp_info structure when managing UDP input
@@ -255,6 +267,8 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 	
 	key.odid = ntohl(msg->pkt_header->observation_domain_id);
 	key.crc = preprocessor_compute_crc((struct input_info_network *) msg->input_info);
+
+	MSG_NOTICE("CRC = ", "%d", key.crc);
 
 	preprocessor_udp_init((struct input_info_network *) msg->input_info, &udp_conf);
 

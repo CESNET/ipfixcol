@@ -560,7 +560,7 @@ int main (int argc, char* argv[])
 		goto cleanup;
 	}
 
-	set_preprocessor_output_queue(preprocessor_output_queue);
+	preprocessor_init(preprocessor_output_queue);
 
 
 	/* main loop */

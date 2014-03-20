@@ -62,12 +62,12 @@
 void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins);
 
 /**
- * \brief Preprocessor has only one output queue. This function sets the queue for preprocessor.
+ * \brief This function sets the queue for preprocessor and inits crc computing.
  *
  * @param out_queue preprocessor's output queue
  * @return 0 on success, negative value otherwise
  */
-int set_preprocessor_output_queue(struct ring_buffer *out_queue);
+int preprocessor_init(struct ring_buffer *out_queue);
 
 
 /**
