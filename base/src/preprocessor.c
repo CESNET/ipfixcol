@@ -66,6 +66,7 @@ struct udp_conf {
 
 static struct ring_buffer *preprocessor_out_queue = NULL;
 static struct ipfix_template_mgr *tm = NULL;
+static int sequence_number = 0;
 
 
 /**
@@ -399,7 +400,16 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		return;
 	}
 
-    preprocessor_process_templates(tm, msg);
+	/* Check sequence number */
+	if (sequence_number != ntohl(msg->pkt_header->sequence_number)) {
+		if (!skip_seq_err) {
+			MSG_WARNING(msg_module, "Sequence number does not match: expected %u, got %u", sequence_number, ntohl(msg->pkt_header->sequence_number));
+		}
+		sequence_number = ntohl(msg->pkt_header->sequence_number);
+	}
+
+	/* Process templates */
+    sequence_number += preprocessor_process_templates(tm, msg);
 
     /* Send data to the first intermediate plugin */
 	if (rbuffer_write(preprocessor_out_queue, msg, 1) != 0) {
@@ -410,5 +420,12 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 
 void preprocessor_close()
 {
+	/* Free allocated space for Template Manager */
+	if (tm) {
+		tm_destroy(tm);
+		tm = NULL;
+	}
+
+	/* output queue will be closed by intermediate process or output manager */
 	return;
 }
