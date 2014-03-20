@@ -173,6 +173,16 @@ struct ipfix_template *tm_create_template(void *tmp, int max_len, int type);
 struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm,
                                           void *tmp, int max_len, int type, struct ipfix_template_key *key);
 
+
+/**
+ * \brief Insert existing template into Template Manager
+ *
+ * \param[in] tm Template Manager
+ * \param[in] tmpl Existing IPFIX Template
+ * \param[in] key Unique identifier of template in Template Manager
+ */
+struct ipfix_template *tm_insert_template(struct ipfix_template_mgr *tm, struct ipfix_template *tmpl, struct ipfix_template_key *key);
+
 /**
  * \brief Function for updating an existing templates.
  *
@@ -265,6 +275,15 @@ void tm_destroy(struct ipfix_template_mgr *tm);
  * @return pointer to ipfix_template_key
  */
 struct ipfix_template_key *tm_key_create(uint32_t odid, uint32_t crc, uint32_t tid);
+
+/**
+ * \brief Change Template ID in template_key
+ *
+ * @param key Template identifier in Template Manager
+ * @param tid New Template ID
+ * @return pointer to changed ipfix_template_key
+ */
+struct ipfix_template_key *tm_key_change_template_id(struct ipfix_template_key *key, uint32_t tid);
 
 /**
  * \brief Destroy ipfix_template_key structure

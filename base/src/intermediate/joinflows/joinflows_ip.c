@@ -42,6 +42,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+//#include <glib.h>
 
 #include <ipfixcol.h>
 #include "../../intermediate_process.h"
@@ -50,11 +51,53 @@
 
 static char *msg_module = "joinflows IP";
 
-
 struct mapping {
 	uint16_t orig;
 	uint16_t new;
+	struct mapping *next;
 };
+
+
+uint16_t *mapping_lookup(struct mapping *map, uint16_t orig)
+{
+	if (map == NULL) {
+		return NULL;
+	}
+	struct mapping *aux_map = map;
+	while (aux_map) {
+		if (aux_map->orig == orig) {
+			return &(aux_map->new);
+		}
+		aux_map = aux_map->next;
+	}
+	return NULL;
+}
+
+struct mapping *mapping_insert(struct mapping *map, uint16_t orig, uint16_t new)
+{
+	struct mapping *new_map = malloc(sizeof(struct mapping));
+	if (new_map == NULL) {
+		return NULL;
+	}
+	new_map->orig = orig;
+	new_map->new = new;
+
+	new_map->next = map;
+	map = new_map;
+
+	return new_map;
+}
+
+void mapping_destroy(struct mapping *map)
+{
+	struct mapping *aux_map = map;
+
+	while (aux_map) {
+		map = aux_map->next;
+		free(aux_map);
+		aux_map = map;
+	}
+}
 
 struct source {
 	uint32_t orig_odid;
@@ -62,7 +105,7 @@ struct source {
 	uint16_t first_template_id;
 	uint16_t next_template_id;
 	struct ipfix_template_mgr *tm;
-	GHashTable *tmapping;           /* mapping of the templates */
+	struct mapping *tmapping;           /* mapping of the templates */
 };
 
 /* plugin's configuration structure */
@@ -111,7 +154,7 @@ static uint16_t joinflows_template_length(struct ipfix_template_record *template
 	uint32_t data_record_length = 0;
 	uint16_t tmp_data_length;
 	uint16_t orig_id;
-	int *res = NULL;
+	uint16_t *res = NULL;
 
 	tmpl_length = sizeof(struct ipfix_template) - sizeof(template_ie);
 
@@ -125,7 +168,7 @@ static uint16_t joinflows_template_length(struct ipfix_template_record *template
 
 	orig_id = ntohs(template->template_id);
 
-	res = g_hash_table_lookup(source->tmapping, (gpointer) &orig_id);
+	res = mapping_lookup(source->tmapping, orig_id);
 	if (!res) {
 		/* get new unique Template ID */
 		template->template_id = htons(source->next_template_id);
@@ -133,12 +176,12 @@ static uint16_t joinflows_template_length(struct ipfix_template_record *template
 		MSG_DEBUG(msg_module, "Template ID %hu is now %hu", orig_id, ntohs(template->template_id));
 
 		/* remember this mapping */
-		int *store_orig = (int *) malloc(sizeof(int));
-		int *store_new = (int *) malloc(sizeof(int));
-
-		*store_orig = (int) orig_id;
-		*store_new = (int) ntohs(template->template_id);
-		g_hash_table_insert(source->tmapping, (gpointer) store_orig, (gpointer) store_new);
+//		int *store_orig = (int *) malloc(sizeof(int));
+//		int *store_new = (int *) malloc(sizeof(int));
+//
+//		*store_orig = (int) orig_id;
+//		*store_new = (int) ntohs(template->template_id);
+		mapping_insert(source->tmapping, orig_id, ntohs(template->template_id));
 	} else {
 		/* we already have mapped this template ID */
 		MSG_DEBUG(msg_module, "Template ID %hu is already mapped to %hu", orig_id, (uint16_t) (*res));
@@ -215,7 +258,7 @@ static int joinflows_fill_template(struct ipfix_template *template, void *templa
 }
 
 
-static struct ipfix_template *joinflows_add_template(struct ipfix_template_mgr *tm, void *template, int max_len, int type, struct source *source)
+static struct ipfix_template *joinflows_add_template(struct ipfix_template_mgr *tm, void *template, int max_len, int type, struct source *source, uint32_t ip_id)
 {
 	struct ipfix_template *new_tmpl = NULL;
 	uint32_t data_length = 0;
@@ -238,20 +281,26 @@ static struct ipfix_template *joinflows_add_template(struct ipfix_template_mgr *
 		free(new_tmpl);
 		return NULL;
 	}
+//	g_hash_table_insert(tm->templates, (gpointer) &(new_tmpl->template_id), new_tmpl);
 
-	g_hash_table_insert(tm->templates, (gpointer) &(new_tmpl->template_id), new_tmpl);
+	struct ipfix_template_key *key = tm_key_create(source->orig_odid, ip_id, ntohs(((struct ipfix_template_record *) template)->template_id));
+	new_tmpl = tm_insert_template(tm, template, key);
 
 	return new_tmpl;
 }
 
 
-static int joinflows_process_one_template(struct ipfix_template_mgr *tm, void *tmpl, int max_len, int type, uint32_t msg_counter, struct input_info *input_info, struct source *source)
+static int joinflows_process_one_template(struct ipfix_template_mgr *tm, void *tmpl, int max_len, int type, uint32_t msg_counter,
+		struct input_info *input_info, struct source *source, uint32_t ip_id)
 {
 	struct ipfix_template_record *template_record;
 	struct ipfix_template *template;
 	int ret;
 
 	template_record = (struct ipfix_template_record*) tmpl;
+
+	/* TODO: orig_id or new_id? */
+	struct ipfix_template_key *key = tm_key_create(source->orig_odid, ip_id, ntohs(template_record->template_id));
 
 	/* check for withdraw all templates message */
 	/* these templates are no longer used (checked in data_manager_withdraw_templates()) */
@@ -266,7 +315,7 @@ static int joinflows_process_one_template(struct ipfix_template_mgr *tm, void *t
 		return TM_TEMPLATE_WITHDRAW_LEN;
 		/* check for withdraw template message */
 	} else if (ntohs(template_record->count) == 0) {
-		ret = tm_remove_template(tm, ntohs(template_record->template_id));
+		ret = tm_remove_template(tm, key);
 		/* Log error when removing unknown template */
 		if (ret == 1) {
 			MSG_WARNING(msg_module, "%s withdraw message received for unknown Template ID: %u",
@@ -274,20 +323,20 @@ static int joinflows_process_one_template(struct ipfix_template_mgr *tm, void *t
 		}
 		return TM_TEMPLATE_WITHDRAW_LEN;
 		/* check whether template exists */
-	} else if ((template = tm_get_template(tm, ntohs(template_record->template_id))) == NULL) {
+	} else if ((template = tm_get_template(tm, key)) == NULL) {
 		/* add template */
 		/* check that the template has valid ID ( < 256 ) */
 		if (ntohs(template_record->template_id) < 256) {
 			MSG_WARNING(msg_module, "%s ID %i is reserved and not valid for data set!", (type==TM_TEMPLATE)?"Template":"Options template", ntohs(template_record->template_id));
 		} else {
 			//MSG_NOTICE(msg_module, "New %s ID %i", (type==TM_TEMPLATE)?"template":"options template", ntohs(template_record->template_id));
-			template = joinflows_add_template(tm, tmpl, max_len, type, source);
+			template = joinflows_add_template(tm, tmpl, max_len, type, source, ip_id);
 		}
 	} else {
 		/* template already exists */
 		MSG_WARNING(msg_module, "%s ID %i already exists. Rewriting.",
 				(type==TM_TEMPLATE)?"Template":"Options template", template->template_id);
-		template = tm_update_template(tm, tmpl, type);
+		template = tm_update_template(tm, tmpl, max_len, type, key);
 	}
 	if (template == NULL) {
 		MSG_WARNING(msg_module, "Cannot parse %s set, skipping to next set",
@@ -310,7 +359,7 @@ static int joinflows_process_one_template(struct ipfix_template_mgr *tm, void *t
 }
 
 
-static int joinflows_process_message(struct ipfix_template_mgr *tm, struct source *source, struct ipfix_message *message)
+static int joinflows_process_message(struct ipfix_template_mgr *tm, struct source *source, struct ipfix_message *message, uint32_t ip_id)
 {
 	uint32_t message_counter = 0;
 	uint8_t *ptr;
@@ -323,7 +372,7 @@ static int joinflows_process_message(struct ipfix_template_mgr *tm, struct sourc
 		ptr = (uint8_t*) &message->templ_set[i]->first_record;
 		while (ptr < (uint8_t*) message->templ_set[i] + ntohs(message->templ_set[i]->header.length)) {
 			max_len = ((uint8_t *) message->templ_set[i] + ntohs(message->templ_set[i]->header.length)) - ptr;
-			ret = joinflows_process_one_template(tm, ptr, max_len, TM_TEMPLATE, message_counter, message->input_info, source);
+			ret = joinflows_process_one_template(tm, ptr, max_len, TM_TEMPLATE, message_counter, message->input_info, source, ip_id);
 			if (ret == 0) {
 				break;
 			} else {
@@ -337,7 +386,7 @@ static int joinflows_process_message(struct ipfix_template_mgr *tm, struct sourc
 		ptr = (uint8_t*) &message->opt_templ_set[i]->first_record;
 		max_len = ((uint8_t *) message->opt_templ_set[i] + ntohs(message->opt_templ_set[i]->header.length)) - ptr;
 		while (ptr < (uint8_t*) message->opt_templ_set[i] + ntohs(message->opt_templ_set[i]->header.length)) {
-			ret = joinflows_process_one_template(tm, ptr, max_len, TM_OPTIONS_TEMPLATE, message_counter, message->input_info, source);
+			ret = joinflows_process_one_template(tm, ptr, max_len, TM_OPTIONS_TEMPLATE, message_counter, message->input_info, source, ip_id);
 			if (ret == 0) {
 				break;
 			} else {
@@ -354,7 +403,7 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, void
 {
 	struct joinflows_ip_config *conf;
 	int retval;
-	uint16_t interval;
+	uint32_t interval;
     int i;
 
 
@@ -415,14 +464,17 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, void
         }
     }
 
-
-    interval = 65536 / conf->odid_counter;
+    if (conf->odid_counter == 0) {
+    	interval = 65536;
+    } else {
+    	interval = 65536 / conf->odid_counter;
+    }
 
     if ((conf->odid_counter > 0) && conf->odid_new_set) {
         for (i = 0; i < conf->odid_counter; i++) {
         	conf->sources[i].tm = tm_create();
-        	conf->sources[i].tm->odid = conf->odid_inter[i];
-        	conf->sources[i].tmapping = g_hash_table_new(g_int_hash, g_int_equal);
+//        	conf->sources[i].tm->odid = conf->odid_inter[i];
+        	conf->sources[i].tmapping = NULL;
         	conf->sources[i].first_template_id = interval * i + 256;
         	conf->sources[i].next_template_id = conf->sources[i].first_template_id;
         }
@@ -463,12 +515,12 @@ int process_message(void *config, void *message)
 			msg->pkt_header->sequence_number = htonl(conf->sequence_number);
 			conf->sequence_number += 1;
 
-			joinflows_process_message(conf->sources[i].tm, &(conf->sources[i]), msg);
+			joinflows_process_message(conf->sources[i].tm, &(conf->sources[i]), msg, conf->ip_id);
 
 			for (c=0; msg->data_couple[c].data_set != NULL && c<1023; c++) {
 				uint16_t orig_id = ntohs(msg->data_couple[c].data_set->header.flowset_id);
-				int *ret = NULL;
-				ret = g_hash_table_lookup(conf->sources[i].tmapping, (gpointer) &orig_id);
+				uint16_t *ret = NULL;
+				ret = mapping_lookup(conf->sources[i].tmapping, orig_id);
 
 				if (ret) {
 					/* we have mapped template ID */
@@ -476,9 +528,9 @@ int process_message(void *config, void *message)
 				}
 			}
 
-			message_set_templates(msg, conf->sources[i].tm);
+			message_set_templates(msg, conf->sources[i].tm, conf->ip_id);
 
-			msg->template_manager = conf->sources[i].tm;
+//			msg->template_manager = conf->sources[i].tm;
 		}
 	}
 
@@ -496,30 +548,30 @@ int intermediate_plugin_close(void *config)
 	conf = (struct joinflows_ip_config *) config;
 
 	for (i = 0; i < conf->odid_counter; i++) {
-		GList *keys;
-		GList *aux_keys;
-		GList *values;
-		GList *aux_values;
+//		GList *keys;
+//		GList *aux_keys;
+//		GList *values;
+//		GList *aux_values;
 
 		/* dispose mapping of the template IDs */
-		keys = g_hash_table_get_keys(conf->sources->tmapping);
+//		keys = g_hash_table_get_keys(conf->sources->tmapping);
 
-		aux_keys = keys;
-		while (keys) {
-			free(keys->data);
-			keys = keys->next;
-		}
-		g_list_free(aux_keys);
+//		aux_keys = keys;
+//		while (keys) {
+//			free(keys->data);
+//			keys = keys->next;
+//		}
+//		g_list_free(aux_keys);
 
-		values = g_hash_table_get_values(conf->sources->tmapping);
-		aux_values = values;
-		while (values) {
-			free(values->data);
-			values = values->next;
-		}
-		g_list_free(aux_values);
+//		values = g_hash_table_get_values(conf->sources->tmapping);
+//		aux_values = values;
+//		while (values) {
+//			free(values->data);
+//			values = values->next;
+//		}
+//		g_list_free(aux_values);
 
-		g_hash_table_destroy(conf->sources->tmapping);
+		mapping_destroy(conf->sources->tmapping);
 
 		/* free template manager */
 		tm_destroy(conf->sources->tm);

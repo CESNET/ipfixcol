@@ -68,7 +68,7 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
  * \param[in] tm template manager with corresponding templates
  * \return 0 on success, negative value otherwise
  */
-int message_set_templates(struct ipfix_message *msg, struct ipfix_template_mgr *tm);
+int message_set_templates(struct ipfix_message *msg, struct ipfix_template_mgr *tm, uint32_t src_id);
 
 
 /**

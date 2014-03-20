@@ -288,25 +288,17 @@ struct ipfix_template *tm_create_template(void *template, int max_len, int type)
 	return new_tmpl;
 }
 
-
 /**
- * \brief Add new template into Template Manager's record
+ * \brief Insert existing template into Template Manager's record
  *
  * \param[in] tmr Template Manager's record
- * \param[in] template ipfix template which will be inserted into tmr
- * \param[in] max_len maximum size of template
- * \param[in] type type of template (template/option template)
- * \return pointer to added template
+ * \param[in] new_tmpl IPFIX Template
+ * \return pointer to inserted template
  */
-struct ipfix_template *tm_record_add_template(struct ipfix_template_mgr_record *tmr, void *template, int max_len, int type)
+struct ipfix_template *tm_record_insert_template(struct ipfix_template_mgr_record *tmr, struct ipfix_template *new_tmpl)
 {
-	struct ipfix_template *new_tmpl = NULL;
 	struct ipfix_template **new_templates = NULL;
 	int i;
-
-	if ((new_tmpl = tm_create_template(template, max_len, type)) == NULL) {
-		return NULL;
-	}
 
 	/* check whether allocated memory is big enough */
 	if (tmr->counter == tmr->max_length) {
@@ -332,6 +324,26 @@ struct ipfix_template *tm_record_add_template(struct ipfix_template_mgr_record *
 	}
 
 	return new_tmpl;
+}
+
+/**
+ * \brief Add new template into Template Manager's record
+ *
+ * \param[in] tmr Template Manager's record
+ * \param[in] template ipfix template which will be inserted into tmr
+ * \param[in] max_len maximum size of template
+ * \param[in] type type of template (template/option template)
+ * \return pointer to added template
+ */
+struct ipfix_template *tm_record_add_template(struct ipfix_template_mgr_record *tmr, void *template, int max_len, int type)
+{
+	struct ipfix_template *new_tmpl = NULL;
+
+	if ((new_tmpl = tm_create_template(template, max_len, type)) == NULL) {
+		return NULL;
+	}
+
+	return tm_record_insert_template(tmr, new_tmpl);
 }
 
 /**
@@ -541,6 +553,19 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 }
 
 /**
+ * \brief Insert existing template into Template Manager
+ */
+struct ipfix_template *tm_insert_template(struct ipfix_template_mgr *tm, struct ipfix_template *tmpl, struct ipfix_template_key *key)
+{
+	struct ipfix_template_mgr_record *tmr = tm_record_lookup_insert(tm, key);
+
+	if (tmr == NULL) {
+		return NULL;
+	}
+	return tm_record_insert_template(tmr, tmpl);
+}
+
+/**
  * \brief Update template in template manager
  */
 struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *template, int max_len, int type, struct ipfix_template_key *key)
@@ -685,6 +710,19 @@ struct ipfix_template_key *tm_key_create(uint32_t odid, uint32_t crc, uint32_t t
 	key->odid = odid;
 	key->tid = tid;
 	
+	return key;
+}
+
+/**
+ * \brief Change Template ID in template_key
+ *
+ * @param key Template identifier in Template Manager
+ * @param tid New Template ID
+ * @return pointer to changed ipfix_template_key
+ */
+struct ipfix_template_key *tm_key_change_template_id(struct ipfix_template_key *key, uint32_t tid)
+{
+	key->tid = tid;
 	return key;
 }
 

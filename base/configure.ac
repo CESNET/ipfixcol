@@ -189,6 +189,7 @@ AC_CONFIG_FILES([Makefile
 				src/storage/dummy/Makefile
 				src/intermediate/anonymization/Makefile
 				src/intermediate/dummy/Makefile
+				src/intermediate/joinflows/Makefile
 				config/Makefile
 				headers/Makefile
 				documentation/doxygen/Makefile
