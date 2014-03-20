@@ -47,6 +47,7 @@
 #include "queues.h"
 #include "ipfixcol.h"
 #include "crc.h"
+#include "ipfix_message.h"
 
 /** Identifier to MSG_* macros */
 static char *msg_module = "preprocessor";
@@ -79,9 +80,19 @@ int preprocessor_init(struct ring_buffer *out_queue)
 		MSG_WARNING(msg_module, "Redefining preprocessor's output queue.");
 	}
 
+	/* Set output queue */
 	preprocessor_out_queue = out_queue;
 
+	/* Create Template Manager */
+	tm = tm_create();
+	if (tm == NULL) {
+		MSG_ERROR(msg_module, "Unable to create Template Manager");
+		return -1;
+	}
+
+	/* Init crc computing unit */
 	crcInit();
+
 	return 0;
 }
 
@@ -268,8 +279,6 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 	key.odid = ntohl(msg->pkt_header->observation_domain_id);
 	key.crc = preprocessor_compute_crc((struct input_info_network *) msg->input_info);
 
-	MSG_NOTICE("CRC = ", "%d", key.crc);
-
 	preprocessor_udp_init((struct input_info_network *) msg->input_info, &udp_conf);
 
 	/* check for new templates */
@@ -384,66 +393,11 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		return;
 	}
 
-	msg = (struct ipfix_message*) calloc (1, sizeof (struct ipfix_message));
-	msg->pkt_header = (struct ipfix_header*) packet;
-	msg->input_info = input_info;
-	MSG_DEBUG(msg_module, "Processing data for Observation domain ID %d.",
-			ntohl(msg->pkt_header->observation_domain_id));
-
-	/* check IPFIX version */
-	if (msg->pkt_header->version != htons(IPFIX_VERSION)) {
-		MSG_WARNING(msg_module, "Unexpected IPFIX version detected (%X), skipping packet.",
-				msg->pkt_header->version);
-		free (msg);
-		free (packet);
+	/* process IPFIX packet and fill up the ipfix_message structure */
+	msg = message_create_from_mem(packet, len, input_info);
+	if (!msg) {
 		return;
 	}
-
-	/* check whether message is not shorter than header says */
-	if ((uint16_t) len < ntohs(msg->pkt_header->length)) {
-		MSG_WARNING(msg_module, "Malformed IPFIX message detected (bad length), skipping packet.");
-		free (msg);
-		free (packet);
-		return;
-	}
-
-	/* process IPFIX packet and fillup the ipfix_message structure */
-    uint8_t *p = packet + IPFIX_HEADER_LENGTH;
-    int t_set_count = 0, ot_set_count = 0, d_set_count = 0;
-    struct ipfix_set_header *set_header;
-    while (p < (uint8_t*) packet + ntohs(msg->pkt_header->length)) {
-        set_header = (struct ipfix_set_header*) p;
-        switch (ntohs(set_header->flowset_id)) {
-            case IPFIX_TEMPLATE_FLOWSET_ID:
-                msg->templ_set[t_set_count++] = (struct ipfix_template_set *) set_header;
-                break;
-            case IPFIX_OPTION_FLOWSET_ID:
-                 msg->opt_templ_set[ot_set_count++] = (struct ipfix_options_template_set *) set_header;
-                break;
-            default:
-                if (ntohs(set_header->flowset_id) < IPFIX_MIN_RECORD_FLOWSET_ID) {
-                	MSG_WARNING(msg_module, "Unknown Set ID %d", ntohs(set_header->flowset_id));
-                } else {
-                    msg->data_couple[d_set_count++].data_set = (struct ipfix_data_set*) set_header;
-                }
-                break;
-        }
-
-        /* if length is wrong and pointer does not move, stop processing the message */
-        if (ntohs(set_header->length) == 0) {
-        	break;
-        }
-
-        p += ntohs(set_header->length);
-    }
-
-    if (!tm) {
-    	tm = tm_create();
-    	if (tm == NULL) {
-    		MSG_ERROR(msg_module, "Unable to create Template Manager");
-    		return;
-    	}
-    }
 
     preprocessor_process_templates(tm, msg);
 

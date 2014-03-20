@@ -560,7 +560,11 @@ int main (int argc, char* argv[])
 		goto cleanup;
 	}
 
-	preprocessor_init(preprocessor_output_queue);
+	retval = preprocessor_init(preprocessor_output_queue);
+	if (retval != 0) {
+		MSG_ERROR(msg_module, "[%d] initiating Preprocessor failed.", proc_id);
+		goto cleanup;
+	}
 
 
 	/* main loop */
