@@ -82,7 +82,6 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
 		MSG_WARNING(msg_module, "Unexpected IPFIX version detected (%X), skipping msg.",
 				message->pkt_header->version);
 		free(message);
-		free(msg);
 		return NULL;
 	}
 
@@ -90,7 +89,6 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
 	if ((uint16_t) len < ntohs(message->pkt_header->length)) {
 		MSG_WARNING(msg_module, "Malformed IPFIX message detected (bad length), skipping msg.");
 		free (message);
-		free (msg);
 		return NULL;
 	}
 

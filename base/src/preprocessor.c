@@ -115,16 +115,16 @@ struct ring_buffer *get_preprocessor_output_queue()
  */
 uint32_t preprocessor_compute_crc(struct input_info_network *input_info)
 {
-	uint8_t buff[145];
+	uint8_t buff[35];
 	uint8_t size;
-	if (input_info->l3_proto == 4) { /* IPv4 */
-		memcpy(buff, &(input_info->src_addr.ipv4.s_addr), 32);
-		size = 48;
+	if (input_info->l3_proto == 6) { /* IPv4 */
+		memcpy(buff, &(input_info->src_addr.ipv6.__in6_u.__u6_addr8), 32);
+		size = 34;
 	} else { /* IPv6 */
-		memcpy(buff, &(input_info->src_addr.ipv6), 128);
-		size = 128;
+		memcpy(buff, &(input_info->src_addr.ipv4.s_addr), 8);		
+		size = 10;
 	}
-	memcpy(buff + size - 16, &(input_info->src_port), 16);
+	memcpy(buff + size - 2, &(input_info->src_port), 2);
 	buff[size] = '\0';
 
 	return crcFast(buff, size);
@@ -384,7 +384,14 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 	return records_count;
 }
 
-
+/**
+ * \brief Parse IPFIX message and send it to intermediate plugin or output managers queue
+ * 
+ * @param packet Received data from input plugins
+ * @param len Packet length
+ * @param input_info Input informations about source etc.
+ * @param storage_plugins List of storage plugins
+ */
 void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins)
 {
 	struct ipfix_message* msg;
@@ -396,12 +403,16 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 
 	if (input_info == NULL || storage_plugins == NULL) {
 		MSG_WARNING(msg_module, "Invalid parameters in function preprocessor_parse_msg().");
+		free(packet);
+		packet = NULL;
 		return;
 	}
 
 	/* process IPFIX packet and fill up the ipfix_message structure */
 	msg = message_create_from_mem(packet, len, input_info);
 	if (!msg) {
+		free(packet);
+		packet = NULL;
 		return;
 	}
 
@@ -419,7 +430,10 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
     /* Send data to the first intermediate plugin */
 	if (rbuffer_write(preprocessor_out_queue, msg, 1) != 0) {
 		MSG_WARNING(msg_module, "Unable to write into Data manager's input queue, skipping data.");
-		free (packet);
+		free(packet);
+		free(msg);
+		packet = NULL;
+		msg = NULL;
 	}
 }
 
