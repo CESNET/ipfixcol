@@ -109,6 +109,8 @@ static void *output_manager_plugin_thread(void* config)
     /* loop will break upon receiving NULL from buffer */
 	while (1) {
 		/* get next data */
+		index = -1;
+		
 		msg = rbuffer_read(conf->in_queue, &index);
 
 		if (!msg) {
@@ -129,6 +131,7 @@ static void *output_manager_plugin_thread(void* config)
 				MSG_WARNING(msg_module, "Unable to create data manager for Observation Domain ID %d, skipping data.",
 						ntohl(msg->pkt_header->observation_domain_id));
 				free (msg);
+				continue;
 			}
 
 		    /* add config to data_mngmts structure */
@@ -137,14 +140,16 @@ static void *output_manager_plugin_thread(void* config)
 	        MSG_NOTICE(msg_module, "Created new Data manager for ODID %i", ntohl(msg->pkt_header->observation_domain_id));
 		}
 
+		/* Write data into Data Manager's input queue */
 		if (rbuffer_write(data_config->in_queue, msg, 1) != 0) {
 			MSG_WARNING(msg_module, "Unable to write into Data manager's input queue, skipping data.");
+			rbuffer_remove_reference(conf->in_queue, index, 1);
 			free(msg);
+			continue;
 		}
-
+		
+		/* Remove data from queue (without deallocating) */
 		rbuffer_remove_reference(conf->in_queue, index, 0);
-
-		index = (index + 1) % conf->in_queue->size;
 	}
 
 	MSG_NOTICE(msg_module, "Closing Output Manager's thread.");
