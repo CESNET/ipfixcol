@@ -195,13 +195,14 @@ int output_manager_create(struct storage_list *storages, struct ring_buffer *in_
  */
 void output_manager_close(void *config) {
 	struct output_manager_config *manager = (struct output_manager_config *) config;
-	struct data_manager_config *aux_config = manager->data_managers, *tmp = NULL;
+	struct data_manager_config *aux_config = NULL, *tmp = NULL;
 
 	/* Stop Output Manager's thread and free input buffer */
 	rbuffer_write(manager->in_queue, NULL, 1);
 	pthread_join(manager->thread_id, NULL);
 	rbuffer_free(manager->in_queue);
 
+	aux_config = manager->data_managers;
 	/* Close all data managers */
 	while (aux_config) {
 		tmp = aux_config;
