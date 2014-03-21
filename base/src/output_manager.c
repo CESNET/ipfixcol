@@ -131,6 +131,7 @@ static void *output_manager_plugin_thread(void* config)
 				MSG_WARNING(msg_module, "Unable to create data manager for Observation Domain ID %d, skipping data.",
 						ntohl(msg->pkt_header->observation_domain_id));
 				free (msg);
+				rbuffer_remove_reference(conf->in_queue, index, 1);
 				continue;
 			}
 
