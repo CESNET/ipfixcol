@@ -108,23 +108,29 @@ struct ring_buffer *get_preprocessor_output_queue()
 }
 
 /**
- * \brief Compute 32b CRC from source address and source port
+ * \brief Compute 32b CRC from input informations 
  * 
  * @param input_info Input informations
  * @return crc32
  */
-uint32_t preprocessor_compute_crc(struct input_info_network *input_info)
+uint32_t preprocessor_compute_crc(struct input_info *input_info)
 {
+	if (input_info->type == SOURCE_TYPE_IPFIX_FILE) {
+		struct input_info_file *input_file = (struct input_info_file *) input_info;
+		return crcFast((const unsigned char *) input_file->name, strlen(input_file->name));
+	}
+	
+	struct input_info_network *input = (struct input_info_network *) input_info;
 	uint8_t buff[35];
 	uint8_t size;
-	if (input_info->l3_proto == 6) { /* IPv4 */
-		memcpy(buff, &(input_info->src_addr.ipv6.__in6_u.__u6_addr8), 32);
+	if (input->l3_proto == 6) { /* IPv4 */
+		memcpy(buff, &(input->src_addr.ipv6.__in6_u.__u6_addr8), 32);
 		size = 34;
 	} else { /* IPv6 */
-		memcpy(buff, &(input_info->src_addr.ipv4.s_addr), 8);		
+		memcpy(buff, &(input->src_addr.ipv4.s_addr), 8);		
 		size = 10;
 	}
-	memcpy(buff + size - 2, &(input_info->src_port), 2);
+	memcpy(buff + size - 2, &(input->src_port), 2);
 	buff[size] = '\0';
 
 	return crcFast(buff, size);
@@ -278,7 +284,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 	struct ipfix_template_key key;
 	
 	key.odid = ntohl(msg->pkt_header->observation_domain_id);
-	key.crc = preprocessor_compute_crc((struct input_info_network *) msg->input_info);
+	key.crc = preprocessor_compute_crc(msg->input_info);
 
 	preprocessor_udp_init((struct input_info_network *) msg->input_info, &udp_conf);
 
