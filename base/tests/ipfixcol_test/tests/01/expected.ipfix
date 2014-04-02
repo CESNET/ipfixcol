@@ -1,0 +1,430 @@
+--------------------------------------------------------------------------------
+IPFIX Message Header:
+	Version: 10
+	Length: 1396
+	Export Time: 1312183002 (Mon Aug  1 09:16:42 2011)
+	Sequence Number: 0
+	Observation Domain ID: 0
+
+
+Set Header:
+	Set ID: 2 (Template Set)
+	Length: 1060
+Template Record Header:
+	Template ID: 256
+	Field Count: 17
+Fields:
+	IE ID: 10		Field Length: 2
+	IE ID: 14		Field Length: 2
+	IE ID: 152		Field Length: 8
+	IE ID: 153		Field Length: 8
+	IE ID: 1		Field Length: 4
+	IE ID: 2		Field Length: 4
+	IE ID: 23		Field Length: 4
+	IE ID: 24		Field Length: 4
+	IE ID: 4		Field Length: 1
+	IE ID: 8		Field Length: 4
+	IE ID: 12		Field Length: 4
+	IE ID: 7		Field Length: 2
+	IE ID: 11		Field Length: 2
+	IE ID: 6		Field Length: 1
+	IE ID: 58		Field Length: 2
+	IE ID: 16		Field Length: 2
+	IE ID: 17		Field Length: 2
+Template Record Header:
+	Template ID: 257
+	Field Count: 18
+Fields:
+	IE ID: 10		Field Length: 2
+	IE ID: 14		Field Length: 2
+	IE ID: 152		Field Length: 8
+	IE ID: 153		Field Length: 8
+	IE ID: 1		Field Length: 4
+	IE ID: 2		Field Length: 4
+	IE ID: 23		Field Length: 4
+	IE ID: 24		Field Length: 4
+	IE ID: 60		Field Length: 1
+	IE ID: 4		Field Length: 1
+	IE ID: 27		Field Length: 16
+	IE ID: 28		Field Length: 16
+	IE ID: 7		Field Length: 2
+	IE ID: 11		Field Length: 2
+	IE ID: 6		Field Length: 1
+	IE ID: 58		Field Length: 2
+	IE ID: 16		Field Length: 2
+	IE ID: 17		Field Length: 2
+Template Record Header:
+	Template ID: 258
+	Field Count: 16
+Fields:
+	IE ID: 10		Field Length: 2
+	IE ID: 14		Field Length: 2
+	IE ID: 152		Field Length: 8
+	IE ID: 153		Field Length: 8
+	IE ID: 1		Field Length: 4
+	IE ID: 2		Field Length: 4
+	IE ID: 23		Field Length: 4
+	IE ID: 24		Field Length: 4
+	IE ID: 4		Field Length: 1
+	IE ID: 8		Field Length: 4
+	IE ID: 12		Field Length: 4
+	IE ID: 7		Field Length: 2
+	IE ID: 11		Field Length: 2
+	IE ID: 6		Field Length: 1
+	IE ID: 16		Field Length: 2
+	IE ID: 17		Field Length: 2
+Template Record Header:
+	Template ID: 259
+	Field Count: 16
+Fields:
+	IE ID: 10		Field Length: 2
+	IE ID: 14		Field Length: 2
+	IE ID: 152		Field Length: 8
+	IE ID: 153		Field Length: 8
+	IE ID: 1		Field Length: 4
+	IE ID: 2		Field Length: 4
+	IE ID: 23		Field Length: 4
+	IE ID: 24		Field Length: 4
+	IE ID: 4		Field Length: 1
+	IE ID: 8		Field Length: 4
+	IE ID: 12		Field Length: 4
+	IE ID: 7		Field Length: 2
+	IE ID: 11		Field Length: 2
+	IE ID: 58		Field Length: 2
+	IE ID: 16		Field Length: 2
+	IE ID: 17		Field Length: 2
+Template Record Header:
+	Template ID: 260
+	Field Count: 15
+Fields:
+	IE ID: 10		Field Length: 2
+	IE ID: 14		Field Length: 2
+	IE ID: 152		Field Length: 8
+	IE ID: 153		Field Length: 8
+	IE ID: 1		Field Length: 4
+	IE ID: 2		Field Length: 4
+	IE ID: 23		Field Length: 4
+	IE ID: 24		Field Length: 4
+	IE ID: 4		Field Length: 1
+	IE ID: 8		Field Length: 4
+	IE ID: 12		Field Length: 4
+	IE ID: 32		Field Length: 2
+	IE ID: 58		Field Length: 2
+	IE ID: 16		Field Length: 2
+	IE ID: 17		Field Length: 2
+Template Record Header:
+	Template ID: 261
+	Field Count: 17
+Fields:
+	IE ID: 10		Field Length: 2
+	IE ID: 14		Field Length: 2
+	IE ID: 152		Field Length: 8
+	IE ID: 153		Field Length: 8
+	IE ID: 1		Field Length: 4
+	IE ID: 2		Field Length: 4
+	IE ID: 23		Field Length: 4
+	IE ID: 24		Field Length: 4
+	IE ID: 60		Field Length: 1
+	IE ID: 4		Field Length: 1
+	IE ID: 27		Field Length: 16
+	IE ID: 28		Field Length: 16
+	IE ID: 7		Field Length: 2
+	IE ID: 11		Field Length: 2
+	IE ID: 6		Field Length: 1
+	IE ID: 16		Field Length: 2
+	IE ID: 17		Field Length: 2
+Template Record Header:
+	Template ID: 262
+	Field Count: 17
+Fields:
+	IE ID: 10		Field Length: 2
+	IE ID: 14		Field Length: 2
+	IE ID: 152		Field Length: 8
+	IE ID: 153		Field Length: 8
+	IE ID: 1		Field Length: 4
+	IE ID: 2		Field Length: 4
+	IE ID: 23		Field Length: 4
+	IE ID: 24		Field Length: 4
+	IE ID: 60		Field Length: 1
+	IE ID: 4		Field Length: 1
+	IE ID: 27		Field Length: 16
+	IE ID: 28		Field Length: 16
+	IE ID: 7		Field Length: 2
+	IE ID: 11		Field Length: 2
+	IE ID: 58		Field Length: 2
+	IE ID: 16		Field Length: 2
+	IE ID: 17		Field Length: 2
+Template Record Header:
+	Template ID: 263
+	Field Count: 16
+Fields:
+	IE ID: 10		Field Length: 2
+	IE ID: 14		Field Length: 2
+	IE ID: 152		Field Length: 8
+	IE ID: 153		Field Length: 8
+	IE ID: 1		Field Length: 4
+	IE ID: 2		Field Length: 4
+	IE ID: 23		Field Length: 4
+	IE ID: 24		Field Length: 4
+	IE ID: 60		Field Length: 1
+	IE ID: 4		Field Length: 1
+	IE ID: 27		Field Length: 16
+	IE ID: 28		Field Length: 16
+	IE ID: 32		Field Length: 2
+	IE ID: 58		Field Length: 2
+	IE ID: 16		Field Length: 2
+	IE ID: 17		Field Length: 2
+Template Record Header:
+	Template ID: 264
+	Field Count: 15
+Fields:
+	IE ID: 10		Field Length: 2
+	IE ID: 14		Field Length: 2
+	IE ID: 152		Field Length: 8
+	IE ID: 153		Field Length: 8
+	IE ID: 1		Field Length: 4
+	IE ID: 2		Field Length: 4
+	IE ID: 23		Field Length: 4
+	IE ID: 24		Field Length: 4
+	IE ID: 4		Field Length: 1
+	IE ID: 8		Field Length: 4
+	IE ID: 12		Field Length: 4
+	IE ID: 7		Field Length: 2
+	IE ID: 11		Field Length: 2
+	IE ID: 16		Field Length: 2
+	IE ID: 17		Field Length: 2
+Template Record Header:
+	Template ID: 265
+	Field Count: 14
+Fields:
+	IE ID: 10		Field Length: 2
+	IE ID: 14		Field Length: 2
+	IE ID: 152		Field Length: 8
+	IE ID: 153		Field Length: 8
+	IE ID: 1		Field Length: 4
+	IE ID: 2		Field Length: 4
+	IE ID: 23		Field Length: 4
+	IE ID: 24		Field Length: 4
+	IE ID: 4		Field Length: 1
+	IE ID: 8		Field Length: 4
+	IE ID: 12		Field Length: 4
+	IE ID: 32		Field Length: 2
+	IE ID: 16		Field Length: 2
+	IE ID: 17		Field Length: 2
+Template Record Header:
+	Template ID: 266
+	Field Count: 14
+Fields:
+	IE ID: 10		Field Length: 2
+	IE ID: 14		Field Length: 2
+	IE ID: 152		Field Length: 8
+	IE ID: 153		Field Length: 8
+	IE ID: 1		Field Length: 4
+	IE ID: 2		Field Length: 4
+	IE ID: 23		Field Length: 4
+	IE ID: 24		Field Length: 4
+	IE ID: 4		Field Length: 1
+	IE ID: 8		Field Length: 4
+	IE ID: 12		Field Length: 4
+	IE ID: 58		Field Length: 2
+	IE ID: 16		Field Length: 2
+	IE ID: 17		Field Length: 2
+Template Record Header:
+	Template ID: 267
+	Field Count: 16
+Fields:
+	IE ID: 10		Field Length: 2
+	IE ID: 14		Field Length: 2
+	IE ID: 152		Field Length: 8
+	IE ID: 153		Field Length: 8
+	IE ID: 1		Field Length: 4
+	IE ID: 2		Field Length: 4
+	IE ID: 23		Field Length: 4
+	IE ID: 24		Field Length: 4
+	IE ID: 60		Field Length: 1
+	IE ID: 4		Field Length: 1
+	IE ID: 27		Field Length: 16
+	IE ID: 28		Field Length: 16
+	IE ID: 7		Field Length: 2
+	IE ID: 11		Field Length: 2
+	IE ID: 16		Field Length: 2
+	IE ID: 17		Field Length: 2
+Template Record Header:
+	Template ID: 268
+	Field Count: 15
+Fields:
+	IE ID: 10		Field Length: 2
+	IE ID: 14		Field Length: 2
+	IE ID: 152		Field Length: 8
+	IE ID: 153		Field Length: 8
+	IE ID: 1		Field Length: 4
+	IE ID: 2		Field Length: 4
+	IE ID: 23		Field Length: 4
+	IE ID: 24		Field Length: 4
+	IE ID: 60		Field Length: 1
+	IE ID: 4		Field Length: 1
+	IE ID: 27		Field Length: 16
+	IE ID: 28		Field Length: 16
+	IE ID: 32		Field Length: 2
+	IE ID: 16		Field Length: 2
+	IE ID: 17		Field Length: 2
+Template Record Header:
+	Template ID: 269
+	Field Count: 15
+Fields:
+	IE ID: 10		Field Length: 2
+	IE ID: 14		Field Length: 2
+	IE ID: 152		Field Length: 8
+	IE ID: 153		Field Length: 8
+	IE ID: 1		Field Length: 4
+	IE ID: 2		Field Length: 4
+	IE ID: 23		Field Length: 4
+	IE ID: 24		Field Length: 4
+	IE ID: 60		Field Length: 1
+	IE ID: 4		Field Length: 1
+	IE ID: 27		Field Length: 16
+	IE ID: 28		Field Length: 16
+	IE ID: 58		Field Length: 2
+	IE ID: 16		Field Length: 2
+	IE ID: 17		Field Length: 2
+Template Record Header:
+	Template ID: 270
+	Field Count: 13
+Fields:
+	IE ID: 10		Field Length: 2
+	IE ID: 14		Field Length: 2
+	IE ID: 152		Field Length: 8
+	IE ID: 153		Field Length: 8
+	IE ID: 1		Field Length: 4
+	IE ID: 2		Field Length: 4
+	IE ID: 23		Field Length: 4
+	IE ID: 24		Field Length: 4
+	IE ID: 4		Field Length: 1
+	IE ID: 8		Field Length: 4
+	IE ID: 12		Field Length: 4
+	IE ID: 16		Field Length: 2
+	IE ID: 17		Field Length: 2
+Template Record Header:
+	Template ID: 271
+	Field Count: 14
+Fields:
+	IE ID: 10		Field Length: 2
+	IE ID: 14		Field Length: 2
+	IE ID: 152		Field Length: 8
+	IE ID: 153		Field Length: 8
+	IE ID: 1		Field Length: 4
+	IE ID: 2		Field Length: 4
+	IE ID: 23		Field Length: 4
+	IE ID: 24		Field Length: 4
+	IE ID: 60		Field Length: 1
+	IE ID: 4		Field Length: 1
+	IE ID: 27		Field Length: 16
+	IE ID: 28		Field Length: 16
+	IE ID: 16		Field Length: 2
+	IE ID: 17		Field Length: 2
+
+
+Set Header:
+	Set ID: 258 (Data Set)
+	Length: 60
+Data Record (#1):		(network byte order)
+	IE ID: 10		Value: 0x200
+	IE ID: 14		Value: 0xa301
+	IE ID: 152		Value: 0xf88d338431010000
+	IE ID: 153		Value: 0xff8d338431010000
+	IE ID: 1		Value: 0x9d000000
+	IE ID: 2		Value: 0x2000000
+	IE ID: 23		Value: 0x9d000000
+	IE ID: 24		Value: 0x2000000
+	IE ID: 4		Value: 0x6
+	IE ID: 8		Value: 0xec15fb93
+	IE ID: 12		Value: 0x32665658
+	IE ID: 7		Value: 0x37c2
+	IE ID: 11		Value: 0x6614
+	IE ID: 6		Value: 0x18
+	IE ID: 16		Value: 0
+	IE ID: 17		Value: 0x7700
+Padding: 2
+
+
+Set Header:
+	Set ID: 264 (Data Set)
+	Length: 60
+Data Record (#1):		(network byte order)
+	IE ID: 10		Value: 0x200
+	IE ID: 14		Value: 0xa301
+	IE ID: 152		Value: 0xdc8f338431010000
+	IE ID: 153		Value: 0xdc8f338431010000
+	IE ID: 1		Value: 0x45000000
+	IE ID: 2		Value: 0x1000000
+	IE ID: 23		Value: 0x45000000
+	IE ID: 24		Value: 0x1000000
+	IE ID: 4		Value: 0x11
+	IE ID: 8		Value: 0xec15fb93
+	IE ID: 12		Value: 0x2d15fb93
+	IE ID: 7		Value: 0x1edc
+	IE ID: 11		Value: 0x3500
+	IE ID: 16		Value: 0
+	IE ID: 17		Value: 0x7700
+Padding: 3
+
+
+Set Header:
+	Set ID: 270 (Data Set)
+	Length: 200
+Data Record (#1):		(network byte order)
+	IE ID: 10		Value: 0x200
+	IE ID: 14		Value: 0xa301
+	IE ID: 152		Value: 0xdc89338431010000
+	IE ID: 153		Value: 0xdc89338431010000
+	IE ID: 1		Value: 0x20000000
+	IE ID: 2		Value: 0x1000000
+	IE ID: 23		Value: 0x20000000
+	IE ID: 24		Value: 0x1000000
+	IE ID: 4		Value: 0x2
+	IE ID: 8		Value: 0x1c15fb93
+	IE ID: 12		Value: 0x510000e0
+	IE ID: 16		Value: 0
+	IE ID: 17		Value: 0x7700
+Data Record (#2):		(network byte order)
+	IE ID: 10		Value: 0x200
+	IE ID: 14		Value: 0xa301
+	IE ID: 152		Value: 0x590338431010000
+	IE ID: 153		Value: 0x590338431010000
+	IE ID: 1		Value: 0x3a000000
+	IE ID: 2		Value: 0x1000000
+	IE ID: 23		Value: 0x3a000000
+	IE ID: 24		Value: 0x1000000
+	IE ID: 4		Value: 0x67
+	IE ID: 8		Value: 0x115fb93
+	IE ID: 12		Value: 0xd0000e0
+	IE ID: 16		Value: 0
+	IE ID: 17		Value: 0x7700
+Data Record (#3):		(network byte order)
+	IE ID: 10		Value: 0x200
+	IE ID: 14		Value: 0xa301
+	IE ID: 152		Value: 0x268a338431010000
+	IE ID: 153		Value: 0x268a338431010000
+	IE ID: 1		Value: 0x20000000
+	IE ID: 2		Value: 0x1000000
+	IE ID: 23		Value: 0x20000000
+	IE ID: 24		Value: 0x1000000
+	IE ID: 4		Value: 0x2
+	IE ID: 8		Value: 0xfd15fb93
+	IE ID: 12		Value: 0xfb0000e0
+	IE ID: 16		Value: 0
+	IE ID: 17		Value: 0x7700
+Data Record (#4):		(network byte order)
+	IE ID: 10		Value: 0x200
+	IE ID: 14		Value: 0xa301
+	IE ID: 152		Value: 0x4a89338431010000
+	IE ID: 153		Value: 0x4a89338431010000
+	IE ID: 1		Value: 0x20000000
+	IE ID: 2		Value: 0x1000000
+	IE ID: 23		Value: 0x20000000
+	IE ID: 24		Value: 0x1000000
+	IE ID: 4		Value: 0x2
+	IE ID: 8		Value: 0x115fb93
+	IE ID: 12		Value: 0x10000e0
+	IE ID: 16		Value: 0
+	IE ID: 17		Value: 0x7700
