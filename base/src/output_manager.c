@@ -141,8 +141,8 @@ static void *output_manager_plugin_thread(void* config)
 	        MSG_NOTICE(msg_module, "Created new Data manager for ODID %i", ntohl(msg->pkt_header->observation_domain_id));
 		}
 
-		/* Write data into Data Manager's input queue */
-		if (rbuffer_write(data_config->in_queue, msg, 1) != 0) {
+		/* Write data into input queue of Storage Plugins */
+		if (rbuffer_write(data_config->store_queue, msg, data_config->plugins_count) != 0) {
 			MSG_WARNING(msg_module, "Unable to write into Data manager's input queue, skipping data.");
 			rbuffer_remove_reference(conf->in_queue, index, 1);
 			free(msg);

@@ -53,18 +53,6 @@ static char *msg_module = "data manager";
 extern int ring_buffer_size;
 
 /**
- * \brief
- *
- * Structure holding UDP specific template configuration
- */
-struct udp_conf {
-	uint16_t template_life_time;
-	uint16_t template_life_packet;
-	uint16_t options_template_life_time;
-	uint16_t options_template_life_packet;
-};
-
-/**
  * \brief Deallocate Data manager's configuration structure.
  *
  * @param config Configuration structure to destroy.
@@ -90,76 +78,12 @@ static inline void data_manager_free (struct data_manager_config* config)
             free (aux_storage);
 	    }
 
-		if (config->in_queue != NULL) {
-			rbuffer_free(config->in_queue);
-		}
 		if (config->store_queue != NULL) {
 			rbuffer_free(config->store_queue);
 		}
 
-
-		if (config->template_mgr != NULL) {
-			tm_destroy(config->template_mgr);
-		}
 		free (config);
 	}
-}
-
-/**
- * \brief Thread routine for new Data manager (new Observation Domain ID).
- *
- * @param[in] config Data manager configuration (is internally typecasted to
- * struct data_manager_config)
- */
-static void* data_manager_thread (void* cfg)
-{
-	struct data_manager_config *config = (struct data_manager_config*) cfg;
-    struct storage_list *aux_storage = config->storage_plugins;
-	struct ipfix_message *msg;
-	unsigned int index;
-
-	/* set the thread name to reflect the configuration */
-	snprintf(config->thread_name, 16, "ipfixcol DM %d", config->observation_domain_id);
-	prctl(PR_SET_NAME, config->thread_name, 0, 0, 0);
-
-	/* loop will break upon receiving NULL from buffer */
-	while (1) {
-        index = -1;
-
-		/* read new data */
-		msg = rbuffer_read (config->in_queue, &index);
-
-		if (rbuffer_write (config->store_queue, msg, config->plugins_count) != 0) {
-			MSG_WARNING(msg_module, "ODID %d: Unable to pass data into the Storage plugins' queue.",
-					config->observation_domain_id);
-			rbuffer_remove_reference (config->in_queue, index, 1);
-			continue;
-		}
-
-		/*
-		 * data are now in store_queue, so we can remove it from in_queue, but
-		 * we cannot deallocate data - it will be done in store_queue
-		 */
-		rbuffer_remove_reference (config->in_queue, index, 0);
-
-        /* passing NULL message means closing */
-        if (msg == NULL) {
-        	MSG_NOTICE(msg_module, "ODID %d: No more data from IPFIX preprocessor.",
-					config->observation_domain_id);
-			break;
-		}
-	}
-    
-    /* close all storage plugins */
-    while (aux_storage) {
-        pthread_join(aux_storage->storage.thread_config->thread_id, NULL);
-        aux_storage = aux_storage->next;
-    }
-
-	MSG_NOTICE(msg_module, "ODID %d: Closing Data manager's thread.",
-			config->observation_domain_id);
-
-	return (NULL);
 }
 
 static void* storage_plugin_thread (void* cfg)
@@ -208,12 +132,16 @@ static void* storage_plugin_thread (void* cfg)
  */
 void data_manager_close (struct data_manager_config **config)
 {
-    /* close data manager thread - write NULL  */
-    rbuffer_write((*config)->in_queue, NULL, 1);
-    pthread_join((*config)->thread_id, NULL);
+	struct storage_list *aux_storage = (*config)->storage_plugins;
 
-    /* deallocate config structure */
+	/* close all storage plugins */
+	rbuffer_write ((*config)->store_queue, NULL, (*config)->plugins_count);
+	while (aux_storage) {
+		pthread_join(aux_storage->storage.thread_config->thread_id, NULL);
+		aux_storage = aux_storage->next;
+	}
 
+	/* deallocate config structure */
     data_manager_free(*config);
     *config = NULL;
 
@@ -247,13 +175,6 @@ struct data_manager_config* data_manager_create (
 		return (NULL);
 	}
 
-	/* initiate queue to communicate with IPFIX preprocessor */
-	config->in_queue = rbuffer_init(ring_buffer_size);
-	if (config->in_queue == NULL) {
-		MSG_ERROR(msg_module, "Unable to initiate queue for communication with IPFIX preprocessor.");
-		data_manager_free (config);
-		return (NULL);
-	}
 	/* initiate queue to communicate with storage plugins' threads */
 	config->store_queue = rbuffer_init(ring_buffer_size);
 	if (config->store_queue == NULL) {
@@ -265,8 +186,6 @@ struct data_manager_config* data_manager_create (
 	config->observation_domain_id = observation_domain_id;
 	config->storage_plugins = NULL;
 	config->plugins_count = 0;
-//	config->input_info = input_info;
-//	config->template_mgr = tm_create();
 
 	/* check whether there is OID specific plugin for this OID */
 	for (aux_storage = storage_plugins; aux_storage != NULL; aux_storage = aux_storage->next) {
@@ -350,13 +269,6 @@ struct data_manager_config* data_manager_create (
 	/* check if at least one storage plugin initiated */
 	if (config->plugins_count == 0) {
 		MSG_WARNING(msg_module, "No storage plugin for the Data manager initiated.");
-		data_manager_free (config);
-		return (NULL);
-	}
-
-	/* create new thread of data manager */
-	if (pthread_create(&(config->thread_id), NULL, &data_manager_thread, (void*)config) != 0) {
-		MSG_ERROR(msg_module, "Unable to create data manager thread.");
 		data_manager_free (config);
 		return (NULL);
 	}

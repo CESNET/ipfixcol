@@ -57,14 +57,9 @@
  */
 struct data_manager_config {
 	uint32_t observation_domain_id;
-	pthread_t thread_id;
-	char thread_name[16];	/**< Name of the thread for SET_PROCESS_NAME*/
 	unsigned int plugins_count;
-	struct ring_buffer *in_queue;
 	struct ring_buffer *store_queue;
 	struct storage_list* storage_plugins;
-    struct input_info *input_info;
-    struct ipfix_template_mgr *template_mgr;
 	struct data_manager_config *next;
 };
 
