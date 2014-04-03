@@ -103,7 +103,7 @@ med_plugins=($(echo ${aux_med_plugins[@]} | tr ':' '\n' | sort -u ))
 if [ ${#med_plugins} != 0 ]; then
 	create_med_plugins_conf "${med_plugins[@]}";
 	tst_dir=$(echo ${med_plugins[@]} | tr -d ' ');
-	test_dirs=$(ls -1 $PWD/tests/ | grep -e "^${tst_dir}")
+	test_dirs=$(ls -1 $PWD/tests/ | grep -e "^${tst_dir}[0-9]\+$")
 	if [ "${test_dirs}" = "" ]; then
 		echo "No testing data for this combination of plugins found."
 		exit 1;
