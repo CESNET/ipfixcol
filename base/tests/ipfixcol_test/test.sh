@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-IPFIXCOL="ipfixcol -v -1 -c"
+IPFIXCOL="../../src/ipfixcol -v -1 -c"
 
-CONF_FILE="test_conf.xml"
+CONF_FILE="configs/test_conf.xml"
 CONF_MED_PLUGINS=""
 
 EXPECTED="expected.ipfix"
@@ -102,46 +102,43 @@ med_plugins=($(echo ${aux_med_plugins[@]} | tr ':' '\n' | sort -u ))
 
 if [ ${#med_plugins} != 0 ]; then
 	create_med_plugins_conf "${med_plugins[@]}";
+	tst_dir=$(echo ${med_plugins[@]} | tr -d ' ');
+	test_dirs=$(ls -1 $PWD/tests/ | grep -e "^${tst_dir}")
+	if [ "${test_dirs}" = "" ]; then
+		echo "No testing data for this combination of plugins found."
+		exit 1;
+	fi
+else
+	test_dirs=$(ls -1 $PWD/tests/ | grep -e "^[0-9]\+$")
+	if [ "${test_dirs}" = "" ]; then
+		echo "No testing data found!";
+		exit 1;
+	fi
 fi
 
-create_conf "vstup" "vystup"
-
 # do tests
-for test in "$PWD/tests/"*; do
-	create_conf "$test/$INPUT" "$test/$OUTPUT"
-	$IPFIXCOL "$CONF_FILE" > "$test/$OUTPUT"
+for test in "${test_dirs}"; do
+	act_folder="$PWD/tests/$test";
+	create_conf "$act_folder/$INPUT" "$act_folder/$OUTPUT"
+	$IPFIXCOL "$CONF_FILE" > "$act_folder/$OUTPUT"
 done
 
 rm -f test_log
 
-#TODO: choose testing dirs according to used intermediate plugin(s) (IP)
-#		and parsed med_plugins array
-# example structure:
-# without any IP:
-#	tests/01
-#	tests/02
-#	...
-# with dummy IP chosen:
-#	tests/dummy01
-#	tests/dummy02
-#	...
-# with dummy and joinflows plugins:
-#	tests/dummyjoinflows01
-#	tests/dummyjoinflows02
-
 # check results
-for test in "$PWD/tests/"*; do
-	echo -n "Test ${test#$PWD/tests/}: " | tee -a "$LOG_FILE"
-	diff "$test/$OUTPUT" "$test/$EXPECTED" >> "$LOG_FILE" 2>&1
+for test in "${test_dirs}"; do
+	act_folder="$PWD/tests/$test";
+	echo -n "Test ${test}: " | tee -a "$LOG_FILE"
+	diff "$act_folder/$OUTPUT" "$act_folder/$EXPECTED" >> "$LOG_FILE" 2>&1
 	if [ $? = 0 ]; then
 		echo "OK" | tee -a "$LOG_FILE"
 	else
 		echo "FAIL" | tee -a "$LOG_FILE"
 	fi
-	rm -f "$test/$OUTPUT"
+	rm -f "$act_folder/$OUTPUT"
 done
 
-#rm "$CONF_FILE"
+rm "$CONF_FILE"
 
 echo -e "\nTesting done, results saved into file 'test_log'"
 
