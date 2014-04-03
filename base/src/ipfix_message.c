@@ -171,7 +171,6 @@ int message_set_templates(struct ipfix_message *msg, struct ipfix_template_mgr *
 {
 	int ret = 0;
 	int i;
-	struct ipfix_template_mgr *template_mgr = tm;
 	struct ipfix_template *template;
     uint16_t min_data_length;
     uint16_t data_length;
@@ -189,7 +188,7 @@ int message_set_templates(struct ipfix_message *msg, struct ipfix_template_mgr *
 
     for (i=0; msg->data_couple[i].data_set != NULL && i<1023; i++) {
     	tm_key_change_template_id(key, ntohs(msg->data_couple[i].data_set->header.flowset_id));
-		msg->data_couple[i].data_template = tm_get_template(template_mgr, key);
+		msg->data_couple[i].data_template = tm_get_template(tm, key);
 		if (msg->data_couple[i].data_template == NULL) {
 			MSG_WARNING(msg_module, "Template with ID %i not found!", ntohs(msg->data_couple[i].data_set->header.flowset_id));
 		} else {

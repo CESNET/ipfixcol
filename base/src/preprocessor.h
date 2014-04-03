@@ -65,9 +65,10 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
  * \brief This function sets the queue for preprocessor and inits crc computing.
  *
  * @param out_queue preprocessor's output queue
+ * @param template_mgr collector's Template Manager
  * @return 0 on success, negative value otherwise
  */
-int preprocessor_init(struct ring_buffer *out_queue);
+int preprocessor_init(struct ring_buffer *out_queue, struct ipfix_template_mgr *template_mgr);
 
 
 /**

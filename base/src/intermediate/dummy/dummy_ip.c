@@ -52,9 +52,10 @@ struct dummy_ip_config {
 	char *params;
 	void *ip_config;
 	uint32_t ip_id;
+	struct ipfix_template_mgr *tm;
 };
 
-int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, void **config)
+int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config)
 {
 	struct dummy_ip_config *conf;
 
@@ -67,6 +68,7 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, void
 	conf->params = params;
 	conf->ip_config = ip_config;
 	conf->ip_id = ip_id;
+	conf->tm = template_mgr;
 
 	*config = conf;
 

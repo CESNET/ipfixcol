@@ -52,7 +52,7 @@ struct ip_config {
 	struct ring_buffer *in_queue;
 	struct ring_buffer *out_queue;
 	char *xmldata;
-	int (*intermediate_plugin_init)(char *, void *, uint32_t, void **);
+	int (*intermediate_plugin_init)(char *, void *, uint32_t, struct ipfix_template_mgr *, void **);
 	int (*process_message)(void *, void *);
 	int (*intermediate_plugin_close)(void *);
 	void *plugin_config;
@@ -115,7 +115,8 @@ void *ip_loop(void *config)
  * \return 0 on success, negative value otherwise
  */
 int ip_init(struct ring_buffer *in_queue, struct ring_buffer *out_queue, 
-	struct intermediate *intermediate, char *xmldata, uint32_t ip_id, void **config)
+	struct intermediate *intermediate, char *xmldata, uint32_t ip_id,
+	struct ipfix_template_mgr *template_mgr, void **config)
 {
 	struct ip_config *conf;
 	int ret;
@@ -134,7 +135,7 @@ int ip_init(struct ring_buffer *in_queue, struct ring_buffer *out_queue,
 	conf->intermediate_plugin_close = intermediate->intermediate_plugin_close;
 	conf->xmldata = xmldata;
 
-	conf->intermediate_plugin_init(conf->xmldata, conf, ip_id, &(conf->plugin_config));
+	conf->intermediate_plugin_init(conf->xmldata, conf, ip_id, template_mgr, &(conf->plugin_config));
 	if (conf->plugin_config == NULL) {
 		MSG_ERROR(msg_module, "Unable to initialize Intermediate Process");
 		return -1;

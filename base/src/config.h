@@ -124,7 +124,7 @@ struct storage {
 struct intermediate {
 	void *ip_config;		/**< config structure of intermediate process */
 	void *config;           /**< intermediate plugin's config structure */
-	int (*intermediate_plugin_init)(char *, void *, uint32_t, void **);
+	int (*intermediate_plugin_init)(char *, void *, uint32_t, struct ipfix_template_mgr *, void **);
 	int (*process_message)(void *, void *);
 	int (*intermediate_plugin_close)(void *);
 	void *dll_handler;

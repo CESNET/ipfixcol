@@ -139,6 +139,7 @@ int main (int argc, char* argv[])
 	char *packet = NULL;
 	struct input_info* input_info;
 	struct ring_buffer *in_queue = NULL, *out_queue = NULL, *aux_queue = NULL, *preprocessor_output_queue = NULL;
+	struct ipfix_template_mgr *template_mgr = NULL;
 	void *output_manager_config = NULL;
 	uint8_t core_initialized = 0;
 	uint32_t ip_id = 0;
@@ -261,6 +262,17 @@ int main (int argc, char* argv[])
 		}
 		collector_node = collectors->nodesetval->nodeTab[i];
 		break;
+	}
+
+	/*
+	 * create Template Manager
+	 */
+
+	template_mgr = tm_create();
+	if (template_mgr == NULL) {
+		MSG_ERROR(msg_module, "[%d] Unable to create Template Manager", proc_id);
+		retval = EXIT_FAILURE;
+		goto cleanup;
 	}
 
 	/*
@@ -540,6 +552,7 @@ int main (int argc, char* argv[])
 					&(aux_intermediate_list->intermediate),
 					(char *) ip_params,
 					ip_id,
+					template_mgr,
 					&(aux_intermediate_list->intermediate.ip_config));
 			
 			/* Increment source ID for next Intermediate Process */
@@ -560,7 +573,7 @@ int main (int argc, char* argv[])
 		goto cleanup;
 	}
 
-	retval = preprocessor_init(preprocessor_output_queue);
+	retval = preprocessor_init(preprocessor_output_queue, template_mgr);
 	if (retval != 0) {
 		MSG_ERROR(msg_module, "[%d] initiating Preprocessor failed.", proc_id);
 		goto cleanup;
@@ -598,6 +611,12 @@ cleanup:
 	if (collectors) {
 		xmlXPathFreeObject (collectors);
 	}
+
+	/* destroy template manager */
+	if (template_mgr) {
+		tm_destroy(template_mgr);
+	}
+
 	if (input_plugins) {
 		if (input_plugins->config.file) {
 			free (input_plugins->config.file);

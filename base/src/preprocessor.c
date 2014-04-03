@@ -75,7 +75,7 @@ static int sequence_number = 0;
  * @param out_queue preprocessor's output queue
  * @return 0 on success, negative value otherwise
  */
-int preprocessor_init(struct ring_buffer *out_queue)
+int preprocessor_init(struct ring_buffer *out_queue, struct ipfix_template_mgr *template_mgr)
 {
 	if (preprocessor_out_queue) {
 		MSG_WARNING(msg_module, "Redefining preprocessor's output queue.");
@@ -84,15 +84,10 @@ int preprocessor_init(struct ring_buffer *out_queue)
 	/* Set output queue */
 	preprocessor_out_queue = out_queue;
 
-	/* Create Template Manager */
-	tm = tm_create();
-	if (tm == NULL) {
-		MSG_ERROR(msg_module, "Unable to create Template Manager");
-		return -1;
-	}
-
 	/* Init crc computing unit */
 	crcInit();
+
+	tm = template_mgr;
 
 	return 0;
 }
@@ -445,12 +440,6 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 
 void preprocessor_close()
 {
-	/* Free allocated space for Template Manager */
-	if (tm) {
-		tm_destroy(tm);
-		tm = NULL;
-	}
-
 	/* output queue will be closed by intermediate process or output manager */
 	return;
 }
