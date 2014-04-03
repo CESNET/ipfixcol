@@ -1,5 +1,2 @@
 NOTICE: storage plugin thread: No more data from Data manager.
 NOTICE: storage plugin thread: Closing storage plugin's thread.
-NOTICE: data manager: ODID 0: No more data from IPFIX preprocessor.
-NOTICE: data manager: ODID 0: Closing Data manager's thread.
-
