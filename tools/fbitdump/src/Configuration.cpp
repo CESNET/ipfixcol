@@ -182,7 +182,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			break;
 		case 'r': {/* -M help argument */
                 if (optarg == std::string("")) {
-                	throw std::invalid_argument("-r requires a path to open, empty string given");
+					throw std::invalid_argument("-r requires a path to open, empty string given");
                 }
 
                 optionr = optarg;
@@ -213,8 +213,8 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 				throw std::invalid_argument("-p requires a path to open, empty string given");
 			}
 			if (access ( optarg, F_OK ) != 0 ) {
-				throw std::invalid_argument("Cannot access pipe");	
-			}		
+				throw std::invalid_argument("Cannot access pipe");
+			}
 			this->pipe_name = optarg;
 
 			break;
@@ -340,9 +340,6 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	this->searchForTableParts(tables);
 	this->instance = this;
 
-	
-
-
 	return 0;
 }
 
@@ -376,8 +373,7 @@ void Configuration::searchForTableParts(stringVector &tables) throw (std::invali
 		while((dent = readdir(d)) != NULL) {
 			/* construct directory path */
 			std::string tablePath = tables[i] + std::string(dent->d_name);
-			
-			
+
 			if (stat(tablePath.c_str(), &statbuf) == -1) {
 				std::cerr << "Cannot stat " << dent->d_name << std::endl;
 				continue;
@@ -415,7 +411,7 @@ void Configuration::parseFormat(std::string format)
 	regmatch_t matches[1]; /* array of regex matches (we need only one) */
 	bool removeNext = false; /* when removing column, remove the separator after it */
 
-		/* prepare regular expresion */
+	/* prepare regular expresion */
 	regcomp(&reg, "%[a-zA-Z0-9]+", REG_EXTENDED);
 
 	/* go over whole format string */
@@ -452,14 +448,12 @@ void Configuration::parseFormat(std::string format)
 
 				} while (false);
 
-				
 				/* use the column only if everything was ok */
 				if (!ok) {
 					delete col;
 					removeNext = true;
-				}
-				else {
-					if( this->plugins_format.find( col->getSemantics()) != this->plugins_format.end()) {
+				} else {
+					if (this->plugins_format.find( col->getSemantics()) != this->plugins_format.end()) {
 						col->format = this->plugins_format[col->getSemantics()];
 					}
 					this->columns.push_back(col);
@@ -472,10 +466,11 @@ void Configuration::parseFormat(std::string format)
 			std::cerr << "Bad output format string" << std::endl;
 			break;
 		} else if (!removeNext) { /* rest is column separator */
-			col = new Column(format.substr(0, matches[0].rm_so));
+			col = new Column(format);
 			this->columns.push_back(col);
+			/* Nothing more to process */
+			format = "";
 		}
-		
 	}
 	/* free created regular expression */
 	regfree(&reg);
@@ -958,12 +953,12 @@ void Configuration::loadModules()
 		if (access(path.c_str(), X_OK) != 0) {
 			std::cerr << "Cannot access " << path << std::endl;
 		}
-		
+
 		handle = dlopen(path.c_str(), RTLD_LAZY);
 		if (!handle) {
 			std::cerr << dlerror() << std::endl;
 			continue;
-		}		
+		}
 
 		*(void **)(&format) = dlsym( handle, "format" );
 		if( format == NULL ) {
