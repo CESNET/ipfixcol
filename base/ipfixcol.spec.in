@@ -58,6 +58,13 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %{_datadir}/%{name}/plugins/ipfixcol-ipfix-output.*
 %{_datadir}/%{name}/plugins/ipfixcol-dummy-output.*
 %{_mandir}/man1/ipfixcol-dummy-output.1.gz
+#intermediate plugins
+%{_datadir}/%{name}/plugins/ipfixcol-anonymization-inter.la
+%{_datadir}/%{name}/plugins/ipfixcol-anonymization-inter.so
+%{_datadir}/%{name}/plugins/ipfixcol-dummy-inter.la
+%{_datadir}/%{name}/plugins/ipfixcol-dummy-inter.so
+%{_datadir}/%{name}/plugins/ipfixcol-joinflows-inter.la
+%{_datadir}/%{name}/plugins/ipfixcol-joinflows-inter.so
 #ipfixviewer
 %{_datadir}/%{name}/plugins/ipfixcol-ipfixviewer-output.*
 %{_datadir}/%{name}/ipfixviewer_startup.xml
