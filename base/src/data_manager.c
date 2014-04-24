@@ -162,7 +162,7 @@ struct data_manager_config* data_manager_create (
     struct storage_list* storage_plugins)
 {
 	xmlChar *plugin_params;
-	int retval, oid_specific_plugins = 0;
+	int retval, name_len, oid_specific_plugins = 0;
 	struct storage_list* aux_storage;
 	struct storage_list *aux_storage_list;
 	struct data_manager_config *config;
@@ -249,6 +249,8 @@ struct data_manager_config* data_manager_create (
 		plugin_cfg->queue = config->store_queue;
 //		plugin_cfg->template_mgr = config->template_mgr;
 		aux_storage->storage.thread_config = plugin_cfg;
+		name_len = strlen(aux_storage->storage.thread_name);
+		snprintf(aux_storage->storage.thread_name + name_len, 16 - name_len, " %d", observation_domain_id);
 		if (pthread_create(&(plugin_cfg->thread_id), NULL, &storage_plugin_thread, (void*) &aux_storage->storage) != 0) {
 			MSG_ERROR(msg_module, "Unable to create storage plugin thread.");
 			aux_storage->storage.close (&(aux_storage->storage.config));
