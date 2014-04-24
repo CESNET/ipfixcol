@@ -103,7 +103,7 @@ static void *output_manager_plugin_thread(void* config)
 	index = conf->in_queue->read_offset;
 
 	/* set the thread name to reflect the configuration */
-	prctl(PR_SET_NAME, "om", 0, 0, 0);      /* output managers' manager */
+	prctl(PR_SET_NAME, "ipfixcol OM", 0, 0, 0);      /* output managers' manager */
 
 
     /* loop will break upon receiving NULL from buffer */
