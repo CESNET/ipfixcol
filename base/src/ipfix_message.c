@@ -66,7 +66,7 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
 {
 	struct ipfix_message *message;
 
-	message = (struct ipfix_message*) calloc (1, sizeof(*message));
+	message = (struct ipfix_message*) calloc (1, sizeof(struct ipfix_message));
 	if (!message) {
 		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
 		return NULL;

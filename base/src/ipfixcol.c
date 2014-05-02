@@ -612,11 +612,6 @@ cleanup:
 		xmlXPathFreeObject (collectors);
 	}
 
-	/* destroy template manager */
-	if (template_mgr) {
-		tm_destroy(template_mgr);
-	}
-
 	if (input_plugins) {
 		if (input_plugins->config.file) {
 			free (input_plugins->config.file);
@@ -629,7 +624,6 @@ cleanup:
 	if (xml_config) {
 		xmlFreeDoc (xml_config);
 	}
-	xmlCleanupParser ();
 
 	/* wait for all intermediate processes to close */
 	aux_intermediate_list = intermediate_list;
@@ -722,6 +716,14 @@ cleanup:
         }
         MSG_NOTICE(msg_module, "[%d] Closing collector.", proc_id);
     }
+
+    /* destroy template manager */
+	if (template_mgr) {
+		tm_destroy(template_mgr);
+	}
+
+	xmlCleanupThreads();
+	xmlCleanupParser ();
 
 	return (retval);
 }
