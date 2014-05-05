@@ -115,7 +115,7 @@ static void* storage_plugin_thread (void* cfg)
 		}
 
 		/* all done, mark data as processed */
-		rbuffer_remove_reference(config->thread_config->queue, index, 0);
+		rbuffer_remove_reference(config->thread_config->queue, index, 1);
 
 		/* move the index */
 		index = (index + 1) % config->thread_config->queue->size;

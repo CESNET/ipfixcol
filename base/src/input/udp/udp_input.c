@@ -388,7 +388,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
 		MSG_NOTICE(msg_module, "New UDP exporter connected (unique port and address)");
 		/* create new input_info */
 		info_list = malloc(sizeof(struct input_info_list));
-		memcpy(&info_list->info, &conf->info, sizeof(struct input_info_list));
+		memcpy(&info_list->info, &conf->info, sizeof(struct input_info_network));
 
 		/* copy address and port */
 		if (address.sin6_family == AF_INET) {

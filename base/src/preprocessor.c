@@ -431,10 +431,8 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
     /* Send data to the first intermediate plugin */
 	if (rbuffer_write(preprocessor_out_queue, msg, 1) != 0) {
 		MSG_WARNING(msg_module, "Unable to write into Data manager's input queue, skipping data.");
-		free(packet);
-		free(msg);
+		message_free(msg);
 		packet = NULL;
-		msg = NULL;
 	}
 }
 
