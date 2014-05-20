@@ -46,6 +46,8 @@
 #include "../../intermediate_process.h"
 #include "../../ipfix_message.h"
 
+#include <libxml/parser.h>
+#include <libxml/tree.h>
 
 /* module name for MSG_* */
 static const char *msg_module = "joinflows";
@@ -57,7 +59,6 @@ struct mapped_template {
 
 /* mapping structure */
 struct mapping {
-	uint16_t references; /* number of old ODIDs using this mapping */
 	uint32_t orig_odid;  /* original ODID */
 	uint32_t new_odid;	 /* new ODID */
 	uint16_t orig_tid;   /* original Template ID */
@@ -79,8 +80,10 @@ struct joinflows_ip_config {
 	char *params;  /* input parameters */
 	void *ip_config; /* internal process configuration */
 	uint8_t odid_counter; /* number of mapped ODIDs */
+	uint8_t map_counter;
 	uint8_t default_map;	  /* flag indicating mapping every unmentioned ODIDs */
 	struct source sources[128]; /* source structure for each ODID */
+	struct mapping mappings[128]; /* mappings */
 	struct source default_source;  /* mapping for unmentioned ODIDs */
 	uint32_t ip_id; /* source ID for Template Manager */
 	struct ipfix_template_mgr *tm; /* Template Manager */
@@ -428,12 +431,6 @@ void mapping_destroy(struct mapping *map)
 {
 	struct mapping *aux_map = map;
 
-	/* Destroy only when there are no references on it */
-	map->references--;
-	if (map->references > 0) {
-		return;
-	}
-
 	while (aux_map) {
 		map = aux_map->next;
 		if (aux_map->new_templ != NULL) {
@@ -443,7 +440,7 @@ void mapping_destroy(struct mapping *map)
 				free(aux_map->new_templ);
 			}
 		}
-		free(aux_map);
+//		free(aux_map);
 		aux_map = map;
 	}
 }
@@ -522,22 +519,61 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
-	struct mapping *new_map = calloc(1, sizeof(struct mapping));
 
-	new_map->references = 2;
-	new_map->new_odid = 10;
-	new_map->new_templ = NULL;
-	new_map->new_tid = 255;
-	new_map->next = NULL;
+	if (!params) {
+		MSG_ERROR(msg_module, "Missing plugin configuration!");
+		free(conf);
+		return -1;
+	}
 
-	conf->odid_counter = 2;
+	/* parse configuration */
+	char *to = NULL;
+
+	xmlDoc *doc = NULL;
+	xmlNode *root = NULL;
+	xmlNode *curr = NULL;
+	xmlNode *join = NULL;
+	xmlNode *from = NULL;
+
+	doc = xmlParseDoc(BAD_CAST params);
+	if (!doc) {
+		MSG_ERROR(msg_module, "Cannot parse config xml!");
+		free(conf);
+		return -1;
+	}
+
+	root = xmlDocGetRootElement(doc);
+	if (!root) {
+		MSG_ERROR(msg_module, "Cannot get document root element!");
+		free(conf);
+		return -1;
+	}
+
+	struct mapping *new_map = NULL;
+	struct source *src = NULL;
+
+	for (curr = root->children; curr != NULL; curr = curr->next) {
+		join = curr->children;
+		for (join = curr->children; join != NULL; join = join->next) {
+			to = (char *) xmlGetProp(curr, (const xmlChar *) "to");
+			new_map = &(conf->mappings[conf->map_counter++]);
+			new_map->new_odid = atoi(to);
+			new_map->new_tid = 255;
+
+			for (from = join->children; from != NULL; from = from->next) {
+				if (!xmlStrcmp(from->content, (const xmlChar *) "*")) {
+					conf->default_map = 1;
+					src = &(conf->default_source);
+				} else {
+					src = &(conf->sources[conf->odid_counter++]);
+				}
+				src->mapping = new_map;
+				src->orig_odid = atoi((char *)from->content);
+			}
+		}
+	}
+
 	conf->ip_config = ip_config;
-
-	conf->sources[0].mapping = new_map;
-	conf->sources[0].orig_odid = 0;
-	conf->sources[1].mapping = new_map;
-	conf->sources[1].orig_odid = 1;
-	conf->default_map = 0;
 
 	*config = conf;
 	MSG_NOTICE(msg_module, "Successfully initialized");
@@ -701,8 +737,8 @@ int intermediate_plugin_close(void *config)
 
 	conf = (struct joinflows_ip_config *) config;
 
-	for (i = 0; i < conf->odid_counter; i++) {
-		mapping_destroy(conf->sources[i].mapping);
+	for (i = 0; i < conf->map_counter; i++) {
+		mapping_destroy(&(conf->mappings[i]));
 	}
 
 	free(conf);
