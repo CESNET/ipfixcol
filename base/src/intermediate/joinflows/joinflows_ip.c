@@ -575,6 +575,7 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 
 	conf->ip_config = ip_config;
 
+	xmlFreeDoc(doc);
 	*config = conf;
 	MSG_NOTICE(msg_module, "Successfully initialized");
 	return 0;
