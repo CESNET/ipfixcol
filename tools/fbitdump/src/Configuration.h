@@ -297,8 +297,9 @@ private:
 	/**
 	 * \brief Parse output format string
 	 * @param format output format string
+	 * @param orderby alias of sorting column
 	 */
-	void parseFormat(std::string format);
+	void parseFormat(std::string format, std::string &orderby);
 
     /**
      * \brief Process -M option from getopt()
@@ -330,7 +331,7 @@ private:
      *
      * @param order name of the column to order by
      */
-    void processmOption(std::string order);
+    void processmOption(std::string &order);
 
     /**
      * \brief Parse argument for aggregation

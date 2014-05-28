@@ -325,7 +325,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	this->loadOutputFormat();
 
 	/* parse output format string */
-	this->parseFormat(this->format);
+	this->parseFormat(this->format, optionm);
 	if( print_semantics ) {
 		std::cout << "Available semantics: " <<  std::endl;
 		for( std::map<std::string, void(*)(const union plugin_arg *, int, char*)>::iterator iter = this->plugins_format.begin(); iter != this->plugins_format.end(); ++iter ) {
@@ -403,13 +403,14 @@ void Configuration::searchForTableParts(stringVector &tables) throw (std::invali
 	}
 }
 
-void Configuration::parseFormat(std::string format)
+void Configuration::parseFormat(std::string format, std::string &orderby)
 {
 	Column *col; /* newly created column pointer */
 	regex_t reg; /* the regular expresion structure */
 	int err; /* check for regexec error */
 	regmatch_t matches[1]; /* array of regex matches (we need only one) */
 	bool removeNext = false; /* when removing column, remove the separator after it */
+	bool order_found = false; /* check if output format contains ordering column */
 
 	/* prepare regular expresion */
 	regcomp(&reg, "%[a-zA-Z0-9]+", REG_EXTENDED);
@@ -458,6 +459,10 @@ void Configuration::parseFormat(std::string format)
 					}
 					this->columns.push_back(col);
 					removeNext = false;
+
+					if (alias == orderby) {
+						order_found = true;
+					}
 				}
 			} catch (std::exception &e) {
 				std::cerr << e.what() << std::endl;
@@ -472,6 +477,27 @@ void Configuration::parseFormat(std::string format)
 			format = "";
 		}
 	}
+
+	if (this->optm && !order_found) {
+		std::string existing = orderby;
+		for (columnVector::iterator it = this->columns.begin(); it != this->columns.end(); ++it) {
+			if (!(*it)->isOperation()) {
+				existing = *((*it)->getAliases().begin());
+				break;
+			}
+		}
+
+		if (existing == orderby) {
+			MSG_ERROR("configuration", "No suitable column for sorting found in used format!");
+		} else {
+			MSG_WARNING("configuration", "Sorting column '%s' not found in output format, using '%s'.", orderby.c_str(), existing.c_str());
+			orderby = existing;
+
+			delete this->orderColumn;
+			this->processmOption(orderby);
+		}
+	}
+
 	/* free created regular expression */
 	regfree(&reg);
 }
@@ -630,7 +656,7 @@ bool Configuration::getTemplateInfo() const
 	return this->templateInfo;
 }
 
-void Configuration::processmOption(std::string order)
+void Configuration::processmOption(std::string &order)
 {
 	std::string::size_type pos;
 	if ((pos = order.find("ASC")) != std::string::npos) {
