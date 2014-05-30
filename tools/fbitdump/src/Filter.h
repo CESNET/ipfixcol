@@ -90,6 +90,7 @@ typedef struct _parserStruct {
 	partsType type;
 	uint16_t nParts;
 	std::string colType;
+	stringSet baseCols;
 	void (*parse)(char *input, char *out);
 	std::vector<std::string> parts;
 } parserStruct;
@@ -390,6 +391,27 @@ private:
 	 * @param type Type of column
 	 */
 	std::string onlyCol(std::string &name, partsType type) const;
+
+	/**
+	 * \brief Create EXISTS(column) expression
+	 *
+	 * @param left Parser structure with column(s)
+	 * @param i index of part in parser structure
+	 * @param neq true when comparison is '!='
+	 * @return EXISTS expression
+	 */
+	std::string createExists(parserStruct *left, int i, bool neq) const;
+
+	/**
+	 * \brief Create EXISTS(column) expression
+	 *
+	 * @param left Parser structure with column(s)
+	 * @param i index of part in parser structure
+	 * @param exists clause of expression (EXISTS or NOT EXISTS)
+	 * @param op logic operator (and/or)
+	 * @return EXISTS expression
+	 */
+	std::string createExists(parserStruct *left, int i, std::string exists, std::string op) const;
 
 	Configuration *actualConf; /**< Used configuration for getting column names while parsing filter */
 

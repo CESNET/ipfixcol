@@ -526,6 +526,7 @@ void Filter::parseColumn(parserStruct *ps, std::string alias) const throw (std::
 	} else {
 		ps->parts.push_back(col->getElement());
 		ps->nParts = 1;
+		ps->baseCols = col->getColumns();
 		ps->type = PT_COMPUTED;
 	}
 
@@ -623,17 +624,14 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 
 	/* Parser expression "column CMP value" */
 	if ((left->nParts == 1) && (right->nParts == 1)) {
+		exp += createExists(left, 0, cmp == "!=");
 		if (cmp == "!=") {
-			exp += "NOT EXISTS(" + onlyCol(left->parts[0], left->type) + ") or ";
-
 			if (right->type == PT_STRING) {
 				exp += "(not (" + left->parts[0] + " LIKE " + right->parts[0] + ")))";
 				return exp;
 			}
-
-		} else {
-			exp += "EXISTS(" + onlyCol(left->parts[0], left->type) + ") and ";
 		}
+
 		exp += "(" + left->parts[0] + " " + cmp + " " + right->parts[0] + "))";
 		return exp;
 	}
@@ -671,14 +669,14 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 
 		/* Add part into expression */
 		if (cmp == "!=") {
-			exp += "(NOT EXISTS(" + onlyCol(left->parts[0], left->type) + ") or ";
+			exp += "(" + createExists(left, 0, true);
 			if (right->type == PT_STRING) {
 				exp += "(not (" + left->parts[0] + " LIKE " + right->parts[0] + ")))" + op;
 			} else {
 				exp += "(" + left->parts[i] + " " + cmp + " " + right->parts[j] + "))" + op;
 			}
 		} else {
-			exp += "(EXISTS(" + onlyCol(left->parts[i], left->type) + ") and ";
+			exp += "(" + createExists(left, i, false);
 			exp += "(" + left->parts[i] + " " + cmp + " " + right->parts[j] + "))" + op;
 		}
 	}
@@ -731,11 +729,7 @@ std::string Filter::parseExpSub(parserStruct *left, std::string cmp, parserStruc
 		}
 
 		/* Insert (NOT) EXISTS according to comparison operator */
-		if (cmp == "!=") {
-			exp += "(NOT EXISTS(" + onlyCol(left->parts[i], left->type) + ") or (";
-		} else {
-			exp += "(EXISTS(" + onlyCol(left->parts[i], left->type) + ") and (";
-		}
+		exp += "(" + createExists(left, i, cmp == "!=") + "(";
 
 		/* Add values from right parser structure */
 		exp += "(" + left->parts[i] + cmp1 + right->parts[rightPos++] + ")" + op;
@@ -784,14 +778,14 @@ std::string Filter::parseExpHost6(parserStruct *left, std::string cmp, parserStr
 	/* Create expression */
 	while (i < right->nParts) {
 		if (cmp == "!=") {
-			exp += "(NOT EXISTS(" + onlyCol(left->parts[leftPos], left->type) + ") or (";
+			exp += "(" + createExists(left, leftPos, true) + "(";
 			exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + "))" + op1;
-			exp += "(NOT EXISTS(" + onlyCol(left->parts[leftPos], left->type) + ") or (";
+			exp += "(" + createExists(left, leftPos, true) + "(";
 			exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + "))" + op2;
 		} else {
-			exp += "(EXISTS(" + onlyCol(left->parts[leftPos], left->type) + ") and (";
+			exp += "(" + createExists(left, leftPos, false) + "(";
 			exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + "))" + op1;
-			exp += "(EXISTS(" + onlyCol(left->parts[leftPos], left->type) + ") and (";
+			exp += "(" + createExists(left, leftPos, false) + "(";
 			exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + "))" + op2;
 		}
 
@@ -908,13 +902,40 @@ std::string Filter::parseExists(parserStruct* ps) const throw (std::invalid_argu
 	std::string exp = "(", op = " and ";
 	uint16_t i;
 	for (i = 0; i < ps->nParts; i++) {
-		exp += "EXISTS(" + ps->parts[i] + ")" + op;
+		exp += createExists(ps, i, "EXISTS", op);
 	}
 	
 	exp = exp.substr(0, exp.length() - op.length()) + ")";
 	
 	return exp;
 }
+
+std::string Filter::createExists(parserStruct *left, int i, bool neq) const
+{
+	std::string exp = "", exists = "EXISTS", op = " and ";
+	if (neq) {
+		exists = "NOT EXISTS";
+		op = " or ";
+	}
+
+	return createExists(left, i, exists, op);
+}
+
+std::string Filter::createExists(parserStruct *left, int i, std::string exists, std::string op) const
+{
+	std::string exp = "";
+	if (left->type == PT_COMPUTED) {
+		exp += "(";
+		for (stringSet::iterator it = left->baseCols.begin(); it != left->baseCols.end(); ++it) {
+			exp += exists + "(" + *it + ")" + op;
+		}
+		exp = exp.substr(0, exp.length() - op.length()) + ")" + op;
+	} else {
+		exp += exists + "(" + onlyCol(left->parts[i], left->type) + ")" + op;
+	}
+	return exp;
+}
+
 
 std::string Filter::onlyCol(std::string& expr, partsType type) const
 {
