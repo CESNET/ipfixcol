@@ -66,7 +66,6 @@ struct udp_conf {
 
 static struct ring_buffer *preprocessor_out_queue = NULL;
 static struct ipfix_template_mgr *tm = NULL;
-static int sequence_number = 0;
 
 
 /**
@@ -418,15 +417,15 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 	}
 
 	/* Check sequence number */
-	if (sequence_number != ntohl(msg->pkt_header->sequence_number)) {
+	if (msg->input_info->sequence_number != ntohl(msg->pkt_header->sequence_number)) {
 		if (!skip_seq_err) {
-			MSG_WARNING(msg_module, "Sequence number does not match: expected %u, got %u", sequence_number, ntohl(msg->pkt_header->sequence_number));
+			MSG_WARNING(msg_module, "Sequence number does not match: expected %u, got %u", msg->input_info->sequence_number , ntohl(msg->pkt_header->sequence_number));
 		}
-		sequence_number = ntohl(msg->pkt_header->sequence_number);
+		msg->input_info->sequence_number  = ntohl(msg->pkt_header->sequence_number);
 	}
 
 	/* Process templates */
-    sequence_number += preprocessor_process_templates(tm, msg);
+	msg->input_info->sequence_number += preprocessor_process_templates(tm, msg);
 
     /* Send data to the first intermediate plugin */
 	if (rbuffer_write(preprocessor_out_queue, msg, 1) != 0) {

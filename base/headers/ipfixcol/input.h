@@ -97,19 +97,21 @@ enum SOURCE_TYPE{
  * \brief  General input information structure used to distinguish the real
  * input information type.
  */
-struct input_info {
+struct __attribute__((__packed__)) input_info {
 	enum SOURCE_TYPE type;    /**< type of source defined by enum #SOURCE_TYPE */
+	int sequence_number;      /**< sequence number for current source */
 };
 
 /**
  * \struct input_info_network
  * \brief Input information structure specific for network based data sources.
  */
-struct input_info_network {
+struct __attribute__((__packed__)) input_info_network {
 	enum SOURCE_TYPE type;    /**< type of source - #SOURCE_TYPE_UDP,
 	                           * #SOURCE_TYPE_TCP, #SOURCE_TYPE_TCPTLS,
 	                           * #SOURCE_TYPE_SCTP, #SOURCE_TYPE_NF5,
 	                           * #SOURCE_TYPE_NF9 */
+	int sequence_number;      /**< sequence number for current source */
 	uint8_t l3_proto;         /**< IP protocol byte */
 	union {
 		struct in6_addr ipv6;
@@ -139,8 +141,9 @@ struct input_info_network {
  * \struct input_info_file
  * \brief Input information structure specific for file based data sources.
  */
-struct input_info_file {
+struct __attribute__((__packed__)) input_info_file {
 	enum SOURCE_TYPE type;    /**< type of source - #SOURCE_TYPE_IPFIX_FILE */
+	int sequence_number;      /**< sequence number for current source */
 	char *name;               /**< name of the input file */
 };
 

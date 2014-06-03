@@ -167,7 +167,7 @@ void *listen_worker(void *data) {
 		ioctl(conn_socket, FIONBIO, (char *)&on);
 
 		/* input_info - fill out information about input */
-		node = (struct input_info_node *) malloc(sizeof(*node));
+		node = (struct input_info_node *) calloc(1, sizeof(*node));
 		if (!node) {
 			MSG_ERROR(msg_module, "Not enough memory (%s:%d)",
 			                 __FILE__, __LINE__);

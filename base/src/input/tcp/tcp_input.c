@@ -326,7 +326,7 @@ void *input_listen(void *config)
         pthread_mutex_unlock(&mutex);
 
         /* create new input_info for this connection */
-        input_info = malloc(sizeof(struct input_info_list));
+        input_info = calloc(1, sizeof(struct input_info_list));
         memcpy(&input_info->info, &conf->info, sizeof(struct input_info_list));
 
         /* copy address and port */
