@@ -48,7 +48,7 @@ AC_CONFIG_SRCDIR([fastbit.cpp])
 AC_CONFIG_HEADERS([config.h])
 
 # Initialization
-CXXFLAGS="-Wall"
+AM_CXXFLAGS="-Wall"
 
 RELEASE=1
 AC_SUBST(RELEASE)
@@ -78,7 +78,7 @@ AC_SEARCH_LIBS([fastbit_init], [fastbit],,
 ###################### Check for configure parameters ##########################
 AC_ARG_ENABLE([debug], 
         AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
-        [CXXFLAGS="$CXXFLAGS -Wextra -g"])
+        [AM_CXXFLAGS="$AM_CXXFLAGS -Wextra -g"])
         
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar.h])
@@ -114,6 +114,8 @@ AC_CHECK_DECL([be64toh], [AC_DEFINE([HAVE_BE64TOH], [1],
 							   [[#include <endian.h>]])
 
 ############################### Set output #####################################
+# Substitute compiler flags
+AC_SUBST([AM_CXXFLAGS])
 
 AC_SUBST(RPMBUILD)
 if test -z "$RPMBUILD"; then
@@ -127,8 +129,8 @@ fi
 
 # generate output
 AC_CONFIG_FILES([Makefile
-				pugixml/Makefile
-				ipfixcol-fastbit-output.spec])
+		pugixml/Makefile
+		ipfixcol-fastbit-output.spec])
 
 # tools makefiles
 
@@ -143,7 +145,7 @@ echo "
   $PACKAGE_NAME version $PACKAGE_VERSION
   Prefix........: $prefix
   Distribution..: $DISTRO
-  C++ Compiler..: $CXX $CXXFLAGS $CPPFLAGS
+  C++ Compiler..: $CXX $AM_CXXFLAGS $CXXFLAGS $CPPFLAGS
   Linker........: $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
   xsltproc......: ${XSLTPROC:-NONE}

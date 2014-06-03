@@ -49,7 +49,7 @@ AC_CONFIG_SRCDIR([src/ipfixcol.c])
 AC_CONFIG_HEADERS([pkgconfig.h])
 
 # Initialization
-CFLAGS="-Wall"
+AM_CFLAGS="-Wall -O2 -std=gnu99"
 
 RELEASE=1
 AC_SUBST(RELEASE)
@@ -61,8 +61,8 @@ LBR_SET_DISTRO([redhat])
 ###################### Check for configure parameters ##########################
 AC_ARG_ENABLE([debug], 
         AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
-        [CFLAGS="$CFLAGS -Wextra -g"
-        CPPFLAGS="$CPPFLAGS -DDEBUG"])
+        [AM_CFLAGS="$AM_CFLAGS -Wextra -g"
+        AM_CPPFLAGS="$AM_CPPFLAGS -DDEBUG"])
         
 AC_ARG_ENABLE([sctp], 
         AC_HELP_STRING([--disable-sctp],[disable sctp input plugin]))
@@ -175,6 +175,10 @@ AC_CHECK_DECL([be64toh], [AC_DEFINE([HAVE_BE64TOH], [1],
                          [Define if macro be64toh exists.])],,
 			 [[#include <endian.h>]])
 
+# substitute automake CFLAGS and CPPFLAGS variables
+AC_SUBST([AM_CPPFLAGS])        
+AC_SUBST([AM_CFLAGS])
+
 # generate output
 AC_CONFIG_FILES([Makefile
 				ipfixcol.spec
@@ -214,7 +218,7 @@ echo "
   Prefix........: $prefix
   Distribution..: $DISTRO
   Debug build...: ${enable_debug:-no}
-  C Compiler....: $CC $CFLAGS $CPPFLAGS
+  C Compiler....: $CC $AM_CFLAGS $CFLAGS $CPPFLAGS
   Linker........: $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
   xsltproc......: ${XSLTPROC:-NONE}
