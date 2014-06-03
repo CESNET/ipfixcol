@@ -366,7 +366,7 @@ int main (int argc, char* argv[])
 
 		storage_list->storage.dll_handler = storage_plugin_handler;
 		/* set storage thread name */
-		snprintf(storage_list->storage.thread_name, 16, "ipfixc:%s", aux_plugins->config.name);
+		snprintf(storage_list->storage.thread_name, 16, "out:%s", aux_plugins->config.name);
 
 		/* prepare Input API routines */
 		storage_list->storage.init = dlsym (storage_plugin_handler, "storage_init");
