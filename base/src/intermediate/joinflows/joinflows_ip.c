@@ -745,7 +745,7 @@ int process_message(void *config, void *message)
 		memcpy(new_msg + IPFIX_HEADER_LENGTH, &tmp, 2);
 		tmp = htons(new_msg_len - IPFIX_HEADER_LENGTH);
 		memcpy(new_msg + IPFIX_HEADER_LENGTH + 2, &tmp, 2);
-		struct ipfix_message *new_message = message_create_from_mem(new_msg, new_msg_len, msg->input_info, msg->source_status);
+		struct ipfix_message *new_message = message_create_from_mem(new_msg, new_msg_len, src->input_info, msg->source_status);
 //		msg->templ_set[0] = new_message->templ_set[0];
 		pass_message(conf->ip_config, (void *) new_message);
 	}
