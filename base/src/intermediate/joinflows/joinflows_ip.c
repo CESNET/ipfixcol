@@ -53,7 +53,7 @@
 static const char *msg_module = "joinflows";
 
 struct mapped_template {
-	uint16_t references;
+	int references;
 	struct ipfix_template *templ;
 };
 
@@ -72,6 +72,7 @@ struct mapping {
 struct source {
 	uint32_t orig_odid;      /* original ODID */
 	uint32_t new_odid;		 /* new ODID */
+	struct input_info *input_info;
 	struct mapping *mapping; /* mapping common for all source ODIDs mapped on the same new ODID */
 };
 
@@ -311,7 +312,7 @@ struct mapping *mapping_insert(struct mapping *map, struct mapping *new_map)
  */
 struct mapping *mapping_copy(struct mapping *orig_map, uint32_t orig_odid, uint16_t orig_tid)
 {
-	struct mapping *new_map = malloc(sizeof(struct mapping));
+	struct mapping *new_map = calloc(1, sizeof(struct mapping));
 	if (new_map == NULL) {
 		return NULL;
 	}
@@ -412,7 +413,7 @@ void mapping_remove(struct mapping *map, struct mapping *old_map)
 	}
 
 	old_map->new_templ->references--;
-	if (old_map->new_templ->references == 0) {
+	if (old_map->new_templ->references <= 0) {
 		/* If there is no reference on modified template, remove it */
 		free(old_map->new_templ->templ);
 		free(old_map->new_templ);
@@ -435,7 +436,7 @@ void mapping_destroy(struct mapping *map)
 		map = aux_map->next;
 		if (aux_map->new_templ != NULL) {
 			aux_map->new_templ->references--;
-			if (aux_map->new_templ->references == 0) {
+			if (aux_map->new_templ->references <= 0) {
 				free(aux_map->new_templ->templ);
 				free(aux_map->new_templ);
 			}
@@ -569,11 +570,15 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 				}
 				src->mapping = new_map;
 				src->orig_odid = atoi((char *)from->content);
+				src->input_info = NULL;
+				src->new_odid = new_map->new_odid;
 			}
 		}
 	}
 
+	conf->ip_id = ip_id;
 	conf->ip_config = ip_config;
+	conf->tm = template_mgr;
 
 	xmlFreeDoc(doc);
 	*config = conf;
@@ -627,8 +632,9 @@ int process_message(void *config, void *message)
 	msg = (struct ipfix_message *) message;
 	conf = (struct joinflows_ip_config *) config;
 
+
 	/* Get original ODID */
-	orig_odid = ntohl(msg->pkt_header->observation_domain_id);
+	orig_odid = msg->input_info->odid;
 
 	/* Find mapping from orig_odid */
 	for (i = 0; i < conf->odid_counter; ++i) {
@@ -649,6 +655,25 @@ int process_message(void *config, void *message)
 	} else {
 		/* Get source structure */
 		src = &(conf->sources[i]);
+	}
+
+	/* Source closed */
+	if (msg->source_status == SOURCE_STATUS_CLOSED) {
+		msg->input_info = src->input_info;
+		pass_message(conf->ip_config, (void *) msg);
+		return 0;
+	}
+
+	/* Create mapped input_info structure */
+	if (src->input_info == NULL) {
+		if (msg->input_info->type == SOURCE_TYPE_IPFIX_FILE) {
+			src->input_info = calloc(1, sizeof(struct input_info_file));
+			memcpy(src->input_info, msg->input_info, sizeof(struct input_info_file));
+		} else {
+			src->input_info = calloc(1, sizeof(struct input_info_network));
+			memcpy(src->input_info, msg->input_info, sizeof(struct input_info_network));
+		}
+		src->input_info->odid = src->new_odid;
 	}
 
 	/* Skip old template sets */
@@ -720,12 +745,13 @@ int process_message(void *config, void *message)
 		memcpy(new_msg + IPFIX_HEADER_LENGTH, &tmp, 2);
 		tmp = htons(new_msg_len - IPFIX_HEADER_LENGTH);
 		memcpy(new_msg + IPFIX_HEADER_LENGTH + 2, &tmp, 2);
-		struct ipfix_message *new_message = message_create_from_mem(new_msg, new_msg_len, msg->input_info);
+		struct ipfix_message *new_message = message_create_from_mem(new_msg, new_msg_len, msg->input_info, msg->source_status);
 //		msg->templ_set[0] = new_message->templ_set[0];
 		pass_message(conf->ip_config, (void *) new_message);
 	}
 
 	/* Change ODID to new and pass message */
+	msg->input_info = src->input_info;
 	msg->pkt_header->observation_domain_id = htonl(src->mapping->new_odid);
 	pass_message(conf->ip_config, (void *) msg);
 	return 0;

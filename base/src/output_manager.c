@@ -111,6 +111,8 @@ void output_manager_remove(struct output_manager_config *output_manager, struct 
 				output_manager->last = aux_conf;
 			}
 			break;
+		} else {
+			aux_conf = aux_conf->next;
 		}
 	}
 
