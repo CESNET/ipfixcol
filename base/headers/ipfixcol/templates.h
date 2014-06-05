@@ -227,6 +227,13 @@ int tm_remove_template(struct ipfix_template_mgr *tm, struct ipfix_template_key 
  */
 int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type);
 
+/**
+ * \brief Remove all templates for ODID
+ *
+ * \param[in] tm Template Manager
+ * \param[in] odid Observation Domain ID
+ */
+void tm_remove_all_odid_templates(struct ipfix_template_mgr *tm, uint32_t odid);
 
 /**
  * \brief Create new template manager and set default values

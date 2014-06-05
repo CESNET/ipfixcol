@@ -601,6 +601,39 @@ int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type)
 }
 
 /**
+ * \brief Remove all templates for ODID
+ */
+void tm_remove_all_odid_templates(struct ipfix_template_mgr *tm, uint32_t odid)
+{
+	struct ipfix_template_mgr_record *prev_rec = tm->first, *aux_rec = tm->first;
+	uint64_t key = ((uint64_t) odid << 32);
+
+	while (aux_rec) {
+		if (aux_rec->key & key == key) {
+			if (aux_rec == tm->first) {
+				if (aux_rec == tm->last) {
+					tm->last = NULL;
+				}
+				tm->first = aux_rec->next;
+				tm_record_destroy(aux_rec);
+				prev_rec = tm->first;
+				aux_rec = tm->first;
+			} else {
+				if (aux_rec == tm->last) {
+					tm->last = prev_rec;
+				}
+				prev_rec->next = aux_rec->next;
+				tm_record_destroy(aux_rec);
+				aux_rec = prev_rec->next;
+			}
+		} else {
+			prev_rec = aux_rec;
+			aux_rec = aux_rec->next;
+		}
+	}
+}
+
+/**
  * \brief Get pointer to template in template manager
  */
 struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, struct ipfix_template_key *key)

@@ -50,7 +50,7 @@
 #include "output_manager.h"
 
 char *msg_module = "output manager";
-
+extern struct ipfix_template_mgr *tm;
 
 /**
  * \brief Search for Data manager handling specified Observation Domain ID
@@ -92,7 +92,7 @@ void output_manager_insert(struct output_manager_config *output_manager, struct 
 }
 
 /**
- * \brief Remove data manager from list and close it
+ * \brief Remove data manager from list, close it and free templates
  * \param[in] output_manager Output Manager structure
  * \param[in] old_manager Data Manager to remove and close
  */
@@ -117,8 +117,9 @@ void output_manager_remove(struct output_manager_config *output_manager, struct 
 	if (output_manager->data_managers == NULL) {
 		output_manager->last = NULL;
 	}
-
+	uint32_t odid = old_manager->observation_domain_id;
 	data_manager_close(&old_manager);
+	tm_remove_all_odid_templates(tm, odid);
 }
 
 /**
@@ -187,7 +188,7 @@ static void *output_manager_plugin_thread(void* config)
 
 			if (data_config->references == 0) {
 				/* No reference for this ODID, close DM */
-				MSG_DEBUG(msg_module, "Closing Data Manager for ODID %d", data_config->observation_domain_id);
+				MSG_DEBUG(msg_module, "No source for ODID %d, releasing templates.", data_config->observation_domain_id);
 				output_manager_remove(conf, data_config);
 			}
 			rbuffer_remove_reference(conf->in_queue, index, 1);

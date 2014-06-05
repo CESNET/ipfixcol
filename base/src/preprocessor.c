@@ -65,7 +65,7 @@ struct udp_conf {
 };
 
 static struct ring_buffer *preprocessor_out_queue = NULL;
-static struct ipfix_template_mgr *tm = NULL;
+struct ipfix_template_mgr *tm = NULL;
 
 
 /**
@@ -397,7 +397,6 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 {
 	struct ipfix_message* msg;
 	if (source_status == SOURCE_STATUS_CLOSED) {
-		/* TODO: free templates from this source */
 		/* Inform intermediate plugins and output manager about closed input */
 		msg = calloc(1, sizeof(struct ipfix_message));
 		msg->input_info = input_info;
