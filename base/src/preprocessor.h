@@ -57,9 +57,10 @@
  * @param[in] len Length of the packet
  * @param[in] input_info Input information from input plugin
  * @param[in] storage_plugins List of storage plugins that should be passed to data manager
+ * @param[in] source_status Status of source (new, opened, closed)
  * @return void
  */
-void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins);
+void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins, int source_state);
 
 /**
  * \brief This function sets the queue for preprocessor and inits crc computing.

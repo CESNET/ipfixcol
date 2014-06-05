@@ -329,6 +329,9 @@ void *input_listen(void *config)
         input_info = calloc(1, sizeof(struct input_info_list));
         memcpy(&input_info->info, &conf->info, sizeof(struct input_info_list));
 
+        /* set status to new connection */
+        input_info->info.status = SOURCE_STATUS_NEW;
+
         /* copy address and port */
         if (address->sin6_family == AF_INET) {
         	/* copy src IPv4 address */
@@ -740,10 +743,11 @@ out:
  * \param[in] config  plugin_conf structure
  * \param[out] info   Information structure describing the source of the data.
  * \param[out] packet Flow information data in the form of IPFIX packet.
+ * \param[out] source_status Status of source (new, opened, closed)
  * \return the length of packet on success, INPUT_CLOSE when some connection 
  *  closed, INPUT_ERROR on error or INPUT_SIGINT when interrupted.
  */
-int get_packet(void *config, struct input_info **info, char **packet)
+int get_packet(void *config, struct input_info **info, char **packet, int *source_status)
 {
     /* temporary socket set */
     fd_set tmp_set;
@@ -912,9 +916,17 @@ int get_packet(void *config, struct input_info **info, char **packet)
     		}
     	}
     }
+
     /* check whether we found the input_info */
     if (info_list == NULL) {
     	MSG_WARNING(msg_module, "input_info not found, passing packet with NULL input info");
+    } else {
+    	/* Set source status */
+    	*source_status = info_list->info.status;
+    	if (info_list->info.status == SOURCE_STATUS_NEW) {
+    		info_list->info.status = SOURCE_STATUS_OPENED;
+    		info_list->info.odid = ntohl(((struct ipfix_header *) *packet)->observation_domain_id);
+    	}
     }
 
     /* pass info to the collector */
@@ -941,6 +953,9 @@ int get_packet(void *config, struct input_info **info, char **packet)
         } else {
             inet_ntop(AF_INET6, &conf->sock_addresses[sock]->sin6_addr, src_addr, INET6_ADDRSTRLEN);
         }
+        (*info)->status = SOURCE_STATUS_CLOSED;
+        *source_status = SOURCE_STATUS_CLOSED;
+
         MSG_NOTICE(msg_module, "Exporter on address %s closed connection", src_addr);
            
         /* use mutex so that listening thread does not reuse the socket too quickly */

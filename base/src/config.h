@@ -86,7 +86,7 @@ struct plugin_xml_conf_list {
 struct input {
 	void* config;
 	int (*init) (char*, void**);
-	int (*get) (void*, struct input_info**, char**);
+	int (*get) (void*, struct input_info**, char**, int*);
 	int (*close) (void**);
 	void *dll_handler;
 	struct plugin_xml_conf *xml_conf;

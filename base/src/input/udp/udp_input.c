@@ -319,10 +319,11 @@ out:
  * \param[in] config  plugin_conf structure
  * \param[out] info   Information structure describing the source of the data.
  * \param[out] packet Flow information data in the form of IPFIX packet.
+ * \param[out] source_status Status of source (new, opened, closed)
  * \return the length of packet on success, INPUT_CLOSE when some connection
  *  closed, INPUT_ERROR on error.
  */
-int get_packet(void *config, struct input_info **info, char **packet)
+int get_packet(void *config, struct input_info **info, char **packet, int *source_status)
 {
 	/* get socket */
 	int sock = ((struct plugin_conf*) config)->socket;
@@ -390,6 +391,9 @@ int get_packet(void *config, struct input_info **info, char **packet)
 		info_list = calloc(1, sizeof(struct input_info_list));
 		memcpy(&info_list->info, &conf->info, sizeof(struct input_info_network));
 
+		info_list->info.status = SOURCE_STATUS_NEW;
+		info_list->info.odid = ntohl(((struct ipfix_header *) *packet)->observation_domain_id);
+
 		/* copy address and port */
 		if (address.sin6_family == AF_INET) {
 			/* copy src IPv4 address */
@@ -414,7 +418,13 @@ int get_packet(void *config, struct input_info **info, char **packet)
 		info_list->last_sent = ((struct ipfix_header *)(*packet))->export_time;
 		info_list->packets_sent = 1;
 		conf->info_list = info_list;
+	} else {
+		info_list->info.status = SOURCE_STATUS_OPENED;
 	}
+
+	/* Set source status */
+	*source_status = info_list->info.status;
+
 	/* pass info to the collector */
 	*info = (struct input_info*) info_list;
 

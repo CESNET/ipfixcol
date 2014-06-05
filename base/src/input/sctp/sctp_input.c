@@ -184,7 +184,7 @@ void *listen_worker(void *data) {
 		node->info.src_port = ntohs(src_addr6->sin6_port);
 		node->info.dst_port = ntohs(((struct sockaddr_in6*) addr_ptr)->sin6_port);
 		node->socket = conn_socket;
-
+		node->info.status = SOURCE_STATUS_NEW;
 
 		/* add input_info to the list */
 		pthread_mutex_lock(&(conf->input_info_list_mutex));
@@ -661,9 +661,10 @@ err_sockaddr6:
  * \param[in] config  plugin config structure
  * \param[out] input_info  information about input
  * \param[out] packet  IPFIX message
+ * \param[out] source_status Status of source (new, opened, closed)
  * \return message length on success, error code otherwise
  */
-int get_packet(void *config, struct input_info** info, char **packet)
+int get_packet(void *config, struct input_info** info, char **packet, int *source_status)
 {	
 	struct sctp_config *conf;
 	int socket;
@@ -802,6 +803,7 @@ wait_for_data:
 
 			/* no more data from this exporter */
 			/* \todo free input info structure now (in near future) */
+			*source_status = SOURCE_STATUS_CLOSED;
 			return INPUT_CLOSED;
 		} else {
 			MSG_WARNING(msg_module, "Unsupported SCTP event "
@@ -817,6 +819,12 @@ wait_for_data:
 		                          "long");
 	}
 
+	/* Set source status */
+	*source_status = info_node->info.status;
+	if (info_node->info.status == SOURCE_STATUS_NEW) {
+		info_node->info.status = SOURCE_STATUS_OPENED;
+		info_node->info.odid = ntohl(((struct ipfix_header *) *packet)->observation_domain_id);
+	}
 
 	return msg_length;
 

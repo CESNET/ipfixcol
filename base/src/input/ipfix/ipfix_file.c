@@ -365,6 +365,7 @@ int input_init(char *params, void **config)
 
 	conf->in_info->type = SOURCE_TYPE_IPFIX_FILE;
 	conf->in_info->name = conf->file;
+	conf->in_info->status = SOURCE_STATUS_NEW;
 
 	/* we don't need this xml tree any more */
 	xmlFreeDoc(doc);
@@ -503,12 +504,13 @@ err_init:
  * \param[in] config  input plugin config structure
  * \param[out] info  information about source of the IPFIX data 
  * \param[out] packet  IPFIX message in memory
+ * \param[out] source_status Status of source (new, opened, closed)
  * \return length of the message on success. otherwise:
  * INPUT_INTR - on signal interrupt,
  * INPUT_CLOSED - if there are no more input files,
  * negative value on other possible errors
  */ 
-int get_packet(void *config, struct input_info **info, char **packet)
+int get_packet(void *config, struct input_info **info, char **packet, int *source_status)
 {
 	int ret;
 	int counter = 0;
@@ -608,6 +610,7 @@ read_header:
 		ret = next_file(conf);
 		if (ret == NO_INPUT_FILE) {
 			/* all files processed */
+			*source_status = SOURCE_STATUS_CLOSED;
 			ret = INPUT_CLOSED;
 			goto err_info;
 		}
@@ -622,6 +625,13 @@ read_header:
 	counter += ret;
 
 	free(header);
+
+	/* Set source status */
+	*source_status = (*info)->status;
+	if ((*info)->status == SOURCE_STATUS_NEW) {
+		(*info)->status = SOURCE_STATUS_OPENED;
+		(*info)->odid = ntohl(((struct ipfix_header *) *packet)->observation_domain_id);
+	}
 
 	return packet_len;
 

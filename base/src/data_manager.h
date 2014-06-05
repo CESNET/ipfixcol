@@ -57,6 +57,7 @@
  */
 struct data_manager_config {
 	uint32_t observation_domain_id;
+	uint32_t references;
 	unsigned int plugins_count;
 	struct ring_buffer *store_queue;
 	struct storage_list* storage_plugins;

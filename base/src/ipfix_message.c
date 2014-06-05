@@ -60,9 +60,10 @@ static char *msg_module = "ipfix_message";
  * \param[in] msg memory containing IPFIX message
  * \param[in] len length of the IPFIX message
  * \param[in] input_info information structure about input
+ * \param[in] source_status Status of source (new, opened, closed)
  * \return ipfix_message structure on success, NULL otherwise
  */
-struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_info* input_info)
+struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_info* input_info, int source_status)
 {
 	struct ipfix_message *message;
 
@@ -74,6 +75,7 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
 
 	message->pkt_header = (struct ipfix_header*) msg;
 	message->input_info = input_info;
+	message->source_status = source_status;
 	MSG_DEBUG(msg_module, "Processing data for Observation domain ID %d.",
 			ntohl(message->pkt_header->observation_domain_id));
 
@@ -150,7 +152,7 @@ struct ipfix_message *message_create_clone(struct ipfix_message *msg)
 	}
 	memset(packet, 0, sizeof(ntohs(msg->pkt_header->length)));
 
-	message = message_create_from_mem(packet, msg->pkt_header->length, msg->input_info);
+	message = message_create_from_mem(packet, msg->pkt_header->length, msg->input_info, msg->source_status);
 	if (!message) {
 		MSG_DEBUG(msg_module, "Unable to create copy of the IPFIX message");
 		free(packet);

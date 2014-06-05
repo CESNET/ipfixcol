@@ -72,15 +72,18 @@ struct data_template_couple{
 	struct ipfix_template *data_template;
 };
 
+
 /**
  * \struct ipfix_message
  * \brief Structure covering main parts of the IPFIX packet by pointers into it.
  */
-struct ipfix_message {
+struct __attribute__((__packed__)) ipfix_message {
 	/** IPFIX header*/
 	struct ipfix_header               *pkt_header;
 	/** Input source information */
 	struct input_info                 *input_info;
+	/** Source status (new, opened, closed) */
+	enum SOURCE_STATUS                source_status;
 	/** List of Template Sets in the packet */
 	struct ipfix_template_set         *templ_set[1024];
 	/** List of Options Template Sets in the packet */

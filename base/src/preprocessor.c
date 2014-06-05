@@ -391,41 +391,49 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
  * @param len Packet length
  * @param input_info Input informations about source etc.
  * @param storage_plugins List of storage plugins
+ * @param source_status Status of source (new, opened, closed)
  */
-void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins)
+void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins, int source_status)
 {
 	struct ipfix_message* msg;
-
-	if (packet == NULL) {
-		MSG_NOTICE(msg_module, "Received empty message");
-		return;
-	}
-
-	if (input_info == NULL || storage_plugins == NULL) {
-		MSG_WARNING(msg_module, "Invalid parameters in function preprocessor_parse_msg().");
-		free(packet);
-		packet = NULL;
-		return;
-	}
-
-	/* process IPFIX packet and fill up the ipfix_message structure */
-	msg = message_create_from_mem(packet, len, input_info);
-	if (!msg) {
-		free(packet);
-		packet = NULL;
-		return;
-	}
-
-	/* Check sequence number */
-	if (msg->input_info->sequence_number != ntohl(msg->pkt_header->sequence_number)) {
-		if (!skip_seq_err) {
-			MSG_WARNING(msg_module, "Sequence number does not match: expected %u, got %u", msg->input_info->sequence_number , ntohl(msg->pkt_header->sequence_number));
+	if (source_status == SOURCE_STATUS_CLOSED) {
+		/* TODO: free templates from this source */
+		/* Inform intermediate plugins and output manager about closed input */
+		msg = calloc(1, sizeof(struct ipfix_message));
+		msg->input_info = input_info;
+		msg->source_status = source_status;
+	} else {
+		if (packet == NULL) {
+			MSG_WARNING(msg_module, "Received empty packet");
+			return;
 		}
-		msg->input_info->sequence_number  = ntohl(msg->pkt_header->sequence_number);
-	}
 
-	/* Process templates */
-	msg->input_info->sequence_number += preprocessor_process_templates(tm, msg);
+		if (input_info == NULL || storage_plugins == NULL) {
+			MSG_WARNING(msg_module, "Invalid parameters in function preprocessor_parse_msg().");
+			free(packet);
+			packet = NULL;
+			return;
+		}
+
+		/* process IPFIX packet and fill up the ipfix_message structure */
+		msg = message_create_from_mem(packet, len, input_info, source_status);
+		if (!msg) {
+			free(packet);
+			packet = NULL;
+			return;
+		}
+
+		/* Check sequence number */
+		if (msg->input_info->sequence_number != ntohl(msg->pkt_header->sequence_number)) {
+			if (!skip_seq_err) {
+				MSG_WARNING(msg_module, "Sequence number does not match: expected %u, got %u", msg->input_info->sequence_number , ntohl(msg->pkt_header->sequence_number));
+			}
+			msg->input_info->sequence_number  = ntohl(msg->pkt_header->sequence_number);
+		}
+
+		/* Process templates */
+		msg->input_info->sequence_number += preprocessor_process_templates(tm, msg);
+	}
 
     /* Send data to the first intermediate plugin */
 	if (rbuffer_write(preprocessor_out_queue, msg, 1) != 0) {

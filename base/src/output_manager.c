@@ -75,6 +75,11 @@ static struct data_manager_config *get_data_mngmt_config (uint32_t id, struct da
 	return (aux_cfg);
 }
 
+/**
+ * \brief Insert new Data manager into list
+ * \param[in] output_manager Output Manager structure
+ * \param[in] new_manager New Data manager
+ */
 void output_manager_insert(struct output_manager_config *output_manager, struct data_manager_config *new_manager)
 {
 	new_manager->next = NULL;
@@ -84,6 +89,36 @@ void output_manager_insert(struct output_manager_config *output_manager, struct 
 		output_manager->last->next = new_manager;
 	}
 	output_manager->last = new_manager;
+}
+
+/**
+ * \brief Remove data manager from list and close it
+ * \param[in] output_manager Output Manager structure
+ * \param[in] old_manager Data Manager to remove and close
+ */
+void output_manager_remove(struct output_manager_config *output_manager, struct data_manager_config *old_manager)
+{
+	struct data_manager_config *aux_conf = output_manager->data_managers;
+
+	if (aux_conf == old_manager) {
+		output_manager->data_managers = old_manager->next;
+	}
+
+	while (aux_conf->next) {
+		if (aux_conf->next == old_manager) {
+			aux_conf->next = old_manager->next;
+			if (output_manager->last == old_manager) {
+				output_manager->last = aux_conf;
+			}
+			break;
+		}
+	}
+
+	if (output_manager->data_managers == NULL) {
+		output_manager->last = NULL;
+	}
+
+	data_manager_close(&old_manager);
 }
 
 /**
@@ -119,17 +154,17 @@ static void *output_manager_plugin_thread(void* config)
 		}
 
 		/* get appropriate data manager's config according to Observation domain ID */
-		data_config = get_data_mngmt_config (ntohl(msg->pkt_header->observation_domain_id), conf->data_managers);
+		data_config = get_data_mngmt_config (msg->input_info->odid, conf->data_managers);
 		if (data_config == NULL) {
 			/*
 			 * no data manager config for this observation domain ID found -
 			 * we have a new observation domain ID, so create new data manager for
 			 * it
 			 */
-			data_config = data_manager_create(ntohl(msg->pkt_header->observation_domain_id), conf->storage_plugins);
+			data_config = data_manager_create(msg->input_info->odid, conf->storage_plugins);
 			if (data_config == NULL) {
 				MSG_WARNING(msg_module, "Unable to create data manager for Observation Domain ID %d, skipping data.",
-						ntohl(msg->pkt_header->observation_domain_id));
+						msg->input_info->odid);
 				free (msg);
 				rbuffer_remove_reference(conf->in_queue, index, 1);
 				continue;
@@ -138,7 +173,26 @@ static void *output_manager_plugin_thread(void* config)
 		    /* add config to data_mngmts structure */
 	    	output_manager_insert(conf, data_config);
 
-	        MSG_NOTICE(msg_module, "Created new Data manager for ODID %i", ntohl(msg->pkt_header->observation_domain_id));
+	        MSG_NOTICE(msg_module, "Created new Data manager for ODID %i", msg->input_info->odid);
+		}
+
+		if (msg->source_status == SOURCE_STATUS_NEW) {
+			/* New source, increment reference counter */
+			MSG_DEBUG(msg_module, "New source for ODID %d", data_config->observation_domain_id);
+			data_config->references++;
+		} else if (msg->source_status == SOURCE_STATUS_CLOSED) {
+			/* Source closed, decrement reference counter */
+			MSG_DEBUG(msg_module, "Closed source for ODID %d", data_config->observation_domain_id);
+			data_config->references--;
+
+			if (data_config->references == 0) {
+				/* No reference for this ODID, close DM */
+				MSG_DEBUG(msg_module, "Closing Data Manager for ODID %d", data_config->observation_domain_id);
+				output_manager_remove(conf, data_config);
+			}
+			rbuffer_remove_reference(conf->in_queue, index, 1);
+			continue;
+
 		}
 
 		/* Write data into input queue of Storage Plugins */

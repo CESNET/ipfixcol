@@ -56,9 +56,10 @@
  * \param[in] msg memory containing IPFIX message
  * \param[in] len length of the IPFIX message
  * \param[in] input_info information structure about input
+ * \param[in] source_status Status of source (new, opened, closed)
  * \return ipfix_message structure on success, NULL otherwise
  */
-struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_info* input_info);
+struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_info* input_info, int source_state);
 
 
 /**

@@ -125,6 +125,7 @@ void term_signal_handler(int sig)
 int main (int argc, char* argv[])
 {
 	int c, i, fd, retval = 0, get_retval, proc_count = 0, proc_id = 0, collector_mode = 0;
+	int source_status = SOURCE_STATUS_OPENED;
 	pid_t pid = 0;
 	bool daemonize = false;
 	char *config_file = NULL;
@@ -579,11 +580,10 @@ int main (int argc, char* argv[])
 		goto cleanup;
 	}
 
-
 	/* main loop */
 	while (!done) {
 		/* get data to process */
-		if ((get_retval = input.get (input.config, &input_info, &packet)) < 0) {
+		if ((get_retval = input.get (input.config, &input_info, &packet, &source_status)) < 0) {
 			if (!done || get_retval != INPUT_INTR) { /* if interrupted and closing, it's ok */
 				MSG_WARNING(msg_module, "[%d] Getting IPFIX data failed!", proc_id);
 			}
@@ -601,7 +601,8 @@ int main (int argc, char* argv[])
             }
         }
 		/* distribute data to the particular Data Manager for further processing */
-		preprocessor_parse_msg (packet, get_retval, input_info, storage_list);
+		preprocessor_parse_msg (packet, get_retval, input_info, storage_list, source_status);
+		source_status = SOURCE_STATUS_OPENED;
 		packet = NULL;
 		input_info = NULL;
 	}
