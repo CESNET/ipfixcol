@@ -308,16 +308,18 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		this->filter = "1=1";
 	}
 
-	this->plugins_format["ipv4"] = printIPv4;
-	this->plugins_format["ipv6"] = printIPv6;
-	this->plugins_format["tmstmp64"] = printTimestamp64;
-	this->plugins_format["tmstmp32"] = printTimestamp32;
-	this->plugins_format["protocol"] = printProtocol;
-	this->plugins_format["tcpflags"] = printTCPFlags;
-	this->plugins_format["duration"] = printDuration;
+	/* Set default plugin functions */
+	this->plugins["ipv4"].format = printIPv4;
+	this->plugins["ipv6"].format = printIPv6;
+	this->plugins["tmstmp64"].format = printTimestamp64;
+	this->plugins["tmstmp32"].format = printTimestamp32;
+	this->plugins["protocol"].format = printProtocol;
+	this->plugins["tcpflags"].format = printTCPFlags;
+	this->plugins["duration"].format = printDuration;
 
-	this->plugins_parse["tcpflags"] = parseFlags;
-	this->plugins_parse["protocol"] = parseProto;
+
+	this->plugins["tcpflags"].parse = parseFlags;
+	this->plugins["protocol"].parse = parseProto;
 
 	Utils::printStatus( "Preparing output format");
 
@@ -328,8 +330,8 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	this->parseFormat(this->format, optionm);
 	if( print_semantics ) {
 		std::cout << "Available semantics: " <<  std::endl;
-		for( std::map<std::string, void(*)(const union plugin_arg *, int, char*)>::iterator iter = this->plugins_format.begin(); iter != this->plugins_format.end(); ++iter ) {
-			std::cout << "\t" << iter->first << std::endl;
+		for (pluginMap::iterator it = this->plugins.begin(); it != this->plugins.end(); ++it) {
+			std::cout << "\t" << it->first << std::endl;
 		}
 		return 1;
 	}
@@ -454,8 +456,8 @@ void Configuration::parseFormat(std::string format, std::string &orderby)
 					delete col;
 					removeNext = true;
 				} else {
-					if (this->plugins_format.find( col->getSemantics()) != this->plugins_format.end()) {
-						col->format = this->plugins_format[col->getSemantics()];
+					if (this->plugins.find(col->getSemantics()) != this->plugins.end()) {
+						col->format = this->plugins[col->getSemantics()].format;
 					}
 					this->columns.push_back(col);
 					removeNext = false;
@@ -964,53 +966,77 @@ void Configuration::loadModules()
 {
 	pugi::xpath_node_set nodes = this->getXMLConfiguration().select_nodes("/configuration/plugins/plugin");
 	std::string path;
-	void * handle;
-	void (*format)(const union plugin_arg *, int, char *);
-	void (*parse)(char *input, char *out);
+	pluginConf aux_conf;
 
 	for (pugi::xpath_node_set::const_iterator ii = nodes.begin(); ii != nodes.end(); ii++) {
 		pugi::xpath_node node = *ii;
-		if (this->plugins_format.find(node.node().child_value("name")) != this->plugins_format.end()) {
+		if (this->plugins.find(node.node().child_value("name")) != this->plugins.end()) {
 			std::cerr << "Duplicit module names" << node.node().child_value("name") << std::endl;
 			continue;
 		}
+
 		path = node.node().child_value("path");
 
 		if (access(path.c_str(), X_OK) != 0) {
 			std::cerr << "Cannot access " << path << std::endl;
 		}
 
-		handle = dlopen(path.c_str(), RTLD_LAZY);
-		if (!handle) {
+		aux_conf.handle = dlopen(path.c_str(), RTLD_LAZY);
+		if (!aux_conf.handle) {
 			std::cerr << dlerror() << std::endl;
 			continue;
 		}
 
-		*(void **)(&format) = dlsym( handle, "format" );
-		if( format == NULL ) {
+		/* Look for functions */
+		*(void **)(&(aux_conf.init)) = dlsym(aux_conf.handle, "init");
+		if (aux_conf.init == NULL) {
+			std::cerr << "No \"init\" function in plugin " << path << std::endl;
+			dlclose(aux_conf.handle);
+			continue;
+		}
+
+		*(void **)(&(aux_conf.close)) = dlsym(aux_conf.handle, "close");
+		if (aux_conf.close == NULL) {
+			std::cerr << "No \"close\" function in plugin " << path << std::endl;
+			dlclose(aux_conf.handle);
+			continue;
+		}
+
+		*(void **)(&(aux_conf.format)) = dlsym(aux_conf.handle, "format" );
+		if(aux_conf.format == NULL ) {
 			std::cerr << "No \"format\" function in plugin " << path << std::endl;
-			dlclose(handle);
+			dlclose(aux_conf.handle);
 			continue;
 		}
 
-		*(void **)(&parse) = dlsym(handle, "parse");
-		if (parse == NULL) {
+		*(void **)(&(aux_conf.parse)) = dlsym(aux_conf.handle, "parse");
+		if (aux_conf.parse == NULL) {
 			std::cerr << "No \"parse\" function in plugin " << path << std::endl;
-			dlclose(handle);
+			dlclose(aux_conf.handle);
 			continue;
 		}
 
-		this->plugins_format[node.node().child_value("name")] = format;
-		this->plugins_parse[node.node().child_value("name")] = parse;
-		this->plugins_handles.push(handle);
+		/* Initialize plugin */
+		if (aux_conf.init()) {
+			std::cerr << "Error in plugin initialization: " << path << std::endl;
+			dlclose(aux_conf.handle);
+			continue;
+		}
+
+		this->plugins[node.node().child_value("name")] = aux_conf;
 	}
 }
 
 void Configuration::unloadModules() {
-	while (!this->plugins_handles.empty()) {
-		dlclose(this->plugins_handles.front());
-		plugins_handles.pop();
+	for (pluginMap::iterator it = this->plugins.begin(); it != this->plugins.end(); ++it) {
+		if (it->second.close) {
+			it->second.close();
+		}
+		if (it->second.handle) {
+			dlclose(it->second.handle);
+		}
 	}
+	this->plugins.clear();
 }
 
 Configuration::~Configuration()

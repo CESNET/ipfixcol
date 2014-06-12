@@ -529,12 +529,12 @@ void Filter::parseColumn(parserStruct *ps, std::string alias) const throw (std::
 		ps->baseCols = col->getColumns();
 		ps->type = PT_COMPUTED;
 	}
-
-	if (this->actualConf->plugins_parse.find(col->getSemantics()) != this->actualConf->plugins_parse.end()) {
-		ps->parse = this->actualConf->plugins_parse[col->getSemantics()];
+	if (this->actualConf->plugins.find(col->getSemantics()) != this->actualConf->plugins.end()) {
+		ps->parse = this->actualConf->plugins[col->getSemantics()].parse;
 	} else {
 		ps->parse = NULL;
 	}
+
 	ps->colType = col->getSemantics();
 	delete col;
 
@@ -912,12 +912,14 @@ std::string Filter::parseExists(parserStruct* ps) const throw (std::invalid_argu
 
 std::string Filter::createExists(parserStruct *left, int i, bool neq) const
 {
+	/* prepare keyword(s) and operator according to comparison */
 	std::string exp = "", exists = "EXISTS", op = " and ";
 	if (neq) {
 		exists = "NOT EXISTS";
 		op = " or ";
 	}
 
+	/* create exists clause */
 	return createExists(left, i, exists, op);
 }
 
@@ -925,12 +927,15 @@ std::string Filter::createExists(parserStruct *left, int i, std::string exists, 
 {
 	std::string exp = "";
 	if (left->type == PT_COMPUTED) {
+		/* computed column - add every part of enumeration */
 		exp += "(";
 		for (stringSet::iterator it = left->baseCols.begin(); it != left->baseCols.end(); ++it) {
 			exp += exists + "(" + *it + ")" + op;
 		}
+		/* remove last operator */
 		exp = exp.substr(0, exp.length() - op.length()) + ")" + op;
 	} else {
+		/* simple column */
 		exp += exists + "(" + onlyCol(left->parts[i], left->type) + ")" + op;
 	}
 	return exp;
@@ -939,6 +944,7 @@ std::string Filter::createExists(parserStruct *left, int i, std::string exists, 
 
 std::string Filter::onlyCol(std::string& expr, partsType type) const
 {
+	/* get only column name from expression */
 	std::string res = expr;
 	if (type == PT_BITCOLVAL) {
 		res = expr.substr(2);

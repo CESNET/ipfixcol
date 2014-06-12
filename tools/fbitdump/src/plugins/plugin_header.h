@@ -23,8 +23,30 @@ union plugin_arg
 	} blob;
 } ;
 
+/**
+ * \brief Plugin initialization
+ * \return 0 on success
+ */
+int init();
+
+/**
+ * \brief Close plugin
+ */
+void close();
+
+/**
+ * \brief Format data into human readable string
+ * \param[in] arg Data arguments
+ * \param[in] plain_numbers
+ * \param[out] buffer Output string
+ */
 void format( const union plugin_arg * arg, int plain_numbers, char buffer[PLUGIN_BUFFER_SIZE] );
 
+/**
+ * \brief Format data into inner representation
+ * \param[in] input Input data
+ * \param[out] out Result
+ */
 void parse( char *input, char out[PLUGIN_BUFFER_SIZE]);
 
 

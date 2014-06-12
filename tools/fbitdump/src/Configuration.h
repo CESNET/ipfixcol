@@ -54,6 +54,21 @@ namespace fbitdump {
 #define CONFIG_XML "/usr/share/fbitdump/fbitdump.xml"
 
 /**
+ * \brief Struct with pointers to plugin functions
+ */
+struct pluginConf {
+	pluginConf(): init(NULL), close(NULL), format(NULL), /* Structure initialization */
+				  parse(NULL), handle(NULL) {};
+	int (*init) (void);     		/**< Plugin initialization */
+	void (*close) (void); 			/**< Plugin close */
+	void (*format)(const union plugin_arg *, int, char*); 	/**< Format data */
+	void (*parse)(char *, char*); 	/**< Parse input */
+	void *handle; 					/**< Plugin handle */
+};
+
+typedef std::map<std::string, pluginConf> pluginMap;
+
+/**
  * \brief Class handling command line configuration
  *
  * This class parses and processes command line configuration
@@ -265,14 +280,18 @@ public:
 	std::string pipe_name;
 	
 	static Configuration * instance;
-    
-	std::map<std::string, void (*)(const union plugin_arg *, int, char*)> plugins_format;
-	std::map<std::string, void (*)(char *, char*)> plugins_parse;
-	std::queue<void *> plugins_handles;
+
+    pluginMap plugins; /**< active plugins */
+
+    /**
+     * \brief Unload plugins
+     */
     void unloadModules();
 private:
+    /**
+     * \brief Load plugins for parsing input and formatting output
+     */
 	void loadModules();
-	
 
     /**
      * \brief Prints help to standard output
