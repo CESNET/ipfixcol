@@ -72,6 +72,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	std::string optionr;	/* optarg value for option -r */
 	char *indexes = NULL;	/* indexes optarg to be parsed later */
 	bool print_semantics = false;
+	bool print_formats = false;
 
 //	Configuration * Configuration::instance;
 
@@ -252,6 +253,9 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		case 'S': /* Template information */
 			print_semantics = true;
 			break;
+		case 'O':
+			print_formats = true;
+			break;
 		default:
 			help ();
 			return 1;
@@ -269,6 +273,12 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		std::string err = std::string("XML '") + this->getXmlConfPath() + "' with columns configuration cannot be loaded!";
 		throw std::invalid_argument(err);
 	}
+
+	if (print_formats) {
+		this->printOutputFormats();
+		return 1;
+	}
+
 	if (!optionM.empty()) {
 		/* process -M option, this option depends on -r or -R */
 		processMOption(tables, optionM.c_str(), optionr);
@@ -345,6 +355,21 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	return 0;
 }
 
+void Configuration::printOutputFormats()
+{
+	pugi::xpath_node output_path = this->getXMLConfiguration().select_single_node("/configuration/output");
+	if (output_path == NULL) {
+		std::cout << "No output format found\n";
+		return;
+	}
+	pugi::xml_node output = output_path.node();
+
+	/* Print all formats */
+	std::cout << "Available output formats:\n";
+	for (pugi::xml_node::iterator it = output.begin(); it != output.end(); ++it) {
+		std::printf("\t%-15s %s\n\n", it->child_value("formatName"), it->child_value("formatString"));
+	}
+}
 
 void Configuration::searchForTableParts(stringVector &tables) throw (std::invalid_argument)
 {
@@ -751,6 +776,7 @@ void Configuration::help() const
 	<< "-C <path>       path to configuration file. Default is " << CONFIG_XML << std::endl
 	<< "-T              print information about templates in directories specified by -R" << std::endl
 	<< "-S              print available semantics" << std::endl
+	<< "-O              print available output formats" << std::endl
 	;
 }
 

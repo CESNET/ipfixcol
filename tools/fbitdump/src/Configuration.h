@@ -49,7 +49,7 @@
 namespace fbitdump {
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "hVaA::r:f:n:c:D:Ns:qeIM:m::R:o:v:Z:t:i::d::C:Tp:S"
+#define OPTSTRING "hVaA::r:f:n:c:D:Ns:qeIM:m::R:o:v:Z:t:i::d::C:Tp:SO"
 
 #define CONFIG_XML "/usr/share/fbitdump/fbitdump.xml"
 
@@ -380,6 +380,11 @@ private:
      * @param list Vector to push the directory into
      */
     void pushCheckDir(std::string &dir, std::vector<std::string> &list);
+
+    /**
+     * \brief Print available output formats
+     */
+    void printOutputFormats();
 
     stringVector parts;                 /**< Fastbit parts paths to be used*/
     stringSet aggregateColumnsAliases;  /**< Aggregate columns aliases set */
