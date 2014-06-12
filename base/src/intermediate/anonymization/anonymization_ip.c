@@ -279,6 +279,12 @@ int process_message(void *config, void *message)
 
 	msg = (struct ipfix_message *) message;
 
+	if (msg->source_status == SOURCE_STATUS_CLOSED) {
+		/* Source was closed */
+		pass_message(conf->ip_config, msg);
+		return 0;
+	}
+
 	if (msg->pkt_header->version != htons(IPFIX_VERSION)) {
 		/* this is control message and this plugin is not interested in it */
 		pass_message(conf->ip_config, msg);
