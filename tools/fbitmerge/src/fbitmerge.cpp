@@ -250,70 +250,92 @@ void merge_flowStats(const char *first, const char *second) {
  */
 int merge_dirs(const char *srcDir, const char *dstDir) {
     /* Table initialization */
-    ibis::part part(srcDir, static_cast<const char*>(0));
-    ibis::bitvector *bv;
-    ibis::tablex *tablex = NULL;
-    uint32_t i;
+    ibis::part part(dstDir, static_cast<const char*>(0));
 
     /* If there are no rows, we have nothing to do */
     if (part.nRows() == 0) {
     	return OK;
     }
 
-    /* Set all bitmaps to 1 */
-    bv = new ibis::bitvector();
-    bv->appendFill(1, part.nRows());
-
-   	tablex = ibis::tablex::create();
-
-   	std::stringstream ss;
-
-    for(i = 0; i < part.nColumns(); i++) {
-    	unsigned char *s8;
-		uint16_t *s16;
-		uint32_t *s32;
-		uint64_t *s64;
-		ibis::column *c;
-
-		c = part.getColumn(i);
-
-		switch(c->elementSize()) {
-		case BYTES_1: {
-			std::auto_ptr< ibis::array_t<unsigned char> > tmp(part.selectUBytes(c->name(), *bv));
-			s8 = tmp->begin();
-
-			tablex->addColumn(c->name(), c->type());
-			tablex->append(c->name(), 0, part.nRows(), s8);
-			break;}
-		case BYTES_2: {
-			std::auto_ptr< ibis::array_t<uint16_t> > tmp(part.selectUShorts(c->name(), *bv));
-			s16 = tmp->begin();
-
-			tablex->addColumn(c->name(), c->type());
-			tablex->append(c->name(), 0, part.nRows(), s16);
-			break;}
-		case BYTES_4: {
-			std::auto_ptr< ibis::array_t<uint32_t> > tmp(part.selectUInts(c->name(), *bv));
-			s32 = tmp->begin();
-
-			tablex->addColumn(c->name(), c->type());
-			tablex->append(c->name(), 0, part.nRows(), s32);
-			break;}
-		case BYTES_8: {
-			std::auto_ptr< ibis::array_t<uint64_t> > tmp(part.selectULongs(c->name(), *bv));
-			s64 = tmp->begin();
-
-			tablex->addColumn(c->name(), c->type());
-			tablex->append(c->name(), 0, part.nRows(), s64);
-			break;}
-		}
+    if (part.append(srcDir) < 0) {
+    	return NOT_OK;
     }
-
-    /* Write new rows into dstDir part file */
-   	tablex->write(dstDir, 0, 0);
-    delete tablex;
+    part.commit(dstDir);
     return OK;
 }
+//
+//int merge_dirs(const char *srcDir, const char *dstDir) {
+//    /* Table initialization */
+//    ibis::part part(srcDir, static_cast<const char*>(0));
+//    ibis::bitvector *bv;
+//    ibis::tablex *tablex = NULL;
+//    uint32_t i;
+//
+//    /* If there are no rows, we have nothing to do */
+//    if (part.nRows() == 0) {
+//    	return OK;
+//    }
+//
+////    /* Set all bitmaps to 1 */
+////    bv = new ibis::bitvector();
+////    bv->appendFill(1, part.nRows());
+//
+//    ibis::part dpart(dstDir, static_cast<const char*>(0));
+//    dpart.append(srcDir);
+//    dpart.commit(dstDir);
+//    return OK;
+//
+//   	tablex = ibis::tablex::create();
+//
+//   	std::stringstream ss;
+//
+//    for(i = 0; i < part.nColumns(); i++) {
+//    	unsigned char *s8;
+//		uint16_t *s16;
+//		uint32_t *s32;
+//		uint64_t *s64;
+//		ibis::column *c;
+//
+//		c = part.getColumn(i);
+//		part.append("");
+//		std::cout << c->name() << "|" << c->type() << "|" << part.nRows() << "|" << c->elementSize() << std::endl;
+//		switch(c->elementSize()) {
+//		case BYTES_1: {
+//			std::auto_ptr< ibis::array_t<unsigned char> > tmp(part.selectUBytes(c->name(), *bv));
+//			s8 = tmp->begin();
+//
+//			tablex->addColumn(c->name(), c->type());
+//			tablex->append(c->name(), 0, part.nRows(), s8);
+//			break;}
+//		case BYTES_2: {
+//			std::auto_ptr< ibis::array_t<uint16_t> > tmp(part.selectUShorts(c->name(), *bv));
+//			s16 = tmp->begin();
+//
+//			tablex->addColumn(c->name(), c->type());
+//			tablex->append(c->name(), 0, part.nRows(), s16);
+//			break;}
+//		case BYTES_4: {
+//			std::auto_ptr< ibis::array_t<uint32_t> > tmp(part.selectUInts(c->name(), *bv));
+//			s32 = tmp->begin();
+//
+//			tablex->addColumn(c->name(), c->type());
+//			tablex->append(c->name(), 0, part.nRows(), s32);
+//			break;}
+//		case BYTES_8: {
+//			std::auto_ptr< ibis::array_t<uint64_t> > tmp(part.selectULongs(c->name(), *bv));
+//			s64 = tmp->begin();
+//
+//			tablex->addColumn(c->name(), c->type());
+//			tablex->append(c->name(), 0, part.nRows(), s64);
+//			break;}
+//		}
+//    }
+//
+//    /* Write new rows into dstDir part file */
+//   	std::cout << "result = " << tablex->write(dstDir, 0, 0) << "\n";
+//    delete tablex;
+//    return OK;
+//}
 
 void scan_dir(const char *dirname,const char *srcDir, DIRMAP *bigMap) {
     ibis::part part(srcDir, static_cast<const char*>(0));
@@ -686,6 +708,7 @@ int main(int argc, char *argv[]) {
 		usage();
 		return OK;
 	}
+	ibis::gVerbose = -10;
 
 	/* Process arguments */
 	int option;
