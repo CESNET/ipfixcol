@@ -519,6 +519,12 @@ void Filter::parseColumn(parserStruct *ps, std::string alias) const throw (std::
 	if (!col->isOperation()) {
 		/* Iterate through all aliases */
 		for (stringSet::iterator it = cols.begin(); it != cols.end(); it++) {
+			/* Check for flows column */
+			if (col->getSemantics() == "flows") {
+				delete col;
+				std::string err = "Filtering by flows (" + alias + ") not supported!";
+				throw std::invalid_argument(err);
+			}
 			ps->parts.push_back(*it);
 			ps->nParts++;
 		}
