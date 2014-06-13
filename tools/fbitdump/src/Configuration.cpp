@@ -1014,20 +1014,13 @@ void Configuration::loadModules()
 		}
 
 		/* Look for functions */
+		/* Init */
 		*(void **)(&(aux_conf.init)) = dlsym(aux_conf.handle, "init");
-		if (aux_conf.init == NULL) {
-			std::cerr << "No \"init\" function in plugin " << path << std::endl;
-			dlclose(aux_conf.handle);
-			continue;
-		}
-
+		
+		/* Close */
 		*(void **)(&(aux_conf.close)) = dlsym(aux_conf.handle, "close");
-		if (aux_conf.close == NULL) {
-			std::cerr << "No \"close\" function in plugin " << path << std::endl;
-			dlclose(aux_conf.handle);
-			continue;
-		}
 
+		/* Format */
 		*(void **)(&(aux_conf.format)) = dlsym(aux_conf.handle, "format" );
 		if(aux_conf.format == NULL ) {
 			std::cerr << "No \"format\" function in plugin " << path << std::endl;
@@ -1035,6 +1028,7 @@ void Configuration::loadModules()
 			continue;
 		}
 
+		/* Parse */
 		*(void **)(&(aux_conf.parse)) = dlsym(aux_conf.handle, "parse");
 		if (aux_conf.parse == NULL) {
 			std::cerr << "No \"parse\" function in plugin " << path << std::endl;
@@ -1043,12 +1037,14 @@ void Configuration::loadModules()
 		}
 
 		/* Initialize plugin */
-		if (aux_conf.init()) {
-			std::cerr << "Error in plugin initialization: " << path << std::endl;
-			dlclose(aux_conf.handle);
-			continue;
+		if (aux_conf.init) {
+			if (aux_conf.init()) {
+				std::cerr << "Error in plugin initialization: " << path << std::endl;
+				dlclose(aux_conf.handle);
+				continue;
+			}
 		}
-
+		
 		this->plugins[node.node().child_value("name")] = aux_conf;
 	}
 }
