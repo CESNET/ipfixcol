@@ -2,15 +2,24 @@ ACLOCAL_AMFLAGS = -I m4
 
 pluginsdir = $(datadir)/fbitdump/plugins
 
-plugins_LTLIBRARIES = httprt.la http_status_code.la dns_rcode.la
+plugins_LTLIBRARIES = httprt.la http_status_code.la dns_rcode.la tls_csuites.la tls_version.la tls_csuites_array.la
 
-httprt_la_SOURCES=httprt.c
+httprt_la_SOURCES= httprt.c
 httprt_la_LDFLAGS= -shared -module -avoid-version
 
-http_status_code_la_SOURCES=http_status_code.c
+http_status_code_la_SOURCES= http_status_code.c
 http_status_code_la_LDFLAGS= -shared -module -avoid-version
 
-dns_rcode_la_SOURCES=dns_rcode.c
+dns_rcode_la_SOURCES= dns_rcode.c
 dns_rcode_la_LDFLAGS= -shared -module -avoid-version
+
+tls_csuites_la_SOURCES= tls_csuites.c tls_values.h
+tls_csuites_la_LDFLAGS= -shared -module -avoid-version
+
+tls_csuites_array_la_SOURCES= tls_csuites_array.c tls_values.h
+tls_csuites_array_la_LDFLAGS= -shared -module -avoid-version
+
+tls_version_la_SOURCES= tls_version.c tls_values.h
+tls_version_la_LDFLAGS= -shared -module -avoid-version
 
 EXTRA_DIST = plugin_header.h

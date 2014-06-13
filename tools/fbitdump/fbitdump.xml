@@ -249,6 +249,14 @@
 		</value>
 	</column>
 	<column>
+	        <name>applicationID</name>
+		<alias>%applicationid</alias>
+		<width>8</width>
+		<value type="plain">
+		        <element>e0id95</element>
+		</value>
+	</column>
+	<column>
 		<name>Input</name>
 		<alias>%in</alias>
 		<width>8</width>
@@ -925,7 +933,114 @@
 			<element>e16982id701</element>
 		</value>
 	</column>
-
+	<column>
+		<name>TLS Client Version</name>
+		<alias>%cversion</alias>
+		<width>27</width>
+		<default-value>---</default-value>
+		<value type="plain">
+			<element semantics="tls_version">e16982id800</element>
+		</value>
+	</column>
+	<column>
+		<name>TLS Server Version</name>
+		<alias>%sversion</alias>
+		<width>20</width>
+		<default-value>---</default-value>
+		<value type="plain">
+			<element semantics="tls_version">e16982id801</element>
+		</value>
+	</column>
+	<column>
+		<name>Cipher Suite Used</name>
+		<alias>%cips</alias>
+		<width>37</width>
+		<default-value>---</default-value>
+		<value type="plain">
+			<element semantics="tls_csuites">e16982id802</element>
+		</value>
+	</column>
+	<column>
+		<name>Client Cipher Suites</name>
+		<alias>%clsuites</alias>
+		<width>100</width>
+		<default-value>---</default-value>
+		<value type="plain">
+			<element semantics="tls_csuites_array">e16982id803</element>
+		</value>
+	</column>
+	<column>
+		<name>Certificate Subject</name>
+		<alias>%subj</alias>
+		<width>76</width>
+		<default-value>---</default-value>
+		<value type="plain">
+			<element>e16982id804</element>
+		</value>
+	</column>
+	<column>
+		<name>Certificate Issuer</name>
+		<alias>%issuer</alias>
+		<width>55</width>
+		<default-value>---</default-value>
+		<value type="plain">
+			<element>e16982id805</element>
+		</value>
+	</column>
+	<column>
+		<name>Cert Not Before</name>
+		<alias>%notbf</alias>
+		<width>23</width>
+		<default-value>---</default-value>
+		<value type="plain">
+			<element semantics="tmstmp32">e16982id806</element>
+		</value>
+	</column>
+	<column>
+		<name>Cert Not After</name>
+		<alias>%notaft</alias>
+		<width>23</width>
+		<default-value>---</default-value>
+		<value type="plain">
+			<element semantics="tmstmp32">e16982id807</element>
+		</value>
+	</column>
+	<column>
+		<name>Key Length</name>
+		<alias>%pkeylen</alias>
+		<width>15</width>
+		<default-value>---</default-value>
+		<value type="plain">
+			<element>e16982id808</element>
+		</value>
+	</column>
+	<column>
+		<name>Key Exponent</name>
+		<alias>%pkeyexp</alias>
+		<width>15</width>
+		<default-value>---</default-value>
+		<value type="plain">
+			<element>e16982id809</element>
+		</value>
+	</column>
+	<column>
+		<name>Signature Algorithm</name>
+		<alias>%sigalgo</alias>
+		<width>23</width>
+		<default-value>---</default-value>
+		<value type="plain">
+			<element>e16982id810</element>
+		</value>
+	</column>
+	<column>
+		<name>Server Name</name>
+		<alias>%sni</alias>
+		<width>80</width>
+		<default-value>---</default-value>
+		<value type="plain">
+			<element>e16982id811</element>
+		</value>
+	</column>
 </columns>
 
 <groups>
@@ -1046,7 +1161,34 @@
 		<formatName>perf</formatName>
 		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %tcprtt %tcpsrt %tcpcrt %jitterdev %jitteravg %jittermin %jittermax %delaydev %delayavg %delaymin %delaymax</formatString>
 	</format>
-
+	<format>
+		<formatName>tls</formatName>
+		<formatString>%ts %sp %dp %sa4 %da4 %cversion %sversion %cips</formatString>
+	</format>
+	<format>
+		<formatName>tls_aggr</formatName>
+		<formatString>%ts %sversion %cversion %cips %pkeylen %pkeyexp %sni %sigalgo %pkt %byt %fl</formatString>
+	</format>
+	<format>
+		<formatName>sni</formatName>
+		<formatString>%sa4 %da4 %cversion %sversion %sni</formatString>
+	</format>
+	<format>
+		<formatName>clsuites</formatName>
+		<formatString>%cversion %sversion %clsuites</formatString>
+	</format>
+	<format>
+		<formatName>cert_validity</formatName>
+		<formatString>%sa4 %da4 %sversion %notbf %notaft %pkeylen %pkeyexp %sigalgo</formatString>
+	</format>
+	<format>
+		<formatName>cert_info</formatName>
+		<formatString>%sa4 %da4 %subj %issuer</formatString>
+	</format>
+	<format>
+		<formatName>osdet</formatName>
+		<formatString>%sa4 %da4 %ttl %synsize %winsize %ttlos %synos %winos</formatString>
+	</format>
 </output>
 <plugins>
 	<plugin>
@@ -1061,5 +1203,17 @@
 		<name>dns_rcode</name>
 		<path>/usr/share/fbitdump/plugins/dns_rcode.so</path>
 	</plugin>
-</plugins>
+	<plugin>
+		<name>tls_version</name>
+		<path>/usr/share/fbitdump/plugins/tls_version.so</path>
+	</plugin>
+	<plugin>
+		<name>tls_csuites</name>
+		<path>/usr/share/fbitdump/plugins/tls_csuites.so</path>
+	</plugin>
+	<plugin>
+		<name>tls_csuites_array</name>
+		<path>/usr/share/fbitdump/plugins/tls_csuites_array.so</path>
+	</plugin>
+	</plugins>
 </configuration>
