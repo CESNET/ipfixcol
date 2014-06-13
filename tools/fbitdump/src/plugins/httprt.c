@@ -2,15 +2,6 @@
 #include <stdio.h>
 #include "plugin_header.h"
 
-int init()
-{
-	return 0;
-}
-
-void close()
-{
-}
-
 void format( const union plugin_arg * arg, int plain_numbers, char buff[PLUGIN_BUFFER_SIZE] ) {
 	char *methods[]={"GET", "POST", "HTTP", "HEAD", "PUT", "OPTIONS", "DELETE", "TRACE", "CONNECT", "PATCH"};
 
