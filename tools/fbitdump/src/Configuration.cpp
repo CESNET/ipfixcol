@@ -56,6 +56,9 @@
 #include "DefaultPlugin.h"
 #include "Verbose.h"
 
+/* Module identifier for MSG_* */
+static const char *msg_module = "configuration";
+
 namespace fbitdump {
 
 /* temporary macro that should be removed in full implementation */
@@ -997,14 +1000,14 @@ void Configuration::loadModules()
 	for (pugi::xpath_node_set::const_iterator ii = nodes.begin(); ii != nodes.end(); ii++) {
 		pugi::xpath_node node = *ii;
 		if (this->plugins.find(node.node().child_value("name")) != this->plugins.end()) {
-			std::cerr << "Duplicit module names" << node.node().child_value("name") << std::endl;
+			MSG_ERROR(msg_module, "Duplicit module names %s", node.node().child_value("name"));
 			continue;
 		}
 
 		path = node.node().child_value("path");
 
 		if (access(path.c_str(), X_OK) != 0) {
-			std::cerr << "Cannot access " << path << std::endl;
+			MSG_WARNING(msg_module, "Cannot access %s", path.c_str());
 		}
 
 		aux_conf.handle = dlopen(path.c_str(), RTLD_LAZY);
@@ -1014,32 +1017,22 @@ void Configuration::loadModules()
 		}
 
 		/* Look for functions */
-		/* Init */
 		*(void **)(&(aux_conf.init)) = dlsym(aux_conf.handle, "init");
-		
-		/* Close */
 		*(void **)(&(aux_conf.close)) = dlsym(aux_conf.handle, "close");
-
-		/* Format */
 		*(void **)(&(aux_conf.format)) = dlsym(aux_conf.handle, "format" );
-		if(aux_conf.format == NULL ) {
-			std::cerr << "No \"format\" function in plugin " << path << std::endl;
-			dlclose(aux_conf.handle);
-			continue;
-		}
-
-		/* Parse */
 		*(void **)(&(aux_conf.parse)) = dlsym(aux_conf.handle, "parse");
-		if (aux_conf.parse == NULL) {
-			std::cerr << "No \"parse\" function in plugin " << path << std::endl;
+
+		/* Check whether plugin has at least one data processing function */
+		if (!aux_conf.format && !aux_conf.parse) {
+			MSG_ERROR(msg_module, "Plugin with no data processing function, skipping %s", path.c_str());
 			dlclose(aux_conf.handle);
 			continue;
 		}
-
+		
 		/* Initialize plugin */
 		if (aux_conf.init) {
 			if (aux_conf.init()) {
-				std::cerr << "Error in plugin initialization: " << path << std::endl;
+				MSG_WARNING(msg_module, "Error in plugin initialization %s", path.c_str());
 				dlclose(aux_conf.handle);
 				continue;
 			}
