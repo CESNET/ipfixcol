@@ -308,6 +308,7 @@ void tm_release_tid(struct ipfix_template_mgr *tm, uint32_t odid, uint16_t tid)
 			released->tid = tid;
 			released->next = tm->free_tid[i]->released;
 			tm->free_tid[i]->released = released;
+			break;
 		}
 	}
 }
@@ -792,19 +793,31 @@ struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, struct ipf
  */
 void tm_template_reference_inc(struct ipfix_template *templ)
 {
-	templ->references++;
+	/* This must be atomic */
+	__sync_fetch_and_add(&(templ->references), 1);
 }
 
 /**
  * \brief Decrement number of references to template
+ *
+ * \param[in] templ Template
  */
 void tm_template_reference_dec(struct ipfix_template *templ)
 {
 	if (templ->references > 0) {
-		templ->references--;
+		/* This must be atomic */
+		__sync_fetch_and_sub(&(templ->references), 1);
 	}
-	if (templ->next != NULL) {
-		MSG_DEBUG(msg_module, "Removing older template");
+
+	/* We have data for newer template, remove older ones */
+	if (templ->next != NULL && templ->next->references == 0) {
+		struct ipfix_template *aux_templ;
+		while (templ->next) {
+			aux_templ = templ->next;
+			templ->next = templ->next->next;
+			free(aux_templ);
+		}
+
 		free(templ->next);
 		templ->next = NULL;
 	}
