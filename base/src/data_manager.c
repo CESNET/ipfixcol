@@ -110,7 +110,7 @@ static void* storage_plugin_thread (void* cfg)
 
 		for (i=0; msg->data_couple[i].data_set != NULL && i<1023; i++) {
 			if (msg->data_couple[i].data_template != NULL) {
-				msg->data_couple[i].data_template->references--;
+				tm_template_reference_dec(msg->data_couple[i].data_template);
 			}
 		}
 
