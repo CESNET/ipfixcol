@@ -1,7 +1,7 @@
 SUBDIRS = . \
 	input/tcp input/udp input/ipfix \
 	intermediate/anonymization intermediate/dummy intermediate/joinflows \
-	storage/ipfix storage/dummy \
+	storage/ipfix storage/dummy storage/forwarding \
 	ipfixviewer
 
 if HAVE_SCTP
