@@ -83,9 +83,6 @@ int preprocessor_init(struct ring_buffer *out_queue, struct ipfix_template_mgr *
 	/* Set output queue */
 	preprocessor_out_queue = out_queue;
 
-	/* Init crc computing unit */
-	crcInit();
-
 	tm = template_mgr;
 
 	return 0;
@@ -111,23 +108,24 @@ uint32_t preprocessor_compute_crc(struct input_info *input_info)
 {
 	if (input_info->type == SOURCE_TYPE_IPFIX_FILE) {
 		struct input_info_file *input_file = (struct input_info_file *) input_info;
-		return crcFast((const unsigned char *) input_file->name, strlen(input_file->name));
+		return crc32(input_file->name, strlen(input_file->name));
 	}
 	
 	struct input_info_network *input = (struct input_info_network *) input_info;
-	uint8_t buff[35];
+
+	char buff[35];
 	uint8_t size;
-	if (input->l3_proto == 6) { /* IPv4 */
+	if (input->l3_proto == 6) { /* IPv6 */
 		memcpy(buff, &(input->src_addr.ipv6.__in6_u.__u6_addr8), 32);
 		size = 34;
-	} else { /* IPv6 */
-		memcpy(buff, &(input->src_addr.ipv4.s_addr), 8);		
+	} else { /* IPv4 */
+		memcpy(buff, &(input->src_addr.ipv4.s_addr), 8);
 		size = 10;
 	}
 	memcpy(buff + size - 2, &(input->src_port), 2);
 	buff[size] = '\0';
 
-	return crcFast(buff, size);
+	return crc32(buff, size);
 }
 /**
  * \brief Fill in udp_info structure when managing UDP input
