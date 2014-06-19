@@ -85,6 +85,7 @@
  * All data in this structure are in host byte order
  */
 struct ipfix_template {
+	uint16_t original_id;			 /** Original template ID */
 	uint32_t references;		 /** Number of packets referencing to this template */
 	struct ipfix_template *next; /** Pointer to older template with the same template id */
 
@@ -94,7 +95,7 @@ struct ipfix_template {
 	                              * UDP only */
 	uint32_t last_message;		 /** Message number of last update,
 	 	 	 	 	 	 	 	  * UDP only */
-	uint16_t template_id;        /**Template ID */
+	uint16_t template_id;        /**Template ID given by collector */
 	uint16_t field_count;        /**Number of fields in Template Record */
 	uint16_t scope_field_count;  /**Number of scope fields */
 	uint16_t template_length;    /**Length of the template. This is size
@@ -114,10 +115,22 @@ struct ipfix_template {
 };
 
 /**
+ * \struct ipfix_free_tid
+ * \brief Structure for storing free Template IDs for ODID
+ */
+struct ipfix_free_tid {
+	uint32_t odid;     /** Observation Domain ID */
+	uint16_t tid;      /** Free Template ID */
+};
+
+/**
  * \struct ipfix_template_mgr
  * \brief Template Manager structure.
  */
 struct ipfix_template_mgr {
+	int free_tid_cnt;     /** Number of ipfix_free_tid structures */
+	int free_tid_max;     /** Maximum number of ipfix_free_tid structures (allocated space) */
+	struct ipfix_free_tid **free_tid;  /** Array of free Template IDs */
 	struct ipfix_template_mgr_record *first; /** list of template manager's record for each source */
 	struct ipfix_template_mgr_record *last;  /** last member of list */
 };

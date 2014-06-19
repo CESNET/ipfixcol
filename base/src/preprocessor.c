@@ -230,6 +230,9 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 		template->last_transmission = time(NULL);
 	}
 
+	/* Set new template id to original template record */
+	template_record->template_id = htons(template->template_id);
+
 	/* return the length of the original template:
 	 * = template length - template header length + template record header length */
 	if (type == TM_TEMPLATE) {
@@ -317,6 +320,9 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 		} else {
 			/* Increasing number of references to template */
 			msg->data_couple[i].data_template->references++;
+
+			/* Set right flowset ID */
+			msg->data_couple[i].data_set->header.flowset_id = htons(msg->data_couple[i].data_template->template_id);
 
 			if ((msg->input_info->type == SOURCE_TYPE_UDP) && /* source UDP */
 					((time(NULL) - msg->data_couple[i].data_template->last_transmission > udp_conf.template_life_time) || /* lifetime expired */
