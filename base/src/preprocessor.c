@@ -52,18 +52,6 @@
 /** Identifier to MSG_* macros */
 static char *msg_module = "preprocessor";
 
-/**
- * \brief
- *
- * Structure holding UDP specific template configuration
- */
-struct udp_conf {
-	uint16_t template_life_time;
-	uint16_t template_life_packet;
-	uint16_t options_template_life_time;
-	uint16_t options_template_life_packet;
-};
-
 static struct ring_buffer *preprocessor_out_queue = NULL;
 struct ipfix_template_mgr *tm = NULL;
 
