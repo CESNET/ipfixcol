@@ -319,7 +319,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 			MSG_WARNING(msg_module, "Data template with ID %i not found!", key.tid);
 		} else {
 			/* Increasing number of references to template */
-			msg->data_couple[i].data_template->references++;
+			tm_template_reference_inc(msg->data_couple[i].data_template);
 
 			/* Set right flowset ID */
 			msg->data_couple[i].data_set->header.flowset_id = htons(msg->data_couple[i].data_template->template_id);

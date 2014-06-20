@@ -108,12 +108,6 @@ static void* storage_plugin_thread (void* cfg)
 		/* do the job */
 		config->store (config->config, msg, config->thread_config->template_mgr);
 
-		for (i=0; msg->data_couple[i].data_set != NULL && i<1023; i++) {
-			if (msg->data_couple[i].data_template != NULL) {
-				msg->data_couple[i].data_template->references--;
-			}
-		}
-
 		/* all done, mark data as processed */
 		rbuffer_remove_reference(config->thread_config->queue, index, 1);
 

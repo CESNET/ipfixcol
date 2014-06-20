@@ -114,11 +114,18 @@ struct ipfix_template {
 	template_ie fields[1];       /**Template fields */
 };
 
+
+struct released_tid {
+	uint16_t tid;
+	struct released_tid *next;
+};
+
 /**
  * \struct ipfix_free_tid
  * \brief Structure for storing free Template IDs for ODID
  */
 struct ipfix_free_tid {
+	struct released_tid *released; /** Released Template IDs */
 	uint32_t odid;     /** Observation Domain ID */
 	uint16_t tid;      /** Free Template ID */
 };
