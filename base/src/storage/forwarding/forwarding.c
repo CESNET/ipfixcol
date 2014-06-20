@@ -50,7 +50,7 @@
 #include <errno.h>
 
 /* Identifier for MSG_* */
-const char *msg_module = "forwarding storage";
+static const char *msg_module = "forwarding storage";
 
 union addr_t {
 	struct sockaddr_in  addr4;
@@ -140,6 +140,7 @@ int forwarding_connect6(forwarding *conf, char *destination)
 			MSG_ERROR(msg_module, "Cannot connect to \"%s:%d\" - %s", destination, conf->port, sys_errlist[errno]);
 			return 1;
 		}
+		MSG_NOTICE(msg_module, "Connected to %s:%d", destination, conf->port);
 	} else {
 		conf->sockfd = socket(AF_INET6, SOCK_DGRAM, 0);
 		if (conf->sockfd < 0) {
@@ -307,8 +308,6 @@ int storage_init(char *params, void **config)
 	if (ret) {
 		goto init_err;
 	}
-
-	MSG_NOTICE(msg_module, "Connected to %s:%d", destination, conf->port);
 
 	*config = conf;
 
