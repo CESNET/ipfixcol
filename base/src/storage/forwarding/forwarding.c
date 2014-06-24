@@ -521,9 +521,8 @@ int forwarding_send_tcp(forwarding *conf, void *packet, int length)
  * \param[in] conf Plugin configuration
  * \param[in] packet IPFIX packet
  * \param[in] length Packet length
- * \return 0 on success
  */
-int forwarding_send(forwarding *conf, void *packet, int length)
+void forwarding_send(forwarding *conf, void *packet, int length)
 {
 	int ret;
 	if (conf->type == SOURCE_TYPE_UDP) {
@@ -532,9 +531,8 @@ int forwarding_send(forwarding *conf, void *packet, int length)
 		ret = forwarding_send_tcp(conf, packet, length);
 	}
 	if (ret < 0) {
-		return 1;
+		MSG_WARNING(msg_module, "%s", sys_errlist[errno]);
 	}
-	return 0;
 }
 
 /**
@@ -648,7 +646,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	(void) template_mgr;
 	forwarding *conf = (forwarding *) config;
 	void *packet;
-	int ret, length;
+	int length;
 
 	if (conf->type == SOURCE_TYPE_TCP) {
 		/* Remove already sent templates */
@@ -662,10 +660,10 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	}
 
 	/* Send data */
-	ret = forwarding_send(conf, packet, length);
+	forwarding_send(conf, packet, length);
 	free(packet);
 
-	return ret;
+	return 0;
 }
 
 /**
