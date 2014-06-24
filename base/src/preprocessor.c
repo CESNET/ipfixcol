@@ -55,6 +55,122 @@ static char *msg_module = "preprocessor";
 static struct ring_buffer *preprocessor_out_queue = NULL;
 struct ipfix_template_mgr *tm = NULL;
 
+/* Sequence number counter for each ODID */
+struct sequence_number_counter {
+	uint32_t odid, sequence_number;
+	int sources;
+	struct sequence_number_counter *next;
+};
+
+struct sequence_number_counter *snc = NULL;
+
+/**
+ * \brief Get sequence number counter for given ODID
+ * \param[in] odid Observation Domain ID
+ * \return Pointer to sequence number counter
+ */
+struct sequence_number_counter *snc_get(uint32_t odid)
+{
+	struct sequence_number_counter *aux_snc = snc;
+	while (aux_snc) {
+		if (aux_snc->odid == odid) {
+			return aux_snc;
+		}
+	}
+	return NULL;
+}
+
+/**
+ * \brief Add new SN counter
+ * \param[in] odid Observation Domain ID
+ * \return Pointer to sequence number counter
+ */
+struct sequence_number_counter *snc_add(uint32_t odid)
+{
+	struct sequence_number_counter *aux_snc;
+
+	aux_snc = calloc(1, sizeof(struct sequence_number_counter));
+	if (!aux_snc) {
+		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
+	aux_snc->odid = odid;
+	aux_snc->sources = 1;
+
+	if (!snc) {
+		snc = aux_snc;
+	} else {
+		aux_snc->next = snc->next;
+		snc->next = aux_snc;
+	}
+
+	return aux_snc;
+}
+
+/**
+ * \brief Add new source for SN counter
+ * \param[in] odid Observation Domain ID
+ * \return Pointer to sequence number counter
+ */
+struct sequence_number_counter *snc_add_source(uint32_t odid)
+{
+	struct sequence_number_counter *aux_snc = snc_get(odid);
+
+	if (!aux_snc) {
+		return snc_add(odid);
+	}
+
+	aux_snc->sources++;
+	return aux_snc;
+}
+
+/**
+ * \brief Remove source from SN counter
+ * \param[in] odid Observation Domain ID
+ */
+void snc_remove_source(uint32_t odid)
+{
+	struct sequence_number_counter *aux_snc = snc_get(odid);
+	if (!aux_snc) {
+		return;
+	}
+
+	aux_snc->sources--;
+	if (aux_snc->sources <= 0) {
+		aux_snc->sequence_number = 0;
+	}
+}
+
+/**
+ * \brief Get sequence number for given ODID
+ * \param[in] odid Observation Domain ID
+ * \return Pointer to sequence number value
+ */
+int *snc_get_sequence_number(uint32_t odid)
+{
+	struct sequence_number_counter *aux_snc = snc_get(odid);
+	if (!aux_snc) {
+		aux_snc = snc_add(odid);
+		if (!aux_snc) {
+			return NULL;
+		}
+	}
+
+	return &(aux_snc->sequence_number);
+}
+
+/**
+ * \brief Remove all counters
+ */
+void snc_destroy()
+{
+	struct sequence_number_counter *aux_snc = snc;
+	while (aux_snc) {
+		snc = snc->next;
+		free(aux_snc);
+		aux_snc = snc;
+	}
+}
 
 /**
  * \brief This function sets the queue for preprocessor and inits crc computing.
@@ -230,7 +346,7 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 	/* length of the options template */
 	return template->template_length - sizeof(struct ipfix_template) + sizeof(struct ipfix_options_template_record);
 }
-
+static int odid_sn = 0;
 /**
  * \brief Process templates
  *
@@ -372,6 +488,12 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 		}
 	}
 
+	int *seqn = snc_get_sequence_number(ntohl(msg->pkt_header->observation_domain_id));
+	if (seqn) {
+		msg->pkt_header->sequence_number = htonl(*seqn);
+		*seqn += records_count;
+	}
+
 	/* return number of data records */
 	return records_count;
 }
@@ -393,6 +515,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		msg = calloc(1, sizeof(struct ipfix_message));
 		msg->input_info = input_info;
 		msg->source_status = source_status;
+		snc_remove_source(input_info->odid);
 	} else {
 		if (packet == NULL) {
 			MSG_WARNING(msg_module, "Received empty packet");
@@ -414,10 +537,18 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 			return;
 		}
 
+		if (source_status == SOURCE_STATUS_NEW) {
+			snc_add_source(ntohl(msg->pkt_header->observation_domain_id));
+		}
+
 		/* Check sequence number */
 		if (msg->input_info->sequence_number != ntohl(msg->pkt_header->sequence_number)) {
 			if (!skip_seq_err) {
 				MSG_WARNING(msg_module, "Sequence number does not match: expected %u, got %u", msg->input_info->sequence_number , ntohl(msg->pkt_header->sequence_number));
+			}
+			int *seqn = snc_get_sequence_number(ntohl(msg->pkt_header->observation_domain_id));
+			if (seqn) {
+				*seqn += ntohl(msg->pkt_header->sequence_number) - msg->input_info->sequence_number;
 			}
 			msg->input_info->sequence_number  = ntohl(msg->pkt_header->sequence_number);
 		}
