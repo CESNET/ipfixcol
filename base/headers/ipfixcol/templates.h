@@ -319,6 +319,26 @@ struct ipfix_template_key *tm_key_change_template_id(struct ipfix_template_key *
  */
 void tm_key_destroy(struct ipfix_template_key *key);
 
+/**
+ * \brief Get template record length
+ *
+ * @param templ Template record
+ * @param max_len Maximum length of the template record. Typically length
+ * to the end of the Template Set.
+ * @param type Type of the Template Record. TM_TEMPLATE = Template,
+ * TM_OPTIONS_TEMPLATE = Options Template.
+ * @param data_length Length of the data record specified by this template record
+ */
+uint16_t tm_template_record_length(struct ipfix_template_record *templ, int max_len, int type, uint32_t *data_length);
+
+/**
+ * \brief Compare 2 template records
+ *
+ * @param first First template record
+ * @param second Second template record
+ * @return non-zero if templates are equal
+ */
+int tm_compare_template_records(struct ipfix_template_record *first, struct ipfix_template_record *second);
 
 #endif /* IPFIXCOL_TEMPLATES_H_ */
 

@@ -255,6 +255,19 @@ static uint16_t tm_template_length(struct ipfix_template_record *template, int m
 }
 
 /**
+ * \brief Get templaterecord length
+ */
+uint16_t tm_template_record_length(struct ipfix_template_record *template, int max_len, int type, uint32_t *data_length)
+{
+	uint16_t len = tm_template_length(template, max_len, type, data_length);
+	if (len > 0) {
+		len = len - sizeof(struct ipfix_template) + sizeof(struct ipfix_template_record);
+	}
+
+	return len;
+}
+
+/**
  * \brief Create new ipfix template
  *
  * \param[in] template ipfix template data
@@ -928,4 +941,42 @@ void tm_key_destroy(struct ipfix_template_key *key)
 {
 	free(key);
 	key = NULL;
+}
+
+/**
+ * \brief Compare two template records
+ *
+ * \param[in] first First template record
+ * \param[in] second Second template record
+ * \return non-zero if templates are equal
+ */
+int tm_compare_template_records(struct ipfix_template_record *first, struct ipfix_template_record *second)
+{
+	/* Check valid pointers */
+	if (first == NULL || second == NULL) {
+		return 0;
+	}
+
+	/* Same pointers? */
+	if (first == second) {
+		return 1;
+	}
+
+	/* Check number of fields */
+	if (first->count != second->count) {
+		return 0;
+	}
+	uint16_t *field1 = (uint16_t *) first->fields;
+	uint16_t *field2 = (uint16_t *) second->fields;
+
+	/* Check each field ID */
+	uint16_t i;
+	for (i = 0; i < ntohs(first->count); ++i, field1 += 2, field2 += 2) {
+		if (*field1 != *field2) {
+			return 0;
+		}
+	}
+
+	/* Template records are equal */
+	return 1;
 }

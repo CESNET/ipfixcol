@@ -49,7 +49,7 @@
 #include "data_manager.h"
 #include "output_manager.h"
 
-char *msg_module = "output manager";
+static const char *msg_module = "output manager";
 extern struct ipfix_template_mgr *tm;
 
 /**

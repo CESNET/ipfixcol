@@ -191,6 +191,7 @@ AC_CONFIG_FILES([Makefile
 				src/input/sctp/Makefile
 				src/storage/ipfix/Makefile
 				src/storage/dummy/Makefile
+				src/storage/forwarding/Makefile
 				src/intermediate/anonymization/Makefile
 				src/intermediate/dummy/Makefile
 				src/intermediate/joinflows/Makefile

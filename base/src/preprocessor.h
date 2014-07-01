@@ -48,6 +48,19 @@
 #include "queues.h"
 
 /**
+ * \brief
+ *
+ * Structure holding UDP specific template configuration
+ */
+struct udp_conf {
+	uint16_t template_life_time;
+	uint16_t template_life_packet;
+	uint16_t options_template_life_time;
+	uint16_t options_template_life_packet;
+};
+
+
+/**
  * \brief Does first basic parsing of raw ipfix message
  *
  * Creates pointers to data and template sets, creates data manager for
