@@ -37,6 +37,8 @@
  *
  */
 
+/* TODO: SCTP - use sctp wrappers (sctp_bindx, sctp_sendmsg ...) */
+
 #include <ipfixcol.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
@@ -44,7 +46,9 @@
 
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <netinet/in.h>
+#include <netinet/sctp.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <errno.h>
@@ -95,8 +99,18 @@ int forwarding_connect4(forwarding *conf, char *destination)
 	conf->addr.addr4.sin_family = AF_INET;
 	conf->addr.addr4.sin_port = htons(conf->port);
 
-	if (conf->type == SOURCE_TYPE_TCP) {
-		conf->sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	if (conf->type == SOURCE_TYPE_UDP) {
+		conf->sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+		if (conf->sockfd < 0) {
+			MSG_ERROR(msg_module, "Cannot open socket");
+			return 1;
+		}
+	} else {
+		if (conf->type == SOURCE_TYPE_TCP) {
+			conf->sockfd = socket(AF_INET, SOCK_STREAM, 0);
+		} else {
+			conf->sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+		}
 		if (conf->sockfd < 0) {
 			MSG_ERROR(msg_module, "Cannot open socket");
 			return 1;
@@ -106,14 +120,7 @@ int forwarding_connect4(forwarding *conf, char *destination)
 			return 1;
 		}
 		MSG_NOTICE(msg_module, "Connected to %s:%d", destination, conf->port);
-	} else {
-		conf->sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-		if (conf->sockfd < 0) {
-			MSG_ERROR(msg_module, "Cannot open socket");
-			return 1;
-		}
 	}
-
 	return 0;
 }
 
@@ -136,8 +143,18 @@ int forwarding_connect6(forwarding *conf, char *destination)
 	conf->addr.addr6.sin6_family = AF_INET6;
 	conf->addr.addr6.sin6_port = htons(conf->port);
 
-	if (conf->type == SOURCE_TYPE_TCP) {
-		conf->sockfd = socket(AF_INET6, SOCK_STREAM, 0);
+	if (conf->type == SOURCE_TYPE_UDP) {
+		conf->sockfd = socket(AF_INET6, SOCK_DGRAM, 0);
+		if (conf->sockfd < 0) {
+			MSG_ERROR(msg_module, "Cannot open socket");
+			return 1;
+		}
+	} else {
+		if (conf->type == SOURCE_TYPE_TCP) {
+			conf->sockfd = socket(AF_INET6, SOCK_STREAM, 0);
+		} else {
+			conf->sockfd = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP);
+		}
 		if (conf->sockfd < 0) {
 			MSG_ERROR(msg_module, "Cannot open socket");
 			return 1;
@@ -147,12 +164,6 @@ int forwarding_connect6(forwarding *conf, char *destination)
 			return 1;
 		}
 		MSG_NOTICE(msg_module, "Connected to %s:%d", destination, conf->port);
-	} else {
-		conf->sockfd = socket(AF_INET6, SOCK_DGRAM, 0);
-		if (conf->sockfd < 0) {
-			MSG_ERROR(msg_module, "Cannot open socket");
-			return 1;
-		}
 	}
 
 	return 0;
@@ -538,6 +549,18 @@ int forwarding_send_tcp(forwarding *conf, void *packet, int length)
 }
 
 /**
+ * \brief Send SCTP packet
+ * \param[in] conf Plugin configuration
+ * \param[in] packet IPFIX packet
+ * \param[in] length Packet length
+ * \return -1 on error
+ */
+int forwarding_send_sctp(forwarding *conf, void *packet, int length)
+{
+	return send(conf->sockfd, packet, length, 0);
+}
+
+/**
  * \brief Send packet
  * \param[in] conf Plugin configuration
  * \param[in] packet IPFIX packet
@@ -545,12 +568,22 @@ int forwarding_send_tcp(forwarding *conf, void *packet, int length)
  */
 void forwarding_send(forwarding *conf, void *packet, int length)
 {
-	int ret;
-	if (conf->type == SOURCE_TYPE_UDP) {
+	int ret = 0;
+
+	switch (conf->type) {
+	case SOURCE_TYPE_UDP:
 		ret = forwarding_send_udp(conf, packet, length);
-	} else {
+		break;
+	case SOURCE_TYPE_TCP:
 		ret = forwarding_send_tcp(conf, packet, length);
+		break;
+	case SOURCE_TYPE_SCTP:
+		ret = forwarding_send_sctp(conf, packet, length);
+		break;
+	default:
+		break;
 	}
+
 	if (ret < 0) {
 		MSG_WARNING(msg_module, "%s", sys_errlist[errno]);
 	}
