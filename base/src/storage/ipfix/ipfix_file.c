@@ -263,7 +263,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 
 
 	/* write IPFIX message into an output file */
-	while (count < ntohs(ipfix_msg->pkt_header->length)) {
+	while (wbytes < ntohs(ipfix_msg->pkt_header->length)) {
 		count = write(conf->fd, (ipfix_msg->pkt_header)+wbytes,
 		              ntohs(ipfix_msg->pkt_header->length)-wbytes);
 		if (count == -1) {
