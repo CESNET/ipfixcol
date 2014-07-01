@@ -53,18 +53,28 @@
 /* Identifier for MSG_* */
 static const char *msg_module = "forwarding storage";
 
+/* Target address */
 union addr_t {
 	struct sockaddr_in  addr4;
 	struct sockaddr_in6 addr6;
 };
 
+/* Forwarded template record */
+struct forwarding_template_record {
+	uint32_t last_sent;
+	uint32_t packets;
+	int type, length;
+	struct ipfix_template_record *record;
+};
+
+/* Plugin configuration */
 typedef struct forwarding_config {
 	enum SOURCE_TYPE type;
 	int version, port, sockfd;
 	union addr_t addr;
 	struct udp_conf udp;
 	int records_cnt, records_max;
-	struct ipfix_template_record **records;
+	struct forwarding_template_record **records;
 } forwarding;
 
 /**
@@ -160,7 +170,7 @@ int forwarding_get_record_index(forwarding *conf, uint16_t tid)
 	for (i = 0, c = 0; i < conf->records_max && c < conf->records_cnt; ++i) {
 		if (conf->records[i] != NULL) {
 			c++;
-			if (conf->records[i]->template_id == tid) {
+			if (conf->records[i]->record->template_id == tid) {
 				return i;
 			}
 		}
@@ -174,7 +184,7 @@ int forwarding_get_record_index(forwarding *conf, uint16_t tid)
  * \param[in] tid Template ID
  * \return Pointer to template
  */
-struct ipfix_template_record *forwarding_get_record(forwarding *conf, uint16_t tid)
+struct forwarding_template_record *forwarding_get_record(forwarding *conf, uint16_t tid)
 {
 	int i = forwarding_get_record_index(conf, tid);
 	if (i < 0) {
@@ -204,16 +214,17 @@ void forwarding_remove_record(forwarding *conf, uint32_t tid)
  * \brief Add new template record into array
  * \param[in] conf Plugin configuration
  * \param[in] templ New template record
+ * \param[in] len Template records length
  * \return Pointer to inserted template record
  */
-struct ipfix_template_record *forwarding_add_record(forwarding *conf, struct ipfix_template_record *record)
+struct forwarding_template_record *forwarding_add_record(forwarding *conf, struct ipfix_template_record *record, int type, int len)
 {
 	int i;
 	MSG_DEBUG(msg_module, "%d adding", ntohs(record->template_id));
 	if (conf->records_cnt == conf->records_max) {
 		/* Array is full, need more memory */
 		conf->records_max += 32;
-		conf->records = realloc(conf->records, conf->records_max * sizeof(struct ipfix_template_record *));
+		conf->records = realloc(conf->records, conf->records_max * sizeof(struct forwarding_template_record *));
 		if (conf->records == NULL) {
 			MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
 			return NULL;
@@ -227,7 +238,14 @@ struct ipfix_template_record *forwarding_add_record(forwarding *conf, struct ipf
 	/* Find place for template */
 	for (i = 0; i < conf->records_max; ++i) {
 		if (conf->records[i] == NULL) {
-			conf->records[i] = record;
+			conf->records[i] = calloc(1, sizeof(struct forwarding_template_record));
+			if (conf->records[i] == NULL) {
+				MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
+				return NULL;
+			}
+			conf->records[i]->record = record;
+			conf->records[i]->type = type;
+			conf->records[i]->length = len;
 			conf->records_cnt++;
 			return conf->records[i];
 		}
@@ -246,7 +264,7 @@ int forwarding_init_records(forwarding *conf)
 	conf->records_cnt = 0;
 	conf->records_max = 32;
 
-	conf->records = calloc(conf->records_max, sizeof(struct ipfix_template_record *));
+	conf->records = calloc(conf->records_max, sizeof(struct forwarding_template_record *));
 	if (conf->records== NULL) {
 		return 1;
 	}
@@ -281,6 +299,9 @@ char *forwarding_init_conf(forwarding *conf, xmlDoc *doc, xmlNodePtr root)
 			} else if (!xmlStrcasecmp(aux_str, (const xmlChar *) "udp")) {
 				/* UDP */
 				conf->type = SOURCE_TYPE_UDP;
+			} else if (!xmlStrcasecmp(aux_str, (const xmlChar *) "sctp")) {
+				/* SCTP */
+				conf->type = SOURCE_TYPE_SCTP;
 			} else {
 				MSG_ERROR(msg_module, "Unknown connection type \"%s\"!", aux_str);
 				xmlFree(aux_str);
@@ -536,6 +557,39 @@ void forwarding_send(forwarding *conf, void *packet, int length)
 }
 
 /**
+ * \brief Check whether template should be sent
+ * \param[in] conf Plugin configuration
+ * \param[in] rec Forwarding template record
+ * \return 0 if it wasnt sent
+ */
+int forwarding_udp_sent(forwarding *conf, struct forwarding_template_record *rec)
+{
+	uint32_t act_time = time(NULL);
+	uint32_t life_time = (rec->type == IPFIX_TEMPLATE_FLOWSET_ID) ? 
+							conf->udp.template_life_time : conf->udp.options_template_life_time;
+	uint32_t life_packets = (rec->type == IPFIX_TEMPLATE_FLOWSET_ID) ? 
+							conf->udp.template_life_packet : conf->udp.options_template_life_packet;
+	
+	/* Check template timeout */
+	if (life_time) {
+		if (rec->last_sent + life_time > act_time) {
+			return 1;
+		}
+		rec->last_sent = act_time;
+	}
+	
+	/* Check template life packets */
+	if (life_packets) {
+		if (rec->packets < life_packets) {
+			return 1;
+		}
+		rec->packets = 0;
+	}
+	
+	return 0;
+}
+
+/**
  * \brief Checks whether template record was send earlier
  *
  * Also controls template updates and inserts not-sent records into array
@@ -545,17 +599,21 @@ void forwarding_send(forwarding *conf, void *packet, int length)
  * \param[in] len Template record's length
  * \return 0 if it wasnt sent
  */
-int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, int len)
+int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, int len, int type)
 {
+	struct forwarding_template_record *aux_record;
 	int i = forwarding_get_record_index(conf, rec->template_id);
 
 	if (i >= 0) {
-		if (tm_compare_template_records(conf->records[i], rec)) {
+		if (tm_compare_template_records(conf->records[i]->record, rec)) {
 			/* records are equal */
+			if (conf->type == SOURCE_TYPE_UDP) {
+				return forwarding_udp_sent(conf, conf->records[i]);
+			}
 			return 1;
 		}
 		/* stored record is old, update it */
-		forwarding_remove_record(conf, conf->records[i]->template_id);
+		forwarding_remove_record(conf, conf->records[i]->record->template_id);
 	}
 
 	/* Store new record */
@@ -566,7 +624,10 @@ int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, 
 	}
 
 	memmove(stored, rec, len);
-	forwarding_add_record(conf, stored);
+	aux_record = forwarding_add_record(conf, stored, type, len);
+	if (aux_record) {
+		aux_record->last_sent = time(NULL);
+	}
 	return 0;
 }
 
@@ -617,7 +678,7 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 				break;
 			}
 
-			if (forwarding_record_sent(conf, aux_rec, rec_len)) {
+			if (forwarding_record_sent(conf, aux_rec, rec_len, ntohs(msg->templ_set[i]->header.flowset_id))) {
 				/* Record was sent earlier, skip it and correct template set length */
 				memmove(ptr, ptr + rec_len, max_len - rec_len);
 				msg->templ_set[i]->header.length = htons(ntohs(msg->templ_set[i]->header.length) - rec_len);
@@ -631,6 +692,72 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 	forwarding_remove_empty_sets((struct ipfix_message *) msg);
 
 	return 0;
+}
+
+/**
+ * \brief Add (option) template set into message
+ * \param[in] msg IPFIX message
+ * \param[in] set (Option) Template set
+ */
+void forwarding_add_set(struct ipfix_message *msg, struct ipfix_template_set *set)
+{
+	int i;
+	for (i = 0; msg->templ_set[i] && i < 1024; ++i);
+	
+	msg->templ_set[i] = set;
+	msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) + ntohs(set->header.length));
+}
+
+/**
+ * \brief Add templates according to udp_conf (life time && life packets)
+ * \param[in] conf Plugin configuration
+ * \param[in] msg IPFIX message
+ */
+void forwarding_update_templates(forwarding *conf, const struct ipfix_message *msg)
+{
+	int i, tid, tset_len = 4, otset_len = 4;
+	struct ipfix_template_set *templ_set = NULL, *option_set = NULL;
+	struct forwarding_template_record *rec = NULL;
+	
+	/* Check each used template */
+	for (i = 0; msg->data_couple[i].data_set != NULL && i < 1024; ++i) {
+		tid = ntohs(msg->data_couple[i].data_template->template_id);
+		rec = forwarding_get_record(conf, tid);
+		if (!rec) {
+			/* Data without template */
+			continue;
+		}
+
+		rec->packets++;
+		
+		if (forwarding_udp_sent(conf, rec)) {
+			/* Template doesnt need to be sent */
+			continue;
+		}
+
+		/* Send template - add it to (options) template set */
+		if (rec->type == IPFIX_TEMPLATE_FLOWSET_ID) {
+			templ_set = realloc(templ_set, tset_len + rec->length);
+			memcpy((uint8_t *) templ_set + tset_len, rec->record, rec->length);
+			tset_len += rec->length;
+		} else {
+			option_set = realloc(option_set, otset_len + rec->length);
+			memcpy((uint8_t *) option_set + otset_len, rec->record, rec->length);
+			otset_len += rec->length;
+		}
+	}
+	
+	/* Add sets into IPFIX message */
+	if (templ_set) {
+		templ_set->header.flowset_id = htons(IPFIX_TEMPLATE_FLOWSET_ID);
+		templ_set->header.length = htons(tset_len);
+		forwarding_add_set((struct ipfix_message *) msg, templ_set);
+	}
+	if (option_set) {
+		option_set->header.flowset_id = htons(IPFIX_OPTION_FLOWSET_ID);
+		option_set->header.length = htons(tset_len);
+		forwarding_add_set((struct ipfix_message *) msg, option_set);
+	}
 }
 
 /**
@@ -648,11 +775,13 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	void *packet;
 	int length;
 
-	if (conf->type == SOURCE_TYPE_TCP) {
-		/* Remove already sent templates */
-		forwarding_remove_sent_templates(conf, ipfix_msg);
-	}
+	/* Remove already sent templates */
+	forwarding_remove_sent_templates(conf, ipfix_msg);
 
+	if (conf->type == SOURCE_TYPE_UDP) {
+		/* Add timeouted templates */
+		forwarding_update_templates(conf, ipfix_msg);
+	}
 	/* Create packet from message */
 	packet = msg_to_packet(ipfix_msg, &length);
 	if (!packet) {
@@ -676,19 +805,23 @@ int storage_close(void **config)
 	MSG_DEBUG(msg_module, "CLOSE");
 	forwarding *conf = (forwarding *) *config;
 
-	close(conf->sockfd);
+	if (conf->type != SOURCE_TYPE_UDP) {
+		close(conf->sockfd);
+	}
 
 	int i, c;
 	for (i = 0, c = 0; i < conf->records_max && c < conf->records_cnt; ++i) {
 		if (conf->records[i]) {
 			c++;
+			free(conf->records[i]->record);
 			free(conf->records[i]);
 		}
 	}
 
 	free(conf->records);
 	free(conf);
-	conf = NULL;
+
+	*config = NULL;
 
 	return 0;
 }
