@@ -394,6 +394,11 @@ int input_init(char *params, void **config)
     xmlNode *cur_node_parent;
 #endif
 
+    /* parse params */
+    xmlDoc *doc = NULL;
+    xmlNode *root_element = NULL;
+    xmlNode *cur_node = NULL;
+
     /* allocate plugin_conf structure */
     conf = calloc(1, sizeof(struct plugin_conf));
     if (conf == NULL) {
@@ -404,11 +409,6 @@ int input_init(char *params, void **config)
 
     /* empty the master set */
     FD_ZERO(&conf->master);
-
-    /* parse params */
-    xmlDoc *doc = NULL;
-    xmlNode *root_element = NULL;
-    xmlNode *cur_node = NULL;
 
     /* parse xml string */
     doc = xmlParseDoc(BAD_CAST params);
@@ -760,7 +760,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
     struct input_info_list *info_list;
 #ifdef TLS_SUPPORT
 	int i;
-	SSL *ssl;        /* SSL structure for active socket */
+	SSL *ssl = NULL;        /* SSL structure for active socket */
 #endif
 
     /* allocate memory for packet, if needed */

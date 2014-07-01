@@ -156,7 +156,7 @@ static struct input_info_list *info_list;
  * \brief Convers static arrays from host to network byte order
  *
  */
-inline void modify()
+static inline void modify()
 {
 	int i;
 	for (i = 0; i < NETFLOW_V5_TEMPLATE_LEN/2; i++) {

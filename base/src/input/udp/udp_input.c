@@ -118,6 +118,11 @@ int input_init(char *params, void **config)
 	/* 1 when using default port - don't free memory */
 	int def_port = 0;
 
+	/* parse params */
+	xmlDoc *doc = NULL;
+	xmlNode *root_element = NULL;
+	xmlNode *cur_node = NULL;
+
 	/* allocate plugin_conf structure */
 	conf = calloc(1, sizeof(struct plugin_conf));
 	if (conf == NULL) {
@@ -125,11 +130,6 @@ int input_init(char *params, void **config)
 		retval = 1;
 		goto out;
 	}
-
-	/* parse params */
-	xmlDoc *doc = NULL;
-	xmlNode *root_element = NULL;
-	xmlNode *cur_node = NULL;
 
 	/* parse xml string */
 	doc = xmlParseDoc(BAD_CAST params);

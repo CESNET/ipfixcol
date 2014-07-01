@@ -701,7 +701,7 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 		return NULL;
 	}
 
-	MSG_DEBUG(msg_module, "Template %u from ODID %u and source %u has new id %u", new_templ->original_id, key->odid, key->crc, new_templ->template_id);
+//	MSG_DEBUG(msg_module, "Template %u from ODID %u and source %u has new id %u", new_templ->original_id, key->odid, key->crc, new_templ->template_id);
 	return new_templ;
 }
 
