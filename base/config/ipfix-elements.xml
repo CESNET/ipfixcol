@@ -2255,6 +2255,13 @@
 		<dataType>string</dataType>
 		<semantic></semantic>
 	</element>
+	<element>
+		<enterprise>16982</enterprise>
+		<id>508</id>
+		<name>HTTPResponseTime</name>
+		<dataType>unsigned32</dataType>
+		<semantic></semantic>
+	</element>
 
 	<element>
 		<enterprise>39499</enterprise>

@@ -717,6 +717,15 @@
 		</value>
 	</column>
 	<column>
+		<name>HTTP Time</name>
+		<alias>%httpti</alias>
+		<width>8</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e16982id508</element>
+		</value>
+	</column>
+	<column>
 		<name>DNS Ans</name>
 		<alias>%dnsans</alias>
 		<width>7</width>
