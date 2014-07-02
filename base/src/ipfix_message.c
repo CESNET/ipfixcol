@@ -444,3 +444,169 @@ int message_free(struct ipfix_message *msg)
 
 	return 0;
 }
+
+/*
+ * ---------------------------------------------------------------------------
+ * ---------------------------------------------------------------------------
+ * ---------------------------------------------------------------------------
+ */
+
+/**
+ * \brief Get field with given id
+ * \param[in] fields template (record) fields
+ * \param[in] cnt number of fields
+ * \param[in] id  field id
+ * \param[out] data_offset offset data record specified by this template
+ * \param[in] netw Flag indicating network byte order (template record)
+ * \return pointer to row in fields
+ */
+struct ipfix_template_row *fields_get_field(uint8_t *fields, int cnt, uint16_t id, int *data_offset, int netw)
+{
+	int i;
+	if (netw) {
+		id = htons(id);
+	}
+
+	if (data_offset) {
+		*data_offset = 0;
+	}
+
+	struct ipfix_template_row *row = (struct ipfix_template_row *) fields;
+
+	for (i = 0; i < cnt; ++i, ++row) {
+		/* Check field ID */
+		if (row->id == id) {
+			return row;
+		}
+
+		/* increase data offset */
+		if (data_offset) {
+			if (netw) {
+				*data_offset += ntohs(row->length);
+			} else {
+				*data_offset += row->length;
+			}
+		}
+	}
+
+	return NULL;
+}
+
+/**
+ * \brief Get template record field
+ */
+struct ipfix_template_row *template_record_get_field(struct ipfix_template_record *rec, uint16_t id, int *data_offset)
+{
+	return fields_get_field((uint8_t *) rec->fields, ntohs(rec->count), id, data_offset, 1);
+}
+
+/**
+ * \brief Get template record field
+ */
+struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint16_t id, int *data_offset)
+{
+	return fields_get_field((uint8_t *) templ->fields, templ->field_count, id, data_offset, 0);
+}
+
+/**
+ * \brief Get data from record
+ */
+uint8_t *data_record_get_field(uint8_t *record, struct ipfix_template *templ, uint16_t id, int *data_length)
+{
+	int offset;
+	struct ipfix_template_row *row = template_get_field(templ, id, &offset);
+
+	if (!row) {
+		return NULL;
+	}
+
+	if (data_length) {
+		*data_length = row->length;
+	}
+
+	return (uint8_t *) record + offset;
+}
+
+/**
+ * \brief Set field value
+ */
+void data_record_set_field(uint8_t *record, struct ipfix_template *templ, uint16_t id, uint8_t *value)
+{
+	int offset;
+	struct ipfix_template_row *row = template_get_field(templ, id, &offset);
+
+	if (row) {
+		memcpy(record + offset, value, row->length);
+	}
+}
+
+/**
+ * \brief Count data record length
+ */
+uint16_t data_record_length(uint8_t *data_record, struct ipfix_template *template)
+{
+	int i;
+	uint16_t count, offset = 0, index, length;
+
+	for (count = index = 0; count < template->field_count; count++, index++) {
+		length = template->fields[index].ie.length;
+
+		switch (length) {
+		case (1):
+		case (2):
+		case (4):
+		case (8):
+			offset += length;
+			break;
+		default:
+			if (length != 65535) {
+				offset += length;
+			} else {
+				/* variable length */
+				length = *((uint8_t *) (data_record+offset));
+				offset += 1;
+
+				if (length == 255) {
+					length = ntohs(*((uint16_t *) (data_record+offset)));
+					offset += 2;
+				}
+
+				offset += length;
+			}
+			break;
+		}
+	}
+
+	return offset;
+}
+
+/**
+ * \brief Set field value for each data record in set
+ */
+void data_set_set_field(struct ipfix_data_set *data_set, struct ipfix_template *templ, uint16_t id, uint8_t *value)
+{
+	int field_offset;
+	uint16_t record_offset = 0, setlen = ntohs(data_set->header.length), data_len = templ->data_length;
+	uint8_t *ptr = data_set->records;
+	struct ipfix_template_row *row = template_get_field(templ, id, &field_offset);
+
+	if (!row) {
+		return;
+	}
+
+	uint16_t min_record_length = templ->data_length;
+	uint32_t offset = 4;
+
+	if (min_record_length & 0x8000) {
+		/* record contains fields with variable length */
+		min_record_length = min_record_length & 0x7fff; /* size of the fields, variable fields excluded  */
+	}
+
+	while ((int) setlen - (int) offset - (int) min_record_length >= 0) {
+		ptr = (((uint8_t *) data_set) + offset);
+		memcpy(ptr + field_offset, value, row->length);
+		offset += data_record_length(ptr, templ);
+	}
+
+}
+

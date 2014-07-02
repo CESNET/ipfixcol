@@ -51,6 +51,13 @@
 #include <ipfixcol.h>
 
 /**
+ * \brief Structure for moving in template fields
+ */
+struct __attribute__((__packed__)) ipfix_template_row {
+	uint16_t id, length;
+};
+
+/**
  * \brief Create ipfix_message structure from data in memory
  *
  * \param[in] msg memory containing IPFIX message
@@ -138,6 +145,65 @@ uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template
  */
 int message_free(struct ipfix_message *msg);
 
+/**
+ * \brief Get data from record
+ *
+ * \param[in] record Pointer to data record
+ * \param[in] templ Data record's template
+ * \param[in] id Field id
+ * \param[out] data_length Length of returned data
+ * \return Pointer to field
+ */
+uint8_t *data_record_get_field(uint8_t *record, struct ipfix_template *templ, uint16_t id, int *data_length);
+
+/**
+ * \brief Set field value
+ *
+ * \param[in] record Pointer to data record
+ * \param[in] templ Data record's template
+ * \param[in] id Field id
+ * \param[in] value Field value
+ */
+void data_record_set_field(uint8_t *record, struct ipfix_template *templ, uint16_t id, uint8_t *value);
+
+/**
+ * \brief Set field value for each data record in set
+ *
+ * \param[in] set Data set
+ * \param[in] templ Data set's template
+ * \param[in] id Field ID
+ * \param[in] value Field value
+ */
+void data_set_set_field(struct ipfix_data_set *set, struct ipfix_template *templ, uint16_t id, uint8_t *value);
+
+/**
+ * \brief Get template record field
+ *
+ * \param[in] rec Template record
+ * \param[in] id  field id
+ * \param[out] data_offset offset data record specified by this template record
+ * \return pointer to inserted field
+ */
+struct ipfix_template_row *template_record_get_field(struct ipfix_template_record *rec, uint16_t id, int *data_offset);
+
+/**
+ * \brief Get template record field
+ *
+ * \param[in] templ Template
+ * \param[in] id  field id
+ * \param[out] data_offset offset data record specified by this template record
+ * \return pointer to inserted field
+ */
+struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint16_t id, int *data_offset);
+
+/**
+ * \brief Compute data record's length
+ *
+ * \param[in] data_record Data record
+ * \param[in] templ Data record's template
+ * \return Length
+ */
+uint16_t data_record_length(uint8_t *data_record, struct ipfix_template *templ);
 
 #endif /* IPFIX_MESSAGE_H_ */
 
