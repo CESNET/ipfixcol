@@ -1,6 +1,7 @@
 SUBDIRS = . \
 	input/tcp input/udp input/ipfix \
 	intermediate/anonymization intermediate/dummy intermediate/joinflows \
+	intermediate/filter \
 	storage/ipfix storage/dummy storage/forwarding \
 	ipfixviewer
 
