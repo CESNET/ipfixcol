@@ -568,6 +568,7 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config)
 
 	struct plugin_xml_conf_list *plugins = NULL;
 	struct plugin_xml_conf_list *aux_plugin = NULL;
+	struct plugin_xml_conf_list *last_plugin = NULL;
 	xmlNodePtr node;
 	xmlNodePtr plugin_config;
 	xmlNodePtr plugin_config_internal;
@@ -697,11 +698,12 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config)
 		xmlFree(plugin_name);
 
 		if (plugins) {
-			plugins->next = aux_plugin;
+			last_plugin->next = aux_plugin;
 		} else {
 			plugins = aux_plugin;
 		}
 
+		last_plugin = aux_plugin;
 		node = node->next;
 	}
 
