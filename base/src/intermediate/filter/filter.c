@@ -38,12 +38,14 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
 #include <ipfixcol.h>
 
 #include "../../intermediate_process.h"
+#include "../../ipfix_message.h"
 
 static const char *msg_module = "filter";
 
@@ -64,6 +66,24 @@ struct filter_config {
 	struct filter_profile *profiles;
 	struct filter_profile *default_profile;
 };
+
+/**
+ * \brief Free profile structure
+ *
+ * \param[in] profile Filter profile
+ */
+void filter_free_profile(struct filter_profile *profile)
+{
+	struct filter_source *aux_src = profile->sources;
+
+	while (aux_src) {
+		profile->sources = profile->sources->next;
+		free(aux_src);
+		aux_src = profile->sources;
+	}
+
+	free(profile);
+}
 
 /**
  * \brief Initialize filter plugin
@@ -117,7 +137,9 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 			goto cleanup_err;
 		}
 		/* Set new ODID */
-		aux_profile->new_odid = atoi((char *) xmlGetProp(profile, (const xmlChar *) "to"));
+		aux_char = xmlGetProp(profile, (const xmlChar *) "to");
+		aux_profile->new_odid = atoi((char *) aux_char);
+		xmlFree(aux_char);
 
 		/* Get filter string and all sources */
 		for (node = profile->children; node; node = node->next) {
@@ -177,6 +199,7 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 	conf->ip_config = ip_config;
 
 	*config = conf;
+	xmlFreeDoc(doc);
 	return 0;
 
 cleanup_err:
@@ -192,18 +215,48 @@ cleanup_err:
 
 	while (aux_profile) {
 		conf->profiles = conf->profiles->next;
-		free(aux_profile);
+		filter_free_profile(aux_profile);
 		aux_profile = conf->profiles;
 	}
 
 	if (conf->default_profile) {
-		free(conf->default_profile);
+		filter_free_profile(conf->default_profile);
 	}
 
 	free(conf);
 	return -1;
 }
 
+/**
+ * \brief Check if field in data record matches value
+ *
+ * \param[in] rec Data record
+ * \param[in] templ Data record's template
+ * \param[in] id Field ID
+ * \param[in] value Checked value
+ * \return 0 if values is equal with value in data record
+ */
+int filter_data_record_match(uint8_t *rec, struct ipfix_template *templ, uint16_t id, uint8_t *value)
+{
+	uint8_t *data;
+	int data_length;
+
+	data = data_record_get_field(rec, templ, id, &data_length);
+
+	if (!data) {
+		return 1;
+	}
+
+	return memcmp(data, value, data_length);
+}
+
+/**
+ * \brief Apply profile filter on message and change ODID if it fits
+ *
+ * \param[in] msg IPFIX message
+ * \param[in] profile Filter profile
+ * \return 0 if no error occurs
+ */
 int filter_apply_profile(struct ipfix_message *msg, struct filter_profile *profile)
 {
 	return 0;
@@ -259,8 +312,14 @@ int intermediate_plugin_close(void *config)
 
 	while (aux_profile) {
 		conf->profiles = conf->profiles->next;
-		free(aux_profile);
+		free(aux_profile->filter);
+		filter_free_profile(aux_profile);
 		aux_profile = conf->profiles;
+	}
+
+	if (conf->default_profile) {
+		free(conf->default_profile->filter);
+		filter_free_profile(conf->default_profile);
 	}
 
 	free(conf);
