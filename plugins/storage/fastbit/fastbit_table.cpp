@@ -319,6 +319,12 @@ int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_co
                                  * adding p0 p1 sufixes to row name
                                  */
 				//_tablex->addColumn(new_element->name(), new_element->type());
+				/* Check size from template */
+				if (field->ie.length != 16) {
+					MSG_WARNING(MSG_MODULE, "Element e%iid%i has type IPv6 but size %i. Skipping...", en, field->ie.id & 0x7FFF, field->ie.length);
+					new_element = new el_unknown(field->ie.length);
+					break;
+				}
 				new_element = new el_ipv6(sizeof(uint64_t), en, field->ie.id & 0x7FFF, 0, _buff_size);
 				elements.push_back(new_element);
 

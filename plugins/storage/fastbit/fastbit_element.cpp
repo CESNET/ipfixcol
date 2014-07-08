@@ -585,3 +585,42 @@ el_sint::el_sint(int size , int en, int id, uint32_t buf_size) {
 	}
 	allocate_buffer(buf_size);
 }
+
+el_unknown::el_unknown(int size, int en, int id,  int part, uint32_t buf_size) {
+	_size = size;
+	if (size == 65535) { /* Element with variable size */
+		_var_size = true;
+        }
+}
+
+void el_unknown::allocate_buffer(int count) {}
+void el_unknown::free_buffer() {}
+
+int el_unknown::append(void *data) {
+	return 0;
+}
+
+int el_unknown::flush(std::string path) {
+	return 0;
+}
+
+uint16_t el_unknown::fill(uint8_t * data) {
+	/* Get real size of the data */
+	if (_var_size) {
+		uint16_t true_size, offset;
+		if (data[0] < 255) {
+			true_size = data[0];
+			offset = 1;
+		} else {
+			true_size = ntohs(*((uint16_t*) &data[1]));
+			offset = 3;
+		}
+		return true_size + offset;
+	}
+
+	/* FiXED size */
+	return _size;
+}
+std::string el_unknown::get_part_info() {
+	return  std::string("");
+}

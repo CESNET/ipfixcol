@@ -187,7 +187,7 @@ public:
 	 *
 	 * @return string with part information
 	 */
-	std::string get_part_info();
+	virtual std::string get_part_info();
 };
 
 class el_var_size : public element
@@ -370,4 +370,61 @@ public:
 protected:
 	int set_type();
 };
+
+class el_unknown : public element
+{
+protected:
+	bool _var_size;
+
+	/**
+	 * \brief allocate memory for buffer
+	 *
+	 * @param count Number of elements that the buffer should hold
+	 */
+	void allocate_buffer(int count);
+
+	/**
+	 * \brief free memory for buffer
+	 */
+	virtual void free_buffer();
+
+	/**
+	 * \brief Append data to the buffer
+	 * @param data
+	 * @return 0 on success, 1 when buffer is full
+	 */
+	int append(void *data);
+
+public:
+	el_unknown(int size = 0, int en = 0, int id = 0,  int part = 0, uint32_t buf_size = 0);
+
+	/* core methods */
+	/**
+	 * \brief fill internal element value according to given data
+	 *
+	 * This method transforms data from ipfix record to internal
+	 * value usable by fastbit. Number of bytes to read is specified by _size
+	 * variable. This method converts endianity. Data can be accesed by value pointer.
+	 *
+	 * @param data pointer to input data (usualy ipfix element)
+	 * @return size of the element read from the data
+	 */
+	virtual uint16_t fill(uint8_t * data);
+
+	/**
+	 * \brief Flush buffer content to file
+	 *
+	 * @param path of the file to write to
+	 * @return 0 on success, 1 otherwise
+	 */
+	virtual int flush(std::string path);
+
+	/**
+	 * \brief Return string with par information for -part.txt FastBit file
+	 *
+	 * @return string with part information
+	 */
+	std::string get_part_info();
+};
+
 #endif
