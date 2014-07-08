@@ -112,7 +112,7 @@ struct input_info_node {
 struct sctp_config {
 	uint16_t listen_port;                    /**< listen port (host byte 
 	                                          * order) */
-	uint16_t listen_socket;                  /**< listen socket */
+	int listen_socket;                  /**< listen socket */
 	int epollfd;                             /**< epoll file descriptor */
 	struct input_info_node *input_info_list; /**< linked list of input_info
 	                                          * structures */
@@ -539,7 +539,12 @@ err_sockaddr6_case:
 	 * SOCK_SEQPACKET would create one-to-many style socket. for our 
 	 * purpose, one-to-one is just fine */
 	conf->listen_socket = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP);
-	if (conf->listen_socket == (uint16_t) -1) {
+	/* Retry with IPv4 when the implementation does not support the specified address family. */
+	if (conf->listen_socket == (uint16_t) -1 && errno == EAFNOSUPPORT) {
+		conf->listen_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	}
+	/* Check result */
+	if (conf->listen_socket == -1) {
 		MSG_ERROR(msg_module, "socket() - %s", strerror(errno));
 		goto err;
 	}
