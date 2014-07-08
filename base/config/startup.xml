@@ -102,45 +102,45 @@
 			</fileWriter>
 		</destination>
 	</exportingProcess>
+
+<!-- List of active Intermediate Plugins -->
+	<intermediatePlugins>
 	
-	<ipfixcolCore>
-		<!-- list of active intermediate plugins -->
-		<plugin>dummy_ip</plugin>
-	</ipfixcolCore> 
-	
-	<intermediatePlugin>
+		<!-- Dummy Intermediate Plugin - does nothing -->
 		<dummy_ip>
 		</dummy_ip>
-	</intermediatePlugin>
-	
-	<intermediatePlugin>
+		
 		<!-- Configuration for Anonymization Intermediate Plugin -->
+		<!--
 		<anonymization_ip>
-			<!-- Type of the anonymization function.
-				Another option is "truncation" -->
 			<type>cryptopan</type>
 		</anonymization_ip>
-	</intermediatePlugin>
-
-	<intermediatePlugin>
-		<!-- Configure Joinflows Intermediate Plugin -->
-		<!-- Each source and destination ODID (including "*") must be used only once! -->
-		<joinflows_ip>
+		-->
+		
+		<!-- Configuration for next Anonymization Intermediate Plugin -->
+		<!--
+		<anonymization_ip>
+			<type>truncation</type>
+		</anonymization_ip>
+		-->
+		
+		<!-- Configuration for joinflows plugin -->
+<!--	<joinflows_ip>	-->
 		  <!-- Set destination ODID -->
-			<join to="2">
+<!--		<join to="2">	-->
 			  <!-- Set source ODIDs for this dst ODID -->
-				<from>1</from>
-				<from>3</from>
-			</join>
+<!--			<from>1</from>	-->
+<!--			<from>3</from>	-->
+<!--		</join>	-->
 		  <!-- Set another destination ODID -->
-			<join to="4">
-				<from>5</from>
+<!--		<join to="4">	-->
+<!--			<from>5</from>	-->
 				<!-- All ODIDs not mentioned in any <join> block 
 				  will be mapped on this dst ODID -->
-				<from>*</from>
-			</join>
-		</joinflows_ip>
-	  </intermediatePlugin> 
-
-	
+<!--			<from>*</from>	-->
+<!--		</join>	-->
+<!--	</joinflows_ip>	-->
+		
+	</intermediatePlugins>
+		
 </ipfix>
