@@ -37,12 +37,17 @@
  *
  */
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
 #include <ipfixcol.h>
+
+#include "filter.h"
+#include "scanner.h"
+#include "parser.h"
 
 #include "../../intermediate_process.h"
 #include "../../ipfix_message.h"
@@ -54,18 +59,54 @@ struct filter_source {
 	struct filter_source *next;
 };
 
-struct filter_profile {
-	uint32_t new_odid;
-	char *filter;
-	struct filter_source *sources;
-	struct filter_profile *next;
-};
 
 struct filter_config {
 	void *ip_config;
 	struct filter_profile *profiles;
 	struct filter_profile *default_profile;
 };
+
+static char *ops[] = {"=", "<", "<=", ">", ">=", "!="};
+char *filter_op(enum operators op)
+{
+	return ops[op];
+}
+void filter_print(struct filter_treenode *node)
+{
+	switch (node->type) {
+	case NODE_AND:
+		filter_print(node->left);
+		MSG_DEBUG("", " && ");
+		filter_print(node->right);
+		return;
+	case NODE_OR:
+		filter_print(node->left);
+		MSG_DEBUG("", " || ");
+		filter_print(node->right);
+		return;
+	default:
+		MSG_DEBUG("", "%d %s %d", node->field, filter_op(node->op), *((uint16_t *)node->value));
+	}
+}
+
+/**
+ * \brief Free tree structure
+ */
+void filter_free_tree(struct filter_treenode *node)
+{
+	if (!node) {
+		return;
+	}
+
+	filter_tree_free(node->left);
+	filter_tree_free(node->right);
+
+	if (node->value) {
+		free(node->value);
+	}
+
+	free(node);
+}
 
 /**
  * \brief Free profile structure
@@ -82,6 +123,8 @@ void filter_free_profile(struct filter_profile *profile)
 		aux_src = profile->sources;
 	}
 
+	filter_free_tree(profile->root);
+	free(profile->filter);
 	free(profile);
 }
 
@@ -97,10 +140,12 @@ void filter_free_profile(struct filter_profile *profile)
  */
 int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config)
 {
+	(void) ip_id; (void) template_mgr;
 	struct filter_config *conf = NULL;
 	struct filter_profile *aux_profile;
 	xmlDoc *doc = NULL;
 	xmlNode *root = NULL, *profile = NULL, *node = NULL;
+	int ret;
 
 	conf = (struct filter_config *) calloc(1, sizeof(struct filter_config));
 	if (!conf) {
@@ -174,6 +219,27 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 			continue;
 		}
 
+		/* Prepare scanner */
+		yylex_init(&aux_profile->scanner);
+		YY_BUFFER_STATE bp = yy_scan_string(aux_profile->filter, aux_profile->scanner);
+		yy_switch_to_buffer(bp, aux_profile->scanner);
+
+		/* Parse filter */
+		ret = yyparse(aux_profile);
+
+		/* Clear scanner */
+		yy_flush_buffer(bp, aux_profile->scanner);
+		yy_delete_buffer(bp, aux_profile->scanner);
+		yylex_destroy(aux_profile->scanner);
+
+		if (ret) {
+			MSG_ERROR(msg_module, "Error while parsing filter - skipping profile");
+			filter_free_profile(aux_profile);
+			continue;
+		}
+
+//		filter_print(aux_profile->root);
+
 		/* This is default profile */
 		if (!xmlStrcasecmp(profile->name, (const xmlChar *) "default")) {
 			if (conf->default_profile) {
@@ -200,6 +266,8 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 
 	*config = conf;
 	xmlFreeDoc(doc);
+
+	MSG_DEBUG(msg_module, "Initialized");
 	return 0;
 
 cleanup_err:
@@ -251,6 +319,96 @@ int filter_data_record_match(uint8_t *rec, struct ipfix_template *templ, uint16_
 }
 
 /**
+ * \brief Compare values byte by byte and return according bool value
+ *
+ * \param[in] first First value
+ * \param[in] second Second value
+ * \param[in] datalen length of values
+ * \param[in] less    Return value when first value is less than second
+ * \param[in] greater Return value when first value is greater than second
+ * \param[in] equal   Return value when both values are equal
+ * \return less, greater or equal value
+ */
+bool filter_compare_values(uint8_t *first, uint8_t *second, int datalen, bool less, bool greater, bool equal)
+{
+	int i;
+	/**
+	 * Start with highest bytes of values
+	 * If byte of first and second value equals, compare lower two
+	 * Continue until i == datalen (values are equal) or some bytes differs
+	 */
+	for (i = 0; i < datalen; ++i) {
+		if (first[i] < second[i]) {
+			return less;
+		} else if (first[i] > second[i]) {
+			return greater;
+		}
+	}
+
+	return equal;
+}
+
+/**
+ * \brief Check whether value in template record fits with node expression
+ *
+ * \param[in] node Filter tree node
+ * \param[in] rec Data record
+ * \param[in] templ Data record's template
+ * \return true if data record's field fits
+ */
+bool filter_value_fits(struct filter_treenode *node, uint8_t *rec, struct ipfix_template *templ)
+{
+	int datalen;
+	uint8_t *recdata = data_record_get_field(rec, templ, node->field, &datalen);
+	if (!recdata) {
+		/* Field not found - if op is '!=' it is success */
+		return node->op == OP_NOT_EQUAL;
+	}
+
+	/* Compare values according to op */
+	switch (node->op) {
+	case OP_EQUAL:
+		return memcmp(recdata, node->value, datalen);
+	case OP_NOT_EQUAL:
+		return !memcmp(recdata, node->value, datalen);
+	case OP_LESS_EQUAL:
+		return filter_compare_values(recdata, node->value, datalen, true, false, true);
+	case OP_LESS:
+		return filter_compare_values(recdata, node->value, datalen, true, false, false);
+	case OP_GREATER_EQUAL:
+		return filter_compare_values(recdata, node->value, datalen, false, true, true);
+	case OP_GREATER:
+		return filter_compare_values(recdata, node->value, datalen, false, true, false);
+	default:
+		return false;
+	}
+}
+
+/**
+ * \brief Check whether node (and it's children) fits on data record
+ *
+ * \param[in] node Filter tree node
+ * \param[in] rec Data record
+ * \param[in] templ Data record's template
+ * \return true if data record's field fits
+ */
+bool filter_node_fits(struct filter_treenode *node, uint8_t *rec, struct ipfix_template *templ)
+{
+	/**
+	 * return result modified by negation flag
+	 * it is the same as 'return (node->negate) ? !value : value'
+	 */
+	switch (node->type) {
+	case NODE_AND:
+		return (node->negate) ^ (filter_node_fits(node->left, rec, templ) && filter_node_fits(node->right, rec, templ));
+	case NODE_OR:
+		return (node->negate) ^ (filter_node_fits(node->left, rec, templ) || filter_node_fits(node->right, rec, templ));
+	default:
+		return (node->negate) ^ filter_value_fits(node, rec, templ);
+	}
+}
+
+/**
  * \brief Apply profile filter on message and change ODID if it fits
  *
  * \param[in] msg IPFIX message
@@ -259,6 +417,8 @@ int filter_data_record_match(uint8_t *rec, struct ipfix_template *templ, uint16_
  */
 int filter_apply_profile(struct ipfix_message *msg, struct filter_profile *profile)
 {
+	(void) msg;
+	(void) profile;
 	return 0;
 }
 
@@ -325,3 +485,197 @@ int intermediate_plugin_close(void *config)
 	free(conf);
 	return 0;
 }
+
+
+/**
+ * \brief Parse field name
+ *
+ * \param[in] field Field name
+ * \return Information Element ID
+ */
+int filter_parse_field(const char *field)
+{
+	return 1;
+}
+
+/**
+ * \brief Parse raw field name
+ *
+ * \param[in] rawfield Raw field name
+ * \return Information Element ID
+ */
+int filter_parse_rawfield(const char *rawfield)
+{
+	return atoi(&(rawfield[2]));
+}
+
+/**
+ * \brief Create a pointer with given value
+ *
+ * \param[in] data Source value
+ * \param[in] length Data length (pointer size)
+ * \return New pointer
+ */
+uint8_t *filter_num_to_ptr(uint8_t *data, int length)
+{
+	uint8_t *value = malloc(length);
+	if (!value) {
+		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
+
+	memcpy(value, data, length);
+	return value;
+}
+
+/**
+ * \brief Parse number in format [0-9]+[kKmMgGtT]
+ *
+ * \param[in] number Number
+ * \return Numeric value
+ */
+uint8_t *filter_parse_number(const char *number)
+{
+	long tmp = strlen(number);
+	long mult = 1;
+	switch (number[tmp - 1]) {
+	case 'k':
+	case 'K':
+		mult = 1000;
+		break;
+	case 'm':
+	case 'M':
+		mult = 1000000;
+		break;
+	case 'g':
+	case 'G':
+		mult = 1000000000;
+		break;
+	case 't':
+	case 'T':
+		mult = 1000000000000;
+		break;
+	}
+
+	tmp = strtol(number, NULL, 10) * mult;
+
+	return filter_num_to_ptr((uint8_t *) &tmp, sizeof(long));
+}
+
+/**
+ * \brief Parse hexadecimal number
+ */
+uint8_t *filter_parse_hexnum(const char *hexnum)
+{
+	long tmp = strtol(hexnum, NULL, 16);
+	return filter_num_to_ptr((uint8_t *) &tmp, sizeof(long));
+}
+
+enum operators filter_decode_operator(const char *op)
+{
+	/*
+	 * there must be strNcmp because there is rest of filter string behind operator
+	 * for example filter = "ie20 > 60" =>  op = "> 60"
+	 */
+	if (!strcmp(op, "=") || !strcmp(op, "==")) {
+		return OP_EQUAL;
+	} else if (!strncmp(op, "!=", 2)) {
+		return OP_NOT_EQUAL;
+	} else if (!strncmp(op, "<", 1)) {
+		return OP_LESS;
+	} else if (!strncmp(op, "<=", 2) || !strncmp(op, "=<", 2)) {
+		return OP_LESS_EQUAL;
+	} else if (!strncmp(op, ">", 1)) {
+		return OP_GREATER;
+	} else if (!strncmp(op, ">=", 2) || !strncmp(op, "=>", 2)) {
+		return OP_GREATER_EQUAL;
+	}
+
+	return OP_EQUAL;
+}
+
+/**
+ * \brief Create new leaf treenode
+ */
+struct filter_treenode *filter_new_leaf_node(int field, const char *op, uint8_t *value)
+{
+	struct filter_treenode *node = calloc(1, sizeof(struct filter_treenode));
+	if (!node) {
+		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
+
+	node->value = value;
+	node->field = field;
+	node->type = NODE_LEAF;
+	node->op = filter_decode_operator(op);
+
+	return node;
+}
+
+/**
+ * \brief Decode node type
+ */
+enum nodetype filter_decode_type(const char *type)
+{
+	if (!strncasecmp(type, "and", 3) || !strncmp(type, "&&", 2)) {
+		return NODE_AND;
+	}
+
+	return NODE_OR;
+}
+
+/**
+ * \brief Create new parent node
+ */
+struct filter_treenode *filter_new_parent_node(struct filter_treenode *left, const char *type, struct filter_treenode *right)
+{
+	struct filter_treenode *node = calloc(1, sizeof(struct filter_treenode));
+	if (!node) {
+		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
+
+	node->left = left;
+	node->right = right;
+	node->type = filter_decode_type(type);
+
+	return node;
+}
+
+/**
+ * \brief Set node negated
+ */
+void filter_node_set_negated(struct filter_treenode *node)
+{
+	if (node) {
+		node->negate = true;
+	}
+}
+
+/**
+ * \brief Set profile root node
+ */
+void filter_set_root(struct filter_profile *profile, struct filter_treenode *node)
+{
+	if (profile && node) {
+		profile->root = node;
+	}
+}
+
+/**
+ * \brief Print error message from filter parser
+ */
+void filter_error(const char *msg)
+{
+	MSG_ERROR(msg_module, "%s", msg);
+}
+
+struct filter_treenode *filter_new_exists_node(int field)
+{
+	struct filter_treenode *node = calloc(1, sizeof(struct filter_treenode));
+
+	node->field = field;
+	return node;
+}
+

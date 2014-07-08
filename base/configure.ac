@@ -75,6 +75,12 @@ AC_ARG_WITH([openssl],
 
 ############################ Check for programs ################################
 
+# Check for flex
+AC_CHECK_PROG(FLEX, flex, flex)
+
+# Check fol bison
+AC_CHECK_PROG(BISON, bison, bison)
+
 # Check for doxygen
 AC_CHECK_PROG(DOXYGEN, doxygen, doxygen)
 AM_CONDITIONAL([HAVE_DOXYGEN], [test -n $DOXYGEN])
@@ -206,6 +212,10 @@ AC_OUTPUT
 
 # print warnings
 
+AS_IF([test -z "$FLEX"], AC_MSG_WARN([Due to missing flex you will not be able to generate filter scanner from sources.]))
+
+AS_IF([test -z "$BISON"], AC_MSG_WARN([Due to missing bison you will not be able to generate filter parser from sources.]))
+
 AM_COND_IF(HAVE_DOXYGEN,, AC_MSG_WARN([Due to missing doxygen you will not able to generate Doxygen documentation.]))
 
 AS_IF([test -z "$RPMBUILD"],
@@ -225,6 +235,8 @@ echo "
   rpmbuild......: ${RPMBUILD:-NONE}
   xsltproc......: ${XSLTPROC:-NONE}
   xsltmanstyle..: $XSLTMANSTYLE
+  flex..........: ${FLEX:-NONE}
+  bison.........: ${BISON:-NONE}
   Doxygen.......: ${DOXYGEN:-NONE}
   TLS support...: $TLS_SUPPORT
   SCTP support..: ${enable_sctp:-yes}
