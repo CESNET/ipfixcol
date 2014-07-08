@@ -42,6 +42,7 @@
 #include <string.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
+#include <libxml/xpathInternals.h>
 
 #include <ipfixcol.h>
 
@@ -54,17 +55,13 @@
 
 static const char *msg_module = "filter";
 
-struct filter_source {
-	uint32_t id;
-	struct filter_source *next;
-};
+#define DEFAULT_ELEMENTS_FILE "/etc/ipfixcol/ipfix-elements.xml"
 
-
-struct filter_config {
-	void *ip_config;
-	struct filter_profile *profiles;
-	struct filter_profile *default_profile;
-};
+#define CHECK_ALLOC(check_alloc_ptr) \
+	if (!(check_alloc_ptr)) { \
+		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__); \
+		return NULL; \
+	}
 
 static char *ops[] = {"=", "<", "<=", ">", ">=", "!="};
 char *filter_op(enum operators op)
@@ -85,7 +82,7 @@ void filter_print(struct filter_treenode *node)
 		filter_print(node->right);
 		return;
 	default:
-		MSG_DEBUG("", "%d %s %d", node->field, filter_op(node->op), *((uint16_t *)node->value));
+		MSG_DEBUG("", "%d %s %d", node->field, filter_op(node->op), *((uint16_t *)node->value->value));
 	}
 }
 
@@ -98,10 +95,13 @@ void filter_free_tree(struct filter_treenode *node)
 		return;
 	}
 
-	filter_tree_free(node->left);
-	filter_tree_free(node->right);
+	filter_free_tree(node->left);
+	filter_free_tree(node->right);
 
 	if (node->value) {
+		if (node->value->value) {
+			free(node->value->value);
+		}
 		free(node->value);
 	}
 
@@ -124,8 +124,22 @@ void filter_free_profile(struct filter_profile *profile)
 	}
 
 	filter_free_tree(profile->root);
-	free(profile->filter);
 	free(profile);
+}
+
+void filter_init_elements(struct filter_parser_data *pdata)
+{
+	pdata->doc = xmlReadFile(DEFAULT_ELEMENTS_FILE, NULL, 0);
+	if (!pdata->doc) {
+		MSG_ERROR(msg_module, "Unable to parse elements configuration file %s", DEFAULT_ELEMENTS_FILE);
+		return;
+	}
+
+	pdata->context = xmlXPathNewContext(pdata->doc);
+	if (pdata->context == NULL) {
+		MSG_ERROR(msg_module, "Error in xmlXPathNewContext");
+		return;
+	}
 }
 
 /**
@@ -142,9 +156,14 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 {
 	(void) ip_id; (void) template_mgr;
 	struct filter_config *conf = NULL;
-	struct filter_profile *aux_profile;
+	struct filter_profile *aux_profile = NULL;
+	struct filter_source *aux_src = NULL;
+	struct filter_parser_data parser_data;
+
 	xmlDoc *doc = NULL;
 	xmlNode *root = NULL, *profile = NULL, *node = NULL;
+	xmlChar *aux_char;
+
 	int ret;
 
 	conf = (struct filter_config *) calloc(1, sizeof(struct filter_config));
@@ -169,12 +188,13 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 		MSG_ERROR(msg_module, "Cannot get document root element!");
 		goto cleanup_err;
 	}
-	xmlChar *aux_char;
 
-	struct filter_source *aux_src = NULL;
+	filter_init_elements(&parser_data);
 
 	/* Iterate throught all profiles */
 	for (profile = root->children; profile; profile = profile->next) {
+		parser_data.filter = NULL;
+
 		/* Allocate space for profile */
 		aux_profile = calloc(1, sizeof(struct filter_profile));
 		if (!aux_profile) {
@@ -209,36 +229,37 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 				}
 			} else if (!xmlStrcmp(node->name, (const xmlChar *) "filterString")) {
 				/* Filter string found */
-				aux_profile->filter = (char *) xmlNodeListGetString(doc, node->children, 1);
+				parser_data.filter = (char *) xmlNodeListGetString(doc, node->children, 1);
 			}
 		}
 
 		/* No filter string -> no profile */
-		if (!aux_profile->filter) {
+		if (!parser_data.filter) {
 			free(aux_profile);
 			continue;
 		}
 
+		parser_data.profile = aux_profile;
+
 		/* Prepare scanner */
-		yylex_init(&aux_profile->scanner);
-		YY_BUFFER_STATE bp = yy_scan_string(aux_profile->filter, aux_profile->scanner);
-		yy_switch_to_buffer(bp, aux_profile->scanner);
+		yylex_init(&parser_data.scanner);
+		YY_BUFFER_STATE bp = yy_scan_string(parser_data.filter, parser_data.scanner);
+		yy_switch_to_buffer(bp, parser_data.scanner);
 
 		/* Parse filter */
-		ret = yyparse(aux_profile);
+		ret = yyparse(&parser_data);
 
 		/* Clear scanner */
-		yy_flush_buffer(bp, aux_profile->scanner);
-		yy_delete_buffer(bp, aux_profile->scanner);
-		yylex_destroy(aux_profile->scanner);
+		yy_flush_buffer(bp, parser_data.scanner);
+		yy_delete_buffer(bp, parser_data.scanner);
+		yylex_destroy(parser_data.scanner);
+		free(parser_data.filter);
 
 		if (ret) {
 			MSG_ERROR(msg_module, "Error while parsing filter - skipping profile");
 			filter_free_profile(aux_profile);
 			continue;
 		}
-
-//		filter_print(aux_profile->root);
 
 		/* This is default profile */
 		if (!xmlStrcasecmp(profile->name, (const xmlChar *) "default")) {
@@ -266,8 +287,10 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 
 	*config = conf;
 	xmlFreeDoc(doc);
+	xmlXPathFreeContext(parser_data.context);
+	xmlFreeDoc(parser_data.doc);
 
-	MSG_DEBUG(msg_module, "Initialized");
+	MSG_NOTICE(msg_module, "Initialized");
 	return 0;
 
 cleanup_err:
@@ -277,6 +300,11 @@ cleanup_err:
 
 	if (doc) {
 		xmlFreeDoc(doc);
+	}
+
+	if (parser_data.doc) {
+		xmlXPathFreeContext(parser_data.context);
+		xmlFreeDoc(parser_data.doc);
 	}
 
 	aux_profile = conf->profiles;
@@ -349,14 +377,14 @@ bool filter_compare_values(uint8_t *first, uint8_t *second, int datalen, bool le
 }
 
 /**
- * \brief Check whether value in template record fits with node expression
+ * \brief Check whether value in data record fits with node expression
  *
  * \param[in] node Filter tree node
  * \param[in] rec Data record
  * \param[in] templ Data record's template
  * \return true if data record's field fits
  */
-bool filter_value_fits(struct filter_treenode *node, uint8_t *rec, struct ipfix_template *templ)
+bool filter_fits_value(struct filter_treenode *node, uint8_t *rec, struct ipfix_template *templ)
 {
 	int datalen;
 	uint8_t *recdata = data_record_get_field(rec, templ, node->field, &datalen);
@@ -368,20 +396,47 @@ bool filter_value_fits(struct filter_treenode *node, uint8_t *rec, struct ipfix_
 	/* Compare values according to op */
 	switch (node->op) {
 	case OP_EQUAL:
-		return memcmp(recdata, node->value, datalen);
+		return memcmp(recdata, node->value->value, datalen);
 	case OP_NOT_EQUAL:
-		return !memcmp(recdata, node->value, datalen);
+		return !memcmp(recdata, node->value->value, datalen);
 	case OP_LESS_EQUAL:
-		return filter_compare_values(recdata, node->value, datalen, true, false, true);
+		return filter_compare_values(recdata, node->value->value, datalen, true, false, true);
 	case OP_LESS:
-		return filter_compare_values(recdata, node->value, datalen, true, false, false);
+		return filter_compare_values(recdata, node->value->value, datalen, true, false, false);
 	case OP_GREATER_EQUAL:
-		return filter_compare_values(recdata, node->value, datalen, false, true, true);
+		return filter_compare_values(recdata, node->value->value, datalen, false, true, true);
 	case OP_GREATER:
-		return filter_compare_values(recdata, node->value, datalen, false, true, false);
+		return filter_compare_values(recdata, node->value->value, datalen, false, true, false);
 	default:
 		return false;
 	}
+}
+
+/**
+ * \brief Check whether string in data record fits with node
+ *
+ * \param[in] node Filter tree node
+ * \param[in] rec Data record
+ * \param[in] templ Data record's template
+ * \return true if data record's field fits
+ */
+bool filter_fits_string(struct filter_treenode *node, uint8_t *rec, struct ipfix_template *templ)
+{
+	(void) node; (void) rec; (void) templ;
+	return false;
+}
+
+/**
+ * \brief Check whether data record contains given field
+ *
+ * \param[in] node Filter tree node
+ * \param[in] rec Data record
+ * \param[in] templ Data record's template
+ * \return true if data record's field fits
+ */
+bool filter_fits_exists(struct filter_treenode *node, uint8_t *rec, struct ipfix_template *templ)
+{
+	return data_record_get_field(rec, templ, node->field, NULL);
 }
 
 /**
@@ -392,7 +447,7 @@ bool filter_value_fits(struct filter_treenode *node, uint8_t *rec, struct ipfix_
  * \param[in] templ Data record's template
  * \return true if data record's field fits
  */
-bool filter_node_fits(struct filter_treenode *node, uint8_t *rec, struct ipfix_template *templ)
+bool filter_fits_node(struct filter_treenode *node, uint8_t *rec, struct ipfix_template *templ)
 {
 	/**
 	 * return result modified by negation flag
@@ -400,11 +455,17 @@ bool filter_node_fits(struct filter_treenode *node, uint8_t *rec, struct ipfix_t
 	 */
 	switch (node->type) {
 	case NODE_AND:
-		return (node->negate) ^ (filter_node_fits(node->left, rec, templ) && filter_node_fits(node->right, rec, templ));
+		return (node->negate) ^ (filter_fits_node(node->left, rec, templ) && filter_fits_node(node->right, rec, templ));
 	case NODE_OR:
-		return (node->negate) ^ (filter_node_fits(node->left, rec, templ) || filter_node_fits(node->right, rec, templ));
+		return (node->negate) ^ (filter_fits_node(node->left, rec, templ) || filter_fits_node(node->right, rec, templ));
+	case NODE_EXISTS:
+		return (node->negate) ^ (filter_fits_exists(node, rec, templ));
 	default:
-		return (node->negate) ^ filter_value_fits(node, rec, templ);
+		if (node->value->type == VT_NUMBER) {
+			return (node->negate) ^ filter_fits_value(node, rec, templ);
+		} else {
+			return (node->negate) ^ filter_fits_string(node, rec, templ);
+		}
 	}
 }
 
@@ -472,13 +533,11 @@ int intermediate_plugin_close(void *config)
 
 	while (aux_profile) {
 		conf->profiles = conf->profiles->next;
-		free(aux_profile->filter);
 		filter_free_profile(aux_profile);
 		aux_profile = conf->profiles;
 	}
 
 	if (conf->default_profile) {
-		free(conf->default_profile->filter);
 		filter_free_profile(conf->default_profile);
 	}
 
@@ -491,11 +550,39 @@ int intermediate_plugin_close(void *config)
  * \brief Parse field name
  *
  * \param[in] field Field name
- * \return Information Element ID
+ * \param[in] doc XML document
+ * \param[in] context XML context
+ * \return Information Element ID or -1 on error
  */
-int filter_parse_field(const char *field)
+int filter_parse_field(char *field, xmlDoc *doc, xmlXPathContextPtr context)
 {
-	return 1;
+	xmlChar xpath[100];
+	xmlChar *tmp = NULL;
+	xmlXPathObjectPtr result;
+	int res;
+
+	/* Prepare XPath */
+	sprintf((char *) xpath, "/ipfix-elements/element[name='%s']/id", field);
+	result = xmlXPathEvalExpression(xpath, context);
+
+	if (result == NULL) {
+		MSG_ERROR(msg_module, "Error in xmlXPathEvalExpression\n");
+		return -1;
+	}
+
+	if (xmlXPathNodeSetIsEmpty(result->nodesetval)) {
+		xmlXPathFreeObject(result);
+		MSG_ERROR(msg_module, "Unknown field '%s'!", field);
+		return -1;
+	} else {
+		/* Get ID */
+		tmp = xmlNodeListGetString(doc, result->nodesetval->nodeTab[0]->xmlChildrenNode, 1);
+		res = atoi((char *) tmp);
+	}
+
+	xmlXPathFreeObject(result);
+	xmlFree(tmp);
+	return res;
 }
 
 /**
@@ -504,7 +591,7 @@ int filter_parse_field(const char *field)
  * \param[in] rawfield Raw field name
  * \return Information Element ID
  */
-int filter_parse_rawfield(const char *rawfield)
+int filter_parse_rawfield(char *rawfield)
 {
 	return atoi(&(rawfield[2]));
 }
@@ -519,10 +606,7 @@ int filter_parse_rawfield(const char *rawfield)
 uint8_t *filter_num_to_ptr(uint8_t *data, int length)
 {
 	uint8_t *value = malloc(length);
-	if (!value) {
-		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
-		return NULL;
-	}
+	CHECK_ALLOC(value);
 
 	memcpy(value, data, length);
 	return value;
@@ -534,8 +618,11 @@ uint8_t *filter_num_to_ptr(uint8_t *data, int length)
  * \param[in] number Number
  * \return Numeric value
  */
-uint8_t *filter_parse_number(const char *number)
+struct filter_value *filter_parse_number(char *number)
 {
+	struct filter_value *val = malloc(sizeof(struct filter_value));
+	CHECK_ALLOC(val);
+
 	long tmp = strlen(number);
 	long mult = 1;
 	switch (number[tmp - 1]) {
@@ -559,19 +646,46 @@ uint8_t *filter_parse_number(const char *number)
 
 	tmp = strtol(number, NULL, 10) * mult;
 
-	return filter_num_to_ptr((uint8_t *) &tmp, sizeof(long));
+	val->type = VT_NUMBER;
+	val->value = filter_num_to_ptr((uint8_t *) &tmp, sizeof(long));
+	return val;
 }
 
 /**
  * \brief Parse hexadecimal number
  */
-uint8_t *filter_parse_hexnum(const char *hexnum)
+struct filter_value *filter_parse_hexnum(char *hexnum)
 {
+	struct filter_value *val = malloc(sizeof(struct filter_value));
+	CHECK_ALLOC(val);
+
+	val->type = VT_NUMBER;
+
 	long tmp = strtol(hexnum, NULL, 16);
-	return filter_num_to_ptr((uint8_t *) &tmp, sizeof(long));
+
+	val->value = filter_num_to_ptr((uint8_t *) &tmp, sizeof(long));
+	return val;
 }
 
-enum operators filter_decode_operator(const char *op)
+/**
+ * \brief Parse string
+ */
+struct filter_value *filter_parse_string(char *string)
+{
+	struct filter_value *val = malloc(sizeof(struct filter_value));
+	CHECK_ALLOC(val);
+
+	val->type = VT_STRING;
+	val->value = malloc(strlen(string) - 1);
+	CHECK_ALLOC(val->value);
+
+	memcpy(val->value, string + 1, strlen(string) - 1);
+	val->value[strlen(string) - 2] = 0;
+
+	return val;
+}
+
+enum operators filter_decode_operator(char *op)
 {
 	/*
 	 * there must be strNcmp because there is rest of filter string behind operator
@@ -579,15 +693,15 @@ enum operators filter_decode_operator(const char *op)
 	 */
 	if (!strcmp(op, "=") || !strcmp(op, "==")) {
 		return OP_EQUAL;
-	} else if (!strncmp(op, "!=", 2)) {
+	} else if (!strcmp(op, "!=")) {
 		return OP_NOT_EQUAL;
-	} else if (!strncmp(op, "<", 1)) {
+	} else if (!strcmp(op, "<")) {
 		return OP_LESS;
-	} else if (!strncmp(op, "<=", 2) || !strncmp(op, "=<", 2)) {
+	} else if (!strcmp(op, "<=") || !strcmp(op, "=<")) {
 		return OP_LESS_EQUAL;
-	} else if (!strncmp(op, ">", 1)) {
+	} else if (!strcmp(op, ">")) {
 		return OP_GREATER;
-	} else if (!strncmp(op, ">=", 2) || !strncmp(op, "=>", 2)) {
+	} else if (!strcmp(op, ">=") || !strcmp(op, "=>")) {
 		return OP_GREATER_EQUAL;
 	}
 
@@ -597,13 +711,10 @@ enum operators filter_decode_operator(const char *op)
 /**
  * \brief Create new leaf treenode
  */
-struct filter_treenode *filter_new_leaf_node(int field, const char *op, uint8_t *value)
+struct filter_treenode *filter_new_leaf_node(int field, char *op, struct filter_value *value)
 {
 	struct filter_treenode *node = calloc(1, sizeof(struct filter_treenode));
-	if (!node) {
-		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
-		return NULL;
-	}
+	CHECK_ALLOC(node);
 
 	node->value = value;
 	node->field = field;
@@ -616,9 +727,9 @@ struct filter_treenode *filter_new_leaf_node(int field, const char *op, uint8_t 
 /**
  * \brief Decode node type
  */
-enum nodetype filter_decode_type(const char *type)
+enum nodetype filter_decode_type(char *type)
 {
-	if (!strncasecmp(type, "and", 3) || !strncmp(type, "&&", 2)) {
+	if (!strcasecmp(type, "and") || !strcmp(type, "&&")) {
 		return NODE_AND;
 	}
 
@@ -628,13 +739,10 @@ enum nodetype filter_decode_type(const char *type)
 /**
  * \brief Create new parent node
  */
-struct filter_treenode *filter_new_parent_node(struct filter_treenode *left, const char *type, struct filter_treenode *right)
+struct filter_treenode *filter_new_parent_node(struct filter_treenode *left, char *type, struct filter_treenode *right)
 {
 	struct filter_treenode *node = calloc(1, sizeof(struct filter_treenode));
-	if (!node) {
-		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
-		return NULL;
-	}
+	CHECK_ALLOC(node);
 
 	node->left = left;
 	node->right = right;
@@ -666,15 +774,17 @@ void filter_set_root(struct filter_profile *profile, struct filter_treenode *nod
 /**
  * \brief Print error message from filter parser
  */
-void filter_error(const char *msg)
+void filter_error(const char *msg, YYLTYPE *loc)
 {
-	MSG_ERROR(msg_module, "%s", msg);
+	MSG_ERROR(msg_module, "%d: %s", loc->last_column, msg);
 }
 
 struct filter_treenode *filter_new_exists_node(int field)
 {
 	struct filter_treenode *node = calloc(1, sizeof(struct filter_treenode));
+	CHECK_ALLOC(node);
 
+	node->type = NODE_EXISTS;
 	node->field = field;
 	return node;
 }

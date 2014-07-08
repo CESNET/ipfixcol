@@ -48,7 +48,8 @@
 %code requires { 
 
 struct filter_treenode;
-struct filter_profile;
+struct filter_parser_data;
+struct filter_value;
 
 }
 
@@ -60,25 +61,28 @@ struct filter_profile;
 %}
 
 /* Parser parameter (profile) and lexer parameter (scanner) */
-%parse-param { struct filter_profile *profile }
+%parse-param { struct filter_parser_data *data }
 %lex-param { void *scanner}
 
 %{
 int yylex(YYSTYPE* lvalp, YYLTYPE* llocp, void* scanner);
 
-void yyerror(YYLTYPE *loc, struct filter_profile *p, const char *msg)
+void yyerror(YYLTYPE *loc, struct filter_parser_data *p, const char *msg)
 {
 	(void) p; (void) loc;
-	filter_error(msg);
+	filter_error(msg, loc);
 }
 
-#define scanner profile->scanner
+#define scanner  data->scanner
+#define profile  data->profile
+#define doc      data->doc
+#define context  data->context
 %}
 
 %union {
-const char *s;
+char *s;
 int i;
-uint8_t *ptr;
+struct filter_value *v;
 struct filter_treenode *n;
 }
 
@@ -100,7 +104,7 @@ struct filter_treenode *n;
 %token END 0			"end of file"
 
 %type <n> explist exp start
-%type <ptr> value
+%type <v> value
 %type <i> field
 
 %left OPERATOR
@@ -128,13 +132,14 @@ exp:
     ;
 
 value:
-	  NUMBER { $$ = filter_parse_number($1); }
-	| HEXNUM { $$ = filter_parse_hexnum($1); }
+	  NUMBER { $$ = filter_parse_number($1); free($1); if (!$$) YYABORT;}
+	| HEXNUM { $$ = filter_parse_hexnum($1); free($1); if (!$$) YYABORT;}
+	| STRING { $$ = filter_parse_string($1); free($1); if (!$$) YYABORT;}
 	;
 	
 field:
-	  FIELD { $$ = filter_parse_field($1); }
-	| RAWFIELD { $$ = filter_parse_rawfield($1); }
+	  FIELD { $$ = filter_parse_field($1, doc, context); free($1); if ($$ < 0) YYABORT; }
+	| RAWFIELD { $$ = filter_parse_rawfield($1); free($1); if ($$ < 0) YYABORT; }
 	;
 
 %%

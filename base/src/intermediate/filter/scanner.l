@@ -59,7 +59,6 @@
 %}
 
 /* regexp aliases */
-_FIELD %[a-zA-Z0-9]+
 _RAWFIELD ie[0-9]+
 _NUMBER [0-9]+[kKmMgGtT]{0,1}
 _HEXNUM 0x[0-9a-fA-F]+
@@ -71,24 +70,26 @@ _OPERATOR AND|OR|and|or|"||"|&&
 _NOT not|NOT
 _EXISTS exists|EXISTS 
 _BRACKET "("|")"
+_FIELD [a-zA-Z][a-zA-Z0-9]+
 _WHITESPACE " "+|\t+
-_STRING [^ =><!()]+|! 
+_STRING \"[^ =><!()]+|!\" 
 %%
 
-{_FIELD}       { yylval->s = yytext; return FIELD; }
-{_RAWFIELD}    { yylval->s = yytext; return RAWFIELD; }
+{_RAWFIELD}    { yylval->s = strndup(yytext, yyleng); return RAWFIELD; }
 {_WHITESPACE} 	{ yylloc->last_column++; yylloc->first_column++; /* update location even when skipping the input */ }
 \n+             { yylloc->last_line += yyleng; yylloc->first_line = yylloc->last_line; /* update location on newline */ }
-{_NUMBER} 	    { yylval->s = yytext; return NUMBER; }
-{_HEXNUM}		{ yylval->s = yytext; return HEXNUM; }
-{_IPv4}         { yylval->s = yytext; return IPv4; }
-{_IPv6}         { yylval->s = yytext; return IPv6; }
-{_TIMESTAMP}    { yylval->s = yytext; return TIMESTAMP; }
-{_CMP}          { yylval->s = yytext; return CMP; }
-{_OPERATOR}   	{ yylval->s = yytext; return OPERATOR; }
-{_NOT}			{ yylval->s = yytext; return NOT; }
-{_EXISTS}		{ yylval->s = yytext; return EXISTS; }
+{_NUMBER} 	    { yylval->s = strndup(yytext, yyleng); return NUMBER; }
+{_HEXNUM}		{ yylval->s = strndup(yytext, yyleng); return HEXNUM; }
+{_IPv4}         { yylval->s = strndup(yytext, yyleng); return IPv4; }
+{_IPv6}         { yylval->s = strndup(yytext, yyleng); return IPv6; }
+{_TIMESTAMP}    { yylval->s = strndup(yytext, yyleng); return TIMESTAMP; }
+{_CMP}          { yylval->s = strndup(yytext, yyleng); return CMP; }
+{_OPERATOR}   	{ yylval->s = strndup(yytext, yyleng); return OPERATOR; }
+{_NOT}			{ return NOT; }
+{_EXISTS}		{ return EXISTS; }
+{_FIELD}        { yylval->s = strndup(yytext, yyleng); return FIELD; }
 {_BRACKET}		{ return yytext[0]; }
+{_STRING}		{ yylval->s = strndup(yytext, yyleng); return STRING; }
 .				{yylloc->last_column++; yylloc->first_column++;}
 %%
  
