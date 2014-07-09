@@ -391,7 +391,43 @@ bool filter_fits_value(struct filter_treenode *node, uint8_t *rec, struct ipfix_
  */
 bool filter_fits_string(struct filter_treenode *node, uint8_t *rec, struct ipfix_template *templ)
 {
-	(void) node; (void) rec; (void) templ;
+	int datalen = 0, vallen = strlen((char *) node->value->value);
+	char *pos = NULL, *prevpos = NULL;
+
+	uint8_t *recdata = data_record_get_field(rec, templ, node->field, &datalen);
+	if (!recdata) {
+		return node->op == OP_NOT_EQUAL;
+	}
+	datalen = strlen((char *) recdata);
+
+	/* Find substring in string */
+	pos = strstr((char *) recdata, (char *) node->value->value);
+
+	switch (node->op) {
+	case OP_NONE:
+		/* Success == substring found */
+		return (bool) pos;
+	case OP_EQUAL:
+		/* Success == strings are equal */
+		return pos && datalen == vallen;
+	case OP_NOT_EQUAL:
+		/* Success == strings are different */
+		return !(pos && datalen == vallen);
+	case OP_LESS:
+		/* String must end with substring */
+		while (pos) {
+			prevpos = pos++;
+			pos = strstr(pos, (char *) node->value->value);
+		}
+		pos = prevpos;
+		return pos == (char *) &(recdata[datalen - vallen]);
+	case OP_GREATER:
+		/* String must begin with substring */
+		return pos == (char *) recdata;
+	default:
+		/* Unsupported operation */
+		return false;
+	}
 	return false;
 }
 
@@ -895,6 +931,23 @@ struct filter_treenode *filter_new_leaf_node(int field, char *op, struct filter_
 	node->field = field;
 	node->type = NODE_LEAF;
 	node->op = filter_decode_operator(op);
+
+	return node;
+}
+
+/**
+ * \brief Create new leaf treenode without specified operator
+ */
+struct filter_treenode *filter_new_leaf_node_opless(int field, struct filter_value *value)
+{
+	/*
+	 * For string values - no operator means "find this substring".
+	 * For numeric values it is the same as "="
+	 */
+	struct filter_treenode *node = filter_new_leaf_node(field, "=", value);
+	if (node && value->type == VT_STRING) {
+		node->op = OP_NONE;
+	}
 
 	return node;
 }

@@ -128,7 +128,7 @@ explist:
 exp:
 	  field CMP value {  $$ = filter_new_leaf_node($1, $2, $3); }
 	| value CMP field {  $$ = filter_new_leaf_node($3, $2, $1); }
-	| field value { $$ = filter_new_leaf_node($1, "=", $2); }
+	| field value { $$ = filter_new_leaf_node_opless($1, $2); }
 	| EXISTS field { $$ = filter_new_exists_node($2); }
     ;
 

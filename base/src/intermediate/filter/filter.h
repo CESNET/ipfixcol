@@ -32,7 +32,8 @@ enum operators {
 	OP_LESS_EQUAL,
 	OP_GREATER,
 	OP_GREATER_EQUAL,
-	OP_NOT_EQUAL
+	OP_NOT_EQUAL,
+	OP_NONE,  /* string values only */
 };
 
 enum valtype {
@@ -158,6 +159,15 @@ struct filter_value *filter_parse_timestamp(char *tstamp);
  * \return Pointer to new leaf treenode
  */
 struct filter_treenode *filter_new_leaf_node(int field, char *op, struct filter_value *value);
+
+/**
+ * \brief Create new leaf treenode without specified operator
+ *
+ * \param[in] field Field number
+ * \param[in] value Pointer to value
+ * \return Pointer to new leaf treenode
+ */
+struct filter_treenode *filter_new_leaf_node_opless(int field, struct filter_value *value);
 
 /**
  * \brief Decode node type
