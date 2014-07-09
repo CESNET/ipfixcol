@@ -37,10 +37,13 @@
  *
  */
 
+#define _XOPEN_SOURCE
+
 #include <arpa/inet.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 #include <libxml/xpathInternals.h>
@@ -704,7 +707,7 @@ struct filter_value *filter_parse_number(char *number)
 	struct filter_value *val = malloc(sizeof(struct filter_value));
 	CHECK_ALLOC(val);
 
-	long tmp = strlen(number);
+	long long tmp = strlen(number);
 	long mult = 1;
 	switch (number[tmp - 1]) {
 	case 'k':
@@ -728,7 +731,7 @@ struct filter_value *filter_parse_number(char *number)
 	tmp = strtol(number, NULL, 10) * mult;
 
 	val->type = VT_NUMBER;
-	val->value = filter_num_to_ptr((uint8_t *) &tmp, sizeof(long));
+	val->value = filter_num_to_ptr((uint8_t *) &tmp, sizeof(long long));
 	return val;
 }
 
@@ -813,6 +816,45 @@ struct filter_value *filter_parse_ipv6(char *addr)
 }
 
 /**
+ * \brief Parse timestamp
+ */
+struct filter_value *filter_parse_timestamp(char *tstamp)
+{
+	struct tm ctime;
+
+	if (strptime(tstamp, "%Y/%m/%d.%H:%M:%S", &ctime) == NULL) {
+		MSG_ERROR(msg_module, "Cannot parse timestamp %s", tstamp);
+		return NULL;
+	}
+
+	ctime.tm_isdst = 0;
+
+	uint64_t tmp = mktime(&ctime);
+
+	switch (tstamp[strlen(tstamp) - 1]) {
+	case 's':
+		break;
+	case 'm':
+		tmp *= 1000;
+		break;
+	case 'u':
+		tmp *= 1000000;
+		break;
+	case 'n':
+		tmp *= 1000000000;
+		break;
+	}
+
+	struct filter_value *val = malloc(sizeof(struct filter_value));
+	CHECK_ALLOC(val);
+
+	val->type = VT_NUMBER;
+	val->value = filter_num_to_ptr((uint8_t *) &tmp, sizeof(uint64_t));
+
+	return val;
+}
+
+/**
  * \brief Decode operator
  *
  * \param[in] op Operator
@@ -862,7 +904,7 @@ struct filter_treenode *filter_new_leaf_node(int field, char *op, struct filter_
  */
 enum nodetype filter_decode_type(char *type)
 {
-	if (!strcasecmp(type, "and") || !strcmp(type, "&&")) {
+	if (!strcmp(type, "and") || !strcmp(type, "AND") || !strcmp(type, "&&")) {
 		return NODE_AND;
 	}
 

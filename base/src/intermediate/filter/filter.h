@@ -142,6 +142,14 @@ struct filter_value *filter_parse_ipv4(char *addr);
 struct filter_value *filter_parse_ipv6(char *addr);
 
 /**
+ * \brief Parse timestamp
+ *
+ * \param[in] tstamp Timestamp
+ * \return pointer to parsed value
+ */
+struct filter_value *filter_parse_timestamp(char *tstamp);
+
+/**
  * \brief Create new leaf treenode
  *
  * \param[in] field Field number
