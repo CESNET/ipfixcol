@@ -551,6 +551,11 @@ uint16_t data_record_length(uint8_t *data_record, struct ipfix_template *templat
 	for (count = index = 0; count < template->field_count; count++, index++) {
 		length = template->fields[index].ie.length;
 
+		if (template->fields[index].ie.id >> 15) {
+			/* Enterprise Number */
+			++index;
+		}
+
 		switch (length) {
 		case (1):
 		case (2):
@@ -579,6 +584,31 @@ uint16_t data_record_length(uint8_t *data_record, struct ipfix_template *templat
 
 	return offset;
 }
+
+/**
+ * \brief Go through all data records and call processing function for each
+ */
+void data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_template *templ, callback_f processor, void *proc_data)
+{
+	uint16_t setlen = ntohs(data_set->header.length), data_len = templ->data_length, rec_len;
+	uint8_t *ptr = data_set->records;
+
+	uint16_t min_record_length = templ->data_length;
+	uint32_t offset = 4;
+
+	if (min_record_length & 0x8000) {
+		/* record contains fields with variable length */
+		min_record_length = min_record_length & 0x7fff; /* size of the fields, variable fields excluded  */
+	}
+
+	while ((int) setlen - (int) offset - (int) min_record_length >= 0) {
+		ptr = (((uint8_t *) data_set) + offset);
+		rec_len = data_record_length(ptr, templ);
+		processor(ptr, rec_len, templ, proc_data);
+		offset += rec_len;
+	}
+}
+
 
 /**
  * \brief Set field value for each data record in set

@@ -205,6 +205,26 @@ struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint
  */
 uint16_t data_record_length(uint8_t *data_record, struct ipfix_template *templ);
 
+/**
+ * \brief Callback function for data records processing
+ *
+ * \param[in] rec Data record
+ * \param[in] rec_len Data record's length
+ * \param[in] templ Data record's template
+ * \param[in] data Processing function data
+ */
+typedef  void (*callback_f)(uint8_t *rec, int rec_len, struct ipfix_template *templ, void *data);
+
+/**
+ * \brief Process all data records in set
+ *
+ * \param[in] data_set Data set
+ * \param[in] templ Data set's template
+ * \param[in] processor Function called for each data record
+ * \param[in] proc_data Data given to function (besides data record, its's length and template)
+ */
+void data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_template *templ, callback_f processor, void *proc_data);
+
 #endif /* IPFIX_MESSAGE_H_ */
 
 /**@}*/
