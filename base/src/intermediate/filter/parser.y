@@ -120,6 +120,7 @@ start:
 explist:
 	  exp { $$ = $1; }
 	| NOT exp { $$ = $2; filter_node_set_negated($$); }
+	| NOT explist { $$ = $2; filter_node_set_negated($$); }
 	| '(' explist ')' { $$ = $2; }
 	| explist OPERATOR explist { $$ = filter_new_parent_node($1, $2, $3); }
 	;

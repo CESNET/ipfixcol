@@ -63,6 +63,13 @@ static const char *msg_module = "filter";
 		return NULL; \
 	}
 
+struct filter_process {
+	uint8_t *ptr;
+	int *offset;
+	struct filter_profile *profile;
+};
+
+
 static char *ops[] = {"=", "<", "<=", ">", ">=", "!="};
 char *filter_op(enum operators op)
 {
@@ -324,29 +331,6 @@ cleanup_err:
 }
 
 /**
- * \brief Check if field in data record matches value
- *
- * \param[in] rec Data record
- * \param[in] templ Data record's template
- * \param[in] id Field ID
- * \param[in] value Checked value
- * \return 0 if values is equal with value in data record
- */
-int filter_data_record_match(uint8_t *rec, struct ipfix_template *templ, uint16_t id, uint8_t *value)
-{
-	uint8_t *data;
-	int data_length;
-
-	data = data_record_get_field(rec, templ, id, &data_length);
-
-	if (!data) {
-		return 1;
-	}
-
-	return memcmp(data, value, data_length);
-}
-
-/**
  * \brief Compare values byte by byte and return according bool value
  *
  * \param[in] first First value
@@ -396,9 +380,9 @@ bool filter_fits_value(struct filter_treenode *node, uint8_t *rec, struct ipfix_
 	/* Compare values according to op */
 	switch (node->op) {
 	case OP_EQUAL:
-		return memcmp(recdata, node->value->value, datalen);
-	case OP_NOT_EQUAL:
 		return !memcmp(recdata, node->value->value, datalen);
+	case OP_NOT_EQUAL:
+		return memcmp(recdata, node->value->value, datalen);
 	case OP_LESS_EQUAL:
 		return filter_compare_values(recdata, node->value->value, datalen, true, false, true);
 	case OP_LESS:
@@ -470,56 +454,174 @@ bool filter_fits_node(struct filter_treenode *node, uint8_t *rec, struct ipfix_t
 }
 
 /**
+ * \brief Copy (options) template sets from original message
+ *
+ * \param[in] msg Original message
+ * \param[in] ptr Destination
+ * \param[in] offset Offset in new message
+ */
+void filter_add_template_sets(struct ipfix_message *msg, uint8_t *ptr, int *offset)
+{
+	int length, i;
+
+	/* Copy template sets */
+	for (i = 0; i < 1024 && msg->templ_set[i]; ++i) {
+		length = ntohs(msg->templ_set[i]->header.length);
+		memcpy(ptr + *offset, msg->templ_set[i], length);
+		*offset += length;
+	}
+
+	/* Copy options template sets */
+	for (i = 0; i < 1024 && msg->opt_templ_set[i]; ++i) {
+		length = ntohs(msg->opt_templ_set[i]->header.length);
+		memcpy(ptr + *offset, msg->opt_templ_set[i], length);
+		*offset += length;
+	}
+}
+
+/**
+ * \brief Process one data record
+ *
+ * \param[in] rec Data record
+ * \param[in] rec_len Data record's length
+ * \param[in] templ Data record's template
+ * \param[in] data Processing data
+ */
+void filter_process_data_record(uint8_t *rec, int rec_len, struct ipfix_template *templ, void *data)
+{
+	struct filter_process *conf = (struct filter_process *) data;
+
+	if (filter_fits_node(conf->profile->root, rec, templ)) {
+//		MSG_DEBUG(msg_module, "data record fits");
+		memcpy(conf->ptr + *(conf->offset), rec, rec_len);
+		*(conf->offset) += rec_len;
+
+		tm_template_reference_inc(templ);
+	} else {
+//		MSG_DEBUG(msg_module, "data record DOES NOT fit");
+	}
+}
+
+/**
  * \brief Apply profile filter on message and change ODID if it fits
  *
  * \param[in] msg IPFIX message
  * \param[in] profile Filter profile
- * \return 0 if no error occurs
+ * \return pointer to new ipfix message
  */
-int filter_apply_profile(struct ipfix_message *msg, struct filter_profile *profile)
+struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct filter_profile *profile)
 {
-	(void) msg;
-	(void) profile;
-	return 0;
-}
+	struct ipfix_message *new_msg = NULL;
+	struct ipfix_header *header = NULL;
+	struct filter_process conf;
+	int i, j, offset = 0, oldoffset;
+	uint8_t *ptr = NULL;
 
-int process_message(void *config, void *message)
-{
-	struct ipfix_message *msg = (struct ipfix_message *) message;
-	struct filter_config *conf = (struct filter_config *) config;
-	struct filter_profile *aux_profile = NULL, *profile = NULL;
-	struct filter_source *aux_src = NULL;
-	int ret;
-	uint32_t orig_odid = ntohl(msg->pkt_header->observation_domain_id);
+	/* Allocate space */
+	ptr = calloc(1, ntohs(msg->pkt_header->length));
+	CHECK_ALLOC(ptr);
 
+	conf.offset = &offset;
+	conf.ptr = ptr;
+	conf.profile = profile;
 
-	/* Go throught all profiles */
-	for (aux_profile = conf->profiles; aux_profile && !profile; aux_profile = aux_profile->next) {
-		/* Go throught all sources for this profile */
-		for (aux_src = aux_profile->sources; aux_src; aux_src = aux_src->next) {
-			if (aux_src->id == orig_odid) {
-				profile = aux_profile;
+	/* Copy header */
+	memcpy(ptr, msg->pkt_header, IPFIX_HEADER_LENGTH);
+	offset += IPFIX_HEADER_LENGTH;
+
+	/* Copy (options) template sets */
+	filter_add_template_sets(msg, ptr, &offset);
+
+	for (i = 0; i < 1024 && msg->data_couple[i].data_set; ++i) {
+		oldoffset = offset;
+		/* Copy set header */
+		memcpy(ptr + offset, &(msg->data_couple[i].data_set->header), sizeof(struct ipfix_set_header));
+		offset += sizeof(struct ipfix_set_header);
+
+		/* Process data records */
+		data_set_process_records(msg->data_couple[i].data_set, msg->data_couple[i].data_template, &filter_process_data_record, (void *) &conf);
+
+		if (offset == oldoffset + 4) {
+			/* No data records were copied, rollback */
+			offset = oldoffset;
+			continue;
+		}
+
+		/* Update data set length */
+		((struct ipfix_set_header *) ((uint8_t *) ptr + oldoffset))->length = htons(offset - oldoffset);
+	}
+
+	if (offset == IPFIX_HEADER_LENGTH) {
+		/* empty message */
+		free(ptr);
+		return NULL;
+	}
+
+	/* Modify header and create IPFIX message */
+	header = (struct ipfix_header *) ptr;
+	header->length = ntohs(offset);
+	header->observation_domain_id = htonl(profile->new_odid);
+
+	/* Create new IPFIX message */
+	new_msg = message_create_from_mem(ptr, offset, msg->input_info, msg->source_status);
+
+	/* Match data couples */
+	for (i = 0; i < 1024 && new_msg->data_couple[i].data_set; ++i) {
+		for (j = 0; j < 1024 && msg->data_couple[j].data_set; ++j) {
+			if (new_msg->data_couple[i].data_set->header.flowset_id == msg->data_couple[j].data_set->header.flowset_id) {
+				new_msg->data_couple[i].data_template = msg->data_couple[j].data_template;
 				break;
 			}
 		}
 	}
 
-	if (!profile) {
+	return new_msg;
+}
+
+int process_message(void *config, void *message)
+{
+	struct ipfix_message *msg = (struct ipfix_message *) message, *new_msg;
+	struct filter_config *conf = (struct filter_config *) config;
+	struct filter_profile *aux_profile = NULL;
+	struct filter_source *aux_src = NULL;
+	uint32_t orig_odid = ntohl(msg->pkt_header->observation_domain_id);
+	int profiles = 0;
+
+	/* Go throught all profiles */
+	for (aux_profile = conf->profiles; aux_profile; aux_profile = aux_profile->next) {
+		/* Go throught all sources for this profile */
+		for (aux_src = aux_profile->sources; aux_src; aux_src = aux_src->next) {
+			if (aux_src->id == orig_odid) {
+				break;
+			}
+		}
+
+		if (!aux_src) {
+			/* Profile is not for this source */
+			continue;
+		}
+
+		profiles++;
+
+		new_msg = filter_apply_profile(msg, aux_profile);
+		if (new_msg) {
+			pass_message(conf->ip_config, (void *) new_msg);
+		}
+	}
+
+	/* No profile for this source */
+	if (!profiles) {
 		if (conf->default_profile) {
 			/* Use default profile */
-			profile = conf->default_profile;
+			new_msg = filter_apply_profile(msg, conf->default_profile);
+			if (new_msg) {
+				pass_message(conf->ip_config, (void *) new_msg);
+			}
 		} else {
 			/* No profile found for this ODID */
 			pass_message(conf->ip_config, message);
 			return 0;
 		}
-	}
-
-
-	ret = filter_apply_profile(msg, profile);
-
-	if (!ret) {
-		return ret;
 	}
 
 	pass_message(conf->ip_config, message);
