@@ -39,7 +39,7 @@
 AC_PREREQ([2.60])
 
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol], [0.6.0])
+AC_INIT([ipfixcol], [0.6.1])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 LT_PREREQ([2.2])
 LT_INIT([dlopen disable-static])
@@ -83,7 +83,7 @@ AC_CHECK_PROG(BISON, bison, bison)
 
 # Check for doxygen
 AC_CHECK_PROG(DOXYGEN, doxygen, doxygen)
-AM_CONDITIONAL([HAVE_DOXYGEN], [test -n $DOXYGEN])
+AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
 
 # Check for rpmbuil
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)

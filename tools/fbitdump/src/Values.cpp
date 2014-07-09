@@ -133,7 +133,7 @@ std::string Values::toString(bool plainNumbers) const
 		valStr = ss.str();
 		break;
 	case ibis::FLOAT:
-		Utils::formatNumber(this->value[0].flt, ss, plainNumbers);
+		Utils::formatNumber(this->value[0].flt, ss, plainNumbers, 3);
 		valStr = ss.str();
 		break;
 	case ibis::DOUBLE:

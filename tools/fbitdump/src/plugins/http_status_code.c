@@ -2,6 +2,15 @@
 #include <stdio.h>
 #include "plugin_header.h"
 
+int init()
+{
+	return 0;
+}
+
+void close()
+{
+}
+
 void format( const union plugin_arg * arg, int plain_numbers, char out[PLUGIN_BUFFER_SIZE] ) {
 	char *str = NULL;
 	char num[15];

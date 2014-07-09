@@ -519,6 +519,12 @@ void Filter::parseColumn(parserStruct *ps, std::string alias) const throw (std::
 	if (!col->isOperation()) {
 		/* Iterate through all aliases */
 		for (stringSet::iterator it = cols.begin(); it != cols.end(); it++) {
+			/* Check for flows column */
+			if (col->getSemantics() == "flows") {
+				delete col;
+				std::string err = "Filtering by flows (" + alias + ") not supported!";
+				throw std::invalid_argument(err);
+			}
 			ps->parts.push_back(*it);
 			ps->nParts++;
 		}
@@ -526,12 +532,15 @@ void Filter::parseColumn(parserStruct *ps, std::string alias) const throw (std::
 	} else {
 		ps->parts.push_back(col->getElement());
 		ps->nParts = 1;
+		ps->baseCols = col->getColumns();
 		ps->type = PT_COMPUTED;
 	}
-
-	if (this->actualConf->plugins_parse.find(col->getSemantics()) != this->actualConf->plugins_parse.end()) {
-		ps->parse = this->actualConf->plugins_parse[col->getSemantics()];
+	if (this->actualConf->plugins.find(col->getSemantics()) != this->actualConf->plugins.end()) {
+		ps->parse = this->actualConf->plugins[col->getSemantics()].parse;
+	} else {
+		ps->parse = NULL;
 	}
+
 	ps->colType = col->getSemantics();
 	delete col;
 
@@ -621,17 +630,14 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 
 	/* Parser expression "column CMP value" */
 	if ((left->nParts == 1) && (right->nParts == 1)) {
+		exp += createExists(left, 0, cmp == "!=");
 		if (cmp == "!=") {
-			exp += "NOT EXISTS(" + left->parts[0] + ") or ";
-
 			if (right->type == PT_STRING) {
 				exp += "(not (" + left->parts[0] + " LIKE " + right->parts[0] + ")))";
 				return exp;
 			}
-
-		} else {
-			exp += "EXISTS(" + left->parts[0] + ") and ";
 		}
+
 		exp += "(" + left->parts[0] + " " + cmp + " " + right->parts[0] + "))";
 		return exp;
 	}
@@ -669,14 +675,14 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 
 		/* Add part into expression */
 		if (cmp == "!=") {
-			exp += "(NOT EXISTS(" + left->parts[0] + ") or ";
+			exp += "(" + createExists(left, 0, true);
 			if (right->type == PT_STRING) {
 				exp += "(not (" + left->parts[0] + " LIKE " + right->parts[0] + ")))" + op;
 			} else {
 				exp += "(" + left->parts[i] + " " + cmp + " " + right->parts[j] + "))" + op;
 			}
 		} else {
-			exp += "(EXISTS(" + left->parts[i] + ") and ";
+			exp += "(" + createExists(left, i, false);
 			exp += "(" + left->parts[i] + " " + cmp + " " + right->parts[j] + "))" + op;
 		}
 	}
@@ -729,11 +735,7 @@ std::string Filter::parseExpSub(parserStruct *left, std::string cmp, parserStruc
 		}
 
 		/* Insert (NOT) EXISTS according to comparison operator */
-		if (cmp == "!=") {
-			exp += "(NOT EXISTS(" + left->parts[i] + ") or (";
-		} else {
-			exp += "(EXISTS(" + left->parts[i] + ") and (";
-		}
+		exp += "(" + createExists(left, i, cmp == "!=") + "(";
 
 		/* Add values from right parser structure */
 		exp += "(" + left->parts[i] + cmp1 + right->parts[rightPos++] + ")" + op;
@@ -782,14 +784,14 @@ std::string Filter::parseExpHost6(parserStruct *left, std::string cmp, parserStr
 	/* Create expression */
 	while (i < right->nParts) {
 		if (cmp == "!=") {
-			exp += "(NOT EXISTS(" + left->parts[leftPos] + ") or (";
+			exp += "(" + createExists(left, leftPos, true) + "(";
 			exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + "))" + op1;
-			exp += "(NOT EXISTS(" + left->parts[leftPos] + ") or (";
+			exp += "(" + createExists(left, leftPos, true) + "(";
 			exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + "))" + op2;
 		} else {
-			exp += "(EXISTS(" + left->parts[leftPos] + ") and (";
+			exp += "(" + createExists(left, leftPos, false) + "(";
 			exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + "))" + op1;
-			exp += "(EXISTS(" + left->parts[leftPos] + ") and (";
+			exp += "(" + createExists(left, leftPos, false) + "(";
 			exp += left->parts[leftPos++] + " " + cmp + " " + right->parts[i++] + "))" + op2;
 		}
 
@@ -906,12 +908,55 @@ std::string Filter::parseExists(parserStruct* ps) const throw (std::invalid_argu
 	std::string exp = "(", op = " and ";
 	uint16_t i;
 	for (i = 0; i < ps->nParts; i++) {
-		exp += "EXISTS(" + ps->parts[i] + ")" + op;
+		exp += createExists(ps, i, "EXISTS", op);
 	}
 	
 	exp = exp.substr(0, exp.length() - op.length()) + ")";
 	
 	return exp;
+}
+
+std::string Filter::createExists(parserStruct *left, int i, bool neq) const
+{
+	/* prepare keyword(s) and operator according to comparison */
+	std::string exp = "", exists = "EXISTS", op = " and ";
+	if (neq) {
+		exists = "NOT EXISTS";
+		op = " or ";
+	}
+
+	/* create exists clause */
+	return createExists(left, i, exists, op);
+}
+
+std::string Filter::createExists(parserStruct *left, int i, std::string exists, std::string op) const
+{
+	std::string exp = "";
+	if (left->type == PT_COMPUTED) {
+		/* computed column - add every part of enumeration */
+		exp += "(";
+		for (stringSet::iterator it = left->baseCols.begin(); it != left->baseCols.end(); ++it) {
+			exp += exists + "(" + *it + ")" + op;
+		}
+		/* remove last operator */
+		exp = exp.substr(0, exp.length() - op.length()) + ")" + op;
+	} else {
+		/* simple column */
+		exp += exists + "(" + onlyCol(left->parts[i], left->type) + ")" + op;
+	}
+	return exp;
+}
+
+
+std::string Filter::onlyCol(std::string& expr, partsType type) const
+{
+	/* get only column name from expression */
+	std::string res = expr;
+	if (type == PT_BITCOLVAL) {
+		res = expr.substr(2);
+		res = res.substr(0, res.find(" "));
+	}
+	return res;
 }
 
 Filter::Filter(Configuration &conf) throw (std::invalid_argument)

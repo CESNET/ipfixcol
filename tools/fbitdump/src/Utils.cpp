@@ -165,28 +165,19 @@ void loadDirRange(std::string &dir, std::string &firstDir, std::string &lastDir,
 	 * the structures are sorted according to versionsort, which is ok for most cases
 	 */
 
-	bool firstDirFound = false; /* indicates whether we already found first specified dir */
 	int counter = 0;
 	struct dirent *dent;
-	bool onlyFreeDirs = false; /* call free on all dirents without adding the directories */
 
 	while(dirs_counter--) {
 		dent = namelist[counter++];
 
-		if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".")
-		&& strcmp(dent->d_name, "..") && !onlyFreeDirs) {
-			if (firstDirFound || !strcmp(dent->d_name, firstDir.c_str())) {
+		/* Check that the directory is in range and not '.' or '..' */
+		if (dent->d_type == DT_DIR && strcmp(dent->d_name, ".") && strcmp(dent->d_name, "..") &&
+			strverscmp(dent->d_name, firstDir.c_str()) >= 0 && strverscmp(dent->d_name, lastDir.c_str()) <= 0) {
 
-				firstDirFound = true;
-				std::string tableDir = dir + dent->d_name;
-				Utils::sanitizePath(tableDir);
-				tables.push_back(std::string(tableDir));
-
-				if (!strcmp(dent->d_name, lastDir.c_str())) {
-					/* this is last directory we are interested in */
-					onlyFreeDirs = true;
-				}
-			}
+			std::string tableDir = dir + dent->d_name;
+			Utils::sanitizePath(tableDir);
+			tables.push_back(std::string(tableDir));
 		}
 
 		free(namelist[counter-1]);

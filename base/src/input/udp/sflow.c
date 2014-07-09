@@ -953,7 +953,7 @@ static uint32_t getAddress(SFSample *sample, SFLAddress *address) {
   address->type = getData32(sample);
   if(address->type == SFLADDRESSTYPE_IP_V4)
     address->address.ip_v4.addr = getData32_nobswap(sample);
-  else {
+  else if (address->type == SFLADDRESSTYPE_IP_V6){
     memcpy(&address->address.ip_v6.addr, sample->datap, 16);
     skipBytes(sample, 16);
   }
@@ -1793,11 +1793,14 @@ static void readSFlowDatagram(SFSample *sample, char *packet)
   if(sample->datagramVersion != 2 &&
      sample->datagramVersion != 4 &&
      sample->datagramVersion != 5) {
-    // error - unexpected datagram version
+	 return;
   }
 
   /* get the agent address */
-  getAddress(sample, &sample->agent_addr);
+  uint32_t addr_type = getAddress(sample, &sample->agent_addr);
+  if (addr_type != SFLADDRESSTYPE_IP_V4 && addr_type != SFLADDRESSTYPE_IP_V6) {
+	  return;
+  }
 
   /* version 5 has an agent sub-id as well */
   if(sample->datagramVersion >= 5) {

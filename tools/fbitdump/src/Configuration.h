@@ -49,9 +49,24 @@
 namespace fbitdump {
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "hVaA::r:f:n:c:D:Ns:qeIM:m::R:o:v:Z:t:i::d::C:Tp:S"
+#define OPTSTRING "hVaA::r:f:n:c:D:Ns:qeIM:m::R:o:v:Z:t:i::d::C:Tp:SO"
 
 #define CONFIG_XML "/usr/share/fbitdump/fbitdump.xml"
+
+/**
+ * \brief Struct with pointers to plugin functions
+ */
+struct pluginConf {
+	pluginConf(): init(NULL), close(NULL), format(NULL), /* Structure initialization */
+				  parse(NULL), handle(NULL) {};
+	int (*init) (void);     		/**< Plugin initialization */
+	void (*close) (void); 			/**< Plugin close */
+	void (*format)(const union plugin_arg *, int, char*); 	/**< Format data */
+	void (*parse)(char *, char*); 	/**< Parse input */
+	void *handle; 					/**< Plugin handle */
+};
+
+typedef std::map<std::string, pluginConf> pluginMap;
 
 /**
  * \brief Class handling command line configuration
@@ -265,14 +280,18 @@ public:
 	std::string pipe_name;
 	
 	static Configuration * instance;
-    
-	std::map<std::string, void (*)(const union plugin_arg *, int, char*)> plugins_format;
-	std::map<std::string, void (*)(char *, char*)> plugins_parse;
-	std::queue<void *> plugins_handles;
+
+    pluginMap plugins; /**< active plugins */
+
+    /**
+     * \brief Unload plugins
+     */
     void unloadModules();
 private:
+    /**
+     * \brief Load plugins for parsing input and formatting output
+     */
 	void loadModules();
-	
 
     /**
      * \brief Prints help to standard output
@@ -297,8 +316,9 @@ private:
 	/**
 	 * \brief Parse output format string
 	 * @param format output format string
+	 * @param orderby alias of sorting column
 	 */
-	void parseFormat(std::string format);
+	void parseFormat(std::string format, std::string &orderby);
 
     /**
      * \brief Process -M option from getopt()
@@ -330,7 +350,7 @@ private:
      *
      * @param order name of the column to order by
      */
-    void processmOption(std::string order);
+    void processmOption(std::string &order);
 
     /**
      * \brief Parse argument for aggregation
@@ -360,6 +380,11 @@ private:
      * @param list Vector to push the directory into
      */
     void pushCheckDir(std::string &dir, std::vector<std::string> &list);
+
+    /**
+     * \brief Print available output formats
+     */
+    void printOutputFormats();
 
     stringVector parts;                 /**< Fastbit parts paths to be used*/
     stringSet aggregateColumnsAliases;  /**< Aggregate columns aliases set */

@@ -61,20 +61,22 @@ void progressBar(std::string prefix, std::string suffix, int max, int actual);
  * @param plainNumbers whether to format or not
  */
 template <class T>
-inline void formatNumber(T num, std::ostream &ss, bool plainNumbers)
+inline void formatNumber(T num, std::ostream &ss, bool plainNumbers, int precision=0)
 {
+	int exp_prec = precision?precision:1;
+
 	ss << std::fixed;
 	if (num <= 1000000 || plainNumbers) {
-		ss.precision(0);
+		ss.precision(precision);
 		ss << num;
 	} else if (num < 1000000000) { /* no too big for M */
-		ss.precision(1);
+		ss.precision(exp_prec);
 		ss << (float) num/1000000 << " M";
 	} else if (num/1024 < 1000000000) { /* not too big for G */
-		ss.precision(1);
+		ss.precision(exp_prec);
 		ss << (float) num/1000000000 << " G";
 	} else { /* big enough for T */
-		ss.precision(1);
+		ss.precision(exp_prec);
 		ss << (float) num/1000000000000 << " T";
 	}
 	ss.precision(0); /* set zero precision for other numbers */

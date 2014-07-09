@@ -72,6 +72,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	std::string optionr;	/* optarg value for option -r */
 	char *indexes = NULL;	/* indexes optarg to be parsed later */
 	bool print_semantics = false;
+	bool print_formats = false;
 
 //	Configuration * Configuration::instance;
 
@@ -182,7 +183,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			break;
 		case 'r': {/* -M help argument */
                 if (optarg == std::string("")) {
-                	throw std::invalid_argument("-r requires a path to open, empty string given");
+					throw std::invalid_argument("-r requires a path to open, empty string given");
                 }
 
                 optionr = optarg;
@@ -213,8 +214,8 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 				throw std::invalid_argument("-p requires a path to open, empty string given");
 			}
 			if (access ( optarg, F_OK ) != 0 ) {
-				throw std::invalid_argument("Cannot access pipe");	
-			}		
+				throw std::invalid_argument("Cannot access pipe");
+			}
 			this->pipe_name = optarg;
 
 			break;
@@ -252,6 +253,9 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		case 'S': /* Template information */
 			print_semantics = true;
 			break;
+		case 'O':
+			print_formats = true;
+			break;
 		default:
 			help ();
 			return 1;
@@ -269,6 +273,12 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		std::string err = std::string("XML '") + this->getXmlConfPath() + "' with columns configuration cannot be loaded!";
 		throw std::invalid_argument(err);
 	}
+
+	if (print_formats) {
+		this->printOutputFormats();
+		return 1;
+	}
+
 	if (!optionM.empty()) {
 		/* process -M option, this option depends on -r or -R */
 		processMOption(tables, optionM.c_str(), optionr);
@@ -308,16 +318,18 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		this->filter = "1=1";
 	}
 
-	this->plugins_format["ipv4"] = printIPv4;
-	this->plugins_format["ipv6"] = printIPv6;
-	this->plugins_format["tmstmp64"] = printTimestamp64;
-	this->plugins_format["tmstmp32"] = printTimestamp32;
-	this->plugins_format["protocol"] = printProtocol;
-	this->plugins_format["tcpflags"] = printTCPFlags;
-	this->plugins_format["duration"] = printDuration;
+	/* Set default plugin functions */
+	this->plugins["ipv4"].format = printIPv4;
+	this->plugins["ipv6"].format = printIPv6;
+	this->plugins["tmstmp64"].format = printTimestamp64;
+	this->plugins["tmstmp32"].format = printTimestamp32;
+	this->plugins["protocol"].format = printProtocol;
+	this->plugins["tcpflags"].format = printTCPFlags;
+	this->plugins["duration"].format = printDuration;
 
-	this->plugins_parse["tcpflags"] = parseFlags;
-	this->plugins_parse["protocol"] = parseProto;
+
+	this->plugins["tcpflags"].parse = parseFlags;
+	this->plugins["protocol"].parse = parseProto;
 
 	Utils::printStatus( "Preparing output format");
 
@@ -325,11 +337,11 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	this->loadOutputFormat();
 
 	/* parse output format string */
-	this->parseFormat(this->format);
+	this->parseFormat(this->format, optionm);
 	if( print_semantics ) {
 		std::cout << "Available semantics: " <<  std::endl;
-		for( std::map<std::string, void(*)(const union plugin_arg *, int, char*)>::iterator iter = this->plugins_format.begin(); iter != this->plugins_format.end(); ++iter ) {
-			std::cout << "\t" << iter->first << std::endl;
+		for (pluginMap::iterator it = this->plugins.begin(); it != this->plugins.end(); ++it) {
+			std::cout << "\t" << it->first << std::endl;
 		}
 		return 1;
 	}
@@ -340,12 +352,24 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	this->searchForTableParts(tables);
 	this->instance = this;
 
-	
-
-
 	return 0;
 }
 
+void Configuration::printOutputFormats()
+{
+	pugi::xpath_node output_path = this->getXMLConfiguration().select_single_node("/configuration/output");
+	if (output_path == NULL) {
+		std::cout << "No output format found\n";
+		return;
+	}
+	pugi::xml_node output = output_path.node();
+
+	/* Print all formats */
+	std::cout << "Available output formats:\n";
+	for (pugi::xml_node::iterator it = output.begin(); it != output.end(); ++it) {
+		std::printf("\t%-15s %s\n\n", it->child_value("formatName"), it->child_value("formatString"));
+	}
+}
 
 void Configuration::searchForTableParts(stringVector &tables) throw (std::invalid_argument)
 {
@@ -376,8 +400,7 @@ void Configuration::searchForTableParts(stringVector &tables) throw (std::invali
 		while((dent = readdir(d)) != NULL) {
 			/* construct directory path */
 			std::string tablePath = tables[i] + std::string(dent->d_name);
-			
-			
+
 			if (stat(tablePath.c_str(), &statbuf) == -1) {
 				std::cerr << "Cannot stat " << dent->d_name << std::endl;
 				continue;
@@ -407,15 +430,16 @@ void Configuration::searchForTableParts(stringVector &tables) throw (std::invali
 	}
 }
 
-void Configuration::parseFormat(std::string format)
+void Configuration::parseFormat(std::string format, std::string &orderby)
 {
 	Column *col; /* newly created column pointer */
 	regex_t reg; /* the regular expresion structure */
 	int err; /* check for regexec error */
 	regmatch_t matches[1]; /* array of regex matches (we need only one) */
 	bool removeNext = false; /* when removing column, remove the separator after it */
+	bool order_found = false; /* check if output format contains ordering column */
 
-		/* prepare regular expresion */
+	/* prepare regular expresion */
 	regcomp(&reg, "%[a-zA-Z0-9]+", REG_EXTENDED);
 
 	/* go over whole format string */
@@ -452,18 +476,20 @@ void Configuration::parseFormat(std::string format)
 
 				} while (false);
 
-				
 				/* use the column only if everything was ok */
 				if (!ok) {
 					delete col;
 					removeNext = true;
-				}
-				else {
-					if( this->plugins_format.find( col->getSemantics()) != this->plugins_format.end()) {
-						col->format = this->plugins_format[col->getSemantics()];
+				} else {
+					if (this->plugins.find(col->getSemantics()) != this->plugins.end()) {
+						col->format = this->plugins[col->getSemantics()].format;
 					}
 					this->columns.push_back(col);
 					removeNext = false;
+
+					if (alias == orderby) {
+						order_found = true;
+					}
 				}
 			} catch (std::exception &e) {
 				std::cerr << e.what() << std::endl;
@@ -472,11 +498,33 @@ void Configuration::parseFormat(std::string format)
 			std::cerr << "Bad output format string" << std::endl;
 			break;
 		} else if (!removeNext) { /* rest is column separator */
-			col = new Column(format.substr(0, matches[0].rm_so));
+			col = new Column(format);
 			this->columns.push_back(col);
+			/* Nothing more to process */
+			format = "";
 		}
-		
 	}
+
+	if (this->optm && !order_found) {
+		std::string existing = orderby;
+		for (columnVector::iterator it = this->columns.begin(); it != this->columns.end(); ++it) {
+			if (!(*it)->isOperation()) {
+				existing = *((*it)->getAliases().begin());
+				break;
+			}
+		}
+
+		if (existing == orderby) {
+			MSG_ERROR("configuration", "No suitable column for sorting found in used format!");
+		} else {
+			MSG_WARNING("configuration", "Sorting column '%s' not found in output format, using '%s'.", orderby.c_str(), existing.c_str());
+			orderby = existing;
+
+			delete this->orderColumn;
+			this->processmOption(orderby);
+		}
+	}
+
 	/* free created regular expression */
 	regfree(&reg);
 }
@@ -635,7 +683,7 @@ bool Configuration::getTemplateInfo() const
 	return this->templateInfo;
 }
 
-void Configuration::processmOption(std::string order)
+void Configuration::processmOption(std::string &order)
 {
 	std::string::size_type pos;
 	if ((pos = order.find("ASC")) != std::string::npos) {
@@ -728,6 +776,7 @@ void Configuration::help() const
 	<< "-C <path>       path to configuration file. Default is " << CONFIG_XML << std::endl
 	<< "-T              print information about templates in directories specified by -R" << std::endl
 	<< "-S              print available semantics" << std::endl
+	<< "-O              print available output formats" << std::endl
 	;
 }
 
@@ -943,53 +992,77 @@ void Configuration::loadModules()
 {
 	pugi::xpath_node_set nodes = this->getXMLConfiguration().select_nodes("/configuration/plugins/plugin");
 	std::string path;
-	void * handle;
-	void (*format)(const union plugin_arg *, int, char *);
-	void (*parse)(char *input, char *out);
+	pluginConf aux_conf;
 
 	for (pugi::xpath_node_set::const_iterator ii = nodes.begin(); ii != nodes.end(); ii++) {
 		pugi::xpath_node node = *ii;
-		if (this->plugins_format.find(node.node().child_value("name")) != this->plugins_format.end()) {
+		if (this->plugins.find(node.node().child_value("name")) != this->plugins.end()) {
 			std::cerr << "Duplicit module names" << node.node().child_value("name") << std::endl;
 			continue;
 		}
+
 		path = node.node().child_value("path");
 
 		if (access(path.c_str(), X_OK) != 0) {
 			std::cerr << "Cannot access " << path << std::endl;
 		}
-		
-		handle = dlopen(path.c_str(), RTLD_LAZY);
-		if (!handle) {
+
+		aux_conf.handle = dlopen(path.c_str(), RTLD_LAZY);
+		if (!aux_conf.handle) {
 			std::cerr << dlerror() << std::endl;
 			continue;
-		}		
+		}
 
-		*(void **)(&format) = dlsym( handle, "format" );
-		if( format == NULL ) {
+		/* Look for functions */
+		*(void **)(&(aux_conf.init)) = dlsym(aux_conf.handle, "init");
+		if (aux_conf.init == NULL) {
+			std::cerr << "No \"init\" function in plugin " << path << std::endl;
+			dlclose(aux_conf.handle);
+			continue;
+		}
+
+		*(void **)(&(aux_conf.close)) = dlsym(aux_conf.handle, "close");
+		if (aux_conf.close == NULL) {
+			std::cerr << "No \"close\" function in plugin " << path << std::endl;
+			dlclose(aux_conf.handle);
+			continue;
+		}
+
+		*(void **)(&(aux_conf.format)) = dlsym(aux_conf.handle, "format" );
+		if(aux_conf.format == NULL ) {
 			std::cerr << "No \"format\" function in plugin " << path << std::endl;
-			dlclose(handle);
+			dlclose(aux_conf.handle);
 			continue;
 		}
 
-		*(void **)(&parse) = dlsym(handle, "parse");
-		if (parse == NULL) {
+		*(void **)(&(aux_conf.parse)) = dlsym(aux_conf.handle, "parse");
+		if (aux_conf.parse == NULL) {
 			std::cerr << "No \"parse\" function in plugin " << path << std::endl;
-			dlclose(handle);
+			dlclose(aux_conf.handle);
 			continue;
 		}
 
-		this->plugins_format[node.node().child_value("name")] = format;
-		this->plugins_parse[node.node().child_value("name")] = parse;
-		this->plugins_handles.push(handle);
+		/* Initialize plugin */
+		if (aux_conf.init()) {
+			std::cerr << "Error in plugin initialization: " << path << std::endl;
+			dlclose(aux_conf.handle);
+			continue;
+		}
+
+		this->plugins[node.node().child_value("name")] = aux_conf;
 	}
 }
 
 void Configuration::unloadModules() {
-	while (!this->plugins_handles.empty()) {
-		dlclose(this->plugins_handles.front());
-		plugins_handles.pop();
+	for (pluginMap::iterator it = this->plugins.begin(); it != this->plugins.end(); ++it) {
+		if (it->second.close) {
+			it->second.close();
+		}
+		if (it->second.handle) {
+			dlclose(it->second.handle);
+		}
 	}
+	this->plugins.clear();
 }
 
 Configuration::~Configuration()
