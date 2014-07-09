@@ -549,13 +549,19 @@ int input_init(char *params, void **config)
         goto out;
     }
 
-    /* create socket */
-    conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
-    if (conf->socket == -1) {
-    	MSG_ERROR(msg_module, "Cannot create socket: %s", strerror(errno));
-        retval = 1;
-        goto out;
-    }
+	/* create socket */
+	conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
+	/* Retry with IPv4 when the implementation does not support the specified address family. */
+	if (conf->socket == -1 && errno == EAFNOSUPPORT && addrinfo->ai_family == AF_INET6) {
+		addrinfo->ai_family = AF_INET;
+		conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
+	}
+	if (conf->socket == -1) {
+		/* End with error otherwise */
+		MSG_ERROR(msg_module, "Cannot create socket: %s", strerror(errno));
+		retval = 1;
+		goto out;
+	}
 
     /* allow IPv4 connections on IPv6 */
     if ((addrinfo->ai_family == AF_INET6) &&
