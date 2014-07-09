@@ -563,15 +563,14 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config)
 	xmlXPathContextPtr internal_ctxt = NULL;
 	xmlXPathContextPtr config_ctxt = NULL;
 	xmlXPathObjectPtr xpath_obj_ipinter = NULL;
-	xmlXPathObjectPtr xpath_obj_ipuser = NULL;
 	xmlXPathObjectPtr xpath_obj_core = NULL;
 
 	struct plugin_xml_conf_list *plugins = NULL;
 	struct plugin_xml_conf_list *aux_plugin = NULL;
+	struct plugin_xml_conf_list *last_plugin = NULL;
 	xmlNodePtr node;
 	xmlNodePtr plugin_config;
 	xmlNodePtr plugin_config_internal;
-	xmlChar *plugin_name = NULL;
 	xmlChar *plugin_file = NULL;
 	xmlDocPtr xmldata = NULL;
 	uint8_t hit = 0;
@@ -602,17 +601,8 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config)
 		goto cleanup;
 	}
 
-	/* look for <intermediatePlugin> in user config */
-	xpath_obj_ipuser = xmlXPathEvalExpression(BAD_CAST "/ietf-ipfix:ipfix/ietf-ipfix:intermediatePlugin", config_ctxt);
-	if (xpath_obj_ipuser != NULL) {
-		if (xmlXPathNodeSetIsEmpty(xpath_obj_ipuser->nodesetval)) {
-			MSG_NOTICE(msg_module, "No intermediate plugin found in user configuration!");
-			goto cleanup;
-		}
-	}
-
 	/* look for <ipfixmedCore> */
-	xpath_obj_core = xmlXPathEvalExpression(BAD_CAST "/ietf-ipfix:ipfix/ietf-ipfix:ipfixcolCore", config_ctxt);
+	xpath_obj_core = xmlXPathEvalExpression(BAD_CAST "/ietf-ipfix:ipfix/ietf-ipfix:intermediatePlugins", config_ctxt);
 	if (xpath_obj_core != NULL) {
 		if (xmlXPathNodeSetIsEmpty(xpath_obj_core->nodesetval)) {
 			MSG_NOTICE(msg_module, "No intermediate plugin set in user configuration!");
@@ -624,61 +614,39 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config)
 	node = xpath_obj_core->nodesetval->nodeTab[0]->children;
 
 	while (node != NULL) {
-
-		plugin_name = NULL;
 		plugin_file = NULL;
 		xmldata = NULL;
 		hit = 0;
 
-		if (!xmlStrncmp(node->name, BAD_CAST "plugin", strlen("plugin") + 1)) {
-			if (node->children->content) {
-				/* name of the Intermediate Process */
-				plugin_name = xmlNodeListGetString(config, node->children, 1);
+		/* find internal configuration for this Intermediate plugin */
+		for (i = 0; i < xpath_obj_ipinter->nodesetval->nodeNr; i++) {
+			plugin_config_internal = xpath_obj_ipinter->nodesetval->nodeTab[i]->children;
 
-				if (plugin_name) {
-					/* find internal configuration for this Intermediate plugin */
-					for (i = 0; i < xpath_obj_ipinter->nodesetval->nodeNr; i++) {
-						plugin_config_internal = xpath_obj_ipinter->nodesetval->nodeTab[i]->children;
-
-						while (plugin_config_internal) {
-							if ((!xmlStrncmp(plugin_config_internal->name, BAD_CAST "name", strlen("name") + 1)) &&
-								(!xmlStrncmp(plugin_config_internal->children->content, plugin_name, xmlStrlen(plugin_name)))) {
-								hit = 1;
-							}
-							if (!xmlStrncmp(plugin_config_internal->name, BAD_CAST "file", strlen("file") + 1)) {
-								plugin_file = xmlNodeListGetString(plugin_config_internal->doc, plugin_config_internal->children, 1);
-							}
-
-							plugin_config_internal = plugin_config_internal->next;
-						}
-
-						if (!hit) {
-							xmlFree(plugin_file);
-							continue;
-						}
-
-						break;
-					}
+			while (plugin_config_internal) {
+				if ((!xmlStrncmp(plugin_config_internal->name, BAD_CAST "name", strlen("name") + 1)) &&
+					(!xmlStrncmp(plugin_config_internal->children->content, node->name, xmlStrlen(node->name)))) {
+					hit = 1;
+				}
+				if (!xmlStrncmp(plugin_config_internal->name, BAD_CAST "file", strlen("file") + 1)) {
+					plugin_file = xmlNodeListGetString(plugin_config_internal->doc, plugin_config_internal->children, 1);
 				}
 
-				/* find plugin specific configuration (from startup.xml) */
-				for (i = 0; i < xpath_obj_ipuser->nodesetval->nodeNr; i++) {
-					plugin_config = xpath_obj_ipuser->nodesetval->nodeTab[i]->children;
-
-					while (plugin_config) {
-						if (!xmlStrncmp(plugin_config->name, plugin_name, xmlStrlen(plugin_name) + 1)) {
-							xmldata = xmlNewDoc(BAD_CAST "1.0");
-							xmlDocSetRootElement(xmldata, xmlCopyNode(plugin_config, 1));
-							break;
-						}
-
-						plugin_config = plugin_config->next;
-					}
-				}
+				plugin_config_internal = plugin_config_internal->next;
 			}
+
+			if (!hit) {
+				xmlFree(plugin_file);
+				plugin_file = NULL;
+				continue;
+			}
+
+			break;
 		}
 
-		if (!plugin_file && !plugin_name && !xmldata) {
+		xmldata = xmlNewDoc(BAD_CAST "1.0");
+		xmlDocSetRootElement(xmldata, xmlCopyNode(node, 1));
+
+		if (!plugin_file || !xmldata) {
 			node = node->next;
 			continue;
 		}
@@ -691,17 +659,16 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config)
 		memset(aux_plugin, 0, sizeof(*aux_plugin));
 
 		aux_plugin->config.file = (char *) plugin_file;
-		strncpy(aux_plugin->config.name, (char *) plugin_name, 16);
+		strncpy(aux_plugin->config.name, (char *) node->name, 16);
 		aux_plugin->config.xmldata = xmldata;
 
-		xmlFree(plugin_name);
-
 		if (plugins) {
-			plugins->next = aux_plugin;
+			last_plugin->next = aux_plugin;
 		} else {
 			plugins = aux_plugin;
 		}
 
+		last_plugin = aux_plugin;
 		node = node->next;
 	}
 
@@ -719,9 +686,6 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config)
 	}
 	if (xpath_obj_ipinter) {
 		xmlXPathFreeObject (xpath_obj_ipinter);
-	}
-	if (xpath_obj_ipuser) {
-		xmlXPathFreeObject(xpath_obj_ipuser);
 	}
 	if (config_ctxt) {
 		xmlXPathFreeContext (config_ctxt);

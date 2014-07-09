@@ -72,12 +72,13 @@
 		<file>/usr/share/ipfixcol/plugins/ipfixcol-anonymization-inter.so</file>
 		<threadName>anon_inter</threadName>
 	</intermediatePlugin>
-<!--
+
 	<intermediatePlugin>
 		<name>joinflows_ip</name>
 		<file>/usr/share/ipfixcol/plugins/ipfixcol-joinflows-inter.so</file>
 		<threadName>join_inter</threadName>
 	</intermediatePlugin>
+<<<<<<< HEAD
 -->
 <!--
 	<intermediatePlugin>
@@ -86,4 +87,7 @@
 		<threadName>filter_inter</threadName>
 	</intermediatePlugin>
 -->
+=======
+
+>>>>>>> mediator
 </ipfixcol>
