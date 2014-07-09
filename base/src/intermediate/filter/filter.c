@@ -37,6 +37,7 @@
  *
  */
 
+#include <arpa/inet.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -68,30 +69,6 @@ struct filter_process {
 	int *offset;
 	struct filter_profile *profile;
 };
-
-
-static char *ops[] = {"=", "<", "<=", ">", ">=", "!="};
-char *filter_op(enum operators op)
-{
-	return ops[op];
-}
-void filter_print(struct filter_treenode *node)
-{
-	switch (node->type) {
-	case NODE_AND:
-		filter_print(node->left);
-		MSG_DEBUG("", " && ");
-		filter_print(node->right);
-		return;
-	case NODE_OR:
-		filter_print(node->left);
-		MSG_DEBUG("", " || ");
-		filter_print(node->right);
-		return;
-	default:
-		MSG_DEBUG("", "%d %s %d", node->field, filter_op(node->op), *((uint16_t *)node->value->value));
-	}
-}
 
 /**
  * \brief Free tree structure
@@ -134,6 +111,11 @@ void filter_free_profile(struct filter_profile *profile)
 	free(profile);
 }
 
+/**
+ * \brief Initialize ipfix-elements.xml
+ *
+ * \param[in] pdata Parser data structure
+ */
 void filter_init_elements(struct filter_parser_data *pdata)
 {
 	pdata->doc = xmlReadFile(DEFAULT_ELEMENTS_FILE, NULL, 0);
@@ -689,9 +671,6 @@ int filter_parse_field(char *field, xmlDoc *doc, xmlXPathContextPtr context)
 
 /**
  * \brief Parse raw field name
- *
- * \param[in] rawfield Raw field name
- * \return Information Element ID
  */
 int filter_parse_rawfield(char *rawfield)
 {
@@ -787,6 +766,58 @@ struct filter_value *filter_parse_string(char *string)
 	return val;
 }
 
+/**
+ * \brief Parse IPv4 address
+ */
+struct filter_value *filter_parse_ipv4(char *addr)
+{
+	struct filter_value *val = malloc(sizeof(struct filter_value));
+	CHECK_ALLOC(val);
+
+	val->type = VT_NUMBER;
+
+	struct in_addr tmp;
+
+	if (inet_pton(AF_INET, addr, &tmp) != 1) {
+		MSG_ERROR(msg_module, "Cannot parse IP address %s", addr);
+		free(val);
+		return NULL;
+	}
+
+	val->value= filter_num_to_ptr((uint8_t *) &tmp, sizeof(struct in_addr));
+
+	return val;
+}
+
+/**
+ * \brief Parse IPv6 address
+ */
+struct filter_value *filter_parse_ipv6(char *addr)
+{
+	struct filter_value *val = malloc(sizeof(struct filter_value));
+	CHECK_ALLOC(val);
+
+	val->type = VT_NUMBER;
+
+	struct in6_addr tmp;
+
+	if (inet_pton(AF_INET6, addr, &tmp) != 1) {
+		MSG_ERROR(msg_module, "Cannot parse IP address %s", addr);
+		free(val);
+		return NULL;
+	}
+
+	val->value = filter_num_to_ptr((uint8_t *) &tmp, sizeof(struct in6_addr));
+
+	return val;
+}
+
+/**
+ * \brief Decode operator
+ *
+ * \param[in] op Operator
+ * \return Numeric value of operator
+ */
 enum operators filter_decode_operator(char *op)
 {
 	/*

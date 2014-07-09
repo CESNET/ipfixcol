@@ -136,6 +136,8 @@ value:
 	  NUMBER { $$ = filter_parse_number($1); free($1); if (!$$) YYABORT;}
 	| HEXNUM { $$ = filter_parse_hexnum($1); free($1); if (!$$) YYABORT;}
 	| STRING { $$ = filter_parse_string($1); free($1); if (!$$) YYABORT;}
+	| IPv4   { $$ = filter_parse_ipv4($1);   free($1); if (!$$) YYABORT;}
+	| IPv6   { $$ = filter_parse_ipv6($1);   free($1); if (!$$) YYABORT;}
 	;
 	
 field:

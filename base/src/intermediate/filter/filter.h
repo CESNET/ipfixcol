@@ -126,6 +126,22 @@ struct filter_value *filter_parse_hexnum(char *hexnum);
 struct filter_value *filter_parse_string(char *string);
 
 /**
+ * \brief Parse IPv4 address
+ *
+ * \param[in] string IPv4 address
+ * \return pointer to parsed value
+ */
+struct filter_value *filter_parse_ipv4(char *addr);
+
+/**
+ * \brief Parse IPv6 address
+ *
+ * \param[in] string IPv6 address
+ * \return pointer to parsed value
+ */
+struct filter_value *filter_parse_ipv6(char *addr);
+
+/**
  * \brief Create new leaf treenode
  *
  * \param[in] field Field number
