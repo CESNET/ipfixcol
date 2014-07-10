@@ -78,16 +78,10 @@
 		<file>/usr/share/ipfixcol/plugins/ipfixcol-joinflows-inter.so</file>
 		<threadName>join_inter</threadName>
 	</intermediatePlugin>
-<<<<<<< HEAD
--->
-<!--
+
 	<intermediatePlugin>
 		<name>filter</name>
 		<file>/usr/share/ipfixcol/plugins/ipfixcol-filter-inter.so</file>
 		<threadName>filter_inter</threadName>
 	</intermediatePlugin>
--->
-=======
-
->>>>>>> mediator
 </ipfixcol>
