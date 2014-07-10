@@ -185,6 +185,10 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 
 	/* Iterate throught all profiles */
 	for (profile = root->children; profile; profile = profile->next) {
+		if (profile->type != XML_ELEMENT_NODE) {
+			continue;
+		}
+
 		parser_data.filter = NULL;
 
 		/* Allocate space for profile */
@@ -200,6 +204,9 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 
 		/* Get filter string and all sources */
 		for (node = profile->children; node; node = node->next) {
+			if (node->type != XML_ELEMENT_NODE) {
+				continue;
+			}
 			if (!xmlStrcmp(node->name, (const xmlChar *) "from")) {
 				/* New source */
 				aux_src = calloc(1, sizeof(struct filter_source));
