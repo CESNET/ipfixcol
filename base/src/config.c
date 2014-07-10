@@ -643,10 +643,16 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config)
 			break;
 		}
 
+		if (!plugin_file) {
+			node = node->next;
+			continue;
+		}
+
 		xmldata = xmlNewDoc(BAD_CAST "1.0");
 		xmlDocSetRootElement(xmldata, xmlCopyNode(node, 1));
 
-		if (!plugin_file || !xmldata) {
+		if (!xmldata) {
+			xmlFree(plugin_file);
 			node = node->next;
 			continue;
 		}

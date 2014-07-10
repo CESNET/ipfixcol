@@ -122,14 +122,14 @@ explist:
 	  exp { $$ = $1; }
 	| NOT exp { $$ = $2; filter_node_set_negated($$); }
 	| '(' explist ')' { $$ = $2; }
-	| explist OPERATOR explist { $$ = filter_new_parent_node($1, $2, $3); }
+	| explist OPERATOR explist { $$ = filter_new_parent_node($1, $2, $3); free($2); if (!$$) YYABORT;}
 	;
 
 exp:
-	  field CMP value {  $$ = filter_new_leaf_node($1, $2, $3); }
-	| value CMP field {  $$ = filter_new_leaf_node($3, $2, $1); }
-	| field value { $$ = filter_new_leaf_node_opless($1, $2); }
-	| EXISTS field { $$ = filter_new_exists_node($2); }
+	  field CMP value {  $$ = filter_new_leaf_node($1, $2, $3); free($2); if (!$$) YYABORT; }
+	| value CMP field {  $$ = filter_new_leaf_node($3, $2, $1); free($2); if (!$$) YYABORT; }
+	| field value { $$ = filter_new_leaf_node_opless($1, $2); if (!$$) YYABORT; }
+	| EXISTS field { $$ = filter_new_exists_node($2); if (!$$) YYABORT; }
     ;
 
 value:

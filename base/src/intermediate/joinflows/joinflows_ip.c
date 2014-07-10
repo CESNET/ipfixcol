@@ -562,6 +562,7 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 			new_map = &(conf->mappings[conf->map_counter++]);
 			new_map->new_odid = atoi(to);
 			new_map->new_tid = 255;
+			xmlFree(to);
 
 			for (from = join->children; from != NULL; from = from->next) {
 				if (!xmlStrcmp(from->content, (const xmlChar *) "*")) {

@@ -91,6 +91,7 @@ void filter_free_tree(struct filter_treenode *node)
 			if (node->value->type == VT_REGEX) {
 				regfree((regex_t *) node->value->value);
 			}
+			MSG_DEBUG(msg_module, "Free value");
 			free(node->value->value);
 		}
 		free(node->value);
