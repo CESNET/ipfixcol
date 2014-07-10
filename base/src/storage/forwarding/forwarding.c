@@ -754,6 +754,10 @@ void forwarding_update_templates(forwarding *conf, const struct ipfix_message *m
 	
 	/* Check each used template */
 	for (i = 0; msg->data_couple[i].data_set != NULL && i < 1024; ++i) {
+		if (!msg->data_couple[i].data_template) {
+			/* Data set without template, skip it */
+			continue;
+		}
 		tid = ntohs(msg->data_couple[i].data_template->template_id);
 		rec = forwarding_get_record(conf, tid);
 		if (!rec) {

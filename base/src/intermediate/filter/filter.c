@@ -620,6 +620,10 @@ struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct fil
 	filter_add_template_sets(msg, ptr, &offset);
 
 	for (i = 0; i < 1024 && msg->data_couple[i].data_set; ++i) {
+		if (!msg->data_couple[i].data_template) {
+			/* Data set without template, skip it */
+			continue;
+		}
 		oldoffset = offset;
 		/* Copy set header */
 		memcpy(ptr + offset, &(msg->data_couple[i].data_set->header), sizeof(struct ipfix_set_header));

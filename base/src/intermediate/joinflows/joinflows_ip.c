@@ -685,6 +685,10 @@ int process_message(void *config, void *message)
 
 	/* Replace template in each data couple */
 	for (i = 0; msg->data_couple[i].data_set != NULL && i < 1024; ++i) {
+		if (!msg->data_couple[i].data_template) {
+			/* Data set without template, skip it */
+			continue;
+		}
 		orig_templ = msg->data_couple[i].data_template;
 		orig_tid = orig_templ->template_id;
 
