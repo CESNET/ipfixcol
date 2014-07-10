@@ -76,6 +76,8 @@ struct sequence_number_counter *snc_get(uint32_t odid)
 		if (aux_snc->odid == odid) {
 			return aux_snc;
 		}
+
+		aux_snc = aux_snc->next;
 	}
 	return NULL;
 }

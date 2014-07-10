@@ -410,6 +410,8 @@ void mapping_remove(struct mapping *map, struct mapping *old_map)
 			aux_map->next = old_map->next;
 			break;
 		}
+
+		aux_map = aux_map->next;
 	}
 
 	old_map->new_templ->references--;
