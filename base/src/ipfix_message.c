@@ -569,6 +569,7 @@ int data_record_field_offset(uint8_t *data_record, struct ipfix_template *templa
 					offset += 2;
 				}
 
+				prevoffset = offset;
 				offset += length;
 			}
 			break;

@@ -400,26 +400,34 @@ bool filter_fits_string(struct filter_treenode *node, uint8_t *rec, struct ipfix
 {
 	int datalen = 0, vallen = strlen((char *) node->value->value);
 	char *pos = NULL, *prevpos = NULL;
+	bool result = false;
 
 	uint8_t *recdata = data_record_get_field(rec, templ, node->field, &datalen);
 	if (!recdata) {
 		return node->op == OP_NOT_EQUAL;
 	}
-	datalen = strlen((char *) recdata);
+
+	/* recdata is string without terminating '\0' */
+	char *data = malloc(datalen + 1);
+	memcpy(data, recdata, datalen);
+	data[datalen] = '\0';
 
 	/* Find substring in string */
-	pos = strstr((char *) recdata, (char *) node->value->value);
+	pos = strstr(data, (char *) node->value->value);
 
 	switch (node->op) {
 	case OP_NONE:
 		/* Success == substring found */
-		return (bool) pos;
+		result = (bool) pos;
+		break;
 	case OP_EQUAL:
 		/* Success == strings are equal */
-		return pos && datalen == vallen;
+		result = pos && datalen == vallen;
+		break;
 	case OP_NOT_EQUAL:
 		/* Success == strings are different */
-		return !(pos && datalen == vallen);
+		result = !(pos && datalen == vallen);
+		break;
 	case OP_LESS:
 		/* String must end with substring */
 		while (pos) {
@@ -427,15 +435,18 @@ bool filter_fits_string(struct filter_treenode *node, uint8_t *rec, struct ipfix
 			pos = strstr(pos, (char *) node->value->value);
 		}
 		pos = prevpos;
-		return pos == (char *) &(recdata[datalen - vallen]);
+		result = pos == (char *) &(data[datalen - vallen]);
+		break;
 	case OP_GREATER:
 		/* String must begin with substring */
-		return pos == (char *) recdata;
+		result = pos == (char *) data;
+		break;
 	default:
 		/* Unsupported operation */
-		return false;
+		result = false;
 	}
-	return false;
+	free(data);
+	return result;
 }
 
 /**
@@ -807,7 +818,7 @@ struct filter_value *filter_parse_string(char *string)
 	CHECK_ALLOC(val->value);
 
 	memcpy(val->value, string + 1, strlen(string) - 1);
-	val->value[strlen(string) - 2] = 0;
+	val->value[strlen(string) - 2] = '\0';
 
 	return val;
 }
