@@ -72,7 +72,8 @@ _EXISTS exists|EXISTS
 _BRACKET "("|")"
 _FIELD [a-zA-Z][a-zA-Z0-9]+
 _WHITESPACE " "+|\t+
-_STRING \"[^ =><!()]+|!\" 
+_REGEX  \"\/[^(\/\")]*\/\"
+_STRING \"[^"]*\" 
 %%
 
 {_RAWFIELD}    { yylval->s = strndup(yytext, yyleng); return RAWFIELD; }
@@ -89,7 +90,8 @@ _STRING \"[^ =><!()]+|!\"
 {_EXISTS}		{ return EXISTS; }
 {_FIELD}        { yylval->s = strndup(yytext, yyleng); return FIELD; }
 {_BRACKET}		{ return yytext[0]; }
-{_STRING}		{ yylval->s = strndup(yytext, yyleng); return STRING; }
+{_REGEX} 		{ yylval->s = strndup(yytext + 2, yyleng - 4); return REGEX; }
+{_STRING}		{ yylval->s = strndup(yytext + 1, yyleng - 2); return STRING; }
 .				{yylloc->last_column++; yylloc->first_column++;}
 %%
  

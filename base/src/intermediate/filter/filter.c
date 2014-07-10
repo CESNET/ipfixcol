@@ -49,6 +49,7 @@
 #include <libxml/xpathInternals.h>
 
 #include <ipfixcol.h>
+#include <regex.h>
 
 #include "filter.h"
 #include "scanner.h"
@@ -87,6 +88,9 @@ void filter_free_tree(struct filter_treenode *node)
 
 	if (node->value) {
 		if (node->value->value) {
+			if (node->value->type == VT_REGEX) {
+				regfree((regex_t *) node->value->value);
+			}
 			free(node->value->value);
 		}
 		free(node->value);
@@ -450,6 +454,37 @@ bool filter_fits_string(struct filter_treenode *node, uint8_t *rec, struct ipfix
 }
 
 /**
+ * \brief Check whether string in data record fits with node's regex
+ *
+ * \param[in] node Filter tree node
+ * \param[in] rec Data record
+ * \param[in] templ Data record's template
+ * \return true if data record's field fits
+ */
+bool filter_fits_regex(struct filter_treenode *node, uint8_t *rec, struct ipfix_template *templ)
+{
+	int datalen = 0;
+	bool result = false;
+	regex_t *regex = (regex_t *) node->value->value;
+
+	uint8_t *recdata = data_record_get_field(rec, templ, node->field, &datalen);
+	if (!recdata) {
+		return node->op == OP_NOT_EQUAL;
+	}
+
+	/* recdata is string without terminating '\0' */
+	char *data = malloc(datalen + 1);
+	memcpy(data, recdata, datalen);
+	data[datalen] = '\0';
+
+	/* Execute regex */
+	result = !regexec(regex, data, 0, NULL, 0);
+
+	free(data);
+	return (node->op == OP_NOT_EQUAL) ^ result;
+}
+
+/**
  * \brief Check whether data record contains given field
  *
  * \param[in] node Filter tree node
@@ -484,10 +519,13 @@ bool filter_fits_node(struct filter_treenode *node, uint8_t *rec, struct ipfix_t
 	case NODE_EXISTS:
 		return (node->negate) ^ (filter_fits_exists(node, rec, templ));
 	default:
-		if (node->value->type == VT_NUMBER) {
-			return (node->negate) ^ filter_fits_value(node, rec, templ);
-		} else {
+		switch (node->value->type) {
+		case VT_STRING:
 			return (node->negate) ^ filter_fits_string(node, rec, templ);
+		case VT_REGEX:
+			return (node->negate) ^ filter_fits_regex(node, rec, templ);
+		default:
+			return (node->negate) ^ filter_fits_value(node, rec, templ);
 		}
 	}
 }
@@ -813,13 +851,49 @@ struct filter_value *filter_parse_string(char *string)
 	struct filter_value *val = malloc(sizeof(struct filter_value));
 	CHECK_ALLOC(val);
 
+	int len = strlen(string) + 1;
+
 	val->type = VT_STRING;
-	val->value = malloc(strlen(string) - 1);
+	val->value = malloc(len);
 	CHECK_ALLOC(val->value);
 
-	memcpy(val->value, string + 1, strlen(string) - 1);
-	val->value[strlen(string) - 2] = '\0';
+	/* Add terminating '\0' */
+	memcpy(val->value, string, len - 1);
+	val->value[len - 1] = '\0';
 
+	return val;
+}
+
+/**
+ * \brief Parse regular expression
+ */
+struct filter_value *filter_parse_regex(char *regexstr)
+{
+	int reglen;
+	regex_t *regex = calloc(1, sizeof(regex_t));
+	CHECK_ALLOC(regex);
+
+	reglen = strlen(regexstr) + 1;
+	char *reg = malloc(reglen);
+	CHECK_ALLOC(reg);
+
+	memcpy(reg, regexstr, reglen - 1);
+	reg[reglen - 1] = '\0';
+
+	/* REG_NOSUB == we don't need positions of matches */
+	if (regcomp(regex, reg, REG_NOSUB)) {
+		MSG_ERROR(msg_module, "Can't compile regular expression '%s'", reg);
+		free(reg);
+		return NULL;
+	}
+
+	struct filter_value *val = malloc(sizeof(struct filter_value));
+	CHECK_ALLOC(val);
+
+	val->type = VT_REGEX;
+	val->value = (uint8_t *) regex;
+
+	free(reg);
 	return val;
 }
 

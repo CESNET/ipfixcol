@@ -71,7 +71,8 @@ enum operators {
 
 enum valtype {
 	VT_NUMBER,
-	VT_STRING
+	VT_STRING,
+	VT_REGEX
 };
 
 struct filter_source {
@@ -158,6 +159,14 @@ struct filter_value *filter_parse_hexnum(char *hexnum);
  * \return pointer to parsed string
  */
 struct filter_value *filter_parse_string(char *string);
+
+/**
+ * \brief Parse regular expression
+ *
+ * \param[in] regexstr Regular expressing
+ * \return pointer to parsed regex
+ */
+struct filter_value *filter_parse_regex(char *regexstr);
 
 /**
  * \brief Parse IPv4 address

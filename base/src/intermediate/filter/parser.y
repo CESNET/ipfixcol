@@ -101,6 +101,7 @@ struct filter_treenode *n;
 %token <s> NOT			"not"
 %token <s> EXISTS		"exists"
 %token <s> STRING		"string"
+%token <s> REGEX		"regexp"
 %token END 0			"end of file"
 
 %type <n> explist exp start
@@ -136,6 +137,7 @@ value:
 	  NUMBER { $$ = filter_parse_number($1); free($1); if (!$$) YYABORT;}
 	| HEXNUM { $$ = filter_parse_hexnum($1); free($1); if (!$$) YYABORT;}
 	| STRING { $$ = filter_parse_string($1); free($1); if (!$$) YYABORT;}
+	| REGEX  { $$ = filter_parse_regex($1);  free($1); if (!$$) YYABORT;}
 	| IPv4   { $$ = filter_parse_ipv4($1);   free($1); if (!$$) YYABORT;}
 	| IPv6   { $$ = filter_parse_ipv6($1);   free($1); if (!$$) YYABORT;}
 	| TIMESTAMP { $$ = filter_parse_timestamp($1); free($1); if (!$$) YYABORT;}
