@@ -82,6 +82,7 @@ struct filter_source {
 
 
 struct filter_config {
+	bool remove_original;
 	void *ip_config;
 	struct filter_profile *profiles;
 	struct filter_profile *default_profile;

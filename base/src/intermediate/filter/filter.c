@@ -193,6 +193,16 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 			continue;
 		}
 
+		/* <removeOriginal>  option */
+		if (!xmlStrcmp(profile->name, (const xmlChar *) "removeOriginal")) {
+			aux_char = xmlNodeListGetString(doc, profile->children, 1);
+			if (!xmlStrcasecmp(aux_char, (const xmlChar *) "true")) {
+				conf->remove_original = true;
+			}
+			xmlFree(aux_char);
+			continue;
+		}
+
 		parser_data.filter = NULL;
 
 		/* Allocate space for profile */
@@ -701,7 +711,11 @@ int process_message(void *config, void *message)
 		}
 	}
 
-	pass_message(conf->ip_config, message);
+	if (conf->remove_original) {
+		drop_message(conf->ip_config, message);
+	} else {
+		pass_message(conf->ip_config, message);
+	}
 	return 0;
 }
 
