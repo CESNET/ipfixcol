@@ -155,13 +155,12 @@ static void joinflows_copy_fields(uint8_t *to, uint8_t *from, uint16_t length)
 			*((uint16_t*)(template_ptr+offset+i*2)) = htons(*((uint16_t*)(tmpl_ptr+offset+i*2)));
 		}
 		offset += TEMPLATE_FIELD_LEN;
-//		if (*((uint16_t *) (template_ptr+offset-TEMPLATE_FIELD_LEN)) & 0x8000) { /* enterprise element has first bit set to 1*/
-//			MSG_DEBUG(msg_module, "enterprise");
-//			for (i=0; i < TEMPLATE_ENT_NUM_LEN / 4; i++) {
-//				*((uint32_t*)(template_ptr+offset)) = htonl(*((uint32_t*)(tmpl_ptr+offset)));
-//			}
-//			offset += TEMPLATE_ENT_NUM_LEN;
-//		}
+		if (*((uint16_t *) (template_ptr+offset-TEMPLATE_FIELD_LEN)) & htons(0x8000)) { /* enterprise element has first bit set to 1*/
+			for (i=0; i < TEMPLATE_ENT_NUM_LEN / 4; i++) {
+				*((uint32_t*)(template_ptr+offset)) = htonl(*((uint32_t*)(tmpl_ptr+offset)));
+			}
+			offset += TEMPLATE_ENT_NUM_LEN;
+		}
 	}
 
 	return;
