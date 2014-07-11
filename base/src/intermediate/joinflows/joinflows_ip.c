@@ -90,6 +90,13 @@ struct joinflows_ip_config {
 	struct ipfix_template_mgr *tm; /* Template Manager */
 };
 
+struct joinflows_copy_info {
+	uint8_t *new_set;
+	uint8_t *value;
+	uint16_t offset;
+	uint16_t length;
+};
+
 /**
  * \brief Compare two templates
  *
@@ -212,6 +219,7 @@ struct mapped_template *updated_templ(struct ipfix_template *orig_templ, uint16_
 
 	new_mapped->templ = new_templ;
 	new_mapped->references = 1;
+
 	return new_mapped;
 }
 
@@ -416,6 +424,7 @@ void mapping_remove(struct mapping *map, struct mapping *old_map)
 	old_map->new_templ->references--;
 	if (old_map->new_templ->references <= 0) {
 		/* If there is no reference on modified template, remove it */
+		while (old_map->new_templ->templ->references > 0);
 		free(old_map->new_templ->templ);
 		free(old_map->new_templ);
 	}
@@ -438,13 +447,33 @@ void mapping_destroy(struct mapping *map)
 		if (aux_map->new_templ != NULL) {
 			aux_map->new_templ->references--;
 			if (aux_map->new_templ->references <= 0) {
+				while (aux_map->new_templ->templ->references > 0);
 				free(aux_map->new_templ->templ);
 				free(aux_map->new_templ);
 			}
 		}
-//		free(aux_map);
+
 		aux_map = map;
 	}
+}
+
+void joinflows_data_set_cnt(uint8_t *rec, int rec_len, struct ipfix_template *templ, void *data)
+{
+	(void) rec; (void) rec_len; (void) templ;
+	uint16_t *cnt = (uint16_t *) data;
+	(*cnt)++;
+}
+
+void joinflows_copy_data_set(uint8_t *rec, int rec_len, struct ipfix_template *templ, void *data)
+{
+	struct joinflows_copy_info *info = (struct joinflows_copy_info *) data;
+
+	MSG_DEBUG(msg_module, "Copy %d bytes on offset %d", rec_len, info->offset);
+	memcpy(info->new_set + info->offset, rec, rec_len);
+	info->offset += rec_len;
+
+	memcpy(info->new_set + info->offset, info->value, info->length);
+	info->offset += 4;
 }
 
 /**
@@ -455,20 +484,19 @@ void mapping_destroy(struct mapping *map)
  */
 void update_data_set(struct data_template_couple *couple, uint32_t orig_odid)
 {
-	struct ipfix_data_set *new_set, *old_set;
-	struct ipfix_set_header *aux_src, *aux_dst;
-	uint16_t i, new_length, records_num;
-	uint32_t data_length;
-
-	data_length = couple->data_template->data_length;
-	orig_odid = htons(orig_odid);
-	old_set = couple->data_set;
+	struct ipfix_data_set *new_set;
+	uint16_t  new_length, records_num = 0;
+	struct joinflows_copy_info info;
 
 	/* Count number of data records in data set */
-	records_num = (ntohs(old_set->header.length) - 4) / data_length;
+	data_set_process_records(couple->data_set, couple->data_template, &joinflows_data_set_cnt, (void *) &records_num);
+
+	if (records_num == 0) {
+		return;
+	}
 
 	/* Length of new data set */
-	new_length = ntohs(old_set->header.length) + records_num * 4;
+	new_length = ntohs(couple->data_set->header.length) + records_num * 4;
 
 	/* Allocate memory for new data set */
 	new_set = calloc(1, new_length);
@@ -477,24 +505,15 @@ void update_data_set(struct data_template_couple *couple, uint32_t orig_odid)
 	}
 
 	/* Set ID and length */
-	new_set->header.flowset_id = old_set->header.flowset_id;
+	new_set->header.flowset_id = couple->data_set->header.flowset_id;
 	new_set->header.length = htons(new_length);
 
-	aux_dst = &(new_set->header);
-	aux_src = &(old_set->header);
+	info.new_set = (uint8_t *) new_set;
+	info.offset = sizeof(struct ipfix_set_header);
+	info.value = (uint8_t *) &orig_odid;
+	info.length = sizeof(uint32_t);
 
-	/* Copy every data record into new data set and insert orig_odid as last element */
-	aux_dst++;
-	aux_src++;
-	for (i = 0; i < records_num; ++i) {
-		memcpy(aux_dst, aux_src, data_length);
-		aux_dst = (struct ipfix_set_header *) ((uint8_t *) aux_dst + data_length);
-		memcpy(aux_dst, &orig_odid, 4);
-
-		/* move to next data record */
-		aux_dst++;
-		aux_src = (struct ipfix_set_header *) ((uint8_t *) aux_src + data_length);
-	}
+	data_set_process_records(couple->data_set, couple->data_template, &joinflows_copy_data_set, (void *) &info);
 
 	/* replace data set by new one */
 	couple->data_set = new_set;
@@ -733,6 +752,7 @@ int process_message(void *config, void *message)
 		/* Replace template and count references */
 		MSG_DEBUG(msg_module, "Have mapping from %d:%d to %d:%d", orig_odid, orig_tid, new_mapping->new_odid, new_mapping->new_templ->templ->template_id);
 
+		__sync_fetch_and_add(&(new_mapping->new_templ->templ->references), orig_templ->references);
 		new_mapping->new_templ->templ->references += orig_templ->references;
 		msg->data_couple[i].data_template = new_mapping->new_templ->templ;
 		msg->data_couple[i].data_template->references = 0;
