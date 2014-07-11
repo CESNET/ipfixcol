@@ -356,7 +356,7 @@ int input_init(char *params, void **config)
 
 
 	/* input info */
-	conf->in_info = (struct input_info_file *) malloc(sizeof(*(conf->in_info)));
+	conf->in_info = (struct input_info_file *) calloc(1, sizeof(*(conf->in_info)));
 	if (!conf->in_info) {
 		/* out of memory */
 		MSG_ERROR(msg_module, "Not enough memory");
