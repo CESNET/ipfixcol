@@ -664,7 +664,7 @@ uint16_t data_record_length(uint8_t *data_record, struct ipfix_template *templat
 /**
  * \brief Go through all data records and call processing function for each
  */
-void data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_template *templ, callback_f processor, void *proc_data)
+void data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_template *templ, dset_callback_f processor, void *proc_data)
 {
 	uint16_t setlen = ntohs(data_set->header.length), data_len = templ->data_length, rec_len;
 	uint8_t *ptr = data_set->records;
@@ -685,6 +685,24 @@ void data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_temp
 	}
 }
 
+/**
+ * \brief Go through all (options) template records and call processing function for each
+ */
+void template_set_process_records(struct ipfix_template_set *tset, int type, tset_callback_f processor, void *proc_data)
+{
+	int offset = 0, max_len, rec_len;
+	uint8_t *ptr = (uint8_t*) &tset->first_record;
+
+	while (ptr < (uint8_t*) tset + ntohs(tset->header.length)) {
+		max_len = ((uint8_t *) tset + ntohs(tset->header.length)) - ptr;
+		rec_len = tm_template_record_length((struct ipfix_template_record *) ptr, max_len, type, NULL);
+		if (rec_len == 0) {
+			break;
+		}
+		processor(ptr, rec_len, proc_data);
+		ptr += rec_len;
+	}
+}
 
 /**
  * \brief Set field value for each data record in set
