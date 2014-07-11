@@ -468,7 +468,6 @@ void joinflows_copy_data_set(uint8_t *rec, int rec_len, struct ipfix_template *t
 {
 	struct joinflows_copy_info *info = (struct joinflows_copy_info *) data;
 
-	MSG_DEBUG(msg_module, "Copy %d bytes on offset %d", rec_len, info->offset);
 	memcpy(info->new_set + info->offset, rec, rec_len);
 	info->offset += rec_len;
 
@@ -699,7 +698,14 @@ int process_message(void *config, void *message)
 
 	/* Skip old template sets */
 	for (i = 0; msg->templ_set[i] != NULL && i < 1024; ++i) {
+		msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) - ntohs(msg->templ_set[i]->header.length));
 		msg->templ_set[i] = NULL;
+	}
+
+	/* Skip empty messages */
+	if (ntohs(msg->pkt_header->length) == IPFIX_HEADER_LENGTH) {
+		drop_message(conf->ip_config, (void *) msg);
+		return 0;
 	}
 
 	/* Replace template in each data couple */
@@ -758,6 +764,12 @@ int process_message(void *config, void *message)
 		msg->data_couple[i].data_template->references = 0;
 	}
 
+	/* Skip empty message */
+	if (new_msg_len <= IPFIX_HEADER_LENGTH) {
+		free(new_msg);
+		new_msg = NULL;
+	}
+
 	if (new_msg != NULL) {
 		struct ipfix_header *header = (struct ipfix_header *) new_msg;
 
@@ -772,7 +784,6 @@ int process_message(void *config, void *message)
 		tmp = htons(new_msg_len - IPFIX_HEADER_LENGTH);
 		memcpy(new_msg + IPFIX_HEADER_LENGTH + 2, &tmp, 2);
 		struct ipfix_message *new_message = message_create_from_mem(new_msg, new_msg_len, src->input_info, msg->source_status);
-//		msg->templ_set[0] = new_message->templ_set[0];
 		pass_message(conf->ip_config, (void *) new_message);
 	}
 
