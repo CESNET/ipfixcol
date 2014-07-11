@@ -384,6 +384,8 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 	struct udp_conf udp_conf;
 	struct ipfix_template_key key;
 	
+	msg->data_records_count = msg->templ_records_count = msg->opt_templ_records_count = 0;
+
 	key.odid = ntohl(msg->pkt_header->observation_domain_id);
 	key.crc = preprocessor_compute_crc(msg->input_info);
 
@@ -398,6 +400,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 			if (ret == 0) {
 				break;
 			} else {
+				msg->templ_records_count++;
 				ptr += ret;
 			}
 		}
@@ -412,6 +415,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 			if (ret == 0) {
 				break;
 			} else {
+				msg->opt_templ_records_count++;
 				ptr += ret;
 			}
 		}
@@ -495,6 +499,8 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 		msg->pkt_header->sequence_number = htonl(*seqn);
 		*seqn += records_count;
 	}
+
+	msg->data_records_count = records_count;
 
 	/* return number of data records */
 	return records_count;

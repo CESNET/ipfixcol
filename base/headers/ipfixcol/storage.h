@@ -84,6 +84,12 @@ struct __attribute__((__packed__)) ipfix_message {
 	struct input_info                 *input_info;
 	/** Source status (new, opened, closed) */
 	enum SOURCE_STATUS                source_status;
+	/** Number of data records in message */
+	uint16_t 						  data_records_count;
+	/** Number of template records in message */
+	uint16_t						  templ_records_count;
+	/** Number of options template records in message */
+	uint16_t						  opt_templ_records_count;
 	/** List of Template Sets in the packet */
 	struct ipfix_template_set         *templ_set[1024];
 	/** List of Options Template Sets in the packet */
