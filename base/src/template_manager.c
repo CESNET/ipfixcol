@@ -161,7 +161,7 @@ static void tm_copy_fields(uint8_t *to, uint8_t *from, uint16_t length)
  * \brief Fills up ipfix_template structure with data from (options_)template_record
  */
 static int tm_fill_template(struct ipfix_template *template, void *template_record, uint16_t template_length,
-							uint32_t data_length, int type)
+							uint32_t data_length, int type, uint32_t odid)
 {
 	struct ipfix_template_record *tmpl = (struct ipfix_template_record*) template_record;
 
@@ -183,7 +183,7 @@ static int tm_fill_template(struct ipfix_template *template, void *template_reco
 	} else { /* option template */
 		template->scope_field_count = ntohs(((struct ipfix_options_template_record*) template_record)->scope_field_count);
 		if (template->scope_field_count == 0) {
-			MSG_WARNING(msg_module, "Option template scope field count is 0");
+			MSG_WARNING(msg_module, "[%u] Option template scope field count is 0", odid);
 			return 1;
 		}
 		tm_copy_fields((uint8_t*)template->fields,
@@ -273,9 +273,10 @@ uint16_t tm_template_record_length(struct ipfix_template_record *template, int m
  * \param[in] template ipfix template data
  * \param[in] max_len maximum length of template
  * \param[in] type type of template (template/option template)
+ * \param[in] odid Observation Domain ID
  * \return pointer to new ipfix template
  */
-struct ipfix_template *tm_create_template(void *template, int max_len, int type)
+struct ipfix_template *tm_create_template(void *template, int max_len, int type, uint32_t odid)
 {
 	struct ipfix_template *new_tmpl = NULL;
 	uint32_t data_length = 0;
@@ -284,7 +285,7 @@ struct ipfix_template *tm_create_template(void *template, int max_len, int type)
 	tmpl_length = tm_template_length(template, max_len, type, &data_length);
 	if (tmpl_length == 0) {
 		/* template->count probably points beyond current set area */
-		MSG_WARNING(msg_module, "Template %d is malformed (bad template count), skipping.",
+		MSG_WARNING(msg_module, "[%u] Template %d is malformed (bad template count), skipping.", odid,
 				ntohs(((struct ipfix_template_record *) template)->template_id));
 		return NULL;
 	}
@@ -294,7 +295,7 @@ struct ipfix_template *tm_create_template(void *template, int max_len, int type)
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 	}
 
-	if (tm_fill_template(new_tmpl, template, tmpl_length, data_length, type) == 1) {
+	if (tm_fill_template(new_tmpl, template, tmpl_length, data_length, type, odid) == 1) {
 		free(new_tmpl);
 		return NULL;
 	}
@@ -371,13 +372,14 @@ struct ipfix_template *tm_record_insert_template(struct ipfix_template_mgr_recor
  * \param[in] template ipfix template which will be inserted into tmr
  * \param[in] max_len maximum size of template
  * \param[in] type type of template (template/option template)
+ * \param[in] odid Observation Domain ID
  * \return pointer to added template
  */
-struct ipfix_template *tm_record_add_template(struct ipfix_template_mgr_record *tmr, void *template, int max_len, int type)
+struct ipfix_template *tm_record_add_template(struct ipfix_template_mgr_record *tmr, void *template, int max_len, int type, uint32_t odid)
 {
 	struct ipfix_template *new_tmpl = NULL;
 
-	if ((new_tmpl = tm_create_template(template, max_len, type)) == NULL) {
+	if ((new_tmpl = tm_create_template(template, max_len, type, odid)) == NULL) {
 		return NULL;
 	}
 
@@ -419,9 +421,10 @@ int tm_record_remove_template(struct ipfix_template_mgr_record *tmr, uint16_t te
  * \param[in] template ipfix template record
  * \param[in] max_len maximum size of template
  * \param[in] type type of template (template/option template)
+ * \param[in] odid Observation Domain ID
  * \return pointer to updated template
  */
-struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_record *tmr, void *template, int max_len, int type)
+struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_record *tmr, void *template, int max_len, int type, uint32_t odid)
 {
 	uint32_t id = ntohs(((struct ipfix_template_record *) template)->template_id);
 	int i, count=0;
@@ -441,26 +444,26 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 			/* remove the old template */
 //			MSG_DEBUG(msg_module, "No references and no previous template - removing, ID %d", id);
 			if (tm_record_remove_template(tmr, id) != 0) {
-				MSG_WARNING(msg_module, "Cannot remove template %i.", id);
+				MSG_WARNING(msg_module, "[%u] Cannot remove template %i.", odid, id);
 			}
 			/* create a new one */
 			MSG_DEBUG(msg_module, "Creating new template %d", id);
-			return tm_record_add_template(tmr, template, max_len, type);
+			return tm_record_add_template(tmr, template, max_len, type, odid);
 		} else {
 			/* Has some previous template(s) */
-			MSG_DEBUG(msg_module, "No references, but previous template found, ID (%d)", id);
+			MSG_DEBUG(msg_module, "[%u] No references, but previous template found, ID (%d)", odid, id);
 			struct ipfix_template *new = tmr->templates[i]->next;
 			free(tmr->templates[i]);
 			tmr->templates[i] = new;
 		}
 	} else {
-		MSG_DEBUG(msg_module, "Template %d can't be removed (%u references), it will be marked as old.", id, tmr->templates[i]->references);
+		MSG_DEBUG(msg_module, "[%u] Template %d can't be removed (%u references), it will be marked as old.", odid, id, tmr->templates[i]->references);
 	}
 
 	/* Create new template and place it on beginning of list */
 	struct ipfix_template *new_tmpl = NULL;
 
-	if ((new_tmpl = tm_create_template(template, max_len, type)) == NULL) {
+	if ((new_tmpl = tm_create_template(template, max_len, type, odid)) == NULL) {
 		return NULL;
 	}
 
@@ -468,7 +471,7 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 	new_tmpl->next = tmr->templates[i];
 	tmr->templates[i] = new_tmpl;
 
-	MSG_DEBUG(msg_module,"Template with id %d and index %d added to list", id, i);
+	MSG_DEBUG(msg_module,"[%u] Template with id %d and index %d added to list", odid, id, i);
 
 	return tmr->templates[i];
 }
@@ -635,7 +638,7 @@ uint32_t tm_add_free_tid(struct ipfix_template_mgr *tm, uint32_t odid)
 	for (i = 0; i < tm->free_tid_max; ++i) {
 		if (tm->free_tid[i] == NULL) {
 			tm->free_tid[i] = free_tid;
-			MSG_DEBUG(msg_module, "Adding free tid for ODID %d", odid);
+			MSG_DEBUG(msg_module, "[%u] Adding free Template ID", odid);
 			break;
 		}
 	}
@@ -661,7 +664,7 @@ uint32_t tm_get_free_tid(struct ipfix_template_mgr *tm, uint32_t odid)
 				/* Recycle used template ID */
 				tid = tm->free_tid[i]->released->tid;
 				tm->free_tid[i]->released = tm->free_tid[i]->released->next;
-				MSG_DEBUG(msg_module, "Reusing %d", tid);
+				MSG_DEBUG(msg_module, "[%u] Reusing Template ID %d", odid, tid);
 			} else {
 				/* Increment new Template ID */
 				tid = ++(tm->free_tid[i]->tid);
@@ -687,7 +690,7 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *temp
 	}
 
 	/* Add template to Template Manager */
-	new_templ = tm_record_add_template(tmr, template, max_len, type);
+	new_templ = tm_record_add_template(tmr, template, max_len, type, key->odid);
 
 	if (new_templ == NULL) {
 		return NULL;
@@ -728,7 +731,7 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *t
 	if (tmr == NULL) {
 		return NULL;
 	}
-	return tm_record_update_template(tmr, template, max_len, type);
+	return tm_record_update_template(tmr, template, max_len, type, key->odid);
 
 }
 
@@ -763,6 +766,8 @@ void tm_remove_all_odid_templates(struct ipfix_template_mgr *tm, uint32_t odid)
 {
 	struct ipfix_template_mgr_record *prev_rec = tm->first, *aux_rec = tm->first;
 	uint64_t key = ((uint64_t) odid << 32);
+
+	MSG_NOTICE(msg_module, "[%u] Removing all templates", odid);
 
 	while (aux_rec) {
 		if (aux_rec->key & key == key) {

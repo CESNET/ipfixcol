@@ -388,13 +388,13 @@ struct mapping *mapping_equal_or_new(struct mapping *map, uint32_t orig_odid, ui
 
 	if (equal_mapping == NULL) {
 		/* Found new mapping */
-		MSG_NOTICE(msg_module, "New mapping for ODID %d and Template ID %d", orig_odid, orig_tid);
+		MSG_NOTICE(msg_module, "[%u] New mapping for Template ID %d", orig_odid, orig_tid);
 		new_mapping = mapping_create(map, orig_odid, orig_tid, orig_templ);
 	} else {
 		/* Found equal mapping -> copy it with differenc original IDs
 		 * so next time it can be found only by mapping_lookup
 		 */
-		MSG_NOTICE(msg_module, "Found equal mapping for ODID %d and Template ID %d", orig_odid, orig_tid);
+		MSG_NOTICE(msg_module, "[%u] Found equal mapping for Template ID %d", orig_odid, orig_tid);
 		new_mapping = mapping_copy(equal_mapping, orig_odid, orig_tid);
 	}
 
@@ -668,7 +668,7 @@ int process_message(void *config, void *message)
 			/* Use default source and default mapping */
 			src = &(conf->default_source);
 		} else {
-			MSG_DEBUG(msg_module, "No mapping for ODID %d, ignoring", orig_odid);
+			MSG_DEBUG(msg_module, "[%u] No mapping, ignoring", orig_odid);
 			pass_message(conf->ip_config, message);
 			return 0;
 		}
@@ -736,7 +736,7 @@ int process_message(void *config, void *message)
 
 			mapping_insert(src->mapping, new_mapping);
 		} else if (new_mapping->orig_templ != msg->data_couple[i].data_template) {
-			MSG_DEBUG(msg_module, "Mapping for %d found, but template is old.", orig_tid);
+			MSG_DEBUG(msg_module, "[%u] Mapping for %d found, but template is old.", orig_odid, orig_tid);
 
 			/* Remove outdated mapping */
 			mapping_remove(src->mapping, new_mapping);

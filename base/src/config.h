@@ -112,6 +112,7 @@ struct storage {
 	int (*store) (void*, const struct ipfix_message*, const struct ipfix_template_mgr*);
 	int (*store_now) (const void*);
 	int (*close) (void**);
+	uint32_t odid;
 	void *dll_handler;
 	struct plugin_xml_conf *xml_conf;
     struct storage_thread_conf *thread_config;

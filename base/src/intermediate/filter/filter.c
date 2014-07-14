@@ -91,7 +91,6 @@ void filter_free_tree(struct filter_treenode *node)
 			if (node->value->type == VT_REGEX) {
 				regfree((regex_t *) node->value->value);
 			}
-			MSG_DEBUG(msg_module, "Free value");
 			free(node->value->value);
 		}
 		free(node->value);
@@ -580,13 +579,10 @@ void filter_process_data_record(uint8_t *rec, int rec_len, struct ipfix_template
 	struct filter_process *conf = (struct filter_process *) data;
 
 	if (filter_fits_node(conf->profile->root, rec, templ)) {
-//		MSG_DEBUG(msg_module, "data record fits");
 		memcpy(conf->ptr + *(conf->offset), rec, rec_len);
 		*(conf->offset) += rec_len;
 
 		tm_template_reference_inc(templ);
-	} else {
-//		MSG_DEBUG(msg_module, "data record DOES NOT fit");
 	}
 }
 

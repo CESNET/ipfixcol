@@ -292,7 +292,7 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 	/* these templates are no longer used (checked in data_manager_withdraw_templates()) */
 	if (input_info->type == SOURCE_TYPE_UDP && ntohs(template_record->count) == 0) {
 		/* got withdrawal message with UDP -> this is wrong */
-		MSG_WARNING(msg_module, "Got template withdraw message on UDP. Ignoring.");
+		MSG_WARNING(msg_module, "[%u] Got template withdraw message on UDP. Ignoring.", input_info->odid);
 		return TM_TEMPLATE_WITHDRAW_LEN;
 	} else if ((ntohs(template_record->template_id) == IPFIX_TEMPLATE_FLOWSET_ID ||
 				ntohs(template_record->template_id) == IPFIX_OPTION_FLOWSET_ID) &&
@@ -306,7 +306,7 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 		ret = tm_remove_template(tm, key);
 		/* Log error when removing unknown template */
 		if (ret == 1) {
-			MSG_WARNING(msg_module, "%s withdraw message received for unknown Template ID: %u",
+			MSG_WARNING(msg_module, "[%u] %s withdraw message received for unknown Template ID: %u", input_info->odid,
 					(type==TM_TEMPLATE)?"Template":"Options template", ntohs(template_record->template_id));
 		}
 		return TM_TEMPLATE_WITHDRAW_LEN;
@@ -315,19 +315,19 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 		/* add template */
 		/* check that the template has valid ID ( < 256 ) */
 		if (ntohs(template_record->template_id) < 256) {
-			MSG_WARNING(msg_module, "%s ID %i is reserved and not valid for data set!", (type==TM_TEMPLATE)?"Template":"Options template", ntohs(template_record->template_id));
+			MSG_WARNING(msg_module, "[%u] %s ID %i is reserved and not valid for data set!", key->odid, (type==TM_TEMPLATE)?"Template":"Options template", ntohs(template_record->template_id));
 		} else {
-			MSG_NOTICE(msg_module, "New %s ID %i", (type==TM_TEMPLATE)?"template":"options template", ntohs(template_record->template_id));
+			MSG_NOTICE(msg_module, "[%u] New %s ID %i", key->odid, (type==TM_TEMPLATE)?"template":"options template", ntohs(template_record->template_id));
 			template = tm_add_template(tm, tmpl, max_len, type, key);
 		}
 	} else {
 		/* template already exists */
-		MSG_WARNING(msg_module, "%s ID %i already exists. Rewriting.",
+		MSG_WARNING(msg_module, "[%u] %s ID %i already exists. Rewriting.", key->odid,
 				(type==TM_TEMPLATE)?"Template":"Options template", template->template_id);
 		template = tm_update_template(tm, tmpl, max_len, type, key);
 	}
 	if (template == NULL) {
-		MSG_WARNING(msg_module, "Cannot parse %s set, skipping to next set",
+		MSG_WARNING(msg_module, "[%u] Cannot parse %s set, skipping to next set", key->odid,
 				(type==TM_TEMPLATE)?"template":"options template");
 		return 0;
 		/* update UDP timeouts */
@@ -348,7 +348,7 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 	/* length of the options template */
 	return template->template_length - sizeof(struct ipfix_template) + sizeof(struct ipfix_options_template_record);
 }
-static int odid_sn = 0;
+
 /**
  * \brief Process templates
  *
@@ -426,7 +426,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 		key.tid = ntohs(msg->data_couple[i].data_set->header.flowset_id);
 		msg->data_couple[i].data_template = tm_get_template(template_mgr, &key);
 		if (msg->data_couple[i].data_template == NULL) {
-			MSG_WARNING(msg_module, "Data template with ID %i not found!", key.tid);
+			MSG_WARNING(msg_module, "[%u] Data template with ID %i not found!", key.odid, key.tid);
 		} else {
 			/* Increasing number of references to template */
 			tm_template_reference_inc(msg->data_couple[i].data_template);
@@ -438,7 +438,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 					((time(NULL) - msg->data_couple[i].data_template->last_transmission > udp_conf.template_life_time) || /* lifetime expired */
 					(udp_conf.template_life_packet > 0 && /* life packet should be checked */
 					(uint32_t) (msg_counter - msg->data_couple[i].data_template->last_message) > udp_conf.template_life_packet))) {
-				MSG_WARNING(msg_module, "Data template ID %i expired! Using old template.",
+				MSG_WARNING(msg_module, "[%u] Data template ID %i expired! Using old template.", key.odid,
 				                                               msg->data_couple[i].data_template->template_id);
 			}
 
@@ -526,12 +526,12 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		snc_remove_source(input_info->odid);
 	} else {
 		if (packet == NULL) {
-			MSG_WARNING(msg_module, "Received empty packet");
+			MSG_WARNING(msg_module, "[%u] Received empty packet", input_info->odid);
 			return;
 		}
 
 		if (input_info == NULL || storage_plugins == NULL) {
-			MSG_WARNING(msg_module, "Invalid parameters in function preprocessor_parse_msg().");
+			MSG_WARNING(msg_module, "[%u] Invalid parameters in function preprocessor_parse_msg().", input_info->odid);
 			free(packet);
 			packet = NULL;
 			return;
@@ -552,7 +552,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		/* Check sequence number */
 		if (msg->input_info->sequence_number != ntohl(msg->pkt_header->sequence_number)) {
 			if (!skip_seq_err) {
-				MSG_WARNING(msg_module, "Sequence number does not match: expected %u, got %u", msg->input_info->sequence_number , ntohl(msg->pkt_header->sequence_number));
+				MSG_WARNING(msg_module, "[%u] Sequence number does not match: expected %u, got %u", input_info->odid, msg->input_info->sequence_number , ntohl(msg->pkt_header->sequence_number));
 			}
 			int *seqn = snc_get_sequence_number(ntohl(msg->pkt_header->observation_domain_id));
 			if (seqn) {
@@ -567,7 +567,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 
     /* Send data to the first intermediate plugin */
 	if (rbuffer_write(preprocessor_out_queue, msg, 1) != 0) {
-		MSG_WARNING(msg_module, "Unable to write into Data manager's input queue, skipping data.");
+		MSG_WARNING(msg_module, "[%u] Unable to write into Data manager's input queue, skipping data.", input_info->odid);
 		message_free(msg);
 		packet = NULL;
 	}

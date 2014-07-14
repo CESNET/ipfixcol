@@ -66,6 +66,7 @@ static char *msg_module = "ipfix_message";
 struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_info* input_info, int source_status)
 {
 	struct ipfix_message *message;
+	uint32_t odid;
 
 	message = (struct ipfix_message*) calloc (1, sizeof(struct ipfix_message));
 	if (!message) {
@@ -76,12 +77,13 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
 	message->pkt_header = (struct ipfix_header*) msg;
 	message->input_info = input_info;
 	message->source_status = source_status;
-	MSG_DEBUG(msg_module, "Processing data for Observation domain ID %d.",
-			ntohl(message->pkt_header->observation_domain_id));
+
+	odid = ntohl(message->pkt_header->observation_domain_id);
+	MSG_DEBUG(msg_module, "[%u] Processing data.", odid);
 
 	/* check IPFIX version */
 	if (message->pkt_header->version != htons(IPFIX_VERSION)) {
-		MSG_WARNING(msg_module, "Unexpected IPFIX version detected (%X), skipping msg.",
+		MSG_WARNING(msg_module, "[%u] Unexpected IPFIX version detected (%X), skipping msg.", odid,
 				message->pkt_header->version);
 		free(message);
 		return NULL;
@@ -89,7 +91,7 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
 
 	/* check whether message is not shorter than header says */
 	if ((uint16_t) len < ntohs(message->pkt_header->length)) {
-		MSG_WARNING(msg_module, "Malformed IPFIX message detected (bad length), skipping msg.");
+		MSG_WARNING(msg_module, "[%u] Malformed IPFIX message detected (bad length), skipping msg.", odid);
 		free (message);
 		return NULL;
 	}
@@ -111,7 +113,7 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
                 break;
             default:
                 if (ntohs(set_header->flowset_id) < IPFIX_MIN_RECORD_FLOWSET_ID) {
-                	MSG_WARNING(msg_module, "Unknown Set ID %d", ntohs(set_header->flowset_id));
+                	MSG_WARNING(msg_module, "[%u] Unknown Set ID %d", odid, ntohs(set_header->flowset_id));
                 } else {
                     message->data_couple[d_set_count++].data_set = (struct ipfix_data_set*) set_header;
                 }
@@ -181,8 +183,9 @@ int message_set_templates(struct ipfix_message *msg, struct ipfix_template_mgr *
     uint8_t var_len = 0;
     uint32_t records_count = 0;
     uint16_t count;
+    uint32_t odid = ntohl(msg->pkt_header->observation_domain_id);
 
-    struct ipfix_template_key *key = tm_key_create(ntohl(msg->pkt_header->observation_domain_id), src_id, 0);
+    struct ipfix_template_key *key = tm_key_create(odid, src_id, 0);
 
 	if (!msg || !tm) {
 		return -1;
@@ -192,7 +195,7 @@ int message_set_templates(struct ipfix_message *msg, struct ipfix_template_mgr *
     	tm_key_change_template_id(key, ntohs(msg->data_couple[i].data_set->header.flowset_id));
 		msg->data_couple[i].data_template = tm_get_template(tm, key);
 		if (msg->data_couple[i].data_template == NULL) {
-			MSG_WARNING(msg_module, "Template with ID %i not found!", ntohs(msg->data_couple[i].data_set->header.flowset_id));
+			MSG_WARNING(msg_module, "[%u] Template with ID %i not found!", odid, ntohs(msg->data_couple[i].data_set->header.flowset_id));
 		} else {
 			/* compute sequence number */
 			if (msg->data_couple[i].data_template->data_length & 0x80000000) {

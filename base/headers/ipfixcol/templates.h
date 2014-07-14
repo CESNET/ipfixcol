@@ -173,9 +173,10 @@ struct ipfix_template_mgr_record {
  * to the end of the Template Set.
  * \param[in]  type Type of the Template Record. TM_TEMPLATE = Template,
  * TM_OPTIONS_TEMPLATE = Options Template.
+ * \param[in]  odid Observation Domain ID
  * \return Pointer to new ipfix_template on success, NULL otherwise
  */
-struct ipfix_template *tm_create_template(void *tmp, int max_len, int type);
+struct ipfix_template *tm_create_template(void *tmp, int max_len, int type, uint32_t odid);
 
 
 /**

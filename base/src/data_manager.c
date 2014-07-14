@@ -101,7 +101,7 @@ static void* storage_plugin_thread (void* cfg)
 		/* get next data */
 		msg = rbuffer_read (config->thread_config->queue, &index);
 		if (msg == NULL) {
-			MSG_NOTICE("storage plugin thread", "No more data from Data manager.");
+			MSG_NOTICE("storage plugin thread", "[%u] No more data from Data manager.", config->odid);
             break;
 		}
 
@@ -115,7 +115,7 @@ static void* storage_plugin_thread (void* cfg)
 		index = (index + 1) % config->thread_config->queue->size;
 	}
 
-	MSG_NOTICE("storage plugin thread", "Closing storage plugin's thread.");
+	MSG_NOTICE("storage plugin thread", "[%u] Closing storage plugin's thread.", config->odid);
 	return (NULL);
 }
 
@@ -218,7 +218,7 @@ struct data_manager_config* data_manager_create (
 		xmlDocDumpMemory (aux_storage->storage.xml_conf->xmldata, &plugin_params, NULL);
 		retval = aux_storage->storage.init ((char*) plugin_params, &(aux_storage->storage.config));
 		if (retval != 0) {
-			MSG_WARNING(msg_module, "Initiating storage plugin failed.");
+			MSG_WARNING(msg_module, "[%u] Initiating storage plugin failed.", config->observation_domain_id);
 			xmlFree (plugin_params);
 			aux_storage_list = aux_storage_list->next;
 			continue;
@@ -243,6 +243,7 @@ struct data_manager_config* data_manager_create (
 		plugin_cfg->queue = config->store_queue;
 //		plugin_cfg->template_mgr = config->template_mgr;
 		aux_storage->storage.thread_config = plugin_cfg;
+		aux_storage->storage.odid = config->observation_domain_id;
 		name_len = strlen(aux_storage->storage.thread_name);
 		snprintf(aux_storage->storage.thread_name + name_len, 16 - name_len, " %d", observation_domain_id);
 		if (pthread_create(&(plugin_cfg->thread_id), NULL, &storage_plugin_thread, (void*) &aux_storage->storage) != 0) {
@@ -264,7 +265,7 @@ struct data_manager_config* data_manager_create (
 
 	/* check if at least one storage plugin initiated */
 	if (config->plugins_count == 0) {
-		MSG_WARNING(msg_module, "No storage plugin for the Data manager initiated.");
+		MSG_WARNING(msg_module, "[%u] No storage plugin for the Data manager initiated.", config->observation_domain_id);
 		data_manager_free (config);
 		return (NULL);
 	}

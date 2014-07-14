@@ -273,6 +273,7 @@ int process_message(void *config, void *message)
 	char ip_orig[INET6_ADDRSTRLEN];
 	char ip_anon[INET6_ADDRSTRLEN];
 	struct anonymization_ip_config *conf;
+	uint32_t odid;
 
 	conf = (struct anonymization_ip_config *) config;
 
@@ -291,15 +292,13 @@ int process_message(void *config, void *message)
 		return 0;
 	}
 
-	MSG_DEBUG(msg_module, "got IPFIX message!");
-
+	odid = ntohl(msg->pkt_header->observation_domain_id);
 	index = 0;
 	while ((data_set = msg->data_couple[index].data_set) != NULL) {
 		template = msg->data_couple[index].data_template;
 
 		if (!template) {
 			/* oops, this is weird... no template for data set, skip it (note this might be a bug in previous intermediate plugin) */
-			MSG_ERROR(msg_module, "missing template for data set with ID=%u", data_set->header.flowset_id);
 			++index;
 			continue;
 		}
@@ -336,7 +335,7 @@ int process_message(void *config, void *message)
 
 							inet_ntop(AF_INET, &new_addr, ip_anon, INET6_ADDRSTRLEN);
 
-							MSG_DEBUG(msg_module, "%s %s -> %s", entities_to_anonymize[entities_index].entity_name,
+							MSG_DEBUG(msg_module, "[%u] %s %s -> %s", odid, entities_to_anonymize[entities_index].entity_name,
 									ip_orig, ip_anon);
 
 							free(data);
@@ -353,7 +352,7 @@ int process_message(void *config, void *message)
 
 						inet_ntop(AF_INET, data, ip_anon, INET6_ADDRSTRLEN);
 
-						MSG_DEBUG(msg_module, "%s %s -> %s", entities_to_anonymize[entities_index].entity_name,
+						MSG_DEBUG(msg_module, "[%u] %s %s -> %s", odid, entities_to_anonymize[entities_index].entity_name,
 								ip_orig, ip_anon);
 
 						free(data);
@@ -384,7 +383,7 @@ int process_message(void *config, void *message)
 
 							inet_ntop(AF_INET6, new_addr, ip_anon, INET6_ADDRSTRLEN);
 
-							MSG_DEBUG(msg_module, "%s %s -> %s",
+							MSG_DEBUG(msg_module, "[%u] %s %s -> %s", odid,
 									entities_to_anonymize[entities_index].entity_name, ip_orig, ip_anon);
 
 							free(data);
@@ -402,7 +401,7 @@ int process_message(void *config, void *message)
 
 						inet_ntop(AF_INET6, data, ip_anon, INET6_ADDRSTRLEN);
 
-						MSG_DEBUG(msg_module, "%s %s -> %s",
+						MSG_DEBUG(msg_module, "[%u] %s %s -> %s", odid,
 								entities_to_anonymize[entities_index].entity_name, ip_orig, ip_anon);
 
 						free(data);
@@ -414,7 +413,7 @@ int process_message(void *config, void *message)
 				}
 				break;
 				default:
-					MSG_ERROR(msg_module, "Invalid address family");
+					MSG_ERROR(msg_module, "[%u] Invalid address family", odid);
 					break;
 				} /* switch */
 			} /* if */
