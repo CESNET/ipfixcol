@@ -571,7 +571,7 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config)
 	xmlNodePtr node;
 	xmlNodePtr plugin_config;
 	xmlNodePtr plugin_config_internal;
-	xmlChar *plugin_file = NULL;
+	xmlChar *plugin_file = NULL, *thread_name = NULL;
 	xmlDocPtr xmldata = NULL;
 	uint8_t hit = 0;
 
@@ -616,6 +616,8 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config)
 	while (node != NULL) {
 		plugin_file = NULL;
 		xmldata = NULL;
+		thread_name = NULL;
+
 		hit = 0;
 
 		/* find internal configuration for this Intermediate plugin */
@@ -631,11 +633,15 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config)
 					plugin_file = xmlNodeListGetString(plugin_config_internal->doc, plugin_config_internal->children, 1);
 				}
 
+				if (!xmlStrncmp(plugin_config_internal->name, BAD_CAST "threadName", strlen("threadName") + 1)) {
+					thread_name = xmlNodeListGetString(plugin_config_internal->doc, plugin_config_internal->children, 1);
+				}
 				plugin_config_internal = plugin_config_internal->next;
 			}
 
 			if (!hit) {
 				xmlFree(plugin_file);
+				xmlFree(thread_name);
 				plugin_file = NULL;
 				continue;
 			}
@@ -653,6 +659,7 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config)
 
 		if (!xmldata) {
 			xmlFree(plugin_file);
+			xmlFree(thread_name);
 			node = node->next;
 			continue;
 		}
@@ -662,10 +669,17 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config)
 			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			goto cleanup;
 		}
+
 		memset(aux_plugin, 0, sizeof(*aux_plugin));
 
 		aux_plugin->config.file = (char *) plugin_file;
-		strncpy(aux_plugin->config.name, (char *) node->name, 16);
+		if (thread_name) {
+			strncpy(aux_plugin->config.name, (char*) thread_name, 16);
+			xmlFree(thread_name);
+		} else {
+			strncpy(aux_plugin->config.name, (char *) node->name, 16);
+		}
+
 		aux_plugin->config.xmldata = xmldata;
 
 		if (plugins) {

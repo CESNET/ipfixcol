@@ -444,7 +444,7 @@ int main (int argc, char* argv[])
 
 		intermediate_list->intermediate.dll_handler = intermediate_plugin_handler;
 		/* set intermediate thread name */
-		snprintf(intermediate_list->intermediate.thread_name, 16, "ipfixm:%s", aux_plugins->config.name);
+		snprintf(intermediate_list->intermediate.thread_name, 16, "med:%s", aux_plugins->config.name);
 
 		/* prepare Input API routines */
 		intermediate_list->intermediate.process_message = dlsym(intermediate_plugin_handler, "process_message");

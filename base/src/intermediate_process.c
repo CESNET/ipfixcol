@@ -40,6 +40,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <sys/prctl.h>
 #include <string.h>
 #include "queues.h"
 #include "intermediate_process.h"
@@ -57,6 +58,7 @@ struct ip_config {
 	int (*intermediate_plugin_close)(void *);
 	void *plugin_config;
 	pthread_t thread_id;
+	char thread_name[16];
 };
 
 
@@ -75,6 +77,8 @@ void *ip_loop(void *config)
 	unsigned int index;
 
 	conf = (struct ip_config *) config;
+
+	prctl(PR_SET_NAME, conf->thread_name, 0, 0, 0);
 
 	index = conf->in_queue->read_offset;
 
@@ -134,6 +138,8 @@ int ip_init(struct ring_buffer *in_queue, struct ring_buffer *out_queue,
 	conf->process_message = intermediate->process_message;
 	conf->intermediate_plugin_close = intermediate->intermediate_plugin_close;
 	conf->xmldata = xmldata;
+	snprintf(conf->thread_name, 16, "%s", intermediate->thread_name);
+//	conf->thread_name = intermediate->thread_name;
 
 	conf->intermediate_plugin_init(conf->xmldata, conf, ip_id, template_mgr, &(conf->plugin_config));
 	if (conf->plugin_config == NULL) {
