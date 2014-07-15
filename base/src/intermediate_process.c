@@ -59,6 +59,7 @@ struct ip_config {
 	void *plugin_config;
 	pthread_t thread_id;
 	char thread_name[16];
+	unsigned int index;
 };
 
 
@@ -92,15 +93,15 @@ void *ip_loop(void *config)
 			MSG_DEBUG(msg_module, "NULL message, terminating intermediate process.");
 			break;
 		}
+		conf->index = index;
+		/* process message */
+		conf->process_message(conf->plugin_config, message);
 
 		/* remove message from input queue, but do not free memory (it must be done later in output manager) */
 		rbuffer_remove_reference(conf->in_queue, index, 0);
 
 		/* update index */
 		index = (index + 1) % conf->in_queue->size;
-
-		/* process message */
-		conf->process_message(conf->plugin_config, message);
 	}
 
 	return (void *) 0;
@@ -197,7 +198,9 @@ int pass_message(void *config, struct ipfix_message *message)
  */
 int drop_message(void *config, struct ipfix_message *message)
 {
-	free(message);
+	struct ip_config *conf = (struct ip_config *) config;
+
+	rbuffer_remove_reference(conf->in_queue, conf->index, 1);
 	return 0;
 }
 
