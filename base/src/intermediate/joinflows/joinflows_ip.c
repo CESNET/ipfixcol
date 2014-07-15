@@ -164,7 +164,7 @@ struct mapped_template *updated_templ(struct ipfix_template_record *orig_rec, in
 {
 	struct mapped_template *new_mapped;
 	struct ipfix_template_record *new_rec;
-	uint16_t field_num = htons(450);
+	uint16_t field_num = htons(405);
 	uint16_t field_len = htons(4);
 
 	/* Allocate memory for updated template */
