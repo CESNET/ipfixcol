@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2014</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>15 July 2014</date>
+		<authorgroup>
+			<author>
+				<personname>
+					<firstname>Michal</firstname>
+					<surname>Kozubik</surname>
+				</personname>
+				<email>kozubik@cesnet.cz</email>
+				<contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol-joinflows-inter</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">Joinflows intermediate plugin for IPFIXcol.</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>ipfixcol-joinflows-inter</refname>
+		<refpurpose>Joinflows intermediate plugin for IPFIXcol.</refpurpose>
+	</refnamediv>
+	
+	<refsect1>
+		<title>Description</title>
+		<simpara>The <command>ipfixcol-joinflows-inter.so</command> is intermediate plugin for ipfixcol (ipfix collector).</simpara>
+		<simpara>Plugin merges multiple flows to one and adds information about original Observation Domain ID to each Template and Data record (Information Element 405, <command>originalObservationDomainId</command>).</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Configuration</title>
+		<simpara>There are two configuration XML files for ipfixcol that affects plugin usage.
+		First one is internal configuration XML (<filename>/etc/ipfixcol/internalcfg.xml</filename>) where are list of all available plugins for the collecor. 
+		To use joinflows intermediate plugin, make sure it is properly specified in the configuration XMLs.
+		</simpara>
+		<simpara><filename>internalcfg.xml</filename> joinflows example</simpara>
+		<programlisting>
+	<![CDATA[
+	<intermediatePlugin>
+		<name>joinflows_ip</name>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-joinflows-inter.so</file>
+		<threadName>join_inter</threadName>
+	</intermediatePlugin>
+	]]>
+		</programlisting>
+		<para></para>
+		
+		<simpara>The collector must be configured to use joinflows intermediate plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
+		The configuration specifies which plugins are used by the collector to process data and provides configuration for the plugins themselves. 
+		</simpara>
+		<simpara><filename>startup.xml</filename> joinflows example</simpara>
+		<programlisting>
+	<![CDATA[
+	<intermediatePlugins>
+		<joinflows_ip>
+			<join to="6">
+				<from>0</from>
+				<from>1</from>
+			</join>
+			<join to="8">
+				<from>*</from>
+			</join>
+		</joinflows_ip>
+	</intermediatePlugins>
+	]]>
+		</programlisting>
+
+	<para>
+		<variablelist>
+			<varlistentry>
+				<term>
+					<command>to</command>
+				</term>
+				<listitem>
+					<simpara>Observation Domain ID of joined flow.
+					</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>from</command>
+				</term>
+				<listitem>
+					<simpara>Observation Domain ID of source flow.<command> * </command>means "every ODID that is not mentioned in some other join block".
+					</simpara>
+				</listitem>
+			</varlistentry>
+		</variablelist>
+	</para>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+						<citerefentry><refentrytitle>ipfixcol-filter-inter</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+						<citerefentry><refentrytitle>ipfixcol-fastbit-output</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+						<citerefentry><refentrytitle>ipfixcol-forwarding-output</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org/technologies/ipfixcol/">http://www.liberouter.org/technologies/ipfixcol/</link>
+					</term>
+					<listitem>
+						<para>IPFIXcol Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>

@@ -16,3 +16,22 @@ parser.h parser.c: parser.y
 
 scanner.h scanner.c: scanner.l
 	$(FLEX) -o scanner.c --header-file=scanner.h $<
+
+MANSRC = ipfixcol-filter-inter.dbk
+EXTRA_DIST = $(MANSRC)
+man_MANS = ipfixcol-filter-inter.1
+CLEANFILES += ipfixcol-filter-inter.1
+
+%.1 : %.dbk
+	@if [ -n "$(XSLTPROC)" ]; then \
+		if [ -f "$(XSLTMANSTYLE)" ]; then \
+			echo $(XSLTPROC) $(XSLTMANSTYLE) $<; \
+			$(XSLTPROC) $(XSLTMANSTYLE) $<; \
+		else \
+			echo "Missing $(XSLTMANSTYLE)!"; \
+			exit 1; \
+		fi \
+	else \
+		echo "Missing xsltproc"; \
+	fi
+
