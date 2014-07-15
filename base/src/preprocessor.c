@@ -518,6 +518,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins, int source_status)
 {
 	struct ipfix_message* msg;
+	int sn_not_match = 0;
 	if (source_status == SOURCE_STATUS_CLOSED) {
 		/* Inform intermediate plugins and output manager about closed input */
 		msg = calloc(1, sizeof(struct ipfix_message));
@@ -551,6 +552,12 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 
 		/* Check sequence number */
 		if (msg->input_info->sequence_number != ntohl(msg->pkt_header->sequence_number)) {
+			sn_not_match = 1;
+		}
+
+		/* Process templates */
+		msg->input_info->sequence_number += preprocessor_process_templates(tm, msg);
+		if (sn_not_match && msg->data_records_count > 0) {
 			if (!skip_seq_err) {
 				MSG_WARNING(msg_module, "[%u] Sequence number does not match: expected %u, got %u", input_info->odid, msg->input_info->sequence_number , ntohl(msg->pkt_header->sequence_number));
 			}
@@ -560,9 +567,6 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 			}
 			msg->input_info->sequence_number  = ntohl(msg->pkt_header->sequence_number);
 		}
-
-		/* Process templates */
-		msg->input_info->sequence_number += preprocessor_process_templates(tm, msg);
 	}
 
     /* Send data to the first intermediate plugin */
