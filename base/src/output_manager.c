@@ -166,7 +166,7 @@ static void *output_manager_plugin_thread(void* config)
 			 */
 			data_config = data_manager_create(msg->input_info->odid, conf->storage_plugins);
 			if (data_config == NULL) {
-				MSG_WARNING(msg_module, "Unable to create data manager for Observation Domain ID %d, skipping data.",
+				MSG_WARNING(msg_module, "[%u] Unable to create data manager, skipping data.",
 						msg->input_info->odid);
 				free (msg);
 				rbuffer_remove_reference(conf->in_queue, index, 1);
@@ -176,21 +176,21 @@ static void *output_manager_plugin_thread(void* config)
 		    /* add config to data_mngmts structure */
 	    	output_manager_insert(conf, data_config);
 
-	        MSG_NOTICE(msg_module, "Created new Data manager for ODID %i", msg->input_info->odid);
+	        MSG_NOTICE(msg_module, "[%u] Created new Data manager", msg->input_info->odid);
 		}
 
 		if (msg->source_status == SOURCE_STATUS_NEW) {
 			/* New source, increment reference counter */
-			MSG_DEBUG(msg_module, "New source for ODID %d", data_config->observation_domain_id);
+			MSG_DEBUG(msg_module, "[%u] New source", data_config->observation_domain_id);
 			data_config->references++;
 		} else if (msg->source_status == SOURCE_STATUS_CLOSED) {
 			/* Source closed, decrement reference counter */
-			MSG_DEBUG(msg_module, "Closed source for ODID %d", data_config->observation_domain_id);
+			MSG_DEBUG(msg_module, "[%u] Closed source", data_config->observation_domain_id);
 			data_config->references--;
 
 			if (data_config->references == 0) {
 				/* No reference for this ODID, close DM */
-				MSG_DEBUG(msg_module, "No source for ODID %d, releasing templates.", data_config->observation_domain_id);
+				MSG_DEBUG(msg_module, "[%u] No source, releasing templates.", data_config->observation_domain_id);
 				output_manager_remove(conf, data_config);
 			}
 			rbuffer_remove_reference(conf->in_queue, index, 1);
@@ -200,7 +200,7 @@ static void *output_manager_plugin_thread(void* config)
 
 		/* Write data into input queue of Storage Plugins */
 		if (rbuffer_write(data_config->store_queue, msg, data_config->plugins_count) != 0) {
-			MSG_WARNING(msg_module, "Unable to write into Data manager's input queue, skipping data.");
+			MSG_WARNING(msg_module, "[%u] Unable to write into Data manager's input queue, skipping data.", data_config->observation_domain_id);
 			rbuffer_remove_reference(conf->in_queue, index, 1);
 			free(msg);
 			continue;
@@ -242,7 +242,7 @@ int output_manager_create(struct storage_list *storages, struct ring_buffer *in_
 	/* Create Output Manager's thread */
 	retval = pthread_create(&(conf->thread_id), NULL, &output_manager_plugin_thread, (void *) conf);
 	if (retval != 0) {
-		MSG_ERROR(msg_module, "Unable to create storage plugin thread.");
+		MSG_ERROR(msg_module, "Unable to create output manager's thread.");
 		free(conf);
 		return -1;
 	}

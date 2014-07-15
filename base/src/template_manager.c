@@ -471,7 +471,7 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 	new_tmpl->next = tmr->templates[i];
 	tmr->templates[i] = new_tmpl;
 
-	MSG_DEBUG(msg_module,"[%u] Template with id %d and index %d added to list", odid, id, i);
+	MSG_DEBUG(msg_module,"[%u] Template %d added to list", odid, id, i);
 
 	return tmr->templates[i];
 }
