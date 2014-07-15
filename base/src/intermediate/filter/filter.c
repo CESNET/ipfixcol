@@ -72,6 +72,7 @@ struct filter_process {
 	uint8_t *ptr;
 	int *offset;
 	struct filter_profile *profile;
+	int records;
 };
 
 /**
@@ -582,6 +583,7 @@ void filter_process_data_record(uint8_t *rec, int rec_len, struct ipfix_template
 		memcpy(conf->ptr + *(conf->offset), rec, rec_len);
 		*(conf->offset) += rec_len;
 
+		conf->records++;
 		tm_template_reference_inc(templ);
 	}
 }
@@ -608,6 +610,7 @@ struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct fil
 	conf.offset = &offset;
 	conf.ptr = ptr;
 	conf.profile = profile;
+	conf.records = 0;
 
 	/* Copy header */
 	memcpy(ptr, msg->pkt_header, IPFIX_HEADER_LENGTH);
@@ -662,6 +665,11 @@ struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct fil
 			}
 		}
 	}
+
+	/* Set counters */
+	new_msg->data_records_count = conf.records;
+	new_msg->templ_records_count = msg->templ_records_count;
+	new_msg->opt_templ_records_count = msg->opt_templ_records_count;
 
 	return new_msg;
 }

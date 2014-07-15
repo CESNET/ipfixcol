@@ -197,9 +197,6 @@ int pass_message(void *config, struct ipfix_message *message)
  */
 int drop_message(void *config, struct ipfix_message *message)
 {
-	struct ip_config *conf = (struct ip_config *) config;
-
-	rbuffer_remove_reference(conf->in_queue, 0, 1);
 	free(message);
 	return 0;
 }

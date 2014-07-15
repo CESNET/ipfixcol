@@ -438,7 +438,7 @@ void mapping_destroy(struct mapping_header *map)
 		if (aux_map->new_templ != NULL) {
 			aux_map->new_templ->references--;
 			if (aux_map->new_templ->references <= 0) {
-				while (aux_map->new_templ->templ->references > 0);
+//				while (aux_map->new_templ->templ->references > 0);
 				free(aux_map->new_templ->templ);
 				free(aux_map->new_templ->rec);
 				free(aux_map->new_templ);
@@ -681,7 +681,7 @@ int process_message(void *config, void *message)
 		return 0;
 	}
 
-	proc.msg = malloc(ntohs(msg->pkt_header->length) + 4 * (msg->data_records_count + msg->templ_records_count));
+	proc.msg = calloc(1, ntohs(msg->pkt_header->length) + 4 * (msg->data_records_count + msg->templ_records_count));
 	if (!proc.msg) {
 		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
 		return 1;
