@@ -114,6 +114,7 @@ struct joinflows_processor {
 	uint32_t orig_odid;
 	uint8_t *value;
 	uint32_t length;
+	int trecords;
 	struct source *src;
 };
 
@@ -442,6 +443,7 @@ void mapping_destroy(struct mapping_header *map)
 				free(aux_map->new_templ->templ);
 				free(aux_map->new_templ->rec);
 				free(aux_map->new_templ);
+				free(aux_map->orig_rec);
 			}
 		}
 		free(aux_map);
@@ -588,6 +590,7 @@ void templates_processor(uint8_t *rec, int rec_len, void *data)
 		memcpy(proc->msg + proc->offset, mapped->rec, mapped->reclen);
 		proc->offset += mapped->reclen;
 		proc->length += mapped->reclen;
+		proc->trecords++;
 	}
 }
 
@@ -698,6 +701,7 @@ int process_message(void *config, void *message)
 	proc.offset = IPFIX_HEADER_LENGTH;
 	proc.orig_odid = orig_odid;
 	proc.src = src;
+	proc.trecords = 0;
 	new_msg->pkt_header = (struct ipfix_header *) proc.msg;
 
 	for (i = 0; i < 1024 && msg->templ_set[i]; ++i) {
@@ -716,6 +720,8 @@ int process_message(void *config, void *message)
 			tsets++;
 		}
 	}
+
+	new_msg->templ_set[tsets] = NULL;
 
 	for (i = 0; i < 1024 && msg->data_couple[i].data_set; ++i) {
 		templ = msg->data_couple[i].data_template;
@@ -742,12 +748,15 @@ int process_message(void *config, void *message)
 		new_msg->data_couple[i].data_set->header.length = htons(proc.length);
 	}
 
+	new_msg->data_couple[i].data_set = NULL;
+
 	new_msg->pkt_header->observation_domain_id = htonl(src->new_odid);
 	new_msg->pkt_header->length = htons(proc.offset);
 	new_msg->input_info = src->input_info;
-	new_msg->templ_records_count = tsets;
+	new_msg->templ_records_count = proc.trecords;
 	new_msg->data_records_count = msg->data_records_count;
 	new_msg->source_status = msg->source_status;
+
 	drop_message(conf->ip_config, message);
 	pass_message(conf->ip_config, (void *) new_msg);
 	return 0;
@@ -767,6 +776,7 @@ int intermediate_plugin_close(void *config)
 
 	while (aux_src) {
 		conf->sources = conf->sources->next;
+		free(aux_src->input_info);
 		free(aux_src);
 		aux_src = conf->sources;
 	}
@@ -778,6 +788,7 @@ int intermediate_plugin_close(void *config)
 	}
 
 	if (conf->default_source) {
+		free(conf->default_source->input_info);
 		free(conf->default_source);
 	}
 
