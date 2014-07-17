@@ -740,12 +740,21 @@ int process_message(void *config, void *message)
 
 		new_msg->data_couple[i].data_set = ((struct ipfix_data_set *) ((uint8_t *)proc.msg + proc.offset - 4));
 		new_msg->data_couple[i].data_template = map->new_templ->templ;
+
 		__sync_fetch_and_add(&(new_msg->data_couple[i].data_template->references), templ->references);
 		templ->references = 0;
 
 		data_set_process_records(msg->data_couple[i].data_set, templ, &data_processor, (void *) &proc);
 
 		new_msg->data_couple[i].data_set->header.length = htons(proc.length);
+	}
+
+	/* Dont send empty message */
+	if (proc.offset == IPFIX_HEADER_LENGTH) {
+		free(proc.msg);
+		free(new_msg);
+		drop_message(conf->ip_config, message);
+		return 0;
 	}
 
 	new_msg->data_couple[i].data_set = NULL;
