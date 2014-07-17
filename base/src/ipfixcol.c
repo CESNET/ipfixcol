@@ -626,6 +626,26 @@ cleanup:
 		xmlFreeDoc (xml_config);
 	}
 
+	/* Close whole Output Manager (including Data Managers) */
+	if (output_manager_config) {
+		output_manager_close(output_manager_config);
+	}
+
+	while (storage_plugins) { /* while is just for sure, it should be always one */
+		if (storage_plugins->config.file) {
+			free (storage_plugins->config.file);
+		}
+		if (storage_plugins->config.observation_domain_id) {
+			free (storage_plugins->config.observation_domain_id);
+		}
+		if (storage_plugins->config.xmldata) {
+			xmlFreeDoc (storage_plugins->config.xmldata);
+		}
+		aux_plugins = storage_plugins->next;
+		free (storage_plugins);
+		storage_plugins = aux_plugins;
+	}
+
 	/* wait for all intermediate processes to close */
 	aux_intermediate_list = intermediate_list;
 	while (aux_intermediate_list && aux_intermediate_list->next) {
@@ -652,27 +672,6 @@ cleanup:
 		aux_plugins = intermediate_plugins->next;
 		free(intermediate_plugins);
 		intermediate_plugins = aux_plugins;
-
-	}
-
-	/* Close whole Output Manager (including Data Managers) */
-	if (output_manager_config) {
-		output_manager_close(output_manager_config);
-	}
-
-	while (storage_plugins) { /* while is just for sure, it should be always one */
-		if (storage_plugins->config.file) {
-			free (storage_plugins->config.file);
-		}
-		if (storage_plugins->config.observation_domain_id) {
-			free (storage_plugins->config.observation_domain_id);
-		}
-		if (storage_plugins->config.xmldata) {
-			xmlFreeDoc (storage_plugins->config.xmldata);
-		}
-		aux_plugins = storage_plugins->next;
-		free (storage_plugins);
-		storage_plugins = aux_plugins;
 	}
 
 	/* DLLs cleanup */
