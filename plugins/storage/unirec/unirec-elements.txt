@@ -1,18 +1,60 @@
-#unirec_name	size		ipfix_ident		description
-SRC_IP			16			e0id8,e0id27	IPv4 or IPv6 source address
-DST_IP			16			e0id12,e0id28	IPv4 or IPv6 destination address
-SRC_PORT		2			e0id7			Transport protocol source port
-DST_PORT		2			e0id11			Transport protocol destination port
-PROTOCOL		1			e0id4			Transport protocol
-TCP_FLAGS		1			e0id6			TCP flags
-BYTES			8			e0id1			Number of bytes in flow
-PACKETS			4			e0id2			Number of packets in flow
-URL				-1			e16982id105		HTTP URL
-#
-# Special fields that don't directly map to IPFIX fields (methods to fill them are hard-coded in the plugin):
-# name				depends_on_ipfix_id			description
-# ODID				--							Observation domain ID
-# TIME_FIRST		e0id150|e0id152|e0154|e0156	Time of the first packet of a flow
-# TIME_LAST			e0id151|e0id153|e0155|e0157	Time of the last packet of a flow
-# LINK_BIT_FIELD	--							Bit field where each bit marks whether a flow was captured on corresponding link (filled as (1 << (ODID-1)))
-# DIR_BIT_FIELD		e0id61						Bit field used for detemining incoming/outgoing flow
+#unirec_name			size		ipfix_ident		description
+SRC_IP				16		e0id8,e0id27		IPv4 or IPv6 source address
+DST_IP				16		e0id12,e0id28		IPv4 or IPv6 destination address
+SRC_PORT			2		e0id7			Transport protocol source port
+DST_PORT			2		e0id11			Transport protocol destination port
+PROTOCOL			1		e0id4			Transport protocol
+TCP_FLAGS			1		e0id6			TCP flags
+BYTES				8		e0id1			Number of bytes in flow
+PACKETS				4		e0id2			Number of packets in flow
+TIME_FIRST			8		e0id152			Time of the first packet of a flow (ms since init of exporter, TODO: compute absolute time)
+TIME_LAST			8		e0id153			Time of the last packet of a flow (ms since init of exporter, TODO: compute absolute time)
+DIR_BIT_FIELD			1		e0id10			Bit field used for detemining incomming/outgoing flow (1 => Incomming, 0 => Outgoing)
+FLOWDIR_SYN			1		e8057id299		Packet with SYN flag only flag
+DNS_ANSWERS			2		e8057id0		DNS answers
+DNS_RCODE			1		e8057id1		DNS rcode
+DNS_NAME			-1		e8057id2		DNS name
+DNS_QTYPE			2		e8057id3		DNS qtype
+DNS_CLASS			2		e8057id4		DNS class
+DNS_RR_TTL			4		e8057id5		DNS rr ttl
+DNS_RLENGTH			2		e8057id6		DNS rlenght
+DNS_RDATA			-1		e8057id7		DNS rdata
+DNS_PSIZE			2		e8057id8		DNS payload size
+DNS_DO				1		e8057id9		DNS DNSSEC OK bit
+DNS_ID				2		e8057id10		DNS transaction id
+SMTP_FLAGS			1		e8057id200		SMTP flags
+SIP_CONTROL			2		e8057id100		SIP response/command code
+SIP_FROM			-1		e8057id101		SIP From header field
+SIP_TO				-1		e8057id102		SIP To header field
+HB_TYPE				1		e8057id700		TLS content type
+HB_DIR				1		e8057id701		Heartbeat request/response byte
+HB_SIZE_MSG			2		e8057id702		Heartbeat message size
+HB_SIZE_PAYLOAD			2		e8057id703		Heartbeat payload size 
+HTTP_REQUEST_METHOD_ID		4		e16982id500		HTTP request method id
+HTTP_REQUEST_HOST		-1		e16982id501		HTTP request host
+HTTP_REQUEST_URL		-1		e16982id502		HTTP request url
+HTTP_REQUEST_AGENT_ID		4		e16982id503		HTTP request agent id
+HTTP_REQUEST_AGENT		-1		e16982id504		HTTP request agent
+HTTP_REQUEST_REFERER		-1		e16982id505		HTTP referer
+HTTP_RESPONSE_STATUS_CODE	4		e16982id506		HTTP response status code
+HTTP_RESPONSE_CONTENT_TYPE	-1		e16982id507		HTTP response content type
+IPV6_TUN_TYPE			1		e16982id405		IPv6 tunnel type
+HTTP_SDM_REQUEST_METHOD_ID	4 		e8057id800		HTTP request method id
+HTTP_SDM_REQUEST_HOST		-1		e8057id801		HTTP request host
+HTTP_SDM_REQUEST_URL		-1		e8057id802		HTTP request url
+HTTP_SDM_REQUEST_REFERER	-1		e8057id803		HTTP request referer
+HTTP_SDM_REQUEST_AGENT		-1		e8057id804		HTTP request agent
+HTTP_SDM_RESPONSE_STATUS_CODE	4		e8057id805		HTTP response status code
+HTTP_SDM_RESPONSE_CONTENT_TYPE	-1		e8057id806		HTTP response content type
+HTTP_SDM_RESPONSE_TIME		8		e8057id807		HTTP response time
+SMTP_COMMAND_FLAGS		4		e8057id810		SMTP command flags
+SMTP_MAIL_CMD_COUNT		4		e8057id811		SMTP MAIL command count
+SMTP_RCPT_CMD_COUNT		4		e8057id812		SMTP RCPT command count
+SMTP_FIRST_SENDER		-1		e8057id813		SMTP first sender
+SMTP_FIRST_RECIPIENT		-1		e8057id814		SMTP first recipient
+SMTP_STAT_CODE_FLAGS		4		e8057id815		SMTP status code flags
+SMTP_2XX_STAT_CODE_COUNT	4		e8057id816		SMTP 2XX status code count
+SMTP_3XX_STAT_CODE_COUNT	4		e8057id817		SMTP 3XX status code count
+SMTP_4XX_STAT_CODE_COUNT	4		e8057id818		SMTP 4XX status code count
+SMTP_5XX_STAT_CODE_COUNT	4		e8057id819		SMTP 5XX status code count
+SMTP_DOMAIN			-1		e8057id820		SMTP domain
