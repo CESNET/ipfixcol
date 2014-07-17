@@ -173,15 +173,16 @@ int forwarding_connect6(forwarding *conf, char *destination)
  * \brief Get index to array of template record for given Template ID
  * \param[in] conf Plugin configuration
  * \param[in] tid Template ID
+ * \param[in] type Template type
  * \return Index on success, -1 otherwise
  */
-int forwarding_get_record_index(forwarding *conf, uint16_t tid)
+int forwarding_get_record_index(forwarding *conf, uint16_t tid, int type)
 {
 	int i, c;
 	for (i = 0, c = 0; i < conf->records_max && c < conf->records_cnt; ++i) {
 		if (conf->records[i] != NULL) {
 			c++;
-			if (conf->records[i]->record->template_id == tid) {
+			if (conf->records[i]->record->template_id == tid && conf->records[i]->type == type) {
 				return i;
 			}
 		}
@@ -193,16 +194,15 @@ int forwarding_get_record_index(forwarding *conf, uint16_t tid)
  * \brief Get template record with given Template ID
  * \param[in] conf Plugin configuration
  * \param[in] tid Template ID
+ * \param[in] type Template type
  * \return Pointer to template
  */
-struct forwarding_template_record *forwarding_get_record(forwarding *conf, uint16_t tid)
+struct forwarding_template_record *forwarding_get_record(forwarding *conf, uint16_t tid, int type)
 {
-	int i = forwarding_get_record_index(conf, tid);
+	int i = forwarding_get_record_index(conf, tid, type);
 	if (i < 0) {
-		MSG_DEBUG(msg_module, "%d not found", ntohs(tid));
 		return NULL;
 	}
-	MSG_DEBUG(msg_module, "%d found", ntohs(tid));
 	return conf->records[i];
 }
 
@@ -210,10 +210,11 @@ struct forwarding_template_record *forwarding_get_record(forwarding *conf, uint1
  * \brief Remove template record with givet Template ID from array
  * \param[in] conf Plugin configuration
  * \param[in] tid Template ID
+ * \param[in] type Template type
  */
-void forwarding_remove_record(forwarding *conf, uint32_t tid)
+void forwarding_remove_record(forwarding *conf, uint32_t tid, int type)
 {
-	int i = forwarding_get_record_index(conf, tid);
+	int i = forwarding_get_record_index(conf, tid, type);
 	if (i >= 0) {
 		free(conf->records[i]);
 		conf->records[i] = NULL;
@@ -224,7 +225,8 @@ void forwarding_remove_record(forwarding *conf, uint32_t tid)
 /**
  * \brief Add new template record into array
  * \param[in] conf Plugin configuration
- * \param[in] templ New template record
+ * \param[in] record New template record
+ * \param[in] type Template type
  * \param[in] len Template records length
  * \return Pointer to inserted template record
  */
@@ -635,7 +637,7 @@ int forwarding_udp_sent(forwarding *conf, struct forwarding_template_record *rec
 int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, int len, int type)
 {
 	struct forwarding_template_record *aux_record;
-	int i = forwarding_get_record_index(conf, rec->template_id);
+	int i = forwarding_get_record_index(conf, rec->template_id, type);
 
 	if (i >= 0) {
 		if (tm_compare_template_records(conf->records[i]->record, rec)) {
@@ -646,7 +648,7 @@ int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, 
 			return 1;
 		}
 		/* stored record is old, update it */
-		forwarding_remove_record(conf, conf->records[i]->record->template_id);
+		forwarding_remove_record(conf, conf->records[i]->record->template_id, type);
 	}
 
 	/* Store new record */
@@ -711,10 +713,35 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 				break;
 			}
 
-			if (forwarding_record_sent(conf, aux_rec, rec_len, ntohs(msg->templ_set[i]->header.flowset_id))) {
+			if (forwarding_record_sent(conf, aux_rec, rec_len, TM_TEMPLATE)) {
 				/* Record was sent earlier, skip it and correct template set length */
 				memmove(ptr, ptr + rec_len, max_len - rec_len);
 				msg->templ_set[i]->header.length = htons(ntohs(msg->templ_set[i]->header.length) - rec_len);
+				msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) - rec_len);
+			} else {
+				ptr += rec_len;
+			}
+		}
+	}
+
+	/* Go throught all template sets and remove already sent template records */
+	for (i = 0; msg->opt_templ_set[i] != NULL && i < 1024; ++i) {
+		ptr = (uint8_t*) &msg->opt_templ_set[i]->first_record;
+		while (ptr < (uint8_t*) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) {
+			max_len = ((uint8_t *) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) - ptr;
+			aux_rec = (struct ipfix_template_record *) ptr;
+			/* Get record length */
+			rec_len = tm_template_record_length(aux_rec, max_len, TM_OPTIONS_TEMPLATE, &data_len);
+
+			if (rec_len == 0) {
+				/* Malformed set? skip */
+				break;
+			}
+
+			if (forwarding_record_sent(conf, aux_rec, rec_len, TM_OPTIONS_TEMPLATE)) {
+				/* Record was sent earlier, skip it and correct template set length */
+				memmove(ptr, ptr + rec_len, max_len - rec_len);
+				msg->opt_templ_set[i]->header.length = htons(ntohs(msg->opt_templ_set[i]->header.length) - rec_len);
 				msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) - rec_len);
 			} else {
 				ptr += rec_len;
@@ -759,7 +786,7 @@ void forwarding_update_templates(forwarding *conf, const struct ipfix_message *m
 			continue;
 		}
 		tid = ntohs(msg->data_couple[i].data_template->template_id);
-		rec = forwarding_get_record(conf, tid);
+		rec = forwarding_get_record(conf, tid, msg->data_couple[i].data_template->template_type);
 		if (!rec) {
 			/* Data without template */
 			continue;
