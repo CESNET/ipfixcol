@@ -66,6 +66,7 @@ struct mapping {
 	uint32_t new_odid;	 /* new ODID */
 	uint16_t orig_tid;   /* original Template ID */
 	uint16_t new_tid;	 /* new Template ID */
+	int type; 			 /* Template type */
 	int orig_rec_len;    /* length of original record */
 	struct mapped_template *new_templ;  /* mapped template */
 	struct ipfix_template_record *orig_rec; /* original template record */
@@ -115,6 +116,7 @@ struct joinflows_processor {
 	uint8_t *value;
 	uint32_t length;
 	int trecords;
+	int type;
 	struct source *src;
 };
 
@@ -157,11 +159,12 @@ int records_compare(struct ipfix_template_record *first, int lenf, struct ipfix_
  *
  * \param[in] orig_rec Original template record
  * \param[in] rec_len Record length
+ * \param[in] type Template type
  * \param[in] new_tid Template ID of new template record
  * \param[in] odid ODID
  * \return pointer to updated template
  */
-struct mapped_template *updated_templ(struct ipfix_template_record *orig_rec, int rec_len, uint16_t new_tid, uint32_t odid)
+struct mapped_template *updated_templ(struct ipfix_template_record *orig_rec, int rec_len, int type, uint16_t new_tid, uint32_t odid)
 {
 	struct mapped_template *new_mapped;
 	struct ipfix_template_record *new_rec;
@@ -186,7 +189,7 @@ struct mapped_template *updated_templ(struct ipfix_template_record *orig_rec, in
 	new_rec->template_id = htons(new_tid);
 	new_rec->count = htons(ntohs(new_rec->count) + 1);
 
-	new_mapped->templ = tm_create_template(new_rec, TEMPL_MAX_LEN, TM_TEMPLATE, odid);
+	new_mapped->templ = tm_create_template(new_rec, TEMPL_MAX_LEN, type, odid);
 	new_mapped->rec = new_rec;
 	new_mapped->reclen = rec_len + 4;
 	new_mapped->references = 1;
@@ -239,9 +242,10 @@ void mapping_reuse_tid(struct mapping_header *map, uint16_t tid)
  * \param[in] map Mapping header
  * \param[in] orig_odid Original ODID
  * \param[in] orig_tid Original Template ID
+ * \param[in] type Template type
  * \return pointer to mapping
  */
-struct mapping *mapping_lookup(struct mapping_header *map, uint32_t orig_odid, uint16_t orig_tid)
+struct mapping *mapping_lookup(struct mapping_header *map, uint32_t orig_odid, uint16_t orig_tid, int type)
 {
 	if (map == NULL) {
 		return NULL;
@@ -249,7 +253,7 @@ struct mapping *mapping_lookup(struct mapping_header *map, uint32_t orig_odid, u
 
 	struct mapping *aux_map = map->first;
 	while (aux_map) {
-		if (aux_map->orig_odid == orig_odid && aux_map->orig_tid == orig_tid) {
+		if (aux_map->orig_odid == orig_odid && aux_map->orig_tid == orig_tid && aux_map->type == type) {
 			return aux_map;
 		}
 		aux_map = aux_map->next;
@@ -278,9 +282,10 @@ void mapping_insert(struct mapping_header *map, struct mapping *new_map)
  * \param[in] orig_tid Original Template ID
  * \param[in] orig_rec Original template record
  * \param[in] rec_len Record's length
+ * \param[in] type Template type
  * \return pointer to new mapping
  */
-struct mapping *mapping_create(struct mapping_header *map, uint32_t orig_odid, uint16_t orig_tid, struct ipfix_template_record *orig_rec, int rec_len)
+struct mapping *mapping_create(struct mapping_header *map, uint32_t orig_odid, uint16_t orig_tid, struct ipfix_template_record *orig_rec, int rec_len, int type)
 {
 	struct mapping *new_map;
 
@@ -298,11 +303,12 @@ struct mapping *mapping_create(struct mapping_header *map, uint32_t orig_odid, u
 	new_map->orig_rec_len = rec_len;
 	new_map->new_odid = map->new_odid;
 	new_map->new_tid = mapping_get_free_tid(map);
+	new_map->type = type;
 
 
 
 	/* Create updated template */
-	new_map->new_templ = updated_templ(orig_rec, rec_len, new_map->new_tid, orig_odid);
+	new_map->new_templ = updated_templ(orig_rec, rec_len, type, new_map->new_tid, orig_odid);
 
 	mapping_insert(map, new_map);
 
@@ -346,16 +352,19 @@ struct mapping *mapping_copy(struct mapping *orig_map, uint32_t orig_odid, uint1
  * \param[in] map Mapping header
  * \param[in] orig_rec Original template record
  * \param[in] rec_len Record's length
+ * \param[in] type Template type
  * \return pointer to mapping
  */
-struct mapping *mapping_find_equal(struct mapping_header *map, struct ipfix_template_record *orig_rec, int rec_len)
+struct mapping *mapping_find_equal(struct mapping_header *map, struct ipfix_template_record *orig_rec, int rec_len, int type)
 {
 	struct mapping *aux_map;
 
 	aux_map = map->first;
 	while (aux_map) {
-		if (!records_compare(aux_map->orig_rec, aux_map->orig_rec_len, orig_rec, rec_len, aux_map->orig_odid)) {
-			return aux_map;
+		if (type == aux_map->type) {
+			if (!records_compare(aux_map->orig_rec, aux_map->orig_rec_len, orig_rec, rec_len, aux_map->orig_odid)) {
+				return aux_map;
+			}
 		}
 		aux_map = aux_map->next;
 	}
@@ -371,13 +380,14 @@ struct mapping *mapping_find_equal(struct mapping_header *map, struct ipfix_temp
  * \param[in] orig_tid Original TID
  * \param[in] orig_rec Original Template record
  * \param[in] rec_len Record's length
+ * \param[in] type Template type
  * \return pointer to mapping
  */
-struct mapping *mapping_equal(struct mapping_header *map, uint32_t orig_odid, uint16_t orig_tid, struct ipfix_template_record *orig_rec, int rec_len)
+struct mapping *mapping_equal(struct mapping_header *map, uint32_t orig_odid, uint16_t orig_tid, struct ipfix_template_record *orig_rec, int rec_len, int type)
 {
 	struct mapping *new_mapping = NULL, *equal_mapping = NULL;
 
-	equal_mapping = mapping_find_equal(map, orig_rec, rec_len);
+	equal_mapping = mapping_find_equal(map, orig_rec, rec_len, type);
 	if (equal_mapping != NULL) {
 		new_mapping = mapping_copy(equal_mapping, orig_odid, orig_tid);
 		mapping_insert(map, new_mapping);
@@ -568,19 +578,19 @@ void templates_processor(uint8_t *rec, int rec_len, void *data)
 	struct mapped_template *mapped = NULL;
 	uint16_t orig_tid = ntohs(record->template_id);
 
-	map = mapping_lookup(proc->src->mapping, proc->orig_odid, orig_tid);
+	map = mapping_lookup(proc->src->mapping, proc->orig_odid, orig_tid, proc->type);
 	if (map == NULL) {
-		map = mapping_equal(proc->src->mapping, proc->orig_odid, orig_tid, record, rec_len);
+		map = mapping_equal(proc->src->mapping, proc->orig_odid, orig_tid, record, rec_len, proc->type);
 		if (map == NULL) {
-			map = mapping_create(proc->src->mapping, proc->orig_odid, orig_tid, record, rec_len);
+			map = mapping_create(proc->src->mapping, proc->orig_odid, orig_tid, record, rec_len, proc->type);
 			mapped = map->new_templ;
 		}
 	} else if (records_compare(record, rec_len, map->orig_rec, map->orig_rec_len, map->orig_odid)) {
 		/* UDPATED*/
 		mapping_remove(proc->src->mapping, map);
-		map = mapping_equal(proc->src->mapping, proc->orig_odid, orig_tid, record, rec_len);
+		map = mapping_equal(proc->src->mapping, proc->orig_odid, orig_tid, record, rec_len, proc->type);
 		if (map == NULL) {
-			map = mapping_create(proc->src->mapping, proc->orig_odid, orig_tid, record, rec_len);
+			map = mapping_create(proc->src->mapping, proc->orig_odid, orig_tid, record, rec_len, proc->type);
 			mapped = map->new_templ;
 		}
 	}
@@ -654,9 +664,22 @@ void joinflows_update_input_info(struct source *src, struct input_info *input_in
 	}
 }
 
+/**
+ * \brief Copy informations between templates
+ *
+ * \param[in] to Destination template
+ * \param[in] from Source template
+ */
+void joinflows_copy_template_info(struct ipfix_template *to, struct ipfix_template *from)
+{
+	__sync_fetch_and_add(&(to->references), from->references);
+	to->last_message = from->last_message;
+	to->last_transmission = from->last_message;
+}
+
 int process_message(void *config, void *message)
 {
-	uint32_t orig_odid, i, prevoffset, tsets = 0;
+	uint32_t orig_odid, i, prevoffset, tsets = 0, otsets = 0;
 	struct joinflows_processor proc;
 	struct ipfix_message *msg, *new_msg;
 	struct joinflows_ip_config *conf;
@@ -684,7 +707,7 @@ int process_message(void *config, void *message)
 		return 0;
 	}
 
-	proc.msg = calloc(1, ntohs(msg->pkt_header->length) + 4 * (msg->data_records_count + msg->templ_records_count));
+	proc.msg = calloc(1, ntohs(msg->pkt_header->length) + 4 * (msg->data_records_count + msg->templ_records_count + msg->opt_templ_records_count));
 	if (!proc.msg) {
 		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
 		return 1;
@@ -704,13 +727,15 @@ int process_message(void *config, void *message)
 	proc.trecords = 0;
 	new_msg->pkt_header = (struct ipfix_header *) proc.msg;
 
+	/* Process templates */
+	proc.type = TM_TEMPLATE;
 	for (i = 0; i < 1024 && msg->templ_set[i]; ++i) {
 		prevoffset = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->templ_set[i]->header), 4);
 		proc.offset += 4;
 		proc.length = 4;
 
-		template_set_process_records(msg->templ_set[i], TM_TEMPLATE, &templates_processor, (void *) &proc);
+		template_set_process_records(msg->templ_set[i], proc.type, &templates_processor, (void *) &proc);
 
 		if (proc.offset == prevoffset + 4) {
 			proc.offset = prevoffset;
@@ -721,7 +746,27 @@ int process_message(void *config, void *message)
 		}
 	}
 
+	/* Process option templates */
+	proc.type = TM_OPTIONS_TEMPLATE;
+	for (i = 0; i < 1024 && msg->opt_templ_set[i]; ++i) {
+		prevoffset = proc.offset;
+		memcpy(proc.msg + proc.offset, &(msg->opt_templ_set[i]->header), 4);
+		proc.offset += 4;
+		proc.length = 4;
+
+		template_set_process_records((struct ipfix_template_set *) msg->opt_templ_set[i], proc.type, &templates_processor, (void *) &proc);
+
+		if (proc.offset == prevoffset + 4) {
+			proc.offset = prevoffset;
+		} else {
+			new_msg->opt_templ_set[otsets] = (struct ipfix_options_template_set *) ((uint8_t *) proc.msg + prevoffset);
+			new_msg->opt_templ_set[otsets]->header.length = htons(proc.length);
+			otsets++;
+		}
+	}
+
 	new_msg->templ_set[tsets] = NULL;
+	new_msg->opt_templ_set[otsets] = NULL;
 
 	for (i = 0; i < 1024 && msg->data_couple[i].data_set; ++i) {
 		templ = msg->data_couple[i].data_template;
@@ -729,7 +774,7 @@ int process_message(void *config, void *message)
 			continue;
 		}
 
-		map = mapping_lookup(src->mapping, orig_odid, templ->template_id);
+		map = mapping_lookup(src->mapping, orig_odid, templ->template_id, templ->template_type);
 		if (map == NULL) {
 			MSG_DEBUG(msg_module, "[%u] %d nenalezeno", orig_odid, templ->template_id);
 		}
@@ -741,7 +786,8 @@ int process_message(void *config, void *message)
 		new_msg->data_couple[i].data_set = ((struct ipfix_data_set *) ((uint8_t *)proc.msg + proc.offset - 4));
 		new_msg->data_couple[i].data_template = map->new_templ->templ;
 
-		__sync_fetch_and_add(&(new_msg->data_couple[i].data_template->references), templ->references);
+		joinflows_copy_template_info(new_msg->data_couple[i].data_template, templ);
+
 		templ->references = 0;
 
 		data_set_process_records(msg->data_couple[i].data_set, templ, &data_processor, (void *) &proc);
