@@ -38,7 +38,6 @@
  */
 
 
-
 #include <ipfixcol.h>
 #include <stdio.h>
 #include <string.h>
@@ -55,14 +54,12 @@
 
 #include "unirec.h"
 
+
+
 /* DEBUG CODE */
 #include <arpa/inet.h>
 #include <sys/time.h>
 
-inline void ip_to_str(uint32_t *addr, char *str)
-{
-  inet_ntop(AF_INET, addr, str, INET6_ADDRSTRLEN);
-}
 
 
 uint32_t DEBUG_PRINT = 0;
@@ -92,6 +89,23 @@ uint64_t get_usec_timestamp()
 /** Identifier to MSG_* macros */
 static char *msg_module = "unirec";
 
+
+
+
+// Struct with information about module
+trap_module_info_t module_info = {
+	"ipfixcol UniRec plugin", // Module name
+	// Module description
+	"This is both Nemea module and ipfixcol plugin. It converts IPFIX records"
+	"to UniRec format for Nemea.\n"
+	"Interfaces:\n"
+	"   Inputs: 0\n"
+	"   Outputs: 1\n",
+	0, // Number of input interfaces
+	1, // Number of output interfaces
+};
+
+
 /**
  * \brief Works as memcpy but converts common data sizes to host byteorder
  *
@@ -114,11 +128,88 @@ static void data_copy(char *dst, char *src, uint16_t length)
 			case (8):
 				*(uint64_t *) dst = be64toh(read64(src));
 				break;
+			case (16):
+				*(uint64_t *) dst = be64toh(read64(src));
+				dst += 16;
+				*(uint64_t *) dst = be64toh(read64(src+16));
+				break;
 			default:
 				memcpy(dst, src, length);
 				break;
 			}
 }
+
+
+
+/**
+ * \brief Add `ODID` to every port in Trap interface specification 
+ *
+ * @param conf Pointer to storage plugin structure
+ * @param ODID ODID from current exporter
+ */
+static void update_ifc_spec(unirec_config *conf, uint32_t ODID)
+{
+	char *state;
+	char *port, *limit;	
+	char buff[32];
+	char ibuff[32];
+	uint16_t port_num;
+	int ifc_count = conf->ifc_count;
+
+
+	for (int i = 0; i < ifc_count; i++) {
+		memset(ibuff, 0, 32);
+		memset(buff, 0, 32);
+		state = NULL;
+
+		strncpy(ibuff, conf->ifc_spec.params[i], 30);
+
+		port  = strtok_r(ibuff, ",", &state);
+		limit = strtok_r(NULL, ",", &state);
+	
+		port_num = atoi(port) + ODID;	
+		sprintf(buff, "%u,", port_num);
+		strncat(&(buff[strlen(buff)]), limit, 10);
+
+		if (strlen(conf->ifc_spec.params[i]) < strlen(buff)) {
+			conf->ifc_spec.params[i] = realloc(conf->ifc_spec.params[i], strlen(buff) + 1);
+		}
+		memcpy(conf->ifc_spec.params[i], buff, strlen(buff));
+	}
+}
+
+/**
+ * \brief Initialize Trap with updated interface specification
+ *
+ * @param conf Pointer to storage plugin structure
+ * @return 1 on success, 0 otherwise
+ */
+static int init_trap_ifc(unirec_config *conf)
+{
+	MSG_DEBUG(msg_module, "Initializing TRAP (%u)...\n", conf->odid);
+	if ((conf->trap_ctx_ptr = trap_ctx_init(&module_info, conf->ifc_spec)) == NULL) {
+		MSG_ERROR(msg_module, "Error in TRAP initialization: (%i) %s\n",
+		trap_last_error, trap_last_error_msg);
+		printf("Error in TRAP initialization: (%i) %s\n",
+		trap_last_error, trap_last_error_msg);
+		return 0;
+	}
+	MSG_DEBUG(msg_module, "OK\n");
+
+
+	for (int i = 0; i < conf->ifc_count; i++) {
+		MSG_NOTICE(msg_module, "Setting interafece %u buffer %s\n", i, conf->ifc_buff_switch[i] ? "ON" : "OFF");
+		trap_ctx_ifcctl(conf->trap_ctx_ptr, TRAPIFC_OUTPUT, i, TRAPCTL_BUFFERSWITCH, conf->ifc_buff_switch[i]);
+		MSG_NOTICE(msg_module, "Setting interafece %u autoflush to %llu us\n", i, conf->ifc_buff_timeout[i]);
+		trap_ctx_ifcctl(conf->trap_ctx_ptr, TRAPIFC_OUTPUT, i, TRAPCTL_AUTOFLUSH_TIMEOUT, conf->ifc_buff_timeout[i]);
+		MSG_NOTICE(msg_module, "Setting interafece %u timeout to %llu us\n", i, conf->ifc[i].timeout);
+		trap_ctx_ifcctl(conf->trap_ctx_ptr, TRAPIFC_OUTPUT, i, TRAPCTL_SETTIMEOUT, (int) conf->ifc[i].timeout);
+	}
+	return 1;
+}
+
+
+
 
 /**
  * \brief Return an UniRec field that matches given IPFIX element
@@ -135,7 +226,6 @@ static unirecField *match_field(template_ie *element, unirecField *fields)
 	int i;
 
 	id = element->ie.id;
-	//if (id>>15) printf("ID: %u(%u)", id, id & 0x7FFF);
 	/* Go over all records to fill */
 	for (tmp = fields; tmp != NULL ; tmp = tmp->next) {
 
@@ -146,7 +236,6 @@ static unirecField *match_field(template_ie *element, unirecField *fields)
 			for (i = 0; i < tmp->ipfixCount; i++) {
 				/* We need to mask first bit of id before the comparison */
 				if ((id & 0x7FFF) == tmp->ipfix[i].id && en == tmp->ipfix[i].en) {
-	//				if (id>>15) printf("EN: %u | %s |MATCH :)\n", en, tmp->name);
 					return tmp;
 				}
 			}
@@ -154,13 +243,11 @@ static unirecField *match_field(template_ie *element, unirecField *fields)
 			en = 0;
 			for (i = 0; i < tmp->ipfixCount; i++) {
 				if (id == tmp->ipfix[i].id && en == tmp->ipfix[i].en) {
-	//				if (id>>15) printf("EN: 0 | %s |MATCH :)\n", tmp->name);
 					return tmp;
 				}
 			}
 		}
 	}
-	//if (id>>15) printf("EN: %u | NOT FOUND :(\n", en);
 	return NULL;
 }
 
@@ -174,7 +261,7 @@ static unirecField *match_field(template_ie *element, unirecField *fields)
  * \param[out] data statistics data to get
  * \return length of the data record
  */
-static uint16_t process_record(char *data_record, struct ipfix_template *template, ifc_config *conf)
+static uint16_t process_record(char *data_record, struct ipfix_template *template, unirec_config *conf)
 {
 
 	if (!template) {
@@ -189,14 +276,24 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 		return 0;
 	}
 
+
 	uint16_t offset = 0;
 	uint16_t index, count;
 	uint16_t length, size_length;
 	unirecField *matchField;
 
+
+
+	// Set LINK_BIT_FIELD first for all interfaces
+	for (int i = 0; i < conf->ifc_count; i++) {
+		if (conf->ifc[i].special_field_link_bit_field != NULL) {
+			*(uint64_t*)((conf->ifc[i].buffer) + (conf->ifc[i].special_field_link_bit_field->offset_ar[i])) = (uint64_t) 1 << (conf->odid - 1);
+		}
+	}
+
+
 	/* Go over all fields */
 	for (count = index = 0; count < template->field_count; count++, index++) {
-
 		matchField = match_field(&template->fields[index], conf->fields);
 
 		length = template->fields[index].ie.length;
@@ -212,46 +309,91 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 				length = ntohs(read16(data_record+offset+size_length));
 				size_length = 3;
 			}
+			
+			
+
 		}
 
 		/* Copy the element value on match */
 		if (matchField) {
-			MSG_COMMON(6, "We found a match! [%s]", matchField->name);
+			// Determine if it is static or dynamic element
+			// If static, copy to all Unirec ifcs whose are using this element
+			// Else if dynamic, copy ptr to this element to `matchField->value` for futher use
+			if (matchField->size != -1) {
+				// Static element
+				for (int i = 0; i < conf->ifc_count; i++) {
+					// For every interface
+					if (matchField->included_ar[i]) {
+						// If element is present in current interface
+						// Copy special elements in special way
+						if (template->fields[index].ie.id == 8 || template->fields[index].ie.id == 12) {
+							// IPv4
+							// Put IPv4 into 128 bits in a special way (see ipaddr.h in Nemea-UniRec for details)
+							*(uint64_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) = 0;
+							*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i] + 8) = *(uint32_t*)(data_record + offset + size_length);
+							*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i] + 12) = 0xffffffff;
+						}
+						else if (template->fields[index].ie.id == 27 || template->fields[index].ie.id == 28) {
+							// IPv6
+							// Just copy 128b
+							memcpy(conf->ifc[i].buffer + matchField->offset_ar[i], data_record + offset + size_length, length);
+						} // PACKET SIZE IS DIFFERENT FOR DIFFERENT EXPORTER!!!
+						else if (template->fields[index].ie.id == 2) {
+							// Packets
+							if (template->fields[index].ie.length == 4) {
+								*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) =  ntohl(*(uint32_t*)(data_record + offset + size_length));
+							}
+							else if (template->fields[index].ie.length == 8) {
+								*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) =  ntohl(*(uint32_t*)(data_record + offset + size_length + 4));
+                                                        } else {
+								*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) =  0xFFFFFFFF;
+							}
+						}  // 152 = TIME_FIRST, 153 = TIME_LAST
+						else if (template->fields[index].ie.id == 152 || template->fields[index].ie.id == 153) {
+							// Handle Time variables
+							uint64_t msec = be64toh(*(uint64_t*)(data_record + offset + size_length));
+							uint64_t sec = msec / 1000;
+							uint64_t frac = (msec % 1000) * (0x0000000100000000L/1000);
+							*(uint64_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) =  (sec<<32) | frac;
+						} // 10 = ingress interface, 14 = egress interface
+						else if (template->fields[index].ie.id == 10) {// || template->fields[index].ie.id == 14) {
+							// Handle DIR_BIT_FIELD
+							*(uint8_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) = (*(uint16_t*)(data_record + offset + size_length)) ? 1 : 0;
+						} else {
+							// Check length of ipfix element and if it is larger than unirec element, then saturate unirec element
+							if (matchField->size >= length) {
+								data_copy( (conf->ifc[i].buffer) + matchField->offset_ar[i],	// Offset to Unirec buffer for current ifc
+									   (data_record + offset + size_length),		// Offset to data in Ipfix message
+									   length);						// Size of element
+							} else {
+								// set maximum value to unirec element
+								memset( (conf->ifc[i].buffer) + matchField->offset_ar[i],
+									0xFF,
+									matchField->size);
 
-			/* Check the allocated size */
-			if (!matchField->value || matchField->valueBufferSize < length) {
-				matchField->value = realloc(matchField->value, length);
-				matchField->valueBufferSize = length;
-			}
-			matchField->valueSize = length;
 
-			/* Copy the value, change byteorder (handle IP addresses specially) */
-			/* IPv4 address */
-			if (template->fields[index].ie.id == 8 || 
-				template->fields[index].ie.id == 12 ) {
-				matchField->value = realloc(matchField->value, 16);
-				matchField->valueSize = 16;
-				/* Put IPv4 into 128 bits in a special way (see ipaddr.h in Nemea-UniRec for details) */
-				((uint64_t*)matchField->value)[0] = 0;
-				((uint32_t*)matchField->value)[2] = *(uint32_t*)(data_record + offset + size_length);
-				((uint32_t*)matchField->value)[3] = 0xffffffff;
-			}
-			/* IPv6 address */
-			else if (template->fields[index].ie.id == 27 ||
-					   template->fields[index].ie.id == 28 ) {
-				/* Just copy, don't convert endianness */
-				memcpy(matchField->value, data_record + offset + size_length, length);
-			} 
-		/* Other fields */
-			else {
-				data_copy(matchField->value, data_record + offset + size_length, length);
-			}
-			
-			if (length == 0) {
-				matchField->valueFilled = 0;
+							}
+
+						}
+						// if required, add required-filled count
+						conf->ifc[i].requiredFilled += matchField->required_ar[i];
+					}
+				}
 			} else {
+				// Dynamic element
+				matchField->valueSize = length;
+				matchField->value     = (void*) (data_record + offset + size_length);
 				matchField->valueFilled = 1;
+				// Fill required count for Unirec where this element is required
+				for (int i = 0; i < conf->ifc_count; i++) {
+					// For every interface
+					if (matchField->included_ar[i]) {
+						// If element is present in current ifc
+						conf->ifc[i].requiredFilled += matchField->required_ar[i];
+					}
+				}
 			}
+
 		}
 
 		/* Skip enterprise element number if necessary*/
@@ -262,288 +404,45 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 		/* Skip the length of the value */
 		offset += length + size_length;
 	}
-
 
 	return offset;
 }
 
 /**
- * \brief Fill value of static element to given offset of the UniRec buffer
+ * \brief Copy dynamic fields to output buffer
  *
- * For dynamic elements it writes only value size
- *
- * @param offset Offset of the value
- * @param field UniRec field with value to fill
- * @param conf plugin configuration
- * @return Returns size of the written data or zero on failure
+ * \param[in] conf Pointer to interface config structure
  */
-static uint16_t unirec_fill_static(uint16_t offset, unirecField *field, ifc_config *conf)
+static void process_dynamic(ifc_config *conf)
 {
+	conf->bufferOffset = conf->bufferStaticSize;
 
-	uint16_t size;
-
-	/* Ensure that the buffer is big enough (+2 is for dynamic element size) */
-	if (conf->bufferSize < offset + field->size + 2) {
-		conf->buffer = realloc(conf->buffer, offset + field->size + 2);
-		conf->bufferSize = offset + field->size + 2;
-	}
-
-	/* Required value not present */
-	if (field->required && !field->valueFilled) {
-		return 0;
-	}
-
-	/* Fixed size elements */
-	if (field->size != -1) {
-		if (field->valueFilled) {
-			/* Find maximum size and set rest to zero if necessary */
-			if (field->size > field->valueSize) {
-				size = field->valueSize;
-				memset(conf->buffer + offset, 0, field->size);
-			} else {
-				size = field->size;
-			}
-
-			/* Copy the actual value size and maximum allowed size */
-			memcpy(conf->buffer + offset, field->value, size);
-		} else {
-			/* Set value to zero */
-			memset(conf->buffer + offset, 0, field->size);
-		}
-
-		return field->size;
-	}
-
-	/* Dynamic size elements - fill only size */
-	if (field->valueFilled) {
-		conf->dynamicPartOffset += field->valueSize;
-	}
-	*(uint16_t *) (conf->buffer + offset) = conf->dynamicPartOffset;
-
-
-	return 2; /* size is 16bit value */
-}
-
-/**
- * \brief Fill value of dynamic element to given offset of the UniRec buffer
- *
- * @param offset Offset of the value
- * @param field UniRec field with value to fill
- * @param conf plugin configuration
- * @return Returns size of the written data
- */
-static uint16_t unirec_fill_dynamic(uint16_t offset, unirecField *field, ifc_config *conf)
-{
-	/* Only dynamic size with filled value */
-	if (field->size == -1 && field->valueFilled) {
-		/* Check buffer size */
-		if (conf->bufferSize < offset + field->valueSize) {
-			conf->buffer = realloc(conf->buffer, offset + field->valueSize);
-			conf->bufferSize = offset + field->size;
-		}
-
-		/* Copy the value */
-		memcpy(conf->buffer + offset, field->value, field->valueSize);
-
-		/* Return real size */
-
-		return field->valueSize;
-	}
-
-	/* Unset the filled property for future use */
-	field->valueFilled = 0;
-
-	return 0;
-}
-
-
-// find ipfix field (exnterprise numbers not supported for now)
-static void find_field(char *data_record, struct ipfix_template *template, uint32_t id,
-					   char **value, uint16_t *valueSize)
-{
-	uint16_t offset = 0;
-	uint16_t index, count;
-	uint16_t length, size_length;
-
-	/* Go over all fields */
-	for (count = index = 0; count < template->field_count; count++, index++) {
+	// Cycle throu all fields
+	for (int i = 0; i < conf->dynCount; i++) {
 		
-		length = template->fields[index].ie.length;
-		size_length = 0;
-
-		/* Handle variable length */
-		if (length == 65535) {
-			/* Variable length */
-			length = read8(data_record+offset);
-			size_length = 1;
-
-			if (length == 255) {
-				length = ntohs(read16(data_record+offset+size_length));
-				size_length = 3;
-			}
-		}
-
-		if (template->fields[index].ie.id == id) {
-			/* Field was found */
-			*value = data_record + offset + size_length;
-			*valueSize = length;
-			return;						
-		}
+		// Store end offset of dynamic value to Unirec buffer
+		*(uint16_t*)(conf->buffer + conf->dynAr[i]->offset_ar[conf->number]) = conf->bufferDynSize + conf->dynAr[i]->valueSize; 
 		
-		/* Skip enterprise element number if necessary*/
-		if (template->fields[index].ie.id >> 15) {
-			index++;
-		}
+		// If dynamic field was filled, copy it to Unirec buffer
+		if (conf->dynAr[i]->valueFilled) {
+			memcpy(	conf->buffer + conf->bufferOffset,
+				conf->dynAr[i]->value,
+				conf->dynAr[i]->valueSize > MAX_DYNAMIC_FIELD_SIZE ? MAX_DYNAMIC_FIELD_SIZE : conf->dynAr[i]->valueSize);
 
-		/* Skip the length of the value */
-		offset += length + size_length;
+			conf->bufferOffset  += conf->dynAr[i]->valueSize;
+			conf->bufferDynSize += conf->dynAr[i]->valueSize;
+			conf->dynAr[i]->valueFilled = 0;
+			conf->dynAr[i]->valueSize = 0;
+		}
 	}
-	
-	*value = NULL;
-	*valueSize = 0;
 }
 
-/**
- * \brief Creates and sends UniRec records
- *
- * Takes values for current record that are filled in conf->fields
- *
- * @param conf
- */
-static void process_unirec_fields(char *data_record, struct ipfix_template *template, ifc_config *conf)
-{
-
-	unirecField *tmp;
-	uint16_t offset = 0, tmpOffset;
-
-	//printf("RAD BY SOM NIECO POSLAL..MOZEM?\n");
-	/* Create UniRec record */
-	conf->dynamicPartOffset = 0;
-
-	/* Fill static size values and dynamic lengths */
-	for (tmp = conf->fields; tmp != NULL; tmp = tmp->next) {
-		/* Hanlde some fields specially */
-		/* ODID */
-		if (tmp == conf->special_field_odid) {
-			if (!tmp->value) {
-				tmp->value = malloc(4);
-				tmp->valueSize = 4;
-			}
-			*(uint32_t*)tmp->value = conf->odid;
-			tmp->valueFilled = 1;
-		}
-		/* LINK_BIT_FIELD */
-		else if (tmp == conf->special_field_link_bit_field) {
-			if (!tmp->value) {
-				tmp->value = malloc(8);
-				tmp->valueSize = 8;
-			}
-			*(uint32_t*)tmp->value = (uint64_t)(1) << (conf->odid - 1);
-			tmp->valueFilled = 1;
-		}
-		/* TIME_FIRST, TIME_LAST */
-		else if (tmp == conf->special_field_time_first ||
-				 tmp == conf->special_field_time_last) {
-			char *value;
-			uint16_t valueSize;
-			uint32_t sec = 0, frac = 0;
-			if (!tmp->value) {
-				tmp->value = malloc(8);
-				tmp->valueSize = 8;
-			}
-			int a = (tmp == conf->special_field_time_first ? 0 : 1); /* Adding one to ID changes Start to End timestamp */
-				
-			tmp->valueFilled = 1;
-			/* Find timestamp in seconds, milliseconds, microseconds or nanoseconds */
-			if (find_field(data_record, template, 150+a, &value, &valueSize), value != NULL) { /* flowStartSeconds */
-				sec = be64toh(*(uint64_t*)value);
-				frac = 0;
-			} else if (find_field(data_record, template, 152+a, &value, &valueSize), value != NULL) { /* flowStartMillieconds */
-				uint64_t msec = be64toh(*(uint64_t*)value);
-				sec = msec / 1000;
-				frac = (msec % 1000) * (0x0000000100000000L/1000);
-			} else if (find_field(data_record, template, 154+a, &value, &valueSize), value != NULL) { /* flowStartMicroseconds */
-				uint64_t usec = be64toh(*(uint64_t*)value);
-				sec = usec / 1000000;
-				frac = (usec % 1000000) * (0x0000000100000000L/1000000);
-			} else if (find_field(data_record, template, 156+a, &value, &valueSize), value != NULL) { /* flowStartNanoseconds */
-				uint64_t nsec = be64toh(*(uint64_t*)value);
-				sec = nsec / 1000000000;
-				frac = (nsec % 1000000000) * (0x0000000100000000L/1000000000);
-			} else {
-				tmp->valueFilled = 0;
-			}
-			*(uint64_t*)tmp->value = (uint64_t)sec << 32;
-			*(uint64_t*)tmp->value |= (uint64_t)frac & 0x00000000ffffffff;
-		}
-		/* DIR_BIT_FIELD */
-		else if (tmp == conf->special_field_dir_bit_field) {
-			if (!tmp->value) {
-				tmp->value = malloc(1);
-				tmp->valueSize = 1;
-			}
-			char *value;
-			uint16_t valueSize;
-			find_field(data_record, template, 10, &value, &valueSize); /* ingressInterface */
-			if (value != NULL) {
-				*(uint8_t*)tmp->value = (uint8_t)(1) << (*(uint32_t*)value);
-				tmp->valueFilled = 1;
-			} else {
-				tmp->valueFilled = 0;
-			}
-		}
-
-		tmpOffset = unirec_fill_static(offset, tmp, conf);
-		/* Record does not contain required value */
-		if (!tmpOffset) {
-			MSG_COMMON(6, "Record does not contain required value(s).");
-			return;
-		}
-
-		offset += tmpOffset;
-	}
-
-
-	/* Fill dynamic values */
-	for (tmp = conf->fields; tmp != NULL; tmp = tmp->next) {
-		offset += unirec_fill_dynamic(offset, tmp, conf);
-	}
-	
-
-        /* buffer dump */
-	/*printf("BUFFER START\n");
-	for (ii=0;ii<offset;ii++) {
-		if (conf->buffer[ii] < 30) {
-			printf("%02X", conf->buffer[ii]);
-		} else {
-			printf("%c", conf->buffer[ii]);
-		}
-	}
-	printf("\nBUFFER END\n\n");*/
-
-
-	/* Send UniRec record */
-// 	printf("Sending record, length: %hu\n", offset);
-// 	int i = 0;
-// 	for ( ; i < offset; i++) {
-// 		printf("%02x ", (int)(unsigned char)conf->buffer[i]);
-// 		if (i % 8 == 7)
-// 			printf("\n");
-// 	}
-	int ret = trap_send_data(conf->number, conf->buffer, offset, conf->timeout);
-	//if (conf->number == 1) printf("UNIREC SENDED: %u [%u]\n", DEBUG_PRINT++, ret);
-
-// 	printf("\nret: %i\n", ret);
-// 	static int counter = 100;
-// 	if (!counter--) {
-// 		trap_finalize();
-// 		exit(0);
-// 	}
 
 
 
 
-}
+
+
 
 /**
  * \brief Process all data sets in IPFIX message
@@ -554,7 +453,8 @@ static void process_unirec_fields(char *data_record, struct ipfix_template *temp
  */
 static int process_data_sets(const struct ipfix_message *ipfix_msg, unirec_config *conf)
 {	
-	// RECORDS METER
+	// RECORDS METER // FOR DEBUG
+	/*
 	time(&curr_time);
 	if (curr_time > prev_time + step_time) {
 		printf("%u records/s   \r", DEBUG_TIME_RECORD/(uint32_t)step_time);
@@ -562,6 +462,9 @@ static int process_data_sets(const struct ipfix_message *ipfix_msg, unirec_confi
 		prev_time = curr_time;
 		DEBUG_TIME_RECORD = 0;
 	}
+	*/
+
+	
 
 	uint16_t data_index = 0;
 	struct ipfix_data_set *data_set;
@@ -570,10 +473,21 @@ static int process_data_sets(const struct ipfix_message *ipfix_msg, unirec_confi
 	uint32_t offset;
 	uint16_t min_record_length, ret = 0;
 	int i;
+	
 
-	for (i = 0; i < conf->ifc_count; i++) {
-		conf->ifc[i].odid = ntohl(ipfix_msg->pkt_header->observation_domain_id);
+	// ********** Initialize Trap ********** 
+	uint32_t ODID = ntohl(ipfix_msg->pkt_header->observation_domain_id);
+	// Fill ODID
+	conf->odid = (uint16_t) ODID;
+	if (!conf->trap_init) {
+		update_ifc_spec(conf, ODID);
+		if (!init_trap_ifc(conf)) {
+			return 0;
+		}
+		conf->trap_init = 1;  // Trap was just initialized
 	}
+	// ***********************************
+
 
 	data_set = ipfix_msg->data_couple[data_index].data_set;
 
@@ -598,23 +512,49 @@ static int process_data_sets(const struct ipfix_message *ipfix_msg, unirec_confi
 
 		while ((int) ntohs(data_set->header.length) - (int) offset - (int) min_record_length >= 0) {
 			data_record = (((char *) data_set) + offset);
-			DEBUG_TIME_RECORD++;
-			/* Process and send data to all output interfaces */
-			for (i = 0; i < conf->ifc_count; i++) {
-				/* Process record and save data to UniRec fields */
-				ret = process_record(data_record, template, &(conf->ifc[i]));
-				
-				/* Check that the record was processes successfuly */
-				if (ret == 0) {
-					return -1;
+			//DEBUG_TIME_RECORD++;
+
+			// Process data record only once
+			ret = process_record(data_record, template, conf);
+
+			//Check that the record was processes successfuly
+			if (ret == 0) {
+				return -1;
+			}
+			
+ 	             	 //Fill dynamic fields for every UniRec record and send it
+                	for (i = 0; i < conf->ifc_count; i++) {
+				// Check if we have all required fields
+				if (conf->ifc[i].requiredCount == conf->ifc[i].requiredFilled) {
+					// Fill dynamic fields if there are ones
+					if (conf->ifc[i].dynamic) {
+						process_dynamic(&(conf->ifc[i]));
+					}
+					// Send record
+					trap_ctx_send(	conf->trap_ctx_ptr,
+							conf->ifc[i].number,
+							conf->ifc[i].buffer,
+							conf->ifc[i].bufferStaticSize + conf->ifc[i].bufferDynSize);
+							// conf->ifc[i].timeout); // Timeout is set by IFCCTL	
 				}
-				
-				/* Create UniRec record and send it */
-				process_unirec_fields(data_record, template, &(conf->ifc[i]));
+
+				// Clear static fields
+				memset(conf->ifc[i].buffer, 0, conf->ifc[i].bufferStaticSize);
+
+
+				// Clear dynamic fields
+				for (int j = 0; j < conf->ifc[i].dynCount; j++) {
+					conf->ifc[i].dynAr[j]->valueFilled = 0;
+				}
+
+
+				conf->ifc[i].requiredFilled = 0;
+				conf->ifc[i].bufferDynSize = 0;
 			}
 
 			offset += ret;
 		}
+
 
 		/* Process next set */
 		data_set = ipfix_msg->data_couple[++data_index].data_set;
@@ -634,8 +574,14 @@ static void destroy_field(unirecField *field)
 	/* Free field name */
 	free(field->name);
 
-	/* Free field value */
-	free(field->value);
+	free(field->included_ar);
+	free(field->required_ar);
+	free(field->offset_ar);
+
+	if (field->size > 0) {
+		free(field->value);
+	}
+
 
 	/* Free field */
 	free(field);
@@ -716,6 +662,9 @@ static unirecField *load_elements()
 		currentField = malloc(sizeof(unirecField));
 		currentField->name = NULL;
 		currentField->value = NULL;
+		currentField->offset_ar = NULL;
+		currentField->required_ar = NULL;
+		currentField->included_ar = NULL;
 
 		/* Read individual tokens */
 		int position = 0;
@@ -743,8 +692,8 @@ static unirecField *load_elements()
 					currentField->ipfixCount++;
 				}
 				break;
-			}
-			}
+			} // case 2 end
+			} // switch end
 		}
 
 		/* Check that all necessary data was provided */
@@ -767,6 +716,8 @@ static unirecField *load_elements()
 }
 
 
+
+
 /**
  * \brief Update field's length and ipfix elements from configuration fields list
  *
@@ -774,16 +725,22 @@ static unirecField *load_elements()
  * @param confFields Field list loaded from configuration
  * @return Returns 0 on success
  */
-static int update_field(unirecField **currentField, unirecField *confFields)
+static int update_field(unirecField **currentField, unirecField *confFields, int *dynamic)
 {
 	unirecField *tmp;
 	int updated = 0;
+	*dynamic = 0; // Assume there is no dynamic field, if there is then change this variable to 1
 
 	/* Look for specified element */
 	for (tmp = confFields; tmp != NULL; tmp = tmp->next) {
 		if (strcmp((*currentField)->name, tmp->name) == 0) {
 			(*currentField)->size = tmp->size;
 			(*currentField)->ipfixCount = 0;
+
+			if (tmp->size == -1) {
+				// If it is dynamic field, set dynamic to 1
+				*dynamic = 1;
+			}
 
 			/* Copy IPFIX element identifiers */
 			int i;
@@ -807,111 +764,240 @@ static int update_field(unirecField **currentField, unirecField *confFields)
 }
 
 
-/**
- * \brief Parse UniRec format from XML
- *
- * @param conf Plugin internal configuration
- * @return 0 on success
- *
- *
- * https://homeproj.cesnet.cz/projects/traffic-analysis/wiki/UniRec
- * https://homeproj.cesnet.cz/projects/traffic-analysis/wiki/Seznam_polo%C5%BEek_UniRec
- *
- *
- */
-static int parse_format(ifc_config *conf)
+
+
+static int parse_format(unirec_config *conf_plugin)
 {
 	char *token, *state; /* Variables for strtok  */
-	unirecField *lastField = NULL, *currentField = NULL, *confFields;
+	unirecField *lastField, *currentField, *confFields;
 	int ret;
-
-	if (conf->format == NULL) {
-		return -1;
-	}
+	ifc_config *conf;
+	int dynamic;
+	uint16_t field_offset;
 
 	/* Load elements from configuration file */
 	confFields = load_elements();
 
-	/* Split string to tokens */
-	for (token = strtok_r(conf->format, ",", &state); token != NULL; token = strtok_r(NULL, ",", &state)) {
+	for (int c = 0; c < conf_plugin->ifc_count; c++) {
+		conf = &conf_plugin->ifc[c];
+		conf->dynamic = 0;
+		conf->dynCount = 0;
+		field_offset = 0;
 
-		/* Create new field element */
-		currentField = malloc(sizeof(unirecField));
-		/* Init values used for iteration */
-		currentField->next = NULL;
-		currentField->value = NULL;
-		currentField->valueSize = 0;
-		currentField->valueBufferSize = 0;
-		currentField->valueFilled = 0;
-		currentField->ipfixCount = 0;
+		lastField = NULL;
+		currentField = NULL;
 
-		/* Fill name and required values */
-		if (token[0] == '?') {
-			currentField->required = 0;
-			currentField->name = strdup(token + 1);
-		} else {
-			currentField->required = 1;
-			currentField->name = strdup(token);
+		if (conf->format == NULL) {
+			return -1;
 		}
 
-		/* Handle special fields */
-		if (strcmp(currentField->name, "ODID") == 0) {
-			conf->special_field_odid = currentField;
-			currentField->size = 4;
-		} else if (strcmp(currentField->name, "TIME_FIRST") == 0) {
-			conf->special_field_time_first = currentField;
-			currentField->size = 8;
-		} else if (strcmp(currentField->name, "TIME_LAST") == 0) {
-			conf->special_field_time_last = currentField;
-			currentField->size = 8;
-		} else if (strcmp(currentField->name, "DIR_BIT_FIELD") == 0) {
-			conf->special_field_dir_bit_field = currentField;
-			currentField->size = 1;
-		} else if (strcmp(currentField->name, "LINK_BIT_FIELD") == 0) {
-			conf->special_field_link_bit_field = currentField;
-			currentField->size = 8;
-		}
-		/* Fill values from configuration file */
-		else {
-			ret = update_field(&currentField, confFields);
-			if (ret) {
-				MSG_ERROR(msg_module, "Field \"%s\" is not present in UniRec configuration file", currentField->name);
-				destroy_field(currentField);
-				destroy_fields(confFields);
-				return 1;
-			}
-		}
+		// Allocate memory for dynamic fields array
+		conf->dynAr = malloc(sizeof(unirecField*) * INIT_DYNAMIC_ARR_SIZE);
+		conf->dynArAlloc = INIT_DYNAMIC_ARR_SIZE;
 
-		/* Add it at the end of the list */
-		if (lastField != NULL) {
-			lastField->next = currentField;
-		} else {
-			/* At first run assign the first field to configuration structure */
-			conf->fields = currentField;
+
+		// Allocate memory for output data buffer
+		conf->buffer = malloc(INIT_OUTPUT_BUFFER_SIZE);
+		if (conf->buffer == NULL) {
+			return -1;
 		}
-		/* Move the pointer to the end */
-		lastField = currentField;
-	}
+		conf->bufferAllocSize = INIT_OUTPUT_BUFFER_SIZE;
+		memset(conf->buffer, 0, conf->bufferAllocSize);
+
+		// Used for static size overflow check
+		conf->bufferSize = conf->bufferAllocSize;
+
+
+
+		// ****** Split string to tokens ******
+		for (token = strtok_r(conf->format, ",", &state); token != NULL; token = strtok_r(NULL, ",", &state)) {
+			// Add it to config array if it is not there yet
+			lastField = conf_plugin->fields;
+
+			// Check if field is already present in fields list or if it is new field
+			while (1) {
+				// Try to find field in field list
+				if (lastField != NULL && strcmp(lastField->name, token[0] == '?' ? token + 1 : token) == 0) {
+					// Element is already present in config array so we do not need to add it
+					// but we need to adjust required_ar and included_ar and offset_ar
+					if (token[0] == '?') {
+						lastField->required_ar[c] = 0;
+					} else {
+						lastField->required_ar[c] = 1;
+						
+						if (strcmp(token, "LINK_BIT_FIELD") == 0 ) {               // Do not count LINK_BIT_FIELD as required value
+							conf->special_field_link_bit_field = lastField;    // Do not count DIRECTION_FLAGS as required value
+						}                                                          // because they are always present
+						else if (strcmp(token, "DIRECTION_FLAGS") != 0 ) {
+							conf->requiredCount++;			
+						}
+					}
+					lastField->included_ar[c] = 1;
+					lastField->offset_ar[c] = field_offset;
+					if (lastField->size == -1) {
+						// Dynamic field
+						field_offset += 2;		// 2B is size of offset of the end of dynamic field in unirec record
+						conf->bufferStaticSize += 2;	// same as above
+
+						// Add last field to dynAr and update dynamic field counter
+						conf->dynAr[conf->dynCount] = lastField;
+						conf->dynCount++;
+						if (conf->dynCount >= conf->dynArAlloc) {
+							conf->dynArAlloc += INIT_DYNAMIC_ARR_SIZE;
+							conf->dynAr = realloc(conf->dynAr, sizeof(unirecField*) * conf->dynArAlloc);
+						}
+
+						// Update output buffer for new dynamic value
+						conf->bufferAllocSize += MAX_DYNAMIC_FIELD_SIZE;
+						conf->buffer = realloc(conf->buffer, conf->bufferAllocSize);
+					} else {
+						conf->bufferStaticSize += lastField->size;
+						field_offset += lastField->size;
+
+						// Update output buffer size if needed
+						if (conf->bufferSize <= conf->bufferStaticSize) {
+							conf->bufferAllocSize += INIT_OUTPUT_BUFFER_SIZE;
+							conf->buffer = realloc(conf->buffer, conf->bufferAllocSize);	
+							conf->bufferSize += INIT_OUTPUT_BUFFER_SIZE;
+						}
+					}
+
+
+					break;
+				}
+				// If it is very first field or it was not found in fields list, then create it and add it to fields list
+				if (lastField == NULL || lastField->next == NULL) {
+					/* Create new field element */
+					currentField = malloc(sizeof(unirecField));
+					currentField->required_ar = malloc(sizeof(uint8_t)  * conf_plugin->ifc_count); 
+					currentField->included_ar = malloc(sizeof(uint8_t)  * conf_plugin->ifc_count); 
+					currentField->offset_ar   = malloc(sizeof(uint16_t) * conf_plugin->ifc_count); 
+					memset(currentField->required_ar, 0, conf_plugin->ifc_count);
+					memset(currentField->included_ar, 0, conf_plugin->ifc_count);
+					memset(currentField->offset_ar,   0, 2 * conf_plugin->ifc_count);   // 2Bytes * ifc count
+					/* Init values used for iteration */
+					currentField->next = NULL;
+					currentField->nextIfc = NULL;
+					currentField->value = NULL;
+					currentField->valueSize = 0;
+					currentField->valueFilled = 0;
+					currentField->ipfixCount = 0;
+					currentField->included_ar[c] = 1;
+					currentField->offset_ar[c] = field_offset;
+
+					/* Fill name and required values */
+					if (token[0] == '?') {
+						currentField->required = 0;
+						currentField->name = strdup(token + 1);
+						currentField->required_ar[c] = 0;
+					} else {
+						conf->requiredCount++;
+						currentField->required = 1;
+						currentField->name = strdup(token);
+						currentField->required_ar[c] = 1;
+					}
+
+					/* Handle special fields */
+					if (strcmp(currentField->name, "LINK_BIT_FIELD") == 0) {
+						conf->special_field_link_bit_field = currentField;
+						conf->requiredCount--; // Is required but it is always present as ODID
+						currentField->size = 8;
+						currentField->value = malloc(8);   
+						currentField->valueSize = 8;
+						currentField->ipfixCount = 1;  // Only for compatibility with other elements
+						currentField->ipfix[0].id = 0; // when comparing
+						currentField->ipfix[0].en = 0; //
+					
+					}
+					else if (strcmp(currentField->name, "DIRECTION_FLAGS") == 0) {
+						conf->requiredCount--; // Is required but it is always present
+						currentField->size = 1;
+						currentField->value = malloc(1);   
+						currentField->valueSize = 1;
+						currentField->ipfixCount = 1;  // Only for compatibility with other elements
+						currentField->ipfix[0].id = 0; // when comparing
+						currentField->ipfix[0].en = 0; //
+					} else {
+						/* Fill values from configuration file */
+						ret = update_field(&currentField, confFields, &dynamic);
+						if (ret) {
+							MSG_ERROR(msg_module, "Field \"%s\" is not present in UniRec configuration file", currentField->name);
+							destroy_field(currentField);
+							destroy_fields(confFields);
+							return 1;
+						}
+						conf->dynamic |= dynamic; // Set dynamic field flag on interface
+					}
+
+					// Update offset of current field
+					currentField->offset_ar[c] = field_offset;
+
+					// Determine if field is static or dynamic
+					if (currentField->size == -1) {
+						// Dynamic field
+						// Update offset for next field
+						field_offset += 2;		// 2B is size of offset to the end of dynamic field
+						conf->bufferStaticSize += 2;	// same as above
+
+						// Add current field to dynAr and update dynamic field counter
+						conf->dynAr[conf->dynCount] = currentField;
+						conf->dynCount++;
+						if (conf->dynCount >= conf->dynArAlloc) {
+							conf->dynArAlloc += INIT_DYNAMIC_ARR_SIZE;
+							conf->dynAr = realloc(conf->dynAr, sizeof(unirecField*) * conf->dynArAlloc);
+						}
+
+						// Update output buffer for new dynamic value
+						conf->bufferAllocSize += MAX_DYNAMIC_FIELD_SIZE;
+						conf->buffer = realloc(conf->buffer, conf->bufferAllocSize);
+
+					} else {
+						// Static field
+						field_offset += currentField->size;
+						conf->bufferStaticSize += currentField->size;
+
+						// Update output buffer for new dynamic value
+						if (conf->bufferSize <= conf->bufferStaticSize) {
+							conf->bufferAllocSize += INIT_OUTPUT_BUFFER_SIZE;
+							conf->buffer = realloc(conf->buffer, conf->bufferAllocSize);	
+							conf->bufferSize += INIT_OUTPUT_BUFFER_SIZE;
+						}
+
+					}
+
+					// Add current field to list
+					if (lastField == NULL) {
+						conf_plugin->fields = currentField;
+					} else {
+						lastField->next = currentField;
+					}
+
+					break;
+				} // End of create new field condition
+				lastField = lastField->next;
+			}	// End of unique element cycle
+		}	// End of current interface cycle
+	}	// End of interfaces cycle
 
 	/* Elements from UniRec configuration file are not needed anymore */
 	destroy_fields(confFields);
 
+
+	// DEBUG PRINT
+	/*
+	currentField = conf_plugin->fields;
+	while(currentField != NULL) {
+		printf("%s ", currentField->name);
+		for (int i = 0; i < conf_plugin->ifc_count; i++) {
+			printf("[%u,%u]", currentField->required_ar[i], currentField->included_ar[i]);
+		}
+		printf("\n");
+		currentField = currentField->next;
+	}
+	*/
+
 	return 0;
 }
-
-
-// Struct with information about module
-trap_module_info_t module_info = {
-	"ipfixcol UniRec plugin", // Module name
-	// Module description
-	"This is both Nemea module and ipfixcol plugin. It coverts IPFIX records"
-	"to UniRec format for Nemea.\n"
-	"Interfaces:\n"
-	"   Inputs: 0\n"
-	"   Outputs: 1\n",
-	0, // Number of input interfaces
-	1, // Number of output interfaces
-};
 
 /**
  * \brief Storage plugin initialization function.
@@ -942,6 +1028,8 @@ int storage_init (char *params, void **config)
 	trap_ifc_spec_t ifc_spec;
 
 
+
+
 	// Allocate memory for main config structure
 	conf = (unirec_config *) malloc(sizeof(unirec_config));
 	if (!conf) {
@@ -949,7 +1037,7 @@ int storage_init (char *params, void **config)
 		return -1;
 	}
 	memset(conf, 0, sizeof(unirec_config));
-
+	
 
 	
 	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
@@ -994,7 +1082,7 @@ int storage_init (char *params, void **config)
 				if ((!xmlStrcmp(cur_sub->name, (const xmlChar *) "params"))) {
 					ifc_params[ifc_count_read-1] = (char *) xmlNodeListGetString(doc, cur_sub->xmlChildrenNode, 1);
 				} else
-				if ((!xmlStrcmp(cur_sub->name, (const xmlChar *) "buffer"))) {
+				if ((!xmlStrcmp(cur_sub->name, (const xmlChar *) "bufferSwitch"))) {
 					ifc_buff_switch[ifc_count_read-1] = atoi((char *) xmlNodeListGetString(doc, cur_sub->xmlChildrenNode, 1));
 				} else
 				if ((!xmlStrcmp(cur_sub->name, (const xmlChar *) "flushTimeout"))) {
@@ -1004,9 +1092,11 @@ int storage_init (char *params, void **config)
 					char *timeout = (char *) xmlNodeListGetString(doc, cur_sub->xmlChildrenNode, 1);
 					if (timeout != NULL) {
 						ifc_timeout[ifc_count_read-1] = atoi(timeout);
+						
 						free(timeout);
+					} else {
+						ifc_timeout[ifc_count_read-1] = DEFAULT_TIMEOUT;
 					}
-					ifc_timeout[ifc_count_read-1] = DEFAULT_TIMEOUT;
 				} else
 				if ((!xmlStrcmp(cur_sub->name, (const xmlChar *) "format"))) {
 					ifc_format[ifc_count_read-1] = (char *) xmlNodeListGetString(doc, cur_sub->xmlChildrenNode, 1);
@@ -1028,11 +1118,18 @@ int storage_init (char *params, void **config)
 		for (i = ifc_count_read; i < ifc_count_space; i++) {
 			ifc_types[i] = '\0';
 			ifc_params[i] = NULL;
+			ifc_buff_switch[i] = 0;
 		}
 	}
 	ifc_spec.types = ifc_types;
 	ifc_spec.params = ifc_params;
 
+	// Set Trap context variables
+	conf->trap_init = 0;
+	conf->ifc_spec.types = ifc_types;
+	conf->ifc_spec.params = ifc_params;
+	conf->ifc_buff_switch = ifc_buff_switch;
+	conf->ifc_buff_timeout = ifc_buff_timeout;
 
 	// Allocate array of pointers to interface config structures
 	conf->ifc_count = ifc_count_read;
@@ -1051,11 +1148,12 @@ int storage_init (char *params, void **config)
 		conf->ifc[i].format = ifc_format[i];
 		conf->ifc[i].timeout = ifc_timeout[i];	
 		conf->ifc[i].special_field_odid = NULL;
-		conf->ifc[i].special_field_time_first = NULL;
-		conf->ifc[i].special_field_time_last = NULL;
-		conf->ifc[i].special_field_dir_bit_field = NULL;
 		conf->ifc[i].special_field_link_bit_field = NULL;
-
+		conf->ifc[i].requiredCount = 0;
+		conf->ifc[i].requiredFilled = 0;
+		conf->ifc[i].bufferStaticSize = 0;
+		conf->ifc[i].bufferDynSize = 0;
+		conf->ifc[i].bufferAllocSize = 0;
 
 		/* Check that all necessary information is provided */
 		if (!conf->ifc[i].format) {
@@ -1081,24 +1179,13 @@ int storage_init (char *params, void **config)
 		goto err_xml;
 	}
 
-
-/*	
-	MSG_NOTICE(msg_module, "Following configuration is used:\n\tifc_type: %s\n"
-			"\tifc_params: %s\n\ttimeout: %i\n\tformat: %s",
-			ifc_spec.types, ifc_spec.params[0], conf->timeout, conf->format);
-*/
-	
-
-	/* Parse UniRec format */
-	for (i = 0; i < conf->ifc_count; i++) {
-		if (parse_format(&(conf->ifc[i]))) {
-			goto err_parse;
-		}
+	if (parse_format(conf)) {
+		goto err_parse;
 	}
+
 
 	/* Set number of TRAP output interfaces */
 	module_info.num_ifc_out = conf->ifc_count;
-
 	/* Set verbosity of TRAP library */
 	if (verbose == ICMSG_ERROR) {
 		trap_set_verbose_level(-1);
@@ -1110,33 +1197,10 @@ int storage_init (char *params, void **config)
 		trap_set_verbose_level(2); // 0
 	}
 	MSG_NOTICE(msg_module, "Verbosity level of TRAP set to %i\n", trap_get_verbose_level());
-	
-	/* Initialize TRAP interface */
-	MSG_DEBUG(msg_module, "Initializing TRAP ...\n");
-	if (trap_init(&module_info, ifc_spec) != TRAP_E_OK) {
-		MSG_ERROR(msg_module, "Error in TRAP initialization: (%i) %s\n",
-			trap_last_error, trap_last_error_msg);
-		goto err_parse;
-	}
-	MSG_DEBUG(msg_module, "OK\n");
-	
 
-	/* Initialization and configuration of interfaces*/
-	for (i = 0; i < conf->ifc_count; i++) {		
-		/* Allocate basic buffer for UniRec records */
-		conf->ifc[i].buffer = malloc(100);
-		if (!conf->ifc[i].buffer) {
-			goto err_parse;
-		}
-		conf->ifc[i].bufferSize = 100;
 
-		/* Configure interfaces */
-		MSG_NOTICE(msg_module, "Setting interafece %u buffer %s\n", i, ifc_buff_switch[i] ? "ON" : "OFF");
-		trap_ifcctl(TRAPIFC_OUTPUT, i, TRAPCTL_BUFFERSWITCH, ifc_buff_switch[i]);
-		MSG_NOTICE(msg_module, "Setting interafece %u autoflush to %llu us\n", i, ifc_buff_timeout[i]);
-		trap_ifcctl(TRAPIFC_OUTPUT, i, TRAPCTL_AUTOFLUSH_TIMEOUT, ifc_buff_timeout[i]);
-	}
 
+	/* Copy configuration */
 	*config = conf;
 
 	/* Destroy the XML configuration document */
@@ -1144,13 +1208,8 @@ int storage_init (char *params, void **config)
 
 
 	/* Free unnecessary data */
-	free(ifc_params);
-	free(ifc_types);
 	free(ifc_format);
 	free(ifc_timeout);
-	free(ifc_buff_switch);
-	free(ifc_buff_timeout);
-
 
 	return 0;
 
@@ -1204,7 +1263,9 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	struct unirec_config *conf = (struct unirec_config*) config;
 
 	/* Process all data in the ipfix packet */
-	process_data_sets(ipfix_msg, conf);
+	if (!process_data_sets(ipfix_msg, conf)) {
+		return -1;
+	}
 
 	return 0;
 }
@@ -1247,16 +1308,16 @@ int storage_close (void **config)
 
 	unirec_config *conf = (unirec_config*) *config;
 
-	trap_finalize();
+	trap_ctx_finalize(&conf->trap_ctx_ptr);
 
 	// Free everything
 	int i;
 	for (i = 0 ; i < conf->ifc_count; i++) {
 		free(conf->ifc[i].format);
 		free(conf->ifc[i].buffer);
-		/* free fieldList */
-		destroy_fields(conf->ifc[i].fields);
+		free(conf->ifc[i].dynAr);
 	}
+        destroy_fields(conf->fields);
 
 	free(*config);
 	return 0;

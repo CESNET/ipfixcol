@@ -37,8 +37,13 @@
  *
  */
 
-#ifndef UNIREC_H_
-#define UNIREC_H_
+#ifndef IPFIX2UNIREC_H_
+#define IPFIX2UNIREC_H_
+
+
+#define INIT_DYNAMIC_ARR_SIZE 8
+#define INIT_OUTPUT_BUFFER_SIZE 1024
+#define MAX_DYNAMIC_FIELD_SIZE 512
 
 #define DEFAULT_TIMEOUT 0 /**< No waiting */
 #define UNIREC_ELEMENTS_FILE "/usr/share/ipfixcol/unirec-elements.txt"
@@ -50,13 +55,20 @@ typedef struct ipfixElement {
 
 typedef struct unirecField {
 	char *name;
+	int ur_id;
 	int8_t size;
 	int8_t required;
+	int8_t *required_ar;		/**< Array of interfaces numbers where this element is required */
+	int8_t *included_ar;		/**< Array of interfaces numbers where this element is included */
+	uint16_t *offset_ar;
 	struct unirecField *next;
-	char *value;				/**< Value of the field */
+	struct unirecField *nextIfc;
+	void *value;				/**< Pointer to value of the field */
 	uint16_t valueSize;			/**< Size of the value */
 	uint8_t valueFilled;		/**< Is the value filled? */
-	uint16_t valueBufferSize;	/**< Size of the buffer for value */
+
+
+
 
 	/**< Number of ipfix elements */
 	int ipfixCount;
@@ -80,13 +92,19 @@ typedef struct ifc_config {
 	unirecField			*fields;
 	char 				*buffer;	/**< UniRec ouput buffer */
 	int				bufferSize;		/**< UniRec ouput buffer size */
+	int 				bufferDynSize;
+	int				bufferAllocSize;
 	int				dynamicPartOffset;	/**< Offset of current position in dynamic part of record (sum of dynamic field sizes) */
-	uint32_t			odid;		/**< Observation domain ID of the last packet */
-	
+	int				bufferOffset;
+	uint8_t				requiredCount;	/**< Count of all required Unirec fields */
+	uint8_t				requiredFilled;	/**< Count of filled required Unirec fields */
+	uint16_t 			bufferStaticSize;
+	uint8_t 			dynamic;
+	uint16_t 			dynCount;
+	uint16_t 			dynArAlloc;
+	unirecField 			**dynAr;
+
 	unirecField			*special_field_odid; /**< Pointer to special field ODID */
-	unirecField			*special_field_time_first; /**< Pointer to special field TIME_FIRST */
-	unirecField			*special_field_time_last; /**< Pointer to special field TIME_LAST */
-	unirecField			*special_field_dir_bit_field; /**< Pointer to special field DIR_BIT_FIELD */
 	unirecField			*special_field_link_bit_field; /**< Pointer to special field LINK_BIT_FIELD */
 } ifc_config;
 
@@ -97,9 +115,17 @@ typedef struct ifc_config {
  */
 typedef struct unirec_config {
 	int ifc_count;		/**< Interface count */
+	unirecField *fields;	/**< Array of Unirec fields from every interfaces */
 	ifc_config *ifc;	/**< Array of interface config structures */
+	trap_ctx_t *trap_ctx_ptr;
+        uint8_t trap_init;
+	trap_ifc_spec_t ifc_spec;
+        char *ifc_buff_switch;
+	uint64_t *ifc_buff_timeout;
+	uint16_t odid;
+	uint8_t SF_DATA;
 } unirec_config;
 
 
 
-#endif /* UNIREC_H_ */
+#endif /* IPFIX2UNIREC_H_ */

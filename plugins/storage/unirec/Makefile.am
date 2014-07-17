@@ -6,6 +6,7 @@ pluginsdir = $(datadir)/ipfixcol/plugins
 plugins_LTLIBRARIES = ipfixcol-unirec-output.la
 ipfixcol_unirec_output_la_LDFLAGS = -module -avoid-version -shared -ltrap
 ipfixcol_unirec_output_la_SOURCES = unirec.c unirec.h
+ipfixcol_unirec_output_la_CFLAGS  = -std=gnu99
 
 MANSRC = ipfixcol-unirec-output.dbk
 man_MANS = ipfixcol-unirec-output.1
