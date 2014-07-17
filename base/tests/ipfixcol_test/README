@@ -31,3 +31,22 @@ Alternatively you can run all tests in some directory:
 Note test directory has to contain HASH file (but it may be empty).
 Test logs are stored in test.log file.
 
+-------------------------------------------------------------------------------------
+
+How to use NEW Test Tool
+
+./test.sh
+
+Tool runs test on each subfolder in ./tests
+
+Files in each folder:
+
+startup.xml - configuration for running test, default template is in ./configs/default.xml
+expected - expected test output
+output - test output
+params - file with ipfixcol parameters (optional), default is '-v -1 -c startup.xml'
+preproc.sh - script that will be executed BEFORE test (optional)
+postproc.sh - script that will be executed AFTER test and BEFORE comparing results (optional)
+
+Test logs are stored in test_log file
+
