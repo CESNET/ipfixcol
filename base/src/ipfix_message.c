@@ -627,6 +627,10 @@ uint16_t data_record_length(uint8_t *data_record, struct ipfix_template *templat
 	int i;
 	uint16_t count, offset = 0, index, length;
 
+	if (!(template->data_length & 0x80000000)) {
+		return template->data_length;
+	}
+
 	for (count = index = 0; count < template->field_count; count++, index++) {
 		length = template->fields[index].ie.length;
 
@@ -667,9 +671,9 @@ uint16_t data_record_length(uint8_t *data_record, struct ipfix_template *templat
 /**
  * \brief Go through all data records and call processing function for each
  */
-void data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_template *templ, dset_callback_f processor, void *proc_data)
+int data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_template *templ, dset_callback_f processor, void *proc_data)
 {
-	uint16_t setlen = ntohs(data_set->header.length), data_len = templ->data_length, rec_len;
+	uint16_t setlen = ntohs(data_set->header.length), data_len = templ->data_length, rec_len, count = 0;
 	uint8_t *ptr = data_set->records;
 
 	uint16_t min_record_length = templ->data_length;
@@ -683,17 +687,22 @@ void data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_temp
 	while ((int) setlen - (int) offset - (int) min_record_length >= 0) {
 		ptr = (((uint8_t *) data_set) + offset);
 		rec_len = data_record_length(ptr, templ);
-		processor(ptr, rec_len, templ, proc_data);
+		if (processor) {
+			processor(ptr, rec_len, templ, proc_data);
+		}
+		count++;
 		offset += rec_len;
 	}
+
+	return count;
 }
 
 /**
  * \brief Go through all (options) template records and call processing function for each
  */
-void template_set_process_records(struct ipfix_template_set *tset, int type, tset_callback_f processor, void *proc_data)
+int template_set_process_records(struct ipfix_template_set *tset, int type, tset_callback_f processor, void *proc_data)
 {
-	int offset = 0, max_len, rec_len;
+	int offset = 0, max_len, rec_len, count = 0;
 	uint8_t *ptr = (uint8_t*) &tset->first_record;
 
 	while (ptr < (uint8_t*) tset + ntohs(tset->header.length)) {
@@ -702,9 +711,14 @@ void template_set_process_records(struct ipfix_template_set *tset, int type, tse
 		if (rec_len == 0) {
 			break;
 		}
-		processor(ptr, rec_len, proc_data);
+		if (processor) {
+			processor(ptr, rec_len, proc_data);
+		}
+		count++;
 		ptr += rec_len;
 	}
+
+	return count;
 }
 
 /**
@@ -736,4 +750,18 @@ void data_set_set_field(struct ipfix_data_set *data_set, struct ipfix_template *
 	}
 
 }
+
+int data_set_records_count(struct ipfix_data_set *data_set, struct ipfix_template *template)
+{
+	if (template->data_length & 0x80000000) {
+		/* damn... there is a Information Element with variable length. we have to
+		 * compute number of the Data Records in current Set by hand */
+		/* Get number of records */
+		return data_set_process_records(data_set, template, NULL, NULL);
+	} else {
+		/* no elements with variable length */
+		return ntohs(data_set->header.length) / template->data_length;
+	}
+}
+
 

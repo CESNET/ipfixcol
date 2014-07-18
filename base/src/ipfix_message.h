@@ -231,8 +231,18 @@ typedef  void (*tset_callback_f)(uint8_t *rec, int rec_len, void *data);
  * \param[in] templ Data set's template
  * \param[in] processor Function called for each data record
  * \param[in] proc_data Data given to function (besides data record, its's length and template)
+ * \return Number of data records in set
  */
-void data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_template *templ, dset_callback_f processor, void *proc_data);
+int data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_template *templ, dset_callback_f processor, void *proc_data);
+
+/**
+ * \brief Get number of records in data set
+ *
+ * \param[in] data_set Data set
+ * \param[in] templ Data set's template
+ * \return Number of data records in set
+ */
+int data_set_records_count(struct ipfix_data_set *data_set, struct ipfix_template *templ);
 
 /**
  * \brief Process all (options) template records in set
@@ -241,8 +251,9 @@ void data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_temp
  * \param[in] type Set type
  * \param[in] processor Function called for each record
  * \param[in] proc_data Data given to function
+ * \return Number of template records in set
  */
-void template_set_process_records(struct ipfix_template_set *tset, int type, tset_callback_f processor, void *proc_data);
+int template_set_process_records(struct ipfix_template_set *tset, int type, tset_callback_f processor, void *proc_data);
 
 #endif /* IPFIX_MESSAGE_H_ */
 

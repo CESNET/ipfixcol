@@ -443,61 +443,8 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 			}
 
 			/* compute sequence number */
-			if (msg->data_couple[i].data_template->data_length & 0x80000000) {
-				/* damn... there is a Information Element with variable length. we have to
-				 * compute number of the Data Records in current Set by hand */
-
-				/* template for current Data Set */
-				template = msg->data_couple[i].data_template;
-				/* every Data Record has to be at least this long */
-				min_data_length = (uint16_t) msg->data_couple[i].data_template->data_length;
-
-				data_length = ntohs(msg->data_couple[i].data_set->header.length) - sizeof(struct ipfix_set_header);
-
-
-				length = 0;   /* position in Data Record */
-				while (data_length - length >= min_data_length) {
-					offset = 0;
-					for (count = 0; count < template->field_count; count++) {
-						if (template->fields[offset].ie.length == 0xffff) {
-							/* this element has variable length. read first byte from actual data record to determine
-							 * real length of the field */
-							var_len = msg->data_couple[i].data_set->records[length];
-							if (var_len < 255) {
-								/* field length is var_len */
-								length += var_len;
-								length += 1; /* first 1 byte contains information about field length */
-							} else {
-								/* field length is more than 255, actual length is stored in next two bytes */
-								length += ntohs(*((uint16_t *) (msg->data_couple[i].data_set->records + length + 1)));
-								length += 3; /* first 3 bytes contain information about field length */
-							}
-						} else {
-							/* length from template */
-							length += template->fields[offset].ie.length;
-						}
-
-						if (template->fields[offset].ie.id & 0x8000) {
-							/* do not forget on Enterprise Number */
-							offset += 1;
-						}
-						offset += 1;
-					}
-
-					/* data record found */
-					records_count += 1;
-				}
-			} else {
-				/* no elements with variable length */
-				records_count += ntohs(msg->data_couple[i].data_set->header.length) / msg->data_couple[i].data_template->data_length;
-			}
+			records_count += data_set_records_count(msg->data_couple[i].data_set, msg->data_couple[i].data_template);
 		}
-	}
-
-	int *seqn = snc_get_sequence_number(ntohl(msg->pkt_header->observation_domain_id));
-	if (seqn) {
-		msg->pkt_header->sequence_number = htonl(*seqn);
-		*seqn += records_count;
 	}
 
 	msg->data_records_count = records_count;
@@ -518,7 +465,8 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins, int source_status)
 {
 	struct ipfix_message* msg;
-	int sn_not_match = 0;
+	int *seqn;
+
 	if (source_status == SOURCE_STATUS_CLOSED) {
 		/* Inform intermediate plugins and output manager about closed input */
 		msg = calloc(1, sizeof(struct ipfix_message));
@@ -550,23 +498,24 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 			snc_add_source(ntohl(msg->pkt_header->observation_domain_id));
 		}
 
-		/* Check sequence number */
-		if (msg->input_info->sequence_number != ntohl(msg->pkt_header->sequence_number)) {
-			sn_not_match = 1;
-		}
+		/* Process templates and correct sequence number */
+		preprocessor_process_templates(tm, msg);
 
-		/* Process templates */
-		msg->input_info->sequence_number += preprocessor_process_templates(tm, msg);
-		if (sn_not_match && msg->data_records_count > 0) {
+		seqn = snc_get_sequence_number(ntohl(msg->pkt_header->observation_domain_id));
+
+		if (msg->input_info->sequence_number != ntohl(msg->pkt_header->sequence_number) && msg->data_records_count > 0) {
 			if (!skip_seq_err) {
 				MSG_WARNING(msg_module, "[%u] Sequence number does not match: expected %u, got %u", input_info->odid, msg->input_info->sequence_number , ntohl(msg->pkt_header->sequence_number));
 			}
-			int *seqn = snc_get_sequence_number(ntohl(msg->pkt_header->observation_domain_id));
-			if (seqn) {
-				*seqn += ntohl(msg->pkt_header->sequence_number) - msg->input_info->sequence_number;
-			}
-			msg->input_info->sequence_number  = ntohl(msg->pkt_header->sequence_number);
+
+			*seqn += (ntohl(msg->pkt_header->sequence_number) - msg->input_info->sequence_number);
+			msg->input_info->sequence_number = ntohl(msg->pkt_header->sequence_number);
 		}
+
+		msg->pkt_header->sequence_number = htonl(*seqn);
+
+		msg->input_info->sequence_number += msg->data_records_count;
+		*seqn += msg->data_records_count;
 	}
 
     /* Send data to the first intermediate plugin */
