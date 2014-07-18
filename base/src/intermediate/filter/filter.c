@@ -338,36 +338,6 @@ cleanup_err:
 }
 
 /**
- * \brief Compare values byte by byte and return according bool value
- *
- * \param[in] first First value
- * \param[in] second Second value
- * \param[in] datalen length of values
- * \param[in] less    Return value when first value is less than second
- * \param[in] greater Return value when first value is greater than second
- * \param[in] equal   Return value when both values are equal
- * \return less, greater or equal value
- */
-bool filter_compare_values(uint8_t *first, uint8_t *second, int datalen, bool less, bool greater, bool equal)
-{
-	int i;
-	/**
-	 * Start with highest bytes of values
-	 * If byte of first and second value equals, compare lower two
-	 * Continue until i == datalen (values are equal) or some bytes differs
-	 */
-	for (i = 0; i < datalen; ++i) {
-		if (first[i] < second[i]) {
-			return less;
-		} else if (first[i] > second[i]) {
-			return greater;
-		}
-	}
-
-	return equal;
-}
-
-/**
  * \brief Check whether value in data record fits with node expression
  *
  * \param[in] node Filter tree node
@@ -389,22 +359,22 @@ bool filter_fits_value(struct filter_treenode *node, uint8_t *rec, struct ipfix_
 		return node->op == OP_NOT_EQUAL;
 	}
 
-	filter_compare_values(recdata, node->value->value, datalen, false, false, false);
+	int cmpres = memcmp(recdata, node->value->value, datalen);
 
 	/* Compare values according to op */
 	switch (node->op) {
 	case OP_EQUAL:
-		return !memcmp(recdata, node->value->value, datalen);
+		return !cmpres;
 	case OP_NOT_EQUAL:
-		return memcmp(recdata, node->value->value, datalen);
+		return cmpres;
 	case OP_LESS_EQUAL:
-		return filter_compare_values(recdata, node->value->value, datalen, true, false, true);
+		return cmpres <= 0;
 	case OP_LESS:
-		return filter_compare_values(recdata, node->value->value, datalen, true, false, false);
+		return cmpres < 0;
 	case OP_GREATER_EQUAL:
-		return filter_compare_values(recdata, node->value->value, datalen, false, true, true);
+		return cmpres >= 0;
 	case OP_GREATER:
-		return filter_compare_values(recdata, node->value->value, datalen, false, true, false);
+		return cmpres > 0;
 	default:
 		return false;
 	}
