@@ -529,5 +529,6 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 void preprocessor_close()
 {
 	/* output queue will be closed by intermediate process or output manager */
+	snc_destroy();
 	return;
 }

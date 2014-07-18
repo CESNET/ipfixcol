@@ -461,10 +461,14 @@ int storage_init(char *params, void **config)
 
 	*config = conf;
 
+	free(destination);
 	xmlFreeDoc(doc);
 	return 0;
 
 init_err:
+	if (destination) {
+		free(destination);
+	}
 	xmlFreeDoc(doc);
 	free(conf);
 	return -1;
@@ -847,12 +851,14 @@ int forwarding_update_templates(forwarding *conf, const struct ipfix_message *ms
 		templ_set->header.flowset_id = htons(IPFIX_TEMPLATE_FLOWSET_ID);
 		templ_set->header.length = htons(tset_len);
 		memcpy(new_msg + offset, templ_set, tset_len);
+		free(templ_set);
 		offset += tset_len;
 	}
 	if (option_set) {
 		option_set->header.flowset_id = htons(IPFIX_OPTION_FLOWSET_ID);
 		option_set->header.length = htons(otset_len);
 		memcpy(new_msg + offset, option_set, otset_len);
+		free(option_set);
 		offset += otset_len;
 	}
 

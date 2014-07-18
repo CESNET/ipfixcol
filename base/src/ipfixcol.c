@@ -631,6 +631,9 @@ cleanup:
 		output_manager_close(output_manager_config);
 	}
 
+	/* Close preprocessor */
+	preprocessor_close();
+
 	while (storage_plugins) { /* while is just for sure, it should be always one */
 		if (storage_plugins->config.file) {
 			free (storage_plugins->config.file);
