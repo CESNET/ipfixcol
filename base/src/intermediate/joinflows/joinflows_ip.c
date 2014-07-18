@@ -85,6 +85,7 @@ struct mapping_header {
 	uint16_t free_tid;     /* free Template ID */
 	uint32_t new_odid;     /* new ODID */
 	struct tid_reuse *reuse; /* released Template IDs */
+	struct input_info *input_info;
 	struct mapping_header *next; /* Next header */
 };
 
@@ -92,7 +93,7 @@ struct mapping_header {
 struct source {
 	uint32_t orig_odid;      /* original ODID */
 	uint32_t new_odid;		 /* new ODID */
-	struct input_info *input_info;
+	int old_sn;
 	struct mapping_header *mapping; /* mapping common for all source ODIDs mapped on the same new ODID */
 	struct source *next;
 };
@@ -467,6 +468,7 @@ void mapping_destroy(struct mapping_header *map)
 		aux_reuse = map->reuse;
 	}
 
+	free(map->input_info);
 	free(map);
 }
 
@@ -546,7 +548,6 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 
 				src->mapping = new_map;
 				src->orig_odid = atoi((char *)from->content);
-				src->input_info = NULL;
 				src->new_odid = new_map->new_odid;
 			}
 			xmlFree(to);
@@ -649,19 +650,27 @@ struct source *joinflows_get_source(struct joinflows_ip_config *conf, uint32_t o
  *
  * \param[in] src Source structure
  * \param[in] inpu_info Original input_info structure
+ * \return Sequence number of new message
  */
-void joinflows_update_input_info(struct source *src, struct input_info *input_info)
+uint32_t joinflows_update_input_info(struct source *src, struct input_info *input_info, int records)
 {
-	if (src->input_info == NULL) {
+	uint32_t sn;
+	if (src->mapping->input_info == NULL) {
 		if (input_info->type == SOURCE_TYPE_IPFIX_FILE) {
-			src->input_info = calloc(1, sizeof(struct input_info_file));
-			memcpy(src->input_info, input_info, sizeof(struct input_info_file));
+			src->mapping->input_info = calloc(1, sizeof(struct input_info_file));
+			memcpy(src->mapping->input_info, input_info, sizeof(struct input_info_file));
 		} else {
-			src->input_info = calloc(1, sizeof(struct input_info_network));
-			memcpy(src->input_info, input_info, sizeof(struct input_info_network));
+			src->mapping->input_info = calloc(1, sizeof(struct input_info_network));
+			memcpy(src->mapping->input_info, input_info, sizeof(struct input_info_network));
 		}
-		src->input_info->odid = src->new_odid;
+		src->mapping->input_info->odid = src->new_odid;
+		src->mapping->input_info->sequence_number = 0;
 	}
+	sn = src->mapping->input_info->sequence_number;
+	src->mapping->input_info->sequence_number += records;
+	src->old_sn += records;
+
+	return sn;
 }
 
 /**
@@ -679,7 +688,8 @@ void joinflows_copy_template_info(struct ipfix_template *to, struct ipfix_templa
 
 int process_message(void *config, void *message)
 {
-	uint32_t orig_odid, i, prevoffset, tsets = 0, otsets = 0;
+	uint32_t orig_odid, i, prevoffset, tsets = 0, otsets = 0, trec, otrec;
+	uint32_t newsn;
 	struct joinflows_processor proc;
 	struct ipfix_message *msg, *new_msg;
 	struct joinflows_ip_config *conf;
@@ -699,10 +709,10 @@ int process_message(void *config, void *message)
 		pass_message(conf->ip_config, message);
 	}
 
-	joinflows_update_input_info(src, msg->input_info);
+	newsn = joinflows_update_input_info(src, msg->input_info, msg->data_records_count);
 
 	if (msg->source_status == SOURCE_STATUS_CLOSED) {
-		msg->input_info = src->input_info;
+		msg->input_info = src->mapping->input_info;
 		pass_message(conf->ip_config, (void *) msg);
 		return 0;
 	}
@@ -746,6 +756,9 @@ int process_message(void *config, void *message)
 		}
 	}
 
+	trec = proc.trecords;
+
+	proc.trecords = 0;
 	/* Process option templates */
 	proc.type = TM_OPTIONS_TEMPLATE;
 	for (i = 0; i < 1024 && msg->opt_templ_set[i]; ++i) {
@@ -765,9 +778,11 @@ int process_message(void *config, void *message)
 		}
 	}
 
+	otrec = proc.trecords;
 	new_msg->templ_set[tsets] = NULL;
 	new_msg->opt_templ_set[otsets] = NULL;
 
+	proc.orig_odid = htonl(orig_odid);
 	for (i = 0; i < 1024 && msg->data_couple[i].data_set; ++i) {
 		templ = msg->data_couple[i].data_template;
 		if (!templ) {
@@ -793,6 +808,7 @@ int process_message(void *config, void *message)
 		data_set_process_records(msg->data_couple[i].data_set, templ, &data_processor, (void *) &proc);
 
 		new_msg->data_couple[i].data_set->header.length = htons(proc.length);
+		new_msg->data_couple[i].data_set->header.flowset_id = htons(new_msg->data_couple[i].data_template->template_id);
 	}
 
 	/* Dont send empty message */
@@ -806,9 +822,11 @@ int process_message(void *config, void *message)
 	new_msg->data_couple[i].data_set = NULL;
 
 	new_msg->pkt_header->observation_domain_id = htonl(src->new_odid);
+	new_msg->pkt_header->sequence_number = htonl(newsn);
 	new_msg->pkt_header->length = htons(proc.offset);
-	new_msg->input_info = src->input_info;
-	new_msg->templ_records_count = proc.trecords;
+	new_msg->input_info = src->mapping->input_info;
+	new_msg->templ_records_count = trec;
+	new_msg->opt_templ_records_count = otrec;
 	new_msg->data_records_count = msg->data_records_count;
 	new_msg->source_status = msg->source_status;
 
@@ -831,7 +849,6 @@ int intermediate_plugin_close(void *config)
 
 	while (aux_src) {
 		conf->sources = conf->sources->next;
-		free(aux_src->input_info);
 		free(aux_src);
 		aux_src = conf->sources;
 	}
@@ -843,7 +860,6 @@ int intermediate_plugin_close(void *config)
 	}
 
 	if (conf->default_source) {
-		free(conf->default_source->input_info);
 		free(conf->default_source);
 	}
 
