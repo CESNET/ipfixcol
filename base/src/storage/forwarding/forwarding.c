@@ -53,6 +53,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include "../../preprocessor.h"
+#include "../../ipfix_message.h"
 
 /* Identifier for MSG_* */
 static const char *msg_module = "forwarding storage";
@@ -80,6 +81,14 @@ typedef struct forwarding_config {
 	int records_cnt, records_max;
 	struct forwarding_template_record **records;
 } forwarding;
+
+struct forwarding_process {
+	uint8_t *msg;
+	int offset;
+	forwarding *conf;
+	int type;
+	int length;
+};
 
 /**
  * \brief Connect to IPv4 destination address
@@ -509,6 +518,17 @@ void *msg_to_packet(const struct ipfix_message *msg, int *packet_length)
 		offset += len;
 	}
 
+	/* Copy template sets */
+	for (i = 0; msg->opt_templ_set[i] != NULL && i < 1024; ++i) {
+		aux_header = &(msg->opt_templ_set[i]->header);
+		len = ntohs(aux_header->length);
+		for (c = 0; c < len; c += 4) {
+			memcpy(packet + offset + c, aux_header, 4);
+			aux_header++;
+		}
+		offset += len;
+	}
+
 	/* Copy data sets */
 	for (i = 0; msg->data_couple[i].data_set != NULL && i < 1024; ++i) {
 		len = ntohs(msg->data_couple[i].data_set->header.length);
@@ -600,9 +620,9 @@ void forwarding_send(forwarding *conf, void *packet, int length)
 int forwarding_udp_sent(forwarding *conf, struct forwarding_template_record *rec)
 {
 	uint32_t act_time = time(NULL);
-	uint32_t life_time = (rec->type == IPFIX_TEMPLATE_FLOWSET_ID) ? 
+	uint32_t life_time = (rec->type == TM_TEMPLATE) ?
 							conf->udp.template_life_time : conf->udp.options_template_life_time;
-	uint32_t life_packets = (rec->type == IPFIX_TEMPLATE_FLOWSET_ID) ? 
+	uint32_t life_packets = (rec->type == TM_TEMPLATE) ?
 							conf->udp.template_life_packet : conf->udp.options_template_life_packet;
 	
 	/* Check template timeout */
@@ -632,6 +652,7 @@ int forwarding_udp_sent(forwarding *conf, struct forwarding_template_record *rec
  * \param[in] conf Plugin configuration
  * \param[in] rec Template record
  * \param[in] len Template record's length
+ * \param[in] type Template type
  * \return 0 if it wasnt sent
  */
 int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, int len, int type)
@@ -687,71 +708,78 @@ void forwarding_remove_empty_sets(struct ipfix_message *msg)
 }
 
 /**
+ * \brief Process each (option) template
+ *
+ * \param[in] rec Template record
+ * \param[in] rec_len Record's length
+ * \param[in] data processor's data
+ */
+void forwarding_process_template(uint8_t *rec, int rec_len, void *data)
+{
+	struct forwarding_process *proc = (struct forwarding_process *) data;
+
+	if (forwarding_record_sent(proc->conf, (struct ipfix_template_record *) rec, rec_len, proc->type)) {
+		return;
+	}
+
+	memcpy(proc->msg + proc->offset, rec, rec_len);
+	proc->offset += rec_len;
+	proc->length += rec_len;
+}
+
+/**
  * \brief Remove templates already sent in past (TCP only)
  * \param[in] conf Plugin configuration
  * \param[in] msg IPFIX message
- * \return 0 on success
+ * \param[in] new_msg new IPFIX message
+ * \return Length of new message
  */
-int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_message *msg)
+int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_message *msg, uint8_t *new_msg)
 {
-	int i, max_len, rec_len;
-	uint8_t *ptr;
-	uint32_t data_len;
-	struct ipfix_template_record *aux_rec;
+	int i, prevo;
+	struct forwarding_process proc;
 
-	/* Go throught all template sets and remove already sent template records */
+	proc.conf = conf;
+	proc.msg = new_msg;
+	proc.offset = IPFIX_HEADER_LENGTH;
+
+	/* Copy unsent templates to new message */
+	proc.type = TM_TEMPLATE;
 	for (i = 0; msg->templ_set[i] != NULL && i < 1024; ++i) {
-		ptr = (uint8_t*) &msg->templ_set[i]->first_record;
-		while (ptr < (uint8_t*) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) {
-			max_len = ((uint8_t *) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) - ptr;
-			aux_rec = (struct ipfix_template_record *) ptr;
-			/* Get record length */
-			rec_len = tm_template_record_length(aux_rec, max_len, TM_TEMPLATE, &data_len);
+		prevo = proc.offset;
+		memcpy(proc.msg + proc.offset, &(msg->templ_set[i]->header), 4);
+		proc.offset += 4;
+		proc.length = 4;
 
-			if (rec_len == 0) {
-				/* Malformed set? skip */
-				break;
-			}
+		template_set_process_records(msg->templ_set[i], TM_TEMPLATE, &forwarding_process_template, (void *) &proc);
 
-			if (forwarding_record_sent(conf, aux_rec, rec_len, TM_TEMPLATE)) {
-				/* Record was sent earlier, skip it and correct template set length */
-				memmove(ptr, ptr + rec_len, max_len - rec_len);
-				msg->templ_set[i]->header.length = htons(ntohs(msg->templ_set[i]->header.length) - rec_len);
-				msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) - rec_len);
-			} else {
-				ptr += rec_len;
-			}
+		if (proc.offset == prevo + 4) {
+			proc.offset = prevo;
+			continue;
 		}
+
+		((struct ipfix_template_set *) proc.msg + prevo)->header.length = htons(proc.length);
 	}
 
-	/* Go throught all template sets and remove already sent template records */
+	/* Copy unsent option templates to new message */
+	proc.type = TM_OPTIONS_TEMPLATE;
 	for (i = 0; msg->opt_templ_set[i] != NULL && i < 1024; ++i) {
-		ptr = (uint8_t*) &msg->opt_templ_set[i]->first_record;
-		while (ptr < (uint8_t*) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) {
-			max_len = ((uint8_t *) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) - ptr;
-			aux_rec = (struct ipfix_template_record *) ptr;
-			/* Get record length */
-			rec_len = tm_template_record_length(aux_rec, max_len, TM_OPTIONS_TEMPLATE, &data_len);
+		prevo = proc.offset;
+		memcpy(proc.msg + proc.offset, &(msg->opt_templ_set[i]->header), 4);
+		proc.offset += 4;
+		proc.length = 4;
 
-			if (rec_len == 0) {
-				/* Malformed set? skip */
-				break;
-			}
+		template_set_process_records((struct ipfix_template_set *) msg->opt_templ_set[i], TM_OPTIONS_TEMPLATE, &forwarding_process_template, (void *) &proc);
 
-			if (forwarding_record_sent(conf, aux_rec, rec_len, TM_OPTIONS_TEMPLATE)) {
-				/* Record was sent earlier, skip it and correct template set length */
-				memmove(ptr, ptr + rec_len, max_len - rec_len);
-				msg->opt_templ_set[i]->header.length = htons(ntohs(msg->opt_templ_set[i]->header.length) - rec_len);
-				msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) - rec_len);
-			} else {
-				ptr += rec_len;
-			}
+		if (proc.offset == prevo + 4) {
+			proc.offset = prevo;
+			continue;
 		}
+
+		((struct ipfix_options_template_set *) proc.msg + prevo)->header.length = htons(proc.length);
 	}
 
-	forwarding_remove_empty_sets((struct ipfix_message *) msg);
-
-	return 0;
+	return proc.offset;
 }
 
 /**
@@ -772,8 +800,11 @@ void forwarding_add_set(struct ipfix_message *msg, struct ipfix_template_set *se
  * \brief Add templates according to udp_conf (life time && life packets)
  * \param[in] conf Plugin configuration
  * \param[in] msg IPFIX message
+ * \param[in] new_msg new IPFIX message
+ * \param[in] offset offset of new message
+ * \return new offset
  */
-void forwarding_update_templates(forwarding *conf, const struct ipfix_message *msg)
+int forwarding_update_templates(forwarding *conf, const struct ipfix_message *msg, uint8_t *new_msg, int offset)
 {
 	int i, tid, tset_len = 4, otset_len = 4;
 	struct ipfix_template_set *templ_set = NULL, *option_set = NULL;
@@ -800,7 +831,7 @@ void forwarding_update_templates(forwarding *conf, const struct ipfix_message *m
 		}
 
 		/* Send template - add it to (options) template set */
-		if (rec->type == IPFIX_TEMPLATE_FLOWSET_ID) {
+		if (rec->type == TM_TEMPLATE) {
 			templ_set = realloc(templ_set, tset_len + rec->length);
 			memcpy((uint8_t *) templ_set + tset_len, rec->record, rec->length);
 			tset_len += rec->length;
@@ -815,13 +846,17 @@ void forwarding_update_templates(forwarding *conf, const struct ipfix_message *m
 	if (templ_set) {
 		templ_set->header.flowset_id = htons(IPFIX_TEMPLATE_FLOWSET_ID);
 		templ_set->header.length = htons(tset_len);
-		forwarding_add_set((struct ipfix_message *) msg, templ_set);
+		memcpy(new_msg + offset, templ_set, tset_len);
+		offset += tset_len;
 	}
 	if (option_set) {
 		option_set->header.flowset_id = htons(IPFIX_OPTION_FLOWSET_ID);
-		option_set->header.length = htons(tset_len);
-		forwarding_add_set((struct ipfix_message *) msg, option_set);
+		option_set->header.length = htons(otset_len);
+		memcpy(new_msg + offset, option_set, otset_len);
+		offset += otset_len;
 	}
+
+	return offset;
 }
 
 /**
@@ -836,25 +871,37 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 {
 	(void) template_mgr;
 	forwarding *conf = (forwarding *) config;
-	void *packet;
-	int length;
+	uint16_t length = 0, i, setlen;
 
-	/* Remove already sent templates */
-	forwarding_remove_sent_templates(conf, ipfix_msg);
-
-	if (conf->type == SOURCE_TYPE_UDP) {
-		/* Add timeouted templates */
-		forwarding_update_templates(conf, ipfix_msg);
-	}
-	/* Create packet from message */
-	packet = msg_to_packet(ipfix_msg, &length);
-	if (!packet) {
+	uint8_t *new_msg = malloc(65535);
+	if (!new_msg) {
+		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
 		return 1;
 	}
 
+	memcpy(new_msg, ipfix_msg->pkt_header, IPFIX_HEADER_LENGTH);
+	length += IPFIX_HEADER_LENGTH;
+
+	/* Remove already sent templates */
+	length = forwarding_remove_sent_templates(conf, ipfix_msg, new_msg);
+
+	if (conf->type == SOURCE_TYPE_UDP) {
+		/* Add timeouted templates */
+		length = forwarding_update_templates(conf, ipfix_msg, new_msg, length);
+	}
+
+	/* Copy data sets */
+	for (i = 0; i < 1024 && ipfix_msg->data_couple[i].data_set; ++i) {
+		setlen = ntohs(ipfix_msg->data_couple[i].data_set->header.length);
+		memcpy(new_msg + length, ipfix_msg->data_couple[i].data_set, setlen);
+		length += setlen;
+	}
+
+	((struct ipfix_header *) new_msg)->length = htons(length);
+
 	/* Send data */
-	forwarding_send(conf, packet, length);
-	free(packet);
+	forwarding_send(conf, new_msg, length);
+	free(new_msg);
 
 	return 0;
 }
