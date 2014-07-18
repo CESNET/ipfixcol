@@ -91,6 +91,7 @@ struct filter_config {
 struct filter_value {
 	enum valtype type;
 	uint8_t *value;
+	int length;
 };
 
 struct filter_treenode {

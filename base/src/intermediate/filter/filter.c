@@ -384,6 +384,13 @@ bool filter_fits_value(struct filter_treenode *node, uint8_t *rec, struct ipfix_
 		return node->op == OP_NOT_EQUAL;
 	}
 
+	if (datalen > node->value->length) {
+		MSG_DEBUG(msg_module, "Cannot compare %d bytes with %d bytes", datalen, node->value->length);
+		return node->op == OP_NOT_EQUAL;
+	}
+
+	filter_compare_values(recdata, node->value->value, datalen, false, false, false);
+
 	/* Compare values according to op */
 	switch (node->op) {
 	case OP_EQUAL:
@@ -413,7 +420,7 @@ bool filter_fits_value(struct filter_treenode *node, uint8_t *rec, struct ipfix_
  */
 bool filter_fits_string(struct filter_treenode *node, uint8_t *rec, struct ipfix_template *templ)
 {
-	int datalen = 0, vallen = strlen((char *) node->value->value);
+	int datalen = 0, vallen = node->value->length;
 	char *pos = NULL, *prevpos = NULL;
 	bool result = false;
 
@@ -822,7 +829,7 @@ struct filter_value *filter_parse_number(char *number)
 	struct filter_value *val = malloc(sizeof(struct filter_value));
 	CHECK_ALLOC(val);
 
-	long long tmp = strlen(number);
+	uint64_t tmp = strlen(number);
 	long mult = 1;
 	switch (number[tmp - 1]) {
 	case 'k':
@@ -846,7 +853,8 @@ struct filter_value *filter_parse_number(char *number)
 	tmp = strtol(number, NULL, 10) * mult;
 
 	val->type = VT_NUMBER;
-	val->value = filter_num_to_ptr((uint8_t *) &tmp, sizeof(long long));
+	val->length = sizeof(uint64_t);
+	val->value = filter_num_to_ptr((uint8_t *) &tmp, val->length);
 	return val;
 }
 
@@ -860,9 +868,10 @@ struct filter_value *filter_parse_hexnum(char *hexnum)
 
 	val->type = VT_NUMBER;
 
-	long tmp = strtol(hexnum, NULL, 16);
+	uint64_t tmp = strtol(hexnum, NULL, 16);
 
-	val->value = filter_num_to_ptr((uint8_t *) &tmp, sizeof(long));
+	val->length = sizeof(uint64_t);
+	val->value = filter_num_to_ptr((uint8_t *) &tmp, val->length);
 	return val;
 }
 
@@ -883,7 +892,7 @@ struct filter_value *filter_parse_string(char *string)
 	/* Add terminating '\0' */
 	memcpy(val->value, string, len - 1);
 	val->value[len - 1] = '\0';
-
+	val->length = strlen((char *) val->value);
 	return val;
 }
 
@@ -938,7 +947,8 @@ struct filter_value *filter_parse_ipv4(char *addr)
 		return NULL;
 	}
 
-	val->value= filter_num_to_ptr((uint8_t *) &tmp, sizeof(struct in_addr));
+	val->length = sizeof(struct in_addr);
+	val->value = filter_num_to_ptr((uint8_t *) &tmp, val->length);
 
 	return val;
 }
@@ -961,7 +971,8 @@ struct filter_value *filter_parse_ipv6(char *addr)
 		return NULL;
 	}
 
-	val->value = filter_num_to_ptr((uint8_t *) &tmp, sizeof(struct in6_addr));
+	val->length = sizeof(struct in6_addr);
+	val->value = filter_num_to_ptr((uint8_t *) &tmp, val->length);
 
 	return val;
 }
@@ -1000,7 +1011,8 @@ struct filter_value *filter_parse_timestamp(char *tstamp)
 	CHECK_ALLOC(val);
 
 	val->type = VT_NUMBER;
-	val->value = filter_num_to_ptr((uint8_t *) &tmp, sizeof(uint64_t));
+	val->length = sizeof(uint64_t);
+	val->value = filter_num_to_ptr((uint8_t *) &tmp, val->length);
 
 	return val;
 }
