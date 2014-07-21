@@ -75,7 +75,7 @@
 
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "c:dhv:Vsr:"
+#define OPTSTRING "c:dhv:Vsr:i:"
 
 /* main loop indicator */
 volatile int done = 0;
@@ -101,8 +101,9 @@ void version ()
  */
 void help ()
 {
-	printf ("Usage: %s [-c file] [-dhVs] [-v level]\n", PACKAGE);
+	printf ("Usage: %s [-c file] [-i file] [-dhVs] [-v level]\n", PACKAGE);
 	printf ("  -c file   Path to configuration file (%s by default)\n", DEFAULT_CONFIG_FILE);
+	printf ("  -i file   Path to internal configuration file (%s by default)\n", INTERNAL_CONFIG_FILE);
 	printf ("  -d        Daemonize\n");
 	printf ("  -h        Print this help\n");
 	printf ("  -v level  Print verbose messages up to specified level\n");
@@ -128,7 +129,7 @@ int main (int argc, char* argv[])
 	int source_status = SOURCE_STATUS_OPENED;
 	pid_t pid = 0;
 	bool daemonize = false;
-	char *config_file = NULL;
+	char *config_file = NULL, *internal_file = NULL;
 	char process_name[16]; /* name of the process for ps auxc */
 	struct plugin_xml_conf_list* input_plugins = NULL, *storage_plugins = NULL,
 	        *aux_plugins = NULL, *intermediate_plugins = NULL;;
@@ -162,6 +163,9 @@ int main (int argc, char* argv[])
 		switch (c) {
 		case 'c':
 			config_file = optarg;
+			break;
+		case 'i':
+			internal_file = optarg;
 			break;
 		case 'd':
 			daemonize = true;
@@ -216,6 +220,13 @@ int main (int argc, char* argv[])
 		/* and use default if not specified */
 		config_file = DEFAULT_CONFIG_FILE;
 		MSG_NOTICE(msg_module, "Using default configuration file %s.", config_file);
+	}
+
+	/* check internal config file */
+	if (internal_file == NULL) {
+		/* and use default if not specified */
+		internal_file = INTERNAL_CONFIG_FILE;
+		MSG_NOTICE(msg_module, "Using default internal configuration file %s.", internal_file);
 	}
 
 	/* TODO: this part should be in the future replaced by NETCONF configuration */
@@ -280,20 +291,20 @@ int main (int argc, char* argv[])
 	 * initialize plugins for the collector
 	 */
 	/* get input plugin - one */
-	input_plugins = get_input_plugins (collector_node);
+	input_plugins = get_input_plugins (collector_node, internal_file);
 	if (input_plugins == NULL) {
 		retval = EXIT_FAILURE;
 		goto cleanup;
 	}
 
 	/* get storage plugins - at least one */
-	storage_plugins = get_storage_plugins (collector_node, xml_config);
+	storage_plugins = get_storage_plugins (collector_node, xml_config, internal_file);
 	if (storage_plugins == NULL) {
 		retval = EXIT_FAILURE;
 		goto cleanup;
 	}
 
-	intermediate_plugins = get_intermediate_plugins(xml_config);
+	intermediate_plugins = get_intermediate_plugins(xml_config, internal_file);
 	if (intermediate_plugins == NULL) {
 		MSG_NOTICE(msg_module, "[%d] No intermediate plugin specified. ipfixmed will act as IPFIX collector.", proc_id);
 	}

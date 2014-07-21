@@ -136,19 +136,19 @@ static inline xmlChar *get_children_content (xmlNodePtr node, xmlChar *children_
  * @return XPath Context for the internal XML configuration. Caller will need to
  * free it including separated free of return->doc.
  */
-static xmlXPathContextPtr ic_init (xmlChar* ns_name)
+static xmlXPathContextPtr ic_init (xmlChar* ns_name, char *internal_cfg)
 {
 	int fd;
 	xmlDocPtr doc = NULL;
 	xmlXPathContextPtr ctxt = NULL;
 
 	/* open and prepare internal XML configuration file */
-	if ((fd = open (INTERNAL_CONFIG_FILE, O_RDONLY)) == -1) {
-		MSG_ERROR(msg_module, "Unable to open internal configuration file %s (%s)", INTERNAL_CONFIG_FILE, strerror(errno));
+	if ((fd = open (internal_cfg, O_RDONLY)) == -1) {
+		MSG_ERROR(msg_module, "Unable to open internal configuration file %s (%s)", internal_cfg, strerror(errno));
 		return (NULL);
 	}
 	if ((doc = xmlReadFd (fd, NULL, NULL, XML_PARSE_NOERROR | XML_PARSE_NOWARNING | XML_PARSE_NOBLANKS)) == NULL) {
-		MSG_ERROR(msg_module, "Unable to parse internal configuration file %s", INTERNAL_CONFIG_FILE);
+		MSG_ERROR(msg_module, "Unable to parse internal configuration file %s", internal_cfg);
 		close (fd);
 		return (NULL);
 	}
@@ -180,10 +180,11 @@ static xmlXPathContextPtr ic_init (xmlChar* ns_name)
  * @param[in] collector_node XML node with parameters for the particular
  * collectingProcess. This is part of user configuration file.
  * @param[in] config User XML configuration.
+ * @param[in] internal_cfg internalcfg.xml file.
  * @return List of information about storage plugin for the specified collector,
  * NULL in case of error.
  */
-struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xmlDocPtr config)
+struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xmlDocPtr config, char *internal_cfg)
 {
 	int i, j, k, l;
 	xmlDocPtr collector_doc = NULL, exporter_doc = NULL;
@@ -197,7 +198,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	char *odidptr;
 
 	/* initiate internal config - open xml file, get xmlDoc and prepare xpath context for it */
-	if ((internal_ctxt = ic_init (BAD_CAST "cesnet-ipfixcol-int")) == NULL) {
+	if ((internal_ctxt = ic_init (BAD_CAST "cesnet-ipfixcol-int", internal_cfg)) == NULL) {
 		goto cleanup;
 	}
 
@@ -417,10 +418,11 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
  *
  * @param[in] collector_node XML node with parameters for the particular
  * collectingProcess. This is part of user configuration file.
+ * @param[in] internal_cfg internalcfg.xml file.
  * @return Information about first input plugin for the specified collector,
  * NULL in case of error.
  */
-struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node)
+struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char *internal_cfg)
 {
 	int i, j;
 	xmlChar *collector_name;
@@ -440,7 +442,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node)
 	retval->config.file = NULL;
 
 	/* initiate internal config - open xml file, get xmlDoc and prepare xpath context for it */
-	internal_ctxt = ic_init (BAD_CAST "cesnet-ipfixcol-int");
+	internal_ctxt = ic_init (BAD_CAST "cesnet-ipfixcol-int", internal_cfg);
 	if (internal_ctxt == NULL) {
 		free (retval);
 		return (NULL);
@@ -554,10 +556,11 @@ cleanup:
  * internal configuration of the ipfixmed.
  *
  * @param[in] config User XML configuration.
+ * @param[in] internal_cfg internalcfg.xml file.
  * @return List of information about intermediate plugins,
  * NULL in case of error.
  */
-struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config)
+struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *internal_cfg)
 {
 	int i;
 	xmlXPathContextPtr internal_ctxt = NULL;
@@ -576,7 +579,7 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config)
 	uint8_t hit = 0;
 
 	/* initiate internal config - open xml file, get xmlDoc and prepare xpath context for it */
-	if ((internal_ctxt = ic_init(BAD_CAST "cesnet-ipfixcol-int")) == NULL) {
+	if ((internal_ctxt = ic_init(BAD_CAST "cesnet-ipfixcol-int", internal_cfg)) == NULL) {
 		goto cleanup;
 	}
 
