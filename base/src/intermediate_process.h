@@ -106,4 +106,12 @@ int drop_message(void *config, struct ipfix_message *message);
  */
 int ip_destroy(void *config);
 
+/**
+ * \brief Stop Intermediate Process
+ *
+ * \param[in] config configuration structure
+ * \return 0 on success, negative value otherwise
+ */
+int ip_stop(void *config);
+
 /**@}*/

@@ -204,14 +204,47 @@ int drop_message(void *config, struct ipfix_message *message)
 	return 0;
 }
 
+/**
+ * \brief Close Intermediate Process
+ *
+ * \param[in] config configuration structure
+ * \return 0 on success
+ */
+int ip_destroy(void *config)
+{
+	struct ip_config *conf;
+	void *retval;
+	int ret;
+
+	conf = (struct ip_config *) config;
+
+	if (!conf) {
+		return -1;
+	}
+
+	/* free XML configuration */
+	if (conf->xmldata) {
+		free(conf->xmldata);
+	}
+
+	/* free input queue (output queue will be freed by next intermediate process) */
+	rbuffer_free(conf->in_queue);
+
+	/* Close plugin */
+	conf->intermediate_plugin_close(conf->plugin_config);
+
+	free(conf);
+
+	return 0;
+}
 
 /**
- * \brief Destroy Intermediate Process
+ * \brief Stop Intermediate Process
  *
  * \param[in] config configuration structure
  * \return 0 on success, negative value otherwise
  */
-int ip_destroy(void *config)
+int ip_stop(void *config)
 {
 	struct ip_config *conf;
 	void *retval;
@@ -230,18 +263,6 @@ int ip_destroy(void *config)
 	if (ret != 0) {
 		MSG_DEBUG(msg_module, "pthread_join() error");
 	}
-
-	conf->intermediate_plugin_close(conf->plugin_config);
-
-	/* free XML configuration */
-	if (conf->xmldata) {
-		free(conf->xmldata);
-	}
-
-	/* free input queue (output queue will be freed by next intermediate process) */
-	rbuffer_free(conf->in_queue);
-
-	free(conf);
 
 	return 0;
 }

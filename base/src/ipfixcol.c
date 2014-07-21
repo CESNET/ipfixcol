@@ -637,6 +637,23 @@ cleanup:
 		xmlFreeDoc (xml_config);
 	}
 
+	/* wait for all intermediate processes to close */
+	aux_intermediate_list = intermediate_list;
+	while (aux_intermediate_list && aux_intermediate_list->next) {
+		aux_intermediate_list = aux_intermediate_list->next;
+	}
+
+	/*
+	 * Stop all intermediate plugins and flush buffers
+	 * Plugins will be closed later - they can have data needed by storage plugins
+	 * (templates etc.)
+	 */
+	while (aux_intermediate_list && core_initialized) {
+		/* this function will wait for intermediate thread to terminate */
+		ip_stop(aux_intermediate_list->intermediate.ip_config);
+		aux_intermediate_list = aux_intermediate_list->prev;
+	}
+
 	/* Close whole Output Manager (including Data Managers) */
 	if (output_manager_config) {
 		output_manager_close(output_manager_config);
@@ -660,20 +677,14 @@ cleanup:
 		storage_plugins = aux_plugins;
 	}
 
-	/* wait for all intermediate processes to close */
+	/* Now close all intermediate plugins */
 	aux_intermediate_list = intermediate_list;
-	while (aux_intermediate_list && aux_intermediate_list->next) {
+	while (aux_intermediate_list) {
+		ip_destroy(aux_intermediate_list->intermediate.ip_config);
 		aux_intermediate_list = aux_intermediate_list->next;
 	}
 
-	while (aux_intermediate_list && core_initialized) {
-		/* this function will wait for intermediate thread to terminate */
-		ip_destroy(aux_intermediate_list->intermediate.ip_config);
-		aux_intermediate_list = aux_intermediate_list->prev;
-	}
-
 	while (intermediate_plugins) {
-
 		if (intermediate_plugins->config.file) {
 			free(intermediate_plugins->config.file);
 		}
