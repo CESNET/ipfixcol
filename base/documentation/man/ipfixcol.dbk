@@ -86,6 +86,13 @@
 			</varlistentry>
 			
 			<varlistentry>
+				<term>-i <replaceable class="parameter">file</replaceable></term>
+				<listitem>
+					<simpara>Read internal configuration from <replaceable class="parameter">file</replaceable>.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
 				<term>-d</term>
 				<listitem>
 					<simpara>
