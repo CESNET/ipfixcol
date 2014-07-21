@@ -810,7 +810,7 @@ int process_message(void *config, void *message)
 		memcpy(proc.msg + proc.offset, &(msg->data_couple[i].data_set->header), 4);
 		proc.offset += 4;
 		proc.length = 4;
-		proc.add_orig_odid = (bool) template_get_field(templ, ORIGINAL_ODID_FIELD, NULL);
+		proc.add_orig_odid = (bool) !template_get_field(templ, ORIGINAL_ODID_FIELD, NULL);
 
 		new_msg->data_couple[i].data_set = ((struct ipfix_data_set *) ((uint8_t *)proc.msg + proc.offset - 4));
 		new_msg->data_couple[i].data_template = map->new_templ->templ;
