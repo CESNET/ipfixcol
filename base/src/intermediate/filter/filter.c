@@ -629,6 +629,9 @@ struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct fil
 	header = (struct ipfix_header *) ptr;
 	header->length = ntohs(offset);
 	header->observation_domain_id = htonl(profile->new_odid);
+	header->sequence_number = htonl(profile->new_seqn);
+
+	profile->new_seqn += conf.records;
 
 	/* Create new IPFIX message */
 	new_msg = message_create_from_mem(ptr, offset, msg->input_info, msg->source_status);

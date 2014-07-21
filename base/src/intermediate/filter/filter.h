@@ -106,6 +106,7 @@ struct filter_treenode {
 
 struct filter_profile {
 	uint32_t new_odid;
+	uint32_t new_seqn;
 	struct filter_treenode *root;
 	struct filter_source *sources;
 	struct filter_profile *next;
