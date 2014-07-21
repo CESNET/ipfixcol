@@ -605,7 +605,7 @@ read_header:
 	    ret = INPUT_ERROR;
 		goto err_info;
 	}
-	if (ret == 0) {
+	if (ret == 0 && packet_len-counter > 0) {
 		/* EOF, next file? */
 		ret = next_file(conf);
 		if (ret == NO_INPUT_FILE) {
