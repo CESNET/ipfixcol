@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
+
+	<collectingProcess>
+		<name>Forwarding collector</name>
+		<udpCollector>
+		  <localPort>4568</localPort>
+		</udpCollector>
+		<exportingProcess>File writer ipfix</exportingProcess>
+	</collectingProcess>
+
+
+	<exportingProcess>
+		<name>File writer ipfix</name>
+		<destination>
+			<name>File writer</name>
+			<fileWriter>
+				<fileFormat>ipfix</fileFormat>
+				<file>file:./out-second.ipfix</file>
+			</fileWriter>
+		</destination>
+	</exportingProcess>
+
+</ipfix>
+

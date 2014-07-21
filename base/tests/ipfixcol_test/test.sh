@@ -54,7 +54,7 @@ for test in *; do
 		continue;
 	fi
 	cd "$TESTDIR/$test"
-	PARAMS="-v 0 -c $STARTUP -i $INTERNAL";
+	PARAMS="-v -1 -c $STARTUP -i $INTERNAL";
 	if [ -f "$PREPROC" ]; then
 		sh "$PREPROC";
 	fi
@@ -63,7 +63,7 @@ for test in *; do
 		PARAMS=$(cat "$PARFILE")
 	fi
 	
-	$IPFIXCOL $PARAMS > "$OUTPUT"
+	$IPFIXCOL $PARAMS > "$OUTPUT" 2>&1
 	
 	if [ -f "$POSTPROC" ]; then
 		sh "$POSTPROC" ];
