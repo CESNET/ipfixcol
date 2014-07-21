@@ -41,19 +41,22 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits>
+
+#define SQ_MAX std::numeric_limits<uint64_t>::max()
 
 class FlowWatch {
-	enum {SQ_MAX=4294967295,SQ_BOT_LIMIT=1431655765, SQ_TOP_LIMIT=2863311530 };
-	uint firstSQ_;
-	uint lastSQ_;
-	uint recFlows_;
-	uint lastFlows_; /**< Number of flows in the last packet */
+	enum {SQ_BOT_LIMIT=1431655765, SQ_TOP_LIMIT=2863311530 };
+	uint64_t firstSQ_;
+	uint64_t lastSQ_;
+	uint64_t recFlows_;
+	uint64_t lastFlows_; /**< Number of flows in the last packet */
 	bool reseted;
 public:
-	void updateSQ(uint sq);
-	void addFlows(uint recFlows);
-	uint exportedFlows();
-	uint receivedFlows();
+	void updateSQ(uint64_t sq);
+	void addFlows(uint64_t recFlows);
+	uint64_t exportedFlows();
+	uint64_t receivedFlows();
 	void reset();
 	int write(std::string dir);
 	FlowWatch();
