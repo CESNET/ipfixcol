@@ -40,6 +40,7 @@
 
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 
 #include <ipfixcol.h>
@@ -48,6 +49,8 @@
 
 #include <libxml/parser.h>
 #include <libxml/tree.h>
+
+#define ORIGINAL_ODID_FIELD 405
 
 /* module name for MSG_* */
 static const char *msg_module = "joinflows";
@@ -118,6 +121,7 @@ struct joinflows_processor {
 	uint32_t length;
 	int trecords;
 	int type;
+	bool add_orig_odid;
 	struct source *src;
 };
 
@@ -169,7 +173,7 @@ struct mapped_template *updated_templ(struct ipfix_template_record *orig_rec, in
 {
 	struct mapped_template *new_mapped;
 	struct ipfix_template_record *new_rec;
-	uint16_t field_num = htons(405);
+	uint16_t field_num = htons(ORIGINAL_ODID_FIELD);
 	uint16_t field_len = htons(4);
 
 	/* Allocate memory for updated template */
@@ -179,20 +183,25 @@ struct mapped_template *updated_templ(struct ipfix_template_record *orig_rec, in
 	}
 
 	new_rec = calloc(1, rec_len + 4);
-
-
-	/* Copy all informations and add field 405 at the end */
 	memcpy(new_rec, orig_rec, rec_len);
-	memcpy(((uint8_t *)new_rec) + rec_len, &field_num, 2);
-	memcpy(((uint8_t *)new_rec) + rec_len + 2, &field_len, 2);
+
+	new_mapped->reclen = rec_len;
+
+	/**
+	 * Check whether template record already contains 405. If not, add it.
+	 */
+	if (!template_record_get_field(orig_rec, ORIGINAL_ODID_FIELD, NULL)) {
+		memcpy(((uint8_t *)new_rec) + rec_len, &field_num, 2);
+		memcpy(((uint8_t *)new_rec) + rec_len + 2, &field_len, 2);
+		new_rec->count = htons(ntohs(new_rec->count) + 1);
+		new_mapped->reclen += 4;
+	}
 
 	/* Set new values */
 	new_rec->template_id = htons(new_tid);
-	new_rec->count = htons(ntohs(new_rec->count) + 1);
 
 	new_mapped->templ = tm_create_template(new_rec, TEMPL_MAX_LEN, type, odid);
 	new_mapped->rec = new_rec;
-	new_mapped->reclen = rec_len + 4;
 	new_mapped->references = 1;
 
 	return new_mapped;
@@ -619,10 +628,13 @@ void data_processor(uint8_t *rec, int rec_len, struct ipfix_template *templ, voi
 
 	memcpy(proc->msg + proc->offset, rec, rec_len);
 	proc->offset += rec_len;
+	proc->length += rec_len;
 
-	memcpy(proc->msg + proc->offset, &(proc->orig_odid), 4);
-	proc->offset += 4;
-	proc->length += rec_len + 4;
+	if (proc->add_orig_odid) {
+		memcpy(proc->msg + proc->offset, &(proc->orig_odid), 4);
+		proc->offset += 4;
+		proc->length += 4;
+	}
 }
 
 /**
@@ -791,12 +803,14 @@ int process_message(void *config, void *message)
 
 		map = mapping_lookup(src->mapping, orig_odid, templ->template_id, templ->template_type);
 		if (map == NULL) {
-			MSG_DEBUG(msg_module, "[%u] %d nenalezeno", orig_odid, templ->template_id);
+			MSG_WARNING(msg_module, "[%u] %d not found, something is wrong!", orig_odid, templ->template_id);
+			continue;
 		}
 
 		memcpy(proc.msg + proc.offset, &(msg->data_couple[i].data_set->header), 4);
 		proc.offset += 4;
 		proc.length = 4;
+		proc.add_orig_odid = (bool) template_get_field(templ, ORIGINAL_ODID_FIELD, NULL);
 
 		new_msg->data_couple[i].data_set = ((struct ipfix_data_set *) ((uint8_t *)proc.msg + proc.offset - 4));
 		new_msg->data_couple[i].data_template = map->new_templ->templ;
