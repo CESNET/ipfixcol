@@ -15,6 +15,8 @@ STARTUP="startup.xml"
 PARFILE="params"
 PREPROC="preproc.sh"
 POSTPROC="postproc.sh"
+INTERNAL=/etc/ipfixcol/internalcfg.xml
+
 
 BASE="$PWD"
 LF="test_log"
@@ -25,15 +27,34 @@ fails=0
 oks=0
 total=0
 
+function usage()
+{
+	echo -e "Usage: $0 /path/to/internalcfg.xml"
+	exit 1
+}
 
-cd $TESTDIR;
+if [ $# -ge 1 ]; then
+	if [ $1 = "-h" ]; then
+		usage;
+	fi
+	INTERNAL=$(readlink -fe -- "$1");
+	if [ -z $INTERNAL ]; then
+		echo "Internal configuration file $1 not found!"
+		exit 1
+	fi
+fi
 
 echo -n "" > "$LOG_FILE" 
+echo "Using internal configuration file: $INTERNAL" | tee -a "$LOG_FILE"
 
+cd $TESTDIR;
 # do tests
 for test in *; do
+	if [ $test = "ipfix_data" ]; then 
+		continue;
+	fi
 	cd "$TESTDIR/$test"
-	PARAMS="-v 0 -c $STARTUP";
+	PARAMS="-v 0 -c $STARTUP -i $INTERNAL";
 	if [ -f "$PREPROC" ]; then
 		sh "$PREPROC";
 	fi
@@ -53,6 +74,9 @@ cd "$TESTDIR"
 
 # check results
 for test in *; do
+	if [ $test = "ipfix_data" ]; then
+		 continue;
+	fi
 	cd "$TESTDIR/$test"
 	echo -n "Test ${test}: " | tee -a "$LOG_FILE"
 	diff "$OUTPUT" "$EXPECTED" >> "$LOG_FILE" 2>&1

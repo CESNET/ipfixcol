@@ -4,16 +4,16 @@
     <collectingProcess>
 		<name>TCP collector</name>
 		<fileReader>
-			<file>file:../ipfix_data/01-odid0.ipfix</file>
+			<file>file:../ipfix_data/01-odid*.ipfix</file>
 		</fileReader>
-		<exportingProcess>File viewer</exportingProcess>
+		<exportingProcess>File writer ipfix</exportingProcess>
 	</collectingProcess>
 
 
 	<exportingProcess>
-		<name>File viewer</name>
+		<name>File writer ipfix</name>
 		<destination>
-			<name>File viewer</name>
+			<name>File writer</name>
 			<fileWriter>
 				<fileFormat>ipfix</fileFormat>
 				<file>file:./out.ipfix</file>

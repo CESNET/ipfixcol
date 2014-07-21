@@ -4,7 +4,7 @@
     <collectingProcess>
 		<name>TCP collector</name>
 		<fileReader>
-			<file>file:../ipfix_data/01-odid0.ipfix</file>
+			<file>file:../ipfix_data/03-odid0-*.ipfix</file>
 		</fileReader>
 		<exportingProcess>File viewer</exportingProcess>
 	</collectingProcess>
@@ -15,10 +15,8 @@
 		<destination>
 			<name>File viewer</name>
 			<fileWriter>
-				<fileFormat>ipfix</fileFormat>
-				<file>file:./out.ipfix</file>
+				<fileFormat>view</fileFormat>
 			</fileWriter>
 		</destination>
 	</exportingProcess>
-
 </ipfix>
