@@ -53,6 +53,8 @@ PREPROC="preproc.sh"
 POSTPROC="postproc.sh"
 INTERNAL=$(readlink -fe -- ../../config/internalcfg.xml)
 
+export IPFIX_TEST_INTERNALCFG=$INTERNAL
+export IPFIX_TEST_IPFIXCOL=$IPFIXCOL
 
 BASE="$PWD"
 LF="test.log"
