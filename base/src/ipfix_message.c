@@ -67,6 +67,7 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
 {
 	struct ipfix_message *message;
 	uint32_t odid;
+	uint16_t pktlen;
 
 	message = (struct ipfix_message*) calloc (1, sizeof(struct ipfix_message));
 	if (!message) {
@@ -89,8 +90,10 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
 		return NULL;
 	}
 
+	pktlen = ntohs(message->pkt_header->length);
+
 	/* check whether message is not shorter than header says */
-	if ((uint16_t) len < ntohs(message->pkt_header->length)) {
+	if ((uint16_t) len < pktlen) {
 		MSG_WARNING(msg_module, "[%u] Malformed IPFIX message detected (bad length), skipping msg.", odid);
 		free (message);
 		return NULL;
@@ -102,8 +105,13 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
     int ot_set_count = 0;
     int d_set_count = 0;
     struct ipfix_set_header *set_header;
-    while (p < (uint8_t*) msg + ntohs(message->pkt_header->length)) {
+    while (p < (uint8_t*) msg + pktlen) {
         set_header = (struct ipfix_set_header*) p;
+        if ((uint8_t *) p + ntohs(set_header->length) > (uint8_t *) msg + pktlen) {
+        	MSG_WARNING(msg_module, "[%u] Malformed IPFIX message detected (bad length), skipping msg.", odid);
+        	free(message);
+        	return NULL;
+        }
         switch (ntohs(set_header->flowset_id)) {
             case IPFIX_TEMPLATE_FLOWSET_ID:
                 message->templ_set[t_set_count++] = (struct ipfix_template_set *) set_header;

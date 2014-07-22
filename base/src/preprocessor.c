@@ -304,6 +304,7 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 		/* check for withdraw template message */
 	} else if (ntohs(template_record->count) == 0) {
 		ret = tm_remove_template(tm, key);
+		MSG_NOTICE(msg_module, "[%u] Got %s withdraw message.", input_info->odid, (type==TM_TEMPLATE)?"Template":"Options template");
 		/* Log error when removing unknown template */
 		if (ret == 1) {
 			MSG_WARNING(msg_module, "[%u] %s withdraw message received for unknown Template ID: %u", input_info->odid,
