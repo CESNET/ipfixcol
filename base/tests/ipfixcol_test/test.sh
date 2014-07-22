@@ -51,10 +51,7 @@ STARTUP="startup.xml"
 PARFILE="params"
 PREPROC="preproc.sh"
 POSTPROC="postproc.sh"
-INTERNAL=$(readlink -fe -- ../../config/internalcfg.xml)
-
-export IPFIX_TEST_INTERNALCFG=$INTERNAL
-export IPFIX_TEST_IPFIXCOL=$IPFIXCOL
+INTERNAL=$(readlink -fe -- configs/internalcfg.xml)
 
 BASE="$PWD"
 LF="test.log"
@@ -80,7 +77,20 @@ if [ $# -ge 1 ]; then
 		echo "Internal configuration file $1 not found!"
 		exit 1
 	fi
+else 
+	# if configs/internalcfg.xml does not exists, create it
+	if [ -z $INTERNAL ]; then
+		./create_internal.sh
+		INTERNAL=$(readlink -fe -- configs/internalcfg.xml)
+		if [ -z $INTERNAL ]; then
+			echo "Cannot create config/internalcfg.xml!"
+			exit 1
+		fi
+	fi
 fi
+
+export IPFIX_TEST_INTERNALCFG=$INTERNAL
+export IPFIX_TEST_IPFIXCOL=$IPFIXCOL
 
 echo -n "" > "$LOG_FILE" 
 echo -e "Using internal configuration file: $INTERNAL\n" | tee -a "$LOG_FILE"
