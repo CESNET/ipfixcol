@@ -1,41 +1,6 @@
-How to use ipfixcol Test Tool
+How to use Test Tool
 
-
-./run-test.bash PROTOCOL PATH/to/the/message(s)
-
-PROTOCOL has to be either "tcp" or "udp". The script will then start 
-collector with corresponding config file. Configuration files are 
-stored in configs/ subdirectory.
-PATH is path to the directory, which contains IPFIX messages. These
-messages will be sent to the collector (sorted in alphabetical order).
-
-Given directory should also contain these files:
-OUTPUT - expected output lines from collector (e.g. error/warning 
-         messages)
-HASH - expected hash of the output file. 
-
-Standard output of the collector is redirected to the collector_output.log file.
-
-The src/senddata utility is used by these scripts. Build it using make before
-running the tests.
-
-
-Example:
-./run-test.bash tcp messages/tcp/malformed/no-templates/
-
-
-Alternatively you can run all tests in some directory:
-
-./run-all PROTOCOL PATH/tests
-
-Note test directory has to contain HASH file (but it may be empty).
-Test logs are stored in test.log file.
-
--------------------------------------------------------------------------------------
-
-How to use NEW Test Tool
-
-./test.sh
+./test.sh [/path/to/internalcfg.xml]
 
 Tool runs test on each subfolder in ./tests
 
@@ -49,4 +14,3 @@ preproc.sh - script that will be executed BEFORE test (optional)
 postproc.sh - script that will be executed AFTER test and BEFORE comparing results (optional)
 
 Test logs are stored in test_log file
-
