@@ -51,7 +51,7 @@ STARTUP="startup.xml"
 PARFILE="params"
 PREPROC="preproc.sh"
 POSTPROC="postproc.sh"
-INTERNAL=/etc/ipfixcol/internalcfg.xml
+INTERNAL=$(readlink -fe -- ../../config/internalcfg.xml)
 
 
 BASE="$PWD"
