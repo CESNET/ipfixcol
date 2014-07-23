@@ -275,6 +275,13 @@ static int next_file(struct ipfix_config *conf)
 	return NO_INPUT_FILE;
 }
 
+/**
+ * \brief Compare function for qsort
+ */
+static int compare(const void *a, const void *b)
+{
+	return strcmp(*(const char **) a, *(const char **) b);
+}
 
 /*
  * * * * Input plugin API implementation
@@ -461,6 +468,9 @@ int input_init(char *params, void **config)
 			inputf_index += 1;
 		}
 	} while (result);
+
+	/* Sort file names - we need them ordered for tests */
+	qsort(input_files, inputf_index, sizeof(const char *), compare);
 
 	conf->input_files = input_files;
 
