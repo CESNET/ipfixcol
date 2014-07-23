@@ -531,12 +531,12 @@ struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint
 int data_record_field_offset(uint8_t *data_record, struct ipfix_template *template, uint16_t id, int *data_length)
 {
 	int i, ieid;
-	uint16_t count, offset = 0, index, length, prevoffset;
+	int count, offset = 0, index, length, prevoffset;
 	struct ipfix_template_row *row = NULL;
 
 	if (!(template->data_length & 0x80000000)) {
 		/* Data record with no variable length field */
-		row = template_get_field(template, id, (int *) &offset);
+		row = template_get_field(template, id, &offset);
 		if (!row) {
 			return -1;
 		}
