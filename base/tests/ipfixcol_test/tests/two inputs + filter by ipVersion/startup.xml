@@ -13,12 +13,22 @@
 	<exportingProcess>
 		<name>File writer ipfix</name>
 		<destination>
-			<name>File writer</name>
+			<observationDomainId>4</observationDomainId>
+			<name>File writer4</name>
 			<fileWriter>
 				<fileFormat>ipfix</fileFormat>
-				<file>file:./out.ipfix</file>
+				<file>file:./out4.ipfix</file>
 			</fileWriter>
 		</destination>
+		<destination>
+                        <observationDomainId>6</observationDomainId>
+                        <name>File writer6</name>
+                        <fileWriter>
+                                <fileFormat>ipfix</fileFormat>
+                                <file>file:./out6.ipfix</file>
+                        </fileWriter>
+                </destination>
+
 	</exportingProcess>
 
 	

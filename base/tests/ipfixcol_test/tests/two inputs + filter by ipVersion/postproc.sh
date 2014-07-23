@@ -1,8 +1,5 @@
-rm -f output
+cat out4* >  output
+cat out6* >> output
 
-for out in out.ipfix.*; do
-	ipfixviewer $out >> output
-done
-
-rm -f out.ipfix.*
+rm -f out*.ipfix.*
 

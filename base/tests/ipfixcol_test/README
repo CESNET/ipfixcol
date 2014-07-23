@@ -2,7 +2,7 @@ How to use Test Tool
 
 ./test.sh [/path/to/internalcfg.xml]
 
-Tool runs test on each subfolder in ./tests
+Tool runs test on each subfolder in ./tests except ipfix_data
 
 Files in each folder:
 
@@ -13,4 +13,6 @@ params - file with ipfixcol parameters (optional), default is '-v -1 -c startup.
 preproc.sh - script that will be executed BEFORE test (optional)
 postproc.sh - script that will be executed AFTER test and BEFORE comparing results (optional)
 
-Test logs are stored in test_log file
+Test logs are stored in test.log file
+
+Tool uses script create_internal.sh for making internalcfg.xml with paths to build folder.
