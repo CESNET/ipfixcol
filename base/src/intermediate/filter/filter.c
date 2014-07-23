@@ -116,6 +116,11 @@ void filter_free_profile(struct filter_profile *profile)
 	}
 
 	filter_free_tree(profile->root);
+
+	if (profile->input_info) {
+		free(profile->input_info);
+	}
+
 	free(profile);
 }
 
@@ -566,6 +571,34 @@ void filter_process_data_record(uint8_t *rec, int rec_len, struct ipfix_template
 }
 
 /**
+ * \brief Update input info structure
+ *
+ * \param[in] profile Apllied profile
+ * \param[in] input_info Original input_info
+ * \param[in] records Number of data records in new message
+ * \return New sequence number
+ */
+uint32_t filter_profile_update_input_info(struct filter_profile *profile, struct input_info *input_info, int records)
+{
+	uint32_t sn;
+	if (profile->input_info == NULL) {
+		if (input_info->type == SOURCE_TYPE_IPFIX_FILE) {
+			profile->input_info = calloc(1, sizeof(struct input_info_file));
+			memcpy(profile->input_info, input_info, sizeof(struct input_info_file));
+		} else {
+			profile->input_info = calloc(1, sizeof(struct input_info_network));
+			memcpy(profile->input_info, input_info, sizeof(struct input_info_network));
+		}
+		profile->input_info->odid = profile->new_odid;
+		profile->input_info->sequence_number = 0;
+	}
+	sn = profile->input_info->sequence_number;
+	profile->input_info->sequence_number += records;
+
+	return sn;
+}
+
+/**
  * \brief Apply profile filter on message and change ODID if it fits
  *
  * \param[in] msg IPFIX message
@@ -627,14 +660,13 @@ struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct fil
 
 	/* Modify header and create IPFIX message */
 	header = (struct ipfix_header *) ptr;
+
+	header->sequence_number = htonl(filter_profile_update_input_info(profile, msg->input_info, conf.records));
 	header->length = ntohs(offset);
 	header->observation_domain_id = htonl(profile->new_odid);
-	header->sequence_number = htonl(profile->new_seqn);
-
-	profile->new_seqn += conf.records;
 
 	/* Create new IPFIX message */
-	new_msg = message_create_from_mem(ptr, offset, msg->input_info, msg->source_status);
+	new_msg = message_create_from_mem(ptr, offset, profile->input_info, msg->source_status);
 
 	/* Match data couples */
 	for (i = 0; i < 1024 && new_msg->data_couple[i].data_set; ++i) {
