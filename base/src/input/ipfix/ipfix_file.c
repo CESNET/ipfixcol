@@ -176,6 +176,7 @@ static int regexp_asterisk(char *regexp, char *string)
 		break;
 	}
 
+	free(aux_regexp);
 	return ok;
 }
 
@@ -491,6 +492,8 @@ int input_init(char *params, void **config)
 
 	*config = conf;
 
+	free(entry);
+	closedir(dir);
 	return 0;
 
 
