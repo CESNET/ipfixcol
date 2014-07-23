@@ -40,6 +40,7 @@
 #include <iostream>
 #include <fstream>
 #include <stdint.h>
+#include <sys/stat.h>
 
 #include "FlowWatch.h"
 
@@ -117,6 +118,12 @@ int FlowWatch::write(std::string dir)
 	std::ifstream iFlowsFile;
 	std::string fileName, tmp;
 	uint64_t exported = 0, received = 0;
+	struct stat st;
+
+	/* Check whether directory exists */
+	if (!stat(dir.c_str(), &st) || !S_ISDIR(st.st_mode)) {
+		return 0;
+	}
 
 	/* Create filename */
 	fileName = dir + "flowsStats.txt";
