@@ -2728,7 +2728,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x2c000000
 	IE ID: 2		Value: 0x1000000
@@ -2746,7 +2746,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 --------------------------------------------------------------------------------
 IPFIX Message Header:
 	Version: 10
@@ -2776,7 +2776,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0xe0010000
 	IE ID: 2		Value: 0x3000000
@@ -2794,7 +2794,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 
 
 Set Header:
@@ -2818,7 +2818,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x80060000
 	IE ID: 2		Value: 0x20000000
@@ -2837,7 +2837,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 --------------------------------------------------------------------------------
 IPFIX Message Header:
 	Version: 10
@@ -2865,7 +2865,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 --------------------------------------------------------------------------------
 IPFIX Message Header:
 	Version: 10
@@ -2895,7 +2895,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x2c000000
 	IE ID: 2		Value: 0x1000000
@@ -2913,7 +2913,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#3):		(network byte order)
 	IE ID: 1		Value: 0x8d000000
 	IE ID: 2		Value: 0x1000000
@@ -2931,7 +2931,7 @@ Data Record (#3):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#4):		(network byte order)
 	IE ID: 1		Value: 0x8d000000
 	IE ID: 2		Value: 0x1000000
@@ -2949,7 +2949,7 @@ Data Record (#4):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 
 
 Set Header:
@@ -2973,7 +2973,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x940a0100
 	IE ID: 2		Value: 0x2f000000
@@ -2992,7 +2992,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#3):		(network byte order)
 	IE ID: 1		Value: 0x80060000
 	IE ID: 2		Value: 0x20000000
@@ -3011,7 +3011,7 @@ Data Record (#3):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#4):		(network byte order)
 	IE ID: 1		Value: 0x940a0100
 	IE ID: 2		Value: 0x2f000000
@@ -3030,7 +3030,7 @@ Data Record (#4):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 
 
 Set Header:
@@ -3061,7 +3061,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 505 (PEN:16982)	Value: 0x
 	IE ID: 506 (PEN:16982)	Value: 0xc8000000
 	IE ID: 507 (PEN:16982)	Value: 0x746578742f68746d6c
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x33030000
 	IE ID: 2		Value: 0x5000000
@@ -3087,7 +3087,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 505 (PEN:16982)	Value: 0x687474703a2f2f7777772e726f636b6d61782e637a2f73747265616d5f6c6976652f73747265616d5f706c617965722e737766
 	IE ID: 506 (PEN:16982)	Value: 0
 	IE ID: 507 (PEN:16982)	Value: 0x
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 --------------------------------------------------------------------------------
 IPFIX Message Header:
 	Version: 10
@@ -3117,7 +3117,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x7a000000
 	IE ID: 2		Value: 0x2000000
@@ -3135,7 +3135,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#3):		(network byte order)
 	IE ID: 1		Value: 0xf4010000
 	IE ID: 2		Value: 0x2000000
@@ -3153,7 +3153,7 @@ Data Record (#3):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#4):		(network byte order)
 	IE ID: 1		Value: 0xf4010000
 	IE ID: 2		Value: 0x2000000
@@ -3171,7 +3171,7 @@ Data Record (#4):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#5):		(network byte order)
 	IE ID: 1		Value: 0x7a000000
 	IE ID: 2		Value: 0x2000000
@@ -3189,7 +3189,7 @@ Data Record (#5):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#6):		(network byte order)
 	IE ID: 1		Value: 0x2c000000
 	IE ID: 2		Value: 0x1000000
@@ -3207,7 +3207,7 @@ Data Record (#6):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#7):		(network byte order)
 	IE ID: 1		Value: 0x4c000000
 	IE ID: 2		Value: 0x1000000
@@ -3225,7 +3225,7 @@ Data Record (#7):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 
 
 Set Header:
@@ -3249,7 +3249,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x940a0100
 	IE ID: 2		Value: 0x2f000000
@@ -3268,7 +3268,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 
 
 Set Header:
@@ -3299,7 +3299,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 505 (PEN:16982)	Value: 0x687474703a2f2f7777772e726f636b6d61782e637a2f73747265616d5f6c6976652f73747265616d5f706c617965722e737766
 	IE ID: 506 (PEN:16982)	Value: 0
 	IE ID: 507 (PEN:16982)	Value: 0x
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 
 
 Set Header:
@@ -3320,7 +3320,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 --------------------------------------------------------------------------------
 IPFIX Message Header:
 	Version: 10
@@ -3350,7 +3350,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x48000000
 	IE ID: 2		Value: 0x1000000
@@ -3368,7 +3368,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#3):		(network byte order)
 	IE ID: 1		Value: 0x48000000
 	IE ID: 2		Value: 0x1000000
@@ -3386,7 +3386,7 @@ Data Record (#3):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#4):		(network byte order)
 	IE ID: 1		Value: 0x2c000000
 	IE ID: 2		Value: 0x1000000
@@ -3404,7 +3404,7 @@ Data Record (#4):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#5):		(network byte order)
 	IE ID: 1		Value: 0x2c000000
 	IE ID: 2		Value: 0x1000000
@@ -3422,7 +3422,7 @@ Data Record (#5):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#6):		(network byte order)
 	IE ID: 1		Value: 0xb9000000
 	IE ID: 2		Value: 0x1000000
@@ -3440,7 +3440,7 @@ Data Record (#6):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#7):		(network byte order)
 	IE ID: 1		Value: 0xb9000000
 	IE ID: 2		Value: 0x1000000
@@ -3458,7 +3458,7 @@ Data Record (#7):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 
 
 Set Header:
@@ -3482,7 +3482,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x940a0100
 	IE ID: 2		Value: 0x2f000000
@@ -3501,7 +3501,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#3):		(network byte order)
 	IE ID: 1		Value: 0x34000000
 	IE ID: 2		Value: 0x1000000
@@ -3520,7 +3520,7 @@ Data Record (#3):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#4):		(network byte order)
 	IE ID: 1		Value: 0x35000000
 	IE ID: 2		Value: 0x1000000
@@ -3539,7 +3539,7 @@ Data Record (#4):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#5):		(network byte order)
 	IE ID: 1		Value: 0x80060000
 	IE ID: 2		Value: 0x20000000
@@ -3558,7 +3558,7 @@ Data Record (#5):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#6):		(network byte order)
 	IE ID: 1		Value: 0xe8040100
 	IE ID: 2		Value: 0x2e000000
@@ -3577,7 +3577,7 @@ Data Record (#6):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#7):		(network byte order)
 	IE ID: 1		Value: 0x4c060000
 	IE ID: 2		Value: 0x1f000000
@@ -3596,7 +3596,7 @@ Data Record (#7):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#8):		(network byte order)
 	IE ID: 1		Value: 0xe8040100
 	IE ID: 2		Value: 0x2e000000
@@ -3615,7 +3615,7 @@ Data Record (#8):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 
 
 Set Header:
@@ -3636,7 +3636,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x48000000
 	IE ID: 2		Value: 0x1000000
@@ -3652,7 +3652,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 
 
 Set Header:
@@ -3683,7 +3683,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 505 (PEN:16982)	Value: 0x
 	IE ID: 506 (PEN:16982)	Value: 0xc8000000
 	IE ID: 507 (PEN:16982)	Value: 0x746578742f68746d6c
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x24020000
 	IE ID: 2		Value: 0x5000000
@@ -3709,7 +3709,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 505 (PEN:16982)	Value: 0x
 	IE ID: 506 (PEN:16982)	Value: 0xc8000000
 	IE ID: 507 (PEN:16982)	Value: 0x746578742f68746d6c
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#3):		(network byte order)
 	IE ID: 1		Value: 0x33030000
 	IE ID: 2		Value: 0x5000000
@@ -3735,7 +3735,7 @@ Data Record (#3):		(network byte order)
 	IE ID: 505 (PEN:16982)	Value: 0x687474703a2f2f7777772e726f636b6d61782e637a2f73747265616d5f6c6976652f73747265616d5f706c617965722e737766
 	IE ID: 506 (PEN:16982)	Value: 0
 	IE ID: 507 (PEN:16982)	Value: 0x
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 
 
 Set Header:
@@ -3757,7 +3757,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 --------------------------------------------------------------------------------
 IPFIX Message Header:
 	Version: 10
@@ -3787,7 +3787,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x2c000000
 	IE ID: 2		Value: 0x1000000
@@ -3805,7 +3805,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#3):		(network byte order)
 	IE ID: 1		Value: 0xa0000000
 	IE ID: 2		Value: 0x1000000
@@ -3823,7 +3823,7 @@ Data Record (#3):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#4):		(network byte order)
 	IE ID: 1		Value: 0xe0010000
 	IE ID: 2		Value: 0x3000000
@@ -3841,7 +3841,7 @@ Data Record (#4):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#5):		(network byte order)
 	IE ID: 1		Value: 0x2c000000
 	IE ID: 2		Value: 0x1000000
@@ -3859,7 +3859,7 @@ Data Record (#5):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#6):		(network byte order)
 	IE ID: 1		Value: 0xd4010000
 	IE ID: 2		Value: 0x6000000
@@ -3877,7 +3877,7 @@ Data Record (#6):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#7):		(network byte order)
 	IE ID: 1		Value: 0x2c000000
 	IE ID: 2		Value: 0x1000000
@@ -3895,7 +3895,7 @@ Data Record (#7):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#8):		(network byte order)
 	IE ID: 1		Value: 0x6a000000
 	IE ID: 2		Value: 0x1000000
@@ -3913,7 +3913,7 @@ Data Record (#8):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#9):		(network byte order)
 	IE ID: 1		Value: 0x8d000000
 	IE ID: 2		Value: 0x1000000
@@ -3931,7 +3931,7 @@ Data Record (#9):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 
 
 Set Header:
@@ -3955,7 +3955,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x940a0100
 	IE ID: 2		Value: 0x2f000000
@@ -3974,7 +3974,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#3):		(network byte order)
 	IE ID: 1		Value: 0xb4060000
 	IE ID: 2		Value: 0x21000000
@@ -3993,7 +3993,7 @@ Data Record (#3):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#4):		(network byte order)
 	IE ID: 1		Value: 0x940a0100
 	IE ID: 2		Value: 0x2f000000
@@ -4012,7 +4012,7 @@ Data Record (#4):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#5):		(network byte order)
 	IE ID: 1		Value: 0x8d000000
 	IE ID: 2		Value: 0x2000000
@@ -4031,7 +4031,7 @@ Data Record (#5):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#6):		(network byte order)
 	IE ID: 1		Value: 0x42010000
 	IE ID: 2		Value: 0x5000000
@@ -4050,7 +4050,7 @@ Data Record (#6):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#7):		(network byte order)
 	IE ID: 1		Value: 0x3c000000
 	IE ID: 2		Value: 0x1000000
@@ -4069,7 +4069,7 @@ Data Record (#7):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#8):		(network byte order)
 	IE ID: 1		Value: 0x70000000
 	IE ID: 2		Value: 0x2000000
@@ -4088,7 +4088,7 @@ Data Record (#8):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#9):		(network byte order)
 	IE ID: 1		Value: 0x80060000
 	IE ID: 2		Value: 0x20000000
@@ -4107,7 +4107,7 @@ Data Record (#9):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#10):		(network byte order)
 	IE ID: 1		Value: 0xe8040100
 	IE ID: 2		Value: 0x2e000000
@@ -4126,7 +4126,7 @@ Data Record (#10):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#11):		(network byte order)
 	IE ID: 1		Value: 0x34000000
 	IE ID: 2		Value: 0x1000000
@@ -4145,7 +4145,7 @@ Data Record (#11):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#12):		(network byte order)
 	IE ID: 1		Value: 0x3c000000
 	IE ID: 2		Value: 0x1000000
@@ -4164,7 +4164,7 @@ Data Record (#12):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 
 
 Set Header:
@@ -4195,7 +4195,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 505 (PEN:16982)	Value: 0x687474703a2f2f7777772e726f636b6d61782e637a2f73747265616d5f6c6976652f73747265616d5f706c617965722e737766
 	IE ID: 506 (PEN:16982)	Value: 0
 	IE ID: 507 (PEN:16982)	Value: 0x
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x25020000
 	IE ID: 2		Value: 0x5000000
@@ -4221,7 +4221,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 505 (PEN:16982)	Value: 0x
 	IE ID: 506 (PEN:16982)	Value: 0xc8000000
 	IE ID: 507 (PEN:16982)	Value: 0x746578742f68746d6c
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 --------------------------------------------------------------------------------
 IPFIX Message Header:
 	Version: 10
@@ -4251,7 +4251,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x2c000000
 	IE ID: 2		Value: 0x1000000
@@ -4269,7 +4269,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#3):		(network byte order)
 	IE ID: 1		Value: 0x2c000000
 	IE ID: 2		Value: 0x1000000
@@ -4287,7 +4287,7 @@ Data Record (#3):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#4):		(network byte order)
 	IE ID: 1		Value: 0x2c000000
 	IE ID: 2		Value: 0x1000000
@@ -4305,7 +4305,7 @@ Data Record (#4):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#5):		(network byte order)
 	IE ID: 1		Value: 0x2c000000
 	IE ID: 2		Value: 0x1000000
@@ -4323,7 +4323,7 @@ Data Record (#5):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#6):		(network byte order)
 	IE ID: 1		Value: 0xea000000
 	IE ID: 2		Value: 0x3000000
@@ -4341,7 +4341,7 @@ Data Record (#6):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#7):		(network byte order)
 	IE ID: 1		Value: 0x8e020000
 	IE ID: 2		Value: 0x2000000
@@ -4359,7 +4359,7 @@ Data Record (#7):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#8):		(network byte order)
 	IE ID: 1		Value: 0x82000000
 	IE ID: 2		Value: 0x2000000
@@ -4377,7 +4377,7 @@ Data Record (#8):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#9):		(network byte order)
 	IE ID: 1		Value: 0x8e020000
 	IE ID: 2		Value: 0x2000000
@@ -4395,7 +4395,7 @@ Data Record (#9):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 
 
 Set Header:
@@ -4419,7 +4419,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0xe8040100
 	IE ID: 2		Value: 0x2e000000
@@ -4438,7 +4438,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#3):		(network byte order)
 	IE ID: 1		Value: 0x34000000
 	IE ID: 2		Value: 0x1000000
@@ -4457,7 +4457,7 @@ Data Record (#3):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#4):		(network byte order)
 	IE ID: 1		Value: 0x68000000
 	IE ID: 2		Value: 0x2000000
@@ -4476,7 +4476,7 @@ Data Record (#4):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#5):		(network byte order)
 	IE ID: 1		Value: 0x18060000
 	IE ID: 2		Value: 0x1e000000
@@ -4495,7 +4495,7 @@ Data Record (#5):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#6):		(network byte order)
 	IE ID: 1		Value: 0xe8040100
 	IE ID: 2		Value: 0x2e000000
@@ -4514,7 +4514,7 @@ Data Record (#6):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#7):		(network byte order)
 	IE ID: 1		Value: 0x3c000000
 	IE ID: 2		Value: 0x1000000
@@ -4533,7 +4533,7 @@ Data Record (#7):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#8):		(network byte order)
 	IE ID: 1		Value: 0x70000000
 	IE ID: 2		Value: 0x2000000
@@ -4552,7 +4552,7 @@ Data Record (#8):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#9):		(network byte order)
 	IE ID: 1		Value: 0xb4060000
 	IE ID: 2		Value: 0x21000000
@@ -4571,7 +4571,7 @@ Data Record (#9):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#10):		(network byte order)
 	IE ID: 1		Value: 0x940a0100
 	IE ID: 2		Value: 0x2f000000
@@ -4590,7 +4590,7 @@ Data Record (#10):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 
 
 Set Header:
@@ -4611,7 +4611,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 
 
 Set Header:
@@ -4642,7 +4642,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 505 (PEN:16982)	Value: 0x
 	IE ID: 506 (PEN:16982)	Value: 0xc8000000
 	IE ID: 507 (PEN:16982)	Value: 0x746578742f68746d6c
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x33030000
 	IE ID: 2		Value: 0x5000000
@@ -4668,7 +4668,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 505 (PEN:16982)	Value: 0x687474703a2f2f7777772e726f636b6d61782e637a2f73747265616d5f6c6976652f73747265616d5f706c617965722e737766
 	IE ID: 506 (PEN:16982)	Value: 0
 	IE ID: 507 (PEN:16982)	Value: 0x
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 --------------------------------------------------------------------------------
 IPFIX Message Header:
 	Version: 10
@@ -4698,7 +4698,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x48000000
 	IE ID: 2		Value: 0x1000000
@@ -4716,7 +4716,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#3):		(network byte order)
 	IE ID: 1		Value: 0xb9000000
 	IE ID: 2		Value: 0x1000000
@@ -4734,7 +4734,7 @@ Data Record (#3):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#4):		(network byte order)
 	IE ID: 1		Value: 0x2c000000
 	IE ID: 2		Value: 0x1000000
@@ -4752,7 +4752,7 @@ Data Record (#4):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#5):		(network byte order)
 	IE ID: 1		Value: 0x2c000000
 	IE ID: 2		Value: 0x1000000
@@ -4770,7 +4770,7 @@ Data Record (#5):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#6):		(network byte order)
 	IE ID: 1		Value: 0xb9000000
 	IE ID: 2		Value: 0x1000000
@@ -4788,7 +4788,7 @@ Data Record (#6):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#7):		(network byte order)
 	IE ID: 1		Value: 0x48000000
 	IE ID: 2		Value: 0x1000000
@@ -4806,7 +4806,7 @@ Data Record (#7):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#8):		(network byte order)
 	IE ID: 1		Value: 0xa0000000
 	IE ID: 2		Value: 0x1000000
@@ -4824,7 +4824,7 @@ Data Record (#8):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#9):		(network byte order)
 	IE ID: 1		Value: 0xe0010000
 	IE ID: 2		Value: 0x3000000
@@ -4842,7 +4842,7 @@ Data Record (#9):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#10):		(network byte order)
 	IE ID: 1		Value: 0x2c000000
 	IE ID: 2		Value: 0x1000000
@@ -4860,7 +4860,7 @@ Data Record (#10):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#11):		(network byte order)
 	IE ID: 1		Value: 0x2c000000
 	IE ID: 2		Value: 0x1000000
@@ -4878,7 +4878,7 @@ Data Record (#11):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 
 
 Set Header:
@@ -4902,7 +4902,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x68000000
 	IE ID: 2		Value: 0x2000000
@@ -4921,7 +4921,7 @@ Data Record (#2):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#3):		(network byte order)
 	IE ID: 1		Value: 0xb4060000
 	IE ID: 2		Value: 0x21000000
@@ -4940,7 +4940,7 @@ Data Record (#3):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#4):		(network byte order)
 	IE ID: 1		Value: 0xe8040100
 	IE ID: 2		Value: 0x2e000000
@@ -4959,7 +4959,7 @@ Data Record (#4):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#5):		(network byte order)
 	IE ID: 1		Value: 0xb4060000
 	IE ID: 2		Value: 0x21000000
@@ -4978,7 +4978,7 @@ Data Record (#5):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#6):		(network byte order)
 	IE ID: 1		Value: 0x940a0100
 	IE ID: 2		Value: 0x2f000000
@@ -4997,7 +4997,7 @@ Data Record (#6):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#7):		(network byte order)
 	IE ID: 1		Value: 0x4c060000
 	IE ID: 2		Value: 0x1f000000
@@ -5016,7 +5016,7 @@ Data Record (#7):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#8):		(network byte order)
 	IE ID: 1		Value: 0xe8040100
 	IE ID: 2		Value: 0x2e000000
@@ -5035,7 +5035,7 @@ Data Record (#8):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#9):		(network byte order)
 	IE ID: 1		Value: 0x4c060000
 	IE ID: 2		Value: 0x1f000000
@@ -5054,7 +5054,7 @@ Data Record (#9):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#10):		(network byte order)
 	IE ID: 1		Value: 0x3cff0000
 	IE ID: 2		Value: 0x2d000000
@@ -5073,7 +5073,7 @@ Data Record (#10):		(network byte order)
 	IE ID: 14		Value: 0
 	IE ID: 34		Value: 0
 	IE ID: 35		Value: 0
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 
 
 Set Header:
@@ -5104,7 +5104,7 @@ Data Record (#1):		(network byte order)
 	IE ID: 505 (PEN:16982)	Value: 0x687474703a2f2f7777772e726f636b6d61782e637a2f73747265616d5f6c6976652f73747265616d5f706c617965722e737766
 	IE ID: 506 (PEN:16982)	Value: 0
 	IE ID: 507 (PEN:16982)	Value: 0x
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000
 Data Record (#2):		(network byte order)
 	IE ID: 1		Value: 0x38020000
 	IE ID: 2		Value: 0x5000000
@@ -5130,4 +5130,4 @@ Data Record (#2):		(network byte order)
 	IE ID: 505 (PEN:16982)	Value: 0x
 	IE ID: 506 (PEN:16982)	Value: 0xc8000000
 	IE ID: 507 (PEN:16982)	Value: 0x746578742f68746d6c
-	IE ID: 405		Value: 0x4
+	IE ID: 405		Value: 0x4000000

@@ -794,7 +794,7 @@ int process_message(void *config, void *message)
 	new_msg->templ_set[tsets] = NULL;
 	new_msg->opt_templ_set[otsets] = NULL;
 
-	proc.orig_odid = orig_odid;
+	proc.orig_odid = htonl(orig_odid);
 	for (i = 0; i < 1024 && msg->data_couple[i].data_set; ++i) {
 		templ = msg->data_couple[i].data_template;
 		if (!templ) {
