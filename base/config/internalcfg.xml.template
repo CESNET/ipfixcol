@@ -17,23 +17,23 @@
 		<!--## Name must match one of the <supportedCollectors> -->
 		<name>udpCollector</name>
 		<!--## Path of the plugin module -->
-		<file>@prefix@/ipfixcol/plugins/ipfixcol-udp-input.so</file>
+		<file>@pkgdatadir@/plugins/ipfixcol-udp-input.so</file>
 		<!--## Process name suffix (ipfixcol:UDP) -->
 		<processName>UDP</processName>
 	</inputPlugin>
 	<inputPlugin>
 		<name>tcpCollector</name>
-		<file>@prefix@/ipfixcol/plugins/ipfixcol-tcp-input.so</file>
+		<file>@pkgdatadir@/plugins/ipfixcol-tcp-input.so</file>
 		<processName>TCP</processName>
 	</inputPlugin>
 	<inputPlugin>
 		<name>fileReader</name>
-		<file>@prefix@/ipfixcol/plugins/ipfixcol-ipfix-input.so</file>
+		<file>@pkgdatadir@/plugins/ipfixcol-ipfix-input.so</file>
 		<processName>file</processName>
 	</inputPlugin>
 	<inputPlugin>
 		<name>sctpCollector</name>
-		<file>@prefix@/ipfixcol/plugins/ipfixcol-sctp-input.so</file>
+		<file>@pkgdatadir@/plugins/ipfixcol-sctp-input.so</file>
 		<processName>SCTP</processName>
 	</inputPlugin>
 
@@ -44,54 +44,54 @@
 		    ##   match this element -->
 		<fileFormat>ipfix</fileFormat>
 		<!--## Path of the storage module  -->
-		<file>@prefix@/ipfixcol/plugins/ipfixcol-ipfix-output.so</file>
+		<file>@pkgdatadir@/plugins/ipfixcol-ipfix-output.so</file>
 		<!--## Thread name suffix (storage:ipfix) -->
 		<threadName>ipfix</threadName>
 	</storagePlugin>
 	<storagePlugin>
 		<fileFormat>dummy</fileFormat>
-		<file>@prefix@/ipfixcol/plugins/ipfixcol-dummy-output.so</file>
+		<file>@pkgdatadir@/plugins/ipfixcol-dummy-output.so</file>
 		<threadName>dummy</threadName>
 	</storagePlugin>
         <!--## ipfixviewer storage plugin -->
 	<storagePlugin>
 		<fileFormat>view</fileFormat>
-		<file>@prefix@/ipfixcol/plugins/ipfixcol-ipfixviewer-output.so</file>
+		<file>@pkgdatadir@/plugins/ipfixcol-ipfixviewer-output.so</file>
 		<threadName>view</threadName>
 	</storagePlugin>
 	<storagePlugin>
 		<fileFormat>fastbit</fileFormat>
-		<file>@prefix@/ipfixcol/plugins/ipfixcol-fastbit-output.so</file>
+		<file>@pkgdatadir@/plugins/ipfixcol-fastbit-output.so</file>
 		<threadName>fastbit</threadName>
 	</storagePlugin>
 	<storagePlugin>
 		<fileFormat>forwarding</fileFormat>
-		<file>@prefix@/ipfixcol/plugins/ipfixcol-forwarding-output.so</file>
+		<file>@pkgdatadir@/plugins/ipfixcol-forwarding-output.so</file>
 		<threadName>forwarding</threadName>
 	</storagePlugin>
 	
 	<!-- Intermediate Plugins -->
 	<intermediatePlugin>
 		<name>dummy_ip</name>
-		<file>@prefix@/ipfixcol/plugins/ipfixcol-dummy-inter.so</file>
+		<file>@pkgdatadir@/plugins/ipfixcol-dummy-inter.so</file>
 		<threadName>dummy_inter</threadName>
 	</intermediatePlugin>
 	
 	<intermediatePlugin>
 		<name>anonymization_ip</name>
-		<file>@prefix@/ipfixcol/plugins/ipfixcol-anonymization-inter.so</file>
+		<file>@pkgdatadir@/plugins/ipfixcol-anonymization-inter.so</file>
 		<threadName>anon_inter</threadName>
 	</intermediatePlugin>
 
 	<intermediatePlugin>
 		<name>joinflows_ip</name>
-		<file>@prefix@/ipfixcol/plugins/ipfixcol-joinflows-inter.so</file>
+		<file>@pkgdatadir@/plugins/ipfixcol-joinflows-inter.so</file>
 		<threadName>join_inter</threadName>
 	</intermediatePlugin>
 	
 	<intermediatePlugin>
 		<name>filter</name>
-		<file>@prefix@/ipfixcol/plugins/ipfixcol-filter-inter.so</file>
+		<file>@pkgdatadir@/plugins/ipfixcol-filter-inter.so</file>
 		<threadName>filter_inter</threadName>
 	</intermediatePlugin>
 </ipfixcol>

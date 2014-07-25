@@ -202,7 +202,6 @@ AC_CONFIG_FILES([Makefile
 				src/intermediate/dummy/Makefile
 				src/intermediate/joinflows/Makefile
 				src/intermediate/filter/Makefile
-				config/internalcfg.xml
 				config/Makefile
 				headers/Makefile
 				documentation/doxygen/Makefile
