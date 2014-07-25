@@ -459,7 +459,6 @@ void mapping_destroy(struct mapping_header *map)
 		if (aux_map->new_templ != NULL) {
 			aux_map->new_templ->references--;
 			if (aux_map->new_templ->references <= 0) {
-//				while (aux_map->new_templ->templ->references > 0);
 				free(aux_map->new_templ->templ);
 				free(aux_map->new_templ->rec);
 				free(aux_map->new_templ);
@@ -693,7 +692,6 @@ uint32_t joinflows_update_input_info(struct source *src, struct input_info *inpu
  */
 void joinflows_copy_template_info(struct ipfix_template *to, struct ipfix_template *from)
 {
-	__sync_fetch_and_add(&(to->references), from->references);
 	to->last_message = from->last_message;
 	to->last_transmission = from->last_message;
 }
@@ -815,9 +813,9 @@ int process_message(void *config, void *message)
 		new_msg->data_couple[i].data_set = ((struct ipfix_data_set *) ((uint8_t *)proc.msg + proc.offset - 4));
 		new_msg->data_couple[i].data_template = map->new_templ->templ;
 
+		/* Copy template info and increment reference */
 		joinflows_copy_template_info(new_msg->data_couple[i].data_template, templ);
-
-		templ->references = 0;
+		tm_template_reference_inc(new_msg->data_couple[i].data_template);
 
 		data_set_process_records(msg->data_couple[i].data_set, templ, &data_processor, (void *) &proc);
 
