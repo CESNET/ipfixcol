@@ -98,6 +98,8 @@
 				<listitem>
 					<simpara>Observation Domain ID of source flow.<command> * </command>means "every ODID that is not mentioned in some other join block".
 					</simpara>
+                                        <simpara>If some ODID is not mentioned in any <command>from</command>, but occurs as some <command>to</command> target, it is implicitly added as <command>from</command> source for this target.
+                                        </simpara>
 				</listitem>
 			</varlistentry>
 		</variablelist>

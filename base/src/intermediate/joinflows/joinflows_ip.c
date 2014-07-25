@@ -551,7 +551,6 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 					src = calloc(1, sizeof(struct source));
 					src->next = conf->sources;
 					conf->sources = src;
-					MSG_DEBUG(msg_module, "Setting sources");
 				}
 
 				src->mapping = new_map;
@@ -637,6 +636,42 @@ void data_processor(uint8_t *rec, int rec_len, struct ipfix_template *templ, voi
 }
 
 /**
+ * \brief Check whether this ODID is target of some mapping
+ *			If yes, create for it a new source structure
+ * 
+ * \param[in] conf Plugin configuration
+ * \param[in] odid ODID
+ * \return source structure
+ */
+struct source *joinflows_get_source_by_mapping(struct joinflows_ip_config *conf, uint32_t odid)
+{
+	struct mapping_header *aux_map;
+	
+	for (aux_map = conf->mappings; aux_map; aux_map = aux_map->next) {
+		if (aux_map->new_odid == odid) {
+			/* Mapping with this odid found -> create source */
+			struct source *new_src = calloc(1, sizeof(struct source));
+			if (!new_src) {
+				MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+				return NULL;
+			}
+			/* Fill in structure */
+			new_src->mapping = aux_map;
+			new_src->new_odid = aux_map->new_odid;
+			new_src->orig_odid = odid;
+			
+			/* Add source to list so next time it will be found by joinflows_get_source */
+			new_src->next = conf->sources;
+			conf->sources = new_src;
+			MSG_NOTICE(msg_module, "[%u -> %u] Added implicit source for this join group.", odid, odid);
+			return new_src;
+		}
+	}
+	
+	return NULL;
+}
+
+/**
  * \brief Get source structure for this ODID
  *
  * \param[in] conf Plugin configuration
@@ -653,7 +688,12 @@ struct source *joinflows_get_source(struct joinflows_ip_config *conf, uint32_t o
 		}
 	}
 
-	return conf->default_source;
+	if (conf->default_source) {
+		return conf->default_source;
+	}
+	
+	/* No source found and default source is not defined - try mappings */
+	return joinflows_get_source_by_mapping(conf, odid);
 }
 
 /**
@@ -717,6 +757,7 @@ int process_message(void *config, void *message)
 	if (!src) {
 		MSG_DEBUG(msg_module, "[%u] No mapping, ignoring", orig_odid);
 		pass_message(conf->ip_config, message);
+		return 0;
 	}
 
 	newsn = joinflows_update_input_info(src, msg->input_info, msg->data_records_count);
