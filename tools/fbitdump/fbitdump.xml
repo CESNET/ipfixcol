@@ -1050,6 +1050,195 @@
 			<element>e16982id811</element>
 		</value>
 	</column>
+	<column>
+		<name>HTTP Method</name>
+		<alias>%chttpm</alias>
+		<width>7</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element semantics="httprt">e8057id800</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Host</name>
+		<alias>%chttph</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id801</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP URL</name>
+		<alias>%chttpu</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id802</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Referer</name>
+		<alias>%chttpr</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id803</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP User Agent</name>
+		<alias>%chttpa</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id804</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Status Code</name>
+		<alias>%chttpc</alias>
+		<width>15</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element semantics="http_status_code">e8057id805</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Content Type</name>
+		<alias>%chttpt</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id806</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTP Response Time</name>
+		<alias>%chttpr</alias>
+		<width>18</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id807</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTPS (SNI) Host</name>
+		<alias>%chttpsh</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id808</element>
+		</value>
+	</column>
+	<column>
+		<name>HTTPS Response Time</name>
+		<alias>%chttpsr</alias>
+		<width>18</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id809</element>
+		</value>
+	</column>
+	<column>
+		<name>SMTP Commands</name>
+		<alias>%csmtpcf</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id810</element>
+		</value>
+	</column>
+	<column>
+		<name>SMTP MAIL Count</name>
+		<alias>%csmtpmc</alias>
+		<width>8</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id811</element>
+		</value>
+	</column>
+	<column>
+		<name>SMTP RCPT Count </name>
+		<alias>%csmtprc</alias>
+		<width>8</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id812</element>
+		</value>
+	</column>
+	<column>
+		<name>SMTP Sender</name>
+		<alias>%csmtps</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id813</element>
+		</value>
+	</column>
+	<column>
+		<name>SMTP Recipient</name>
+		<alias>%csmtpr</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id814</element>
+		</value>
+	</column>
+	<column>
+		<name>SMTP Status Codes</name>
+		<alias>%csmtpsf</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id815</element>
+		</value>
+	</column>
+	<column>
+		<name>SMTP 2XX Codes Count </name>
+		<alias>%csmtp2c</alias>
+		<width>8</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id816</element>
+		</value>
+	</column>
+	<column>
+		<name>SMTP 3XX Codes Count</name>
+		<alias>%csmtp3c</alias>
+		<width>8</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id817</element>
+		</value>
+	</column>
+	<column>
+		<name>SMTP 4XX Codes Count</name>
+		<alias>%csmtp4c</alias>
+		<width>8</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id818</element>
+		</value>
+	</column>
+	<column>
+		<name>SMTP 5XX Codes Count</name>
+		<alias>%csmtp5c</alias>
+		<width>8</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id819</element>
+		</value>
+	</column>
+	<column>
+		<name>SMTP Domain</name>
+		<alias>%csmtpd</alias>
+		<width>32</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id820</element>
+		</value>
+	</column>
 </columns>
 
 <groups>
@@ -1197,6 +1386,18 @@
 	<format>
 		<formatName>osdet</formatName>
 		<formatString>%sa4 %da4 %ttl %synsize %winsize %ttlos %synos %winos</formatString>
+	</format>
+	<format>
+		<formatName>http4-cesnet</formatName>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %chttpm %chttph %chttpu %chttpr %chttpa %chttpc %chttpt %chttpr</formatString>
+	</format>
+	<format>
+		<formatName>https4-cesnet</formatName>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %chttpsh %chttpsr</formatString>
+	</format>
+	<format>
+		<formatName>smtp4-cesnet</formatName>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %csmtpcf %csmtpmc %csmtprc %csmtps %csmtpr %csmtpsf %csmtp2c %csmtp3c %scmtp4c %csmtp5c %csmtpd</formatString>
 	</format>
 </output>
 <plugins>

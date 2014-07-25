@@ -2397,6 +2397,7 @@
 		<dataType>unsigned16</dataType>
 		<semantic></semantic>
 	</element>
+
 	<element>
 		<enterprise>16982</enterprise>
 		<id>800</id>
@@ -2482,4 +2483,154 @@
 		<semantic></semantic>
 	</element>
 
+	<element>
+		<enterprise>8057</enterprise>
+		<id>800</id>
+		<name>HTTPRequestMethod</name>
+		<dataType>unsigned32</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>801</id>
+		<name>HTTPRequestHost</name>
+		<dataType>string</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>802</id>
+		<name>HTTPRequestURL</name>
+		<dataType>string</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>803</id>
+		<name>HTTPRequestReferer</name>
+		<dataType>string</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>804</id>
+		<name>HTTPRequestAgent</name>
+		<dataType>string</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>805</id>
+		<name>HTTPResponseCode</name>
+		<dataType>unsigned32</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>806</id>
+		<name>HTTPResponseType</name>
+		<dataType>string</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>807</id>
+		<name>HTTPResponseTime</name>
+		<dataType>unsigned64</dataType>
+		<semantic></semantic>
+	</element>
+
+	<element>
+		<enterprise>8057</enterprise>
+		<id>808</id>
+		<name>HTTPSHost</name>
+		<dataType>string</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>809</id>
+		<name>HTTPSResponseTime</name>
+		<dataType>unsigned64</dataType>
+		<semantic></semantic>
+	</element>
+
+
+	<element>
+		<enterprise>8057</enterprise>
+		<id>810</id>
+		<name>SMTPCommands</name>
+		<dataType>unsigned32</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>811</id>
+		<name>SMTPMailCount</name>
+		<dataType>unsigned32</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>812</id>
+		<name>SMTPRcptCount</name>
+		<dataType>unsigned32</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>813</id>
+		<name>SMTPSender</name>
+		<dataType>string</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>814</id>
+		<name>SMTPRecipient</name>
+		<dataType>string</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>815</id>
+		<name>SMTPStatusCodes</name>
+		<dataType>unsigned32</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>816</id>
+		<name>SMTPCode2XXCount</name>
+		<dataType>unsigned32</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>817</id>
+		<name>SMTPCode3XXCount</name>
+		<dataType>unsigned32</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>818</id>
+		<name>SMTPCode4XXCount</name>
+		<dataType>unsigned32</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>819</id>
+		<name>SMTPCode5XXCount</name>
+		<dataType>unsigned32</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>820</id>
+		<name>SMTPDomain</name>
+		<dataType>string</dataType>
+		<semantic></semantic>
+	</element>
 </ipfix-elements>
