@@ -301,6 +301,15 @@
 		</value>
 	</column>
 	<column>
+		<name>ODID</name>
+		<alias>%odid</alias>
+		<width>4</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e0id405</element>
+		</value>
+	</column>
+	<column>
 		<name>sGeo</name>
 		<alias>%sgeo</alias>
 		<width>4</width>

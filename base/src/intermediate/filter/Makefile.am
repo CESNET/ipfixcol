@@ -18,7 +18,7 @@ scanner.h scanner.c: scanner.l
 	$(FLEX) -o scanner.c --header-file=scanner.h $<
 
 MANSRC = ipfixcol-filter-inter.dbk
-EXTRA_DIST = $(MANSRC)
+EXTRA_DIST = $(MANSRC) parser.y scanner.l
 man_MANS = ipfixcol-filter-inter.1
 CLEANFILES += ipfixcol-filter-inter.1
 
