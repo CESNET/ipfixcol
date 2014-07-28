@@ -58,6 +58,9 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %{_datadir}/%{name}/plugins/ipfixcol-ipfix-output.*
 %{_datadir}/%{name}/plugins/ipfixcol-dummy-output.*
 %{_mandir}/man1/ipfixcol-dummy-output.1.gz
+%{_datadir}/%{name}/plugins/ipfixcol-forwarding-output.la
+%{_datadir}/%{name}/plugins/ipfixcol-forwarding-output.so
+%{_mandir}/man1/ipfixcol-forwarding-output.1.gz
 #intermediate plugins
 %{_datadir}/%{name}/plugins/ipfixcol-anonymization-inter.la
 %{_datadir}/%{name}/plugins/ipfixcol-anonymization-inter.so
@@ -65,6 +68,10 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %{_datadir}/%{name}/plugins/ipfixcol-dummy-inter.so
 %{_datadir}/%{name}/plugins/ipfixcol-joinflows-inter.la
 %{_datadir}/%{name}/plugins/ipfixcol-joinflows-inter.so
+%{_mandir}/man1/ipfixcol-joinflows-inter.1.gz
+%{_datadir}/%{name}/plugins/ipfixcol-filter-inter.la
+%{_datadir}/%{name}/plugins/ipfixcol-filter-inter.so
+%{_mandir}/man1/ipfixcol-filter-inter.1.gz
 #ipfixviewer
 %{_datadir}/%{name}/plugins/ipfixcol-ipfixviewer-output.*
 %{_datadir}/%{name}/ipfixviewer_startup.xml
@@ -79,3 +86,7 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %{_includedir}/ipfixcol/*.h
 #doxygen
 %{_datadir}/%{name}/%{name}-doxy-%{version}.tar.gz
+
+   /usr/share/man/man1/ipfixcol-filter-inter.1.gz
+   /usr/share/man/man1/ipfixcol-forwarding-output.1.gz
+   /usr/share/man/man1/ipfixcol-joinflows-inter.1.gz
