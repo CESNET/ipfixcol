@@ -121,7 +121,7 @@ int FlowWatch::write(std::string dir)
 	struct stat st;
 
 	/* Check whether directory exists */
-	if (!stat(dir.c_str(), &st) || !S_ISDIR(st.st_mode)) {
+	if (stat(dir.c_str(), &st) || !S_ISDIR(st.st_mode)) {
 		return 0;
 	}
 
