@@ -415,6 +415,29 @@ int tm_record_remove_template(struct ipfix_template_mgr_record *tmr, uint16_t te
 }
 
 /**
+ * \brief Get template index in template manager's record
+ * 
+ * \param tmr Template manager's record
+ * \param id Template ID
+ * \return Template index or -1 if not found
+ */
+int tm_record_template_index(struct ipfix_template_mgr_record *tmr, uint16_t id)
+{
+	int i, count = 0;
+	/* the array may have holes, thus the counter */
+	for (i = 0; i < tmr->max_length && count < tmr->counter; i++) {
+		if (tmr->templates[i] != NULL) {
+			if (tmr->templates[i]->original_id == id) {
+				return i;
+			}
+			count++;
+		}
+	}
+	
+	return -1;
+}
+
+/**
  * \brief Update template in template managers record
  *
  * \param[in] tmr Template Manager's record
@@ -426,17 +449,16 @@ int tm_record_remove_template(struct ipfix_template_mgr_record *tmr, uint16_t te
  */
 struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_record *tmr, void *template, int max_len, int type, uint32_t odid)
 {
-	uint32_t id = ntohs(((struct ipfix_template_record *) template)->template_id);
-	int i, count=0;
-	/* the array may have holes, thus the counter */
-	for (i=0; i < tmr->max_length && count < tmr->counter; i++) {
-		if (tmr->templates[i] != NULL) {
-			if (tmr->templates[i]->original_id == id) {
-				break;
-			}
-			count++;
-		}
+	uint16_t id = ntohs(((struct ipfix_template_record *) template)->template_id);
+	
+	/* Get template index */
+	int i = tm_record_template_index(tmr, id);
+	
+	if (i < 0) {
+		MSG_WARNING(msg_module, "[%u] Template %u cannot be updated (not found), creating a new one", odid, id);
+		return tm_record_add_template(tmr, template, max_len, type, odid);
 	}
+	
 
 	if (tmr->templates[i]->references == 0) {
 		if (tmr->templates[i]->next == NULL) {
