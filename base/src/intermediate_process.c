@@ -37,6 +37,7 @@
  *
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -60,6 +61,7 @@ struct ip_config {
 	pthread_t thread_id;
 	char thread_name[16];
 	unsigned int index;
+	bool dropped;
 };
 
 
@@ -94,11 +96,14 @@ void *ip_loop(void *config)
 			break;
 		}
 		conf->index = index;
+		conf->dropped = false;
 		/* process message */
 		conf->process_message(conf->plugin_config, message);
 
-		/* remove message from input queue, but do not free memory (it must be done later in output manager) */
-		rbuffer_remove_reference(conf->in_queue, index, 0);
+		if (!conf->dropped) {
+			/* remove message from input queue, but do not free memory (it must be done later in output manager) */
+			rbuffer_remove_reference(conf->in_queue, index, 0);
+		}
 
 		/* update index */
 		index = (index + 1) % conf->in_queue->size;
@@ -201,6 +206,8 @@ int drop_message(void *config, struct ipfix_message *message)
 	struct ip_config *conf = (struct ip_config *) config;
 
 	rbuffer_remove_reference(conf->in_queue, conf->index, 1);
+	
+	conf->dropped = true;
 	return 0;
 }
 
