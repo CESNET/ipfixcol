@@ -612,6 +612,15 @@ struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct fil
 	struct filter_process conf;
 	int i, j, offset = 0, oldoffset;
 	uint8_t *ptr = NULL;
+	
+	if (msg->source_status == SOURCE_STATUS_CLOSED) {
+		filter_profile_update_input_info(profile, msg->input_info, msg->data_records_count);
+		new_msg = calloc(1, sizeof(struct ipfix_message));
+		CHECK_ALLOC(new_msg);
+		new_msg->input_info = profile->input_info;
+		new_msg->source_status = msg->source_status;
+		return new_msg;
+	}
 
 	/* Allocate space */
 	ptr = calloc(1, ntohs(msg->pkt_header->length));
@@ -692,7 +701,7 @@ int process_message(void *config, void *message)
 	struct filter_config *conf = (struct filter_config *) config;
 	struct filter_profile *aux_profile = NULL;
 	struct filter_source *aux_src = NULL;
-	uint32_t orig_odid = ntohl(msg->pkt_header->observation_domain_id);
+	uint32_t orig_odid = msg->input_info->odid;
 	int profiles = 0;
 
 	/* Go throught all profiles */

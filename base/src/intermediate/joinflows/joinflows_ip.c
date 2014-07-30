@@ -749,8 +749,8 @@ int process_message(void *config, void *message)
 
 	msg = (struct ipfix_message *) message;
 	conf = (struct joinflows_ip_config *) config;
-
-	orig_odid = ntohl(msg->pkt_header->observation_domain_id);
+	
+	orig_odid = msg->input_info->odid;
 
 	src = joinflows_get_source(conf, orig_odid);
 
