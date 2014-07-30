@@ -123,6 +123,7 @@ struct sequence_number_counter *snc_add_source(uint32_t odid)
 	}
 
 	aux_snc->sources++;
+	MSG_NOTICE(msg_module, "[%u] Accepted data from %d. source with this ODID", odid, aux_snc->sources);
 	return aux_snc;
 }
 
