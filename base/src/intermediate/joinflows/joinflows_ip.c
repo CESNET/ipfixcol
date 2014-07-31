@@ -90,6 +90,7 @@ struct mapping_header {
 	struct tid_reuse *reuse; /* released Template IDs */
 	struct input_info *input_info;
 	struct mapping_header *next; /* Next header */
+	struct ipfix_template *remove_later;
 };
 
 /* structure for each mapped source ODID */
@@ -407,6 +408,48 @@ struct mapping *mapping_equal(struct mapping_header *map, uint32_t orig_odid, ui
 }
 
 /**
+ * \brief If there are still some references on template which should be removed,
+ *			don't wait for storage plugin. Just add it to list and free it later
+ * 
+ * \param map Mapping header
+ * \param templ Old template
+ */
+void mapping_remove_template(struct mapping_header *map, struct ipfix_template *templ)
+{	
+	if (templ->references <= 0) {
+		free(templ);
+		return;
+	}
+
+	struct ipfix_template *aux_templ;	
+	
+	while (map->remove_later && map->remove_later->references <= 0) {
+		aux_templ = map->remove_later;
+		map->remove_later = map->remove_later->next;
+		free(aux_templ);
+	}
+	
+	templ->next = map->remove_later;
+	map->remove_later = templ;
+}
+
+/**
+ * \brief Destroy all old templates
+ * 
+ * \param map Mapping header
+ */
+void mapping_destroy_old_templates(struct mapping_header *map)
+{
+	struct ipfix_template *aux_templ;
+	
+	while (map->remove_later) {
+		aux_templ = map->remove_later;
+		map->remove_later = map->remove_later->next;
+		free(aux_templ);
+	}
+}
+
+/**
  * \brief Remove mapping
  *
  * \param[in,out] map Mapping header
@@ -431,9 +474,7 @@ void mapping_remove(struct mapping_header *map, struct mapping *old_map)
 
 	old_map->new_templ->references--;
 	if (old_map->new_templ->references <= 0) {
-		/* If there is no reference on modified template, remove it */
-		while (old_map->new_templ->templ->references > 0);
-		free(old_map->new_templ->templ);
+		mapping_remove_template(map, old_map->new_templ->templ);
 		free(old_map->new_templ->rec);
 		mapping_reuse_tid(map, old_map->new_tid);
 		free(old_map->new_templ);
@@ -476,6 +517,8 @@ void mapping_destroy(struct mapping_header *map)
 		aux_reuse = map->reuse;
 	}
 
+	mapping_destroy_old_templates(map);
+	
 	free(map->input_info);
 	free(map);
 }
