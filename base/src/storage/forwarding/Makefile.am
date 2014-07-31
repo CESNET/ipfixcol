@@ -3,7 +3,11 @@ AM_CPPFLAGS = -I$(top_srcdir)/headers
 
 plugins_LTLIBRARIES = ipfixcol-forwarding-output.la
 ipfixcol_forwarding_output_la_LDFLAGS = -module -avoid-version -shared
+
+if HAVE_SCTP
 ipfixcol_forwarding_output_la_LIBADD = -lsctp -lrt
+AM_CPPFLAGS += -DHAVE_SCTP
+endif
 
 ipfixcol_forwarding_output_la_SOURCES = forwarding.c
 

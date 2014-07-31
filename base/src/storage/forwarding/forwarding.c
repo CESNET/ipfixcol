@@ -48,12 +48,18 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
-#include <netinet/sctp.h>
+
 #include <netdb.h>
 #include <unistd.h>
 #include <errno.h>
 #include "../../preprocessor.h"
 #include "../../ipfix_message.h"
+
+#ifdef HAVE_SCTP
+
+#include <netinet/sctp.h>
+
+#endif
 
 /* Identifier for MSG_* */
 static const char *msg_module = "forwarding storage";
@@ -115,11 +121,14 @@ int forwarding_connect4(forwarding *conf, char *destination)
 			return 1;
 		}
 	} else {
-		if (conf->type == SOURCE_TYPE_TCP) {
-			conf->sockfd = socket(AF_INET, SOCK_STREAM, 0);
-		} else {
-			conf->sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+		int proto = 0;
+		
+#ifdef HAVE_SCTP
+		if (conf->type == SOURCE_TYPE_SCTP) {
+			proto = IPPROTO_SCTP;
 		}
+#endif
+		conf->sockfd = socket(AF_INET, SOCK_STREAM, proto);
 		if (conf->sockfd < 0) {
 			MSG_ERROR(msg_module, "Cannot open socket");
 			return 1;
@@ -159,11 +168,15 @@ int forwarding_connect6(forwarding *conf, char *destination)
 			return 1;
 		}
 	} else {
-		if (conf->type == SOURCE_TYPE_TCP) {
-			conf->sockfd = socket(AF_INET6, SOCK_STREAM, 0);
-		} else {
-			conf->sockfd = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP);
+		int proto = 0;
+		
+#ifdef HAVE_SCTP
+		if (conf->type == SOURCE_TYPE_SCTP) {
+			proto = IPPROTO_SCTP;
 		}
+#endif
+		conf->sockfd = socket(AF_INET6, SOCK_STREAM, proto);
+		
 		if (conf->sockfd < 0) {
 			MSG_ERROR(msg_module, "Cannot open socket");
 			return 1;
@@ -323,7 +336,13 @@ char *forwarding_init_conf(forwarding *conf, xmlDoc *doc, xmlNodePtr root)
 				conf->type = SOURCE_TYPE_UDP;
 			} else if (!xmlStrcasecmp(aux_str, (const xmlChar *) "sctp")) {
 				/* SCTP */
+#ifdef HAVE_SCTP
 				conf->type = SOURCE_TYPE_SCTP;
+#else
+				MSG_ERROR(msg_module, "Plugin built without SCTP support!");
+				xmlFree(aux_str);
+				return NULL;
+#endif
 			} else {
 				MSG_ERROR(msg_module, "Unknown connection type \"%s\"!", aux_str);
 				xmlFree(aux_str);
