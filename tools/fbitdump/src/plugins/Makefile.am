@@ -2,13 +2,16 @@ ACLOCAL_AMFLAGS = -I m4
 
 pluginsdir = $(datadir)/fbitdump/plugins
 
-plugins_LTLIBRARIES = httprt.la http_status_code.la dns_rcode.la tls_csuites.la tls_version.la tls_csuites_array.la
+plugins_LTLIBRARIES = httprt.la http_status_code.la sip_method.la dns_rcode.la tls_csuites.la tls_version.la tls_csuites_array.la
 
 httprt_la_SOURCES= httprt.c
 httprt_la_LDFLAGS= -shared -module -avoid-version
 
 http_status_code_la_SOURCES= http_status_code.c
 http_status_code_la_LDFLAGS= -shared -module -avoid-version
+
+sip_method_la_SOURCES= sip_method.c
+sip_method_la_LDFLAGS= -shared -module -avoid-version
 
 dns_rcode_la_SOURCES= dns_rcode.c
 dns_rcode_la_LDFLAGS= -shared -module -avoid-version
