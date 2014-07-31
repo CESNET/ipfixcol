@@ -33,11 +33,12 @@
  * otherwise) arising in any way out of the use of this software, even
  * if advised of the possibility of such damage.
  *
- * $Id: tls_version.c 2956 2014-04-03 14:52:48Z 396204 $
+ * $Id$
  */
  
 #define _GNU_SOURCE
 #include <stdio.h>
+#include <strings.h>
 #include "plugin_header.h"
 #include "tls_values.h"
 

@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 #include <stdio.h>
+#include <strings.h>
 #include "plugin_header.h"
 
 void format( const union plugin_arg * arg, int plain_numbers, char out[PLUGIN_BUFFER_SIZE] ) {
