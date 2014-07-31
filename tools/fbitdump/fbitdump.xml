@@ -1239,6 +1239,87 @@
 			<element>e8057id820</element>
 		</value>
 	</column>
+	<column>
+		<name>SIP Method</name>
+		<alias>%csipm</alias>
+		<width>9</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element semantics="sip_method">e8057id830</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP Status Code</name>
+		<alias>%csips</alias>
+		<width>3</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id831</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP Request URI</name>
+		<alias>%csipu</alias>
+		<width>64</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id832</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP From</name>
+		<alias>%csipf</alias>
+		<width>64</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id833</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP To</name>
+		<alias>%csipt</alias>
+		<width>64</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id834</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP Contact</name>
+		<alias>%csipc</alias>
+		<width>64</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id835</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP Via</name>
+		<alias>%csipv</alias>
+		<width>64</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id836</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP Route</name>
+		<alias>%csipr</alias>
+		<width>64</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id837</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP Record Route</name>
+		<alias>%csiprr</alias>
+		<width>64</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id838</element>
+		</value>
+	</column>
 </columns>
 
 <groups>
@@ -1399,6 +1480,10 @@
 		<formatName>smtp4-cesnet</formatName>
 		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %csmtpcf %csmtpmc %csmtprc %csmtps %csmtpr %csmtpsf %csmtp2c %csmtp3c %scmtp4c %csmtp5c %csmtpd</formatString>
 	</format>
+	<format>
+		<formatName>sip4-cesnet</formatName>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %csipm %csipc %csipu %csipf %csipt %csipc %csipv %csipr %csiprr</formatString>
+	</format>
 </output>
 <plugins>
 	<plugin>
@@ -1408,6 +1493,10 @@
 	<plugin>
 		<name>http_status_code</name>
 		<path>/usr/share/fbitdump/plugins/http_status_code.so</path>
+	</plugin>
+	<plugin>
+		<name>sip_method</name>
+		<path>/usr/share/fbitdump/plugins/sip_method.so</path>
 	</plugin>
 	<plugin>
 		<name>dns_rcode</name>
