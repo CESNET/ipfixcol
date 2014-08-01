@@ -598,6 +598,10 @@ int main (int argc, char* argv[])
 			if (!done || get_retval != INPUT_INTR) { /* if interrupted and closing, it's ok */
 				MSG_WARNING(msg_module, "[%d] Getting IPFIX data failed!", proc_id);
 			}
+			if (packet) {
+				free(packet);
+				packet = NULL;
+			}
 			continue;
 		} else if (get_retval == INPUT_CLOSED) {
             /* ensure that parser gets NULL packet => closed connection */
