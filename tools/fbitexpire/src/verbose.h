@@ -68,6 +68,9 @@ typedef enum {
  */
 #define MSG_SYSLOG_INIT(ident) openlog(ident, LOG_PID, LOG_DAEMON); use_syslog = true
 
+
+#define MSG_COMMON(format, ...) icmsg_print_common(format, ## __VA_ARGS__)
+
 /**
  * \brief Set verbose level to level
  *
@@ -84,6 +87,6 @@ typedef enum {
  * \param format message format
  */
 void icmsg_print(ICMSG_LEVEL lvl, const char *prefix, const char *module, const char *format, ...);
-
+void icmsg_print_common(const char *format, ...);
 
 #endif /* VERBOSE_H_ */

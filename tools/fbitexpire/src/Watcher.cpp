@@ -58,11 +58,11 @@ namespace fbitexpire {
  * \param max_depth Maximal depth
  * \param multiple Allow multiple data writers
  */
-void Watcher::run(Scanner* scanner, int max_depth = 1, bool multiple = false)
+void Watcher::run(Scanner* scanner, bool multiple = false)
 {
-	_scanner = scanner; 
-	_max_depth = max_depth; 
-	_multiple = multiple; 
+	_scanner   = scanner;
+	_max_depth = _scanner->getMaxDepth();
+	_multiple  = multiple; 
 	
 	/* prepare inotify, roots etc. */
 	setup();
@@ -76,10 +76,11 @@ void Watcher::run(Scanner* scanner, int max_depth = 1, bool multiple = false)
  */
 void Watcher::stop()
 {
+	_done = true;
+	/* send signal to read() function in inotify */
+	pthread_kill(_th.native_handle(), SIGINT);
+	
 	if (_th.joinable()) {
-		_done = true;
-		/* send signal to read() function in inotify */
-		pthread_kill(_th.native_handle(), SIGINT);
 		_th.join();
 	}
 }
@@ -90,7 +91,6 @@ void Watcher::stop()
 void Watcher::loop()
 {
 	prctl(PR_SET_NAME, "fbitexp:Watcher\0", 0, 0, 0);
-	signal(SIGINT, Watcher::handle);
 	
 	MSG_DEBUG(msg_module, "started");
 	
@@ -110,8 +110,7 @@ void Watcher::loop()
 			while (count > 0) {
 				got_event = _inotify.GetEvent(&event);
 				if (got_event && event.IsCreateDir()) {
-					MSG_NOTICE(msg_module, "created directory %s/%s", event.GetWatch()->GetPath().c_str(), event.GetName().c_str());
-//					processNewDir(event);
+					processNewDir(event);
 				}
 
 				count--;
@@ -134,15 +133,16 @@ void Watcher::setup()
 	RootWatch *rw;
 	
 	_root_name_len = root->getName().length();
-	_max_depth += Directory::dirDepth(root->getName());
+	
 	
 	if (_multiple) {
 		/*
 		 * Multiple sources can write to top level directory
 		 * Set each it's subdir as separate directory tree root
 		 */
-		for (std::vector<Directory *>::iterator it = root->getChildren().begin(); it != root->getChildren().end(); ++it) {
-			rw = new RootWatch(*it);
+		watch(nullptr, root);
+		for (auto subRoot: root->getChildren()) {
+			rw = new RootWatch(subRoot);
 			_roots.push_back(rw);
 			
 			/* Watch directory subtree */
@@ -166,11 +166,15 @@ void Watcher::setup()
  */
 void Watcher::watch(RootWatch* rw, Directory* dir)
 {
+	MSG_DEBUG(msg_module, "watch %s", dir->getName().c_str());
 	InotifyWatch *watch = new InotifyWatch(dir->getName());
 	_inotify.Add(watch);
 	
 	dir->setActive();
-	rw->waching.push_back(dir);
+	
+	if (rw) {
+		rw->waching.push_back(dir);
+	}
 }
 
 /**
@@ -181,7 +185,8 @@ void Watcher::watch(RootWatch* rw, Directory* dir)
 void Watcher::watchRootWatch(RootWatch* rw)
 {
 	Directory *aux_dir = rw->root;
-	while (aux_dir) {
+	
+	while (aux_dir && aux_dir->getDepth() < _max_depth) {
 		watch(rw, aux_dir);
 		if (aux_dir->getChildren().empty() && aux_dir != rw->root) {
 			/* 
@@ -202,6 +207,7 @@ void Watcher::watchRootWatch(RootWatch* rw)
  */
 void Watcher::unWatch(Directory *dir)
 {
+	MSG_DEBUG(msg_module, "unWatch %s", dir->getName().c_str());
 	InotifyWatch *watch = _inotify.FindWatch(dir->getName());
 	if (watch) {
 		_inotify.Remove(watch);
@@ -244,6 +250,7 @@ RootWatch *Watcher::getRoot(Directory *dir)
 		}
 	}
 	
+	MSG_DEBUG(msg_module, "New root %s", dir->getName().c_str());
 	/* New root */
 	dir->setParent(_scanner->getRoot());
 	RootWatch *rw = new RootWatch(dir);
@@ -264,13 +271,14 @@ void Watcher::processNewDir(InotifyEvent& event)
 	int depth = Directory::dirDepth(new_path);
 	
 	if (depth >= _max_depth) {
+		MSG_DEBUG(msg_module, "%s is too deep", new_path.c_str());
 		return;
 	}
 	
-	Directory *newdir = new Directory(new_path, 0, depth, NULL, true);
+	Directory *newdir = new Directory(new_path, 0, depth, nullptr, true);
 	RootWatch *rw = getRoot(newdir);
 	
-	
+//	MSG_DEBUG(msg_module, "Dir from root %s", rw->root->getName().c_str());
 	if (rw->root == newdir) {
 		/* We found a new root dir - add it to dir tree*/
 		_scanner->addDir(newdir, newdir->getParent());
@@ -299,6 +307,9 @@ void Watcher::processNewDir(InotifyEvent& event)
 		_scanner->addDir(oldDir, oldDir->getParent());
 	}
 	
+	if (newdir != rw->root) {
+		newdir->setParent(rw->waching.back());
+	}
 	watch(rw, newdir);
 }
 

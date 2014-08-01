@@ -59,7 +59,7 @@
 #include "verbose.h"
 #include "Watcher.h"
 
-#define OPTSTRING "rmhVDfkp:d:s:v:w:"
+#define OPTSTRING "rmhVDfkop:d:s:v:w:"
 #define DEFAULT_PIPE "./fbitexpire_fifo"
 
 static const char *msg_module = "fbitexpire";
@@ -68,19 +68,20 @@ using namespace fbitexpire;
 
 void print_help()
 {
-	std::cout << "\nUse: " << PACKAGE_NAME << " [-rhVfk] [-p pipe] [-d depth] [-s size] [-w watermark] [-v verbose] directory\n\n";
+	std::cout << "\nUse: " << PACKAGE_NAME << " [-rhVfok] [-p pipe] [-d depth] [-s size] [-w watermark] [-v verbose] [directory]\n\n";
 	std::cout << "Options:\n";
 	std::cout << "  -h           show this text\n";
 	std::cout << "  -V           show tool version\n";
-	std::cout << "  -r           Send daemon message to rescan folder. Daemon HAVE TO be running, conflict with c, d\n";
+	std::cout << "  -r           Send daemon message to rescan folder. Daemon HAVE TO be running\n";
 	std::cout << "  -f           Force rescan directories when daemon starts (ignore stat files)\n";
 	std::cout << "  -p pipe      Pipe name, default is " << DEFAULT_PIPE << "\n";
-	std::cout << "  -s size      Max size of all directories in MB\n";
-	std::cout << "  -w watermark Watermark limit\n";
+	std::cout << "  -s size      Max size of all directories (in MB)\n";
+	std::cout << "  -w watermark Lower limit when removing folders (in MB)\n";
 	std::cout << "  -d depth     Dept of watched directories, default 1\n";
 	std::cout << "  -D           Daemonize\n";
 	std::cout << "  -m           Multiple sources on top level directory. See man pages for more info\n";
 	std::cout << "  -k           Stop fbitexpire daemon listening on pipe specified by -p\n";
+	std::cout << "  -o           Only scan dirs and remove old (if needed). Don't wait for new folders\n";
 	std::cout << "  -v verbose   Verbose level\n";
 	std::cout << "\n";
 }
@@ -120,7 +121,7 @@ int main(int argc, char *argv[])
 {
 	int c, depth{1};
 	bool rescan{false}, force{false}, daemonize{false}, pipe_exists{false}, multiple{false};
-	bool wmarkset{false}, kill_daemon{false};
+	bool wmarkset{false}, sizeset{false}, kill_daemon{false}, only_remove{false};
 	uint64_t watermark{0}, size{0};
 	std::string pipe{DEFAULT_PIPE};
 
@@ -142,11 +143,12 @@ int main(int argc, char *argv[])
 			pipe = std::string(optarg);
 			break;
 		case 's':
-			size = std::atol(optarg);
+			sizeset = true;
+			size = std::atol(optarg) * 1024 * 1024;
 			break;
 		case 'w':
 			wmarkset = true;
-			size = std::atol(optarg);
+			watermark = std::atol(optarg) * 1024 * 1024;
 			break;
 		case 'd':
 			depth = std::atoi(optarg);
@@ -160,6 +162,9 @@ int main(int argc, char *argv[])
 		case 'k':
 			kill_daemon = true;
 			break;
+		case 'o':
+			only_remove = true;
+			break;
 		case 'v':
 			MSG_SET_VERBOSE(std::atoi(optarg));
 			break;
@@ -171,8 +176,9 @@ int main(int argc, char *argv[])
 
 	openlog(0, LOG_CONS | LOG_PID, LOG_USER);
 	
-	if (daemonize && rescan) {
-		MSG_ERROR(msg_module, "conflicting arguments -r and -D");
+	if ((daemonize && rescan) || (daemonize && kill_daemon) || (daemonize && only_remove)
+		|| (rescan && only_remove) || (kill_daemon && only_remove)) {
+		MSG_ERROR(msg_module, "conflicting arguments");
 		return 1;
 	}
 
@@ -191,7 +197,6 @@ int main(int argc, char *argv[])
 
 	std::stringstream msg;
 	if (rescan) {
-		std::cout << optind << "|" << argc << std::endl;
 		while (optind < argc) {
 			msg << "r" << argv[optind++] << "\n";
 		}
@@ -205,6 +210,11 @@ int main(int argc, char *argv[])
 		return write_to_pipe(pipe_exists, pipe, msg.str());
 	}
 
+	if (!sizeset) {
+		MSG_ERROR(msg_module, "size not specified");
+		return 1;
+	}
+	
 	if (!pipe_exists) {
 		/* Create pipe */
 		if (mkfifo(pipe.c_str(), S_IRWXU | S_IRWXG | S_IRWXO)) {
@@ -215,31 +225,43 @@ int main(int argc, char *argv[])
 	
 	std::string basedir{argv[optind]};
 	
-	Directory::correctDirName(basedir);
+	basedir = Directory::correctDirName(basedir);
 	
-	Watcher watcher;
-	Cleaner cleaner;
-	Scanner scanner;
-	PipeListener listener(pipe);
-	
-	std::mutex mtx;
-	std::unique_lock<std::mutex> lock(mtx);
-	std::condition_variable cv;
-	
-	scanner.createDirTree(basedir, depth);
-	watcher.run(&scanner, depth, multiple);
-	scanner.run(&cleaner, size, watermark, multiple);
-	cleaner.run();
-	listener.run(&watcher, &scanner, &cleaner, &cv);
+	if (basedir.empty()) {
+		return 1;
+	}
 	
 	if (daemonize) {
 		closelog();
 		MSG_SYSLOG_INIT(PACKAGE);
 		/* and send all following messages to the syslog */
 		if (daemon (1, 0)) {
-			MSG_ERROR(msg_module, "%s", strerror(errno));
+			MSG_ERROR(msg_module, strerror(errno));
 		}
-	} else {
+	} 
+	
+	Watcher watcher;
+	Cleaner cleaner;
+	Scanner scanner;
+	PipeListener listener(pipe);
+
+	std::mutex mtx;
+	std::unique_lock<std::mutex> lock(mtx);
+	std::condition_variable cv;
+	
+	
+	try {
+		scanner.createDirTree(basedir, depth);
+		watcher.run(&scanner, multiple);
+		scanner.run(&cleaner, size, watermark, multiple);
+		cleaner.run();
+		listener.run(&watcher, &scanner, &cleaner, &cv);
+	} catch (std::exception &e) {
+		MSG_ERROR(msg_module, e.what());
+		return 1;
+	}
+	
+	if (only_remove) {
 		/*
 		 * tell PipeListener to stop other threads
 		 */
@@ -247,6 +269,5 @@ int main(int argc, char *argv[])
 	}
 	
 	cv.wait(lock, [&listener]{ return listener.isDone(); });
-	MSG_DEBUG(msg_module, "leaving");
 	closelog();
 }

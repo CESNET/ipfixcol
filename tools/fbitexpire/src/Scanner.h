@@ -67,18 +67,20 @@ public:
     void createDirTree(std::string basedir, int maxdepth = 1);
     void popNewestChild(Directory *parent);
     
-    Directory *getRoot() { return _rootdir; }
+    Directory *getRoot() { return _rootdir;   }
+    int getMaxDepth()    { return _max_depth; }
     
     void addDir(Directory *dir, Directory *parent);
     void rescan(std::string dir);
     
     Directory *dirFromPath(std::string path);
     
+    void stop();
     void run(Cleaner *cleaner, uint64_t max_size, uint64_t waternark, bool multiple = false);
 private:
     void loop();
     
-    void createDirTree(Directory *parent, int maxdepth, int depth);
+    void createDirTree(Directory *parent);
     int scanCount() { return _scan_count.load(); }
     int  addCount() { return  _add_count.load(); }
     
@@ -108,6 +110,8 @@ private:
     
     std::queue<std::string> _to_scan;
     std::queue<addPair>     _to_add;
+    
+    int _max_depth;
     
     std::condition_variable _cv;
     

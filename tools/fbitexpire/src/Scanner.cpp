@@ -67,6 +67,17 @@ void Scanner::run(Cleaner *cleaner, uint64_t max_size, uint64_t watermark, bool 
 	run();
 }
 
+void Scanner::stop()
+{
+	
+	_done = true;
+	_cv.notify_one();
+	
+	if (_th.joinable()) {
+		_th.join();
+	}
+}
+
 /**
  * \brief Main loop
  */
@@ -142,13 +153,18 @@ void Scanner::removeDirs()
 {
 	Directory *dir, *parent;
 	
-	while (_rootdir->getSize() > _watermark) {
+	
+	while (totalSize() > _watermark) {
 		dir = getDirToRemove();
+		
 		
 		if (!dir) {
 			MSG_WARNING(msg_module, "cannot remove any folder (only active directories)");
 			return;
 		}
+		
+		MSG_ERROR(msg_module, "total size %u KB, max %u KB, watermark %u KB", totalSize() /1024, _max_size/1024, _watermark/1024);
+		MSG_ERROR(msg_module, "remove %s (%u KB)",	dir->getName().c_str(), dir->getSize()/1024);
 		
 		_cleaner->removeDir(dir->getName());
 		
@@ -157,7 +173,6 @@ void Scanner::removeDirs()
 		parent->removeOldest();
 		
 		/* Update parent's age to the second oldest subdir and correct it's size */
-		parent = parent->getParent();
 		while (parent) {
 			parent->updateAge();
 			parent->setSize(parent->getSize() - dir->getSize());
@@ -181,14 +196,18 @@ void Scanner::rescanDirs()
 	
 	while (scanCount() > 0) {
 		/* Get directory instance from path */
-		path = getNextScan();
-		dir  = dirFromPath(Directory::correctDirName(path));
-		
-		if (!dir) {
-			/* Directory not found in our tree */
+		path = Directory::correctDirName(getNextScan());
+		if (path.empty()) {
 			continue;
 		}
-		
+
+		dir = dirFromPath(path);
+		if (!dir) {
+			/* Directory not found in our tree */
+			MSG_WARNING(msg_module, "Cannot rescan %s, it's not part of this tree of it's too deep", path.c_str());
+			continue;
+		}
+
 		/* rescan directory */
 		dir->rescan();
 	}
@@ -204,7 +223,7 @@ void Scanner::addNewDirs()
 	
 	while (addCount() > 0) {
 		std::tie(dir, parent) = getNextAdd();
-		
+		MSG_ERROR(msg_module, "Adding %s", dir->getName().c_str());
 		parent->addChild(dir);
 		
 		/* 
@@ -221,14 +240,17 @@ void Scanner::addNewDirs()
 		/* Get directory size */
 		dir->setSize(dir->countSize());
 		
+		newSize = dir->getSize();
+		
+		MSG_ERROR(msg_module, "%s (%u)", dir->getName().c_str(), dir->getSize());
+		
 		/* Propagate size to predecessors */
 		while (parent) {
-			newSize = parent->getSize() + dir->getSize();
 			if (!parent->isActive()) {
 				/* If parent is inactive, we can count size of files in it */
 				newSize += parent->countFilesSize();
 			}
-			parent->setSize(newSize);
+			parent->setSize(parent->getSize() + newSize);
 			parent = parent->getParent();
 		}
 	}
@@ -237,7 +259,13 @@ void Scanner::addNewDirs()
 
 void Scanner::popNewestChild(Directory *parent)
 {
+	Directory *dir = parent->getChildren().back();
 	parent->getChildren().pop_back();
+	
+	while (parent) {
+		parent->setSize(parent->getSize() - dir->getSize());
+		parent = parent->getParent();
+	}
 }
 
 void Scanner::addDir(Directory* dir, Directory* parent)
@@ -283,14 +311,20 @@ std::string Scanner::getNextScan()
 Directory *Scanner::dirFromPath(std::string path)
 {
 	Directory *aux_dir = _rootdir;
-	std::vector<Directory *>::iterator it;
+	bool next = false;
 	
 	while (!aux_dir->getChildren().empty()) {
+		next = false;
 		for (auto child: aux_dir->getChildren()) {
 			if (path.find(child->getName()) == 0) {
 				aux_dir = child;
+				next = true;
 				break;
 			}
+		}
+		
+		if (!next) {
+			break;
 		}
 	}
 	
@@ -302,16 +336,24 @@ Directory *Scanner::dirFromPath(std::string path)
 	return aux_dir;
 }
 
-
-
+/**
+ * \brief Create directory tree
+ * 
+ * \param basedir Root directory
+ * \param maxdepth maximal depth
+ */
 void Scanner::createDirTree(std::string basedir, int maxdepth)
 {
 	struct stat st;
 	if (!lstat(basedir.c_str(), &st) && S_ISDIR(st.st_mode)) {
 		/* Create root directory */
-		_rootdir = new Directory(basedir, st.st_mtime, 0);
+		_rootdir = new Directory(basedir, st.st_mtime, Directory::dirDepth(basedir));
+		
+		/* set right max depth */
+		_max_depth = maxdepth + _rootdir->getDepth();
+		
 		/* Add subdirectories (recursively) */
-		createDirTree(_rootdir, maxdepth, 0);
+		createDirTree(_rootdir);
 	} else {
 		throw std::invalid_argument(std::string("Cannot acces directory " + basedir));
 	}
@@ -321,11 +363,11 @@ void Scanner::createDirTree(std::string basedir, int maxdepth)
  * \brief Create directory tree
  * 
  * \param parent Actual directory
- * \param maxdepth Maximal depth
  */
-void Scanner::createDirTree(Directory* parent, int maxdepth, int depth)
+void Scanner::createDirTree(Directory* parent)
 {
-	if (maxdepth == depth) {
+	int depth = parent->getDepth() + 1;
+	if (depth >= _max_depth) {
 		parent->setSize(Directory::dirSize(parent->getName()));
 		return;
 	}
@@ -341,6 +383,9 @@ void Scanner::createDirTree(Directory* parent, int maxdepth, int depth)
 		throw std::invalid_argument(std::string("Cannot open " + parent->getName()));
 	}
 	
+	lstat(parent->getName().c_str(), &st);
+	size += st.st_size;
+	
 	/* Iterate through subdirectories */
 	while ((entry = readdir(dir))) {
 		/* Get entry name and full path */
@@ -352,14 +397,15 @@ void Scanner::createDirTree(Directory* parent, int maxdepth, int depth)
 		} else if (S_ISDIR(st.st_mode)) {
 			aux_dir = new Directory(entry_path, st.st_mtime, depth, parent);
 			parent->addChild(aux_dir);
+		} else {
+			size += st.st_size;
 		}
-		size += st.st_size;
 	}
 	closedir(dir);
 	
 	/* Create subtrees */
 	for (std::vector<Directory *>::iterator it = parent->getChildren().begin(); it != parent->getChildren().end(); ++it) {
-		createDirTree(*it, maxdepth, depth + 1);
+		createDirTree(*it);
 		size += (*it)->getSize();
 	}
 	

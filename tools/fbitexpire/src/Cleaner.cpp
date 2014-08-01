@@ -58,7 +58,10 @@ void Cleaner::stop()
 {
 	_done = true;
 	_cv.notify_one();
-	_th.join();
+	
+	if (_th.joinable()) {
+		_th.join();
+	}
 }
 
 /**
@@ -83,7 +86,11 @@ void Cleaner::loop()
 		
 		while (count() > 0) {
 			MSG_DEBUG(msg_module, "rm %s", getNextDir().c_str());
-//			remove(getNextDir());
+			try {
+	//			remove(getNextDir());
+			} catch (std::exception &e) {
+				MSG_ERROR(msg_module, e.what());
+			}
 		}
 	}
 	

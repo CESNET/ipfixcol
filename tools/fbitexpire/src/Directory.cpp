@@ -42,6 +42,9 @@
 
 #include <sys/stat.h>
 #include <dirent.h>
+#include <limits.h>
+#include <stdlib.h>
+
 #include <stdexcept>
 
 static const char *msg_module = "Directory";
@@ -57,22 +60,19 @@ Directory::~Directory()
 	_children.clear();
 }
 
-std::string Directory::correctDirName(std::string& dir)
+std::string Directory::correctDirName(std::string dir)
 {
-	std::string::size_type pos;
-	while ((pos = dir.find("//")) != std::string::npos) {
-		dir.replace(pos, 2, "/");
+	char *real = realpath(dir.c_str(), nullptr);
+	
+	if (!real) {
+		MSG_ERROR(msg_module, "wrong path %s", dir.c_str());
+		return std::string("");
 	}
 	
-	if (dir.length() >= 2 && dir.substr(0, 2) == "./") {
-		dir = dir.substr(2);
-	}
+	std::string realdir(real);
+	free(real);
 	
-	if (dir.length() > 0 && dir[dir.length() - 1] == '/') {
-		dir = dir.substr(0, dir.length() - 1);
-	}
-	
-	return dir;
+	return realdir;
 }
 
 void Directory::rescan()
@@ -123,6 +123,9 @@ uint64_t Directory::dirSize(std::string path, bool recursive)
 		throw std::invalid_argument(std::string("Cannot open " + path));
 	}
 	
+	lstat(path.c_str(), &st);
+	size += st.st_size;
+	
 	/* Iterate through subdirectories */
 	while ((entry = readdir(dir))) {
 		/* Get entry name and full path */
@@ -133,8 +136,9 @@ uint64_t Directory::dirSize(std::string path, bool recursive)
 			continue;
 		} else if (S_ISDIR(st.st_mode) && recursive) {
 			size += dirSize(entry_path);
+		} else {
+			size += st.st_size;
 		}
-		size += st.st_size;
 	}
 	closedir(dir);
 	

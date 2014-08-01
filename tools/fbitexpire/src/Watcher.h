@@ -59,7 +59,7 @@ namespace fbitexpire {
 struct RootWatch {
     RootWatch() {}
     RootWatch(Directory *r): root(r) {}
-    Directory *root = NULL;             /* root of watched subtree */
+    Directory *root = nullptr;          /* root of watched subtree */
     std::vector<Directory *> waching;   /* vector of watched directories in this subtree */
 };
 
@@ -72,7 +72,7 @@ public:
     Watcher() {};
     ~Watcher() {};
 
-    void run(Scanner *scanner, int max_depth, bool multiple);
+    void run(Scanner *scanner, bool multiple);
     void stop();
 private:
     void loop();

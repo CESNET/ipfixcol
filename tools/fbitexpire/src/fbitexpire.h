@@ -59,7 +59,7 @@ public:
     /**
      * \brief Stop and join thread
      */
-    virtual void stop()         { if (_th.joinable()) { _done = true; _th.join(); } } 
+    virtual void stop()         { _done = true; if (_th.joinable()) { _th.join(); } } 
     
     /**
      * \brief Destructor - stop and join thread

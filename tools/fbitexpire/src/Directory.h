@@ -95,8 +95,8 @@ public:
     static uint64_t dirSize(Directory *dir);
     
     static int  dirDepth(std::string dir) { return std::count(dir.begin(), dir.end(), '/'); }
-    static bool cmpDirDate(Directory *first, Directory *second) { return first->_age > second->_age; }
-    static std::string correctDirName(std::string &dir);
+    static bool cmpDirDate(Directory *first, Directory *second) { return first->_age < second->_age; }
+    static std::string correctDirName(std::string dir);
 private:
     std::string _name;
     int _age;
@@ -105,7 +105,7 @@ private:
     bool _active = false;
     
     dirVec   _children;
-    uint64_t _size;
+    uint64_t _size = 0;
 };
 
 } /* end of namespace fbitexpire */

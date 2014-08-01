@@ -52,11 +52,27 @@ int verbose = ICMSG_ERROR;
 /* Do not use syslog unless specified otherwise */
 bool use_syslog = false;
 
+void icmsg_print_common(const char *format, ...)
+{
+	va_list ap;
+	std::string msg(std::string(format) + std::string("\n"));
+	
+	va_start(ap, format);
+	vprintf(msg.c_str(), ap);
+	va_end(ap);
+	
+	if (use_syslog) {
+		va_start(ap, format);
+		vsyslog(LOG_INFO, msg.c_str(), ap);
+		va_end(ap);
+	}
+}
+
 void icmsg_print(ICMSG_LEVEL lvl, const char *prefix, const char *module, const char *format, ...)
 {
 	std::stringstream msg;
 	
-	msg << prefix << ": " << module << ": " << format;
+	msg << prefix << ": " << module << ": " << format << "\n";
 	
 	va_list ap;
 	int priority;
