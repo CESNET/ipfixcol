@@ -40,8 +40,6 @@
 #include "PipeListener.h"
 #include "verbose.h"
 
-#include <csignal>
-
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -52,8 +50,6 @@
 
 
 static const char *msg_module = "PipeListener";
-
-static std::string glob_pipename;
 
 namespace fbitexpire {
 
@@ -70,7 +66,6 @@ void PipeListener::run(Watcher *watcher, Scanner *scanner, Cleaner *cleaner, std
 	_watcher = watcher;
 	_scanner = scanner;
 	_cleaner = cleaner;
-	glob_pipename = _pipename;
 	_cv = cv;
 	run();
 }
@@ -81,7 +76,6 @@ void PipeListener::run(Watcher *watcher, Scanner *scanner, Cleaner *cleaner, std
 void PipeListener::loop()
 {
 	prctl(PR_SET_NAME, "fbitexp:PipeList\0", 0, 0, 0);
-	signal(SIGINT, PipeListener::handle);
 	
 	MSG_DEBUG(msg_module, "started");
 	
@@ -117,9 +111,9 @@ void PipeListener::loop()
 void PipeListener::killAll()
 {
 	_done = true;
-	if (_th.joinable()) {
-		pthread_kill(_th.native_handle(), SIGINT);
-	}
+	std::ofstream fpipe(_pipename, std::ios::out);
+	fpipe << "k\n";
+	fpipe.close();
 }
 
 /**
@@ -158,18 +152,6 @@ void PipeListener::reopenPipe()
 {
 	closePipe();
 	openPipe();
-}
-
-void PipeListener::handle(int param)
-{
-	int fd = open(glob_pipename.c_str(), O_WRONLY | O_NONBLOCK);
-	if (fd < 0) {
-		MSG_WARNING(msg_module, "%s", strerror(errno));
-	} else {
-		std::string msg = "k\n";
-		write(fd, msg.c_str(), msg.length());
-		close(fd);
-	}
 }
 
 } /* end of namespace fbitexpire */

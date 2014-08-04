@@ -38,6 +38,8 @@
  */
 
 #include <cstdlib>
+#include <chrono>
+#include <thread>
 #include <condition_variable>
 #include <fstream>
 #include <iostream>
@@ -48,6 +50,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <syslog.h>
+#include <sys/signal.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -61,10 +64,13 @@
 
 #define OPTSTRING "rmhVDfkop:d:s:v:w:"
 #define DEFAULT_PIPE "./fbitexpire_fifo"
+#define DEFAULT_DEPTH 1
 
 static const char *msg_module = "fbitexpire";
 
 using namespace fbitexpire;
+
+static PipeListener *list = nullptr;
 
 void print_help()
 {
@@ -89,6 +95,13 @@ void print_help()
 void print_version()
 {
 	std::cout << PACKAGE_STRING << "\n";
+}
+
+void handle(int param)
+{
+	if (list) {
+		list->killAll();
+	}
 }
 
 int write_to_pipe(bool pipe_exists, std::string pipe, std::string msg)
@@ -119,12 +132,13 @@ int write_to_pipe(bool pipe_exists, std::string pipe, std::string msg)
 
 int main(int argc, char *argv[])
 {
-	int c, depth{1};
+	int c, depth{DEFAULT_DEPTH};
 	bool rescan{false}, force{false}, daemonize{false}, pipe_exists{false}, multiple{false};
-	bool wmarkset{false}, sizeset{false}, kill_daemon{false}, only_remove{false};
+	bool wmarkset{false}, sizeset{false}, kill_daemon{false}, only_remove{false}, depthset{false};
 	uint64_t watermark{0}, size{0};
 	std::string pipe{DEFAULT_PIPE};
-
+	signal(SIGINT, handle);	
+	
 	while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
 		switch (c) {
 		case 'h':
@@ -151,6 +165,7 @@ int main(int argc, char *argv[])
 			watermark = std::atol(optarg) * 1024 * 1024;
 			break;
 		case 'd':
+			depthset = true;
 			depth = std::atoi(optarg);
 			break;
 		case 'D':
@@ -223,6 +238,10 @@ int main(int argc, char *argv[])
 		}
 	}
 	
+	if (!depthset) {
+		MSG_WARNING(msg_module, "Depth not set, using default (%d)", DEFAULT_DEPTH);
+	}
+	
 	std::string basedir{argv[optind]};
 	
 	basedir = Directory::correctDirName(basedir);
@@ -244,11 +263,11 @@ int main(int argc, char *argv[])
 	Cleaner cleaner;
 	Scanner scanner;
 	PipeListener listener(pipe);
+	list = &listener;
 
 	std::mutex mtx;
 	std::unique_lock<std::mutex> lock(mtx);
 	std::condition_variable cv;
-	
 	
 	try {
 		scanner.createDirTree(basedir, depth);
@@ -265,9 +284,12 @@ int main(int argc, char *argv[])
 		/*
 		 * tell PipeListener to stop other threads
 		 */
+		sleep(1);
 		listener.killAll();
+		listener.stop();
+		return 0;
 	}
-	
+
 	cv.wait(lock, [&listener]{ return listener.isDone(); });
 	closelog();
 }
