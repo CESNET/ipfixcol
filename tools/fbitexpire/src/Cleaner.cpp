@@ -85,9 +85,8 @@ void Cleaner::loop()
 		}
 		
 		while (count() > 0) {
-			MSG_DEBUG(msg_module, "rm %s", getNextDir().c_str());
 			try {
-	//			remove(getNextDir());
+				remove(getNextDir());
 			} catch (std::exception &e) {
 				MSG_ERROR(msg_module, e.what());
 			}
@@ -130,7 +129,7 @@ void Cleaner::remove(std::string path)
 		}
 	}
 	
-	MSG_DEBUG(msg_module, "Removing directory %s", path.c_str());
+//	MSG_DEBUG(msg_module, "Removing directory %s", path.c_str());
 	
 	/* close and remove directory */
 	closedir(dir);
