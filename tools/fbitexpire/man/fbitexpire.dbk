@@ -39,13 +39,13 @@
     <refsynopsisdiv>
         <cmdsynopsis>
             <command>fbitexpire</command>
+            <arg>-hrVDokm</arg>
             <arg>-p pipe</arg>
-            <arg>-hrVDf</arg>
             <arg>-d depth</arg>
             <arg>-s size</arg>
-            <arg>-v verboce</arg>
             <arg>-w watermark</arg>
-				<arg>directories...</arg>
+            <arg>-v verbose</arg>
+            <arg>directory</arg>
         </cmdsynopsis>
     </refsynopsisdiv>
 
@@ -53,7 +53,7 @@
 		<title>Description</title>
 		<simpara>
 			The <command>fbitexpire</command> is an data size check tool, part of IPFIXcol framework. 
-			The fbitexpire checks size of data in selected directories and remove old data if data size reached maximal size.
+			The fbitexpire checks size of data in selected directory and remove old data if data size reached maximal size.
 		</simpara>
 	</refsect1>
 
@@ -70,14 +70,14 @@
 			<varlistentry>
 				<term>-V</term>
 				<listitem>
-					<simpara>Print version information and exit.</simpara>
+					<simpara>Print version informations and exit.</simpara>
 				</listitem>
 			</varlistentry>
 			
 			<varlistentry>
 				<term>-p <replaceable class="parameter">pipe</replaceable></term>
 				<listitem>
-					<simpara>For communication between thread or between program and user is used named <replaceable class="parameter">pipe</replaceable>. Default is /var/tmp/exiredaemon-queue.</simpara>
+					<simpara>For communication between program and user is used named <replaceable class="parameter">pipe</replaceable>. Default is ./fbitexpire_fifo</simpara>
 				</listitem>
 			</varlistentry>
 			
@@ -85,7 +85,7 @@
 				<term>-d <replaceable class="parameter">depth</replaceable></term>
 				<listitem>
 					<simpara>
-						<replaceable class="parameter">Depth</replaceable>	of directory where we want to watch changes. Check examples.			
+						<replaceable class="parameter">Depth</replaceable>	of directory where we want to watch changes.
 					</simpara>
 				</listitem>
 			</varlistentry>
@@ -98,28 +98,23 @@
 					</simpara>
 				</listitem>
 			</varlistentry>
-			<varlistentry>
-				<term>-f</term>
-				<listitem>
-					<simpara>fbitexpire is creating stat.txt files which contents size of directory for faster re-running daemon. If you want to do full rescan use this force (-f) option.</simpara>
-				</listitem>
-			</varlistentry>
+		
 			<varlistentry>
 				<term>-r</term>
 				<listitem>
-					<simpara>Send to pipe command to rescan typed directory. Daemon MUST be running. -r option is in conflict with -d -c -s -f options.</simpara>
+					<simpara>Send to pipe command to rescan typed directory. Daemon MUST be running.</simpara>
 				</listitem>
 			</varlistentry>
 			<varlistentry>
 				<term>-v <replaceable class="parameter">level</replaceable></term>
 				<listitem>
-					<simpara>Set verbose level. Expireademon write verbose data to systemlog with LOG_INFO priority. If verbose level is set to 0, it will write nothing. 1 for write deleted data. 2 and 3 more info</simpara>
+					<simpara>Set verbose level.</simpara>
 				</listitem>
 			</varlistentry>
 			<varlistentry>
 				<term>-w <replaceable class="parameter">watermark</replaceable></term>
 				<listitem>
-					<simpara>Set watermark limit...........TODO DOCUMENTATION............</simpara>
+					<simpara>Set watermark limit - it is lower size limit when removing files after reaching maximal size.</simpara>
 				</listitem>
 			</varlistentry>
 			<varlistentry>
@@ -129,21 +124,39 @@
 				</listitem>
 			</varlistentry>
 			
+                        <varlistentry>
+                            <term>-m</term>
+                            <listitem>
+                                <simpara>Enable multiple sources on top directory (disabled by default). When this option is set, fbitexpire looks at each top level directory (each subdirectory of given folder) as a separate 
+                                    directory tree with own data writer.
+                                </simpara>
+                            </listitem>
+                        </varlistentry>
+                        
+                        <varlistentry>
+                            <term>-k</term>
+                            <listitem>
+                                <simpara>Stop fbitexpire daemon listening on pipe specified by <command>-p</command></simpara>
+                            </listitem>
+                        </varlistentry>
+                        
+                        <varlistentry>
+                            <term>-o</term>
+                            <listitem>
+                                <simpara>By default, fbitexpire runs as daemon on foreground (or background with <command>-D</command>). With this option, it only scans directories, removes old data (if needed) and stops without waiting on new data etc.</simpara>
+                            </listitem>
+                        </varlistentry>
 		</variablelist>
 	</refsect1>
 
 	<refsect1>
 		<title>Examples</title>
 		<literallayout>fbitexpire -d 4 -s 5000 /data/collector/
-		Watch subdirectories od /data/collector. Depth is set to 4 so we watch directories of maximal depth /data/collector/1/2/3/4 and we watch 2 of theese directories. Watched size is 5GB</literallayout>
-		<literallayout>fbitexpire -f -d 4 -s 5000 /data/collector/
-		Same as pervious example, but there is scan force option. If you re-run daemon it will scan directories again and ignore and create new stat.txt files.</literallayout>
+		Watch subdirectories at /data/collector. Depth is set to 4 so we watch directories of maximal depth /data/collector/1/2/3/4. Watched size is 5GB</literallayout>
 		<literallayout>fbitexpire -r /data/collector/2013/08/25
-		Send to daemon command to rescan typed directory.</literallayout>
+		Send to daemon command listening on ./fbitexpire_fifo to rescan given directory.</literallayout>
 		<literallayout>fbitexpire -d 4 -s 5000 -p /tmp/expirepipe /data/collector/
 		Pipe location is set to /tmp/expirepipe.</literallayout>
-		<literallayout>fbitexpire -d 4 -s 5000 /data/collector/ /data/collector2 /data/collector3
-		We can watch multiple directories.</literallayout>
 	</refsect1>
 
 
@@ -156,6 +169,7 @@
 					<term>
 						<citerefentry><refentrytitle>fbitdump</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
 						<citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
+                                                <citerefentry><refentrytitle>fbitmerge</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
 						<citerefentry><refentrytitle>ipfixcol-fastbit-output</refentrytitle><manvolnum>1</manvolnum></citerefentry>
 					</term>
 					<listitem>
