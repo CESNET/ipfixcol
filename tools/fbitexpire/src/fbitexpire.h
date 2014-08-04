@@ -44,6 +44,23 @@
 #include <iostream>
 #include <thread>
 
+/* Macros for size conversion */
+#define KILOBYTE (1024)
+#define MEGABYTE (KILOBYTE * 1024)
+#define GIGABYTE (MEGABYTE * 1024)
+#define TERABYTE (GIGABYTE * 1024)
+
+#define BYTES_TO_KB(_size_) (_size_) / 1024.0
+#define BYTES_TO_MB(_size_) (BYTES_TO_KB((_size_))) / 1024.0
+#define BYTES_TO_GB(_size_) (BYTES_TO_MB((_size_))) / 1024.0
+#define BYTES_TO_TB(_size_) (BYTES_TO_GB((_size_))) / 1024.0
+
+#define KB_TO_BYTES(_size_) (_size_) * KILOBYTE
+#define MB_TO_BYTES(_size_) (_size_) * MEGABYTE
+#define GB_TO_BYTES(_size_) (_size_) * GIGABYTE
+#define TB_TO_BYTES(_size_) (_size_) * TERABYTE
+
+
 namespace fbitexpire {
 
 /**

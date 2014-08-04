@@ -48,6 +48,7 @@
 
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
 #include <sys/signal.h>
@@ -72,6 +73,9 @@ using namespace fbitexpire;
 
 static PipeListener *list = nullptr;
 
+/**
+ * \brief Print basic help
+ */
 void print_help()
 {
 	std::cout << "\nUse: " << PACKAGE_NAME << " [-rhVDokm] [-p pipe] [-d depth] [-s size] [-w watermark] [-v verbose] [directory]\n\n";
@@ -92,18 +96,35 @@ void print_help()
 	std::cout << "\n";
 }
 
+/**
+ * \brief Print tool version
+ */
 void print_version()
 {
 	std::cout << PACKAGE_STRING << "\n";
 }
 
+/**
+ * \brief SIGINT handler
+ * 
+ * \param param
+ */
 void handle(int param)
 {
+	/* Tell listener to stop */
 	if (list) {
 		list->killAll();
 	}
 }
 
+/**
+ * \brief Write message to named pipe
+ * 
+ * \param pipe_exists pipe existence flag
+ * \param pipe Pipe name
+ * \param msg Message to be written
+ * \return 0 if everything is OK
+ */
 int write_to_pipe(bool pipe_exists, std::string pipe, std::string msg)
 {
 	std::ofstream f_pipe;
@@ -128,6 +149,38 @@ int write_to_pipe(bool pipe_exists, std::string pipe, std::string msg)
 	/* done */
 	f_pipe.close();
 	return 0;
+}
+
+/**
+ * \brief Decode size in format [0-9]+[bBkKmMgG]{0,1}
+ * 
+ * \param arg Size in string
+ * \return size in numeric format
+ */
+uint64_t decode_size(char *arg)
+{
+	uint64_t size = strtoull(arg, nullptr, 10);
+	
+	switch (arg[strlen(arg) - 1]) {
+	case 'b':
+	case 'B':
+		return size;
+	case 'k':
+	case 'K':
+		return KB_TO_BYTES(size);
+		break;
+	case 'm':
+	case 'M':
+		return MB_TO_BYTES(size);
+		break;
+	case 'g':
+	case 'G':
+		return GB_TO_BYTES(size);
+		break;
+	default:
+		return MB_TO_BYTES(size);
+		break;
+	}
 }
 
 int main(int argc, char *argv[])
@@ -158,11 +211,11 @@ int main(int argc, char *argv[])
 			break;
 		case 's':
 			sizeset = true;
-			size = std::atol(optarg) * 1024 * 1024;
+			size = decode_size(optarg);
 			break;
 		case 'w':
 			wmarkset = true;
-			watermark = std::atol(optarg) * 1024 * 1024;
+			watermark = decode_size(optarg);
 			break;
 		case 'd':
 			depthset = true;

@@ -37,6 +37,7 @@
  *
  */
 
+#include "fbitexpire.h"
 #include "Scanner.h"
 #include "verbose.h"
 
@@ -48,11 +49,6 @@
 #include <iomanip>
 #include <mutex>
 #include <sstream>
-
-/* Macros for totaSizeStr() */
-#define KILOBYTE 1024
-#define MEGABYTE KILOBYTE * 1024
-#define GIGABYTE MEGABYTE * 1024
 
 static const char *msg_module = "Scanner";
 
@@ -110,7 +106,7 @@ void Scanner::loop()
 			removeDirs();
 		}
 		
-		MSG_DEBUG(msg_module, "Total size: %s", totalSizeStr().c_str());
+		MSG_DEBUG(msg_module, "Total size: %s, Max: %s", sizeToStr(totalSize()).c_str(), sizeToStr(_max_size).c_str());
 		_cv.wait(lock, [&]{ return scanCount() > 0 || addCount() > 0 || _done; });
 		
 		if (_done) {
@@ -361,22 +357,23 @@ std::string Scanner::getNextScan()
 }
 
 /**
- * \brief Convert total size to string in appropriate units
+ * \brief Convert size to string in appropriate units
  * 
- * \return String representing total size
+ * \param size Numeric size
+ * \return String representing size
  */
-std::string Scanner::totalSizeStr()
+std::string Scanner::sizeToStr(uint64_t size)
 {
 	std::stringstream ss;
 	ss << std::fixed << std::setprecision(2);
-	if (totalSize() < KILOBYTE) {
-		ss << totalSize() << "B";
-	} else if (totalSize() < MEGABYTE) {
-		ss << totalSizeKB() << "KB";
-	} else if (totalSize() < GIGABYTE) {
-		ss << totalSizeMB() << "MB";
+	if (size < KILOBYTE) {
+		ss << size << " B";
+	} else if (size < MEGABYTE) {
+		ss << BYTES_TO_KB(size) << " KB";
+	} else if (size < GIGABYTE) {
+		ss << BYTES_TO_MB(size) << " MB";
 	} else {
-		ss << totalSizeGB() << "GB";
+		ss << BYTES_TO_GB(size) << " GB";
 	}
 	
 	return ss.str();

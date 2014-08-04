@@ -94,8 +94,9 @@
 				<term>-s <replaceable class="parameter">size</replaceable></term>
 				<listitem>
 					<simpara>
-						Maximal <replaceable class="parameter">size</replaceable> (in MB) of watched directories. If data size reaches maximal size, oldest data will be deleted.
+						Maximal <replaceable class="parameter">size</replaceable> of watched directories. If data size reaches maximal size, oldest data will be deleted.                                                
 					</simpara>
+                                        <simpara>Allowed suffixes: B, k, K, m, M, g, G, where M is default </simpara>
 				</listitem>
 			</varlistentry>
 		
@@ -115,6 +116,7 @@
 				<term>-w <replaceable class="parameter">watermark</replaceable></term>
 				<listitem>
 					<simpara>Set watermark limit - it is lower size limit when removing files after reaching maximal size.</simpara>
+                                        <simpara>Allowed suffixes: B, k, K, m, M, g, G, where M is default </simpara>
 				</listitem>
 			</varlistentry>
 			<varlistentry>

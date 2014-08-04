@@ -95,7 +95,7 @@ private:
     float totalSizeMB()    { return totalSizeKB()/1024.0;  }
     float totalSizeGB()    { return totalSizeMB()/1024.0;  }
     
-    std::string totalSizeStr();
+    static std::string sizeToStr(uint64_t size);
     
     std::string getNextScan();
     addPair     getNextAdd();
