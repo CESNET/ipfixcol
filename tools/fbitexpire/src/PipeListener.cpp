@@ -108,6 +108,9 @@ void PipeListener::loop()
 	_cv->notify_one();
 }
 
+/**
+ * \brief Kill all threads (send "k" into pipe)
+ */
 void PipeListener::killAll()
 {
 	_done = true;

@@ -46,6 +46,9 @@
 
 namespace fbitexpire {
 
+/**
+ * \brief Class representing directory on filesystem
+ */
 class Directory {
 public:
     using dirVec = std::vector<Directory *>;
@@ -86,7 +89,7 @@ public:
     void detectAge();
     
     void rescan();
-    void updateAge() { if (!_children.empty()) { _age = _children.front()->getAge(); } }
+    void updateAge();
     
     uint64_t countSize()      { return dirSize(_name); }
     uint64_t countFilesSize() { return dirSize(_name, false); }
@@ -98,14 +101,14 @@ public:
     static bool cmpDirDate(Directory *first, Directory *second) { return first->_age < second->_age; }
     static std::string correctDirName(std::string dir);
 private:
-    std::string _name;
-    int _age;
-    int _depth;
-    Directory *_parent;
-    bool _active = false;
+    std::string _name;     /**< name (full absolute path) */
+    int _age;              /**< age (time last modified) */
+    int _depth;            /**< depth */
+    Directory *_parent;    /**< parent directory */
+    bool _active = false;  /**< activity flag - true if data writer writes into this folder */
     
-    dirVec   _children;
-    uint64_t _size = 0;
+    dirVec   _children;    /**< children vector */
+    uint64_t _size = 0;    /**< directory size in bytes */
 };
 
 } /* end of namespace fbitexpire */

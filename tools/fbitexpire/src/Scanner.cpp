@@ -49,6 +49,7 @@
 #include <mutex>
 #include <sstream>
 
+/* Macros for totaSizeStr() */
 #define KILOBYTE 1024
 #define MEGABYTE KILOBYTE * 1024
 #define GIGABYTE MEGABYTE * 1024
@@ -63,6 +64,7 @@ namespace fbitexpire {
  * \param cleaner Cleaner's instance
  * \param max_size Maximal size
  * \param watermark Watermark - lower limit when removing data
+ * \param multiple True when multiple data writers allowed
  */
 void Scanner::run(Cleaner *cleaner, uint64_t max_size, uint64_t watermark, bool multiple)
 {
@@ -73,6 +75,9 @@ void Scanner::run(Cleaner *cleaner, uint64_t max_size, uint64_t watermark, bool 
 	run();
 }
 
+/**
+ * \brief Stop scanner's thread
+ */
 void Scanner::stop()
 {
 	
@@ -112,10 +117,12 @@ void Scanner::loop()
 			break;
 		}
 		
+		/* Add dirs from queue */
 		if (addCount() > 0) {
 			addNewDirs();
 		}
 		
+		/* Scan dirs in queue */
 		if (scanCount() > 0) {
 			rescanDirs();
 		}
@@ -124,6 +131,12 @@ void Scanner::loop()
 	MSG_DEBUG(msg_module, "closing thread");
 }
 
+/**
+ * \brief Get oldest directory of given root
+ * 
+ * \param root Directory tree root
+ * \return The oldest directory in tree
+ */
 Directory *Scanner::getOldestDir(Directory *root)
 {
 	while (!root->getChildren().empty()) {
@@ -133,11 +146,17 @@ Directory *Scanner::getOldestDir(Directory *root)
 	return root;
 }
 
+/**
+ * \brief Get directory that can be removed
+ *			== oldest directory in (sub)tree
+ * \return Directory to remove
+ */
 Directory *Scanner::getDirToRemove()
 {
 	Directory *dir;
 	
 	if (!_multiple) {
+		/* Only one root directory - good for us */
 		dir = getOldestDir(_rootdir);
 		if (!dir->isActive()) {
 			return dir;
@@ -146,6 +165,7 @@ Directory *Scanner::getDirToRemove()
 		return nullptr;
 	}
 	
+	/* If directory from first subtree cannot be remoevd (e.g. it is active), try next subtree */
 	for (auto subRoot: _rootdir->getChildren()) {
 		dir = getOldestDir(subRoot);
 		if (!dir->isActive()) {
@@ -156,14 +176,15 @@ Directory *Scanner::getDirToRemove()
 	return nullptr;
 }
 
+/**
+ * \brief Remove directories until total size > watermark
+ */
 void Scanner::removeDirs()
 {
 	Directory *dir, *parent;
 	
-	
 	while (totalSize() > _watermark) {
 		dir = getDirToRemove();
-		
 		
 		if (!dir) {
 			MSG_WARNING(msg_module, "cannot remove any folder (only active directories)");
@@ -261,18 +282,29 @@ void Scanner::addNewDirs()
 	}
 }
 
-
+/**
+ * \brief Remove (but not delete) the newest child from parent's vector
+ * 
+ * \param parent Parent directory
+ */
 void Scanner::popNewestChild(Directory *parent)
 {
 	Directory *dir = parent->getChildren().back();
 	parent->getChildren().pop_back();
 	
+	/* Decrease size of each predecessor */
 	while (parent) {
 		parent->setSize(parent->getSize() - dir->getSize());
 		parent = parent->getParent();
 	}
 }
 
+/**
+ * \brief Add request to add new directory
+ * 
+ * \param dir New directory
+ * \param parent Directory's parent
+ */
 void Scanner::addDir(Directory* dir, Directory* parent)
 {
 	std::lock_guard<std::mutex> lock(_add_lock);
@@ -282,6 +314,11 @@ void Scanner::addDir(Directory* dir, Directory* parent)
 	_cv.notify_one();
 }
 
+/**
+ * \brief Get next directory pair from queue
+ * 
+ * \return Pair - new directory and it's parent
+ */
 Scanner::addPair Scanner::getNextAdd()
 {
 	std::lock_guard<std::mutex> lock(_add_lock);
@@ -293,6 +330,11 @@ Scanner::addPair Scanner::getNextAdd()
 	return pair;
 }
 
+/**
+ * \brief Add request to rescan directory
+ * 
+ * \param dir Directory path
+ */
 void Scanner::rescan(std::string dir)
 {
 	std::lock_guard<std::mutex> lock(_scan_lock);
@@ -302,6 +344,11 @@ void Scanner::rescan(std::string dir)
 	_cv.notify_one();
 }
 
+/**
+ * \brief Get next directory from scanning queue
+ * 
+ * \return Directory path
+ */
 std::string Scanner::getNextScan()
 {
 	std::lock_guard<std::mutex> lock(_scan_lock);
@@ -313,6 +360,11 @@ std::string Scanner::getNextScan()
 	return dir;
 }
 
+/**
+ * \brief Convert total size to string in appropriate units
+ * 
+ * \return String representing total size
+ */
 std::string Scanner::totalSizeStr()
 {
 	std::stringstream ss;
@@ -330,6 +382,12 @@ std::string Scanner::totalSizeStr()
 	return ss.str();
 }
 
+/**
+ * \brief Convert path to directory class
+ * 
+ * \param path Directory path
+ * \return instance of directory class from dirtree
+ */
 Directory *Scanner::dirFromPath(std::string path)
 {
 	Directory *aux_dir = _rootdir;
@@ -431,15 +489,18 @@ void Scanner::createDirTree(Directory* parent)
 		size += child->getSize();
 	}
 	
+	/* Sort children so the oldest will always be on index 0 */
 	if (!parent->getChildren().empty()) {
 		parent->sortChildren();
-		parent->setAge(parent->getChildren()[0]->getAge());
 	}
 	
+	parent->updateAge();
 	parent->setSize(size);
 }
 
-
+/**
+ * \brief Destructor - delete directory tree
+ */
 Scanner::~Scanner()
 {
 	if (_rootdir) {

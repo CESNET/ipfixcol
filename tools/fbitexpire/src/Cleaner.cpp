@@ -84,6 +84,7 @@ void Cleaner::loop()
 			break;
 		}
 		
+		/* Remove everything in queue */
 		while (count() > 0) {
 			try {
 				remove(getNextDir());
@@ -128,9 +129,7 @@ void Cleaner::remove(std::string path)
 			unlink(entry_path.c_str());
 		}
 	}
-	
-//	MSG_DEBUG(msg_module, "Removing directory %s", path.c_str());
-	
+
 	/* close and remove directory */
 	closedir(dir);
 	rmdir(path.c_str());

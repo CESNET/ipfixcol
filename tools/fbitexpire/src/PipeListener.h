@@ -53,6 +53,9 @@
 
 namespace fbitexpire {
 
+/**
+ * \brief PipeListener - reads pipe and decodes rescan/kill commands
+ */
 class PipeListener : public FbitexpireThread {
     using FbitexpireThread::run;
 public:
@@ -68,13 +71,13 @@ private:
     void reopenPipe();
     void stopAll();
     
-    Watcher *_watcher;
-    Scanner *_scanner;
-    Cleaner *_cleaner;
-    std::string   _buff;
-    std::string   _pipename;
-    std::ifstream _pipe;
-    std::condition_variable *_cv;
+    Watcher *_watcher;              /**< Watcher's instance */
+    Scanner *_scanner;              /**< Scanner's instance */
+    Cleaner *_cleaner;              /**< Cleaner's instance */
+    std::string   _buff;            /**< buffer for reading messages from pipe */
+    std::string   _pipename;        /**< pipe name */
+    std::ifstream _pipe;            /**< pipe file */
+    std::condition_variable *_cv;   /**< cond. var indicating end of PipeListener's thread */
 };
 
 } /* end of namespace fbitexpire */

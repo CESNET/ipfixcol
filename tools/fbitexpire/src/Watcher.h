@@ -60,7 +60,7 @@ struct RootWatch {
     RootWatch() {}
     RootWatch(Directory *r): root(r) {}
     Directory *root = nullptr;          /* root of watched subtree */
-    std::vector<Directory *> waching;   /* vector of watched directories in this subtree */
+    std::vector<Directory *> watching;   /* vector of watched directories in this subtree */
 };
 
 /**
@@ -84,14 +84,14 @@ private:
     void unWatchLast(RootWatch *rw);
     RootWatch *getRoot(Directory *dir);
     
-    Inotify  _inotify;
-    Scanner *_scanner;
+    Inotify  _inotify;          /**< inotify instance */
+    Scanner *_scanner;          /**< scanner's instance */
     
-    int  _max_depth;
-    int  _root_name_len;
-    bool _multiple;
+    int  _max_depth;            /**< maximal depth */
+    int  _root_name_len;        /**< length of root's name */
+    bool _multiple;             /**< multiple data writers flag */
     
-    std::vector<RootWatch *> _roots;
+    std::vector<RootWatch *> _roots;  /**< subRoots */
 
 };
 

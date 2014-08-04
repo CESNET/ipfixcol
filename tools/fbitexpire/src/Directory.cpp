@@ -51,6 +51,9 @@ static const char *msg_module = "Directory";
 
 namespace fbitexpire {
 
+/**
+ * \brief Destructor - remove all children
+ */
 Directory::~Directory()
 {
 	for (auto child: _children) {
@@ -60,6 +63,26 @@ Directory::~Directory()
 	_children.clear();
 }
 
+/**
+ * \brief Update directory's age
+ */
+void Directory::updateAge()
+{
+	if (!_children.empty()) { 
+		_age = _children.front()->getAge(); 
+	} else {
+		struct stat st;
+		lstat(_name.c_str(), &st);
+		_age = st.st_mtime;
+	} 
+}
+
+/**
+ * \brief Get directory name in right format (absolute path)
+ *				Also tests if directory exists
+ * \param dir Directory path
+ * \return Absolute path or empty string
+ */
 std::string Directory::correctDirName(std::string dir)
 {
 	char *real = realpath(dir.c_str(), nullptr);
@@ -75,6 +98,9 @@ std::string Directory::correctDirName(std::string dir)
 	return realdir;
 }
 
+/**
+ * \brief Rescan directory - compute size of all files + subdirs
+ */
 void Directory::rescan()
 {
 	if (_children.empty()) {
@@ -82,8 +108,10 @@ void Directory::rescan()
 		return;
 	}
 
+	/* Size of files */
 	uint64_t size = dirSize(_name, false);
 	
+	/* Size of children */
 	for (auto child: _children) {
 		child->rescan();
 		size += child->getSize();
@@ -92,11 +120,17 @@ void Directory::rescan()
 	setSize(size);
 }
 
+/**
+ * \brief Remove the oldest child from vector
+ */
 void Directory::removeOldest()
 {
 	_children.erase(_children.begin());
 }
 
+/**
+ * \brief Get right directory age (time last modified)
+ */
 void Directory::detectAge()
 {
 	struct stat st;
@@ -106,10 +140,11 @@ void Directory::detectAge()
 }
 
 /**
- * \brief Create directory tree
+ * \brief Compute directory size
  * 
- * \param parent Actual directory
- * \param maxdepth Maximal depth
+ * \param path Directory path
+ * \param recursive If true, recursively compute size of subfolders
+ * \return Directory size in bytes
  */
 uint64_t Directory::dirSize(std::string path, bool recursive)
 {
@@ -123,10 +158,11 @@ uint64_t Directory::dirSize(std::string path, bool recursive)
 		throw std::invalid_argument(std::string("Cannot open " + path));
 	}
 	
+	/* Size of "." */
 	lstat(path.c_str(), &st);
 	size += st.st_size;
 	
-	/* Iterate through subdirectories */
+	/* Iterate through files and subdirectories */
 	while ((entry = readdir(dir))) {
 		/* Get entry name and full path */
 		entry_name = entry->d_name;

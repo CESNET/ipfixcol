@@ -55,7 +55,6 @@ namespace fbitexpire {
  * \brief Run watcher thread
  * 
  * \param scanner Scanner's instance
- * \param max_depth Maximal depth
  * \param multiple Allow multiple data writers
  */
 void Watcher::run(Scanner* scanner, bool multiple = false)
@@ -100,6 +99,7 @@ void Watcher::loop()
 	
 	while (!_done) {
 		try {
+			/* Get new inotify events */
 			_inotify.WaitForEvents();
 			if (_done) {
 				break;
@@ -107,6 +107,7 @@ void Watcher::loop()
 			
 			count = _inotify.GetEventCount();
 
+			/* Process all events */
 			while (count > 0) {
 				got_event = _inotify.GetEvent(&event);
 				if (got_event && event.IsCreateDir()) {
@@ -173,7 +174,7 @@ void Watcher::watch(RootWatch* rw, Directory* dir)
 	dir->setActive();
 	
 	if (rw) {
-		rw->waching.push_back(dir);
+		rw->watching.push_back(dir);
 	}
 }
 
@@ -223,8 +224,8 @@ void Watcher::unWatch(Directory *dir)
  */
 void Watcher::unWatchLast(RootWatch* rw)
 {
-	unWatch(rw->waching.back());
-	rw->waching.pop_back();
+	unWatch(rw->watching.back());
+	rw->watching.pop_back();
 }
 
 /**
@@ -251,7 +252,6 @@ RootWatch *Watcher::getRoot(Directory *dir)
 		}
 	}
 	
-	MSG_DEBUG(msg_module, "New root %s", dir->getName().c_str());
 	/* New root */
 	dir->setParent(_scanner->getRoot());
 	RootWatch *rw = new RootWatch(dir);
@@ -279,18 +279,17 @@ void Watcher::processNewDir(InotifyEvent& event)
 	Directory *newdir = new Directory(new_path, 0, depth, nullptr, true);
 	RootWatch *rw = getRoot(newdir);
 	
-//	MSG_DEBUG(msg_module, "Dir from root %s", rw->root->getName().c_str());
 	if (rw->root == newdir) {
 		/* We found a new root dir - add it to dir tree*/
 		_scanner->addDir(newdir, newdir->getParent());
-	} else if (rw->waching.back()->getName() == parent_path) {
+	} else if (rw->watching.back()->getName() == parent_path) {
 		/*
 		 * New directory is child of previous watched directory
 		 * So parent can be added to dir tree (if it is not root which is already there)
 		 * and we can watch new directory
 		 */
 		if (parent_path != rw->root->getName()) {
-			_scanner->addDir(rw->waching.back(), rw->waching.back()->getParent());
+			_scanner->addDir(rw->watching.back(), rw->watching.back()->getParent());
 		}
 	} else {
 		/*
@@ -298,9 +297,9 @@ void Watcher::processNewDir(InotifyEvent& event)
 		 * (it can be sibling..). It means that this is the most actual
 		 * substree and all other subtrees can be unwatched
 		 */
-		Directory *oldDir = rw->waching.back();
+		Directory *oldDir = rw->watching.back();
 		
-		while (rw->waching.back()->getName() != parent_path && rw->waching.back() != rw->root) {
+		while (rw->watching.back()->getName() != parent_path && rw->watching.back() != rw->root) {
 			unWatchLast(rw);
 		}
 		
@@ -309,23 +308,25 @@ void Watcher::processNewDir(InotifyEvent& event)
 	}
 	
 	if (newdir != rw->root) {
-		newdir->setParent(rw->waching.back());
+		newdir->setParent(rw->watching.back());
 	}
 	watch(rw, newdir);
 }
 
+/**
+ * \brief Destructor - remove RootWatches
+ */
 Watcher::~Watcher()
 {
 	for (auto rw: _roots) {
 		/* Last watched directory was NOT added to scanner (if it is not root) so we need to delete it here */
-		if (!rw->waching.empty() && rw->waching.back() != rw->root) {
-			delete rw->waching.back();
+		if (!rw->watching.empty() && rw->watching.back() != rw->root) {
+			delete rw->watching.back();
 		}
 		delete rw;
 	}
 	
 	_roots.clear();
 }
-
 
 } /* end of namespace fbitexpire */
