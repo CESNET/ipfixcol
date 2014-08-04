@@ -91,9 +91,6 @@ private:
     void propagateSize(Directory *parent, uint64_t size);
     
     uint64_t totalSize()   { return _rootdir->getSize();   }
-    float totalSizeKB()    { return totalSize()  /1024.0;  }
-    float totalSizeMB()    { return totalSizeKB()/1024.0;  }
-    float totalSizeGB()    { return totalSizeMB()/1024.0;  }
     
     static std::string sizeToStr(uint64_t size);
     

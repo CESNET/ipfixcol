@@ -106,7 +106,8 @@ void Scanner::loop()
 			removeDirs();
 		}
 		
-		MSG_DEBUG(msg_module, "Total size: %s, Max: %s", sizeToStr(totalSize()).c_str(), sizeToStr(_max_size).c_str());
+		MSG_DEBUG(msg_module, "Total size: %s, Max: %s, Watermark: %s", 
+			sizeToStr(totalSize()).c_str(), sizeToStr(_max_size).c_str(), sizeToStr(_watermark).c_str());
 		_cv.wait(lock, [&]{ return scanCount() > 0 || addCount() > 0 || _done; });
 		
 		if (_done) {
