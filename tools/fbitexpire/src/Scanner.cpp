@@ -184,6 +184,8 @@ void Scanner::removeDirs()
 			parent = parent->getParent();
 		}
 		
+		delete dir;
+		
 		if (_multiple) {
 			/* Multiple data witers - sort top dirs so next time we remove the oldest dir again */
 			_rootdir->sortChildren();
@@ -424,9 +426,9 @@ void Scanner::createDirTree(Directory* parent)
 	closedir(dir);
 	
 	/* Create subtrees */
-	for (std::vector<Directory *>::iterator it = parent->getChildren().begin(); it != parent->getChildren().end(); ++it) {
-		createDirTree(*it);
-		size += (*it)->getSize();
+	for (auto child: parent->getChildren()) {
+		createDirTree(child);
+		size += child->getSize();
 	}
 	
 	if (!parent->getChildren().empty()) {

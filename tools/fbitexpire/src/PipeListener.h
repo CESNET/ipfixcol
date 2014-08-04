@@ -68,8 +68,6 @@ private:
     void reopenPipe();
     void stopAll();
     
-    static void handle(int param);
-    
     Watcher *_watcher;
     Scanner *_scanner;
     Cleaner *_cleaner;

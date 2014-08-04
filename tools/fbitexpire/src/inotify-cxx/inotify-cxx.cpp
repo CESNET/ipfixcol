@@ -428,6 +428,7 @@ void Inotify::RemoveAll()
       pW->m_wd = -1;
     }
     pW->m_pInotify = NULL;
+	delete pW;
     it++;
   }
   

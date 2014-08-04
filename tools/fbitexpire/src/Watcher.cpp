@@ -211,6 +211,7 @@ void Watcher::unWatch(Directory *dir)
 	InotifyWatch *watch = _inotify.FindWatch(dir->getName());
 	if (watch) {
 		_inotify.Remove(watch);
+		delete watch;
 	}
 	dir->setActive(false);
 }
@@ -313,9 +314,18 @@ void Watcher::processNewDir(InotifyEvent& event)
 	watch(rw, newdir);
 }
 
-void Watcher::handle(int param)
+Watcher::~Watcher()
 {
-	MSG_NOTICE(msg_module, "received SIGINT"); 
+	for (auto rw: _roots) {
+		/* Last watched directory was NOT added to scanner (if it is not root) so we need to delete it here */
+		if (!rw->waching.empty() && rw->waching.back() != rw->root) {
+			delete rw->waching.back();
+		}
+		delete rw;
+	}
+	
+	_roots.clear();
 }
+
 
 } /* end of namespace fbitexpire */

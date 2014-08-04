@@ -70,7 +70,7 @@ class Watcher : public FbitexpireThread {
     using FbitexpireThread::run;
 public:
     Watcher() {};
-    ~Watcher() {};
+    ~Watcher();
 
     void run(Scanner *scanner, bool multiple);
     void stop();
@@ -83,8 +83,6 @@ private:
     void unWatch(Directory *dir);
     void unWatchLast(RootWatch *rw);
     RootWatch *getRoot(Directory *dir);
-
-    static void handle(int param);
     
     Inotify  _inotify;
     Scanner *_scanner;
