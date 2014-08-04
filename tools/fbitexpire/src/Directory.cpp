@@ -134,8 +134,10 @@ uint64_t Directory::dirSize(std::string path, bool recursive)
 		
 		if (entry_name == "." || entry_name == ".." || lstat(entry_path.c_str(), &st)) {
 			continue;
-		} else if (S_ISDIR(st.st_mode) && recursive) {
-			size += dirSize(entry_path);
+		} else if (S_ISDIR(st.st_mode)) {
+			if (recursive) {
+				size += dirSize(entry_path);
+			}
 		} else {
 			size += st.st_size;
 		}
