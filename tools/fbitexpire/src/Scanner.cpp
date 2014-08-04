@@ -45,7 +45,13 @@
 #include <stdexcept>
 #include <sys/prctl.h>
 
+#include <iomanip>
 #include <mutex>
+#include <sstream>
+
+#define KILOBYTE 1024
+#define MEGABYTE KILOBYTE * 1024
+#define GIGABYTE MEGABYTE * 1024
 
 static const char *msg_module = "Scanner";
 
@@ -99,6 +105,7 @@ void Scanner::loop()
 			removeDirs();
 		}
 		
+		MSG_DEBUG(msg_module, "Total size: %s", totalSizeStr().c_str());
 		_cv.wait(lock, [&]{ return scanCount() > 0 || addCount() > 0 || _done; });
 		
 		if (_done) {
@@ -163,9 +170,7 @@ void Scanner::removeDirs()
 			return;
 		}
 		
-		MSG_ERROR(msg_module, "total size %u KB, max %u KB, watermark %u KB", totalSize() /1024, _max_size/1024, _watermark/1024);
-		MSG_ERROR(msg_module, "remove %s (%u KB)",	dir->getName().c_str(), dir->getSize()/1024);
-		
+		MSG_DEBUG(msg_module, "remove %s", dir->getName().c_str());
 		_cleaner->removeDir(dir->getName());
 		
 		/* Remove dir from its parent */
@@ -223,7 +228,7 @@ void Scanner::addNewDirs()
 	
 	while (addCount() > 0) {
 		std::tie(dir, parent) = getNextAdd();
-		MSG_ERROR(msg_module, "Adding %s", dir->getName().c_str());
+		MSG_DEBUG(msg_module, "Adding %s", dir->getName().c_str());
 		parent->addChild(dir);
 		
 		/* 
@@ -241,8 +246,6 @@ void Scanner::addNewDirs()
 		dir->setSize(dir->countSize());
 		
 		newSize = dir->getSize();
-		
-		MSG_ERROR(msg_module, "%s (%u)", dir->getName().c_str(), dir->getSize());
 		
 		/* Propagate size to predecessors */
 		while (parent) {
@@ -306,6 +309,23 @@ std::string Scanner::getNextScan()
 	_scan_count--;
 	
 	return dir;
+}
+
+std::string Scanner::totalSizeStr()
+{
+	std::stringstream ss;
+	ss << std::fixed << std::setprecision(2);
+	if (totalSize() < KILOBYTE) {
+		ss << totalSize() << "B";
+	} else if (totalSize() < MEGABYTE) {
+		ss << totalSizeKB() << "KB";
+	} else if (totalSize() < GIGABYTE) {
+		ss << totalSizeMB() << "MB";
+	} else {
+		ss << totalSizeGB() << "GB";
+	}
+	
+	return ss.str();
 }
 
 Directory *Scanner::dirFromPath(std::string path)
