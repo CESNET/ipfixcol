@@ -94,6 +94,12 @@ void PipeListener::loop()
 					/* Stop daemon */
 					_done = true;
 					break;
+				case 's':
+					_scanner->setMaxSize(_buff.substr(1), true);
+					break;
+				case 'w':
+					_scanner->setWatermark(_buff.substr(1));
+					break;
 				}
 			}
 			

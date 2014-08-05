@@ -70,6 +70,12 @@ public:
     Directory *getRoot() { return _rootdir;   }
     int getMaxDepth()    { return _max_depth; }
     
+    void setMaxSize(uint64_t max, bool notify = false)    { _max_size = max; if (_watermark > _max_size) { _watermark = _max_size; } if (notify) { _cv.notify_one(); } }
+    void setMaxSize(std::string max, bool notify = false) { setMaxSize(strtoull(max.c_str(), nullptr, 10), notify); }
+    
+    void setWatermark(uint64_t wm)    { if (wm > _max_size) { wm = _max_size; } _watermark = wm; };
+    void setWatermark(std::string wm) { setWatermark(strtoull(wm.c_str(), nullptr, 10)); }
+    
     void addDir(Directory *dir, Directory *parent);
     void rescan(std::string dir);
     
@@ -77,6 +83,10 @@ public:
     
     void stop();
     void run(Cleaner *cleaner, uint64_t max_size, uint64_t waternark, bool multiple = false);
+    
+    static std::string sizeToStr(uint64_t size);
+    static uint64_t    strToSize(char *arg);
+    static uint64_t    strToSize(std::string str) { return strToSize(str.c_str()); }
 private:
     void loop();
     
@@ -91,8 +101,6 @@ private:
     void propagateSize(Directory *parent, uint64_t size);
     
     uint64_t totalSize()   { return _rootdir->getSize();   }
-    
-    static std::string sizeToStr(uint64_t size);
     
     std::string getNextScan();
     addPair     getNextAdd();

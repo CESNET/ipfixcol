@@ -45,6 +45,7 @@
 #include <sys/stat.h>
 #include <stdexcept>
 #include <sys/prctl.h>
+#include <string.h>
 
 #include <iomanip>
 #include <mutex>
@@ -66,7 +67,7 @@ void Scanner::run(Cleaner *cleaner, uint64_t max_size, uint64_t watermark, bool 
 {
 	_cleaner   = cleaner;
 	_max_size  = max_size; 
-	_watermark = watermark;
+	_watermark = (watermark <= max_size) ? watermark : max_size;
 	_multiple  = multiple;
 	run();
 }
@@ -108,7 +109,7 @@ void Scanner::loop()
 		
 		MSG_DEBUG(msg_module, "Total size: %s, Max: %s, Watermark: %s", 
 			sizeToStr(totalSize()).c_str(), sizeToStr(_max_size).c_str(), sizeToStr(_watermark).c_str());
-		_cv.wait(lock, [&]{ return scanCount() > 0 || addCount() > 0 || _done; });
+		_cv.wait(lock, [&]{ return scanCount() > 0 || addCount() > 0 || _done || totalSize() > _max_size; });
 		
 		if (_done) {
 			break;
@@ -378,6 +379,38 @@ std::string Scanner::sizeToStr(uint64_t size)
 	}
 	
 	return ss.str();
+}
+
+/**
+ * \brief Convert string to size
+ * 
+ * \param arg Size in string form
+ * \return  size
+ */
+uint64_t Scanner::strToSize(char *arg)
+{
+	uint64_t size = strtoull(arg, nullptr, 10);
+	
+	switch (arg[strlen(arg) - 1]) {
+	case 'b':
+	case 'B':
+		return size;
+	case 'k':
+	case 'K':
+		return KB_TO_BYTES(size);
+		break;
+	case 'm':
+	case 'M':
+		return MB_TO_BYTES(size);
+		break;
+	case 'g':
+	case 'G':
+		return GB_TO_BYTES(size);
+		break;
+	default:
+		return MB_TO_BYTES(size);
+		break;
+	}
 }
 
 /**

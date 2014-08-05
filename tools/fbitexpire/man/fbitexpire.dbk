@@ -39,7 +39,7 @@
     <refsynopsisdiv>
         <cmdsynopsis>
             <command>fbitexpire</command>
-            <arg>-hrVDokm</arg>
+            <arg>-hrVDokmc</arg>
             <arg>-p pipe</arg>
             <arg>-d depth</arg>
             <arg>-s size</arg>
@@ -148,6 +148,13 @@
                                 <simpara>By default, fbitexpire runs as daemon on foreground (or background with <command>-D</command>). With this option, it only scans directories, removes old data (if needed) and stops without waiting on new data etc.</simpara>
                             </listitem>
                         </varlistentry>
+                        
+                        <varlistentry>
+                            <term>-c</term>
+                            <listitem>
+                                <simpara>Change settings of running daemon listening on pipe specified by -p. Changed can be maximal size (-s) and watermark limit (-w)</simpara>
+                            </listitem>
+                        </varlistentry>
 		</variablelist>
 	</refsect1>
 
@@ -159,6 +166,8 @@
 		Send to daemon command listening on ./fbitexpire_fifo to rescan given directory.</literallayout>
 		<literallayout>fbitexpire -d 4 -s 5000 -p /tmp/expirepipe /data/collector/
 		Pipe location is set to /tmp/expirepipe.</literallayout>
+                <literallayout>fbitexpire -c -s 53G -w 250M -p /tmp/expirepipe
+          Change settings of fbitexpire listening on pipe /tmp/expirepipe. Change size to 53 GB and watermark limit to 250 MB.</literallayout>
 	</refsect1>
 
 

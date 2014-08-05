@@ -63,7 +63,7 @@
 #include "verbose.h"
 #include "Watcher.h"
 
-#define OPTSTRING "rmhVDkop:d:s:v:w:"
+#define OPTSTRING "rmhVDkocp:d:s:v:w:"
 #define DEFAULT_PIPE "./fbitexpire_fifo"
 #define DEFAULT_DEPTH 1
 
@@ -78,7 +78,7 @@ static PipeListener *list = nullptr;
  */
 void print_help()
 {
-	std::cout << "\nUse: " << PACKAGE_NAME << " [-rhVDokm] [-p pipe] [-d depth] [-s size] [-w watermark] [-v verbose] [directory]\n\n";
+	std::cout << "\nUse: " << PACKAGE_NAME << " [-rhVDokmc] [-p pipe] [-d depth] [-s size] [-w watermark] [-v verbose] [directory]\n\n";
 	std::cout << "Options:\n";
 	std::cout << "  -h           show this text\n";
 	std::cout << "  -V           show tool version\n";
@@ -93,6 +93,7 @@ void print_help()
 	std::cout << "  -k           Stop fbitexpire daemon listening on pipe specified by -p\n";
 	std::cout << "  -o           Only scan dirs and remove old (if needed). Don't wait for new folders\n";
 	std::cout << "  -v verbose   Verbose level\n";
+	std::cout << "  -c           Change settings of daemon listening on pipe specified by -p. Can be combined with -s and -w\n";
 	std::cout << "\n";
 }
 
@@ -151,42 +152,10 @@ int write_to_pipe(bool pipe_exists, std::string pipe, std::string msg)
 	return 0;
 }
 
-/**
- * \brief Decode size in format [0-9]+[bBkKmMgG]{0,1}
- * 
- * \param arg Size in string
- * \return size in numeric format
- */
-uint64_t decode_size(char *arg)
-{
-	uint64_t size = strtoull(arg, nullptr, 10);
-	
-	switch (arg[strlen(arg) - 1]) {
-	case 'b':
-	case 'B':
-		return size;
-	case 'k':
-	case 'K':
-		return KB_TO_BYTES(size);
-		break;
-	case 'm':
-	case 'M':
-		return MB_TO_BYTES(size);
-		break;
-	case 'g':
-	case 'G':
-		return GB_TO_BYTES(size);
-		break;
-	default:
-		return MB_TO_BYTES(size);
-		break;
-	}
-}
-
 int main(int argc, char *argv[])
 {
 	int c, depth{DEFAULT_DEPTH};
-	bool rescan{false}, daemonize{false}, pipe_exists{false}, multiple{false};
+	bool rescan{false}, daemonize{false}, pipe_exists{false}, multiple{false}, change{false};
 	bool wmarkset{false}, sizeset{false}, kill_daemon{false}, only_remove{false}, depthset{false};
 	uint64_t watermark{0}, size{0};
 	std::string pipe{DEFAULT_PIPE};
@@ -211,11 +180,11 @@ int main(int argc, char *argv[])
 			break;
 		case 's':
 			sizeset = true;
-			size = decode_size(optarg);
+			size = Scanner::strToSize(optarg);
 			break;
 		case 'w':
 			wmarkset = true;
-			watermark = decode_size(optarg);
+			watermark = Scanner::strToSize(optarg);
 			break;
 		case 'd':
 			depthset = true;
@@ -236,6 +205,9 @@ int main(int argc, char *argv[])
 		case 'v':
 			MSG_SET_VERBOSE(std::atoi(optarg));
 			break;
+		case 'c':
+			change = true;
+			break;
 		default:
 			print_help();
 			return 1;
@@ -250,7 +222,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	if (optind >= argc && !kill_daemon) {
+	if (optind >= argc && !kill_daemon && !change) {
 		MSG_ERROR(msg_module, "directory not specified");
 		return 1;
 	}
@@ -272,9 +244,20 @@ int main(int argc, char *argv[])
 	if (kill_daemon) {
 		msg << "k\n";
 	}
-	
+	if (change) {
+		if (!sizeset && !wmarkset) {
+			MSG_ERROR(msg_module, "Nothing to be changed by parameter -c");
+			return 1;
+		}
+		if (sizeset) {
+			msg << "s" << size << "\n";
+		}
+		if (wmarkset) {
+			msg << "w" << watermark << "\n";
+		}
+	}
 	/* Send command to rescan folder or to kill daemon */
-	if (rescan || kill_daemon) {
+	if (rescan || kill_daemon || change) {
 		return write_to_pipe(pipe_exists, pipe, msg.str());
 	}
 
