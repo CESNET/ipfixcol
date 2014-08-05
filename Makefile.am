@@ -6,7 +6,7 @@ SUBDIRS = base \
 	tools/fbitconvert \
 	tools/fbitdump \
 	tools/fbitmerge \
-	tools/expiredaemon \
+	tools/fbitexpire \
 	plugins/storage/fastbit \
 	plugins/storage/postgres \
 	plugins/storage/unirec
