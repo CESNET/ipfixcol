@@ -64,7 +64,7 @@ public:
     Scanner() {}
     ~Scanner();
 
-    void createDirTree(std::string basedir, int maxdepth = 1);
+    void createDirTree(std::string basedir, int maxdepth = 1, bool force = false);
     void popNewestChild(Directory *parent);
     
     Directory *getRoot() { return _rootdir;   }
@@ -125,7 +125,7 @@ private:
     
     std::condition_variable _cv;
     
-    bool _multiple;
+    bool _multiple, _force;
     uint64_t _max_size, _watermark;
 };
 

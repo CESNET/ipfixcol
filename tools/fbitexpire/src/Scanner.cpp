@@ -453,7 +453,7 @@ Directory *Scanner::dirFromPath(std::string path)
  * \param basedir Root directory
  * \param maxdepth maximal depth
  */
-void Scanner::createDirTree(std::string basedir, int maxdepth)
+void Scanner::createDirTree(std::string basedir, int maxdepth, bool force)
 {
 	struct stat st;
 	if (!lstat(basedir.c_str(), &st) && S_ISDIR(st.st_mode)) {
@@ -462,6 +462,7 @@ void Scanner::createDirTree(std::string basedir, int maxdepth)
 		
 		/* set right max depth */
 		_max_depth = maxdepth + _rootdir->getDepth();
+		_force = force;
 		
 		/* Add subdirectories (recursively) */
 		createDirTree(_rootdir);
@@ -479,10 +480,12 @@ void Scanner::createDirTree(Directory* parent)
 {
 	int depth = parent->getDepth() + 1;
 	if (depth >= _max_depth) {
-		parent->setSize(Directory::dirSize(parent->getName()));
+		parent->setSize(Directory::dirSize(parent->getName(), _force));
+		parent->detectAge();
 		return;
 	}
 	
+	MSG_DEBUG(msg_module, "scanning %s", parent->getName().c_str());
 	Directory *aux_dir;
 	std::string entry_path, entry_name;
 	struct dirent *entry;

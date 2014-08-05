@@ -63,7 +63,7 @@
 #include "verbose.h"
 #include "Watcher.h"
 
-#define OPTSTRING "rmhVDkocp:d:s:v:w:"
+#define OPTSTRING "rfmhVDkocp:d:s:v:w:"
 #define DEFAULT_PIPE "./fbitexpire_fifo"
 #define DEFAULT_DEPTH 1
 
@@ -83,7 +83,7 @@ void print_help()
 	std::cout << "  -h           show this text\n";
 	std::cout << "  -V           show tool version\n";
 	std::cout << "  -r           Send daemon message to rescan folder. Daemon HAVE TO be running\n";
-//	std::cout << "  -f           Force rescan directories when daemon starts (ignore stat files)\n";
+	std::cout << "  -f           Force rescan directories when daemon starts (ignore stat files)\n";
 	std::cout << "  -p pipe      Pipe name, default is " << DEFAULT_PIPE << "\n";
 	std::cout << "  -s size      Max size of all directories (in MB)\n";
 	std::cout << "  -w watermark Lower limit when removing folders (in MB)\n";
@@ -155,7 +155,7 @@ int write_to_pipe(bool pipe_exists, std::string pipe, std::string msg)
 int main(int argc, char *argv[])
 {
 	int c, depth{DEFAULT_DEPTH};
-	bool rescan{false}, daemonize{false}, pipe_exists{false}, multiple{false}, change{false};
+	bool rescan{false}, daemonize{false}, pipe_exists{false}, multiple{false}, change{false}, force{false};
 	bool wmarkset{false}, sizeset{false}, kill_daemon{false}, only_remove{false}, depthset{false};
 	uint64_t watermark{0}, size{0};
 	std::string pipe{DEFAULT_PIPE};
@@ -172,9 +172,9 @@ int main(int argc, char *argv[])
 		case 'r':
 			rescan = true;
 			break;
-//		case 'f':
-//			force = true;
-//			break;
+		case 'f':
+			force = true;
+			break;
 		case 'p':
 			pipe = std::string(optarg);
 			break;
@@ -306,7 +306,7 @@ int main(int argc, char *argv[])
 	std::condition_variable cv;
 	
 	try {
-		scanner.createDirTree(basedir, depth);
+		scanner.createDirTree(basedir, depth, force);
 		watcher.run(&scanner, multiple);
 		scanner.run(&cleaner, size, watermark, multiple);
 		cleaner.run();

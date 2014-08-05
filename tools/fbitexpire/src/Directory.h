@@ -91,10 +91,10 @@ public:
     void rescan();
     void updateAge();
     
-    uint64_t countSize()      { return dirSize(_name); }
-    uint64_t countFilesSize() { return dirSize(_name, false); }
+    uint64_t countSize()      { return dirSize(_name, false, true, true);   }
+    uint64_t countFilesSize() { return dirSize(_name, false, false, false); }
     
-    static uint64_t dirSize(std::string path, bool recursive = true);
+    static uint64_t dirSize(std::string path, bool force, bool recursive = true, bool writestats = true);
     static uint64_t dirSize(Directory *dir);
     
     static int  dirDepth(std::string dir) { return std::count(dir.begin(), dir.end(), '/'); }

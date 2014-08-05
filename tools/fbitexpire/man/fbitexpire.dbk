@@ -39,7 +39,7 @@
     <refsynopsisdiv>
         <cmdsynopsis>
             <command>fbitexpire</command>
-            <arg>-hrVDokmc</arg>
+            <arg>-hrfVDokmc</arg>
             <arg>-p pipe</arg>
             <arg>-d depth</arg>
             <arg>-s size</arg>
@@ -106,6 +106,14 @@
 					<simpara>Send to pipe command to rescan typed directory. Daemon MUST be running.</simpara>
 				</listitem>
 			</varlistentry>
+                        
+                        <varlistentry>
+                            <term>-f</term>
+                            <listitem>
+                                <simpara>Force scanning - don't look at stats.txt files (containing folder size).</simpara>
+                            </listitem>
+                        </varlistentry>
+                        
 			<varlistentry>
 				<term>-v <replaceable class="parameter">level</replaceable></term>
 				<listitem>

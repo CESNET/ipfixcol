@@ -46,6 +46,7 @@
 #include <stdlib.h>
 
 #include <stdexcept>
+#include <fstream>
 
 static const char *msg_module = "Directory";
 
@@ -104,12 +105,12 @@ std::string Directory::correctDirName(std::string dir)
 void Directory::rescan()
 {
 	if (_children.empty()) {
-		setSize(dirSize(_name));
+		setSize(dirSize(_name, true, true));
 		return;
 	}
 
 	/* Size of files */
-	uint64_t size = dirSize(_name, false);
+	uint64_t size = dirSize(_name, true, false);
 	
 	/* Size of children */
 	for (auto child: _children) {
@@ -146,12 +147,28 @@ void Directory::detectAge()
  * \param recursive If true, recursively compute size of subfolders
  * \return Directory size in bytes
  */
-uint64_t Directory::dirSize(std::string path, bool recursive)
+uint64_t Directory::dirSize(std::string path, bool force, bool recursive, bool writestats)
 {
 	std::string entry_path, entry_name;
 	struct dirent *entry;
 	struct stat st;
 	uint64_t size{0};
+	
+	MSG_DEBUG(msg_module, "scanning %s", path.c_str());     
+	
+	std::string statsfile(path + "/stats.txt");
+	if (!force && stat(statsfile.c_str(), &st)) {
+		/* stats.txt not exists - force scan*/
+		force = true;
+	}
+	
+	if (!force) {
+		MSG_DEBUG(msg_module, "reading %s", statsfile.c_str());
+		std::ifstream sfile(statsfile, std::ios::in);
+		sfile >> size;
+		sfile.close();
+		return size;
+	}
 	
 	DIR *dir = opendir(path.c_str());
 	if (!dir) {
@@ -172,13 +189,21 @@ uint64_t Directory::dirSize(std::string path, bool recursive)
 			continue;
 		} else if (S_ISDIR(st.st_mode)) {
 			if (recursive) {
-				size += dirSize(entry_path);
+				size += dirSize(entry_path, force, recursive, false);
 			}
 		} else {
 			size += st.st_size;
 		}
 	}
 	closedir(dir);
+	
+	
+	if (writestats) {
+		MSG_DEBUG(msg_module, "writing %s", statsfile.c_str());
+		std::ofstream sfile(statsfile, std::ios::out);
+		sfile << size;
+		sfile.close();
+	}
 	
 	return size;
 }
