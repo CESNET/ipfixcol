@@ -249,11 +249,11 @@
 		</value>
 	</column>
 	<column>
-	        <name>applicationID</name>
+		<name>applicationID</name>
 		<alias>%applicationid</alias>
 		<width>8</width>
 		<value type="plain">
-		        <element>e0id95</element>
+			<element>e0id95</element>
 		</value>
 	</column>
 	<column>
@@ -1320,6 +1320,179 @@
 			<element>e8057id838</element>
 		</value>
 	</column>
+
+<!-- Added for VOIP plugin support by Jan Remes -->
+	<column>
+		<name>VOIP packet type</name>
+		<alias>%voiptype</alias>
+		<width>1</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id32</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP call id</name>
+		<alias>%sipcallid</alias>
+		<width>10</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id33</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP calling party</name>
+		<alias>%sipcalling</alias>
+		<width>10</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id34</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP called party</name>
+		<alias>%sipcalled</alias>
+		<width>10</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id35</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP via</name>
+		<alias>%sipvia</alias>
+		<width>10</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id36</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP invite/ringing</name>
+		<alias>%sipinvite</alias>
+		<width>23</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element semantics="tmstmp64">e39499id37</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP ok time</name>
+		<alias>%sipok</alias>
+		<width>23</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element semantics="tmstmp64">e39499id38</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP bye time</name>
+		<alias>%sipbye</alias>
+		<width>23</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element semantics="tmstmp64">e39499id39</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP RTP IP4</name>
+		<alias>%siprtpip4</alias>
+		<width>6</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element semantics="ipv4">e39499id40</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP RTP IP6</name>
+		<alias>%siprtpip6</alias>
+		<width>6</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element semantics="ipv6" parts="2">e39499id41</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP RTP audio port</name>
+		<alias>%siprtpaudio</alias>
+		<width>6</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id42</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP RTP video port</name>
+		<alias>%siprtpvideo</alias>
+		<width>6</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id43</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP stats</name>
+		<alias>%sipstats</alias>
+		<width>18</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id44</element>
+		</value>
+	</column>
+	<column>
+		<name>RTP codec</name>
+		<alias>%rtpcodec</alias>
+		<width>18</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id45</element>
+		</value>
+	</column>
+	<column>
+		<name>RTP jitter</name>
+		<alias>%rtpjitter</alias>
+		<width>18</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id46</element>
+		</value>
+	</column>
+	<column>
+		<name>RTCP lost</name>
+		<alias>%rtcplost</alias>
+		<width>18</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id47</element>
+		</value>
+	</column>
+	<column>
+		<name>RTCP packets</name>
+		<alias>%rtcppackets</alias>
+		<width>18</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id48</element>
+		</value>
+	</column>
+	<column>
+		<name>RTCP octets</name>
+		<alias>%rtcpoctets</alias>
+		<width>18</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id49</element>
+		</value>
+	</column>
+	<column>
+		<name>RTCP source count</name>
+		<alias>%rtcpsrccnt</alias>
+		<width>18</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e39499id50</element>
+		</value>
+	</column>
 </columns>
 
 <groups>
@@ -1483,6 +1656,10 @@
 	<format>
 		<formatName>sip4-cesnet</formatName>
 		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %csipm %csipc %csipu %csipf %csipt %csipc %csipv %csipr %csiprr</formatString>
+	</format>
+	<format>
+		<formatName>sip</formatName>
+		<formatString>%ts,%td,%pr,%sa4,%sp,%da4,%dp,%pkt,%byt,%fl,%voiptype,%sipcallid,%sipcalling,%sipcalled,%sipvia,%sipinvite,%sipok,%sipbye,%siprtpip4,%siprtpip6,%siprtpaudio,%siprtpvideo,%sipstats,%rtpcodec,%rtpjitter,%rtcplost,%rtcppackets,%rtcpsrccnt</formatString>
 	</format>
 </output>
 <plugins>
