@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2014</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>24 July 2014</date>
+		<authorgroup>
+			<author>
+				<personname>
+    				<firstname>Michal</firstname>
+	    			<surname>Kozubik</surname>
+                </personname>
+                <email>kozubik@cesnet.cz</email>
+                <contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">Data expiration tool</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>fbitexpire</refname>
+		<refpurpose>Daemon for deleting old IPFIXcol Fastbit data</refpurpose>
+	</refnamediv>
+    
+    <refsynopsisdiv>
+        <cmdsynopsis>
+            <command>fbitexpire</command>
+            <arg>-hrfVDokmc</arg>
+            <arg>-p pipe</arg>
+            <arg>-d depth</arg>
+            <arg>-s size</arg>
+            <arg>-w watermark</arg>
+            <arg>-v verbose</arg>
+            <arg>directory</arg>
+        </cmdsynopsis>
+    </refsynopsisdiv>
+
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+			The <command>fbitexpire</command> is an data size check tool, part of IPFIXcol framework. 
+			The fbitexpire checks size of data in selected directory and remove old data if data size reached maximal size.
+		</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Options</title>
+		<variablelist>
+			<varlistentry>
+				<term>-h</term>
+				<listitem>
+					<simpara>Print basic usage and options.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-V</term>
+				<listitem>
+					<simpara>Print version informations and exit.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-p <replaceable class="parameter">pipe</replaceable></term>
+				<listitem>
+					<simpara>For communication between program and user is used named <replaceable class="parameter">pipe</replaceable>. Default is ./fbitexpire_fifo</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-d <replaceable class="parameter">depth</replaceable></term>
+				<listitem>
+					<simpara>
+						<replaceable class="parameter">Depth</replaceable>	of directory where we want to watch changes.
+					</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-s <replaceable class="parameter">size</replaceable></term>
+				<listitem>
+					<simpara>
+						Maximal <replaceable class="parameter">size</replaceable> of watched directories. If data size reaches maximal size, oldest data will be deleted.                                                
+					</simpara>
+                                        <simpara>Allowed suffixes: B, k, K, m, M, g, G, where M is default </simpara>
+				</listitem>
+			</varlistentry>
+		
+			<varlistentry>
+				<term>-r</term>
+				<listitem>
+					<simpara>Send to pipe command to rescan typed directory. Daemon MUST be running.</simpara>
+				</listitem>
+			</varlistentry>
+                        
+                        <varlistentry>
+                            <term>-f</term>
+                            <listitem>
+                                <simpara>Force scanning - don't look at stats.txt files (containing folder size).</simpara>
+                            </listitem>
+                        </varlistentry>
+                        
+			<varlistentry>
+				<term>-v <replaceable class="parameter">level</replaceable></term>
+				<listitem>
+					<simpara>Set verbose level.</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>-w <replaceable class="parameter">watermark</replaceable></term>
+				<listitem>
+					<simpara>Set watermark limit - it is lower size limit when removing files after reaching maximal size.</simpara>
+                                        <simpara>Allowed suffixes: B, k, K, m, M, g, G, where M is default </simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>-D</term>
+				<listitem>
+					<simpara>Start fbitexpire as daemon</simpara>
+				</listitem>
+			</varlistentry>
+			
+                        <varlistentry>
+                            <term>-m</term>
+                            <listitem>
+                                <simpara>Enable multiple sources on top directory (disabled by default). When this option is set, fbitexpire looks at each top level directory (each subdirectory of given folder) as a separate 
+                                    directory tree with own data writer.
+                                </simpara>
+                            </listitem>
+                        </varlistentry>
+                        
+                        <varlistentry>
+                            <term>-k</term>
+                            <listitem>
+                                <simpara>Stop fbitexpire daemon listening on pipe specified by <command>-p</command></simpara>
+                            </listitem>
+                        </varlistentry>
+                        
+                        <varlistentry>
+                            <term>-o</term>
+                            <listitem>
+                                <simpara>By default, fbitexpire runs as daemon on foreground (or background with <command>-D</command>). With this option, it only scans directories, removes old data (if needed) and stops without waiting on new data etc.</simpara>
+                            </listitem>
+                        </varlistentry>
+                        
+                        <varlistentry>
+                            <term>-c</term>
+                            <listitem>
+                                <simpara>Change settings of running daemon listening on pipe specified by -p. Changed can be maximal size (-s) and watermark limit (-w)</simpara>
+                            </listitem>
+                        </varlistentry>
+		</variablelist>
+	</refsect1>
+
+	<refsect1>
+		<title>Examples</title>
+		<literallayout>fbitexpire -d 4 -s 5000 /data/collector/
+		Watch subdirectories at /data/collector. Depth is set to 4 so we watch directories of maximal depth /data/collector/1/2/3/4. Watched size is 5GB</literallayout>
+		<literallayout>fbitexpire -r /data/collector/2013/08/25
+		Send to daemon command listening on ./fbitexpire_fifo to rescan given directory.</literallayout>
+		<literallayout>fbitexpire -d 4 -s 5000 -p /tmp/expirepipe /data/collector/
+		Pipe location is set to /tmp/expirepipe.</literallayout>
+                <literallayout>fbitexpire -c -s 53G -w 250M -p /tmp/expirepipe
+          Change settings of fbitexpire listening on pipe /tmp/expirepipe. Change size to 53 GB and watermark limit to 250 MB.</literallayout>
+	</refsect1>
+
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>fbitdump</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+						<citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
+                                                <citerefentry><refentrytitle>fbitmerge</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+						<citerefentry><refentrytitle>ipfixcol-fastbit-output</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org/technologies/ipfixcol/">http://www.liberouter.org/technologies/ipfixcol/</link>
+					</term>
+					<listitem>
+						<para>Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>

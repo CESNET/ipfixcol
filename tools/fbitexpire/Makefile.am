@@ -1,11 +1,9 @@
 ACLOCAL_AMFLAGS = -I m4
-EXTRA_DIST = tools fbitdump.xml
-pkgdata_DATA = fbitdump.xml
 
 rpmspec = $(PACKAGE_TARNAME).spec
 RPMDIR = RPMBUILD
 
-SUBDIRS = 3rdparty src src/plugins
+SUBDIRS = src
 
 if HAVE_XSLTPROC
 SUBDIRS += man
