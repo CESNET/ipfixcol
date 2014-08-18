@@ -1,33 +1,18 @@
-How to use ipfixcol Test Tool
+How to use Test Tool
 
+./test.sh [/path/to/internalcfg.xml]
 
-./run-test.bash PROTOCOL PATH/to/the/message(s)
+Tool runs test on each subfolder in ./tests except ipfix_data
 
-PROTOCOL has to be either "tcp" or "udp". The script will then start 
-collector with corresponding config file. Configuration files are 
-stored in configs/ subdirectory.
-PATH is path to the directory, which contains IPFIX messages. These
-messages will be sent to the collector (sorted in alphabetical order).
+Files in each folder:
 
-Given directory should also contain these files:
-OUTPUT - expected output lines from collector (e.g. error/warning 
-         messages)
-HASH - expected hash of the output file. 
+startup.xml - configuration for running test, default template is in ./configs/default.xml
+expected - expected test output
+output - test output
+params - file with ipfixcol parameters (optional), default is '-v -1 -c startup.xml'
+preproc.sh - script that will be executed BEFORE test (optional)
+postproc.sh - script that will be executed AFTER test and BEFORE comparing results (optional)
 
-Standard output of the collector is redirected to the collector_output.log file.
+Test logs are stored in test.log file
 
-The src/senddata utility is used by these scripts. Build it using make before
-running the tests.
-
-
-Example:
-./run-test.bash tcp messages/tcp/malformed/no-templates/
-
-
-Alternatively you can run all tests in some directory:
-
-./run-all PROTOCOL PATH/tests
-
-Note test directory has to contain HASH file (but it may be empty).
-Test logs are stored in test.log file.
-
+Tool uses script create_internal.sh for making internalcfg.xml with paths to build folder.

@@ -57,14 +57,10 @@
  */
 struct data_manager_config {
 	uint32_t observation_domain_id;
-	pthread_t thread_id;
-	char thread_name[16];	/**< Name of the thread for SET_PROCESS_NAME*/
+	uint32_t references;
 	unsigned int plugins_count;
-	struct ring_buffer *in_queue;
 	struct ring_buffer *store_queue;
 	struct storage_list* storage_plugins;
-    struct input_info *input_info;
-    struct ipfix_template_mgr *template_mgr;
 	struct data_manager_config *next;
 };
 
@@ -75,14 +71,12 @@ struct data_manager_config {
  * handled by this data manager
  * @param[in] storage_plugins List of storage plugins that should be opened by
  * this data manager
- * @param[in] input_info Input information from input plugin
  * @return data_manager_config Configuration strucutre on success, NULL
  * otherwise
  */
 struct data_manager_config* data_manager_create (
     uint32_t observation_domain_id,
-    struct storage_list* storage_plugins,
-    struct input_info *input_info);
+    struct storage_list* storage_plugins);
 
 /**
  * \brief Closes data manager specified by its configuration

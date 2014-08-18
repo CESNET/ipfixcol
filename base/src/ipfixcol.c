@@ -60,8 +60,10 @@
 #include <libxml/xpath.h>
 
 #include "ipfixcol.h"
+#include "intermediate_process.h"
 #include "config.h"
 #include "preprocessor.h"
+#include "output_manager.h"
 
 /**
  * \defgroup internalAPIs ipfixcol's Internal APIs
@@ -73,7 +75,7 @@
 
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "c:dhv:Vsr:"
+#define OPTSTRING "c:dhv:Vsr:i:"
 
 /* main loop indicator */
 volatile int done = 0;
@@ -99,8 +101,9 @@ void version ()
  */
 void help ()
 {
-	printf ("Usage: %s [-c file] [-dhVs] [-v level]\n", PACKAGE);
+	printf ("Usage: %s [-c file] [-i file] [-dhVs] [-v level]\n", PACKAGE);
 	printf ("  -c file   Path to configuration file (%s by default)\n", DEFAULT_CONFIG_FILE);
+	printf ("  -i file   Path to internal configuration file (%s by default)\n", INTERNAL_CONFIG_FILE);
 	printf ("  -d        Daemonize\n");
 	printf ("  -h        Print this help\n");
 	printf ("  -v level  Print verbose messages up to specified level\n");
@@ -122,24 +125,32 @@ void term_signal_handler(int sig)
 
 int main (int argc, char* argv[])
 {
-	int c, i, fd, retval = 0, get_retval, proc_count = 0, proc_id = 0;
+	int c, i, fd, retval = 0, get_retval, proc_count = 0, proc_id = 0, collector_mode = 0;
+	int source_status = SOURCE_STATUS_OPENED;
 	pid_t pid = 0;
 	bool daemonize = false;
-	char *config_file = NULL;
+	char *config_file = NULL, *internal_file = NULL;
 	char process_name[16]; /* name of the process for ps auxc */
 	struct plugin_xml_conf_list* input_plugins = NULL, *storage_plugins = NULL,
-	        *aux_plugins = NULL;
+	        *aux_plugins = NULL, *intermediate_plugins = NULL;;
 	struct input input;
 	struct storage_list *storage_list = NULL, *aux_storage_list = NULL;
-	void *input_plugin_handler = NULL, *storage_plugin_handler = NULL;
+	void *input_plugin_handler = NULL, *storage_plugin_handler = NULL, *intermediate_plugin_handler = NULL;
+	struct intermediate_list *intermediate_list = NULL, *aux_intermediate_list = NULL;
 	struct sigaction action;
 	char *packet = NULL;
 	struct input_info* input_info;
+	struct ring_buffer *in_queue = NULL, *out_queue = NULL, *aux_queue = NULL, *preprocessor_output_queue = NULL;
+	struct ipfix_template_mgr *template_mgr = NULL;
+	void *output_manager_config = NULL;
+	uint8_t core_initialized = 0;
+	uint32_t ip_id = 0;
 
 	xmlXPathObjectPtr collectors;
 	xmlNodePtr collector_node;
 	xmlDocPtr xml_config;
 	xmlChar *plugin_params;
+	xmlChar *ip_params;
 
 	/* some initialization */
 	input.dll_handler = NULL;
@@ -152,6 +163,9 @@ int main (int argc, char* argv[])
 		switch (c) {
 		case 'c':
 			config_file = optarg;
+			break;
+		case 'i':
+			internal_file = optarg;
 			break;
 		case 'd':
 			daemonize = true;
@@ -208,6 +222,13 @@ int main (int argc, char* argv[])
 		MSG_NOTICE(msg_module, "Using default configuration file %s.", config_file);
 	}
 
+	/* check internal config file */
+	if (internal_file == NULL) {
+		/* and use default if not specified */
+		internal_file = INTERNAL_CONFIG_FILE;
+		MSG_NOTICE(msg_module, "Using default internal configuration file %s.", internal_file);
+	}
+
 	/* TODO: this part should be in the future replaced by NETCONF configuration */
 	fd = open (config_file, O_RDONLY);
 	if (fd == -1) {
@@ -256,20 +277,36 @@ int main (int argc, char* argv[])
 	}
 
 	/*
+	 * create Template Manager
+	 */
+
+	template_mgr = tm_create();
+	if (template_mgr == NULL) {
+		MSG_ERROR(msg_module, "[%d] Unable to create Template Manager", proc_id);
+		retval = EXIT_FAILURE;
+		goto cleanup;
+	}
+
+	/*
 	 * initialize plugins for the collector
 	 */
 	/* get input plugin - one */
-	input_plugins = get_input_plugins (collector_node);
+	input_plugins = get_input_plugins (collector_node, internal_file);
 	if (input_plugins == NULL) {
 		retval = EXIT_FAILURE;
 		goto cleanup;
 	}
 
 	/* get storage plugins - at least one */
-	storage_plugins = get_storage_plugins (collector_node, xml_config);
+	storage_plugins = get_storage_plugins (collector_node, xml_config, internal_file);
 	if (storage_plugins == NULL) {
 		retval = EXIT_FAILURE;
 		goto cleanup;
+	}
+
+	intermediate_plugins = get_intermediate_plugins(xml_config, internal_file);
+	if (intermediate_plugins == NULL) {
+		MSG_NOTICE(msg_module, "[%d] No intermediate plugin specified. ipfixmed will act as IPFIX collector.", proc_id);
 	}
 
 	/* prepare input plugin */
@@ -341,7 +378,7 @@ int main (int argc, char* argv[])
 
 		storage_list->storage.dll_handler = storage_plugin_handler;
 		/* set storage thread name */
-		snprintf(storage_list->storage.thread_name, 16, "ipfixc:%s", aux_plugins->config.name);
+		snprintf(storage_list->storage.thread_name, 16, "out:%s", aux_plugins->config.name);
 
 		/* prepare Input API routines */
 		storage_list->storage.init = dlsym (storage_plugin_handler, "storage_init");
@@ -396,6 +433,79 @@ int main (int argc, char* argv[])
 		goto cleanup;
 	}
 
+	/* prepare intermediate plugins */
+	for (aux_plugins = intermediate_plugins; aux_plugins != NULL; aux_plugins = aux_plugins->next) {
+		MSG_NOTICE(msg_module, "[%d] Opening intermediate xml_conf: %s", proc_id, aux_plugins->config.file);
+
+		intermediate_plugin_handler = dlopen(aux_plugins->config.file, RTLD_LAZY);
+		if (intermediate_plugin_handler == NULL) {
+			MSG_ERROR(msg_module, "[%d] Unable to load intermediate xml_conf (%s)", proc_id, dlerror());
+			continue;
+		}
+
+		aux_intermediate_list = intermediate_list;
+		intermediate_list = (struct intermediate_list*) malloc (sizeof(struct intermediate_list));
+		if (intermediate_list == NULL) {
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+			intermediate_list = aux_intermediate_list;
+			dlclose(intermediate_plugin_handler);
+			continue;
+		}
+		memset(intermediate_list, 0, sizeof(struct intermediate_list));
+
+		intermediate_list->intermediate.dll_handler = intermediate_plugin_handler;
+		/* set intermediate thread name */
+		snprintf(intermediate_list->intermediate.thread_name, 16, "med:%s", aux_plugins->config.name);
+
+		/* prepare Input API routines */
+		intermediate_list->intermediate.process_message = dlsym(intermediate_plugin_handler, "process_message");
+		if (intermediate_list->intermediate.process_message == NULL) {
+			MSG_ERROR(msg_module, "Unable to load intermediate xml_conf (%s)", dlerror());
+			dlclose(intermediate_plugin_handler);
+			intermediate_plugin_handler = NULL;
+			free(intermediate_list);
+			intermediate_list = aux_intermediate_list;
+			dlclose(intermediate_plugin_handler);
+			continue;
+		}
+
+		intermediate_list->intermediate.intermediate_plugin_init = dlsym(intermediate_plugin_handler, "intermediate_plugin_init");
+		if (intermediate_list->intermediate.intermediate_plugin_init == NULL) {
+			MSG_ERROR(msg_module, "Unable to load intermediate xml_conf (%s)", dlerror());
+			dlclose(intermediate_plugin_handler);
+			intermediate_plugin_handler = NULL;
+			free(intermediate_list);
+			intermediate_list = aux_intermediate_list;
+			dlclose(intermediate_plugin_handler);
+			continue;
+		}
+
+		intermediate_list->intermediate.intermediate_plugin_close = dlsym(intermediate_plugin_handler, "intermediate_plugin_close");
+		if (intermediate_list->intermediate.intermediate_plugin_close == NULL) {
+			MSG_ERROR(msg_module, "Unable to load intermediate xml_conf (%s)", dlerror());
+			dlclose(intermediate_plugin_handler);
+			intermediate_plugin_handler = NULL;
+			free(intermediate_list);
+			intermediate_list = aux_intermediate_list;
+			dlclose(intermediate_plugin_handler);
+			continue;
+		}
+
+		intermediate_list->intermediate.xml_conf = &aux_plugins->config;
+		intermediate_list->next = aux_intermediate_list;
+
+		if (aux_intermediate_list) {
+			aux_intermediate_list->prev = intermediate_list;
+		}
+
+		continue;
+	}
+	/* check if we have found at least one intermediate plugin */
+	if (!intermediate_list) {
+		MSG_NOTICE(msg_module, "[%d] Running in collector mode.", proc_id);
+		collector_mode = 1;
+	}
+
 	/* daemonize */
 	if (daemonize) {
 		closelog();
@@ -419,12 +529,78 @@ int main (int argc, char* argv[])
 		goto cleanup;
 	}
 
+
+	if (collector_mode) {
+		/* no intermediate plugins */
+		in_queue = rbuffer_init(ring_buffer_size);
+		preprocessor_output_queue = in_queue;
+
+		/* preprocessor's output queue will be input queue of output manager(s) */
+		aux_queue = in_queue;
+	} else {
+		/* there is at least one intermediate plugin */
+		aux_intermediate_list = intermediate_list;
+		while (aux_intermediate_list->next) {
+			aux_intermediate_list = aux_intermediate_list->next;
+		}
+
+
+		while (aux_intermediate_list) {
+
+			/* create input and output queue for Intermediate Process */
+			out_queue = rbuffer_init(ring_buffer_size);
+
+			if (!in_queue) {
+				in_queue = rbuffer_init(ring_buffer_size);
+				preprocessor_output_queue = in_queue;
+			} else {
+				in_queue = aux_queue;
+			}
+
+			xmlDocDumpMemory(aux_intermediate_list->intermediate.xml_conf->xmldata, &ip_params, NULL);
+
+			/* initialize Intermediate Process */
+			ip_init(in_queue, out_queue,
+					&(aux_intermediate_list->intermediate),
+					(char *) ip_params,
+					ip_id,
+					template_mgr,
+					&(aux_intermediate_list->intermediate.ip_config));
+			
+			/* Increment source ID for next Intermediate Process */
+			ip_id++;
+
+			/* output queue of one Intermediate Process is an input queue of another */
+			aux_queue = out_queue;
+
+			aux_intermediate_list = aux_intermediate_list->prev;
+		}
+	}
+	core_initialized = 1;
+
+	/* configure output subsystem */
+	retval = output_manager_create(storage_list, aux_queue, &output_manager_config);
+	if (retval != 0) {
+		MSG_ERROR(msg_module, "[%d] Initiating Storage Manager failed.", proc_id);
+		goto cleanup;
+	}
+
+	retval = preprocessor_init(preprocessor_output_queue, template_mgr);
+	if (retval != 0) {
+		MSG_ERROR(msg_module, "[%d] initiating Preprocessor failed.", proc_id);
+		goto cleanup;
+	}
+
 	/* main loop */
 	while (!done) {
 		/* get data to process */
-		if ((get_retval = input.get (input.config, &input_info, &packet)) < 0) {
+		if ((get_retval = input.get (input.config, &input_info, &packet, &source_status)) < 0) {
 			if (!done || get_retval != INPUT_INTR) { /* if interrupted and closing, it's ok */
 				MSG_WARNING(msg_module, "[%d] Getting IPFIX data failed!", proc_id);
+			}
+			if (packet) {
+				free(packet);
+				packet = NULL;
 			}
 			continue;
 		} else if (get_retval == INPUT_CLOSED) {
@@ -440,7 +616,8 @@ int main (int argc, char* argv[])
             }
         }
 		/* distribute data to the particular Data Manager for further processing */
-		preprocessor_parse_msg (packet, get_retval, input_info, storage_list);
+		preprocessor_parse_msg (packet, get_retval, input_info, storage_list, source_status);
+		source_status = SOURCE_STATUS_OPENED;
 		packet = NULL;
 		input_info = NULL;
 	}
@@ -450,6 +627,7 @@ cleanup:
 	if (collectors) {
 		xmlXPathFreeObject (collectors);
 	}
+
 	if (input_plugins) {
 		if (input_plugins->config.file) {
 			free (input_plugins->config.file);
@@ -462,7 +640,32 @@ cleanup:
 	if (xml_config) {
 		xmlFreeDoc (xml_config);
 	}
-	xmlCleanupParser ();
+
+	/* wait for all intermediate processes to close */
+	aux_intermediate_list = intermediate_list;
+	while (aux_intermediate_list && aux_intermediate_list->next) {
+		aux_intermediate_list = aux_intermediate_list->next;
+	}
+
+	/*
+	 * Stop all intermediate plugins and flush buffers
+	 * Plugins will be closed later - they can have data needed by storage plugins
+	 * (templates etc.)
+	 */
+	while (aux_intermediate_list && core_initialized) {
+		/* this function will wait for intermediate thread to terminate */
+		ip_stop(aux_intermediate_list->intermediate.ip_config);
+		aux_intermediate_list = aux_intermediate_list->prev;
+	}
+
+	/* Close whole Output Manager (including Data Managers) */
+	if (output_manager_config) {
+		output_manager_close(output_manager_config);
+	}
+
+	/* Close preprocessor */
+	preprocessor_close();
+
 	while (storage_plugins) { /* while is just for sure, it should be always one */
 		if (storage_plugins->config.file) {
 			free (storage_plugins->config.file);
@@ -478,6 +681,28 @@ cleanup:
 		storage_plugins = aux_plugins;
 	}
 
+	/* Now close all intermediate plugins */
+	aux_intermediate_list = intermediate_list;
+	while (aux_intermediate_list) {
+		ip_destroy(aux_intermediate_list->intermediate.ip_config);
+		aux_intermediate_list = aux_intermediate_list->next;
+	}
+
+	while (intermediate_plugins) {
+		if (intermediate_plugins->config.file) {
+			free(intermediate_plugins->config.file);
+		}
+		if (intermediate_plugins->config.xmldata) {
+			xmlFreeDoc(intermediate_plugins->config.xmldata);
+		}
+		if (intermediate_plugins->config.observation_domain_id) {
+			free(intermediate_plugins->config.observation_domain_id);
+		}
+		aux_plugins = intermediate_plugins->next;
+		free(intermediate_plugins);
+		intermediate_plugins = aux_plugins;
+	}
+
 	/* DLLs cleanup */
 	if (input_plugin_handler) {
 		if (input.config != NULL) {
@@ -485,9 +710,6 @@ cleanup:
 		}
 		dlclose (input_plugin_handler);
 	}
-   
-    /* close preprocessor (will close all data managers) */
-    preprocessor_close();
 
     /* all storage plugins should be closed now -> free packet */
     if (packet != NULL) {
@@ -504,6 +726,17 @@ cleanup:
 		storage_list = aux_storage_list;
 	}
 
+    /* free allocated resources in intermediate processes */
+   	while (intermediate_list) {
+   		aux_intermediate_list = intermediate_list->next;
+   		if (intermediate_list->intermediate.dll_handler) {
+   			dlclose(intermediate_list->intermediate.dll_handler);
+   		}
+   		free(intermediate_list);
+   		intermediate_list = aux_intermediate_list;
+   	}
+
+
     /* wait for child processes */
     if (pid > 0) {
         for (i=0; i<proc_count; i++) {
@@ -512,6 +745,14 @@ cleanup:
         }
         MSG_NOTICE(msg_module, "[%d] Closing collector.", proc_id);
     }
+
+    /* destroy template manager */
+	if (template_mgr) {
+		tm_destroy(template_mgr);
+	}
+
+	xmlCleanupThreads();
+	xmlCleanupParser ();
 
 	return (retval);
 }

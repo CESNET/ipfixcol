@@ -371,7 +371,6 @@ int storage_init (char *params, void **config){
 
 	/* On startup we expect to write to new directory */
 	c->new_dir = true;
-
 	return 0;
 }
 
@@ -432,7 +431,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 		} else {
 			/* Check template time. On reception of a new template it is crucial to rewrite the old one. */
 			if (ipfix_msg->data_couple[i].data_template->last_transmission > table->second->get_last_transmission()) {
-				MSG_DEBUG(MSG_MODULE,"Received new template with already used ODID: %hu", template_id);
+				MSG_DEBUG(MSG_MODULE,"Received new template with already used Template ID: %hu", template_id);
 				//std::cout << "Template " << template_id << " time: " << ctime(&ipfix_msg->data_couple[i].data_template->last_transmission) << std::endl;
 
 				/* Init map for old template if necessary */

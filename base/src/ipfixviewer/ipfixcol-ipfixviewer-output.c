@@ -446,6 +446,11 @@ static int print_data_sets(const struct ipfix_message *ipfix_msg)
 	while(data_set) {
 		printf("\n\n");
 		template = ipfix_msg->data_couple[data_index].data_template;
+		if (!template) {
+			/* Data set without template, skip it */
+			data_set = ipfix_msg->data_couple[++data_index].data_set;
+			continue;
+		}
 		min_record_length = template->data_length;
 		offset = 0;
 		counter = 1;

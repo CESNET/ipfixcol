@@ -49,7 +49,7 @@ AC_CONFIG_SRCDIR([src/ipfixcol.c])
 AC_CONFIG_HEADERS([pkgconfig.h])
 
 # Initialization
-CFLAGS="-Wall"
+AM_CFLAGS="-Wall -O2 -std=gnu99"
 
 RELEASE=1
 AC_SUBST(RELEASE)
@@ -61,8 +61,8 @@ LBR_SET_DISTRO([redhat])
 ###################### Check for configure parameters ##########################
 AC_ARG_ENABLE([debug], 
         AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
-        [CFLAGS="$CFLAGS -Wextra -g"
-        CPPFLAGS="$CPPFLAGS -DDEBUG"])
+        [AM_CFLAGS="$AM_CFLAGS -Wextra -g"
+        AM_CPPFLAGS="$AM_CPPFLAGS -DDEBUG"])
         
 AC_ARG_ENABLE([sctp], 
         AC_HELP_STRING([--disable-sctp],[disable sctp input plugin]))
@@ -74,6 +74,12 @@ AC_ARG_WITH([openssl],
 
 
 ############################ Check for programs ################################
+
+# Check for flex
+AC_CHECK_PROG(FLEX, flex, flex)
+
+# Check fol bison
+AC_CHECK_PROG(BISON, bison, bison)
 
 # Check for doxygen
 AC_CHECK_PROG(DOXYGEN, doxygen, doxygen)
@@ -175,6 +181,10 @@ AC_CHECK_DECL([be64toh], [AC_DEFINE([HAVE_BE64TOH], [1],
                          [Define if macro be64toh exists.])],,
 			 [[#include <endian.h>]])
 
+# substitute automake CFLAGS and CPPFLAGS variables
+AC_SUBST([AM_CPPFLAGS])        
+AC_SUBST([AM_CFLAGS])
+
 # generate output
 AC_CONFIG_FILES([Makefile
 				ipfixcol.spec
@@ -187,6 +197,11 @@ AC_CONFIG_FILES([Makefile
 				src/input/sctp/Makefile
 				src/storage/ipfix/Makefile
 				src/storage/dummy/Makefile
+				src/storage/forwarding/Makefile
+				src/intermediate/anonymization/Makefile
+				src/intermediate/dummy/Makefile
+				src/intermediate/joinflows/Makefile
+				src/intermediate/filter/Makefile
 				config/Makefile
 				headers/Makefile
 				documentation/doxygen/Makefile
@@ -196,6 +211,10 @@ AM_COND_IF(HAVE_DOXYGEN, AC_CONFIG_FILES([documentation/doxygen/doxyfile]))
 AC_OUTPUT
 
 # print warnings
+
+AS_IF([test -z "$FLEX"], AC_MSG_WARN([Due to missing flex you will not be able to generate filter scanner from sources.]))
+
+AS_IF([test -z "$BISON"], AC_MSG_WARN([Due to missing bison you will not be able to generate filter parser from sources.]))
 
 AM_COND_IF(HAVE_DOXYGEN,, AC_MSG_WARN([Due to missing doxygen you will not able to generate Doxygen documentation.]))
 
@@ -211,11 +230,13 @@ echo "
   Prefix........: $prefix
   Distribution..: $DISTRO
   Debug build...: ${enable_debug:-no}
-  C Compiler....: $CC $CFLAGS $CPPFLAGS
+  C Compiler....: $CC $AM_CFLAGS $CFLAGS $CPPFLAGS
   Linker........: $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
   xsltproc......: ${XSLTPROC:-NONE}
   xsltmanstyle..: $XSLTMANSTYLE
+  flex..........: ${FLEX:-NONE}
+  bison.........: ${BISON:-NONE}
   Doxygen.......: ${DOXYGEN:-NONE}
   TLS support...: $TLS_SUPPORT
   SCTP support..: ${enable_sctp:-yes}

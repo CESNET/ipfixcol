@@ -1,7 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4
 EXTRA_DIST = tools fbitdump.xml
 pkgdata_DATA = fbitdump.xml
-bin_SCRIPTS = tools/fbitexpire
 
 rpmspec = $(PACKAGE_TARNAME).spec
 RPMDIR = RPMBUILD

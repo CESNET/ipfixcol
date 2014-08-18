@@ -71,6 +71,11 @@
 /** Identifier to MSG_* macros */
 static char *msg_module = "ipfix input";
 
+struct input_info_file_list {
+	struct input_info_file in_info;
+	struct input_info_file_list	*next;
+};
+
 /**
  * \struct ipfix_config
  * \brief  IPFIX input plugin specific "config" structure 
@@ -89,6 +94,7 @@ struct ipfix_config {
 	                          * of basename() */
 	char **input_files;      /**< list of all input files */
 	int findex;              /**< index to the current file in the list of files */
+	struct input_info_file_list	*in_info_list;
 	struct input_info_file *in_info; /**< info structure about current input file */
 };
 
@@ -176,6 +182,7 @@ static int regexp_asterisk(char *regexp, char *string)
 		break;
 	}
 
+	free(aux_regexp);
 	return ok;
 }
 
@@ -210,6 +217,21 @@ static int prepare_input_file(struct ipfix_config *conf)
 		ret = -1;
 	}
 
+	/* New file == new input info */
+	struct input_info_file_list *info = calloc(1, sizeof(struct input_info_file_list));
+	if (!info) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+		return -1;
+	}
+	
+	info->in_info.name   = conf->input_files[conf->findex];
+	info->in_info.type   = SOURCE_TYPE_IPFIX_FILE;
+	info->in_info.status = SOURCE_STATUS_NEW; 
+	
+	/* Insert new input info into list */
+	info->next = conf->in_info_list;
+	conf->in_info_list = info;
+	
 	conf->findex += 1;
 	conf->fd = fd;
 	
@@ -275,6 +297,13 @@ static int next_file(struct ipfix_config *conf)
 	return NO_INPUT_FILE;
 }
 
+/**
+ * \brief Compare function for qsort
+ */
+static int compare(const void *a, const void *b)
+{
+	return strcmp(*(const char **) a, *(const char **) b);
+}
 
 /*
  * * * * Input plugin API implementation
@@ -353,18 +382,6 @@ int input_init(char *params, void **config)
 
 	/* skip "file:" at the beginning of the URI */
 	conf->file = (char *) conf->xml_file + 5;
-
-
-	/* input info */
-	conf->in_info = (struct input_info_file *) malloc(sizeof(*(conf->in_info)));
-	if (!conf->in_info) {
-		/* out of memory */
-		MSG_ERROR(msg_module, "Not enough memory");
-		goto err_file;
-	}
-
-	conf->in_info->type = SOURCE_TYPE_IPFIX_FILE;
-	conf->in_info->name = conf->file;
 
 	/* we don't need this xml tree any more */
 	xmlFreeDoc(doc);
@@ -461,6 +478,9 @@ int input_init(char *params, void **config)
 		}
 	} while (result);
 
+	/* Sort file names - we need them ordered for tests */
+	qsort(input_files, inputf_index, sizeof(const char *), compare);
+
 	conf->input_files = input_files;
 
 	/* print all input files */
@@ -480,6 +500,8 @@ int input_init(char *params, void **config)
 
 	*config = conf;
 
+	free(entry);
+	closedir(dir);
 	return 0;
 
 
@@ -503,12 +525,13 @@ err_init:
  * \param[in] config  input plugin config structure
  * \param[out] info  information about source of the IPFIX data 
  * \param[out] packet  IPFIX message in memory
+ * \param[out] source_status Status of source (new, opened, closed)
  * \return length of the message on success. otherwise:
  * INPUT_INTR - on signal interrupt,
  * INPUT_CLOSED - if there are no more input files,
  * negative value on other possible errors
  */ 
-int get_packet(void *config, struct input_info **info, char **packet)
+int get_packet(void *config, struct input_info **info, char **packet, int *source_status)
 {
 	int ret;
 	int counter = 0;
@@ -518,11 +541,11 @@ int get_packet(void *config, struct input_info **info, char **packet)
 	char *packet_orig;	
 
 	conf = (struct ipfix_config *) config;
-
-	*info = (struct input_info *) conf->in_info;
-
+	
+	*info = (struct input_info *) &(conf->in_info_list->in_info);
+	
 	packet_orig = *packet;
-
+	
 	header = (struct ipfix_header *) malloc(sizeof(*header));
 	if (!header) {
 		MSG_ERROR(msg_module, "Not enough memory");
@@ -543,6 +566,7 @@ read_header:
 	}
 	if (ret == 0) {
 		/* EOF, next file? */
+		*source_status = SOURCE_STATUS_CLOSED;
 		ret = next_file(conf);
 		if (ret == NO_INPUT_FILE) {
 			/* all files processed */
@@ -562,6 +586,7 @@ read_header:
 		MSG_ERROR(msg_module, "Input file may be corrupted. Skipping");
 
 		/* try to open next input file */
+		*source_status = SOURCE_STATUS_CLOSED;
 		ret = next_file(conf);
 		if (ret == NO_INPUT_FILE) {
 			/* all files processed */
@@ -603,8 +628,9 @@ read_header:
 	    ret = INPUT_ERROR;
 		goto err_info;
 	}
-	if (ret == 0) {
+	if (ret == 0 && packet_len-counter > 0) {
 		/* EOF, next file? */
+		*source_status = SOURCE_STATUS_CLOSED;
 		ret = next_file(conf);
 		if (ret == NO_INPUT_FILE) {
 			/* all files processed */
@@ -622,9 +648,18 @@ read_header:
 	counter += ret;
 
 	free(header);
+	
+	*info = (struct input_info *) &(conf->in_info_list->in_info);
+	
+	/* Set source status */
+	*source_status = (*info)->status;
+	if ((*info)->status == SOURCE_STATUS_NEW) {
+		(*info)->status = SOURCE_STATUS_OPENED;
+		(*info)->odid = ntohl(((struct ipfix_header *) *packet)->observation_domain_id);
+	}
 
 	return packet_len;
-
+	
 err_info:
 	if (packet_orig != *packet) {
 		/* this plugin allocated this memory */
@@ -646,6 +681,7 @@ err_header:
 int input_close(void **config)
 {
 	struct ipfix_config *conf = *config;
+	struct input_info_file_list *aux_list = conf->in_info_list;
 	int ret = 0;
 	int i;
 
@@ -660,6 +696,12 @@ int input_close(void **config)
 		free(conf->input_files);
 	}
 
+	while (aux_list) {
+		conf->in_info_list = conf->in_info_list->next;
+		free(aux_list);
+		aux_list = conf->in_info_list;
+	}
+	
 	xmlFree(conf->xml_file);
 	free(conf->in_info);
 	free(conf);

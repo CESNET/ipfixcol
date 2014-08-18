@@ -276,6 +276,7 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 		return 0;
 	}
 
+
 	uint16_t offset = 0;
 	uint16_t index, count;
 	uint16_t length, size_length;
@@ -308,6 +309,9 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 				length = ntohs(read16(data_record+offset+size_length));
 				size_length = 3;
 			}
+			
+			
+
 		}
 
 		/* Copy the element value on match */
@@ -428,6 +432,7 @@ static void process_dynamic(ifc_config *conf)
 			conf->bufferOffset  += conf->dynAr[i]->valueSize;
 			conf->bufferDynSize += conf->dynAr[i]->valueSize;
 			conf->dynAr[i]->valueFilled = 0;
+			conf->dynAr[i]->valueSize = 0;
 		}
 	}
 }
@@ -458,6 +463,8 @@ static int process_data_sets(const struct ipfix_message *ipfix_msg, unirec_confi
 		DEBUG_TIME_RECORD = 0;
 	}
 	*/
+
+	
 
 	uint16_t data_index = 0;
 	struct ipfix_data_set *data_set;

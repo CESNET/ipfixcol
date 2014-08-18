@@ -48,6 +48,19 @@
 #include "queues.h"
 
 /**
+ * \brief
+ *
+ * Structure holding UDP specific template configuration
+ */
+struct udp_conf {
+	uint16_t template_life_time;
+	uint16_t template_life_packet;
+	uint16_t options_template_life_time;
+	uint16_t options_template_life_packet;
+};
+
+
+/**
  * \brief Does first basic parsing of raw ipfix message
  *
  * Creates pointers to data and template sets, creates data manager for
@@ -57,9 +70,28 @@
  * @param[in] len Length of the packet
  * @param[in] input_info Input information from input plugin
  * @param[in] storage_plugins List of storage plugins that should be passed to data manager
+ * @param[in] source_status Status of source (new, opened, closed)
  * @return void
  */
-void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins);
+void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins, int source_state);
+
+/**
+ * \brief This function sets the queue for preprocessor and inits crc computing.
+ *
+ * @param out_queue preprocessor's output queue
+ * @param template_mgr collector's Template Manager
+ * @return 0 on success, negative value otherwise
+ */
+int preprocessor_init(struct ring_buffer *out_queue, struct ipfix_template_mgr *template_mgr);
+
+
+/**
+ * \brief Returns pointer to preprocessors output queue.
+ *
+ * @return preprocessors output queue
+ */
+struct ring_buffer *get_preprocessor_output_queue();
+
 
 /**
  * \brief Close all data managers and their storage plugins

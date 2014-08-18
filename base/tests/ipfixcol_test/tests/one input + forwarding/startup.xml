@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
+
+    <collectingProcess>
+		<name>File collector</name>
+		<fileReader>
+			<file>file:../ipfix_data/02-odid0.ipfix</file>
+		</fileReader>
+		<exportingProcess>File writer forwarding</exportingProcess>
+	</collectingProcess>
+
+	<exportingProcess>
+		<name>File writer forwarding</name>
+		<destination>
+			<name>File forwarder</name>
+			<fileWriter>
+				<fileFormat>forwarding</fileFormat>
+				<ipv4>127.0.0.1</ipv4>
+				<type>udp</type>
+				<templateLifeTime>1800</templateLifeTime>
+				<port>4568</port>
+			</fileWriter>
+		</destination>
+		<destination>
+		  <name>File writer</name>
+		  <fileWriter>
+		    <fileFormat>ipfix</fileFormat>
+		    <file>file:./out-first.ipfix</file>
+		  </fileWriter>
+		</destination>
+	</exportingProcess>
+
+</ipfix>

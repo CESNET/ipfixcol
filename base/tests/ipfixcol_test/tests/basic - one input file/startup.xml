@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
+
+    <collectingProcess>
+		<name>TCP collector</name>
+		<fileReader>
+			<file>file:../ipfix_data/01-odid0.ipfix</file>
+		</fileReader>
+		<exportingProcess>File viewer</exportingProcess>
+	</collectingProcess>
+
+
+	<exportingProcess>
+		<name>File viewer</name>
+		<destination>
+			<name>File viewer</name>
+			<fileWriter>
+				<fileFormat>ipfix</fileFormat>
+				<file>file:./out.ipfix</file>
+			</fileWriter>
+		</destination>
+	</exportingProcess>
+
+</ipfix>

@@ -118,6 +118,11 @@ int input_init(char *params, void **config)
 	/* 1 when using default port - don't free memory */
 	int def_port = 0;
 
+	/* parse params */
+	xmlDoc *doc = NULL;
+	xmlNode *root_element = NULL;
+	xmlNode *cur_node = NULL;
+
 	/* allocate plugin_conf structure */
 	conf = calloc(1, sizeof(struct plugin_conf));
 	if (conf == NULL) {
@@ -125,11 +130,6 @@ int input_init(char *params, void **config)
 		retval = 1;
 		goto out;
 	}
-
-	/* parse params */
-	xmlDoc *doc = NULL;
-	xmlNode *root_element = NULL;
-	xmlNode *cur_node = NULL;
 
 	/* parse xml string */
 	doc = xmlParseDoc(BAD_CAST params);
@@ -210,6 +210,11 @@ int input_init(char *params, void **config)
 
 	/* create socket */
 	conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
+	/* Retry with IPv4 when the implementation does not support the specified address family. */
+	if (conf->socket == -1 && errno == EAFNOSUPPORT && addrinfo->ai_family == AF_INET6) {
+		addrinfo->ai_family = AF_INET;
+		conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
+	}
 	if (conf->socket == -1) {
 		MSG_ERROR(msg_module, "Cannot create socket: %s", strerror(errno));
 		retval = 1;
@@ -319,10 +324,11 @@ out:
  * \param[in] config  plugin_conf structure
  * \param[out] info   Information structure describing the source of the data.
  * \param[out] packet Flow information data in the form of IPFIX packet.
+ * \param[out] source_status Status of source (new, opened, closed)
  * \return the length of packet on success, INPUT_CLOSE when some connection
  *  closed, INPUT_ERROR on error.
  */
-int get_packet(void *config, struct input_info **info, char **packet)
+int get_packet(void *config, struct input_info **info, char **packet, int *source_status)
 {
 	/* get socket */
 	int sock = ((struct plugin_conf*) config)->socket;
@@ -387,8 +393,11 @@ int get_packet(void *config, struct input_info **info, char **packet)
 	if (info_list == NULL) {
 		MSG_NOTICE(msg_module, "New UDP exporter connected (unique port and address)");
 		/* create new input_info */
-		info_list = malloc(sizeof(struct input_info_list));
-		memcpy(&info_list->info, &conf->info, sizeof(struct input_info_list));
+		info_list = calloc(1, sizeof(struct input_info_list));
+		memcpy(&info_list->info, &conf->info, sizeof(struct input_info_network));
+
+		info_list->info.status = SOURCE_STATUS_NEW;
+		info_list->info.odid = ntohl(((struct ipfix_header *) *packet)->observation_domain_id);
 
 		/* copy address and port */
 		if (address.sin6_family == AF_INET) {
@@ -414,7 +423,13 @@ int get_packet(void *config, struct input_info **info, char **packet)
 		info_list->last_sent = ((struct ipfix_header *)(*packet))->export_time;
 		info_list->packets_sent = 1;
 		conf->info_list = info_list;
+	} else {
+		info_list->info.status = SOURCE_STATUS_OPENED;
 	}
+
+	/* Set source status */
+	*source_status = info_list->info.status;
+
 	/* pass info to the collector */
 	*info = (struct input_info*) info_list;
 

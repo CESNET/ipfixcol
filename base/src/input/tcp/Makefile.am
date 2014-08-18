@@ -1,6 +1,6 @@
 pluginsdir = $(pkgdatadir)/plugins
-AM_CPPFLAGS = -I$(top_srcdir)/headers $(TLS_CPPFLAGS)
-AM_CFLAGS = $(TLS_CFLAGS)
+AM_CPPFLAGS += -I$(top_srcdir)/headers $(TLS_CPPFLAGS)
+AM_CFLAGS += $(TLS_CFLAGS)
 
 plugins_LTLIBRARIES = ipfixcol-tcp-input.la
 ipfixcol_tcp_input_la_LDFLAGS = -module -avoid-version -shared

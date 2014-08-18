@@ -1,0 +1,1 @@
+mv out.ipfix* output

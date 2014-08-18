@@ -225,7 +225,7 @@ struct __attribute__((__packed__)) ipfix_template_record {
  * \struct ipfix_template_set
  * \brief IPFIX Template Set structure
  */
-struct ipfix_template_set {
+struct __attribute__((__packed__)) ipfix_template_set {
 	struct ipfix_set_header header; /**< Common IPFIX Set header */
 
 	/**

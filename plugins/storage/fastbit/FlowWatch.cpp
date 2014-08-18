@@ -40,6 +40,7 @@
 #include <iostream>
 #include <fstream>
 #include <stdint.h>
+#include <sys/stat.h>
 
 #include "FlowWatch.h"
 
@@ -61,7 +62,7 @@ void FlowWatch::reset()
 	firstSQ_ = 0;
 }
 
-void FlowWatch::updateSQ(uint SQ)
+void FlowWatch::updateSQ(uint64_t SQ)
 {
 	if (reseted == true) {
 		firstSQ_ = lastSQ_ = SQ;
@@ -92,13 +93,13 @@ void FlowWatch::updateSQ(uint SQ)
 	}
 }
 
-void FlowWatch::addFlows(uint recFlows)
+void FlowWatch::addFlows(uint64_t recFlows)
 {
 	lastFlows_ = recFlows;
 	recFlows_ += recFlows;
 }
 
-uint FlowWatch::exportedFlows()
+uint64_t FlowWatch::exportedFlows()
 {
 	uint expFlows;
 	if (lastSQ_ < firstSQ_) {
@@ -116,7 +117,13 @@ int FlowWatch::write(std::string dir)
 	std::ofstream flowsFile;
 	std::ifstream iFlowsFile;
 	std::string fileName, tmp;
-	uint32_t exported = 0, received = 0;
+	uint64_t exported = 0, received = 0;
+	struct stat st;
+
+	/* Check whether directory exists */
+	if (stat(dir.c_str(), &st) || !S_ISDIR(st.st_mode)) {
+		return 0;
+	}
 
 	/* Create filename */
 	fileName = dir + "flowsStats.txt";
@@ -151,7 +158,7 @@ int FlowWatch::write(std::string dir)
 	return -1;
 }
 
-uint FlowWatch::receivedFlows()
+uint64_t FlowWatch::receivedFlows()
 {
 	return recFlows_;
 }

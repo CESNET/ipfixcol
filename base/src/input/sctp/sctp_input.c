@@ -112,7 +112,7 @@ struct input_info_node {
 struct sctp_config {
 	uint16_t listen_port;                    /**< listen port (host byte 
 	                                          * order) */
-	uint16_t listen_socket;                  /**< listen socket */
+	int listen_socket;                  /**< listen socket */
 	int epollfd;                             /**< epoll file descriptor */
 	struct input_info_node *input_info_list; /**< linked list of input_info
 	                                          * structures */
@@ -167,7 +167,7 @@ void *listen_worker(void *data) {
 		ioctl(conn_socket, FIONBIO, (char *)&on);
 
 		/* input_info - fill out information about input */
-		node = (struct input_info_node *) malloc(sizeof(*node));
+		node = (struct input_info_node *) calloc(1, sizeof(*node));
 		if (!node) {
 			MSG_ERROR(msg_module, "Not enough memory (%s:%d)",
 			                 __FILE__, __LINE__);
@@ -184,7 +184,7 @@ void *listen_worker(void *data) {
 		node->info.src_port = ntohs(src_addr6->sin6_port);
 		node->info.dst_port = ntohs(((struct sockaddr_in6*) addr_ptr)->sin6_port);
 		node->socket = conn_socket;
-
+		node->info.status = SOURCE_STATUS_NEW;
 
 		/* add input_info to the list */
 		pthread_mutex_lock(&(conf->input_info_list_mutex));
@@ -539,7 +539,12 @@ err_sockaddr6_case:
 	 * SOCK_SEQPACKET would create one-to-many style socket. for our 
 	 * purpose, one-to-one is just fine */
 	conf->listen_socket = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP);
-	if (conf->listen_socket == (uint16_t) -1) {
+	/* Retry with IPv4 when the implementation does not support the specified address family. */
+	if (conf->listen_socket == (uint16_t) -1 && errno == EAFNOSUPPORT) {
+		conf->listen_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	}
+	/* Check result */
+	if (conf->listen_socket == -1) {
 		MSG_ERROR(msg_module, "socket() - %s", strerror(errno));
 		goto err;
 	}
@@ -661,9 +666,10 @@ err_sockaddr6:
  * \param[in] config  plugin config structure
  * \param[out] input_info  information about input
  * \param[out] packet  IPFIX message
+ * \param[out] source_status Status of source (new, opened, closed)
  * \return message length on success, error code otherwise
  */
-int get_packet(void *config, struct input_info** info, char **packet)
+int get_packet(void *config, struct input_info** info, char **packet, int *source_status)
 {	
 	struct sctp_config *conf;
 	int socket;
@@ -802,6 +808,7 @@ wait_for_data:
 
 			/* no more data from this exporter */
 			/* \todo free input info structure now (in near future) */
+			*source_status = SOURCE_STATUS_CLOSED;
 			return INPUT_CLOSED;
 		} else {
 			MSG_WARNING(msg_module, "Unsupported SCTP event "
@@ -817,6 +824,12 @@ wait_for_data:
 		                          "long");
 	}
 
+	/* Set source status */
+	*source_status = info_node->info.status;
+	if (info_node->info.status == SOURCE_STATUS_NEW) {
+		info_node->info.status = SOURCE_STATUS_OPENED;
+		info_node->info.odid = ntohl(((struct ipfix_header *) *packet)->observation_domain_id);
+	}
 
 	return msg_length;
 

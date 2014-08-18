@@ -326,8 +326,11 @@ void *input_listen(void *config)
         pthread_mutex_unlock(&mutex);
 
         /* create new input_info for this connection */
-        input_info = malloc(sizeof(struct input_info_list));
+        input_info = calloc(1, sizeof(struct input_info_list));
         memcpy(&input_info->info, &conf->info, sizeof(struct input_info_list));
+
+        /* set status to new connection */
+        input_info->info.status = SOURCE_STATUS_NEW;
 
         /* copy address and port */
         if (address->sin6_family == AF_INET) {
@@ -391,6 +394,11 @@ int input_init(char *params, void **config)
     xmlNode *cur_node_parent;
 #endif
 
+    /* parse params */
+    xmlDoc *doc = NULL;
+    xmlNode *root_element = NULL;
+    xmlNode *cur_node = NULL;
+
     /* allocate plugin_conf structure */
     conf = calloc(1, sizeof(struct plugin_conf));
     if (conf == NULL) {
@@ -401,11 +409,6 @@ int input_init(char *params, void **config)
 
     /* empty the master set */
     FD_ZERO(&conf->master);
-
-    /* parse params */
-    xmlDoc *doc = NULL;
-    xmlNode *root_element = NULL;
-    xmlNode *cur_node = NULL;
 
     /* parse xml string */
     doc = xmlParseDoc(BAD_CAST params);
@@ -546,13 +549,19 @@ int input_init(char *params, void **config)
         goto out;
     }
 
-    /* create socket */
-    conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
-    if (conf->socket == -1) {
-    	MSG_ERROR(msg_module, "Cannot create socket: %s", strerror(errno));
-        retval = 1;
-        goto out;
-    }
+	/* create socket */
+	conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
+	/* Retry with IPv4 when the implementation does not support the specified address family. */
+	if (conf->socket == -1 && errno == EAFNOSUPPORT && addrinfo->ai_family == AF_INET6) {
+		addrinfo->ai_family = AF_INET;
+		conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
+	}
+	if (conf->socket == -1) {
+		/* End with error otherwise */
+		MSG_ERROR(msg_module, "Cannot create socket: %s", strerror(errno));
+		retval = 1;
+		goto out;
+	}
 
     /* allow IPv4 connections on IPv6 */
     if ((addrinfo->ai_family == AF_INET6) &&
@@ -740,10 +749,11 @@ out:
  * \param[in] config  plugin_conf structure
  * \param[out] info   Information structure describing the source of the data.
  * \param[out] packet Flow information data in the form of IPFIX packet.
+ * \param[out] source_status Status of source (new, opened, closed)
  * \return the length of packet on success, INPUT_CLOSE when some connection 
  *  closed, INPUT_ERROR on error or INPUT_SIGINT when interrupted.
  */
-int get_packet(void *config, struct input_info **info, char **packet)
+int get_packet(void *config, struct input_info **info, char **packet, int *source_status)
 {
     /* temporary socket set */
     fd_set tmp_set;
@@ -756,7 +766,7 @@ int get_packet(void *config, struct input_info **info, char **packet)
     struct input_info_list *info_list;
 #ifdef TLS_SUPPORT
 	int i;
-	SSL *ssl;        /* SSL structure for active socket */
+	SSL *ssl = NULL;        /* SSL structure for active socket */
 #endif
 
     /* allocate memory for packet, if needed */
@@ -912,9 +922,17 @@ int get_packet(void *config, struct input_info **info, char **packet)
     		}
     	}
     }
+
     /* check whether we found the input_info */
     if (info_list == NULL) {
     	MSG_WARNING(msg_module, "input_info not found, passing packet with NULL input info");
+    } else {
+    	/* Set source status */
+    	*source_status = info_list->info.status;
+    	if (info_list->info.status == SOURCE_STATUS_NEW) {
+    		info_list->info.status = SOURCE_STATUS_OPENED;
+    		info_list->info.odid = ntohl(((struct ipfix_header *) *packet)->observation_domain_id);
+    	}
     }
 
     /* pass info to the collector */
@@ -941,6 +959,9 @@ int get_packet(void *config, struct input_info **info, char **packet)
         } else {
             inet_ntop(AF_INET6, &conf->sock_addresses[sock]->sin6_addr, src_addr, INET6_ADDRSTRLEN);
         }
+        (*info)->status = SOURCE_STATUS_CLOSED;
+        *source_status = SOURCE_STATUS_CLOSED;
+
         MSG_NOTICE(msg_module, "Exporter on address %s closed connection", src_addr);
            
         /* use mutex so that listening thread does not reuse the socket too quickly */

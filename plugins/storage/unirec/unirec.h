@@ -123,6 +123,7 @@ typedef struct unirec_config {
         char *ifc_buff_switch;
 	uint64_t *ifc_buff_timeout;
 	uint16_t odid;
+	uint8_t SF_DATA;
 } unirec_config;
 
 

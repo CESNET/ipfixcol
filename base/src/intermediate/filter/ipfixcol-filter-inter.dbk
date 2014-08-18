@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2014</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>15 July 2014</date>
+		<authorgroup>
+			<author>
+				<personname>
+					<firstname>Michal</firstname>
+					<surname>Kozubik</surname>
+				</personname>
+				<email>kozubik@cesnet.cz</email>
+				<contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol-filter-inter</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">Filter intermediate plugin for IPFIXcol.</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>ipfixcol-filter-inter</refname>
+		<refpurpose>Filter intermediate plugin for IPFIXcol.</refpurpose>
+	</refnamediv>
+	
+	<refsect1>
+		<title>Description</title>
+		<simpara>The <command>ipfixcol-filter-inter.so</command> is intermediate plugin for ipfixcol (ipfix collector).</simpara>
+		<simpara>Plugin searches IPFIX data records and filters them according to profile. User can specify profiles with source ODIDs, ouput ODID and filter string.</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Configuration</title>
+		<simpara>There are two configuration XML files for ipfixcol that affects plugin usage.
+		First one is internal configuration XML (<filename>/etc/ipfixcol/internalcfg.xml</filename>) where are list of all available plugins for the collecor. 
+		To use filter intermediate plugin, make sure it is properly specified in the configuration XMLs.
+		</simpara>
+		<simpara><filename>internalcfg.xml</filename> filter example</simpara>
+		<programlisting>
+	<![CDATA[
+	<intermediatePlugin>
+		<name>filter</name>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-filter-inter.so</file>
+		<threadName>filter_inter</threadName>
+	</intermediatePlugin>
+	]]>
+		</programlisting>
+		<para></para>
+		
+		<simpara>The collector must be configured to use filter intermediate plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
+		The configuration specifies which plugins are used by the collector to process data and provides configuration for the plugins themselves. 
+		</simpara>
+		<simpara><filename>startup.xml</filename> filter example</simpara>
+		<programlisting>
+	<![CDATA[
+	<intermediatePlugins>
+		<filter>
+			<profile to="4">
+				<from>1</from>
+				<from>5</from>
+				<filterString>(ipVersion = 4 and sourceIPv4Address != 192.168.1.1) or ie60 = 6</filterString>
+			</profile>
+			<profile to="8">
+				<from>1</from>
+				<filterString>ie501 = "/[w]{3}\..*\.cz/"</filterString>
+			</profile>
+			<default to="999">
+				<filterString>packetDeltaCount > 0xF</filterString>
+			</default>
+			<removeOriginal>true</removeOriginal>
+		</filter>
+	</intermediatePlugins>
+	]]>
+		</programlisting>
+
+	<para>
+		<variablelist>
+			<varlistentry>
+				<term>
+					<command>to</command>
+				</term>
+				<listitem>
+					<simpara>Observation Domain ID of output flow for profile.
+					</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>from</command>
+				</term>
+				<listitem>
+					<simpara>Observation Domain ID of source flow. One ODID can be in multiple profiles.
+					</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>default</command>
+				</term>
+				<listitem>
+					<simpara>Default profile for each ODID, that is not in some other profile.
+					</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>removeOriginal</command>
+				</term>
+				<listitem>
+					<simpara>If true, original message will be removed (default == false)
+					</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>filterString</command>
+				</term>
+				<listitem>
+					<simpara>string for data filtering. It can contain:
+					</simpara>
+					<variablelist>
+						<varlistentry>
+							<term>
+								<command>raw field</command>
+							</term>
+							<listitem>
+								<simpara>field specified by its number in format ie[0-9]+
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>field</command>
+							</term>
+							<listitem>
+								<simpara>field specified by its name according to file <filename>/etc/ipfixcol/ipfix-elements.xml</filename>
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>number</command>
+							</term>
+							<listitem>
+								<simpara>plain number with optional suffix (k, m, g, t)
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>hexa number</command>
+							</term>
+							<listitem>
+								<simpara>hexadecimal number in format 0x...
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>IP address</command>
+							</term>
+							<listitem>
+								<simpara>IPv4 or IPv6 address
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>Timestamp</command>
+							</term>
+							<listitem>
+								<simpara>%Y/%m/%d.%H:%M:%S
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>keywords</command>
+							</term>
+							<listitem>
+								<simpara><command>NOT</command> and <command>EXISTS</command> keywords
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>operators</command>
+							</term>
+							<listitem>
+								<simpara>AND, OR
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>comparison</command>
+							</term>
+							<listitem>
+								<simpara>>, &lt;, =, ==, =>, &lt;=, >=, =>, !=
+								</simpara>
+								</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>brackets</command>
+							</term>
+							<listitem>
+								<simpara>( and )
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>string</command>
+							</term>
+							<listitem>
+								<simpara>string value in quotation marks
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>regex</command>
+							</term>
+							<listitem>
+								<simpara>regular expression bounded by "/.../"
+								</simpara>
+							</listitem>
+						</varlistentry>
+					</variablelist>
+				</listitem>
+			</varlistentry>
+		</variablelist>
+	</para>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+						<citerefentry><refentrytitle>ipfixcol-joinflows-inter</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+						<citerefentry><refentrytitle>ipfixcol-fastbit-output</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+						<citerefentry><refentrytitle>ipfixcol-forwarding-output</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org/technologies/ipfixcol/">http://www.liberouter.org/technologies/ipfixcol/</link>
+					</term>
+					<listitem>
+						<para>IPFIXcol Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>

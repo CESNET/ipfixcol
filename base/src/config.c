@@ -136,19 +136,19 @@ static inline xmlChar *get_children_content (xmlNodePtr node, xmlChar *children_
  * @return XPath Context for the internal XML configuration. Caller will need to
  * free it including separated free of return->doc.
  */
-static xmlXPathContextPtr ic_init (xmlChar* ns_name)
+static xmlXPathContextPtr ic_init (xmlChar* ns_name, char *internal_cfg)
 {
 	int fd;
 	xmlDocPtr doc = NULL;
 	xmlXPathContextPtr ctxt = NULL;
 
 	/* open and prepare internal XML configuration file */
-	if ((fd = open (INTERNAL_CONFIG_FILE, O_RDONLY)) == -1) {
-		MSG_ERROR(msg_module, "Unable to open internal configuration file %s (%s)", INTERNAL_CONFIG_FILE, strerror(errno));
+	if ((fd = open (internal_cfg, O_RDONLY)) == -1) {
+		MSG_ERROR(msg_module, "Unable to open internal configuration file %s (%s)", internal_cfg, strerror(errno));
 		return (NULL);
 	}
 	if ((doc = xmlReadFd (fd, NULL, NULL, XML_PARSE_NOERROR | XML_PARSE_NOWARNING | XML_PARSE_NOBLANKS)) == NULL) {
-		MSG_ERROR(msg_module, "Unable to parse internal configuration file %s", INTERNAL_CONFIG_FILE);
+		MSG_ERROR(msg_module, "Unable to parse internal configuration file %s", internal_cfg);
 		close (fd);
 		return (NULL);
 	}
@@ -180,10 +180,11 @@ static xmlXPathContextPtr ic_init (xmlChar* ns_name)
  * @param[in] collector_node XML node with parameters for the particular
  * collectingProcess. This is part of user configuration file.
  * @param[in] config User XML configuration.
+ * @param[in] internal_cfg internalcfg.xml file.
  * @return List of information about storage plugin for the specified collector,
  * NULL in case of error.
  */
-struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xmlDocPtr config)
+struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xmlDocPtr config, char *internal_cfg)
 {
 	int i, j, k, l;
 	xmlDocPtr collector_doc = NULL, exporter_doc = NULL;
@@ -197,7 +198,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	char *odidptr;
 
 	/* initiate internal config - open xml file, get xmlDoc and prepare xpath context for it */
-	if ((internal_ctxt = ic_init (BAD_CAST "cesnet-ipfixcol-int")) == NULL) {
+	if ((internal_ctxt = ic_init (BAD_CAST "cesnet-ipfixcol-int", internal_cfg)) == NULL) {
 		goto cleanup;
 	}
 
@@ -417,10 +418,11 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
  *
  * @param[in] collector_node XML node with parameters for the particular
  * collectingProcess. This is part of user configuration file.
+ * @param[in] internal_cfg internalcfg.xml file.
  * @return Information about first input plugin for the specified collector,
  * NULL in case of error.
  */
-struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node)
+struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char *internal_cfg)
 {
 	int i, j;
 	xmlChar *collector_name;
@@ -440,7 +442,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node)
 	retval->config.file = NULL;
 
 	/* initiate internal config - open xml file, get xmlDoc and prepare xpath context for it */
-	internal_ctxt = ic_init (BAD_CAST "cesnet-ipfixcol-int");
+	internal_ctxt = ic_init (BAD_CAST "cesnet-ipfixcol-int", internal_cfg);
 	if (internal_ctxt == NULL) {
 		free (retval);
 		return (NULL);
@@ -546,6 +548,181 @@ cleanup:
 
 	return (retval);
 }
+
+
+/**
+ * \brief Prepare basic information needed to dynamically load intermediate plugins.
+ * This information is get from the user configuration (given as parameter) and from
+ * internal configuration of the ipfixmed.
+ *
+ * @param[in] config User XML configuration.
+ * @param[in] internal_cfg internalcfg.xml file.
+ * @return List of information about intermediate plugins,
+ * NULL in case of error.
+ */
+struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *internal_cfg)
+{
+	int i;
+	xmlXPathContextPtr internal_ctxt = NULL;
+	xmlXPathContextPtr config_ctxt = NULL;
+	xmlXPathObjectPtr xpath_obj_ipinter = NULL;
+	xmlXPathObjectPtr xpath_obj_core = NULL;
+
+	struct plugin_xml_conf_list *plugins = NULL;
+	struct plugin_xml_conf_list *aux_plugin = NULL;
+	struct plugin_xml_conf_list *last_plugin = NULL;
+	xmlNodePtr node;
+	xmlNodePtr plugin_config;
+	xmlNodePtr plugin_config_internal;
+	xmlChar *plugin_file = NULL, *thread_name = NULL;
+	xmlDocPtr xmldata = NULL;
+	uint8_t hit = 0;
+
+	/* initiate internal config - open xml file, get xmlDoc and prepare xpath context for it */
+	if ((internal_ctxt = ic_init(BAD_CAST "cesnet-ipfixcol-int", internal_cfg)) == NULL) {
+		goto cleanup;
+	}
+
+	/* get the list of supported intermediate plugins description from internal config */
+	xpath_obj_ipinter = xmlXPathEvalExpression(BAD_CAST "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:intermediatePlugin", internal_ctxt);
+	if (xpath_obj_ipinter != NULL) {
+		if (xmlXPathNodeSetIsEmpty (xpath_obj_ipinter->nodesetval)) {
+			MSG_ERROR(msg_module, "No list of supported Intermediate formats found in internal configuration!");
+			goto cleanup;
+		}
+	}
+
+	/* create xpath evaluation context of user configuration */
+	if ((config_ctxt = xmlXPathNewContext(config)) == NULL) {
+		MSG_ERROR(msg_module, "Unable to create XPath context for user configuration (%s:%d).", __FILE__, __LINE__);
+		goto cleanup;
+	}
+
+	/* register namespace for the context of internal configuration file */
+	if (xmlXPathRegisterNs(config_ctxt, BAD_CAST "ietf-ipfix", BAD_CAST "urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp") != 0) {
+		MSG_ERROR(msg_module, "Unable to register namespace for user configuration (%s:%d).", __FILE__, __LINE__);
+		goto cleanup;
+	}
+
+	/* look for <ipfixmedCore> */
+	xpath_obj_core = xmlXPathEvalExpression(BAD_CAST "/ietf-ipfix:ipfix/ietf-ipfix:intermediatePlugins", config_ctxt);
+	if (xpath_obj_core != NULL) {
+		if (xmlXPathNodeSetIsEmpty(xpath_obj_core->nodesetval)) {
+			MSG_NOTICE(msg_module, "No intermediate plugin set in user configuration!");
+			goto cleanup;
+		}
+	}
+
+
+	node = xpath_obj_core->nodesetval->nodeTab[0]->children;
+
+	while (node != NULL) {
+		plugin_file = NULL;
+		xmldata = NULL;
+		thread_name = NULL;
+
+		hit = 0;
+
+		/* find internal configuration for this Intermediate plugin */
+		for (i = 0; i < xpath_obj_ipinter->nodesetval->nodeNr; i++) {
+			plugin_config_internal = xpath_obj_ipinter->nodesetval->nodeTab[i]->children;
+
+			while (plugin_config_internal) {
+				if ((!xmlStrncmp(plugin_config_internal->name, BAD_CAST "name", strlen("name") + 1)) &&
+					(!xmlStrncmp(plugin_config_internal->children->content, node->name, xmlStrlen(node->name)))) {
+					hit = 1;
+				}
+				if (!xmlStrncmp(plugin_config_internal->name, BAD_CAST "file", strlen("file") + 1)) {
+					plugin_file = xmlNodeListGetString(plugin_config_internal->doc, plugin_config_internal->children, 1);
+				}
+
+				if (!xmlStrncmp(plugin_config_internal->name, BAD_CAST "threadName", strlen("threadName") + 1)) {
+					thread_name = xmlNodeListGetString(plugin_config_internal->doc, plugin_config_internal->children, 1);
+				}
+				plugin_config_internal = plugin_config_internal->next;
+			}
+
+			if (!hit) {
+				xmlFree(plugin_file);
+				xmlFree(thread_name);
+				plugin_file = NULL;
+				continue;
+			}
+
+			break;
+		}
+
+		if (!plugin_file) {
+			node = node->next;
+			continue;
+		}
+
+		xmldata = xmlNewDoc(BAD_CAST "1.0");
+		xmlDocSetRootElement(xmldata, xmlCopyNode(node, 1));
+
+		if (!xmldata) {
+			xmlFree(plugin_file);
+			xmlFree(thread_name);
+			node = node->next;
+			continue;
+		}
+
+		aux_plugin = (struct plugin_xml_conf_list *) malloc(sizeof(*aux_plugin));
+		if (!aux_plugin) {
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+			goto cleanup;
+		}
+
+		memset(aux_plugin, 0, sizeof(*aux_plugin));
+
+		aux_plugin->config.file = (char *) plugin_file;
+		if (thread_name) {
+			strncpy(aux_plugin->config.name, (char*) thread_name, 16);
+			xmlFree(thread_name);
+		} else {
+			strncpy(aux_plugin->config.name, (char *) node->name, 16);
+		}
+
+		aux_plugin->config.xmldata = xmldata;
+
+		if (plugins) {
+			last_plugin->next = aux_plugin;
+		} else {
+			plugins = aux_plugin;
+		}
+
+		last_plugin = aux_plugin;
+		node = node->next;
+	}
+
+
+
+	/* inform that everything was done but no valid plugin has been found */
+	if (plugins == NULL) {
+		MSG_WARNING(msg_module, "No valid intermediate plugin specification for the mediator found.");
+	}
+
+	cleanup:
+	/* Cleanup of XPath data */
+	if (xpath_obj_core) {
+		xmlXPathFreeObject (xpath_obj_core);
+	}
+	if (xpath_obj_ipinter) {
+		xmlXPathFreeObject (xpath_obj_ipinter);
+	}
+	if (config_ctxt) {
+		xmlXPathFreeContext (config_ctxt);
+	}
+	if (internal_ctxt) {
+		xmlFreeDoc (internal_ctxt->doc);
+		xmlXPathFreeContext (internal_ctxt);
+	}
+
+
+	return (plugins);
+}
+
+/**@}*/
 
 /**
  * @brief Get list of \<collectingPrecoess\>es from user configuration.

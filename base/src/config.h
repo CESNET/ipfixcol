@@ -86,7 +86,7 @@ struct plugin_xml_conf_list {
 struct input {
 	void* config;
 	int (*init) (char*, void**);
-	int (*get) (void*, struct input_info**, char**);
+	int (*get) (void*, struct input_info**, char**, int*);
 	int (*close) (void**);
 	void *dll_handler;
 	struct plugin_xml_conf *xml_conf;
@@ -112,9 +112,24 @@ struct storage {
 	int (*store) (void*, const struct ipfix_message*, const struct ipfix_template_mgr*);
 	int (*store_now) (const void*);
 	int (*close) (void**);
+	uint32_t odid;
 	void *dll_handler;
 	struct plugin_xml_conf *xml_conf;
     struct storage_thread_conf *thread_config;
+    char thread_name[16];	/**< Name for storage threads (from configuration) */
+};
+
+/**
+ * \brief Intermediate plugin handler structure.
+ */
+struct intermediate {
+	void *ip_config;		/**< config structure of intermediate process */
+	void *config;           /**< intermediate plugin's config structure */
+	int (*intermediate_plugin_init)(char *, void *, uint32_t, struct ipfix_template_mgr *, void **);
+	int (*process_message)(void *, void *);
+	int (*intermediate_plugin_close)(void *);
+	void *dll_handler;
+	struct plugin_xml_conf *xml_conf;
     char thread_name[16];	/**< Name for storage threads (from configuration) */
 };
 
@@ -124,6 +139,15 @@ struct storage {
 struct storage_list {
 	struct storage storage;
 	struct storage_list *next;
+};
+
+/**
+ * \brief Intermediate plugin handler structure list
+ */
+struct intermediate_list {
+	struct intermediate intermediate;
+	struct intermediate_list *prev;
+	struct intermediate_list *next;
 };
 
 /**
@@ -142,10 +166,11 @@ xmlXPathObjectPtr get_collectors(xmlDocPtr doc);
  *
  * @param[in] collector_node XML node with parameters for the particular
  * collectingProcess. This is part of user configuration file.
+ * @param[in] internal_cfg internalcfg.xml file.
  * @return Information about first input plugin for the specified collector,
  * NULL in case of error.
  */
-struct plugin_xml_conf_list* get_input_plugins(xmlNodePtr collectorNode);
+struct plugin_xml_conf_list* get_input_plugins(xmlNodePtr collectorNode, char *internal_cfg);
 
 /**
  * \brief Prepare basic information needed to dynamically load storage plugins
@@ -156,10 +181,23 @@ struct plugin_xml_conf_list* get_input_plugins(xmlNodePtr collectorNode);
  * @param[in] collector_node XML node with parameters for the particular
  * collectingProcess. This is part of user configuration file.
  * @param[in] config User XML configuration.
+ * @param[in] internal_cfg internalcfg.xml file.
  * @return List of information about storage plugin for the specified collector,
  * NULL in case of error.
  */
-struct plugin_xml_conf_list* get_storage_plugins(xmlNodePtr collectorNode, xmlDocPtr config);
+struct plugin_xml_conf_list* get_storage_plugins(xmlNodePtr collectorNode, xmlDocPtr config, char *internal_cfg);
+
+/**
+ * \brief Prepare basic information needed to dynamically load intermediate plugins.
+ * This information is get from the user configuration (given as parameter) and from
+ * internal configuration of the ipfixmed.
+ *
+ * @param[in] config User XML configuration.
+ * @param[in] internal_cfg internalcfg.xml file.
+ * @return List of information about intermediate plugins,
+ * NULL in case of error.
+ */
+struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *internal_cfg);
 
 /**@}*/
 

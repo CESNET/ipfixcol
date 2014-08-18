@@ -1686,9 +1686,14 @@ static void readFlowSample(SFSample *sample, int expanded, char *packet)
 {
   uint32_t num_elements, sampleLength;
   u_char *sampleStart;
-
+  
   sampleLength = getData32(sample);
   sampleStart = (u_char *)sample->datap;
+  
+   if((u_char *)sample->datap + sampleLength > sample->endp) {
+    SFABORT(sample, SF_ABORT_EOS);
+  }
+  
   sample->samplesGenerated = getData32(sample);
   if(expanded) {
     sample->ds_class = getData32(sample);
@@ -1799,7 +1804,7 @@ static void readSFlowDatagram(SFSample *sample, char *packet)
   /* get the agent address */
   uint32_t addr_type = getAddress(sample, &sample->agent_addr);
   if (addr_type != SFLADDRESSTYPE_IP_V4 && addr_type != SFLADDRESSTYPE_IP_V6) {
-	  return;
+	  SFABORT(sample, SF_ABORT_EOS);
   }
 
   /* version 5 has an agent sub-id as well */
@@ -1816,7 +1821,7 @@ static void readSFlowDatagram(SFSample *sample, char *packet)
     uint32_t samp = 0;
     for(; samp < samplesInPacket; samp++) {
       if((u_char *)sample->datap >= sample->endp) {
-    	  return; // error - unexpected end
+    	  SFABORT(sample, SF_ABORT_EOS);
       }
 
       // just read the tag, then call the approriate decode fn

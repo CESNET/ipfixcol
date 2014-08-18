@@ -92,24 +92,37 @@ enum SOURCE_TYPE{
 	SOURCE_TYPE_COUNT         /**< number of defined SOURCE_TYPEs */
 };
 
+enum SOURCE_STATUS{
+	SOURCE_STATUS_NEW,     /**< New source connected */
+	SOURCE_STATUS_OPENED,         /**< Received first data from source */
+	SOURCE_STATUS_CLOSED       /**< Source closed */
+};
+
 /**
  * \struct input_info
  * \brief  General input information structure used to distinguish the real
  * input information type.
  */
-struct input_info {
+struct __attribute__((__packed__)) input_info {
 	enum SOURCE_TYPE type;    /**< type of source defined by enum #SOURCE_TYPE */
+	int sequence_number;      /**< sequence number for current source */
+	enum SOURCE_STATUS status;  /**< source status defined by enum #SOURCE_STATUS */
+	uint32_t odid;                 /**< Observation Domain ID of source */
 };
 
 /**
  * \struct input_info_network
  * \brief Input information structure specific for network based data sources.
  */
-struct input_info_network {
+struct __attribute__((__packed__)) input_info_network {
 	enum SOURCE_TYPE type;    /**< type of source - #SOURCE_TYPE_UDP,
 	                           * #SOURCE_TYPE_TCP, #SOURCE_TYPE_TCPTLS,
 	                           * #SOURCE_TYPE_SCTP, #SOURCE_TYPE_NF5,
 	                           * #SOURCE_TYPE_NF9 */
+	int sequence_number;      /**< sequence number for current source */
+	enum SOURCE_STATUS status;  /**< source status - #SOURCE_STATUS_OPENED,
+	                           * #SOURCE_STATUS_NEW, #SOURCE_STATUS_CLOSED */
+	uint32_t odid;                 /**< Observation Domain ID of source */
 	uint8_t l3_proto;         /**< IP protocol byte */
 	union {
 		struct in6_addr ipv6;
@@ -139,8 +152,12 @@ struct input_info_network {
  * \struct input_info_file
  * \brief Input information structure specific for file based data sources.
  */
-struct input_info_file {
+struct __attribute__((__packed__)) input_info_file {
 	enum SOURCE_TYPE type;    /**< type of source - #SOURCE_TYPE_IPFIX_FILE */
+	int sequence_number;      /**< sequence number for current source */
+	enum SOURCE_STATUS status;  /**< source status - #SOURCE_STATUS_OPENED,
+		                           * #SOURCE_STATUS_NEW, #SOURCE_STATUS_CLOSED */
+	uint32_t odid;                 /**< Observation Domain ID of source */
 	char *name;               /**< name of the input file */
 };
 
@@ -175,10 +192,11 @@ int input_init(char *params, void **config);
  * function.
  * \param[out] info   Information structure describing the source of the data.
  * \param[out] packet Flow information data in the form of IPFIX packet.
+ * \param[out] source_status Status of source (enum SOURCE_STATUS)
  * \return the length of packet on success, INPUT_CLOSE when some connection 
  *  closed, INPUT_INTR when interrupted by SIGINT signal, INPUT_ERROR on error.
  */
-int get_packet(void *config, struct input_info** info, char **packet);
+int get_packet(void *config, struct input_info** info, char **packet, int *source_status);
 
 /**
  * \brief Input plugin "destructor".
