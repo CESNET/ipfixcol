@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 BuildRequires: gcc make doxygen pkgconfig
 Requires: libxml2
 BuildRequires: libxml2-devel rrdtool-devel
-Requires: ipfixcol rrdtool
+Requires: ipfixcol >= 0.7.0 rrdtool
 
 %description
 Statistics storage plugin for ipfixcol.

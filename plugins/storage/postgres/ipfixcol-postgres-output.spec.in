@@ -15,7 +15,7 @@ Requires: postgresql
 BuildRequires: postgresql-devel
 Requires: libxml2
 BuildRequires: libxml2-devel
-Requires: ipfixcol
+Requires: ipfixcol >= 0.7.0
 
 %description
 Postgres storage plugin for ipfixcol.
