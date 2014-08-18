@@ -36,7 +36,6 @@ make DESTDIR=%buildroot install
 
 %files
 %_bindir/fbitdump
-%_bindir/fbitexpire
 %config(noreplace) %_datadir/fbitdump/fbitdump.xml
 %_datadir/fbitdump/plugins/*.so
 %_datadir/fbitdump/plugins/*.la
