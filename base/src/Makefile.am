@@ -1,4 +1,5 @@
-SUBDIRS = . \
+SUBDIRS = utils \
+	. \
 	input/tcp input/udp input/ipfix \
 	intermediate/anonymization intermediate/dummy intermediate/joinflows \
 	intermediate/filter \
@@ -11,7 +12,7 @@ endif
 
 bin_PROGRAMS = ipfixcol
 AM_CPPFLAGS = -I$(top_srcdir)/headers
-AM_CFLAGS = -rdynamic -g
+AM_CFLAGS = -rdynamic
 
 ipfixcol_SOURCES = \
 	config.c \
@@ -32,4 +33,5 @@ ipfixcol_SOURCES = \
 	queues.c \
 	queues.h \
 	template_manager.c \
-	verbose.c
+	verbose.c \
+	utils/utils.c
