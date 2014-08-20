@@ -48,24 +48,18 @@
 
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#include <dirent.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
 #include <stdio.h>
-#include <stddef.h>
 #include <errno.h>
-#include <libgen.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
 
 #include "ipfixcol.h"
 
-
-#define NUMBER_OF_INPUT_FILES 100
 #define NO_INPUT_FILE         (-2)
 
 /** Identifier to MSG_* macros */
@@ -86,105 +80,11 @@ struct ipfix_config {
 	                          * file. (e.g.: "file://tmp/ipfix.dump") */
 	char *file;              /**< path where to look for IPFIX files. same as
 	                          * xml_file, but without 'file:' */
-	char *dir;               /**< directory where to look for ipfix files.
-	                          * basically it is dirname(file) */
-	char *filename;          /**< name of the input file. it may contain asterisk
-	                          * (e.g.: "ipfix-2011-03-*.dump) */
-	char *file_copy;         /**< auxiliary variable, copy of the "file" for purpose 
-	                          * of basename() */
 	char **input_files;      /**< list of all input files */
 	int findex;              /**< index to the current file in the list of files */
 	struct input_info_file_list	*in_info_list;
 	struct input_info_file *in_info; /**< info structure about current input file */
 };
-
-
-/**
- * \brief determine whether string matches regexp or not 
- * 
- * \return 1 if string matches regexp, 0 otherwise */
-static int regexp_asterisk(char *regexp, char *string)
-{
-	static int asterisk = '*';
-	char *asterisk_pos;
-	char *aux_regexp;
-	char *saveptr;
-	char *token;
-	int ok;             /* 1 if string matches regexp, 0 otherwise */
-
-	if ((regexp == NULL) || (string == NULL)) {
-		return 0;
-	}
-
-	if ((asterisk_pos = strchr(regexp, asterisk)) == NULL) {
-		/* this string doesn't contain asterisk... */
-		if (!strcmp(regexp, string)) {
-			/* we've found a match! */
-			return 1;
-		} else {
-			return 0;
-		}
-	}
-
-	/* make copy of original string */
-	aux_regexp = (char *) malloc(strlen(regexp) + 1);
-	if (aux_regexp == NULL) {
-		MSG_ERROR(msg_module, "Not enough memory");
-		return -1;
-	}
-
-	strcpy(aux_regexp, regexp);
-	
-	int pos = 1; /* we assume that asterisk is in the middle of the string */
-	if (aux_regexp[0] == asterisk) {
-		/* asterisk on the beginning */
-		pos = 0;
-	}
-	if (aux_regexp[strlen(aux_regexp)-1] == asterisk) {
-		/* asterisk on the end of the string */
-		pos = 2;
-	}
-	if (!strcmp(aux_regexp, "*")) {
-		/* there is nothing but asterisk */
-		pos = -1;
-	}
-
-	token = strtok_r(aux_regexp, "*", &saveptr);
-
-	ok = 0;
-	switch (pos) {
-	case (-1):
-		/* there is nothing but asterisk, so it matches. best scenario :) */
-		ok = 1;
-		break;
-	case (0):
-		/* asterisk is on the beginning of the string */
-		if (!strncmp(token, string+(strlen(string)-strlen(token)), strlen(token))) {
-			ok = 1;
-		}
-		break;
-
-	case (1):
-		/* asterisk is in the middle of the string */
-		if (!strncmp(token, string, strlen(token))) {
-			token = strtok_r(NULL, "*", &saveptr);
-			if (!strncmp(token, string+(strlen(string)-strlen(token)), strlen(token))) {
-				ok = 1;
-			}
-		}
-		break;
-
-	case (2):
-		/* asterisk is on the end of the string */
-		if (!strncmp(token, string, strlen(token))) {
-			ok = 1;
-		}
-		break;
-	}
-
-	free(aux_regexp);
-	return ok;
-}
 
 
 /**
@@ -209,7 +109,7 @@ static int prepare_input_file(struct ipfix_config *conf)
 	}
 
 	MSG_NOTICE(msg_module, "Opening input file: %s", conf->input_files[conf->findex]);
-
+	
 	fd = open(conf->input_files[conf->findex], O_RDONLY);
 	if (fd == -1) {
 		/* input file doesn't exist or we don't have read permission */
@@ -297,14 +197,6 @@ static int next_file(struct ipfix_config *conf)
 	return NO_INPUT_FILE;
 }
 
-/**
- * \brief Compare function for qsort
- */
-static int compare(const void *a, const void *b)
-{
-	return strcmp(*(const char **) a, *(const char **) b);
-}
-
 /*
  * * * * Input plugin API implementation
 */
@@ -322,19 +214,12 @@ int input_init(char *params, void **config)
 	char **input_files;
 	xmlDocPtr doc;
 	xmlNodePtr cur;
-	struct dirent *entry;
-	struct dirent *result;
 	int ret;
-	int fcounter = 0;
-	int inputf_index = 0;
-	int len;
-	DIR *dir;
-	struct stat st;
 	int i;
 
 
 	/* allocate memory for config structure */
-	conf = (struct ipfix_config *) malloc(sizeof(*conf));
+	conf = (struct ipfix_config *) calloc(1, sizeof(*conf));
 	if (!conf) {
 		MSG_ERROR(msg_module, "Not enough memory");
 		return -1;
@@ -386,127 +271,31 @@ int input_init(char *params, void **config)
 	/* we don't need this xml tree any more */
 	xmlFreeDoc(doc);
 
-	/* get directory without filename */
-	conf->dir = (char *) malloc(strlen(conf->file) + 1);
-	if (conf->dir == NULL) {
-		MSG_ERROR(msg_module, "Not enough memory");
-		goto err_file;
+	input_files = utils_files_from_path(conf->file);
+	
+	if (!input_files) {
+		goto err_init;
 	}
-	strcpy(conf->dir, conf->file);
-	conf->dir = dirname(conf->dir);
-
-	/* get filename without directory */
-	conf->file_copy = (char *) malloc(strlen(conf->file) + 1);
-	if (conf->file_copy == NULL) {
-		MSG_ERROR(msg_module, "Not enough memory");
-		goto err_file;
-	}
-	strcpy(conf->file_copy, conf->file);
-	conf->filename = basename(conf->file_copy);
-
-	dir = opendir(conf->dir);
-	if (dir == NULL) {
-		MSG_ERROR(msg_module, "Unable to open input file(s)\n");
-		goto err_file;
-	}
-
-	len = offsetof(struct dirent, d_name) + 
-	          pathconf(conf->dir, _PC_NAME_MAX) + 1;
-
-	entry = (struct dirent *) malloc(len);
-	if (entry == NULL) {
-		MSG_ERROR(msg_module, "Not enough memory");
-		goto err_file;
-	}
-
-	int array_length = NUMBER_OF_INPUT_FILES;
-	input_files = (char **) malloc(array_length * sizeof(char *));
-	if (input_files == NULL) {
-		MSG_ERROR(msg_module, "Not enough memory");
-		goto err_file;
-	}
-	memset(input_files, 0, NUMBER_OF_INPUT_FILES);
-
-	do {
-		ret = readdir_r(dir, entry, &result);
-		if (ret != 0) {
-			MSG_ERROR(msg_module, "Error while reading directory %s\n", conf->dir);
-			goto err_file;
-		}
-		
-		if (result == NULL) {
-			/* no more files in directory */
-			break;
-		}
-
-		if ((!strcmp(".", entry->d_name)) || (!strcmp("..", entry->d_name))) {
-			continue;
-		}
-
-		/* check whether this filename matches given regexp */
-		ret = regexp_asterisk(conf->filename, entry->d_name);
-		if (ret == 1) {
-			/* this file matches */
-			if (fcounter >= array_length) {
-				input_files = realloc(input_files, array_length * 2);
-				if (input_files == NULL) {
-					MSG_ERROR(msg_module, "Not enough memory");
-					goto err_file;
-				}
-				array_length *= 2;
-			}
-
-			input_files[inputf_index] = (char *) malloc(strlen(entry->d_name) + strlen(conf->dir) + 2); /* 2 because of "/" and NULL*/
-			if (input_files[inputf_index] == NULL) {
-				MSG_ERROR(msg_module, "Not enough memory");
-				goto err_file;
-			}
-			/* create path+filename string */
-			sprintf(input_files[inputf_index], "%s/%s", conf->dir, entry->d_name);
-
-			/* check whether input file is a directory */
-			stat(input_files[inputf_index], &st);
-			if (S_ISDIR(st.st_mode)) {
-				/* well, it is... damn */
-				free(input_files[inputf_index]);
-				input_files[inputf_index] = NULL;
-				MSG_WARNING(msg_module, "Input file %s is a directory. Skipping.", entry->d_name);
-				continue;
-			}
-
-			inputf_index += 1;
-		}
-	} while (result);
-
-	/* Sort file names - we need them ordered for tests */
-	qsort(input_files, inputf_index, sizeof(const char *), compare);
-
+	
 	conf->input_files = input_files;
-
+	
 	/* print all input files */
-	if (inputf_index) {
+	if (input_files[0] != NULL) {
 		MSG_NOTICE(msg_module, "List of input files:");
 		for (i = 0; input_files[i] != NULL; i++) {
 			MSG_NOTICE(msg_module, "\t%s", input_files[i]);
 		}
 	}
-
+	
 	ret = next_file(conf);
-	if (ret == -1) {
+	if (ret < 0) {
 		/* no input files */
 		MSG_ERROR(msg_module, "No input files, nothing to do");
-		goto err_file;
+		goto err_init;
 	}
 
 	*config = conf;
-
-	free(entry);
-	closedir(dir);
 	return 0;
-
-
-err_file:
-	xmlFree(conf->xml_file);
 
 err_xml:
 	xmlFreeDoc(doc);
@@ -684,9 +473,6 @@ int input_close(void **config)
 	struct input_info_file_list *aux_list = conf->in_info_list;
 	int ret = 0;
 	int i;
-
-	free(conf->dir);
-	free(conf->file_copy);
 
 	/* free list of input files */
 	if (conf->input_files) {
