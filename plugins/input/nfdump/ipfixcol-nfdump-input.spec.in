@@ -1,0 +1,42 @@
+Summary: nfdump input plugin for ipfixcol.
+Name: @PACKAGE_NAME@
+Version: @PACKAGE_VERSION@
+Release: @RELEASE@
+URL: http://www.liberouter.org/
+Source: http://homeproj.cesnet.cz/rpm/liberouter/stable/SOURCES/%{name}-%{version}-%{release}.tar.gz
+Group: Liberouter
+License: BSD
+Vendor: CESNET, z.s.p.o.
+Packager: @USERNAME@ <@USERMAIL@>
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
+
+BuildRequires: gcc make doxygen
+BuildRequires: ipfixcol-devel
+Requires: ipfixcol >= 0.7.0
+
+%description
+nfdump input plugin for ipfixcol.
+
+
+%prep
+%setup
+
+%post
+
+%preun
+
+%postun
+
+
+%build
+%configure --with-distro=@DISTRO@
+make
+
+%install
+make DESTDIR=$RPM_BUILD_ROOT install
+
+%files
+#input plugins
+%{_datadir}/ipfixcol/plugins/ipfixcol-nfdump-input.*
+%{_datadir}/ipfixcol/plugins/ipfixcol-nfdump-input.txt
+%{_mandir}/man1/ipfixcol-nfdump-input.1*
