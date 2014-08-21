@@ -9,4 +9,5 @@ SUBDIRS = base \
 	tools/fbitexpire \
 	plugins/storage/fastbit \
 	plugins/storage/postgres \
-	plugins/storage/unirec
+	plugins/storage/unirec \
+	plugins/input/nfdump
