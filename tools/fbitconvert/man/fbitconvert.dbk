@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2014</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>24 July 2014</date>
+		<authorgroup>
+			<author>
+				<personname>
+    				<firstname>Michal</firstname>
+	    			<surname>Kozubik</surname>
+                </personname>
+                <email>kozubik@cesnet.cz</email>
+                <contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">Data conversion tool</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>fbitconvert</refname>
+		<refpurpose>Tool for converting nfdump data to Fastbit format</refpurpose>
+	</refnamediv>
+    
+    <refsynopsisdiv>
+        <cmdsynopsis>
+            <command>fbitconvert</command>
+            <arg>options</arg>
+        </cmdsynopsis>
+    </refsynopsisdiv>
+
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+			The <command>fbitconvert</command> is an data conversion tool, part of IPFIXcol framework. 
+			The reads nfdump data converts them into Fastbit data format.
+		</simpara>
+                <simpara>
+                    In fact, it only parses arguments and creates IPFIXcol configuration with nfdump input plugin and fastbit storage plugin.
+                </simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Options</title>
+		<variablelist>
+			<varlistentry>
+				<term>-h --help</term>
+				<listitem>
+					<simpara>Print basic usage and options.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-v --version</term>
+				<listitem>
+					<simpara>Print version informations and exit.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>--path=<replaceable class="parameter">path</replaceable></term>
+				<listitem>
+					<simpara>storage direcotry for fastbit plugin. Default is ./%o/%Y/%m/%d</simpara>
+				</listitem>
+			</varlistentry>
+			
+                        <varlistentry>
+				<term>--source=<replaceable class="parameter">path</replaceable></term>
+				<listitem>
+					<simpara>
+                                            nfcapd file(s) path (asterisk in filename allowed)
+                                        </simpara>
+				</listitem>
+			</varlistentry>
+                        
+			<varlistentry>
+				<term>--reorder=<replaceable class="parameter">yes/no</replaceable></term>
+				<listitem>
+					<simpara>
+						reorder stored data
+					</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>--onthefly=<replaceable class="parameter">yes/no</replaceable></term>
+				<listitem>
+					<simpara>
+						create indexes for stored data
+					</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>--dump-timealign=<replaceable class="parameter">yes/no</replaceable></term>
+				<listitem>
+					<simpara>
+						align flush time according to timeWindow
+					</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>--reorder=<replaceable class="parameter">yes/no</replaceable></term>
+				<listitem>
+					<simpara>
+						reorder stored data
+					</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>--dump-timewindow=<replaceable class="parameter">seconds</replaceable></term>
+				<listitem>
+					<simpara>
+						interval for rotation of data storage direcotry
+					</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>--dump-buffersize=<replaceable class="parameter">size</replaceable></term>
+				<listitem>
+					<simpara>
+						how many elements can be stored in buffer per row
+					</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>--dump-recordlimit=<replaceable class="parameter">yes/no</replaceable></term>
+				<listitem>
+					<simpara>
+						prevents data storage direcotry to become too huge
+					</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>--naming-type=<replaceable class="parameter">type</replaceable></term>
+				<listitem>
+					<simpara>
+						naming strategy - time/incremental/prefix
+					</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>--naming-prefix=<replaceable class="parameter">prefix</replaceable></term>
+				<listitem>
+					<simpara>
+						specifies prefix to data dumps names
+					</simpara>
+				</listitem>
+			</varlistentry>
+			
+		</variablelist>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>fbitdump</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+						<citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
+                                                <citerefentry><refentrytitle>fbitmerge</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+                                                <citerefentry><refentrytitle>fbitexpire</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+                                                <citerefentry><refentrytitle>ipfixcol-nfdump-input</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+						<citerefentry><refentrytitle>ipfixcol-fastbit-output</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org/technologies/ipfixcol/">http://www.liberouter.org/technologies/ipfixcol/</link>
+					</term>
+					<listitem>
+						<para>Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>

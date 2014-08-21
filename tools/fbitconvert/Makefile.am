@@ -1,13 +1,20 @@
-ACLOCAL_AMFLAGS = -I m4
-
-AM_CFLAGS = -rdynamic
-
-bin_PROGRAMS = fbitconvert
-
-fbitconvert_SOURCES = fbitconvert.c ext_fill.c ext_fill.h ext_parse.c ext_parse.h nffile.h verbose.c
+ACLOCAL_AMFLAGS         = -I m4
 
 rpmspec = $(PACKAGE_TARNAME).spec
 RPMDIR = RPMBUILD
+
+dist_pkgdata_DATA = fbitconvert_startup.xml
+
+
+SUBDIRS = src
+
+if HAVE_XSLTPROC
+SUBDIRS += man
+endif
+
+.PHONY: doc
+doc: 
+	(cd doc && $(MAKE) $(AM_MAKEFLAGS) $@) || exit 1
 
 .PHONY: rpm
 rpm: dist $(rpmspec)
