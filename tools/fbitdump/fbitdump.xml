@@ -1454,7 +1454,7 @@
 		<width>18</width>
 		<default-value>-</default-value>
 		<value type="plain">
-			<element>e39499id45</element>
+			<element semantics="voip_rtpcodec">e39499id45</element>
 		</value>
 	</column>
 	<column>
@@ -1699,10 +1699,14 @@
 	<plugin>
 		<name>tls_csuites_array</name>
 		<path>/usr/share/fbitdump/plugins/tls_csuites_array.so</path>
-    </plugin>
-    <plugin>
+	</plugin>
+	<plugin>
 		<name>voip_type</name>
 		<path>/usr/share/fbitdump/plugins/voip_type.so</path>
-    </plugin>
+	</plugin>
+	<plugin>
+		<name>voip_rtpcodec</name>
+		<path>/usr/share/fbitdump/plugins/voip_rtpcodec.so</path>
+	</plugin>
 </plugins>
 </configuration>
