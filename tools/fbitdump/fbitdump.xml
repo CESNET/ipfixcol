@@ -1337,7 +1337,7 @@
 		<width>1</width>
 		<default-value>-</default-value>
 		<value type="plain">
-			<element>e39499id32</element>
+			<element semantics="voip_type">e39499id32</element>
 		</value>
 	</column>
 	<column>
@@ -1454,7 +1454,7 @@
 		<width>18</width>
 		<default-value>-</default-value>
 		<value type="plain">
-			<element>e39499id45</element>
+			<element semantics="voip_rtpcodec">e39499id45</element>
 		</value>
 	</column>
 	<column>
@@ -1667,8 +1667,28 @@
 		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %csipm %csipc %csipu %csipf %csipt %csipc %csipv %csipr %csiprr</formatString>
 	</format>
 	<format>
+		<formatName>voip</formatName>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %voiptype %sipcallid %sipcalling %sipcalled %sipvia %sipinvite %sipok %sipbye %siprtpip4 %siprtpip6 %siprtpaudio %siprtpvideo %sipstats %rtpcodec %rtpjitter %rtcplost %rtcppackets %rtcpsrccnt</formatString>
+	</format>
+	<format>
+		<formatName>voip6</formatName>
+		<formatString>%ts %td %pr %sp %dp %sa6 %da6 %voiptype %sipcallid %sipcalling %sipcalled %sipvia %sipinvite %sipok %sipbye %siprtpip4 %siprtpip6 %siprtpaudio %siprtpvideo %sipstats %rtpcodec %rtpjitter %rtcplost %rtcppackets %rtcpsrccnt</formatString>
+	</format>
+	<format>
 		<formatName>sip</formatName>
-		<formatString>%ts,%td,%pr,%sa4,%sp,%da4,%dp,%pkt,%byt,%fl,%voiptype,%sipcallid,%sipcalling,%sipcalled,%sipvia,%sipinvite,%sipok,%sipbye,%siprtpip4,%siprtpip6,%siprtpaudio,%siprtpvideo,%sipstats,%rtpcodec,%rtpjitter,%rtcplost,%rtcppackets,%rtcpsrccnt</formatString>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %voiptype %sipcallid %sipcalling %sipcalled %sipvia %sipinvite %sipok %sipbye %siprtpip4 %siprtpip6 %siprtpaudio %siprtpvideo %sipstats</formatString>
+	</format>
+	<format>
+		<formatName>sip6</formatName>
+		<formatString>%ts %td %pr %sp %dp %sa6 %da6 %voiptype %sipcallid %sipcalling %sipcalled %sipvia %sipinvite %sipok %sipbye %siprtpip4 %siprtpip6 %siprtpaudio %siprtpvideo %sipstats</formatString>
+	</format>
+	<format>
+		<formatName>rtp</formatName>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %voiptype %rtpcodec %rtpjitter %rtcplost %rtcppackets %rtcpsrccnt</formatString>
+	</format>
+	<format>
+		<formatName>rtp6</formatName>
+		<formatString>%ts %td %pr %sp %dp %sa6 %da6 %voiptype %rtpcodec %rtpjitter %rtcplost %rtcppackets %rtcpsrccnt</formatString>
 	</format>
 </output>
 <plugins>
@@ -1700,5 +1720,13 @@
 		<name>tls_csuites_array</name>
 		<path>/usr/share/fbitdump/plugins/tls_csuites_array.so</path>
 	</plugin>
-	</plugins>
+	<plugin>
+		<name>voip_type</name>
+		<path>/usr/share/fbitdump/plugins/voip_type.so</path>
+	</plugin>
+	<plugin>
+		<name>voip_rtpcodec</name>
+		<path>/usr/share/fbitdump/plugins/voip_rtpcodec.so</path>
+	</plugin>
+</plugins>
 </configuration>
