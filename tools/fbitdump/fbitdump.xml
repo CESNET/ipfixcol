@@ -1200,7 +1200,7 @@
 		<width>32</width>
 		<default-value>-</default-value>
 		<value type="plain">
-			<element>e8057id815</element>
+			<element semantics="smtp_statuscode">e8057id815</element>
 		</value>
 	</column>
 	<column>
@@ -1727,6 +1727,10 @@
 	<plugin>
 		<name>voip_rtpcodec</name>
 		<path>/usr/share/fbitdump/plugins/voip_rtpcodec.so</path>
+    </plugin>
+	<plugin>
+		<name>smtp_statuscode</name>
+		<path>/usr/share/fbitdump/plugins/smtp_statuscode.so</path>
 	</plugin>
 </plugins>
 </configuration>
