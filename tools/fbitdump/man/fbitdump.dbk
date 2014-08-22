@@ -364,6 +364,7 @@
 		<title>Plugins</title>
 		<simpara>Fbitdump supports input and output plugins. Input plugins are used for parsing data from given filter and output plugins are used for valid formatting printed data.</simpara>
 		<simpara>Plugin names and paths must be specified in <citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry> file.</simpara>
+		<simpara>For output format description, see <citerefentry><refentrytitle>fbitdump-plugins</refentrytitle><manvolnum>7</manvolnum></citerefentry>.</simpara>
 		<simpara>Fbitdump already contains one default plugin for parsing and formatting data for columns without specified plugin.</simpara>
 		<simpara>Each plugin must have functions <emphasis>parse</emphasis> (for input) and <emphasis>format</emphasis> (for output).</simpara>
 		<simpara>Parsing: </simpara>
@@ -429,7 +430,8 @@ Reads all subdirs in dir recursively. Outputs flows with destination IPv4 192.16
 				<varlistentry>
 					<term>
 						<citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
-						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+						<citerefentry><refentrytitle>fbitdump-plugins</refentrytitle><manvolnum>7</manvolnum></citerefentry>
 					</term>
 					<listitem>
 						<simpara>Man pages</simpara>

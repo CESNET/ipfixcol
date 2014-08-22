@@ -156,6 +156,7 @@ AC_CHECK_DECL([be64toh], [AC_DEFINE([HAVE_BE64TOH], [1],
 AC_CONFIG_FILES([Makefile
 				src/Makefile
 				src/plugins/Makefile
+				src/plugins/man/Makefile
 				3rdparty/Makefile
 				man/Makefile
 				doc/Makefile

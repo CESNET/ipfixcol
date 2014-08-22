@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry
+   xmlns="http://docbook.org/ns/docbook"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+   http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+   version="5.0" xml:lang="en">
+   <info>
+      <copyright>
+         <year>2011-2014</year>
+         <holder>CESNET, z.s.p.o.</holder>
+      </copyright>
+      <date>22 August 2014</date>
+      <authorgroup>
+         <author>
+            <personname>
+               <firstname>Petr</firstname>
+               <surname>Velan</surname>
+            </personname>
+            <email>petr.velan@cesnet.cz</email>
+            <contrib>developer</contrib>
+         </author>
+         <author>
+            <personname>
+               <firstname>Jan</firstname>
+               <surname>Remes</surname>
+            </personname>
+            <email>jan.remes@cesnet.cz</email>
+            <contrib>developer</contrib>
+         </author>
+      </authorgroup>
+      <orgname>The Liberouter Project</orgname>
+   </info>
+
+   <refmeta>
+      <refentrytitle>fbitdump-plugins</refentrytitle>
+      <manvolnum>7</manvolnum>
+      <refmiscinfo otherclass="manual" class="manual">fbitdump plugins</refmiscinfo>
+   </refmeta>
+
+   <refnamediv>
+      <refname>fbitdump-plugins</refname>
+      <refpurpose>fbitdump plugins</refpurpose>
+   </refnamediv>
+
+   <refsect1>
+      <title>Description</title>
+      <simpara>
+         The <command>fbitdump</command> is a part of IPFIXcol (IPFIX collector).
+         The tool uses FastBit library to read and index data.
+         <command>fbitdump</command> uses plugins to convert printed data to
+         human-readable form and to parse filter input.
+      </simpara>
+      <simpara>
+         This manual page provides information regarding plugins' output format.
+         The plugins described here are listed in alphabetical order.
+         For the information required for writing a plugin see
+         <citerefentry><refentrytitle>fbitdump</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+      </simpara>
+      <simpara>Plugins:</simpara>
+      <simplelist>
+         <member>smtp_statuscode     SMTP Status Code Flags field</member>
+      </simplelist>
+   </refsect1>
+
+   <refsection>
+      <title>Plugin smtp_statuscode</title>
+      <simpara>
+         This plugin was written for parsing the SMTP Status Code field
+         provided by SMTP process plugin of <command>flowmonexp</command>.
+         The field contains flags indicating, whether individual status
+         codes were present in the message within flow or not. The plugin
+         converts the flags into a text string consisting of:
+      </simpara>
+      <simplelist>
+         <member>- present character flags (uppercase letters)</member>
+         <member>- not present character flags ('-')</member>
+         <member>- separators ('|')</member>
+      </simplelist>
+      <simpara>The separators group the flags by the first number of the status code.</simpara>
+      <example>
+         <simpara>This is an output for a flow containing all supported status codes:</simpara>
+         <simpara>SHRCOUV|I|NMLSP|CAISPMUENFR|U</simpara>
+         <simpara>Note 4 groups of flags plus special Unknown flag (U)</simpara>
+      </example>
+      <example>
+         <simpara>This is an output for a flow containing only some of supported status codes:</simpara>
+         <simpara>--R-O-V|-|---S-|--------N--|-</simpara>
+      </example>
+      <simpara>Supported Status Codes</simpara>
+      <simplelist>
+         <member>S:	211 System status, or system help reply</member>
+         <member>H:	214 Help message</member>
+         <member>R:	220 &lt;domain&gt; Service ready</member>
+         <member>C:	221 &lt;domain&gt; Service closing transmission channel</member>
+         <member>O:	250 Requested mail action okay, completed</member>
+         <member>U:	251 User not local; will forward to &lt;forward-path&gt;</member>
+         <member>V:	252 Cannot VRFY user, but will accept message and attempt delivery</member>
+         <member>--- Separator here ---</member>
+         <member>I:	354 Start mail input; end with &lt;CRLF&gt;.&lt;CRLF&gt;</member>
+         <member>--- Separator here ---</member>
+         <member>N:	421 Service not available, closing transmission channel</member>
+         <member>M:	450 Requested mail action not taken: mailbox unavailable</member>
+         <member>L:	451 Requested action aborted: local error in processing</member>
+         <member>S:	452 Requested action not taken: insufficient system storage</member>
+         <member>P:	455 Cannot accomodate parameter</member>
+         <member>--- Separator here ---</member>
+         <member>C:	500 Syntax error, command unrecognised</member>
+         <member>A:	501 Syntax error in parameters or arguments</member>
+         <member>I:	502 Command not implemented</member>
+         <member>S:	503 Bad sequence of commands</member>
+         <member>P:	504 Command parameter not implemented</member>
+         <member>M:	550 Requested action not taken: mailbox unavailable</member>
+         <member>U:	551 User not local; please try &lt;forward-path&gt;</member>
+         <member>E:	552 Requested mail action aborted: exceeded storage allocation</member>
+         <member>N:	553 Requested action not taken: mailbox name not allowed</member>
+         <member>F:	554 Transaction failed</member>
+         <member>R:	555 Cannot recognize or implement parameter</member>
+         <member>--- Separator here ---</member>
+         <member>U:	XXX Unknown status code</member>
+      </simplelist>
+   </refsection>
+
+   <refsection>
+      <title>Configuration</title>
+      <simpara>
+         Plugin usage is configured in <filename>/usr/share/fbitdump/fbitdump.xml</filename>.
+         The plugin must be listed in &lt;plugins&gt; section and its name
+         (as specified in there) must match the value of
+         semantics attribute of the column the plugin
+         should be used for. For configuration file syntax, see
+         <citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+      </simpara>
+   </refsection>
+
+   <refsection>
+      <title>See Also</title>
+      <para>
+         <variablelist>
+            <varlistentry>
+               <term>
+                  <citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
+                  <citerefentry><refentrytitle>fbitdump</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+                  <citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+               </term>
+               <listitem>
+                  <simpara>Man pages</simpara>
+               </listitem>
+            </varlistentry>
+            <varlistentry>
+               <term>
+                  <link xlink:href="http://www.liberouter.org/technologies/ipfixcol/">http://www.liberouter.org/technologies/ipfixcol/</link>
+               </term>
+               <listitem>
+                  <para>IPFIXCOL Project Homepage</para>
+               </listitem>
+            </varlistentry>
+            <varlistentry>
+               <term>
+                  <link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+               </term>
+               <listitem>
+                  <para>Liberouter web page</para>
+               </listitem>
+            </varlistentry>
+            <varlistentry>
+               <term>
+                  <email>tmc-support@cesnet.cz</email>
+               </term>
+               <listitem>
+                  <para>Support mailing list</para>
+               </listitem>
+            </varlistentry>
+         </variablelist>
+      </para>
+   </refsection>
+</refentry>
