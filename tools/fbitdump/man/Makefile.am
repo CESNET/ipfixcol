@@ -1,11 +1,11 @@
 
-MANSRC = fbitdump.dbk fbitdump.xml.dbk
+MANSRC = fbitdump.dbk fbitdump.xml.dbk fbitdump-plugins.dbk
 
 EXTRA_DIST = $(MANSRC)
 
-man_MANS = fbitdump.1 fbitdump.xml.5
+man_MANS = fbitdump.1 fbitdump.xml.5 fbitdump-plugins.7
 
-CLEANFILES = fbitdump.1 fbitdump.xml.5
+CLEANFILES = fbitdump.1 fbitdump.xml.5 fbitdump-plugins.7
 
 %.1 %.5 : %.dbk
 	@if [ -n "$(XSLTPROC)" ]; then \

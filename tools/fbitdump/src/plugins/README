@@ -1,0 +1,38 @@
+--------------------------------------------------------------------------------
+fbitdump plugins README
+================================================================================
+These are output (for formatting) and input (for filter parsing) plugins for
+fbitdump.
+
+================================================================================
+Configuration
+--------------------------------------------------------------------------------
+Plugins are configured in the /usr/share/fbitdump/fbitdump.xml file. Their name
+and path must be specified in the 'plugins' section and their name must be in
+the 'semantics' attribute of a field in order to be used for that field.
+
+================================================================================
+Writing a plugin
+--------------------------------------------------------------------------------
+Consult plugin_header.h in this directory. Each plugin MUST provide at least one
+of format() and parse() functions, preferrably both. It MAY provide an init()
+and/or close() functions. If it does, init() must return zero on succesful
+initialization, otherwise the plugin is silently ignored.
+
+Do not forget to modify Makefile.am.
+
+================================================================================
+Documentation
+--------------------------------------------------------------------------------
+If your plugin's output is not self-explanatory, you should add its' output
+format description to the fbitdump-plugin man-page (source is located in
+../../man/ [<fbitdump_dir>/man] directory).
+
+================================================================================
+Author
+--------------------------------------------------------------------------------
+This README, fbitdump-plugins man-page and several plugins were written by
+
+Jan Remes <xremes00@stud.fit.vutbr.cz>
+
+Copyright (C) CESNET 2014

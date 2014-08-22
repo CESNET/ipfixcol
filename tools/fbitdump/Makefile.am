@@ -8,7 +8,7 @@ RPMDIR = RPMBUILD
 SUBDIRS = 3rdparty src src/plugins
 
 if HAVE_XSLTPROC
-SUBDIRS += man src/plugins/man
+SUBDIRS += man
 endif
 
 if HAVE_DOXYGEN
