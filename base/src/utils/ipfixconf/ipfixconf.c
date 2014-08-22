@@ -224,7 +224,7 @@ int open_xml(conf_info_t *info, char *internal_cfg)
 int save_xml(conf_info_t *info, char *path)
 {
 //	xmlDocFormatDump(stdout, info->doc, 1);
-	xmlSaveFile(path, info->doc);
+	xmlSaveFormatFile(path, info->doc, 1);
 	return 0;
 }
 
