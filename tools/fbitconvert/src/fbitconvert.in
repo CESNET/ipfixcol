@@ -1,0 +1,223 @@
+#!/usr/bin/env bash
+
+# fbitconvert
+#
+# Author: Michal Kozubik, kozubik@cesnet.cz
+#
+# Copyright (C) 2014 CESNET, z.s.p.o.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in
+#    the documentation and/or other materials provided with the
+#    distribution.
+# 3. Neither the name of the Company nor the names of its contributors
+#    may be used to endorse or promote products derived from this
+#    software without specific prior written permission.
+#
+# ALTERNATIVELY, provided that this notice is retained in full, this
+# product may be distributed under the terms of the GNU General Public
+# License (GPL) version 2 or later, in which case the provisions
+# of the GPL apply INSTEAD OF those given above.
+#
+# This software is provided ``as is, and any express or implied
+# warranties, including, but not limited to, the implied warranties of
+# merchantability and fitness for a particular purpose are disclaimed.
+# In no event shall the company or contributors be liable for any
+# direct, indirect, incidental, special, exemplary, or consequential
+# damages (including, but not limited to, procurement of substitute
+# goods or services; loss of use, data, or profits; or business
+# interruption) however caused and on any theory of liability, whether
+# in contract, strict liability, or tort (including negligence or
+# otherwise) arising in any way out of the use of this software, even
+# if advised of the possibility of such damage.
+#
+#
+
+IPFIXCOL_EXEC="@bindir@/ipfixcol"
+IPFIXCOL_PARAMS="-c "
+IPFIXCOL_CONFIG="@pkgdatadir@/fbitconvert_startup.xml"
+VERSION="@version@"
+PACKAGE="@package@"
+
+DEFAULT_PATH="./%o/%Y/%m/%d"
+
+usage()
+{
+    echo -e "\n \
+Usage: $0 [options]\n\n \
+ -h --help                     show this message\n \
+ -v --version                  show tool version\n \
+ --source=<path>               nfcapd file path (asterisk in filename allowed)\n \
+ --path=<path>                 storage direcotry for fastbit plugin\n \
+ --reorder=<yes/no>            reorder stored data\n \
+ --onthefly=<yes/no>           create indexes for stored data\n \
+ --dump-timealign=<yes/no>     align flush time according to timeWindow\n \
+ --dump-timewindow=<seconds>   interval for rotation of data storage direcotry\n \
+ --dump-buffersize=<size>      how many elements can be stored in buffer per row\n \
+ --dump-recordlimit=<yes/no>   prevents data storage direcotry to become too huge\n \
+ --naming-type=<type>          naming strategy - time/incremental/prefix\n \
+ --naming-prefix=<prefix>      specifies prefix to data dumps names\n \
+ \nSee man pages for detailed info\n"
+   exit 0;
+}
+
+version()
+{
+    echo "${PACKAGE} ${VERSION}"
+    exit 0;
+}
+
+# options array
+declare -A options=(["path"]="${DEFAULT_PATH}")
+
+# tag array to create configuration
+declare -A tags=(["path"]="path" ["reorder"]="reorder" ["onthefly"]="onTheFlyIndexes" ["dump-timealign"]="timeAlignment"\
+    ["dump-timewindow"]="timeWindow" ["dump-buffersize"]="bufferSize" ["dump-recordlimit"]="recordLimit" ["naming-type"]="type" ["naming-prefix"]="prefix")
+
+
+# Check if option is known or not
+check_opt()
+{
+    case "$1" in
+        "source"|"path"|"reorder"|"onthefly"|"dump-timealign"|"dump-timewindow"|"dump-buffersize"|"dump-recordlimit"|"naming-type"|\
+        "naming-prefix")
+            ;;
+        *)
+            echo "Unknown option --${OPTARG}" >&2
+            exit 1;
+    esac
+}
+
+optspec=":hv-:"
+
+# parse command line arguments
+while getopts "$optspec" optchar; do
+case "${optchar}" in
+    -)
+        case "${OPTARG}" in
+            "help")
+                usage
+                ;;
+            "version")
+                version
+                ;;
+            *=*)
+                val=${OPTARG#*=}
+                opt=${OPTARG%=$val}
+                check_opt "${opt}"
+                if [ -z "${val}" ]; then
+                    echo "Missing argument for option ${opt}" >&2
+                    exit 1;
+                fi
+                ;;
+            *)
+                echo "Unknown option --${OPTARG}" >&2
+                exit 1
+                ;;
+        esac;;
+    h)
+        usage
+        ;;
+    v)
+        version
+        ;;
+    *)
+        echo "Unknown option -${OPTARG}" >&2
+        exit 1
+esac
+    options[${opt}]=${val}
+done
+
+# source must be set
+if [ -z ${options["source"]} ]; then
+    echo "Missing source file (--source)" >&2
+    exit 2
+fi
+
+
+# create configuration for storage plugin
+xmlconf="<path>${options[path]}</path>"
+dumptag=""
+
+# dumpInterval
+for opt in "dump-timewindow" "dump-timealign" "dump-buffersize" "dump-recordlimit"
+do
+    if [ ! -z ${options[${opt}]} ]; then
+        dumptag="${dumptag}    <${tags[$opt]}>${options[$opt]}</${tags[$opt]}>
+"
+    fi
+done
+
+if [ ! -z "${dumptag}" ]; then
+    xmlconf=\
+"${xmlconf}
+<dumpInterval>
+${dumptag}</dumpInterval>"
+fi
+
+# namingStrategy
+nametag=""
+for opt in "naming-type" "naming-prefix"
+do
+    if [ ! -z ${options[${opt}]} ]; then
+        nametag="${dumptag}    <${tags[$opt]}>${options[$opt]}</${tags[$opt]}>
+"
+    fi
+done
+
+if [ ! -z "${nametag}" ]; then
+    xmlconf=\
+"${xmlconf}
+<namingStrategy>
+${dumptag}</namingStrategy>"
+fi
+
+# other tags
+for opt in "onTheFlyIndexes" "reorder"
+do
+    if [ ! -z ${options[${opt}]} ]; then
+        xmlconf=\
+"${xmlconf}
+<${tags[$opt]}>${options[$opt]}</${tags[$opt]}>"
+    fi
+done
+
+srcfile="${options[source]}"
+
+# check whether input file exists
+if [ ! -f "${srcfile}" ]; then
+    echo "${srcfile}: no such file"
+    exit 1
+fi
+
+# get absolute path of the input file
+INPUT_FILE_PATH=`readlink -f ${srcfile}`
+
+# load config file
+CONFIG=`cat ${IPFIXCOL_CONFIG}`
+
+# use given input file
+CONFIG=${CONFIG/__REPLACE_WITH_INPUT_FILE__/$INPUT_FILE_PATH}
+
+# use created fastbit configuration
+CONFIG=${CONFIG/__REPLACE_WITH_STORAGE_CONF__/$xmlconf}
+
+# create our modified config file in /tmp
+TMP_CONFIG=`mktemp`
+chmod 600 ${TMP_CONFIG}
+
+# save new config
+echo "$CONFIG" > $TMP_CONFIG
+
+# execute ipfixcol with our config
+${IPFIXCOL_EXEC} ${IPFIXCOL_PARAMS} ${TMP_CONFIG}
+
+# remove config file
+rm -f ${TMP_CONFIG}
+
+exit 0

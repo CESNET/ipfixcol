@@ -1,9 +1,9 @@
 /**
- * \file verbose.c
- * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Main body of the ipfixcol
+ * \file remover.c
+ * \author Michal Kozubik <kozubik@cesnet.cz>
+ * \brief Tool for editing IPFIXcol internalcfg.xml
  *
- * Copyright (C) 2011 CESNET, z.s.p.o.
+ * Copyright (C) 2014 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,36 +37,66 @@
  *
  */
 
-#include "ipfixcol.h"
+#include "remover.h"
+#include "ipfixconf.h"
+
 #include <stdio.h>
-#include <stdarg.h>
-#include <syslog.h>
+#include <string.h>
+#include <unistd.h>
+#include <libxml/xpathInternals.h>
 
-/* Default is to print only errors */
-int verbose = ICMSG_ERROR;
 
-/* Do not use syslog unless specified otherwise */
-int use_syslog = 0;
-
-void icmsg_print(ICMSG_LEVEL lvl, const char *format, ...)
+/**
+ * \brief Remove plugin from configuration file
+ * 
+ * \param info tool configuration
+ * \param tag plugin type tag
+ * \return 0 on success
+ */
+int remove_pl(conf_info_t *info, char *tag, char *nametag)
 {
-	va_list ap;
-	int priority;
-
-	va_start(ap, format);
-	vprintf(format, ap);
-	va_end(ap);
-
-	if (use_syslog) {
-		va_start(ap, format);
-		switch (lvl) {
-		case ICMSG_ERROR: priority = LOG_ERR; break;
-		case ICMSG_WARNING: priority = LOG_WARNING; break;
-		case ICMSG_NOTICE: priority = LOG_NOTICE; break;
-		case ICMSG_DEBUG: priority = LOG_DEBUG; break;
-		default: priority = LOG_INFO; break;
-		}
-		vsyslog(priority, format, ap);
-		va_end(ap);
+	xmlNodePtr plug = NULL;
+	
+	/* check if plugin exists */
+	plug = get_plugin(info, tag, nametag, info->name);
+	
+	if (plug == NULL) {
+		fprintf(stderr, "Plugin '%s' does not exists!\n", info->name);
+		return 1;
 	}
+	
+	/* remove node */
+	xmlUnlinkNode(plug);
+	xmlFreeNode(plug);
+	
+	return 0;
+}
+
+int remove_plugin(conf_info_t *info)
+{
+	int ret = 0;
+	
+	/* check if everything is set */
+	if (info->type == PL_NONE || !info->name) {
+		fprintf(stderr, "Missing option '%s'\n", 
+			(info->type == PL_NONE) ? "-p" : "-n");
+		return 1;
+	}
+	
+	/* remove plugin */
+	switch (info->type) {
+	case PL_INPUT:
+		ret = remove_pl(info, TAG_INPUT, "name");
+		break;
+	case PL_INTERMEDIATE:
+		ret = remove_pl(info, TAG_INTER, "name");
+		break;
+	case PL_OUTPUT:
+		ret = remove_pl(info, TAG_OUTPUT, "fileFormat");
+		break;
+	default:
+		break;
+	}
+	
+	return ret;
 }

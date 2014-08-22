@@ -39,80 +39,52 @@
 AC_PREREQ([2.60])
 
 # Process this file with autoconf to produce a configure script.
-AC_INIT([fbitconvert], [1.0.0])
+AC_INIT([fbitconvert], [1.1.0])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
-
-AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_SRCDIR([fbitconvert.c])
+AC_CONFIG_SRCDIR([src/fbitconvert.in])
 AC_CONFIG_HEADERS([config.h])
 
-# Initialization
-CFLAGS="-Wall"
+AC_CONFIG_MACRO_DIR([m4])
 
 RELEASE=1
 AC_SUBST(RELEASE)
 
 # Set user name and email for packaging purposes 
 LBR_SET_CREDENTIALS
+LBR_SET_DISTRO([redhat])
 
 ############################ Check for programs ################################
 
-# Check for rpmbuil
+# Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
 
+# Check for xsltproc
+LBR_CHECK_XSLTPROC
+
 # Check for standard programs
-AC_PROG_CC
 AC_PROG_INSTALL
-
-############################ Check for libraries ###############################
-
-### dynamic linker ###
-AC_CHECK_LIB([dl], [dlopen],,
-        AC_MSG_ERROR([Required library dl missing]))
-
-###################### Check for configure parameters ##########################
-AC_ARG_ENABLE([debug], 
-        AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
-        [CFLAGS="$CFLAGS -Wextra -g"])
-        
-######################### Checks for header files ##############################
-AC_CHECK_HEADERS([stddef.h stdint.h stdlib.h unistd.h])
-
-# Check whether we can find headers dir in relative path (git repository)
-AS_IF([test -d $srcdir/../../base/headers], 
-	[CPPFLAGS="$CPPFLAGS -I$srcdir/../../base/headers"]
-)
-
-AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
-
-######## Checks for typedefs, structures, and compiler characteristics #########
-AC_TYPE_UINT16_T
-AC_TYPE_UINT32_T
-AC_TYPE_UINT64_T
-AC_TYPE_UINT8_T
-
-######################## Checks for library functions ##########################
-AC_FUNC_MALLOC
 
 ############################### Set output #####################################
 
-AC_CONFIG_FILES([fbitconvert.spec
-				Makefile])
+# generate output
+AC_CONFIG_FILES([Makefile
+                src/Makefile
+                man/Makefile
+                fbitconvert.spec])
 
 AC_OUTPUT
 
-# print warnings
+# Print warings
 
-AS_IF([test -z "$RPMBUILD"],
-	AC_MSG_WARN([Due to missing rpmbuild you will not able to generate RPM package.])
-)
+AS_IF([test -z "$RPMBUILD"], AC_MSG_WARN([Due to missing rpmbuild you will not able to generate RPM package.]))
+AM_COND_IF(HAVE_XSLTPROC,, AC_MSG_WARN([Due to missing xsltproc you will not able to generate MAN pages.]))
 
 # Print final summary
 echo "
   $PACKAGE_NAME version $PACKAGE_VERSION
   Prefix........: $prefix
-  Debug build...: ${enable_debug:-no}
-  C Compiler....: $CC $CFLAGS $CPPFLAGS
-  Linker........: $LDFLAGS $LIBS
+  Distribution..: $DISTRO
   rpmbuild......: ${RPMBUILD:-NONE}
+  xsltproc......: ${XSLTPROC:-NONE}
+  xsltmanstyle..: $XSLTMANSTYLE
 "
