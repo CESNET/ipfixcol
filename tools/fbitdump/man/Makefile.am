@@ -7,7 +7,7 @@ man_MANS = fbitdump.1 fbitdump.xml.5 fbitdump-plugins.7
 
 CLEANFILES = fbitdump.1 fbitdump.xml.5 fbitdump-plugins.7
 
-%.1 %.5 : %.dbk
+%.1 %.5 %.7: %.dbk
 	@if [ -n "$(XSLTPROC)" ]; then \
 		if [ -f "$(XSLTMANSTYLE)" ]; then \
 			echo $(XSLTPROC) $(XSLTMANSTYLE) $<; \
