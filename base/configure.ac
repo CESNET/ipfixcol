@@ -203,6 +203,7 @@ AC_CONFIG_FILES([Makefile
 				src/intermediate/joinflows/Makefile
 				src/intermediate/filter/Makefile
 				src/utils/Makefile
+				src/utils/ipfixconf/Makefile
 				config/Makefile
 				headers/Makefile
 				documentation/doxygen/Makefile
