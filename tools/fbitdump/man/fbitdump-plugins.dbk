@@ -60,9 +60,46 @@
       </simpara>
       <simpara>Plugins:</simpara>
       <simplelist>
+         <member>smtp_command        SMTP Command Flags field</member>
          <member>smtp_statuscode     SMTP Status Code Flags field</member>
       </simplelist>
    </refsect1>
+
+   <refsection>
+      <title>Plugin smtp_command</title>
+      <simpara>
+         This plugin was written for parsing the SMTP Command field
+         provided by SMTP process plugin of <command>flowmonexp</command>.
+         The field contains flags indicating, whether individual commands
+         were present in the message within flow or not. The plugin
+         converts the flags into a text string consisting of comma-separated
+         list of commands abbreviations. Their meaning is explained in the list
+         below. If the flow contains no command, the field is empty
+      </simpara>
+      <example>
+         <simpara>This is an output for a flow containing several commands</simpara>
+         <simpara>EH,ML,RC,RST,U</simpara>
+      </example>
+      <simpara>Supported Commands</simpara>
+      <simplelist>
+          <member>EH:   EHLO</member>
+          <member>HE:   HELO</member>
+          <member>ML:   MAIL TO</member>
+          <member>RC:   RCPT FROM</member>
+          <member>D:    DATA</member>
+          <member>RST:  RSET</member>
+          <member>VF:   VRFY</member>
+          <member>EX:   EXPN</member>
+          <member>HLP:  HELP</member>
+          <member>N:    NOOP</member>
+          <member>Q:    QUIT</member>
+          <member>U:    Unknown command</member>
+      </simplelist>
+      <simpara>
+          This is the compromise between understandability of the field and the
+          need for it to occupy as little space as possible
+      </simpara>
+   </refsection>
 
    <refsection>
       <title>Plugin smtp_statuscode</title>
