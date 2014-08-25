@@ -25,11 +25,12 @@ Postgres storage plugin for ipfixcol.
 %setup
 
 %post
+ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p o -n postgres -t postgres -s "%{_datadir}/ipfixcol/plugins/ipfixcol-postgres-output.so" -f
 
 %preun
 
 %postun
-
+ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p o -n postgres
 
 %build
 %configure --with-distro=@DISTRO@

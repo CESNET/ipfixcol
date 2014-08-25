@@ -24,11 +24,12 @@ nfdump storage plugin for ipfixcol.
 %setup
 
 %post
+ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p o -n nfdump -t nfdump -s "%{_datadir}/ipfixcol/plugins/ipfixcol-nfdump-output.so" -f
 
 %preun
 
 %postun
-
+ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p o -n nfdump
 
 %build
 %configure --with-distro=@DISTRO@

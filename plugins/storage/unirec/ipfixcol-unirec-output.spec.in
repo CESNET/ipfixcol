@@ -25,11 +25,12 @@ Plugin for converting IPFIX data to UniRec format.
 %setup
 
 %post
+ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p o -n unirec -t unirec -s "%{_datadir}/ipfixcol/plugins/ipfixcol-unirec-output.so" -f
 
 %preun
 
 %postun
-
+ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p o -n unirec
 
 %build
 %configure --with-distro=@DISTRO@
