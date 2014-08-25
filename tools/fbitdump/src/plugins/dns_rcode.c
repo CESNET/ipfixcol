@@ -1,7 +1,44 @@
 #define _GNU_SOURCE
 #include <stdio.h>
+#include <string.h>
 #include <strings.h>
 #include "plugin_header.h"
+
+static char *messages[] = {
+	"NoError",
+	"FormErr",
+	"ServFail",
+	"NXDomain",
+	"NotImp",
+	"Refused",
+	"YXDomain",
+	"YXRRSet",
+	"NXRRSet",
+	"NotAuth",
+	"NotZone",
+	"",
+	"",
+	"",
+	"",
+	"",
+	"BADVERS/BADSIG",
+	"BADKEY",
+	"BADTIME",
+	"BADMODE",
+	"BADNAME",
+	"BADALG",
+	"BADTRUNC"
+};
+
+#define MSG_CNT (sizeof(messages) / sizeof(messages[0]))
+
+char *info()
+{
+	return \
+"Converts DNS RCODE name to value and vice versa.\n \
+e.g. \"BADKEY\" -> 17";
+}
+
 
 void format( const union plugin_arg * arg, int plain_numbers, char out[PLUGIN_BUFFER_SIZE])
 {
@@ -12,63 +49,17 @@ void format( const union plugin_arg * arg, int plain_numbers, char out[PLUGIN_BU
 		snprintf(out, PLUGIN_BUFFER_SIZE, "%u", arg[0].uint8);
 		return;
 	}
-
-	switch (arg[0].uint8) {
-		case 0:
-			str = "No Error";
-			break;
-		case 1:
-			str = "Format Error";
-			break;
-		case 2:
-			str = "Server Failure";
-			break;
-		case 3:
-			str = "Non-Existent Domain";
-			break;
-		case 4:
-			str = "Not Implemented";
-			break;
-		case 5:
-			str = "Query Refused ";
-			break;
-		case 6:
-			str = "Name Exists when it should not";
-			break;
-		case 7:
-			str = "RR Set Exists when it should not";
-			break;
-		case 8:
-			str = "RR Set that should exist does not";
-			break;
-		case 9:
-			str = "Server Not Authoritative for zone";
-			break;
-		case 10:
-			str = "Name not contained in zone";
-			break;
-		case 16:
-			str = "Bad OPT Version/TSIG Signature Failure ";
-			break;
-		case 17:
-			str = "Key not recognized";
-			break;
-		case 18:
-			str = "Signature out of time window ";
-			break;
-		case 19:
-			str = "Bad TKEY Mode";
-			break;
-		case 20:
-			str = "Duplicate key name";
-			break;
-		case 21:
-			str = "Algorithm not supported";
-			break;
-		default:
-			snprintf(num, PLUGIN_BUFFER_SIZE, "%u", arg[0].uint8);
-			str = num;
-			break;
+	
+	int size = MSG_CNT;
+	
+	if (arg[0].uint8 < size) {
+		str = messages[arg[0].uint8];
+	}
+	
+	if (arg[0].uint8 >= size || strlen(str) == 0) {
+		/* out of bounds or unassigned rcode */
+		snprintf(num, PLUGIN_BUFFER_SIZE, "%u", arg[0].uint8);
+		str = num;
 	}
 
 	snprintf(out, PLUGIN_BUFFER_SIZE, "%s", str);
@@ -76,44 +67,23 @@ void format( const union plugin_arg * arg, int plain_numbers, char out[PLUGIN_BU
 
 void parse(char *input, char out[PLUGIN_BUFFER_SIZE])
 {
-	int code;
-	if (!strcasecmp(input, "No Error")) {
-		code = 0;
-	} else if (!strcasecmp(input, "Format Error")) {
-		code = 1;
-	} else if (!strcasecmp(input, "Server Failure")) {
-		code = 2;
-	} else if (!strcasecmp(input, "Non-Existent Domain")) {
-		code = 3;
-	} else if (!strcasecmp(input, "Not Implemented")) {
-		code = 4;
-	} else if (!strcasecmp(input, "Query Refused")) {
-		code = 5;
-	} else if (!strcasecmp(input, "Name Exists when it should not")) {
-		code = 6;
-	} else if (!strcasecmp(input, "RR Set Exists when it should not")) {
-		code = 7;
-	} else if (!strcasecmp(input, "RR Set that should exist does not")) {
-		code = 8;
-	} else if (!strcasecmp(input, "Server Not Authoritative for zone")) {
-		code = 9;
-	} else if (!strcasecmp(input, "Name not contained in zone")) {
-		code = 10;
-	} else if (!strcasecmp(input, "Bad OPT Version/TSIG Signature Failure")) {
-		code = 16;
-	} else if (!strcasecmp(input, "Key not recognized")) {
-		code = 17;
-	} else if (!strcasecmp(input, "Signature out of time window")) {
-		code = 18;
-	} else if (!strcasecmp(input, "Bad TKEY Mode")) {
-		code = 19;
-	} else if (!strcasecmp(input, "Duplicate key name")) {
-		code = 20;
-	} else if (!strcasecmp(input, "Algorithm not supported")) {
-		code = 21;
-	} else {
-		snprintf(out, PLUGIN_BUFFER_SIZE, "");
-		return;
+	int code, size = MSG_CNT;
+	
+	for (code = 0; code < size; ++code) {
+		if (!strcasecmp(input, messages[code])) {
+			break;
+		}
 	}
+	
+	if (code == size) {
+		/* BADSIG and BADVERS have the same code */
+		if (!strcasecmp(input, "BADSIG") || !strcasecmp(input, "BADVERS")) {
+			code = 16;
+		} else {
+			snprintf(out, PLUGIN_BUFFER_SIZE, "");
+			return;
+		}
+	}
+	
 	snprintf(out, PLUGIN_BUFFER_SIZE, "%d", code);
 }

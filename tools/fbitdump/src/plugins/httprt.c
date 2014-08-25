@@ -3,42 +3,50 @@
 #include <strings.h>
 #include "plugin_header.h"
 
-void format( const union plugin_arg * arg, int plain_numbers, char buff[PLUGIN_BUFFER_SIZE] ) {
-	char *methods[]={"GET", "POST", "HTTP", "HEAD", "PUT", "OPTIONS", "DELETE", "TRACE", "CONNECT", "PATCH"};
+static const char *methods[] = {
+	"GET", 
+	"POST", 
+	"HTTP", 
+	"HEAD", 
+	"PUT", 
+	"OPTIONS", 
+	"DELETE", 
+	"TRACE", 
+	"CONNECT", 
+	"PATCH"
+};
 
-	if (arg[0].uint32 > 10 || arg[0].uint32 == 0 || plain_numbers) {
+#define MSG_CNT (sizeof(methods) / sizeof(methods[0]))
+
+char *info()
+{
+	return \
+"Converts HTTP Method name to value and vice versa.\n \
+Supported methods: GET, POST, HTTP, HEAD, PUT, OPTIONS, DELETE, TRACE, CONNECT, PATCH";
+}
+
+void format( const union plugin_arg * arg, int plain_numbers, char buff[PLUGIN_BUFFER_SIZE] ) {
+	if (arg[0].uint32 > MSG_CNT || arg[0].uint32 == 0 || plain_numbers) {
 		snprintf( buff, PLUGIN_BUFFER_SIZE,  "%u", arg[0].uint32 );
 	} else {
-		snprintf( buff, PLUGIN_BUFFER_SIZE, "%s", methods[(arg[0].uint32)-1] );
+		snprintf( buff, PLUGIN_BUFFER_SIZE, "%s", methods[(arg[0].uint32) - 1] );
 	}
 }
 
 void parse(char *input, char out[PLUGIN_BUFFER_SIZE])
 {
-	int code;
-	if (!strcasecmp(input, "GET")) {
-		code = 1;
-	} else if (!strcasecmp(input, "POST")) {
-		code = 2;
-	} else if (!strcasecmp(input, "HTTP")) {
-		code = 3;
-	} else if (!strcasecmp(input, "HEAD")) {
-		code = 4;
-	} else if (!strcasecmp(input, "PUT")) {
-		code = 5;
-	} else if (!strcasecmp(input, "OPTIONS")) {
-		code = 6;
-	} else if (!strcasecmp(input, "DELETE")) {
-		code = 7;
-	} else if (!strcasecmp(input, "TRACE")) {
-		code = 8;
-	} else if (!strcasecmp(input, "CONNECT")) {
-		code = 9;
-	} else if (!strcasecmp(input, "PATCH")) {
-		code = 10;
-	} else {
+	int code, size = MSG_CNT;
+	
+	for (code = 0; code < size; code++) {
+		if (!strcasecmp(input, methods[code])) {
+			break;
+		}
+	}
+	
+	if (code == size) {
 		snprintf(out, PLUGIN_BUFFER_SIZE, "");
 		return;
 	}
-	snprintf(out, PLUGIN_BUFFER_SIZE, "%d", code);
+	
+	snprintf(out, PLUGIN_BUFFER_SIZE, "%d", code + 1);
 }
