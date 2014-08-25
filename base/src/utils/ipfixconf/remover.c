@@ -62,7 +62,7 @@ int remove_pl(conf_info_t *info, char *tag, char *nametag)
 	
 	if (plug == NULL) {
 		fprintf(stderr, "Plugin '%s' does not exists!\n", info->name);
-		return 1;
+		return 0;
 	}
 	
 	/* remove node */

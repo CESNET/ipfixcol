@@ -46,6 +46,32 @@
 #include <libxml/xpathInternals.h>
 
 /**
+ * \brief Update plugin informations
+ * 
+ * \param plug Plugin node
+ * \param to_add New informations
+ * \param to_search tag names
+ * \return 0 on success
+ */
+int update_plugin(xmlNodePtr plug, char **to_add, char **to_search)
+{
+	xmlNodePtr children = plug->children;
+	int i;
+	
+	while (children) {
+		for (i = 0; i < ITEMS_CNT; ++i) {
+			if (!strncmp ((char*) children->name, to_search[i], strlen (to_search[i]) + 1)) {
+				/* element found*/
+				xmlNodeSetContent(children, (xmlChar *) to_add[i]);
+			}
+			children = children->next;
+		}
+	}
+	
+	return 0;
+}
+
+/**
  * \brief Add plugin to configuration
  * 
  * \param info tool configuration
@@ -64,8 +90,13 @@ int add(conf_info_t *info, char *tag, char **to_add, char **to_search)
 	plug = get_plugin(info, tag, to_search[0], to_add[0]);
 	
 	if (plug) {
-		fprintf(stderr, "Plugin '%s' already exists!\n", to_add[0]);
-		return 1;
+		if (info->force) {
+			update_plugin(plug, to_add, to_search);
+			return 0;
+		} else {
+			fprintf(stderr, "Plugin '%s' already exists!\n", to_add[0]);
+			return 1;
+		}
 	}
 	
 	/* get root */

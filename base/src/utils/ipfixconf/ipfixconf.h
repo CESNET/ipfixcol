@@ -63,6 +63,7 @@ enum plugin_type {
  * \brief Informations about plugin
  */
 typedef struct conf_info_s {
+        int force;               /**< force flag */
 	char *name;				 /**< plugin name */
 	char *sofile;			 /**< .so file path */
 	char *thread;			 /**< thread name */

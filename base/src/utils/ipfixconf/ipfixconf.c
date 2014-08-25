@@ -55,7 +55,7 @@
 #include "remover.h"
 
 #define DEFAULT_INTERNAL "/etc/ipfixcol/internalcfg.xml"
-#define OPTSTRING "hc:p:n:f:t:"
+#define OPTSTRING "hfc:p:n:s:t:"
 
 #define CMD_ADD_STR    "add"
 #define CMD_REMOVE_STR "remove"
@@ -78,8 +78,9 @@ void usage(char *binary)
 	printf("  -c path          configuration file, default %s\n", DEFAULT_INTERNAL);
 	printf("  -p type          plugin type: i (input), m (intermediate), o (output)\n");
 	printf("  -n name          plugin name\n");
-	printf("  -f path          path to .so file\n");
+	printf("  -s path          path to .so file\n");
 	printf("  -t thread_name   name of plugins's thread\n");
+	printf("  -f               force adding - when plugin already exists, rewrite it\n");
 	printf("\n");
 	printf("Available commands:\n");
 	printf("  add              add new plugin to configuration, all informations required\n");
@@ -308,11 +309,14 @@ int main(int argc, char *argv[])
 		case 'n':
 			info.name = optarg;
 			break;
-		case 'f':
+		case 's':
 			info.sofile = optarg;
 			break;
 		case 't':
 			info.thread = optarg;
+			break;
+		case 'f':
+			info.force = 1;
 			break;
 		default:
 			fprintf(stderr, "Unknown option '%s'\n", optarg);
