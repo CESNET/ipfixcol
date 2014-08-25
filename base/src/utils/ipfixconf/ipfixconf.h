@@ -45,6 +45,7 @@
 #define TAG_INPUT  "inputPlugin"
 #define TAG_INTER  "intermediatePlugin"
 #define TAG_OUTPUT "storagePlugin"
+#define TAG_SUPPORTED "supportedCollectors"
 
 #define ITEMS_CNT 3
 

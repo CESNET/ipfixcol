@@ -72,6 +72,38 @@ int remove_pl(conf_info_t *info, char *tag, char *nametag)
 	return 0;
 }
 
+/**
+ * \brief Remove input plugin from supportedCollectors tag
+ * 
+ * \param info tool configuration
+ * \return 0 on success
+ */
+int remove_supported(conf_info_t *info)
+{
+	int i;
+	xmlNodePtr children1;
+	xmlXPathObjectPtr xpath_obj_file = eval_xpath(info, TAG_SUPPORTED);
+	if (!xpath_obj_file) {
+		return 1;
+	}
+	
+	for (i = 0; i < xpath_obj_file->nodesetval->nodeNr; i++) {
+		children1 = xpath_obj_file->nodesetval->nodeTab[i]->children;
+		while (children1) {
+			if ((!strncmp ((char*) children1->name, "name", strlen ("name") + 1))
+			        && (!xmlStrncmp (children1->children->content, (xmlChar *) info->name, xmlStrlen ((xmlChar *)info->name) + 1))) {
+				/* element found*/
+				xmlUnlinkNode(children1);
+				xmlFreeNode(children1);
+				return 0;
+			}
+			children1 = children1->next;
+		}
+	}
+	
+	return 0;
+}
+
 int remove_plugin(conf_info_t *info)
 {
 	int ret = 0;
@@ -86,6 +118,7 @@ int remove_plugin(conf_info_t *info)
 	/* remove plugin */
 	switch (info->type) {
 	case PL_INPUT:
+		remove_supported(info);
 		ret = remove_pl(info, TAG_INPUT, "name");
 		break;
 	case PL_INTERMEDIATE:

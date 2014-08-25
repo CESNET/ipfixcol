@@ -88,6 +88,43 @@ int add(conf_info_t *info, char *tag, char **to_add, char **to_search)
 }
 
 /**
+ * \brief Add input plugin to supportedCollectors tag
+ * 
+ * \param info tool configuration
+ * \return 0 on success
+ */
+int add_supported(conf_info_t *info)
+{
+	int i;
+	xmlNodePtr children1;
+	xmlXPathObjectPtr xpath_obj_file = eval_xpath(info, TAG_SUPPORTED);
+	if (!xpath_obj_file) {
+		return 1;
+	}
+	
+	for (i = 0; i < xpath_obj_file->nodesetval->nodeNr; i++) {
+		children1 = xpath_obj_file->nodesetval->nodeTab[i]->children;
+		while (children1) {
+			if ((!strncmp ((char*) children1->name, "name", strlen ("name") + 1))
+			        && (!xmlStrncmp (children1->children->content, (xmlChar *) info->name, xmlStrlen ((xmlChar *)info->name) + 1))) {
+				/* element found*/
+				xmlXPathFreeObject(xpath_obj_file);
+				return 0;
+			}
+			children1 = children1->next;
+		}
+	}
+	
+	children1 = xmlNewNode(0, (xmlChar *) "name");
+	xmlNodeSetContent(children1, (xmlChar *) info->name);
+	xmlAddChild(xpath_obj_file->nodesetval->nodeTab[0], children1);
+	
+	xmlXPathFreeObject(xpath_obj_file);
+
+	return 0;
+}
+
+/**
  * \brief Add input plugin
  * 
  * \param info tool configuration
@@ -101,6 +138,7 @@ int add_input(conf_info_t *info)
 	to_add[1] = info->sofile;
 	to_add[2] = info->thread;
 	
+	add_supported(info);
 	return add(info, TAG_INPUT, to_add, to_search);
 }
 
