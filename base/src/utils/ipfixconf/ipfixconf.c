@@ -273,6 +273,11 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	
+	if (argc == 2 && !strcmp(argv[1], "-h")) {
+		usage(argv[0]);
+		return 0;
+	}
+	
 	cmd = command_decode(argv[1]);
 	optind++;
 	/* parse params */
