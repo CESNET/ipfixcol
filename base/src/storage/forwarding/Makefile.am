@@ -11,10 +11,12 @@ endif
 
 ipfixcol_forwarding_output_la_SOURCES = forwarding.c
 
+if HAVE_DOC
 MANSRC = ipfixcol-forwarding-output.dbk
 EXTRA_DIST = $(MANSRC)
 man_MANS = ipfixcol-forwarding-output.1
 CLEANFILES = ipfixcol-forwarding-output.1
+endif
 
 %.1 : %.dbk
 	@if [ -n "$(XSLTPROC)" ]; then \

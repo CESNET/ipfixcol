@@ -68,6 +68,10 @@ AC_ARG_ENABLE([sctp],
         AC_HELP_STRING([--disable-sctp],[disable sctp input plugin]))
 AM_CONDITIONAL([HAVE_SCTP], [test "$enable_sctp" != "no"])
 
+AC_ARG_ENABLE([doc],
+        AC_HELP_STRING([--disable-doc],[disable documentation building]))
+AM_CONDITIONAL([HAVE_DOC], [test "$enable_doc" != "no"])
+
 # add --without-openssl parameter
 AC_ARG_WITH([openssl],
 	AC_HELP_STRING([--without-openssl],[disable TLS support]), [with_openssl=no], [with_openssl=yes])
@@ -218,13 +222,18 @@ AS_IF([test -z "$FLEX"], AC_MSG_WARN([Due to missing flex you will not be able t
 
 AS_IF([test -z "$BISON"], AC_MSG_WARN([Due to missing bison you will not be able to generate filter parser from sources.]))
 
-AM_COND_IF(HAVE_DOXYGEN,, AC_MSG_WARN([Due to missing doxygen you will not able to generate Doxygen documentation.]))
+######################## Checks for xsltproc and doxygen if doc building is enabled ##########################
+AM_COND_IF(HAVE_DOC,
+    [AM_COND_IF(HAVE_XSLTPROC, 
+        [AM_COND_IF(HAVE_DOXYGEN, , AC_MSG_ERROR([Missing doxygen - install it or run with --disable-doc]))],
+        AC_MSG_ERROR([Missing xsltproc - install it or run with --disable-doc])
+    )]
+)
 
 AS_IF([test -z "$RPMBUILD"],
 	AC_MSG_WARN([Due to missing rpmbuild you will not able to generate RPM package.])
 )
 
-AM_COND_IF(HAVE_XSLTPROC,, AC_MSG_WARN([Due to missing xsltproc you will not able to generate MAN pages.]))
 
 # Print final summary
 echo "
@@ -235,6 +244,7 @@ echo "
   C Compiler....: $CC $AM_CFLAGS $CFLAGS $CPPFLAGS
   Linker........: $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
+  Build doc.....: ${enable_doc:-yes}
   xsltproc......: ${XSLTPROC:-NONE}
   xsltmanstyle..: $XSLTMANSTYLE
   flex..........: ${FLEX:-NONE}

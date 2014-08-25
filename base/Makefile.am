@@ -6,12 +6,9 @@ RPMDIR = RPMBUILD
 
 SUBDIRS = src config headers 
 
-if HAVE_XSLTPROC
-SUBDIRS += documentation/man
-endif
-
-if HAVE_DOXYGEN
-SUBDIRS += documentation/doxygen
+if HAVE_DOC
+SUBDIRS +=  documentation/man \
+	    documentation/doxygen
 endif
 
 .PHONY: doc

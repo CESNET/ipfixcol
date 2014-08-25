@@ -17,10 +17,14 @@ parser.h parser.c: parser.y
 scanner.h scanner.c: scanner.l
 	$(FLEX) -o scanner.c --header-file=scanner.h $<
 
+EXTRA_DIST = parser.y scanner.l
+
+if HAVE_DOC
 MANSRC = ipfixcol-filter-inter.dbk
-EXTRA_DIST = $(MANSRC) parser.y scanner.l
+EXTRA_DIST += $(MANSRC)
 man_MANS = ipfixcol-filter-inter.1
 CLEANFILES += ipfixcol-filter-inter.1
+endif
 
 %.1 : %.dbk
 	@if [ -n "$(XSLTPROC)" ]; then \

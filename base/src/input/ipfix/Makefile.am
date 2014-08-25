@@ -6,11 +6,12 @@ ipfixcol_ipfix_input_la_LDFLAGS = -module -avoid-version -shared
 
 ipfixcol_ipfix_input_la_SOURCES = ipfix_file.c
 
-
+if HAVE_DOC
 MANSRC = ipfixcol-ipfix-input.dbk
 EXTRA_DIST = $(MANSRC)
 man_MANS = ipfixcol-ipfix-input.1
 CLEANFILES = ipfixcol-ipfix-input.1
+endif
 
 %.1 : %.dbk
 	@if [ -n "$(XSLTPROC)" ]; then \

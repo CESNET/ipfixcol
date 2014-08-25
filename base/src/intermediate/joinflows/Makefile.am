@@ -7,10 +7,12 @@ ipfixcol_joinflows_inter_la_LIBADD = -lrt
 
 ipfixcol_joinflows_inter_la_SOURCES = joinflows_ip.c
 
+if HAVE_DOC
 MANSRC = ipfixcol-joinflows-inter.dbk
 EXTRA_DIST = $(MANSRC)
 man_MANS = ipfixcol-joinflows-inter.1
 CLEANFILES = ipfixcol-joinflows-inter.1
+endif
 
 %.1 : %.dbk
 	@if [ -n "$(XSLTPROC)" ]; then \

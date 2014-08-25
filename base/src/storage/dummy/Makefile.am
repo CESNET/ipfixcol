@@ -5,10 +5,12 @@ plugins_LTLIBRARIES = ipfixcol-dummy-output.la
 ipfixcol_dummy_output_la_LDFLAGS = -module -avoid-version -shared
 ipfixcol_dummy_output_la_SOURCES = dummy_output.c
 
+if HAVE_DOC
 MANSRC = ipfixcol-dummy-output.dbk
 EXTRA_DIST = $(MANSRC)
 man_MANS = ipfixcol-dummy-output.1
 CLEANFILES = ipfixcol-dummy-output.1
+endif
 
 %.1 : %.dbk
 	@if [ -n "$(XSLTPROC)" ]; then \
