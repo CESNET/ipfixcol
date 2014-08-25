@@ -76,6 +76,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	char *indexes = NULL;	/* indexes optarg to be parsed later */
 	bool print_semantics = false;
 	bool print_formats = false;
+	bool print_modules = false;
 
 //	Configuration * Configuration::instance;
 
@@ -259,6 +260,9 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		case 'O':
 			print_formats = true;
 			break;
+		case 'l':
+			print_modules = true;
+			break;
 		default:
 			help ();
 			return 1;
@@ -282,6 +286,12 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		return 1;
 	}
 
+	if (print_modules) {
+		this->loadModules();
+		this->printModules();
+		return 1;
+	}
+	
 	if (!optionM.empty()) {
 		/* process -M option, this option depends on -r or -R */
 		processMOption(tables, optionM.c_str(), optionr);
@@ -371,6 +381,15 @@ void Configuration::printOutputFormats()
 	std::cout << "Available output formats:\n";
 	for (pugi::xml_node::iterator it = output.begin(); it != output.end(); ++it) {
 		std::printf("\t%-15s %s\n\n", it->child_value("formatName"), it->child_value("formatString"));
+	}
+}
+
+void Configuration::printModules()
+{
+	std::cout << "                                \n";
+	for (pluginMap::iterator it = this->plugins.begin(); it != this->plugins.end(); ++it) {
+		std::cout << "[Name] " << it->first << std::endl;
+		std::cout << it->second.info() << std::endl << std::endl;
 	}
 }
 
@@ -780,6 +799,7 @@ void Configuration::help() const
 	<< "-T              print information about templates in directories specified by -R" << std::endl
 	<< "-S              print available semantics" << std::endl
 	<< "-O              print available output formats" << std::endl
+	<< "-l              print plugin list" << std::endl
 	;
 }
 
@@ -996,7 +1016,7 @@ void Configuration::loadModules()
 	pugi::xpath_node_set nodes = this->getXMLConfiguration().select_nodes("/configuration/plugins/plugin");
 	std::string path;
 	pluginConf aux_conf;
-
+	
 	for (pugi::xpath_node_set::const_iterator ii = nodes.begin(); ii != nodes.end(); ii++) {
 		pugi::xpath_node node = *ii;
 		if (this->plugins.find(node.node().child_value("name")) != this->plugins.end()) {
@@ -1021,7 +1041,15 @@ void Configuration::loadModules()
 		*(void **)(&(aux_conf.close)) = dlsym(aux_conf.handle, "close");
 		*(void **)(&(aux_conf.format)) = dlsym(aux_conf.handle, "format" );
 		*(void **)(&(aux_conf.parse)) = dlsym(aux_conf.handle, "parse");
+		*(void **)(&(aux_conf.info)) = dlsym(aux_conf.handle, "info");
 
+		/* Check whether plugin has info function */
+		if (!aux_conf.info) {
+			MSG_ERROR(msg_module, "Plugin without info function, skipping %s", path.c_str());
+			dlclose(aux_conf.handle);
+			continue;
+		}
+		
 		/* Check whether plugin has at least one data processing function */
 		if (!aux_conf.format && !aux_conf.parse) {
 			MSG_ERROR(msg_module, "Plugin with no data processing function, skipping %s", path.c_str());

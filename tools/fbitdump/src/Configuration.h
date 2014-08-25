@@ -49,7 +49,7 @@
 namespace fbitdump {
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "hVaA::r:f:n:c:D:Ns:qeIM:m::R:o:v:Z:t:i::d::C:Tp:SO"
+#define OPTSTRING "hVlaA::r:f:n:c:D:Ns:qeIM:m::R:o:v:Z:t:i::d::C:Tp:SO"
 
 #define CONFIG_XML "/usr/share/fbitdump/fbitdump.xml"
 
@@ -58,11 +58,12 @@ namespace fbitdump {
  */
 struct pluginConf {
 	pluginConf(): init(NULL), close(NULL), format(NULL), /* Structure initialization */
-				  parse(NULL), handle(NULL) {};
+				  parse(NULL), info(NULL), handle(NULL) {};
 	int (*init) (void);     		/**< Plugin initialization */
 	void (*close) (void); 			/**< Plugin close */
 	void (*format)(const union plugin_arg *, int, char*); 	/**< Format data */
 	void (*parse)(char *, char*); 	/**< Parse input */
+        char *(*info) (void);           /**< Plugin description */
 	void *handle; 					/**< Plugin handle */
 };
 
@@ -385,6 +386,11 @@ private:
      * \brief Print available output formats
      */
     void printOutputFormats();
+    
+    /**
+     * \brief Print informations about loaded plugins
+     */
+    void printModules();
 
     stringVector parts;                 /**< Fastbit parts paths to be used*/
     stringSet aggregateColumnsAliases;  /**< Aggregate columns aliases set */
