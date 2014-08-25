@@ -3,6 +3,11 @@
 #include <strings.h>
 #include "plugin_header.h"
 
+char *info()
+{
+	return "";
+}
+
 void format( const union plugin_arg * arg, int plain_numbers, char buff[PLUGIN_BUFFER_SIZE] ) {
 	char *methods[]={"INVITE", "ACK", "BYE", "CANCEL", "OPTIONS", "REGISTER", "PRACK", "SUBSCRIBE",
 		"NOTIFY", "PUBLISH", "INFO", "REFER", "MESSAGE", "UPDATE"};

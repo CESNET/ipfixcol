@@ -49,5 +49,10 @@ void format( const union plugin_arg * arg, int plain_numbers, char buffer[PLUGIN
  */
 void parse( char *input, char out[PLUGIN_BUFFER_SIZE]);
 
+/**
+ * \brief Plugin destription
+ * \return NULL terminated string with plugin description
+ */
+char *info();
 
 #endif

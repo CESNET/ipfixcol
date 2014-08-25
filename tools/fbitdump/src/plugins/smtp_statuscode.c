@@ -100,6 +100,11 @@ int init(void)
     else return 0;
 }
 
+char *info()
+{
+	return "";
+}
+
 /**
  * Fill the buffer with text representation of field's content
  */

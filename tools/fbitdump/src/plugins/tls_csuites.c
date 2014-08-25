@@ -45,6 +45,11 @@
 int init() { return 0; }
 void close() {}
 
+char *info()
+{
+	return "";
+}
+
 /** Funcion to assign given values to strings */
 void format(const union plugin_arg *arg, int plain_numbers, char out[PLUGIN_BUFFER_SIZE]) {
 	char *str = NULL;

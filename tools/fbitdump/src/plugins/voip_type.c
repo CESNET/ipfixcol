@@ -46,6 +46,12 @@ static const int NAMES_SIZE = sizeof(values) / sizeof(item_t);
 
 
 /***** FUNCTIONS *****/
+
+char *info()
+{
+	return "";
+}
+
 /**
  * Fill the buffer with text representation of field's content
  */
