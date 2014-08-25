@@ -5,6 +5,9 @@ AM_CPPFLAGS = -I$(top_srcdir)/pugixml
 
 pluginsdir = $(datadir)/ipfixcol/plugins
 
+sofile = $(pluginsdir)/ipfixcol-fastbit-output.so
+internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
+
 plugins_LTLIBRARIES = ipfixcol-fastbit-output.la
 ipfixcol_fastbit_output_la_LDFLAGS = -module -avoid-version -shared
 ipfixcol_fastbit_output_la_SOURCES = fastbit.cpp fastbit.h fastbit_table.cpp fastbit_table.h fastbit_element.cpp fastbit_element.h config_struct.h FlowWatch.h FlowWatch.cpp
@@ -41,3 +44,9 @@ rpm: dist $(rpmspec)
 
 clean-local: 
 	rm -rf RPMBUILD
+
+install-data-hook:
+	@if [ -f "$(internalcfg)" ]; then \
+	    ipfixconf add -c "$(internalcfg)" -p o -n fastbit -t fastbit -s "$(sofile)" -f; \
+	fi
+

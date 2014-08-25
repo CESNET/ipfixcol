@@ -2,6 +2,9 @@ ACLOCAL_AMFLAGS = -I m4
 
 pluginsdir = $(datadir)/ipfixcol/plugins
 
+sofile = $(pluginsdir)/ipfixcol-postgres-output.so
+internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
+
 plugins_LTLIBRARIES = ipfixcol-postgres-output.la
 ipfixcol_postgres_output_la_LDFLAGS = -module -avoid-version -shared
 ipfixcol_postgres_output_la_SOURCES = postgres_output.c ipfix_postgres_types.h ipfix_entities.h  
@@ -37,3 +40,9 @@ rpm: dist $(rpmspec)
 
 clean-local: 
 	rm -rf RPMBUILD
+
+install-data-hook:
+	@if [ -f "$(internalcfg)" ]; then \
+	    ipfixconf add -c "$(internalcfg)" -p o -n postgres -t postgres -s "$(sofile)" -f; \
+	fi
+

@@ -2,6 +2,9 @@ ACLOCAL_AMFLAGS = -I m4
 
 pluginsdir = $(datadir)/ipfixcol/plugins
 
+sofile = $(pluginsdir)/ipfixcol-statistics-output.so
+internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
+
 plugins_LTLIBRARIES = ipfixcol-statistics-output.la
 ipfixcol_statistics_output_la_LDFLAGS = -module -avoid-version -shared
 ipfixcol_statistics_output_la_SOURCES = statistics.c  
@@ -37,3 +40,9 @@ rpm: dist $(rpmspec)
 
 clean-local: 
 	rm -rf RPMBUILD
+
+install-data-hook:
+	@if [ -f "$(internalcfg)" ]; then \
+	    ipfixconf add -c "$(internalcfg)" -p o -n statistics -t statistics -s "$(sofile)" -f; \
+	fi
+

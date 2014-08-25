@@ -3,6 +3,9 @@ ACLOCAL_AMFLAGS = -I m4
 ipfixcoldir = $(datadir)/ipfixcol
 pluginsdir = $(datadir)/ipfixcol/plugins
 
+sofile = $(pluginsdir)/ipfixcol-unirec-output.so
+internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
+
 plugins_LTLIBRARIES = ipfixcol-unirec-output.la
 ipfixcol_unirec_output_la_LDFLAGS = -module -avoid-version -shared -ltrap
 ipfixcol_unirec_output_la_SOURCES = unirec.c unirec.h
@@ -42,3 +45,9 @@ rpm: dist $(rpmspec)
 
 clean-local: 
 	rm -rf RPMBUILD
+
+install-data-hook:
+	@if [ -f "$(internalcfg)" ]; then \
+	    ipfixconf add -c "$(internalcfg)" -p o -n unirec -t unirec -s "$(sofile)" -f; \
+	fi
+
