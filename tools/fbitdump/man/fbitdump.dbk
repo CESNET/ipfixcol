@@ -238,6 +238,27 @@
 					<simpara>Print information about templates in directories specified by -R</simpara>
 				</listitem>
 			</varlistentry>
+                        
+                        <varlistentry>
+				<term>-S</term>
+				<listitem>
+					<simpara>Print available semantics</simpara>
+				</listitem>
+			</varlistentry>
+                        
+                        <varlistentry>
+				<term>-O</term>
+				<listitem>
+					<simpara>Print available output formats</simpara>
+				</listitem>
+			</varlistentry>
+                        
+                        <varlistentry>
+				<term>-l</term>
+				<listitem>
+					<simpara>Print list of available formatting/parsing plugins</simpara>
+				</listitem>
+			</varlistentry>
 		</variablelist>
 	</refsect1>
 
