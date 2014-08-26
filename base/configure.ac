@@ -174,8 +174,8 @@ AC_TYPE_UINT64_T
 AC_TYPE_UINT8_T
 
 ######################## Checks for library functions ##########################
-AC_FUNC_MALLOC
-AC_FUNC_REALLOC
+AC_CHECK_FUNCS([malloc])
+AC_CHECK_FUNCS([realloc])
 AC_FUNC_FORK
 AC_CHECK_FUNCS([localtime_r memset pathconf select socket strchr strdup strerror strrchr strtol])
 AC_CHECK_DECL([htobe64], [AC_DEFINE([HAVE_HTOBE64], [1],

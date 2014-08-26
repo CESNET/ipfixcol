@@ -131,9 +131,9 @@ AC_CHECK_TYPES([ptrdiff_t])
 
 ######################## Checks for library functions ##########################
 AC_FUNC_ERROR_AT_LINE
-AC_FUNC_MALLOC
+AC_CHECK_FUNCS([malloc])
 AC_FUNC_MKTIME
-AC_FUNC_REALLOC
+AC_CHECK_FUNCS([realloc])
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([memmove memset])
 

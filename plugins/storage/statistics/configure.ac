@@ -114,8 +114,8 @@ AC_TYPE_UINT64_T
 AC_TYPE_UINT8_T
 
 ######################## Checks for library functions ##########################
-AC_FUNC_MALLOC
-AC_FUNC_REALLOC
+AC_CHECK_FUNCS([malloc])
+AC_CHECK_FUNCS([realloc])
 AC_CHECK_FUNCS([memset])
 
 ############################### Set output #####################################
