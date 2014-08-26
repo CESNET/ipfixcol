@@ -369,6 +369,8 @@ int storage_init (char *params, void **config){
 		return 1;
 	}
 
+	c->last_flush = time(NULL);
+	
 	/* On startup we expect to write to new directory */
 	c->new_dir = true;
 	return 0;
