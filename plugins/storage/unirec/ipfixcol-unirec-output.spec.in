@@ -15,7 +15,7 @@ Requires: libxml2
 BuildRequires: libxml2-devel
 Requires: libtrap >= 0.3.0
 BuildRequires: libtrap-devel >= 0.3.0
-Requires: ipfixcol >= 0.7.0
+Requires: ipfixcol >= 0.7.1
 
 %description
 Plugin for converting IPFIX data to UniRec format.
