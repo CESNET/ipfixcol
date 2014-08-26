@@ -47,7 +47,8 @@ void close() {}
 
 char *info()
 {
-	return "";
+	return "Converts TLS Cipher suite value to human readable string.\n"
+		"Parsing is not implemented.";
 }
 
 /** Funcion to assign given values to strings */

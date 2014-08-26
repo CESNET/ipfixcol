@@ -48,7 +48,8 @@ void close() {}
 
 char *info()
 {
-	return "";
+	return "Converts TLS Cipher suites bitmap to human readable string list.\n"
+		"Parsing is not implemented.";
 }
 
 /** Funcion to assign given values to strings */

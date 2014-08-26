@@ -48,7 +48,8 @@ void close() {}
 
 char *info()
 {
-	return "";
+	return "Converts TLS Version number to human readable string.\n"
+		"Printed values can be also passed to filter for parsing.";
 }
 
 /** Funcion to assign given values to strings */
