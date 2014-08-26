@@ -57,10 +57,10 @@ typedef enum {
  * @param module Identification of program part that generated this message
  * @param format
  */
-#define MSG_ERROR(module, format, ...) if(verbose < ICMSG_ERROR); else icmsg_print(ICMSG_ERROR, "ERROR: %s: "format"\n", module, ## __VA_ARGS__)
-#define MSG_WARNING(module, format, ...) if(verbose < ICMSG_WARNING); else icmsg_print(ICMSG_WARNING, "WARNING: %s: "format"\n", module, ## __VA_ARGS__)
-#define MSG_NOTICE(module, format, ...) if(verbose < ICMSG_NOTICE); else icmsg_print(ICMSG_NOTICE, "NOTICE: %s: "format"\n", module, ## __VA_ARGS__)
-#define MSG_DEBUG(module, format, ...) if(verbose < ICMSG_DEBUG); else icmsg_print(ICMSG_DEBUG, "DEBUG: %s: "format"\n", module, ## __VA_ARGS__)
+#define MSG_ERROR(module, format, ...) if(verbose < ICMSG_ERROR); else icmsg_print(ICMSG_ERROR, "ERROR: %s: " format "\n", module, ## __VA_ARGS__)
+#define MSG_WARNING(module, format, ...) if(verbose < ICMSG_WARNING); else icmsg_print(ICMSG_WARNING, "WARNING: %s: " format "\n", module, ## __VA_ARGS__)
+#define MSG_NOTICE(module, format, ...) if(verbose < ICMSG_NOTICE); else icmsg_print(ICMSG_NOTICE, "NOTICE: %s: " format "\n", module, ## __VA_ARGS__)
+#define MSG_DEBUG(module, format, ...) if(verbose < ICMSG_DEBUG); else icmsg_print(ICMSG_DEBUG, "DEBUG: %s: " format "\n", module, ## __VA_ARGS__)
 
 /**
  * \brief Macro for printing commong messages, without severity prefix

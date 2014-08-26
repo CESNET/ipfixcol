@@ -71,6 +71,8 @@ AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
 AC_LANG([C++])
+LBR_SET_CXXSTD
+AM_CXXFLAGS="$AM_CXXFLAGS $CXXSTD"
 ############################ Check for libraries ###############################
 AC_SEARCH_LIBS([fastbit_init], [fastbit],,
     	AC_MSG_ERROR([Required library fastbit missing]))
@@ -93,7 +95,11 @@ AS_IF([test -d $srcdir/../../../base/headers],
 )
 
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
+
+my_save_cxxflags="$CXXFLAGS"
+CXXFLAGS="$CXXFLAGS $CXXSTD"
 AC_CHECK_HEADERS([fastbit/ibis.h],,AC_MSG_ERROR([fastbit/ibis.h header missing. Please install fastbit-devel package]))
+CXXFLAGS="$my_save_cflags"
 
 
 ######## Checks for typedefs, structures, and compiler characteristics #########

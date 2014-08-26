@@ -124,7 +124,10 @@ AC_CHECK_HEADERS([getopt.h iostream regex.h dirent.h string arpa/inet.h \
 	cstdlib cstring unistd.h algorithm cstdio vector set map string fstream \
 	float.h inttypes.h libintl.h malloc.h netdb.h stddef.h stdint.h stdlib.h string.h sys/socket.h wchar.h])
 
+my_save_cxxflags="$CXXFLAGS"
+CXXFLAGS="$CXXFLAGS $CXXSTD"
 AC_CHECK_HEADERS([fastbit/ibis.h],,AC_MSG_ERROR([fastbit/ibis.h header missing. Please install fastbit-devel package]))
+CXXFLAGS="$my_save_cflags"
 
 ######## Checks for typedefs, structures, and compiler characteristics #########AC_HEADER_STDBOOL
 AC_C_INLINE

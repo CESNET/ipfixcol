@@ -111,7 +111,10 @@ AC_HEADER_RESOLV
 AC_CHECK_HEADERS([iostream dirent.h unistd.h vector map fstream \
 	stdint.h stdlib.h string.h])
 
+my_save_cxxflags="$CXXFLAGS"
+CXXFLAGS="$CXXFLAGS $CXXSTD"
 AC_CHECK_HEADERS([fastbit/ibis.h],,AC_MSG_ERROR([fastbit/ibis.h header missing. Please install fastbit-devel package]))
+CXXFLAGS="$my_save_cflags"
 
 ######## Checks for typedefs, structures, and compiler characteristics #########AC_HEADER_STDBOOL
 AC_C_INLINE
