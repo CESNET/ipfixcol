@@ -77,7 +77,11 @@ AC_PROG_MAKE_SET
 AC_ARG_ENABLE([debug], 
         AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
         [CFLAGS="$CFLAGS -Wextra -g"])
-        
+
+AC_ARG_ENABLE([doc],
+        AC_HELP_STRING([--disable-doc],[disable documentation building]))
+AM_CONDITIONAL([HAVE_DOC], [test "$enable_doc" != "no"])
+ 
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar.h])
 
@@ -128,7 +132,11 @@ AC_OUTPUT
 
 AS_IF([test -z "$RPMBUILD"], AC_MSG_WARN([Due to missing rpmbuild you will not able to generate RPM package.]))
 
-AM_COND_IF(HAVE_XSLTPROC,, AC_MSG_WARN([Due to missing xsltproc you will not able to generate MAN pages.]))
+AM_COND_IF(HAVE_DOC,
+    [AM_COND_IF(HAVE_XSLTPROC, ,
+        AC_MSG_ERROR([Missing xsltproc - install it or run with --disable-doc])
+    )]
+)
 
 # Print final summary
 echo "
@@ -138,6 +146,7 @@ echo "
   C Compiler....: $CC $CFLAGS $CPPFLAGS
   Linker........: $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
+  Build doc.....: ${enable_doc:-yes}
   xsltproc......: ${XSLTPROC:-NONE}
   xsltmanstyle..: $XSLTMANSTYLE
 "

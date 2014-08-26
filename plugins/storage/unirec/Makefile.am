@@ -11,11 +11,14 @@ ipfixcol_unirec_output_la_LDFLAGS = -module -avoid-version -shared -ltrap
 ipfixcol_unirec_output_la_SOURCES = unirec.c unirec.h
 ipfixcol_unirec_output_la_CFLAGS  = -std=gnu99
 
+EXTRA_DIST = unirec-elements.txt
+
+if HAVE_DOC
 MANSRC = ipfixcol-unirec-output.dbk
 man_MANS = ipfixcol-unirec-output.1
-
-EXTRA_DIST = $(MANSRC) unirec-elements.txt
+EXTRA_DIST += $(MANSRC)
 CLEANFILES = ipfixcol-unirec-output.1
+endif
 
 ipfixcol_DATA = unirec-elements.txt
 

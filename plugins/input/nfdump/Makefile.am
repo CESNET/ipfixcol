@@ -9,10 +9,12 @@ plugins_LTLIBRARIES = ipfixcol-nfdump-input.la
 ipfixcol_nfdump_input_la_LDFLAGS = -module -avoid-version -shared
 ipfixcol_nfdump_input_la_SOURCES = nfinput.c ext_fill.c ext_fill.h ext_parse.c ext_parse.h nffile.h nfinput.h
 
+if HAVE_DOC
 MANSRC = ipfixcol-nfdump-input.dbk
 EXTRA_DIST = $(MANSRC)
 man_MANS = ipfixcol-nfdump-input.1
 CLEANFILES = ipfixcol-nfdump-input.1
+endif
 
 rpmspec = $(PACKAGE_TARNAME).spec
 RPMDIR = RPMBUILD

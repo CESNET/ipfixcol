@@ -53,6 +53,12 @@ AC_SUBST(RELEASE)
 LBR_SET_CREDENTIALS
 LBR_SET_DISTRO([redhat])
 
+###################### Check for configure parameters ##########################
+
+AC_ARG_ENABLE([doc],
+        AC_HELP_STRING([--disable-doc],[disable documentation building]))
+AM_CONDITIONAL([HAVE_DOC], [test "$enable_doc" != "no"])
+
 ############################ Check for programs ################################
 
 # Check for rpmbuild
@@ -77,7 +83,12 @@ AC_OUTPUT
 # Print warings
 
 AS_IF([test -z "$RPMBUILD"], AC_MSG_WARN([Due to missing rpmbuild you will not able to generate RPM package.]))
-AM_COND_IF(HAVE_XSLTPROC,, AC_MSG_WARN([Due to missing xsltproc you will not able to generate MAN pages.]))
+
+AM_COND_IF(HAVE_DOC,
+    [AM_COND_IF(HAVE_XSLTPROC, ,
+        AC_MSG_ERROR([Missing xsltproc - install it or run with --disable-doc])
+    )]
+)
 
 # Print final summary
 echo "
@@ -85,6 +96,7 @@ echo "
   Prefix........: $prefix
   Distribution..: $DISTRO
   rpmbuild......: ${RPMBUILD:-NONE}
+  Build doc.....: ${enable_doc:-yes}
   xsltproc......: ${XSLTPROC:-NONE}
   xsltmanstyle..: $XSLTMANSTYLE
 "

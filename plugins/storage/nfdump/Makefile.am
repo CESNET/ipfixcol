@@ -16,11 +16,12 @@ ipfixcol_nfdump_output_la_LDFLAGS = -module -avoid-version -shared
 ipfixcol_nfdump_output_la_SOURCES = nfstore.cpp nfstore.h record_map.cpp record_map.h extensions.cpp extensions.h nffile.h config_struct.h
 ipfixcol_nfdump_output_la_LIBADD = pugixml/libpugixml.la
 
+if HAVE_DOC
 MANSRC = ipfixcol-nfdump-output.dbk
 EXTRA_DIST = $(MANSRC) $(LICENSE)
 man_MANS = ipfixcol-nfdump-output.1
 CLEANFILES = ipfixcol-nfdump-output.1
-
+endif
 
 rpmspec = $(PACKAGE_TARNAME).spec
 RPMDIR = RPMBUILD

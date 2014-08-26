@@ -109,6 +109,10 @@ AC_ARG_ENABLE([debug],
         [AM_CPPFLAGS="$AM_CPPFLAGS -DDEBUG"
         AM_CXXFLAGS="$AM_CXXFLAGS -Wextra -g -O0"])
 
+AC_ARG_ENABLE([doc],
+        AC_HELP_STRING([--disable-doc],[disable documentation building]))
+AM_CONDITIONAL([HAVE_DOC], [test "$enable_doc" != "no"])
+
 # Substitute compiler flags
 AC_SUBST([AM_CPPFLAGS])
 AC_SUBST([AM_CXXFLAGS])
@@ -174,11 +178,14 @@ AS_IF([test "x$PROTOCOLS" = xno], AC_MSG_WARN([Due to missing /etc/protocols you
 
 AS_IF([test -z "$AWK"], AC_MSG_WARN([Due to missing awk you will not be able to generate protocols.cpp from /etc/protocols]))
 
-AM_COND_IF(HAVE_DOXYGEN,, AC_MSG_WARN([Due to missing doxygen you will not able to generate Doxygen documentation.]))
-
 AS_IF([test -z "$RPMBUILD"], AC_MSG_WARN([Due to missing rpmbuild you will not able to generate RPM package.]))
 
-AM_COND_IF(HAVE_XSLTPROC,, AC_MSG_WARN([Due to missing xsltproc you will not able to generate MAN pages.]))
+AM_COND_IF(HAVE_DOC,
+    [AM_COND_IF(HAVE_XSLTPROC, 
+        [AM_COND_IF(HAVE_DOXYGEN, , AC_MSG_ERROR([Missing doxygen - install it or run with --disable-doc]))],
+        AC_MSG_ERROR([Missing xsltproc - install it or run with --disable-doc])
+    )]
+)
 
 # Print final summary
 echo "
@@ -189,6 +196,7 @@ echo "
   C++ Compiler..: $CXX $AM_CXXFLAGS $CXXFLAGS $AM_CPPFLAGS $CPPFLAGS
   Linker........: $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
+  Build doc.....: ${enable_doc:-yes}
   xsltproc......: ${XSLTPROC:-NONE}
   xsltmanstyle..: $XSLTMANSTYLE
   flex..........: ${FLEX:-NONE}

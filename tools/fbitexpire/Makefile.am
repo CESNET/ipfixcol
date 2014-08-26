@@ -5,12 +5,9 @@ RPMDIR = RPMBUILD
 
 SUBDIRS = src
 
-if HAVE_XSLTPROC
-SUBDIRS += man
-endif
-
-if HAVE_DOXYGEN
-SUBDIRS += doc
+if HAVE_DOC
+SUBDIRS += man \
+	    doc
 endif
 
 .PHONY: doc
