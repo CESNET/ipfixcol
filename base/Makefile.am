@@ -28,4 +28,5 @@ clean-local:
 
 .PHONY: test
 test:
+	$(MAKE) $(AM_MAKEFLAGS)
 	(cd tests/ipfixcol_test/ && ./test.sh) || exit 1 
