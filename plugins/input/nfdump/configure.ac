@@ -111,6 +111,12 @@ AC_FUNC_STRTOD
 AC_CHECK_FUNCS([floor memmove mkdir strchr strstr strtol strtoul])
 
 ############################### Set output #####################################
+### LibXML2 ###
+AC_CHECK_LIB([xml2], [main],
+    [LIBS="`xml2-config --libs` $LIBS"
+    CFLAGS="`xml2-config --cflags` $CFLAGS"],
+    AC_MSG_ERROR([Libxml2 not found ]))
+
 
 AC_SUBST(RPMBUILD)
 if test -z "$RPMBUILD"; then
