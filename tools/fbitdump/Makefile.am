@@ -7,12 +7,9 @@ RPMDIR = RPMBUILD
 
 SUBDIRS = 3rdparty src src/plugins
 
-if HAVE_XSLTPROC
-SUBDIRS += man
-endif
-
-if HAVE_DOXYGEN
-SUBDIRS += doc
+if HAVE_DOC
+SUBDIRS += man \
+	    doc
 endif
 
 .PHONY: doc

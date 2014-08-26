@@ -9,10 +9,12 @@ plugins_LTLIBRARIES = ipfixcol-postgres-output.la
 ipfixcol_postgres_output_la_LDFLAGS = -module -avoid-version -shared
 ipfixcol_postgres_output_la_SOURCES = postgres_output.c ipfix_postgres_types.h ipfix_entities.h  
 
+if HAVE_DOC
 MANSRC = ipfixcol-postgres-output.dbk
 EXTRA_DIST = $(MANSRC)
 man_MANS = ipfixcol-postgres-output.1
 CLEANFILES = ipfixcol-postgres-output.1
+endif
 
 rpmspec = $(PACKAGE_TARNAME).spec
 RPMDIR = RPMBUILD

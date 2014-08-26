@@ -13,10 +13,12 @@ ipfixcol_fastbit_output_la_LDFLAGS = -module -avoid-version -shared
 ipfixcol_fastbit_output_la_SOURCES = fastbit.cpp fastbit.h fastbit_table.cpp fastbit_table.h fastbit_element.cpp fastbit_element.h config_struct.h FlowWatch.h FlowWatch.cpp
 ipfixcol_fastbit_output_la_LIBADD = pugixml/libpugixml.la
 
+if HAVE_DOC
 MANSRC = ipfixcol-fastbit-output.dbk
 EXTRA_DIST = $(MANSRC)
 man_MANS = ipfixcol-fastbit-output.1
 CLEANFILES = ipfixcol-fastbit-output.1
+endif
 
 rpmspec = $(PACKAGE_TARNAME).spec
 RPMDIR = RPMBUILD

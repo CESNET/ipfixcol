@@ -79,7 +79,11 @@ AC_SEARCH_LIBS([__lzo_init_v2], [lzo2],,
 AC_ARG_ENABLE([debug], 
         AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
         [CXXFLAGS="$CXXFLAGS -Wextra -g"])
-        
+
+AC_ARG_ENABLE([doc],
+        AC_HELP_STRING([--disable-doc],[disable documentation building]))
+AM_CONDITIONAL([HAVE_DOC], [test "$enable_doc" != "no"])
+
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar.h])
 
@@ -118,9 +122,6 @@ if test -z "$RPMBUILD"; then
 fi
 
 AC_SUBST(XSLTPROC)
-if test -z "$XSLTPROC"; then
-	AC_MSG_WARN([Due to missing xsltproc you will not able to generate MAN pages.])
-fi
 
 # generate output
 AC_CONFIG_FILES([Makefile
@@ -133,7 +134,11 @@ AC_OUTPUT
 
 AS_IF([test -z "$RPMBUILD"], AC_MSG_WARN([Due to missing rpmbuild you will not able to generate RPM package.]))
 
-AM_COND_IF(HAVE_XSLTPROC,, AC_MSG_WARN([Due to missing xsltproc you will not able to generate MAN pages.]))
+AM_COND_IF(HAVE_DOC,
+    [AM_COND_IF(HAVE_XSLTPROC, ,
+        AC_MSG_ERROR([Missing xsltproc - install it or run with --disable-doc])
+    )]
+)
 
 # Print final summary
 echo "
@@ -143,6 +148,7 @@ echo "
   C++ Compiler..: $CXX $CXXFLAGS $CPPFLAGS
   Linker........: $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
+  Build doc.....: ${enable_doc:-yes}
   xsltproc......: ${XSLTPROC:-NONE}
   xsltmanstyle..: $XSLTMANSTYLE
 "

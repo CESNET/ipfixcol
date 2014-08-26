@@ -9,10 +9,12 @@ plugins_LTLIBRARIES = ipfixcol-statistics-output.la
 ipfixcol_statistics_output_la_LDFLAGS = -module -avoid-version -shared
 ipfixcol_statistics_output_la_SOURCES = statistics.c  
 
+if HAVE_DOC
 MANSRC = ipfixcol-statistics-output.dbk
 EXTRA_DIST = $(MANSRC)
 man_MANS = ipfixcol-statistics-output.1
 CLEANFILES = ipfixcol-statistics-output.1
+endif
 
 rpmspec = $(PACKAGE_TARNAME).spec
 RPMDIR = RPMBUILD

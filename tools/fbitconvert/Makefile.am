@@ -8,7 +8,7 @@ dist_pkgdata_DATA = fbitconvert_startup.xml
 
 SUBDIRS = src
 
-if HAVE_XSLTPROC
+if HAVE_DOC
 SUBDIRS += man
 endif
 
