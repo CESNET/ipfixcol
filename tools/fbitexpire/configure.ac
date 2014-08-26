@@ -81,9 +81,6 @@ AM_CXXFLAGS="$AM_CXXFLAGS $CXXSTD"
 
 ############################ Check for libraries ###############################
 
-AC_SEARCH_LIBS([fastbit_init], [fastbit],,
-    	AC_MSG_ERROR([Required library fastbit missing]))
-
 ### dynamic linker ###
 AC_SEARCH_LIBS([dlopen], [dl],,
         AC_MSG_ERROR([Required library dl missing]))
@@ -110,8 +107,6 @@ AC_HEADER_RESOLV
 
 AC_CHECK_HEADERS([iostream dirent.h unistd.h vector map fstream \
 	stdint.h stdlib.h string.h])
-
-AC_CHECK_HEADERS([fastbit/ibis.h],,AC_MSG_ERROR([fastbit/ibis.h header missing. Please install fastbit-devel package]))
 
 ######## Checks for typedefs, structures, and compiler characteristics #########AC_HEADER_STDBOOL
 AC_C_INLINE
