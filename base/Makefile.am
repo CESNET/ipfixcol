@@ -11,6 +11,8 @@ SUBDIRS +=  documentation/man \
 	    documentation/doxygen
 endif
 
+EXTRA_DIST = README.md ipfixcol.png
+
 .PHONY: doc
 doc: 
 	(cd documentation/doxygen && $(MAKE) $(AM_MAKEFLAGS) $@) || exit 1

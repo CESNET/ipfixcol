@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4 
 
-EXTRA_DIST = README
+EXTRA_DIST = README.md
 
 SUBDIRS = base \
 	tools/fbitconvert \
