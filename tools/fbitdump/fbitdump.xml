@@ -1518,9 +1518,9 @@
 <!-- summary section contain aliases of columns that can be used for statistics summary, i.e. totals
 	only plain columns can be used -->
 <summary>
-	<column>%pkt</column>
-	<column>%byt</column>
-	<column>%fl</column>
+	<column type="sum">%pkt</column>
+	<column type="sum">%byt</column>
+	<column type="sum">%fl</column>
 </summary>
 
 <!-- definition of output formats that can be used with -o option -->

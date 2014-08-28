@@ -104,8 +104,23 @@ void Column::init(const pugi::xml_document &doc, const std::string &alias, bool 
 		for (pugi::xpath_node_set::const_iterator i = sumColumns.begin(); i != sumColumns.end(); ++i) {
 			if (*it == i->node().child_value()) {
 				this->summary = true;
+			
+				if (!i->node().attribute("type")) {
+					throw std::invalid_argument("Summary column '" + alias + "' without specified summary type!");
+				}
+
+				this->summaryType = i->node().attribute("type").value();
 			}
 		}
+	}
+	
+	/* set alias for select clause */
+	if (this->getSemantics() == "flows") {
+		this->selectName = "flows";
+	} else if (this->isOperation()) {
+		this->selectName = alias.substr(1);
+	} else {
+		this->selectName = this->element;
 	}
 }
 

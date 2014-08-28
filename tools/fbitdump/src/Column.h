@@ -188,6 +188,34 @@ public:
 	void (*format)( const union plugin_arg * val, int, char*);
 	void (*parse)(char *input, char *out);
 
+        /**
+         * \brief Returns summary type
+         * 
+         * \return summary type
+         */
+        std::string getSummaryType() { return summaryType; }
+        
+        /**
+         * \brief Return true if summary type is sum
+         * 
+         * \return true if summary type is sum
+         */
+        bool isSumSummary() { return summaryType == "sum"; }
+        
+        /**
+         * \brief Return true if summary type is avg
+         * 
+         * \return true if summary type is avg
+         */
+        bool isAvgSummary() { return summaryType == "avg"; }
+        
+        /**
+         * \brief Returns name for select clause
+         * 
+         * \return name for select clause
+         */
+        std::string getSelectName() { return selectName; }
+        
 private:
 
 	/**
@@ -342,6 +370,8 @@ private:
 	bool aggregation;       /**< Determines whether column is in aggregation mode */
 	std::string element;    /**< name of the file, which contains actual data for this column */
 	bool summary;			/**< Is this a summary column? */
+        std::string summaryType;/**< summary type - sum or avg */
+        std::string selectName; /**< name for select clause */
 
 }; /* end of Column class */
 
