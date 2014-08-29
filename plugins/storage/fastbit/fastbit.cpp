@@ -363,13 +363,14 @@ int storage_init (char *params, void **config){
 		return 1;
 	}
 
+	/* TODO: check whether it is not set in process_startup_xml */
+	//c->last_flush = time(NULL);
+
 	/* parse configuration xml and updated configure structure according to it */
 	if(process_startup_xml(params, c)){
 		MSG_ERROR(MSG_MODULE, "Unable to parse configuration xml!");
 		return 1;
 	}
-
-	c->last_flush = time(NULL);
 	
 	/* On startup we expect to write to new directory */
 	c->new_dir = true;
