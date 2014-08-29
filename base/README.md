@@ -1,4 +1,19 @@
-##What is IPFIXcol
+##<a name="top"></a>Table of Contents
+
+1.  [What is IPFIXcol](#what)
+2.  [Configuration](#conf)
+3.  [Built-in plugins](#bplugs)
+    *  [Input plugins](#input)
+    *  [Intermediate plugins](#inter)
+    *  [Storage plugins](#storage)
+4.  [External plugins](#explugs)
+5.  [Other tools](#tools)
+    *  [ipfixviewer](#view)
+    *  [ipfixconf](#ipfixconf)
+6.  [How to build](#howbuild)
+7.  [How to run](#howrun)
+
+##<a name="what"></a>What is IPFIXcol
 
 IPFIXcol is a flexible IPFIX flow data collector designed to be easily extensible by plugins.
 
@@ -8,7 +23,7 @@ IPFIXcol corresponds to [RFC501](http://tools.ietf.org/html/rfc5101)
 
 ![IPFIXcol](ipfixcol.png)
 
-##Configuration
+##<a name="conf"></a>Configuration
 
 IPFIXcol stores its configuration in the **/etc/ipfixcol/** directory.
 
@@ -19,14 +34,14 @@ IPFIXcol stores its configuration in the **/etc/ipfixcol/** directory.
 
 * **startup.xml** describes how IPFIXcol is configured at startup, which plugins are used and where the data will be stored. The XML is self-documented, so read the elements description carefully. The collector will listen on TCP, UDP and SCTP on startup by default, so be careful to configure which plugin you want to use before starting it.
 
-##Built-in plugins
-###Input plugins
+##<a name="bplugs"></a>Built-in plugins
+###<a name="input"></a>Input plugins
 
 * **TCP**, **UDP** and **SCTP** plugin are provided accept data from the network. Each can be configured to listen on a specific interface and a port. They are compatible with IPFIX, Netflow v5, Netflow v9 and sFlow.
 
 * **IPFIX file** format input plugin can read data from a file in the mentioned format and store them in any other, depending on the storage plugin used. The IPFIX file format is specified in [RFC5655](http://tools.ietf.org/html/rfc5655).
 
-###Intermediate plugins
+###<a name="inter"></a>Intermediate plugins
 
 * **anonymization** - anonymizes IP addresses with Crypto-PAn algorithm.
 
@@ -36,10 +51,7 @@ IPFIXcol stores its configuration in the **/etc/ipfixcol/** directory.
 
 * **joinflows** plugin merges multiple flows into one and adds information about original ODID to each Template and Data record.
 
-##External plugins
-External plugins are described in the main [README](../README.md).
-
-###Storage plugins
+###<a name="storage"></a>Storage plugins
 
 * **IPFIX file** format storage plugin stores data in the IPFIX format in flat files. The storage path must be configured in **startup.xml** to determine where to store the data.
 
@@ -49,9 +61,53 @@ External plugins are described in the main [README](../README.md).
 
 * **forwarding** plugin sends data over the network (e.g. to the next collector). There is configurable connection type (TCP, UDP or SCTP), destination port and IPv4 or IPv6 address. With UDP, template refresh time etc. can be set.
 
-## Other tools
-###ipfixviewer
+##<a name="explugs"></a>External plugins
+External plugins are described in the main [README](../README.md).
+
+##<a name="tools"></a> Other tools
+###<a name="view"></a>ipfixviewer
 A tool for displaying captured ipfix data. Uses IPFIXcol, IPFIX file input plugin and ipfixviewer storage plugin.
 
-###ipfixconf
+###<a name="ipfixconf"></a>ipfixconf
 This tool provides interface to list, add and remove plugins from internal configuration so you don't need to edit XML file manualy. Each external plugin uses this tool after succesfull installation.
+
+##<a name="howbuild"></a>How to build
+Simply with:
+
+```sh
+autoreconf -i
+./configure
+make
+```
+
+And possibly:
+```sh
+sudo make install
+```
+
+##<a name="howrun"></a>How to run
+###Start ipfixcol
+The simplest way how to run collector is just running
+```sh
+ipfixcol
+```
+It uses default configuration at /etc/ipfixcol/startup.xml.
+
+Use `-v` option to specify the level of verbosity of the collector. 
+```sh
+ipfixcol -v 3
+```
+
+To run the collector as a daemon with specified startup configuration, use
+```sh
+ipfixcol -d -c path/to/startup.xml
+```
+
+###Stop collector
+
+IPFIXcol catches SIGINT, SIGQUIT and SIGTERM signals. When multiple input plugins are used, it is forked to multiple processes and the parent process waits for the children. The easiest way to stop ipfixcol is to call
+```sh
+killall ipfixcol
+```
+
+[Back to Top](#top)
