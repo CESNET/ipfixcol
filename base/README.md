@@ -62,7 +62,7 @@ IPFIXcol stores its configuration in the **/etc/ipfixcol/** directory.
 * **forwarding** plugin sends data over the network (e.g. to the next collector). There is configurable connection type (TCP, UDP or SCTP), destination port and IPv4 or IPv6 address. With UDP, template refresh time etc. can be set.
 
 ##<a name="explugs"></a>External plugins
-External plugins are described in the main [README](../README.md).
+External plugins are described in the main [README](../).
 
 ##<a name="tools"></a> Other tools
 ###<a name="view"></a>ipfixviewer
