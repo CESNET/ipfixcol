@@ -35,7 +35,7 @@ There are also external plugins that are installed separately
 * **[nfdump](plugins/input/nfdump)** - NFDUMP file reader
 
 ###<a name="exout"></a> External storage plugins
-* **[fastbit](plugins/input/fastbit)** - uses FastBit library to store and index data
+* **[fastbit](plugins/storage/fastbit)** - uses FastBit library to store and index data
 * **[nfdump](plugins/storage/nfdump)** - stores data in NFDUMP file format
 * **[postgres](plugins/storage/postgres)** - stores data into PostgreSQL database
 * **[statistics](plugins/storage/statistics)** - uses RRD library to generate statistics for collected data
