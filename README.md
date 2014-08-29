@@ -24,10 +24,10 @@ IPFIXcol framework is a set of:
 * **tools** for data processing etc.
 
 ##<a name="ipfixcol"></a> IPFIXcol
-Described in it's [README](base/README.md)
+Described in it's [README](base/)
 
 ##<a name="plugins"></a> Plugins
-IPFIX collector comes with several built-in plugins described at [IPFIXcol's page](base/README.md).
+IPFIX collector comes with several built-in plugins described at [IPFIXcol's page](base/).
 
 There are also external plugins that are installed separately
 
@@ -43,32 +43,32 @@ There are also external plugins that are installed separately
 
 ##<a name="btools"></a> Built-in tools
 ###ipfixviewer and ipfixconf
-Destribed in IPFIXcol's [README](base/README.md)
+Destribed in IPFIXcol's [README](base/)
 
 ##<a name="extools"></a> External tools
 
 ###<a name="fbitconvert"></a> fbitconvert
-Converts data from NFDUMP file format into FastBit. Uses [IPFIXcol](base/README.md), [nfdump input plugin](plugins/input/nfdump) and [fastbit storage plugin](plugins/storage/fastbit).
+Converts data from NFDUMP file format into FastBit. Uses [IPFIXcol](base/), [nfdump input plugin](plugins/input/nfdump) and [fastbit storage plugin](plugins/storage/fastbit).
 
-More info in it's [README](tools/fbitconvert/README.md)
+More info in it's [README](tools/fbitconvert/)
 
 ###<a name="fbitdump"></a> fbitdump
 
 Tool for manipulating IPFIX data in FastBit database format. It uses FastBit library to read and index data.
 
-More info in it's [README](tools/fbitdump/README.md)
+More info in it's [README](tools/fbitdump/)
 
 ###<a name="fbitexpire"></a> fbitexpire
 
 Daemon for removal old data.
 
-More info in it's [README](tools/fbitexpire/README.md)
+More info in it's [README](tools/fbitexpire/)
 
 ###<a name="fbitmerge"></a> fbitmerge
 
 Tool for merging FastBit data (saves free disk space, reduces number of files..)
 
-More info in it's [README](tools/fbitmerge/README.md)
+More info in it's [README](tools/fbitmerge/)
 
 ##<a name="build"></a> How to build
 Whole framework can be build at once with
