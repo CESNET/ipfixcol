@@ -7,11 +7,11 @@ There are many command line options - see man pages for their description.
 
 ###Configuration
 
-fbitdump uses **fbitdump.xml" file with configured data columns, output formats etc.
+fbitdump uses **fbitdump.xml** file with configured data columns, output formats etc.
 
 ###Output formats
 
-There are few predefined formats specified in fbitdump.xml. Each format is defined as string containing column aliases starting with %.
+There are few predefined formats specified in **fbitdump.xml**. Each format is defined as string containing column aliases starting with %.
 Custom formats are supported.
 
 ###Filter
@@ -24,7 +24,7 @@ Any filter consists of one or more expression expr. Any number of expr can be li
 ###Plugins
 
 Fbitdump supports input and output plugins. Input plugins are used for parsing data from given filter and output plugins are used for valid formatting printed data.
-Plugin names and paths must be specified in fbitdump.xml(5) file.
+Plugin names and paths must be specified in **fbitdump.xml** file.
 
 For output format description, see man pages for fbitdump-plugins.
 
