@@ -12,6 +12,7 @@
     *  [ipfixconf](#ipfixconf)
 6.  [How to build](#howbuild)
 7.  [How to run](#howrun)
+8.  [How to write plugins](#howplug)
 
 ##<a name="what"></a>What is IPFIXcol
 
@@ -109,5 +110,9 @@ IPFIXcol catches SIGINT, SIGQUIT and SIGTERM signals. When multiple input plugin
 ```sh
 killall ipfixcol
 ```
+
+##How to write plugins
+
+See [wiki page](https://github.com/CESNET/ipfixcol/wiki/How-to-write-IPFIXcol-plugins).
 
 [Back to Top](#top)
