@@ -45,22 +45,6 @@
 
 	<refsect1>
 		<title>Configuration</title>
-		<simpara>There are two configuration XML files for ipfixcol that affects plugin usage.
-		First one is internal configuration XML (<filename>/etc/ipfixcol/internalcfg.xml</filename>) where are list of all available plugins for the collecor. 
-		UniRec plugin must be specified here to be usable.
-		</simpara>
-		<simpara><filename>internalcfg.xml</filename> unirec example</simpara>
-		<programlisting>
-	<![CDATA[
-	<storagePlugin>
-		<fileFormat>unirec</fileFormat>
-		<file>/usr/share/ipfixcol/plugins/ipfixcol-unirec-output.so</file>
-		<threadName>unirec</threadName>
-	</storagePlugin>
-	]]>
-		</programlisting>
-		<para></para>
-		
 		<simpara>The collector must be configured to use unirec output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
 		The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves. 
 		</simpara>

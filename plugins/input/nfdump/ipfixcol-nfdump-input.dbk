@@ -54,25 +54,8 @@
 
 	<refsect1>
 		<title>Configuration</title>
-		<simpara>There are two configuration XML files for ipfixcol that affects plugin usage.
-		First one is internal configuration XML (<filename>/etc/ipfixcol/internalcfg.xml</filename>)
-		where are list of all available plugins for the collecor. To use nfdump input plugin,
-		make sure it is properly specified in the configuration XMLs.
-		</simpara>
-		<simpara><filename>internalcfg.xml</filename> nfdump example</simpara>
-		<programlisting>
-	<![CDATA[
-	<inputPlugin>
-		<name>nfdumpReader</name>
-		<file>/usr/share/ipfixcol/plugins/ipfixcol-nfdump-input.so</file>
-		<processName>nfdumpFile</processName>
-	</inputPlugin>
-	]]>
-		</programlisting>
-		<para></para>
-		
 		<simpara>The collector must be configured to use nfdump input plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
-		The configuration specifies which plugins (destinations) are used by the collector to collect data and provides configuration for the plugins themselves. 
+		The configuration specifies which plugins are used by the collector to collect data and provides configuration for the plugins themselves. 
 		</simpara>
 		
 	</refsect1>
