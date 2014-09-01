@@ -42,6 +42,11 @@ static const item_t values[] = {
     { 16, "RTCP" }
 };
 
+const char INFO_MSG[] =
+"Converts VoIP type field (as defined in http://is.muni.cz/th/325458/fi_m/) to\n"
+"text representation. Possible values are:\n"
+"NO VOIP,SERV REQUEST,SERV REPLY,CALL REQUEST,CALL REPLY,VOICE DATA,RTCP\n";
+
 static const int NAMES_SIZE = sizeof(values) / sizeof(item_t);
 
 
@@ -49,7 +54,7 @@ static const int NAMES_SIZE = sizeof(values) / sizeof(item_t);
 
 char *info()
 {
-	return "";
+	return INFO_MSG;
 }
 
 /**

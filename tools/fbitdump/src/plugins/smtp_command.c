@@ -43,6 +43,13 @@ static const item_t values[] = {
     { "Q"   },  // QUIT
 };
 
+const char INFO_MSG[] =
+"Converts 'SMTP command flags' field into text representation\n"
+"SMTP commands present in the flow are printed in comma-separated list, using\n"
+"abbreviated codes\n"
+"\te.g. EHLO -> EH, QUIT -> Q, RSET -> RST\n"
+"Unknown commands use the 'U' code\n";
+
 #define NAMES_SIZE sizeof(values)
 
 // Get room for:
@@ -65,7 +72,7 @@ int init(void)
 
 char *info()
 {
-	return "";
+	return INFO_MSG;
 }
 
 /**

@@ -63,6 +63,14 @@ static const item_t values[] = {
     /* Vertical bar will be here */
 };
 
+const char INFO_MSG[] =
+"Converts 'status code flags' field to more readable form\n"
+"Status codes present in the flow are represented by uppercase letters\n"
+"in their position within the field. The letters are grouped by the first digit\n"
+"of their status codes and are ordered by status code value.\n"
+"Not present status codes are represented by dash ('-')\n"
+"See 'man fbitdump-plugins' for thorough explanation\n";
+
 static const int NAMES_SIZE = sizeof(values) / sizeof(item_t);
 
 // Get room for:
@@ -102,7 +110,7 @@ int init(void)
 
 char *info()
 {
-	return "";
+	return INFO_MSG;
 }
 
 /**

@@ -58,6 +58,11 @@ static const item_t values[] = {
     { 34,   "H263"  }
 };
 
+const char INFO_MSG[] =
+"Converts RTP codec number into its name. Strings 'Reserved', 'Unassigned' and\n"
+"'dynamic' are printed for corresponding numbers. They cannot be parsed back\n"
+"into the numerical representation because of their numerical value ambiguosity\n";
+
 /**
  * The highest number of 'Reserved'
  * @see http://www.iana.org/assignments/rtp-parameters/rtp-parameters.xhtml
@@ -75,13 +80,12 @@ static const int NAMES_SIZE = sizeof(values) / sizeof(item_t);
 
 char *info()
 {
-	return "";
+	return INFO_MSG;
 }
 
 /**
  * Fill the buffer with text representation of field's content
  */
-__attribute__((optimize("unroll-loops")))
 void format( const union plugin_arg * arg,
                 int plain_numbers,
                 char buffer[PLUGIN_BUFFER_SIZE] )
@@ -135,7 +139,6 @@ void format( const union plugin_arg * arg,
  *
  * Unassigned and Reserved values are NOT parsed, as their value is ambiguous
  */
-__attribute__((optimize("unroll-loops")))
 void parse(char *input, char out[PLUGIN_BUFFER_SIZE])
 {
     int i;
