@@ -1,59 +1,76 @@
-#IPFIXcol framework
+#<a name="top"></a>IPFIXcol framework
 
+## Table of Contents
+1.  [Framework description](#desc)
+2.  [IPFIXcol](#ipfixcol)
+3.  [Plugins](#plugins)
+    *  [External input plugins](#exin)
+    *  [External storage plugins](#exout)
+4.  [Built-in tools](#btools)
+5.  [External tools](#extools)
+    *  [fbitconvert](#fbitconvert)
+    *  [fbitdump](#fbitdump)
+    *  [fbitexpire](#fbitexpire)
+    *  [fbitmerge](#fbitmerge)
+6.  [Howto build](#build)
+7.  [RPM](#rpm)
+8.  [FastBit](#fastbit)
+
+##<a name="desc"></a> Framework description
 IPFIXcol framework is a set of:
 
 * **IPFIXcol** - collector for capturing IPFIX NetFlow data
 * input, intermediate and storage **plugins** for collector
 * **tools** for data processing etc.
 
-##IPFIXcol
-Described in it's [README](base/README.md)
+##<a name="ipfixcol"></a> IPFIXcol
+Described in it's [README](base/)
 
-##Plugins
-IPFIX collector comes with several built-in plugins described at [IPFIXcol's page](base/README.md).
+##<a name="plugins"></a> Plugins
+IPFIX collector comes with several built-in plugins described at [IPFIXcol's page](base/).
 
 There are also external plugins that are installed separately
 
-###External input plugins
+###<a name="exin"></a> External input plugins
 * **[nfdump](plugins/input/nfdump)** - NFDUMP file reader
 
-###External storage plugins
-* **[fastbit](plugins/input/fastbit)** - uses FastBit library to store and index data
+###<a name="exout"></a> External storage plugins
+* **[fastbit](plugins/storage/fastbit)** - uses FastBit library to store and index data
 * **[nfdump](plugins/storage/nfdump)** - stores data in NFDUMP file format
 * **[postgres](plugins/storage/postgres)** - stores data into PostgreSQL database
 * **[statistics](plugins/storage/statistics)** - uses RRD library to generate statistics for collected data
 * **[unirec](plugins/storage/unirec)** - stores data in UniRec format
 
-##Built-in tools
+##<a name="btools"></a> Built-in tools
 ###ipfixviewer and ipfixconf
-Destribed in IPFIXcol's [README](base/README.md)
+Destribed in IPFIXcol's [README](base/)
 
-##External tools
+##<a name="extools"></a> External tools
 
-###fbitconvert
-Converts data from NFDUMP file format into FastBit. Uses [IPFIXcol](base/README.md), [nfdump input plugin](plugins/input/nfdump) and [fastbit storage plugin](plugins/storage/fastbit).
+###<a name="fbitconvert"></a> fbitconvert
+Converts data from NFDUMP file format into FastBit. Uses [IPFIXcol](base/), [nfdump input plugin](plugins/input/nfdump) and [fastbit storage plugin](plugins/storage/fastbit).
 
-More info in it's [README](tools/fbitconvert/README.md)
+More info in it's [README](tools/fbitconvert/)
 
-###fbitdump
+###<a name="fbitdump"></a> fbitdump
 
 Tool for manipulating IPFIX data in FastBit database format. It uses FastBit library to read and index data.
 
-More info in it's [README](tools/fbitdump/README.md)
+More info in it's [README](tools/fbitdump/)
 
-###fbitexpire
+###<a name="fbitexpire"></a> fbitexpire
 
 Daemon for removal old data.
 
-More info in it's [README](tools/fbitexpire/README.md)
+More info in it's [README](tools/fbitexpire/)
 
-###fbitmerge
+###<a name="fbitmerge"></a> fbitmerge
 
 Tool for merging FastBit data (saves free disk space, reduces number of files..)
 
-More info in it's [README](tools/fbitmerge/README.md)
+More info in it's [README](tools/fbitmerge/)
 
-##How to build
+##<a name="build"></a> How to build
 Whole framework can be build at once with
 
 ```sh
@@ -76,14 +93,16 @@ Or you can build each part (collector, tool(s), extarnal plugin(s)) separately.
 The projects that depend on ipfixcol headers check the reltive path to base/header directory to use headers. 
 When project is separated from the structure, it needs to have the headers installed (ipfixcol-devel package).
 
-##RPM
+##<a name="rpm"></a> RPM
 Each part of framework supports building rpm packages by running
 
 ```sh
 make rpm
 ```
 
-##FastBit
+##<a name="fastbit"></a> FastBit
 Plugins and tools that uses FastBit file format need FasBit library installed. IPFIXcol framework uses it's own fork of FastBit library to keep compatibility.
 
 IPFIXcol's FastBit library can be found [here](https://github.com/CESNET/libfastbit).
+
+[Back to Top](#top)
