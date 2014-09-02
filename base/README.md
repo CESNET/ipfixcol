@@ -20,7 +20,7 @@ IPFIXcol is a flexible IPFIX flow data collector designed to be easily extensibl
 
 It loads input, intermediate and output plugins on startup. Each input plugin runs in a different process.
 
-IPFIXcol corresponds to [RFC501](http://tools.ietf.org/html/rfc5101)
+IPFIXcol corresponds to [RFC7011](http://tools.ietf.org/html/rfc7011)
 
 ![IPFIXcol](ipfixcol.png)
 
@@ -63,7 +63,7 @@ IPFIXcol stores its configuration in the **/etc/ipfixcol/** directory.
 * **forwarding** plugin sends data over the network (e.g. to the next collector). There is configurable connection type (TCP, UDP or SCTP), destination port and IPv4 or IPv6 address. With UDP, template refresh time etc. can be set.
 
 ##<a name="explugs"></a>External plugins
-External plugins are described in the main [README](../).
+External plugins are described in the main [README](https://github.com/CESNET/ipfixcol#plugins).
 
 ##<a name="tools"></a> Other tools
 ###<a name="view"></a>ipfixviewer
@@ -106,12 +106,16 @@ ipfixcol -d -c path/to/startup.xml
 
 ###Stop collector
 
-IPFIXcol catches SIGINT, SIGQUIT and SIGTERM signals. When multiple input plugins are used, it is forked to multiple processes and the parent process waits for the children. The easiest way to stop ipfixcol is to call
+IPFIXcol catches SIGINT, SIGQUIT and SIGTERM signals. When multiple input plugins are used, it is forked to multiple processes. You can stop each instance separately according to used input plugin.
+
+For example:
 ```sh
-killall ipfixcol
+killall ipfixcol:UDP
+killall ipfixcol:TCP
+...
 ```
 
-##How to write plugins
+##<a name="howplug"></a>How to write plugins
 
 See [wiki page](https://github.com/CESNET/ipfixcol/wiki/How-to-write-IPFIXcol-plugins).
 
