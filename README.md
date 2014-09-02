@@ -43,7 +43,7 @@ There are also external plugins that are installed separately
 
 ##<a name="btools"></a> Built-in tools
 ###ipfixviewer and ipfixconf
-Destribed in IPFIXcol's [README](base/)
+Destribed in IPFIXcol's [README](base/#tools)
 
 ##<a name="extools"></a> External tools
 
