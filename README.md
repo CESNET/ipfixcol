@@ -15,6 +15,9 @@
 6.  [Howto build](#build)
 7.  [RPM](#rpm)
 8.  [FastBit](#fastbit)
+9.  [Contact us](#contact)
+    *  [Reporting bugs](#bug)
+    *  [Forum](#mailing)
 
 ##<a name="desc"></a> Framework description
 IPFIXcol framework is a set of:
@@ -104,5 +107,14 @@ make rpm
 Plugins and tools that uses FastBit file format need FasBit library installed. IPFIXcol framework uses it's own fork of FastBit library to keep compatibility.
 
 IPFIXcol's FastBit library can be found [here](https://github.com/CESNET/libfastbit).
+
+##<a name="contact"></a> Contact us
+###<a name="bug"></a> Reporting bugs
+
+If you find any bug you can report it into [issue tracker](https://github.com/CESNET/ipfixcol/issues) here on GitHub.
+
+###<a name="mailing"></a> Forum
+
+if you have some questions or if you just want to share your ideas about useful features etc., please use [this forum](https://groups.google.com/forum/#!forum/ipfixcol).
 
 [Back to Top](#top)
