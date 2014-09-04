@@ -71,11 +71,12 @@ void ext0_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 
 
 #define CONVERT_IPv6() \
-		*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64(*(((uint64_t *) &data[(*offset)])+0)); \
+		*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64(*(((uint64_t *) &data[(*offset)]))); \
 		data_set->header.length += 8; \
-		*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64(*(((uint64_t *) &data[(*offset)])+1)); \
+		(*offset)+=2; \
+		*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64(*(((uint64_t *) &data[(*offset)]))); \
 		data_set->header.length += 8; \
-		(*offset)+=4;
+		(*offset)+=2;
 
 //EXTENSION 1
 void ext1_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){

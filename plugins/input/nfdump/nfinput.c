@@ -182,10 +182,10 @@ static void (*ext_fill_tm[EXT_FILL_CNT]) (uint8_t flags, struct ipfix_template *
 #define HEADER_ELEMENTS 8
 static int header_elements[][2] = {
 		//id,size
-		{89,1},  //fwd_status
+		{89,4},  //fwd_status
 		{152,8}, //flowEndSysUpTime MILLISECONDS !
 		{153,8}, //flowStartSysUpTime MILLISECONDS !
-		{6,1},  //tcpControlBits flags
+		{6,2},  //tcpControlBits flags
 		{4,1},  //protocolIdentifier
 		{5,1},  //ipClassOfService
 		{7,2},  //sourceTransportPort
@@ -200,16 +200,16 @@ static int header_elements[][2] = {
  * \param data_set New data set
  * \param record nfdump record
  */
-void fill_basic_data(struct ipfix_data_set *data_set, struct common_record_s *record){
+void fill_basic_data(struct ipfix_data_set *data_set, struct common_record_v0_s *record){
 
 	data_set->records[data_set->header.length] = record->fwd_status;
-	data_set->header.length += 1;
+	data_set->header.length += 4;
 	*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64((uint64_t)record->first*1000+record->msec_first); //sec 2 msec
 	data_set->header.length += 8;
 	*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64((uint64_t)record->last*1000+record->msec_last); //sec 2 msec
 	data_set->header.length += 8;
-	data_set->records[data_set->header.length] =record->tcp_flags;
-	data_set->header.length += 1;
+	data_set->records[data_set->header.length+1] = record->tcp_flags;
+	data_set->header.length += 2;
 	data_set->records[data_set->header.length] =record->prot;
 	data_set->header.length += 1;
 	data_set->records[data_set->header.length] =record->tos;
@@ -230,11 +230,12 @@ void fill_basic_data(struct ipfix_data_set *data_set, struct common_record_s *re
 void fill_basic_template(uint8_t flags, struct ipfix_template **template){
 	static int template_id_counter = 256;
 
-	(*template) = (struct ipfix_template *) malloc(sizeof(struct ipfix_template) + \
+	(*template) = (struct ipfix_template *) calloc(1, sizeof(struct ipfix_template) + \
 			ALLOC_FIELDS_SIZE * sizeof(template_ie));
 	
 	if(*template == NULL){
 		MSG_ERROR(msg_module, "Malloc faild to get space for ipfix template");
+		return;
 	}
 
 	(*template)->template_type = TM_TEMPLATE;
@@ -312,10 +313,10 @@ void add_template(struct ipfix_message *ipfix_msg, struct ipfix_template * templ
 	for (i = 0; i < 1024; i++) {
 		if (ipfix_msg->templ_set[i] == NULL) {
 			ipfix_msg->templ_set[i] = (struct ipfix_template_set *) \
-					calloc(1, sizeof(struct ipfix_template_set) + template->data_length);
+					calloc(1, sizeof(struct ipfix_template_set) + 8+template->template_length);
 
 			ipfix_msg->templ_set[i]->header.flowset_id = htons(2);
-			ipfix_msg->templ_set[i]->header.length = htons(4 + template->template_length);
+			ipfix_msg->templ_set[i]->header.length = htons(8 + template->template_length);
 			ipfix_msg->templ_set[i]->first_record.template_id = htons(template->template_id);
 			ipfix_msg->templ_set[i]->first_record.count = htons(template->field_count);
 			
@@ -359,7 +360,7 @@ void clean_tmp_manager(struct ipfix_template_mgr_record *manager){
  * \param msg Current IPFIX message
  * \return 0 on success
  */
-int process_ext_record(struct common_record_s * record, struct extensions *ext, 
+int process_ext_record(struct common_record_v0_s * record, struct extensions *ext, 
 	struct ipfix_template_mgr_record *template_mgr, struct ipfix_message *msg)
 {
 	int data_offset = 0;
@@ -395,7 +396,6 @@ int process_ext_record(struct common_record_s * record, struct extensions *ext,
 	}
 	
 	set->header.flowset_id = htons(tmp->template_id);
-
 	fill_basic_data(set, record);
 	ext_parse[1](record->data, &data_offset, record->flags, set);
 	ext_parse[2](record->data, &data_offset, record->flags, set);
@@ -607,7 +607,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 	uint buffer_size = 0;
 	
 	struct data_block_header_s block_header;
-	struct common_record_s *record;
+	struct common_record_v0_s *record;
 	int stop = 0, ret, len;
 
 	*info = (struct input_info *) &(conf->in_info_list->in_info);
@@ -704,7 +704,7 @@ read_begin:
 	}
 	
 	while (size < block_header.size && !stop) {
-		record = (struct common_record_s *) buffer;
+		record = (struct common_record_v0_s *) buffer;
 		switch (record->type) {
 		case CommonRecordV0Type:
 			stop = process_ext_record(record, &(conf->ext), &(conf->template_mgr), msg);

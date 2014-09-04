@@ -80,7 +80,7 @@ void ext2_fill_tm(uint8_t flags, struct ipfix_template * template){
 	//packetDeltaCount
 	template->fields[template->field_count].ie.id = 2;
 	template->fields[template->field_count].ie.length = 8;
-//	template->field_count++;
+	template->field_count++;
 	template->data_length += 8;
 	template->template_length += 4;
 }
