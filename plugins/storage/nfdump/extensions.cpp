@@ -196,14 +196,13 @@ int CommonBlock::checkElements(int ids_cnt, uint16_t *ids, Extension **ids_ext){
 }
 
 void CommonBlock::fillHeader(char *buffer, uint8_t flags,uint8_t tag, uint16_t ext_map, uint16_t size){
-	struct common_record_s * record;
-	record = (common_record_s *) (buffer + offset_);
+	struct common_record_v0_s * record;
+	record = (common_record_v0_s *) (buffer + offset_);
 
 
 	record->type = 1; //type
 	record->size = size;
 	record->flags = flags;
-	record->exporter_ref = tag; //tag
 	record->ext_map = ext_map; //ext_map
 }
 
@@ -211,8 +210,8 @@ void CommonBlock::fillHeader(char *buffer, uint8_t flags,uint8_t tag, uint16_t e
 uint16_t CommonBlock::fill(uint16_t id, uint16_t size, uint8_t *element_data
 		,char *buffer, struct FlowStats *stat){
 
-	struct common_record_s * record;
-	record = (common_record_s *) (buffer + offset_);
+	struct common_record_v0_s * record;
+	record = (common_record_v0_s *) (buffer + offset_);
 	int factor = 1000;
 	uint64_t tmp1 = 0;
 	uint64_t tmp2 = 0;
@@ -271,7 +270,7 @@ uint16_t CommonBlock::fill(uint16_t id, uint16_t size, uint8_t *element_data
 		record->fwd_status = element_data[0];
 		break;
 	case TCP_FLAGS:
-		record->tcp_flags = element_data[0];
+		record->tcp_flags = element_data[1];
 		break;
 	case PROTOCOL:
 		record->prot = element_data[0];

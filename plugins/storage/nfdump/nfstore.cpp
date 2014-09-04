@@ -169,10 +169,10 @@ int processStartupXML(char *params, struct nfdumpConfig* c){
 
 		tmp=ie.node().child_value("ident");
 		if(tmp != ""){
-			if(tmp.length() >= IdentLen){
-				tmp.resize(IdentLen);
+			if(tmp.length() >= IDENTLEN){
+				tmp.resize(IDENTLEN);
 				c->ident = tmp;
-				MSG_WARNING(MSG_MODULE,"Identification string is too long (max length is %u)",IdentLen -1);
+				MSG_WARNING(MSG_MODULE,"Identification string is too long (max length is %u)",IDENTLEN -1);
 				MSG_WARNING(MSG_MODULE,"Identification string set to: %s",tmp.c_str());
 			} else{
 				c->ident = tmp;

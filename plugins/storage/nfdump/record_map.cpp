@@ -69,7 +69,7 @@ void FileHeader::newHeader(FILE *f, struct nfdumpConfig* conf){
 	if(conf->compression){
 		header_.flags = header_.flags | FLAG_COMPRESSED;
 	}
-	memset(header_.ident,0,IdentLen);
+	memset(header_.ident,0,IDENTLEN);
 	strcpy(header_.ident,conf->ident.c_str());
 	position_ = ftell(f);
 	updateHeader(f);
@@ -154,7 +154,6 @@ void BlockHeader::newBlock(FILE *f){
 	block_.NumRecords = 0;
 	block_.size = 0;
 	block_.id = 2;
-	block_.pad = 0;
 	position_ = ftell(f);
 	updateBlock(f);
 }

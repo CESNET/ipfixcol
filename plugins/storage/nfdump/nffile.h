@@ -1,4 +1,5 @@
 /*
+ *  Copyright (c) 2014, Peter Haag
  *  Copyright (c) 2009, Peter Haag
  *  Copyright (c) 2008, SWITCH - Teleinformatikdienste fuer Lehre und Forschung
  *  All rights reserved.
@@ -11,7 +12,7 @@
  *   * Redistributions in binary form must reproduce the above copyright notice, 
  *     this list of conditions and the following disclaimer in the documentation 
  *     and/or other materials provided with the distribution.
- *   * Neither the name of SWITCH nor the names of its contributors may be 
+ *   * Neither the name of the author nor the names of its contributors may be 
  *     used to endorse or promote products derived from this software without 
  *     specific prior written permission.
  *  
@@ -42,14 +43,35 @@
 #include <stddef.h>
 #endif
 
-#define IdentLen	128
-#define IdentNone	"none"
+#define IDENTLEN	128
+#define IDENTNONE	"none"
 
 #define NF_EOF		 	 0
 #define NF_ERROR		-1
 #define NF_CORRUPT		-2
 
 #define NF_DUMPFILE         "nfcapd.current"
+
+/* 
+ * output buffer max size, before writing data to the file 
+ * used to cache flows before writing to disk. size: tradeoff between
+ * size and time to flush to disk. Do not delay collector with long I/O
+ */
+#define WRITE_BUFFSIZE 1048576
+
+/*
+ * use this buffer size to allocate memory for the output buffer
+ * data other than flow records, such as histograms, may be larger than
+ * WRITE_BUFFSIZE and have potentially more time to flush to disk
+ */
+#define BUFFSIZE (5*WRITE_BUFFSIZE)
+
+/* if the output buffer reaches this limit, it gets flushed. This means,
+ * that 0.5MB input data may produce max 1MB data in output buffer, otherwise
+ * a buffer overflow may occur, and data does not get processed correctly.
+ * However, every Process_vx function checks buffer boundaries.
+ */
+
 /*
  * nfdump binary file layout
  * =========================
@@ -73,17 +95,18 @@ typedef struct file_header_s {
 
 	uint32_t	flags;				
 #define NUM_FLAGS		3
-#define FLAG_COMPRESSED 	0x1
-#define FLAG_ANONYMIZED 	0x2
-#define FLAG_EXTENDED_STATS 0x4
+#define FLAG_COMPRESSED 	0x1		// flow records are compressed
+#define FLAG_ANONYMIZED 	0x2		// flow data are anonimized 
+#define FLAG_CATALOG		0x4		// has a file catalog record after stat record
+
 									/*
 										0x1 File is compressed with LZO1X-1 compression
 									 */
 	uint32_t	NumBlocks;			// number of data blocks in file
-	char		ident[IdentLen];	// string identifier for this file
+	char		ident[IDENTLEN];	// string identifier for this file
 } file_header_t;
 
-/* FLAG_EXTENDED_STATS bit = 0 
+/* 
  * Compatible with nfdump x.x.x file format: After the file header an 
  * inplicit stat record follows, which contains the statistics 
  * information about all netflow records in this file.
@@ -118,10 +141,6 @@ typedef struct stat_record_s {
 	uint32_t	sequence_failure;
 } stat_record_t;
 
-/* FLAG_EXTENDED_STATS bit = 1 
- * not yet implemented
- */
-
 typedef struct stat_header_s {
 	uint16_t	type;		// stat record type
 // compatible stat type nfdump 1.5.x in new extended stat record type
@@ -145,22 +164,77 @@ typedef struct data_block_header_s {
 	uint32_t	NumRecords;		// number of data records in data block
 	uint32_t	size;			// size of this block in bytes without this header
 	uint16_t	id;				// Block ID == DATA_BLOCK_TYPE_2
-	uint16_t	pad;			// unused align 32 bit
+	uint16_t	flags;			// 0 - kompatibility
+								// 1 - block uncompressed
+								// 2 - block compressed
 } data_block_header_t;
 
-// compat nfdump 1.5.x v1 type
-#define DATA_BLOCK_TYPE_1	1
-#define DATA_BLOCK_TYPE_2	2
+// compat nfdump 1.5.x data block type
+#define DATA_BLOCK_TYPE_1		1
 
- /*
- * Generic fle handle for writing files
+// nfdump 1.6.x data block type
+#define DATA_BLOCK_TYPE_2		2
+
+/*
+ *
+ * Block type 3
+ * ============
+ * same block header as type 2. Used for data other than flow data - e.g. histograms. Important difference:
+ * included data records have type L_record_header_t headers in order to allow larger data records.
+ *
+ */ 
+
+#define Large_BLOCK_Type	3
+
+typedef struct L_record_header_s {
+ 	// record header
+ 	uint32_t	type;
+ 	uint32_t	size;
+} L_record_header_t;
+
+/*
+ *
+ * Catalog Block
+ * =============
+ * introduces a file catalog for nfdump files. Not yet really used in nfdump-1.6.x
+ * The catalog will get implemented later - most likely 1.7
+ * The flag FLAG_CATALOG is used to flag the file for having a catalog
+ * 
+ */
+
+#define CATALOG_BLOCK	4
+
+typedef struct catalog_s {
+	uint32_t	NumRecords;		// set to the number of catalog entries
+	uint32_t	size;			// sizeof(nffile_catalog_t) without this header (-12)
+	uint16_t	id;				// Block ID == CATALOG_BLOCK
+	uint16_t	pad;			// unused align 32 bit
+
+	off_t		reserved;		// reserved, set to 0;
+
+	// catalog data
+	struct catalog_entry_s {
+		uint32_t	type;		// what catalog type does the entry point to
+// type = 0 reserved
+#define EXPORTER_table	1
+#define MAX_CATALOG_ENTRIES 16
+		off_t		offset;			// point to a data block with standard header data_block_header_t
+	} entries[MAX_CATALOG_ENTRIES];	// the number of types we currently have defined - may grow in future
+
+} catalog_t;
+
+/*
+ * Generic file handle for reading/writing files
+ * if a file is read only writeto and block_header are NULL
  */
 typedef struct nffile_s {
 	file_header_t		*file_header;	// file header
-	data_block_header_t	*block_header;	// output buffer
-	void				*writeto;		// pointer into buffer for next availabe memory
+	data_block_header_t	*block_header;	// buffer
+	void				*buff_ptr;		// pointer into buffer for read/write blocks/records
+	stat_record_t 		*stat_record;	// flow stat record
+	catalog_t			*catalog;		// file catalog
 	int					_compress;		// data compressed flag
-	int					wfd;			// file id
+	int					fd;				// file descriptor
 } nffile_t;
 
 /* 
@@ -178,11 +252,27 @@ typedef struct nffile_s {
  * Type 0: reserved
  * Type 1: Common netflow record incl. all record extensions
  * Type 2: Extension map
- * Type 3: Exporter meta record */
+ * Type 3: xstat - port histogram record
+ * Type 4: xstat - bpp histogram record
+ */
 
-#define CommonRecordType	1
+#define CommonRecordV0Type	1
 #define ExtensionMapType	2
-#define ExporterType		3
+#define PortHistogramType	3
+#define BppHistogramType	4
+
+// TC code - phased out
+#define ExporterRecordType	5
+#define SamplerRecordype	6
+
+// replaces TC Types
+#define ExporterInfoRecordType	7
+#define ExporterStatRecordType	8
+#define SamplerInfoRecordype	9
+
+// new extended Common Record as intermediate solution to overcome 255 exporters
+// requires moderate changes till 1.7
+#define CommonRecordType	10
 
  /* 
  * All records are 32bit aligned and layouted in a 64bit array. The numbers placed in () refer to the netflow v9 type id.
@@ -200,10 +290,9 @@ typedef struct nffile_s {
  * bit  2:	0: 32bit dOctets	 1: 64bit dOctets 
  * bit  3:  0: IPv4 next hop     1: IPv6 next hop
  * bit  4:  0: IPv4 BGP next hop 1: BGP IPv6 next hop
- * bit  5:  0:                   1:
- * bit  6:  0:                   1:
- * bit  7:  0:                   1:
- * bit  8:  0: unsampled         1: sampled flow - sampling applied
+ * bit  5:  0: IPv4 exporter IP  1: IPv6 exporter IP
+ * bit  6:  0: flow              1: event
+ * bit  7:  0: unsampled         1: sampled flow - sampling applied
  * 
  * Required extensions: 1,2,3
  * ------------------------------
@@ -214,7 +303,7 @@ typedef struct nffile_s {
  * Extension 3: 32 or 64 bit byte counter           Flags bit 2: 0: 32bit, 1: 64bit
  * 
  * Commmon record - extension 0
- * *+---+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
  * |  - |       0      |      1       |      2       |      3       |      4       |      5       |      6       |      7       |
  * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
  * |  0 |         record type == 1    |             size            |    flags     |    tag       |           ext. map          |
@@ -225,6 +314,20 @@ typedef struct nffile_s {
  * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
  * |  3 |           srcport (7)       |   dstport(11)/ICMP (32)     |
  * +----+--------------+--------------+--------------+--------------+
+ *
+ * Commmon record - extension 0 - Type 10
+ * required for larger exporter ID reference 
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  - |       0      |      1       |      2       |      3       |      4       |      5       |      6       |      7       |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  0 |         record type == 10   |             size            |            flags            |           ext. map          |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  1 |          msec_first         |           msec_last         |                          first (22)                       |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  2 |                          last (21)                        |fwd_status(89)| tcpflags (6) |  proto (4)   |  src tos (5) |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  3 |           srcport (7)       |   dstport(11)/ICMP (32)     |          exporter ID        |           <free>            |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
 
  * 
  */
@@ -243,20 +346,50 @@ typedef struct common_record_s {
  	uint16_t	size;
 
 	// record meta data
-	uint8_t		flags;
+	uint16_t	flags;
 #define FLAG_IPV6_ADDR	1
 #define FLAG_PKG_64		2
 #define FLAG_BYTES_64	4
 #define FLAG_IPV6_NH	8
 #define FLAG_IPV6_NHB	16
 #define FLAG_IPV6_EXP	32
+#define FLAG_EVENT		64
 #define FLAG_SAMPLED	128
 
 #define SetFlag(var, flag) 		(var |= flag)
 #define ClearFlag(var, flag) 	(var &= ~flag)
 #define TestFlag(var, flag)		(var & flag)
 
-	uint8_t		exporter_ref;
+ 	uint16_t	ext_map;
+
+	// netflow common record
+ 	uint16_t	msec_first;
+ 	uint16_t	msec_last;
+ 	uint32_t	first;
+ 	uint32_t	last;
+ 
+ 	uint8_t		fwd_status;
+ 	uint8_t		tcp_flags;
+ 	uint8_t		prot;
+ 	uint8_t		tos;
+ 	uint16_t	srcport;
+ 	uint16_t	dstport;
+
+	uint16_t	exporter_sysid;
+	uint16_t	reserved;
+
+	// link to extensions
+ 	uint32_t	data[1];
+} common_record_t;
+
+typedef struct common_record_v0_s {
+ 	// record head
+ 	uint16_t	type;
+ 	uint16_t	size;
+
+	// record meta data
+	uint8_t		flags;
+	uint8_t		exporter_sysid;
  	uint16_t	ext_map;
 
 	// netflow common record
@@ -274,8 +407,12 @@ typedef struct common_record_s {
 
 	// link to extensions
  	uint32_t	data[1];
-} common_record_t;
-#define COMMON_RECORD_DATA_SIZE (sizeof(common_record_t) - sizeof(uint32_t) )
+} common_record_v0_t;
+
+#define COMMON_RECORD_DATA_SIZE   (sizeof(common_record_t) - sizeof(uint32_t) )
+#define COMMON_RECORDV0_DATA_SIZE (sizeof(common_record_v0_t) - sizeof(uint32_t) )
+
+#define COMMON_BLOCK	0
 
  /* 
  * Required extensions:
@@ -579,7 +716,7 @@ typedef struct tpl_ext_13_s {
 /* 
  * Out packet counter size
  * ------------------------
- * 2 byte
+ * 4 byte
  * Extension 14: 
  * +----+--------------+--------------+--------------+--------------+
  * |  0 |                        out pkts (24)                      |
@@ -790,12 +927,256 @@ typedef struct tpl_ext_25_s {
 	uint8_t		data[4];	// points to further data
 } tpl_ext_25_t;
 
+/*
+ * BGP prev/next adjacent AS
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  0 |                  bgpNextAdjacentAsNumber(128)             |                bgpPrevAdjacentAsNumber(129)               |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ */
+#define EX_BGPADJ 26
+typedef struct tpl_ext_26_s {
+	uint32_t	bgpNextAdjacentAS;
+	uint32_t	bgpPrevAdjacentAS;
+	uint8_t		data[4];	// points to further data
+} tpl_ext_26_t;
+
+/*
+ * time flow received in ms
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  0 |                                                    T received()                                                       |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ */
+#define EX_RECEIVED		27
+typedef struct tpl_ext_27_s {
+	union {
+		uint64_t	received;
+		uint32_t	v[2];
+	};
+	uint8_t		data[4];	// points to further data
+} tpl_ext_27_t;
+
+
+
+#define EX_RESERVED_1	28
+#define EX_RESERVED_2	29
+#define EX_RESERVED_3	30
+#define EX_RESERVED_4	31
+#define EX_RESERVED_5	32
+#define EX_RESERVED_6	33
+#define EX_RESERVED_7	34
+#define EX_RESERVED_8	35
+#define EX_RESERVED_9	36
+
+/*
+ * NSEL Common block
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  0 |                                           NF_F_FLOW_CREATE_TIME_MSEC(152)                                             |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  1 |                      NF_F_CONN_ID(148)                    |i type(176/8) |i code(177/9) |EVT(40005/233)|    fill      |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  2 |   NF_F_FW_EXT_EVENT(33002)  |            fill2            |
+ * +----+--------------+--------------+--------------+--------------+
+ * * EVT: NF_F_FW_EVENT
+ * * XEVT: NF_F_FW_EXT_EVENT
+ */
+#define EX_NSEL_COMMON	37
+typedef struct tpl_ext_37_s {
+	uint64_t	event_time;
+	uint32_t	conn_id;
+	union {
+		struct {
+#ifdef WORDS_BIGENDIAN
+			uint8_t		icmp_type;
+			uint8_t		icmp_code;
+#else
+			uint8_t		icmp_code;
+			uint8_t		icmp_type;
+#endif
+		};
+		uint16_t nsel_icmp;
+	};
+	uint8_t		fw_event;
+	uint8_t		fill;
+	uint16_t	fw_xevent;
+	uint16_t	fill2;
+	uint8_t		data[4];	// points to further data
+} tpl_ext_37_t;
+
+/*
+ * NSEL/NEL xlate ports
+ * +----+--------------+--------------+--------------+--------------+
+ * |  0 |  NF_F_XLATE_SRC_PORT(227)   |  NF_F_XLATE_DST_PORT(228)   |
+ * +----+--------------+--------------+--------------+--------------+
+ * ASA 8.4 compatibility mapping 40003 -> 227
+ * ASA 8.4 compatibility mapping 40004 -> 228
+ */
+#define EX_NSEL_XLATE_PORTS	38
+typedef struct tpl_ext_38_s {
+	uint16_t	xlate_src_port;
+	uint16_t	xlate_dst_port;
+	uint8_t		data[4];	// points to further data
+} tpl_ext_38_t;
+
+/*
+ * NSEL xlate v4 IP address
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  0 |                NF_F_XLATE_SRC_ADDR_IPV4(225)              |                NF_F_XLATE_DST_ADDR_IPV4(226)              |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * ASA 8.4 compatibility mapping 40001 -> 225
+ * ASA 8.4 compatibility mapping 40002 -> 226
+ */
+#define EX_NSEL_XLATE_IP_v4	39
+typedef struct tpl_ext_39_s {
+	uint32_t	xlate_src_ip;
+	uint32_t	xlate_dst_ip;
+	uint8_t		data[4];	// points to further data
+} tpl_ext_39_t;
+
+/*
+ * NSEL xlate v6 IP address - not yet implemented by CISCO
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  0 |                                                         xlate src ip (281)                                            |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  1 |                                                         xlate src ip (281)                                            |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  2 |                                                         xlate dst ip (282)                                            |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  3 |                                                         xlate dst ip (282)                                            |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ */
+#define EX_NSEL_XLATE_IP_v6	40
+typedef struct tpl_ext_40_s {
+	uint64_t	xlate_src_ip[2];
+	uint64_t	xlate_dst_ip[2];
+	uint8_t		data[4];	// points to further data
+} tpl_ext_40_t;
+
+
+/*
+ * NSEL ACL ingress/egress acl ID
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  0 |                                            NF_F_INGRESS_ACL_ID(33000)                                                 |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  1 |                 NF_F_INGRESS_ACL_ID(33000)                |               NF_F_EGRESS_ACL_ID(33001)                   |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  2 |                                            NF_F_EGRESS_ACL_ID(33001)                                                  |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ */
+#define EX_NSEL_ACL		41
+typedef struct tpl_ext_41_s {
+	uint32_t	ingress_acl_id[3];
+	uint32_t	egress_acl_id[3];
+	uint8_t		data[4];	// points to further data
+} tpl_ext_41_t;
+
+/*
+ * NSEL ACL username
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  0 |                                                  NF_F_USERNAME(40000)                                                 |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  1 |                                                                                                                       |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  2 |                                                                                                                       |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ */
+#define EX_NSEL_USER	42
+typedef struct tpl_ext_42_s {
+	char		username[24];
+	uint8_t		data[4];	// points to further data
+} tpl_ext_42_t;
+
+/*
+ * NSEL ACL username max
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  0 |                                                  NF_F_USERNAME(40000)                                                 |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * | .. |                                                                                                                       |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  8 |                                                                                                                       |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ */
+#define EX_NSEL_USER_MAX 43
+typedef struct tpl_ext_43_s {
+	char		username[72];
+	uint8_t		data[4];	// points to further data
+} tpl_ext_43_t;
+
+
+#define EX_NSEL_RESERVED 44
+
+/*
+ * nprobe extensions
+ */
+
+/*
+ * latency extension 
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  0 |                                           client_nw_delay_usec (57554/57554)                                          |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  1 |                                           server_nw_delay_usec (57556/57557)                                          |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  2 |                                           appl_latency_usec (57558/57559)                                             |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ */
+#define EX_LATENCY 45
+typedef struct tpl_ext_latency_s {
+	uint64_t	client_nw_delay_usec;
+	uint64_t	server_nw_delay_usec;
+	uint64_t	appl_latency_usec;
+	uint8_t		data[4];	// points to further data
+} tpl_ext_latency_t;
+
+/*
+ * NEL xlate ports
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  0 |NAT_EVENT(230)|     flags    |            fill             |                  NF_N_EGRESS_VRFID(235)                   |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  1 |                 NF_N_INGRESS_VRFID(234)                   |
+ * +----+--------------+--------------+--------------+--------------+
+ */
+#define EX_NEL_COMMON 46
+typedef struct tpl_ext_46_s {
+	uint8_t		nat_event;
+	uint8_t		flags;
+	uint16_t	fill;
+	uint32_t	egress_vrfid;
+	uint32_t	ingress_vrfid;
+	uint8_t		data[4];	// points to further data
+} tpl_ext_46_t;
+
+#define EX_NEL_GLOBAL_IP_v4	47
+/* 
+ * no longer used. Mapped to NSEL extension EX_NSEL_XLATE_IP_v4
+ */
+typedef struct tpl_ext_47_s {
+	uint32_t    nat_inside;
+	uint32_t    nat_outside;
+	uint8_t     data[4];    // points to further data
+} tpl_ext_47_t;
+
+/*
+ * NEL Port Block Allocation
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  0 | NF_F_XLATE_PORT_BLOCK_START |  NF_F_XLATE_PORT_BLOCK_END  |  NF_F_XLATE_PORT_BLOCK_STEP |  NF_F_XLATE_PORT_BLOCK_SIZE |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ */
+#define EX_PORT_BLOCK_ALLOC	48
+typedef struct tpl_ext_48_s {
+	uint16_t	block_start;
+	uint16_t	block_end;
+	uint16_t	block_step;
+	uint16_t	block_size;
+	uint8_t     data[4];    // points to further data
+} tpl_ext_48_t;
+
+#define EX_NEL_RESERVED_1	49
+
 
 /* 
  * 
  * 
- * Extension map:
- * =============
+ * V1 Extension map:
+ * =================
  * The extension map replaces the individual flags in v1 layout. With many possible extensions and combination of extensions
  * an extension map is more efficient and flexible while reading and decoding the record.
  * In current version of nfdump, up to 65535 individual extension maps are supported, which is considered to be enough.
@@ -834,10 +1215,185 @@ typedef struct extension_map_s {
 } extension_map_t;
 
 
-// see nfx.c - extension_descriptor
-#define DefaultExtensions  "1,2"
+/* 
+ * 
+ * 
+ * V2 Extension map:
+ * =================
+ * The V2 extension map replaces the V1 extension map. The basic extension architecture remains the same. V2 extensions
+ * adds extra information about the extension such as size and offset within the packed record. This allows more 
+ * flexibility by using flexible length extensions up to the extension defined maximum. With the introduction of V2
+ * extension maps, the old master_record will become obsolete in near future.
+ * Implementation wise: if extension size is set to 0 - the first 2 bytes of the extension data contains the size of
+ * the extension. Extensions with flexible size must only appended at the end of the record block.
+ * 
+ * For each available extension record, the ids are recorded in the extension map in the order they appear.
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  - |	     0     |      1       |      2       |      3       |      4       |      5       |      6       |      7       |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  0 |       record type == 10     |             size            |            map id           |      max extension size     |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  1 |       extension id 1        |   offset extension id 1     |        extension id 2       |    offset extension id 2    | 
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  1 |       extension id 3        |   offset extension id 3     |        extension id 4       |    offset extension id 4    | 
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * ...
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  n |       extension id n        |      size extension id n    |              0              |              0              |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ */
 
-// typedef struct master_record_s master_record_t;
+/* extension IDs above are 16 bit integers. So themax number of available extensions is */
+#define MAX_EXTENSIONS 65536
+/* XXX extension 1.7
+typedef struct extension_map17_s {
+ 	// record head
+ 	uint16_t	type;	// is ExtensionMapType2
+ 	uint16_t	size;	// size of full map incl. header
+
+	// map data
+	uint16_t	map_id;			// identifies this map
+ 	uint16_t	extension_size; // max size of all extensions
+	struct ex_def_s {
+		uint16_t	id;		// extension id
+		uint16_t	offset;	// max extension size
+	} ex[1];				// array of all extensions
+} extension_map17_t;
+*/
+
+// see nfx.c - extension_descriptor
+#ifdef NSEL
+// Defaults for NSEL
+#define DefaultExtensions  "1,8,26,27,28,29,30,31"
+#else
+// Collector netflow defaults
+#define DefaultExtensions  "1,2"
+#endif
+
+/*
+ * nfcapd writes an info stat record for each new exporter
+ * 
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  - |	     0     |      1       |      2       |      3       |      4       |      5       |      6       |      7       |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  0 |       record type == 7      |             size            |                          version                          |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  1 |                                                                                                                       |
+ * +----+--------------+--------------+--------------+----------  ip   ------------+--------------+--------------+--------------+
+ * |  2 |                                                                                                                       |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  3 |          sa_family          |            sysid            |                             id                            |      
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ */
+typedef struct exporter_info_record_s {
+	record_header_t	header;
+
+	// exporter version
+	uint32_t 	version;
+#define SFLOW_VERSION  9999
+
+	// IP address
+	ip_addr_t	ip;
+	uint16_t	sa_family;
+
+	// internal assigned ID
+	uint16_t	sysid;
+
+	// exporter ID/Domain ID/Observation Domain ID assigned by the device
+	uint32_t	id;
+
+} exporter_info_record_t;
+
+/*
+ * nfcapd writes a stat record at the end of the file which contains the exporter statistics.
+ * 
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  - |	     0     |      1       |      2       |      3       |      4       |      5       |      6       |      7       |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  0 |       record type == 8      |             size            |                         stat_count                        |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  1 |                           sysid[0]                        |                      sequence_failure[0]                  |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  2 |                                                        packets[0]                                                     |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  3 |                                                         flows[0]                                                      |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * ... more stat records [x], one for each exporter
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ */
+typedef struct exporter_stats_record_s {
+	record_header_t	header;
+
+	uint32_t	stat_count;		// number of stat records 
+	
+	struct exporter_stat_s {
+		uint32_t	sysid;				// identifies the exporter
+		uint32_t	sequence_failure;	// number of sequence failues
+		uint64_t	packets;			// number of packets sent by this exporter
+		uint64_t	flows;				// number of flow records sent by this exporter
+	} stat[1];
+
+} exporter_stats_record_t;
+
+
+/*
+ * nfcapd writes a sampler record for each new sampler announced
+ * 
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  - |	     0     |      1       |      2       |      3       |      4       |      5       |      6       |      7       |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  0 |       record type == 9      |             size            |                             id                            |
+ * +----+--------------+--------------+--------------+--------------+--------------+--------------+--------------+--------------+
+ * |  1 |                          interval                         |             mode            |       exporter_sysid        |
+ * +----+--------------+--------------+--------------+-----------------------------+--------------+--------------+--------------+
+ */
+typedef struct sampler_info_record_s {
+	record_header_t	header;
+
+	// sampler data
+	int32_t		id;				// id assigned by the exporting device
+	uint32_t	interval;		// sampling interval
+	uint16_t	mode;			// sampling mode
+	uint16_t	exporter_sysid; // internal reference to exporter
+
+} sampler_info_record_t;
+
+
+
+/*
+ * TC test code - records will disappear ..
+ */
+typedef struct exporter_record_s {
+	record_header_t	header;
+
+	// exporter data
+	uint32_t 	version;		// make sure it's a version 9 exporter 
+
+	// IP address
+	uint32_t	sa_family;
+	ip_addr_t	ip;
+
+	// internal assigned ID
+	uint32_t	sysid;
+
+	// exporter info
+	uint32_t	exporter_id;
+	uint32_t	sequence_failure;
+
+} exporter_record_t;
+
+typedef struct sampler_record_s {
+	record_header_t	header;
+
+	// reference to exporter
+	uint32_t	exporter_sysid;
+
+	// sampler data
+	int32_t		id;
+	uint32_t	interval;
+	uint8_t		mode;
+} sampler_record_t;
+
 
 /* the master record contains all possible records unpacked */
 typedef struct master_record_s {
@@ -847,15 +1403,13 @@ typedef struct master_record_s {
 
 	uint16_t	type;			// index 0  0xffff 0000 0000 0000
 	uint16_t	size;			// index 0	0x0000'ffff'0000 0000
-	uint8_t		flags;			// index 0	0x0000'0000'ff00'0000
-	uint8_t		exporter_ref;	// index 0	0x0000'0000'00ff'0000
+	uint16_t	flags;			// index 0	0x0000'0000'ffff'0000
 	uint16_t	ext_map;		// index 0	0x0000'0000'0000'ffff
-#ifdef WORDS_BIGENDIAN
 #	define OffsetRecordFlags 	0
+#ifdef WORDS_BIGENDIAN
 #	define MaskRecordFlags  	0x00000000ff000000LL
 #	define ShiftRecordFlags 	24
 #else
-#	define OffsetRecordFlags 	0
 #	define MaskRecordFlags  	0x000000ff00000000LL
 #	define ShiftRecordFlags 	32
 #endif
@@ -910,73 +1464,58 @@ typedef struct master_record_s {
 #	define ShiftTos  			56
 #endif
 
-	// extension 8
 	uint16_t	srcport;		// index 3	0xffff'0000'0000'0000
 	uint16_t	dstport;		// index 3  0x0000'ffff'0000'0000
+	uint16_t	exporter_sysid; // index 3	0x0000'0000'ffff'0000
+
 	union {
 		struct {
-			uint8_t	dst_tos;	// index 3  0x0000'0000'ff00'0000
-			uint8_t	dir;		// index 3  0x0000'0000'00ff'0000
-			uint8_t	src_mask;	// index 3  0x0000'0000'0000'ff00
-			uint8_t	dst_mask;	// index 3  0x0000'0000'0000'00ff
+#ifdef WORDS_BIGENDIAN
+			uint8_t		icmp_type;	// index 3  0x0000'0000'0000'ff00
+			uint8_t		icmp_code;	// index 3  0x0000'0000'0000'00ff
+#else
+			// little endian confusion ...
+			uint8_t		icmp_code;	
+			uint8_t		icmp_type;
+#endif
 		};
-		uint32_t	any;
+		uint16_t icmp;
 	};
+
+
 #ifdef WORDS_BIGENDIAN
 #	define OffsetPort 			3
+#	define OffsetExporterSysID	3
 #	define MaskSrcPort			0xffff000000000000LL
 #	define ShiftSrcPort			48
 
 #	define MaskDstPort			0x0000ffff00000000LL
 #	define ShiftDstPort 		32	
 
-#	define MaskICMPtype			0x0000ff0000000000LL
-#	define ShiftICMPtype 		40
-#	define MaskICMPcode			0x000000ff00000000LL
-#	define ShiftICMPcode 		32
+#	define MaskExporterSysID  	0x00000000ffff0000LL
+#	define ShiftExporterSysID 	16
 
-#	define OffsetDstTos			3
-#	define MaskDstTos			0x00000000ff000000LL
-#	define ShiftDstTos  		24
-
-#	define OffsetDir			3
-#	define MaskDir				0x0000000000ff0000LL
-#	define ShiftDir  			16
-
-#	define OffsetMask			3
-#	define MaskSrcMask			0x000000000000ff00LL
-#	define ShiftSrcMask  		8
-
-#	define MaskDstMask			0x00000000000000ffLL
-#	define ShiftDstMask 		0
+#	define MaskICMPtype			0x000000000000ff00LL
+#	define ShiftICMPtype 		8
+#	define MaskICMPcode			0x00000000000000ffLL
+#	define ShiftICMPcode 		0
 
 #else
 #	define OffsetPort 			3
+#	define OffsetExporterSysID	3
 #	define MaskSrcPort			0x000000000000ffffLL
 #	define ShiftSrcPort			0
 
 #	define MaskDstPort			0x00000000ffff0000LL
 #	define ShiftDstPort 		16
 
-#	define MaskICMPtype			0x00000000ff000000LL
-#	define ShiftICMPtype 		24
-#	define MaskICMPcode			0x0000000000ff0000LL
-#	define ShiftICMPcode 		16
+#	define MaskExporterSysID  	0x0000ffff00000000LL
+#	define ShiftExporterSysID 	32
 
-#	define OffsetDstTos			3
-#	define MaskDstTos			0x000000ff00000000LL
-#	define ShiftDstTos  		32
-
-#	define OffsetDir			3
-#	define MaskDir				0x0000ff0000000000LL
-#	define ShiftDir  			40
-
-#	define OffsetMask			3
-#	define MaskSrcMask			0x00ff000000000000LL
-#	define ShiftSrcMask 		48
-
-#	define MaskDstMask			0xff00000000000000LL
-#	define ShiftDstMask  		56
+#	define MaskICMPtype			0xff00000000000000LL
+#	define ShiftICMPtype 		56
+#	define MaskICMPcode			0x00ff000000000000LL
+#	define ShiftICMPcode 		48
 #endif
 
 	// extension 4 / 5
@@ -1041,6 +1580,9 @@ typedef struct master_record_s {
 			uint64_t	dstaddr[2];	// dstaddr[0-1] index 8 0xffff'ffff'ffff'ffff
 									// dstaddr[2-3] index 9 0xffff'ffff'ffff'ffff
 		} _v6;
+		struct _ip64_s {
+			uint64_t	addr[4];
+		} _ip_64;
 	} ip_union;
 
 #ifdef WORDS_BIGENDIAN
@@ -1134,26 +1676,67 @@ typedef struct master_record_s {
 #	define OffsetBGPNexthopv6b	15
 #endif
 
+	// extension 8
+	union {
+		struct {
+			uint8_t	dst_tos;	// index 16 0xff00'0000'0000'0000
+			uint8_t	dir;		// index 16 0x00ff'0000'0000'0000
+			uint8_t	src_mask;	// index 16 0x0000'ff00'0000'0000
+			uint8_t	dst_mask;	// index 16 0x0000'00ff'0000'0000
+		};
+		uint32_t	any;
+	};
+
 	// extension 13
-	uint16_t	src_vlan;		// index 16 0xffff'0000'0000'0000
-	uint16_t	dst_vlan;		// index 16 0x0000'ffff'0000'0000
-	uint32_t	fill1;			// align 64bit word
+	uint16_t	src_vlan;		// index 16 0x0000'0000'ffff'0000
+	uint16_t	dst_vlan;		// index 16 0x0000'0000'0000'ffff
 
 #ifdef WORDS_BIGENDIAN
-#	define OffsetVlan 			16	
-#	define MaskSrcVlan  		0xffff000000000000LL
-#	define ShiftSrcVlan 		48
+#	define OffsetDstTos			16
+#	define MaskDstTos			0xff00000000000000LL
+#	define ShiftDstTos  		56
 
-#	define MaskDstVlan  		0x0000ffff00000000LL
-#	define ShiftDstVlan 		32
+#	define OffsetDir			16
+#	define MaskDir				0x00ff000000000000LL
+#	define ShiftDir  			48
+
+#	define OffsetMask			16
+#	define MaskSrcMask			0x0000ff0000000000LL
+#	define ShiftSrcMask  		40
+
+#	define MaskDstMask			0x000000ff00000000LL
+#	define ShiftDstMask 		32
+
+#	define OffsetVlan 			16	
+#	define MaskSrcVlan  		0x00000000ffff0000LL
+#	define ShiftSrcVlan 		16
+
+#	define MaskDstVlan  		0x000000000000ffffLL
+#	define ShiftDstVlan 		0
 
 #else
-#	define OffsetVlan 			16	
-#	define MaskSrcVlan  		0x000000000000ffffLL
-#	define ShiftSrcVlan 		0
+#	define OffsetDstTos			16
+#	define MaskDstTos			0x00000000000000ffLL
+#	define ShiftDstTos  		0
 
-#	define MaskDstVlan  		0x00000000ffff0000LL
-#	define ShiftDstVlan 		16
+#	define OffsetDir			16
+#	define MaskDir				0x000000000000ff00LL
+#	define ShiftDir  			8
+
+#	define OffsetMask			16
+#	define MaskSrcMask			0x0000000000ff0000LL
+#	define ShiftSrcMask  		16
+
+#	define MaskDstMask			0x00000000ff000000LL
+#	define ShiftDstMask 		24
+
+#	define OffsetVlan 			16	
+#	define MaskSrcVlan  		0x0000ffff00000000LL
+#	define ShiftSrcVlan 		32
+
+#	define MaskDstVlan  		0xffff000000000000LL
+#	define ShiftDstVlan 		48
+
 #endif
 
 	// extension 14 / 15
@@ -1245,6 +1828,7 @@ typedef struct master_record_s {
 	uint16_t	fill;			// fill	index 31 0xffff'0000'0000'0000
 	uint8_t		engine_type;	// type index 31 0x0000'ff00'0000'0000
 	uint8_t		engine_id;		// ID	index 31 0x0000'00ff'0000'0000
+	uint32_t	fill2;
 
 #	define OffsetRouterID	31
 #ifdef WORDS_BIGENDIAN
@@ -1259,6 +1843,217 @@ typedef struct master_record_s {
 #	define MaskEngineID			0x00000000FF000000LL
 #	define ShiftEngineID		24
 #endif
+
+	// IPFIX extensions in v9
+	// BGP next/prev AS
+	uint32_t	bgpNextAdjacentAS;	// index 32 0xffff'ffff'0000'0000
+	uint32_t	bgpPrevAdjacentAS;	// index 32 0x0000'0000'ffff'ffff
+
+// extension 18
+#	define OffsetBGPadj	32
+#ifdef WORDS_BIGENDIAN
+#	define MaskBGPadjNext		0xFFFFFFFF00000000LL
+#	define ShiftBGPadjNext		32
+#	define MaskBGPadjPrev		0x00000000FFFFFFFFLL
+#	define ShiftBGPadjPrev		0
+
+#else
+#	define MaskBGPadjNext		0x00000000FFFFFFFFLL
+#	define ShiftBGPadjNext		0
+#	define MaskBGPadjPrev		0xFFFFFFFF00000000LL
+#	define ShiftBGPadjPrev		32
+#endif
+
+	// NSEL extensions
+#ifdef NSEL 
+#define NSEL_BASE_OFFSET     (offsetof(master_record_t, conn_id) >> 3)
+
+	// common block
+#   define OffsetConnID  NSEL_BASE_OFFSET
+#   define OffsetNATevent  NSEL_BASE_OFFSET
+	uint32_t	conn_id;			// index OffsetConnID    0xffff'ffff'0000'0000
+	uint8_t		event;				// index OffsetConnID    0x0000'0000'ff00'0000
+#define FW_EVENT 1
+#define NAT_EVENT 2
+	uint8_t		event_flag;			// index OffsetConnID    0x0000'0000'00ff'0000
+	uint16_t	fw_xevent;			// index OffsetConnID    0x0000'0000'0000'ffff
+	uint64_t	event_time;			// index OffsetConnID +1 0x1111'1111'1111'1111
+#ifdef WORDS_BIGENDIAN
+#	define MaskConnID		0xFFFFFFFF00000000LL
+#	define ShiftConnID		32
+#	define MaskFWevent		0x00000000FF000000LL
+#	define ShiftFWevent		24
+#	define MasNATevent		0x00000000FF000000LL
+#	define ShiftNATevent	24
+#	define MaskFWXevent		0x000000000000FFFFLL
+#	define ShiftFWXevent	0
+#else
+#	define MaskConnID		0x00000000FFFFFFFFLL
+#	define ShiftConnID		0
+#	define MaskFWevent		0x000000FF00000000LL
+#	define ShiftFWevent		32
+#	define MasNATevent		0x000000FF00000000LL
+#	define ShiftNATevent	32
+#	define MaskFWXevent		0xFFFF000000000000LL
+#	define ShiftFWXevent	48
+
+#endif
+
+	// xlate ip/port
+#   define OffsetXLATEPort NSEL_BASE_OFFSET+2
+	uint16_t	xlate_src_port;		// index OffsetXLATEPort 0xffff'0000'0000'0000
+	uint16_t	xlate_dst_port;		// index OffsetXLATEPort 0x0000'ffff'0000'0000
+	uint32_t	xlate_flags;
+#   define OffsetXLATESRCIP NSEL_BASE_OFFSET+3
+	ip_addr_t	xlate_src_ip;		// ipv4  OffsetXLATESRCIP +1 0x0000'0000'ffff'ffff
+									// ipv6	 OffsetXLATESRCIP 	 0xffff'ffff'ffff'ffff
+									// ipv6	 OffsetXLATESRCIP	 0xffff'ffff'ffff'ffff
+
+	ip_addr_t	xlate_dst_ip;		// ipv4  OffsetXLATEDSTIP +1 0x0000'0000'ffff'ffff
+									// ipv6	 OffsetXLATEDSTIP 	 0xffff'ffff'ffff'ffff
+									// ipv6	 OffsetXLATEDSTIP 	 0xffff'ffff'ffff'ffff
+#ifdef WORDS_BIGENDIAN
+#	define MaskXLATESRCPORT	 0xFFFF000000000000LL
+#	define ShiftXLATESRCPORT 48
+#	define MaskXLATEDSTPORT	 0x0000FFFF00000000LL
+#	define ShiftXLATEDSTPORT 32
+
+#	define OffsetXLATESRCv4	 OffsetXLATESRCIP+1
+#	define MaskXLATEIPv4  	 0x00000000fFFFFFFFLL
+#	define ShiftXLATEIPv4 	 0
+
+#	define OffsetXLATESRCv6a OffsetXLATESRCIP
+#	define OffsetXLATESRCv6b OffsetXLATESRCIP+1
+
+#	define OffsetXLATEDSTv6a OffsetXLATESRCIP+2
+#	define OffsetXLATEDSTv6b OffsetXLATESRCIP+3
+
+#else
+#	define MaskXLATESRCPORT	 0x000000000000FFFFLL
+#	define ShiftXLATESRCPORT 0
+#	define MaskXLATEDSTPORT	 0x00000000FFFF0000LL
+#	define ShiftXLATEDSTPORT 16
+
+#	define OffsetXLATESRCv4	 OffsetXLATESRCIP+1
+#	define MaskXLATEIPv4  	 0xFFFFFFFF00000000LL
+#	define ShiftXLATEIPv4 	 32
+
+#	define OffsetXLATESRCv6a OffsetXLATESRCIP
+#	define OffsetXLATESRCv6b OffsetXLATESRCIP+1
+
+#	define OffsetXLATEDSTv6a OffsetXLATESRCIP+2
+#	define OffsetXLATEDSTv6b OffsetXLATESRCIP+3
+
+#endif
+
+
+	// ingress/egress ACL id
+#   define OffsetIngressAclId NSEL_BASE_OFFSET+7
+#	define OffsetIngressAceId NSEL_BASE_OFFSET+7
+#	define OffsetIngressGrpId NSEL_BASE_OFFSET+8
+#	define OffsetEgressAclId  NSEL_BASE_OFFSET+8
+#	define OffsetEgressAceId  NSEL_BASE_OFFSET+9
+#	define OffsetEgressGrpId  NSEL_BASE_OFFSET+9
+	uint32_t ingress_acl_id[3];	// index OffsetIngressAclId   0xffff'ffff'0000'0000
+								// index OffsetIngressAceId   0x0000'0000'ffff'ffff
+								// index OffsetIngressGrpId   0xffff'ffff'0000'0000
+	uint32_t egress_acl_id[3];	// index OffsetEgressAclId	  0x0000'0000'ffff'ffff
+								// index OffsetEgressAceId	  0xffff'ffff'0000'0000
+								// index OffsetEgressGrpId	  0x0000'0000'ffff'ffff
+#ifdef WORDS_BIGENDIAN
+#define MaskIngressAclId	0xffffffff00000000LL
+#define ShiftIngressAclId	32
+#define MaskIngressAceId	0x00000000ffffffffLL
+#define ShiftIngressAceId	0
+#define MaskIngressGrpId	0xffffffff00000000LL
+#define ShiftIngressGrpId	32
+#define MaskEgressAclId		0x00000000ffffffffLL
+#define ShiftEgressAclId	0
+#define MaskEgressAceId		0xffffffff00000000LL
+#define ShiftEgressAceId	32
+#define MaskEgressGrpId		0x00000000ffffffffLL
+#define ShiftEgressGrpId	0
+#else
+#define MaskIngressAclId	0x00000000ffffffffLL
+#define ShiftIngressAclId	0
+#define MaskIngressAceId	0xffffffff00000000LL
+#define ShiftIngressAceId	32
+#define MaskIngressGrpId	0x00000000ffffffffLL
+#define ShiftIngressGrpId	0
+#define MaskEgressAclId		0xffffffff00000000LL
+#define ShiftEgressAclId	32
+#define MaskEgressAceId		0x00000000ffffffffLL
+#define ShiftEgressAceId	0
+#define MaskEgressGrpId		0xffffffff00000000LL
+#define ShiftEgressGrpId	32
+#endif
+
+	// username
+#	define OffsetUsername  NSEL_BASE_OFFSET+10
+	char username[72];
+
+	// NAT extensions
+	// NAT event is mapped into ASA event
+#define NAT_BASE_OFFSET     (offsetof(master_record_t, ingress_vrfid) >> 3)
+	// common block
+#   define OffsetNELcommon  NEL_BASE_OFFSET
+#   define OffsetIVRFID  	NAT_BASE_OFFSET
+#   define OffsetEVRFID  	NAT_BASE_OFFSET
+#   define OffsetPortBlock	NAT_BASE_OFFSET+1
+	uint32_t	ingress_vrfid;	// OffsetIVRFID	   0xffff'ffff'0000'0000
+	uint32_t	egress_vrfid;	// OffsetEVRFID	   0x0000'0000'ffff'ffff
+
+	// Port block allocation
+	uint16_t	block_start;	// OffsetPortBlock 0xffff'0000'0000'0000
+	uint16_t	block_end;		// OffsetPortBlock 0x0000'ffff'0000'0000
+	uint16_t	block_step;		// OffsetPortBlock 0x0000'0000'ffff'0000
+	uint16_t	block_size;		// OffsetPortBlock 0x0000'0000'0000'ffff
+
+#ifdef WORDS_BIGENDIAN
+#	define MaskIVRFID			0xFFFFFFFF00000000LL
+#	define ShiftIVRFID			32
+#	define MaskEVRFID			0x00000000FFFFFFFFLL
+#	define ShiftEVRFID			0
+#	define MaskPortBlockStart	0xFFFF000000000000LL
+#	define ShiftPortBlockStart	48
+#	define MaskPortBlockEnd		0x0000FFFF00000000LL
+#	define ShiftPortBlockEnd	32
+#	define MaskPortBlockStep	0x00000000FFFF0000LL
+#	define ShiftPortBlockStep	16
+#	define MaskPortBlockSize	0x000000000000FFFFLL
+#	define ShiftPortBlockSize	0
+#else
+#	define MaskIVRFID			0x00000000FFFFFFFFLL
+#	define ShiftIVRFID			0
+#	define MaskEVRFID			0xFFFFFFFF00000000LL
+#	define ShiftEVRFID			32
+#	define MaskPortBlockStart	0x000000000000FFFFLL
+#	define ShiftPortBlockStart	0
+#	define MaskPortBlockEnd		0x00000000FFFF0000LL
+#	define ShiftPortBlockEnd	16
+#	define MaskPortBlockStep	0x0000FFFF00000000LL
+#	define ShiftPortBlockStep	32
+#	define MaskPortBlockSize	0xFFFF000000000000LL
+#	define ShiftPortBlockSize	48
+#endif
+
+#endif
+
+	// nprobe extensions
+	// latency extension
+	uint64_t	client_nw_delay_usec;	// index LATENCY_BASE_OFFSET 0xffff'ffff'ffff'ffff
+	uint64_t	server_nw_delay_usec;	// index LATENCY_BASE_OFFSET + 1 0xffff'ffff'ffff'ffff
+	uint64_t	appl_latency_usec;		// index LATENCY_BASE_OFFSET + 2 0xffff'ffff'ffff'ffff
+
+#define LATENCY_BASE_OFFSET     (offsetof(master_record_t, client_nw_delay_usec) >> 3)
+#   define OffsetClientLatency  LATENCY_BASE_OFFSET
+#   define OffsetServerLatency  LATENCY_BASE_OFFSET + 1
+#   define OffsetAppLatency     LATENCY_BASE_OFFSET + 2
+#   define MaskLatency          0xFFFFFFFFFFFFFFFFLL
+#   define ShiftLatency         0
+
+	// flow received time in ms
+	uint64_t	received;
 
 /* possible user extensions may fit here
  * - Put each extension into its own #ifdef
@@ -1282,7 +2077,11 @@ typedef struct master_record_s {
 
 #endif
 
+	// reference to exporter
+	exporter_info_record_t	*exp_ref;
+
 	// last entry in master record 
+#	define Offset_MR_LAST	offsetof(master_record_t, map_ref)
 	extension_map_t	*map_ref;
 } master_record_t;
 
@@ -1318,6 +2117,9 @@ typedef struct type_mask_s {
  * 				for IPv4 netflow v5/v7	12
  */
 
+/*
+ * exporter records
+ */
 
 #ifdef COMPAT15
 /*
@@ -1349,38 +2151,46 @@ typedef struct common_record_v1_s {
 
 #endif
 
+
+// a few handy shortcuts
+#define FILE_IS_COMPRESSED(n) ((n)->file_header->flags & FLAG_COMPRESSED)
+#define BLOCK_IS_COMPRESSED(n) ((n)->flags == 2 )
+#define HAS_CATALOG(n) ((n)->file_header->flags & FLAG_CATALOG)
+#define IP_ANONYMIZED(n) ((n)->file_header->flags & FLAG_ANONYMIZED)
+
 void SumStatRecords(stat_record_t *s1, stat_record_t *s2);
 
-int OpenFile(char *filename, stat_record_t **stat_record, char **err);
+nffile_t *OpenFile(char *filename, nffile_t *nffile);
 
-nffile_t *OpenNewFile(char *filename, nffile_t *nffile, int compressed, int anonymized, char **err);
+nffile_t *OpenNewFile(char *filename, nffile_t *nffile, int compressed, int anonymized, char *ident);
 
-int ChangeIdent(char *filename, char *Ident, char **err);
+nffile_t *AppendFile(char *filename);
+
+int ChangeIdent(char *filename, char *Ident);
 
 void PrintStat(stat_record_t *s);
 
 void QueryFile(char *filename);
 
-nffile_t *NewFile(void);
+stat_record_t *GetStatRecord(char *filename, stat_record_t *stat_record);
 
 nffile_t *DisposeFile(nffile_t *nffile);
 
-void CloseUpdateFile(nffile_t *nffile, stat_record_t *stat_record, char *ident, char **err );
+void CloseFile(nffile_t *nffile);
 
-int ReadBlock(int rfd, data_block_header_t *block_header, void *read_buff, char **err);
+int CloseUpdateFile(nffile_t *nffile, char *ident);
+
+int ReadBlock(nffile_t *nffile);
 
 int WriteBlock(nffile_t *nffile);
 
+int WriteExtraBlock(nffile_t *nffile, data_block_header_t *block_header);
+
+int RenameAppend(char *from, char *to);
+
 void UnCompressFile(char * filename);
 
-char *GetIdent(void);
-
-int IsCompressed(void);
-
-int IsAnonymized(void);
-
 void ExpandRecord_v1(common_record_t *input_record,master_record_t *output_record );
-
 
 #ifdef COMPAT15
 void Convert_v1_to_v2(void *mem);
