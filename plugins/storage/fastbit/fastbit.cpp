@@ -289,10 +289,11 @@ int process_startup_xml(char *params, struct fastbit_config* c){
 		namePrefix=ie.node().child_value("prefix");
 		c->prefix = namePrefix;
 
+		time ( &(c->last_flush));
+		
 		nameType=ie.node().child_value("type");
 		if(nameType == "time"){
 			c->dump_name = TIME;
-			time ( &(c->last_flush));
 			if(timeAligment == "yes"){
 				/* operators '/' and '*' are used for round down time to time window */
 				c->last_flush = ((c->last_flush/c->time_window) * c->time_window);
@@ -301,11 +302,9 @@ int process_startup_xml(char *params, struct fastbit_config* c){
 			strftime(formated_time,17,"%Y%m%d%H%M%S",timeinfo);
 			c->window_dir = c->prefix + std::string(formated_time) + "/";
 		} else if (nameType == "incremental") {
-			time ( &(c->last_flush));
 			c->dump_name = INCREMENTAL;
 			c->window_dir = c->prefix + "000000000001/";
 		} else if (nameType == "prefix") {
-			time ( &(c->last_flush));
 			c->dump_name = PREFIX;
 			if (c->prefix == "") {
 				c->prefix == "fbitfiles";
@@ -362,9 +361,6 @@ int storage_init (char *params, void **config){
 		MSG_ERROR(MSG_MODULE, "Can't allocate memory for config structure");
 		return 1;
 	}
-
-	/* TODO: check whether it is not set in process_startup_xml */
-	//c->last_flush = time(NULL);
 
 	/* parse configuration xml and updated configure structure according to it */
 	if(process_startup_xml(params, c)){
