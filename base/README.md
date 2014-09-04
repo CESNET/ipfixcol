@@ -22,7 +22,7 @@ It loads input, intermediate and output plugins on startup. Each input plugin ru
 
 IPFIXcol corresponds to [RFC7011](http://tools.ietf.org/html/rfc7011)
 
-![IPFIXcol](ipfixcol.png)
+![IPFIXcol](documentation/img/arch_scheme.png)
 
 ##<a name="conf"></a>Configuration
 
