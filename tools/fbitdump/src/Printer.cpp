@@ -130,7 +130,7 @@ void Printer::printHeader() const
 void Printer::printFooter(uint64_t numPrinted) const
 {
 	out << "Total rows outputed: " << numPrinted << std::endl << "Processed " << this->tableManager->getNumParts() << " tables with ";
-	Utils::formatNumber(this->tableManager->getInitRows(), out, false);
+	Utils::formatNumber(this->tableManager->getInitRows(), out, conf.getPlainNumbers());
 	out << " rows" << std::endl;
 
 	if (conf.getExtendedStats()) {
@@ -146,7 +146,7 @@ void Printer::printFooter(uint64_t numPrinted) const
 			}
 			out << col->getName() << ": ";
 			std::string s = col->getSummaryType() + col->getSelectName();
-			Utils::formatNumber(st->getValue(s), out, false);
+			Utils::formatNumber(st->getValue(s), out, conf.getPlainNumbers());
 			out << std::endl;
 		}
 	}
