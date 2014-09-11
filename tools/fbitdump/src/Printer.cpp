@@ -138,9 +138,14 @@ void Printer::printFooter(uint64_t numPrinted) const
 
 		columnVector stats = conf.getStatisticsColumns();
 
-		for (columnVector::const_iterator it = stats.begin(); it != stats.end(); it++) {
-			out << "Total " << (*it)->getName() << ": ";
-			std::string s = "sum(" + *(*it)->getColumns().begin() + ")";
+		for (auto col: stats) {
+			if (col->isAvgSummary()) {
+				out << "Average ";
+			} else {
+				out << "Total ";
+			}
+			out << col->getName() << ": ";
+			std::string s = col->getSummaryType() + col->getSelectName();
 			Utils::formatNumber(st->getValue(s), out, false);
 			out << std::endl;
 		}
@@ -152,7 +157,7 @@ void Printer::printRow(const Cursor *cur) const
 	/* go over all defined columns */
 	for (size_t i = 0; i < conf.getColumns().size(); i++) {
 		/* set defined column width */
-		if (conf.getStatistics() && conf.getColumns()[i]->isSummary()) {
+		if (conf.getStatistics() && conf.getColumns()[i]->isSumSummary()) {
 			/* widen for percentage */
 			out.width(conf.getColumns()[i]->getWidth() + this->percentageWidth);
 		} else {

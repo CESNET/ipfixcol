@@ -214,8 +214,21 @@ public:
          * 
          * \return name for select clause
          */
-        std::string getSelectName() { return selectName; }
+        std::string getSelectName() const { return selectName; }
         
+        /**
+         * \brief Returns number of parts
+         * 
+         * @return number of parts
+         */
+        int getParts() const { return this->ast->parts; }
+        
+        /**
+         * \brief Returns aggregation function
+         * 
+         * @return aggregation function
+         */
+        std::string getAggregateType() const { return ast->aggregation; }
 private:
 
 	/**
@@ -278,18 +291,6 @@ private:
 	 * @return returns values structure
 	 */
 	const Values *evaluate(AST *ast, const Cursor *cur) const;
-
-		/**
-	 * \brief Performs operation on given data
-	 *
-	 * Can change value type (bigger integer)
-	 *
-	 * @param left left operand
-	 * @param right right operand
-	 * @param op one of '+', '-', '/', '*'
-	 * @return return resulting value of appropriate type
-	 */
-	const Values* performOperation(const Values *left, const Values *right, unsigned char op) const;
 
 	/**
 	 * \brief Set AST for this column

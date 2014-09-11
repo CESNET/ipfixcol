@@ -42,7 +42,7 @@
 
 namespace fbitdump {
 
-TableSummary::TableSummary(tableVector const &tables, stringSet const &summaryColumns)
+TableSummary::TableSummary(tableVector const &tables, columnVector const &summaryColumns)
 {
 	Table *sumTable;
 	Filter filter;
@@ -52,21 +52,32 @@ TableSummary::TableSummary(tableVector const &tables, stringSet const &summaryCo
 
 		if (sumTable == NULL) continue;
 
-		sumTable->aggregate(stringSet(), summaryColumns, filter);
-
+		sumTable->aggregate(columnVector(), summaryColumns, filter, true);
+		
 		Cursor *cur = sumTable->createCursor();
 		if (cur->next()) { /* summary table has some lines (is not filtered out) */
-			for (stringSet::const_iterator iter = summaryColumns.begin(); iter != summaryColumns.end(); iter++) {
-
+			for (auto col: summaryColumns) {
 				Values val;
-				if (cur->getColumn(*iter, val, 0)) { /* add value if available  */
-					this->values[*iter] += val.toDouble(0);
+				std::string name = col->getSummaryType() + col->getSelectName();
+				if (cur->getColumn(name,  val, 0)) { /* add value if available  */
+//					std::cout << name << " " << val.toDouble() << std::endl;
+					if (col->isAvgSummary()) {
+						this->values[name] += (val.toDouble(0) * (*it)->nRows());
+						this->occurences[name] += (*it)->nRows();
+					} else {
+						this->values[name] += val.toDouble(0);
+					}
 				}
 			}
 		}
 		delete cur;
 
 		delete sumTable;
+	}
+	
+	for (auto colpair: this->occurences) {
+//		std::cout << colpair.first << ": " << this->values[colpair.first] << "/" << colpair.second << std::endl;
+		this->values[colpair.first] /= (double) colpair.second;
 	}
 }
 

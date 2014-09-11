@@ -117,6 +117,8 @@ void Column::init(const pugi::xml_document &doc, const std::string &alias, bool 
 	/* set alias for select clause */
 	if (this->getSemantics() == "flows") {
 		this->selectName = "flows";
+		this->element = "*";
+		this->summaryType = "count";
 	} else if (this->isOperation()) {
 		this->selectName = alias.substr(1);
 	} else {
@@ -250,80 +252,35 @@ const Values* Column::getValue(const Cursor *cur) const
 
 const Values *Column::evaluate(AST *ast, const Cursor *cur) const
 {
-
+	
 	/* check input AST */
 	if (ast == NULL) {
 		return NULL;
 	}
 
-	/* evaluate AST */
-	switch (ast->type) {
-		case fbitdump::Column::AST::valueType:{
-			Values *retVal = new Values;
-			int part=0;
-			const stringSet &tmpSet = this->getColumns(ast);
-
-			for (stringSet::const_iterator it = tmpSet.begin(); it != tmpSet.end(); it++) {
-				/* get value from table */
-				if (!cur->getColumn(*it, *retVal, part)) {
-					delete retVal;
-					return NULL;
-				}
-				part++;
+	Values *retVal = new Values;
+	
+	/* Columns has multiple parts (ipv6 address etc.) */
+	if (getParts() > 1) {
+		for (int part = 0; part < getParts(); ++part) {
+			std::stringstream ss;
+			ss << getSelectName() << "p" << part;
+			
+			if (!cur->getColumn(ss.str(), *retVal, part)) {
+				delete retVal;
+				return NULL;
 			}
-
-			return retVal;
-			break;}
-		case fbitdump::Column::AST::operationType:{
-			const Values *left, *right, *retVal = NULL;
-
-			left = evaluate(ast->left, cur);
-			right = evaluate(ast->right, cur);
-
-			if (left != NULL && right != NULL) {
-				retVal = performOperation(left, right, ast->operation);
-			}
-			/* clean up */
-			delete left;
-			delete right;
-
-			return retVal;
-			break;}
-		default:
-			std::cerr << "Unknown AST type" << std::endl;
-			break;
+		}
+		return retVal;
+	}
+	
+	/* One parted column */
+	if (!cur->getColumn(getSelectName(), *retVal, 0)) {
+		delete retVal;
+		return NULL;
 	}
 
-	return NULL;
-}
-
-const Values* Column::performOperation(const Values *left, const Values *right, unsigned char op) const
-{
-	Values *result = new Values;
-	/* TODO add some type checks maybe... */
-	switch (op) {
-				case '+':
-					result->type = ibis::ULONG;
-					result->value[0].uint64 = left->toDouble() + right->toDouble();
-					break;
-				case '-':
-					result->type = ibis::ULONG;
-					result->value[0].uint64 = left->toDouble() - right->toDouble();
-					break;
-				case '*':
-					result->type = ibis::ULONG;
-					result->value[0].uint64 = left->toDouble() * right->toDouble();
-					break;
-				case '/':
-					result->type = ibis::ULONG;
-					if (right->toDouble() == 0) {
-						result->value[0].uint64 = 0;
-					} else {
-						result->value[0].uint64 = left->toDouble() / right->toDouble();
-					}
-					break;
-				}
-	return result;
+	return retVal;
 }
 
 Column::~Column()

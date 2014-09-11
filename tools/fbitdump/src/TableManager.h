@@ -85,9 +85,8 @@ public:
 	 * @param summaryColumns Columns to summarize
 	 * @param filter Filter
 	 */
-	void aggregate(stringSet aggregateColumns, stringSet summaryColumns,
-				Filter &filter);
-
+        void aggregate(columnVector aggregateColumns, columnVector summaryColumns, Filter &filter);
+        
 	/**
 	 * \brief Filter all table part by specified condition
 	 *

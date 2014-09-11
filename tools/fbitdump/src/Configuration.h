@@ -109,22 +109,22 @@ public:
     std::string getFilter() const;
 
     /**
-     * \brief Returns set of fastbit column names containing columns
+     * \brief Returns vector of fastbit columns containing columns
      * to be used in select clause of aggregation query
      * These columns are used to aggregate by
      *
-     * @return stringSet
+     * @return columnVector
      */
-    const stringSet getAggregateColumns() const;
+    const columnVector getAggregateColumns() const;
 
     /**
-     * \brief Returns set of column names containing columns
+     * \brief Returns vector of columns containing columns
      * to be used in select clause of aggregation query
      * These columns are used with summary function (sum, min, max)
      *
-     * @return stringSet
+     * @return columnVector
      */
-    const stringSet getSummaryColumns() const;
+    const columnVector getSummaryColumns() const;
 
     /**
      * \brief Returns column to order by

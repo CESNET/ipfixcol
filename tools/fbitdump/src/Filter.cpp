@@ -622,6 +622,14 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 			/* If it was IPv6 hostname, we need to combine "and" and "or" operators - parse it somewhere else */
 			return this->parseExpHost6(left, cmp, right);
 		default:
+			if (left->parse) {
+				char buff[PLUGIN_BUFFER_SIZE];
+				left->parse((char *) right->parts[0].c_str(), buff);
+				if (strlen(buff) > 0) {
+					right->parts[0] = std::string(buff);
+					right->type = PT_NUMBER;
+				}
+			}
 			break;
 	}
 
