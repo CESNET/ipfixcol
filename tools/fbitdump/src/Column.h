@@ -193,21 +193,21 @@ public:
          * 
          * \return summary type
          */
-        std::string getSummaryType() { return summaryType; }
+        std::string getSummaryType() const { return summaryType; }
         
         /**
          * \brief Return true if summary type is sum
          * 
          * \return true if summary type is sum
          */
-        bool isSumSummary() { return summaryType == "sum"; }
+        bool isSumSummary() const{ return summaryType == "sum"; }
         
         /**
          * \brief Return true if summary type is avg
          * 
          * \return true if summary type is avg
          */
-        bool isAvgSummary() { return summaryType == "avg"; }
+        bool isAvgSummary() const { return summaryType == "avg"; }
         
         /**
          * \brief Returns name for select clause

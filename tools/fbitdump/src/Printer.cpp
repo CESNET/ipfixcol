@@ -106,7 +106,7 @@ void Printer::printHeader() const
 	/* print column names */
 	for (size_t i = 0; i < conf.getColumns().size(); i++) {
 		/* set defined column width */
-		if (conf.getStatistics() && conf.getColumns()[i]->isSummary()) {
+		if (conf.getStatistics() && conf.getColumns()[i]->isSumSummary()) {
 			/* widen for percentage */
 			out.width(conf.getColumns()[i]->getWidth() + this->percentageWidth);
 		} else {
@@ -200,11 +200,10 @@ const std::string Printer::printValue(const Column *col, const Cursor *cur) cons
 	} else {
 		valueStr = val->toString(conf.getPlainNumbers());
 		/* when printing statistics, add percent part */
-		if (conf.getStatistics() && col->isSummary()) {
+		if (conf.getStatistics() && col->isSumSummary()) {
 			std::ostringstream ss;
 			double sum;
-			std::string name = std::string("sum(") + *col->getColumns().begin() + ")";
-
+			std::string name = col->getSummaryType() + col->getSelectName();
 			sum = this->tableManager->getSummary()->getValue(name);
 
 			ss.precision(1);
