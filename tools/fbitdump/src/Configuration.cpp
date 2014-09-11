@@ -971,12 +971,6 @@ void Configuration::loadOutputFormat() throw (std::invalid_argument)
 	/* Look out for custom format */
 	if (this->format.substr(0,4) == "fmt:") {
 		this->format = this->format.substr(4);
-		/* when aggregating, always add flows */
-		size_t pos;
-		if (this->getAggregate() && ((pos = this->format.find("%fl")) == std::string::npos
-				|| isalnum(this->format[pos+3]))) {
-			this->format += " %fl";
-		}
 		return;
 	}
 
