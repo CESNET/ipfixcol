@@ -165,6 +165,15 @@ public:
 	 * @param number Hexadecimal number
 	 */
 	void parseHex(parserStruct *ps, std::string number) const throw (std::invalid_argument);
+        
+        /**
+         * \brief Parses float number
+         * 
+         * @param ps Parser structure
+         * @param number Float number
+         */
+        void parseFloat(parserStruct *ps, std::string number) const;
+        
 	/**
 	 * \brief Parses IPv4 address
 	 *

@@ -461,6 +461,35 @@ void Filter::parseHex(parserStruct *ps, std::string number) const throw (std::in
 	ps->parts.push_back(ss.str());
 }
 
+void Filter::parseFloat(parserStruct* ps, std::string number) const
+{
+	float num;
+	
+	switch (number[number.length() - 1]) {
+	case 'k': case 'K':
+		num = atof(number.substr(0, number.length() - 1).c_str()) * 1000.0;
+		break;
+	case 'm': case 'M':
+		num = atof(number.substr(0, number.length() - 1).c_str()) * 1000000.0;
+		break;
+	case 'g': case 'G':
+		num = atof(number.substr(0, number.length() - 1).c_str()) * 1000000000.0;
+		break;
+	case 't': case 'T':
+		num = atof(number.substr(0, number.length() - 1).c_str()) * 1000000000000.0;
+		break;
+	default:
+		num = atof(number.c_str());
+	}
+	
+	std::stringstream ss;
+	ss << num;
+	
+	ps->type = PT_NUMBER;
+	ps->nParts = 1;
+	ps->parts.push_back(ss.str());
+}
+
 bool Filter::parseColumnGroup(parserStruct *ps, std::string alias, bool aggeregate) const
 {
 	if (ps == NULL) {
