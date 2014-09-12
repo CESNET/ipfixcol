@@ -259,6 +259,13 @@
 					<simpara>Print list of available formatting/parsing plugins</simpara>
 				</listitem>
 			</varlistentry>
+                        <varlistentry>
+                            <term>-P <replaceable class="parameter">filter</replaceable></term>
+                            <listitem>
+                                <simpara>Post aggregate filter. Usable only when aggregating. Must contain only columns from aggregated table.
+                                Syntax is the same as for basic filter.</simpara>
+                            </listitem>
+                        </varlistentry>
 		</variablelist>
 	</refsect1>
 

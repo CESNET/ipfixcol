@@ -7,5 +7,7 @@
 *  Fixed printing percentages (only for "sum" summary columns)
 *  Supported ordering by computed columns (bps...)
 *  %fl column is not required in output format
+*  Added post-aggregate filter (option -P)
+
 
 
