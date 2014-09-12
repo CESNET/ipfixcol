@@ -360,6 +360,7 @@
 		<simplelist>
 				<member>Decimal number, optionally with one of [kKmMgGtT] suffix</member>
 				<member>Hexadecimal number in 0x.... format</member>
+                                <member>Float number, optionally with one of [kKmMgGtT] suffix</member>
 				<member>IPv4 address in decimal format</member>
 				<member>IPv6 address in decimal format</member>
 				<member>IPv4/v6 address in decimal format with subnet (address/xx)</member>
