@@ -7,6 +7,8 @@ AM_CXXFLAGS = @AM_CXXFLAGS@ -fno-strict-aliasing
 LDADD = ../3rdparty/libpugixml.a
 
 fbitdump_SOURCES = \
+	AggregateFilter.cpp \
+	AggregateFilter.h \
 	Column.cpp \
 	Column.h \
 	Configuration.cpp \

@@ -239,8 +239,21 @@ void TableManager::aggregate(columnVector aggregateColumns, columnVector summary
 	}
 }
 
-void TableManager::filter(Filter &filter)
+
+void TableManager::postAggregateFilter(Filter& filter)
 {
+	for (auto table: this->tables) {
+		table->filter(filter);
+	}
+}
+
+void TableManager::filter(Filter &filter, bool postAggregate)
+{
+	if (postAggregate) {
+		this->postAggregateFilter(filter);
+		return;
+	}
+	
 	Table *table;
 	int size = conf.getColumns().size();
 	int i = 0;
@@ -251,7 +264,7 @@ void TableManager::filter(Filter &filter)
 		if (col->isSeparator() || col->getSemantics() == "flows") {
 			continue;
 		}
-		
+
 		columns.push_back(col);
 	}
 	

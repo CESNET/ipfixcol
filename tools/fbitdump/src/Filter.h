@@ -217,7 +217,7 @@ public:
 	 * @param ps Parser structure
 	 * @param alias Column alias
 	 */
-	void parseColumn(parserStruct *ps, std::string alias) const throw (std::invalid_argument);
+	virtual void parseColumn(parserStruct *ps, std::string alias) const;
 
 	/**
 	 * \brief Parses column group
@@ -236,7 +236,7 @@ public:
 	 * @param ps Parser structure
 	 * @param strcol Column name
 	 */
-	void parseRawcolumn(parserStruct *ps, std::string strcol) const throw (std::invalid_argument);
+	virtual void parseRawcolumn(parserStruct *ps, std::string strcol) const;
 
 	/**
 	 * \brief Parses expression "column BITOPERATOR value" into parser structure
@@ -333,7 +333,7 @@ public:
 	 */
 	void setFilterString(std::string newFilter);
 
-private:
+protected:
 	/**
 	 * \brief Initialise the filter
 	 *

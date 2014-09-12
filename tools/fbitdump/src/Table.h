@@ -119,6 +119,13 @@ public:
 	 * @param filter Filter to use
 	 */
         void filter(columnVector columns, Filter &filter);
+        
+        /**
+         * \brief Only apply given filter on whole table
+         * 
+         * @param filter Filter
+         */
+        void filter(Filter &filter);
 
 	/**
 	 * \brief Get number of rows

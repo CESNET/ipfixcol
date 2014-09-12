@@ -218,6 +218,22 @@ void Table::filter(columnVector columns, Filter &filter)
 	queueQuery(select.c_str(), filter);
 }
 
+void Table::filter(Filter& filter)
+{
+	if (!this->table || this->table->nRows() == 0) {
+		return;
+	}
+	
+	/* We need to apply column aliases from previous query */
+	this->doQuery();
+	
+	/* SELECT * FROM <table> WHERE <filter> */
+	std::stringstream ss;
+	this->table->dumpNames(ss);
+	
+	queueQuery(ss.str().c_str(), filter);
+}
+
 uint64_t Table::nRows()
 {
 	this->doQuery();

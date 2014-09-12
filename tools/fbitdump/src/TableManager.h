@@ -94,7 +94,14 @@ public:
 	 *
 	 * @param filter Filter
 	 */
-	void filter(Filter &filter);
+	void filter(Filter &filter, bool postAggregate = false);
+        
+        /**
+         * \brief Apply filter on aggregated tables
+         * 
+         * @param filter Filter
+         */
+        void postAggregateFilter(Filter &filter);
 
 	/**
 	 * \brief Return vector of managed tables

@@ -263,6 +263,9 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		case 'l':
 			print_modules = true;
 			break;
+		case 'P':
+			this->aggregateFilter = optarg;
+			break;
 		default:
 			help ();
 			return 1;
@@ -794,6 +797,7 @@ void Configuration::help() const
 	<< "-S              print available semantics" << std::endl
 	<< "-O              print available output formats" << std::endl
 	<< "-l              print plugin list" << std::endl
+	<< "-P <filter>     Post-aggregate filter (only when aggregating, containing columns in aggregated table only)" << std::endl
 	;
 }
 

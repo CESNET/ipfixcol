@@ -493,7 +493,7 @@ bool Filter::parseColumnGroup(parserStruct *ps, std::string alias, bool aggerega
 	return true;
 }
 
-void Filter::parseColumn(parserStruct *ps, std::string alias) const throw (std::invalid_argument)
+void Filter::parseColumn(parserStruct *ps, std::string alias) const
 {
 	if (ps == NULL) {
 		throw std::invalid_argument(std::string("Cannot parse column, NULL parser structure"));
@@ -547,7 +547,7 @@ void Filter::parseColumn(parserStruct *ps, std::string alias) const throw (std::
 
 }
 
-void Filter::parseRawcolumn(parserStruct *ps, std::string colname) const throw (std::invalid_argument)
+void Filter::parseRawcolumn(parserStruct *ps, std::string colname) const
 {
 	if (ps == NULL) {
 		throw std::invalid_argument(std::string("Cannot parse raw column, NULL parser structure"));
