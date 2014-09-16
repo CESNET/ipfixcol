@@ -1995,6 +1995,20 @@
 		<dataType>unsigned32</dataType>
 		<semantic>identifier</semantic>
 	</element>
+        <element>
+                <enterprise>0</enterprise>
+                <id>403</id>
+                <name>originalExporterIPv4Address</name>
+                <dataType>ipv4Address</dataType>
+                <semantics>identifier</semantics>
+        </element>
+        <element>
+                <enterprise>0</enterprise>
+                <id>404</id>
+                <name>originalExporterIPv6Address</name>
+                <dataType>ipv6Address</dataType>
+                <semantics>identifier</semantics>
+        </element>
 	<element>
 		<enterprise>16982</enterprise>
 		<id>0</id>
