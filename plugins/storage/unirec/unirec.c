@@ -1,6 +1,7 @@
 /**
  * \file unirec.c
  * \author Petr Velan <petr.velan@cesnet.cz>
+ * \author Erik Sabik <xsabik02@stud.fit.vutbr.cz>
  * \brief Plugin for converting IPFIX data to UniRec format
  *
  * Copyright (C) 2012 CESNET, z.s.p.o.
@@ -56,7 +57,7 @@
 
 
 
-/* DEBUG CODE */
+/* NEEDED FOR DEBUG CODE */
 #include <arpa/inet.h>
 #include <sys/time.h>
 
@@ -216,9 +217,10 @@ static int init_trap_ifc(unirec_config *conf)
  *
  * @param element Element to match
  * @param fields List of UniRec fields to search
+ * @param en_id Enterprise id to fill.
  * @return return matching UniRec filed or NULL
  */
-static unirecField *match_field(template_ie *element, unirecField *fields)
+static unirecField *match_field(template_ie *element, unirecField *fields, uint32_t *en_id)
 {
 	unirecField *tmp = NULL;
 	uint16_t id;
@@ -233,6 +235,7 @@ static unirecField *match_field(template_ie *element, unirecField *fields)
 		if (id >> 15) { /* EN is set */
 			/* Enterprise number is in the next element */
 			en = (element+1)->enterprise_number;
+                        *en_id = en;
 			for (i = 0; i < tmp->ipfixCount; i++) {
 				/* We need to mask first bit of id before the comparison */
 				if ((id & 0x7FFF) == tmp->ipfix[i].id && en == tmp->ipfix[i].en) {
@@ -241,6 +244,7 @@ static unirecField *match_field(template_ie *element, unirecField *fields)
 			}
 		} else { /* EN == 0 */
 			en = 0;
+                        *en_id = 0;
 			for (i = 0; i < tmp->ipfixCount; i++) {
 				if (id == tmp->ipfix[i].id && en == tmp->ipfix[i].en) {
 					return tmp;
@@ -282,19 +286,11 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 	uint16_t length, size_length;
 	unirecField *matchField;
 
-
-
-	// Set LINK_BIT_FIELD first for all interfaces
-	for (int i = 0; i < conf->ifc_count; i++) {
-		if (conf->ifc[i].special_field_link_bit_field != NULL) {
-			*(uint64_t*)((conf->ifc[i].buffer) + (conf->ifc[i].special_field_link_bit_field->offset_ar[i])) = (uint64_t) 1 << (conf->odid - 1);
-		}
-	}
-
+        uint32_t en_id;
 
 	/* Go over all fields */
 	for (count = index = 0; count < template->field_count; count++, index++) {
-		matchField = match_field(&template->fields[index], conf->fields);
+		matchField = match_field(&template->fields[index], conf->fields, &en_id);
 
 		length = template->fields[index].ie.length;
 		size_length = 0;
@@ -326,15 +322,17 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 					if (matchField->included_ar[i]) {
 						// If element is present in current interface
 						// Copy special elements in special way
-						if (template->fields[index].ie.id == 8 || template->fields[index].ie.id == 12) {
-							// IPv4
+						if (template->fields[index].ie.id == 8 || template->fields[index].ie.id == 12 ||
+                                                    (en_id == 39499 && (template->fields[index].ie.id & 0x7FFF) == 40)) {
+							// IPv4 or INVEA_SIP_RTP_IP4
 							// Put IPv4 into 128 bits in a special way (see ipaddr.h in Nemea-UniRec for details)
 							*(uint64_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) = 0;
 							*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i] + 8) = *(uint32_t*)(data_record + offset + size_length);
 							*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i] + 12) = 0xffffffff;
 						}
-						else if (template->fields[index].ie.id == 27 || template->fields[index].ie.id == 28) {
-							// IPv6
+						else if (template->fields[index].ie.id == 27 || template->fields[index].ie.id == 28) {// ||
+                                                        // (en_id == 39499 && (template->fields[index].ie.id & 0x7FFF) == 41)) {
+							// IPv6 or INVEA_SIP_RTP_IP6
 							// Just copy 128b
 							memcpy(conf->ifc[i].buffer + matchField->offset_ar[i], data_record + offset + size_length, length);
 						} // PACKET SIZE IS DIFFERENT FOR DIFFERENT EXPORTER!!!
@@ -359,6 +357,10 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 						else if (template->fields[index].ie.id == 10) {// || template->fields[index].ie.id == 14) {
 							// Handle DIR_BIT_FIELD
 							*(uint8_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) = (*(uint16_t*)(data_record + offset + size_length)) ? 1 : 0;
+						} // 405 = original observation domain id
+						else if (template->fields[index].ie.id == 405) {
+							// Handle LINK_BIT_FIELD (!!! Is BIG ENDIAN but we need only less significant byte !!!)
+							*(uint64_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) = 1LLU << ((*(uint8_t*)(data_record + offset + size_length + 3)) - 1);
 						} else {
 							// Check length of ipfix element and if it is larger than unirec element, then saturate unirec element
 							if (matchField->size >= length) {
@@ -453,19 +455,6 @@ static void process_dynamic(ifc_config *conf)
  */
 static int process_data_sets(const struct ipfix_message *ipfix_msg, unirec_config *conf)
 {	
-	// RECORDS METER // FOR DEBUG
-	/*
-	time(&curr_time);
-	if (curr_time > prev_time + step_time) {
-		printf("%u records/s   \r", DEBUG_TIME_RECORD/(uint32_t)step_time);
-		fflush(stdout);
-		prev_time = curr_time;
-		DEBUG_TIME_RECORD = 0;
-	}
-	*/
-
-	
-
 	uint16_t data_index = 0;
 	struct ipfix_data_set *data_set;
 	char *data_record;
@@ -474,18 +463,10 @@ static int process_data_sets(const struct ipfix_message *ipfix_msg, unirec_confi
 	uint16_t min_record_length, ret = 0;
 	int i;
 	
-
-	// ********** Initialize Trap ********** 
+	// ********** Store ODID ************* 
 	uint32_t ODID = ntohl(ipfix_msg->pkt_header->observation_domain_id);
 	// Fill ODID
 	conf->odid = (uint16_t) ODID;
-	if (!conf->trap_init) {
-		update_ifc_spec(conf, ODID);
-		if (!init_trap_ifc(conf)) {
-			return 0;
-		}
-		conf->trap_init = 1;  // Trap was just initialized
-	}
 	// ***********************************
 
 
@@ -512,7 +493,6 @@ static int process_data_sets(const struct ipfix_message *ipfix_msg, unirec_confi
 
 		while ((int) ntohs(data_set->header.length) - (int) offset - (int) min_record_length >= 0) {
 			data_record = (((char *) data_set) + offset);
-			//DEBUG_TIME_RECORD++;
 
 			// Process data record only once
 			ret = process_record(data_record, template, conf);
@@ -825,10 +805,8 @@ static int parse_format(unirec_config *conf_plugin)
 					} else {
 						lastField->required_ar[c] = 1;
 						
-						if (strcmp(token, "LINK_BIT_FIELD") == 0 ) {               // Do not count LINK_BIT_FIELD as required value
-							conf->special_field_link_bit_field = lastField;    // Do not count DIRECTION_FLAGS as required value
-						}                                                          // because they are always present
-						else if (strcmp(token, "DIRECTION_FLAGS") != 0 ) {
+						// Do not count DIRECTION_FLAGS as required value because it is always present
+						if (strcmp(token, "DIRECTION_FLAGS") != 0 ) {
 							conf->requiredCount++;			
 						}
 					}
@@ -898,18 +876,7 @@ static int parse_format(unirec_config *conf_plugin)
 					}
 
 					/* Handle special fields */
-					if (strcmp(currentField->name, "LINK_BIT_FIELD") == 0) {
-						conf->special_field_link_bit_field = currentField;
-						conf->requiredCount--; // Is required but it is always present as ODID
-						currentField->size = 8;
-						currentField->value = malloc(8);   
-						currentField->valueSize = 8;
-						currentField->ipfixCount = 1;  // Only for compatibility with other elements
-						currentField->ipfix[0].id = 0; // when comparing
-						currentField->ipfix[0].en = 0; //
-					
-					}
-					else if (strcmp(currentField->name, "DIRECTION_FLAGS") == 0) {
+					if (strcmp(currentField->name, "DIRECTION_FLAGS") == 0) {
 						conf->requiredCount--; // Is required but it is always present
 						currentField->size = 1;
 						currentField->value = malloc(1);   
@@ -1012,13 +979,14 @@ static int parse_format(unirec_config *conf_plugin)
  */
 int storage_init (char *params, void **config)
 {
+	printf("Initializing storage plugin\n");
 	unirec_config *conf;
 	xmlDocPtr doc;
 	xmlNodePtr cur;
         xmlNodePtr cur_sub;
 	int ifc_count_read = 0;
-	int ifc_count_space = 4;
-	int ifc_count_step = 4;
+	int ifc_count_space = 8;
+	int ifc_count_step = 8;
 	char **ifc_params = malloc(sizeof(char *) * ifc_count_space);
 	char *ifc_types = malloc(sizeof(char) * ifc_count_space);
 	int *ifc_timeout = malloc(sizeof(int) * ifc_count_space);
@@ -1199,6 +1167,10 @@ int storage_init (char *params, void **config)
 	MSG_NOTICE(msg_module, "Verbosity level of TRAP set to %i\n", trap_get_verbose_level());
 
 
+	/* Initialize Trap */
+	if (!init_trap_ifc(conf)) {
+		MSG_ERROR(msg_module, "Could not initialize TRAP\n");
+	}
 
 	/* Copy configuration */
 	*config = conf;
@@ -1304,9 +1276,9 @@ int store_now (const void *config)
  */
 int storage_close (void **config)
 {
-	printf("Plugin is shuting down..\n");
-
 	unirec_config *conf = (unirec_config*) *config;
+
+	printf("Plugine is shuting down for ODID: %u\n", conf->odid);
 
 	trap_ctx_finalize(&conf->trap_ctx_ptr);
 

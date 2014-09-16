@@ -10,6 +10,9 @@ PACKETS				4		e0id2			Number of packets in flow
 TIME_FIRST			8		e0id152			Time of the first packet of a flow (ms since init of exporter, TODO: compute absolute time)
 TIME_LAST			8		e0id153			Time of the last packet of a flow (ms since init of exporter, TODO: compute absolute time)
 DIR_BIT_FIELD			1		e0id10			Bit field used for detemining incomming/outgoing flow (1 => Incomming, 0 => Outgoing)
+LINK_BIT_FIELD			8		e0id405			Bit field of links on which was flow seen
+TTL				1		e0id192			IP time to live
+TOS				1		e0id5			IP type of service
 FLOWDIR_SYN			1		e8057id299		Packet with SYN flag only flag
 DNS_ANSWERS			2		e8057id0		DNS answers
 DNS_RCODE			1		e8057id1		DNS rcode
@@ -38,23 +41,42 @@ HTTP_REQUEST_AGENT		-1		e16982id504		HTTP request agent
 HTTP_REQUEST_REFERER		-1		e16982id505		HTTP referer
 HTTP_RESPONSE_STATUS_CODE	4		e16982id506		HTTP response status code
 HTTP_RESPONSE_CONTENT_TYPE	-1		e16982id507		HTTP response content type
+HTTP_SDM_REQUEST_METHOD_ID	4		e8057id800		Used method
+HTTP_SDM_REQUEST_HOST		-1		e8057id801		Host
+HTTP_SDM_REQUEST_URL		-1		e8057id802		URL
+HTTP_SDM_REQUEST_REFERER	-1		e8057id803		Referer
+HTTP_SDM_REQUEST_AGENT		-1		e8057id804		User-agent
+HTTP_SDM_RESPONSE_STATUS_CODE	4		e8057id805		Status coce converted into integer
+HTTP_SDM_RESPONSE_CONTENT_TYPE	-1		e8057id806		Content-type
+HTTP_SDM_RESPONSE_TIME		8		e8057id807		Application response time
 IPV6_TUN_TYPE			1		e16982id405		IPv6 tunnel type
-HTTP_SDM_REQUEST_METHOD_ID	4 		e8057id800		HTTP request method id
-HTTP_SDM_REQUEST_HOST		-1		e8057id801		HTTP request host
-HTTP_SDM_REQUEST_URL		-1		e8057id802		HTTP request url
-HTTP_SDM_REQUEST_REFERER	-1		e8057id803		HTTP request referer
-HTTP_SDM_REQUEST_AGENT		-1		e8057id804		HTTP request agent
-HTTP_SDM_RESPONSE_STATUS_CODE	4		e8057id805		HTTP response status code
-HTTP_SDM_RESPONSE_CONTENT_TYPE	-1		e8057id806		HTTP response content type
-HTTP_SDM_RESPONSE_TIME		8		e8057id807		HTTP response time
-SMTP_COMMAND_FLAGS		4		e8057id810		SMTP command flags
-SMTP_MAIL_CMD_COUNT		4		e8057id811		SMTP MAIL command count
-SMTP_RCPT_CMD_COUNT		4		e8057id812		SMTP RCPT command count
-SMTP_FIRST_SENDER		-1		e8057id813		SMTP first sender
-SMTP_FIRST_RECIPIENT		-1		e8057id814		SMTP first recipient
-SMTP_STAT_CODE_FLAGS		4		e8057id815		SMTP status code flags
-SMTP_2XX_STAT_CODE_COUNT	4		e8057id816		SMTP 2XX status code count
-SMTP_3XX_STAT_CODE_COUNT	4		e8057id817		SMTP 3XX status code count
-SMTP_4XX_STAT_CODE_COUNT	4		e8057id818		SMTP 4XX status code count
-SMTP_5XX_STAT_CODE_COUNT	4		e8057id819		SMTP 5XX status code count
-SMTP_DOMAIN			-1		e8057id820		SMTP domain
+SMTP_COMMAND_FLAGS              4               e8057id810              SMTP command flags
+SMTP_MAIL_CMD_COUNT             4               e8057id811              SMTP MAIL command count
+SMTP_RCPT_CMD_COUNT             4               e8057id812              SMTP RCPT command count
+SMTP_FIRST_SENDER               -1              e8057id813              SMTP first sender
+SMTP_FIRST_RECIPIENT            -1              e8057id814              SMTP first recipient
+SMTP_STAT_CODE_FLAGS            4               e8057id815              SMTP status code flags
+SMTP_2XX_STAT_CODE_COUNT        4               e8057id816              SMTP 2XX status code count
+SMTP_3XX_STAT_CODE_COUNT        4               e8057id817              SMTP 3XX status code count
+SMTP_4XX_STAT_CODE_COUNT        4               e8057id818              SMTP 4XX status code count
+SMTP_5XX_STAT_CODE_COUNT        4               e8057id819              SMTP 5XX status code count
+SMTP_DOMAIN                     -1              e8057id820              SMTP domain
+INVEA_VOIP_PACKET_TYPE          1               e39499id32              VOIP packet type
+INVEA_SIP_CALL_ID               -1              e39499id33              SIP call ID
+INVEA_SIP_CALLING_PARTY         -1              e39499id34              SIP calling party
+INVEA_SIP_CALLED_PARTY          -1              e39499id35              SIP called party
+INVEA_SIP_VIA                   -1              e39499id36              SIP VIA
+INVEA_SIP_INVITE_RINGING_TIME   8               e39499id37              SIP INVITE ringing time
+INVEA_SIP_OK_TIME               8               e39499id38              SIP OK time
+INVEA_SIP_BYE_TIME              8               e39499id39              SIP BYE time
+INVEA_SIP_RTP_IP4               16              e39499id40              SIP RTP IPv4
+INVEA_SIP_RTP_IP6               16              e39499id41              SIP RTP IPv6
+INVEA_SIP_RTP_AUDIO             2               e39499id42              SIP RTP audio
+INVEA_SIP_RTP_VIDEO             2               e39499id43              SIP RTP video
+INVEA_SIP_STATS                 8               e39499id44              SIP stats
+INVEA_RTP_CODEC                 1               e39499id45              RTP codec
+INVEA_RTP_JITTER                4               e39499id46              RTP jitter
+INVEA_RTCP_LOST                 4               e39499id47              RTCP lost
+INVEA_RTCP_PACKETS              8               e39499id48              RTCP packets
+INVEA_RTCP_OCTETS               8               e39499id49              RTCP octets
+INVEA_RTCP_SOURCE_COUNT         1               e39499id50              RTCP source count
