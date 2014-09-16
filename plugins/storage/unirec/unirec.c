@@ -55,6 +55,9 @@
 
 #include "unirec.h"
 
+// Global variables
+uint8_t INIT_COUNT = 0;  // Number of running instances of plugin
+
 
 
 /* NEEDED FOR DEBUG CODE */
@@ -979,6 +982,14 @@ static int parse_format(unirec_config *conf_plugin)
  */
 int storage_init (char *params, void **config)
 {
+	// Plugin can be initialized only once
+	if (INIT_COUNT == 0) {
+		INIT_COUNT++;
+	} else {
+		MSG_ERROR(msg_module, "Trying to initialize multiple times!");
+		return -1;
+	}
+
 	printf("Initializing storage plugin\n");
 	unirec_config *conf;
 	xmlDocPtr doc;
