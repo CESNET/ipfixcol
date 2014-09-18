@@ -524,7 +524,7 @@ void Configuration::parseFormat(std::string format, std::string &orderby)
 		} else if ( err != REG_NOMATCH ) {
 			std::cerr << "Bad output format string" << std::endl;
 			break;
-		} else if (!removeNext) { /* rest is column separator */
+		} else { /* rest is column separator */
 			col = new Column(format);
 			this->columns.push_back(col);
 			/* Nothing more to process */
