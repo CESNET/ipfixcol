@@ -226,8 +226,12 @@ void Table::filter(Filter& filter)
 	
 	/* We need to apply column aliases from previous query */
 	this->doQuery();
-	
+
 	/* SELECT * FROM <table> WHERE <filter> */
+	if (!this->table || this->table->nRows() == 0) {
+		return;
+	}
+
 	std::stringstream ss;
 	this->table->dumpNames(ss);
 	
