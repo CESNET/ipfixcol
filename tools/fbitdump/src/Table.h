@@ -203,7 +203,7 @@ private:
          * @param summary true when creating summary
          * @return select clause
          */
-        std::string createSelect(const columnVector columns, bool summary = false);
+        std::string createSelect(const columnVector columns, bool summary = false, bool has_flows = false);
         
         /**
          * \brief Get list of column names from vector

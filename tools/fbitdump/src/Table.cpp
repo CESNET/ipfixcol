@@ -62,13 +62,16 @@ Cursor* Table::createCursor()
 	return new Cursor(*this);
 }
 
-std::string Table::createSelect(const columnVector columns, bool summary)
+std::string Table::createSelect(const columnVector columns, bool summary, bool has_flows)
 {
 	std::stringstream select;
 	
 	for (auto col: columns) {
 		if (summary) {
-			if (summary && !col->getSummaryType().empty()) {
+			/* Database already know flows column (it was aggregated), summarize it */
+			if (has_flows && col->getSemantics() == "flows") {
+				select << "sum(" << col->getSelectName() << ") as " << col->getSummaryType() << col->getSelectName() << ",";
+			} else if (!col->getSummaryType().empty()) {
 				select << col->getSummaryType() << "(" << col->getSelectName() << ") " << " as " << col->getSummaryType() << col->getSelectName() << ",";
 			}
 		} else if (col->getParts() > 1) {
@@ -181,7 +184,15 @@ void Table::aggregate(const columnVector &aggregateColumns, const columnVector &
 		return;
 	}
 	
-	std::string select = createSelect(aggregateColumns, summary);
+	bool has_flows = false;
+	for (auto col: table->columnNames()) {
+		if (std::string(col) == "flows") {
+			has_flows = true;
+			break;
+		}
+	}
+	
+	std::string select = createSelect(aggregateColumns, summary, has_flows);
 	if (!select.empty()) {
 		select += ", ";
 	}
@@ -189,7 +200,7 @@ void Table::aggregate(const columnVector &aggregateColumns, const columnVector &
 		select += "flows, ";
 	}
 	
-	select += createSelect(summaryColumns, summary);
+	select += createSelect(summaryColumns, summary, has_flows);
 
 	/* add query */
 	queueQuery(select.c_str(), filter);
