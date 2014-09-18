@@ -82,7 +82,7 @@ AggregateFilter::AggregateFilter(Configuration &conf)
 		/* clear the context */
 		yylex_destroy(this->scaninfo);
 	}
-	MSG_FILTER(this->filterString.c_str());
+	MSG_FILTER("Aggregate filter", this->filterString.c_str());
 }
 
 void AggregateFilter::setParserStruct(parserStruct *ps, Column *col) const

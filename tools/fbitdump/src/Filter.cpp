@@ -130,7 +130,7 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		/* clear the context */
 		yylex_destroy(this->scaninfo);
 	}
-	MSG_FILTER(this->filterString.c_str());
+	MSG_FILTER("Filter", this->filterString.c_str());
 
 }
 
