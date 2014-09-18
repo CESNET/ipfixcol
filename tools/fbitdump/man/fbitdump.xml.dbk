@@ -109,6 +109,7 @@
 			<member><emphasis>&lt;name&gt;</emphasis>: plugin name</member>
 			<member><emphasis>&lt;path&gt;</emphasis>: location of *.so file</member>
 		</simplelist>
+                <simpara>Each plugin can contain <emphasis>&lt;plainLevel&gt;</emphasis> child that specifies upper limit of plain level. When fbitdump is running with plain level greater than plugin's, every value is printed as plain number. Default value is 1.</simpara>
 	</refsect1>
 
 	<refsect1>

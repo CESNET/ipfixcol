@@ -179,9 +179,9 @@
 			</varlistentry>
 			
 			<varlistentry>
-				<term>-N</term>
+				<term>-N <replaceable class="parameter">level</replaceable></term>
 				<listitem>
-					<simpara>Print plain numbers in output. Easier for post-parsing.</simpara>
+					<simpara>Set plain level limit for printing plain numbers. See <citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry> plugins section for detailed informations.</simpara>
 				</listitem>
 			</varlistentry>
 			
@@ -259,6 +259,12 @@
 					<simpara>Print list of available formatting/parsing plugins</simpara>
 				</listitem>
 			</varlistentry>
+                        <varlistentry>
+                            <term>-Z</term>
+                            <listitem>>
+                                <simpara>Check filter syntax and exit.</simpara>
+                            </listitem>
+                        </varlistentry>
 		</variablelist>
 	</refsect1>
 
@@ -385,7 +391,7 @@
 	<refsect1>
 		<title>Plugins</title>
 		<simpara>Fbitdump supports input and output plugins. Input plugins are used for parsing data from given filter and output plugins are used for valid formatting printed data.</simpara>
-		<simpara>Plugin names and paths must be specified in <citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry> file.</simpara>
+		<simpara>Plugin names, paths and plainLevels must be specified in <citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry> file.</simpara>
 		<simpara>For output format description, see <citerefentry><refentrytitle>fbitdump-plugins</refentrytitle><manvolnum>7</manvolnum></citerefentry>.</simpara>
 		<simpara>Fbitdump already contains one default plugin for parsing and formatting data for columns without specified plugin.</simpara>
 		<simpara>Each plugin must have functions <emphasis>parse</emphasis> (for input) and <emphasis>format</emphasis> (for output).</simpara>
