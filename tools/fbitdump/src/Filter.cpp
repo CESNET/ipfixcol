@@ -987,6 +987,13 @@ std::string Filter::onlyCol(std::string& expr, partsType type) const
 	return res;
 }
 
+bool Filter::checkFilter()
+{
+	ibis::whereClause wc;
+	
+	return wc.parse(this->filterString.c_str()) == 0;
+}
+
 Filter::Filter(Configuration &conf) throw (std::invalid_argument)
 {
 	init(conf);

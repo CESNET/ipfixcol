@@ -83,7 +83,20 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-
+	if (conf.getCheckFilters()) {
+		try {
+			std::cout << "Testing filter syntax: " << std::flush;
+			Filter filter(conf);
+			if (filter.checkFilter()) {
+				std::cout << "OK\n";
+			}
+		}  catch (std::exception &e) {
+			std::cerr << e.what() << std::endl;
+			return 2;
+		}
+		
+		return 0;
+	}
 
 	try {
 		/* create filter */

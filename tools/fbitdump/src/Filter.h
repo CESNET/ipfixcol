@@ -341,6 +341,13 @@ public:
 	 * @param newFilter New filter string
 	 */
 	void setFilterString(std::string newFilter);
+        
+        /**
+         * \brief Check whether there are no errors in filter
+         * 
+         * @return true when filter is ok
+         */
+        bool checkFilter();
 
 private:
 	/**

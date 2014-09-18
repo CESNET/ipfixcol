@@ -228,7 +228,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			verbose = atoi(optarg);
 			break;
 		case 'Z':
-			NOT_SUPPORTED
+			this->checkFilters = true;
 			break;
 		case 't':
 				this->timeWindow = optarg;
@@ -329,6 +329,11 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	} else {
 		/* set default filter */
 		this->filter = "1=1";
+	}
+	
+	if (this->checkFilters) {
+		this->instance = this;
+		return 0;
 	}
 
 	/* Set default plugin functions */
@@ -792,7 +797,7 @@ void Configuration::help() const
 //	<< "-v <file>       verify netflow data file. Print version and blocks." << std::endl
 	//<< "-x <file>       verify extension records in netflow data file." << std::endl
 	//<< "-X              Dump Filtertable and exit (debug option)." << std::endl
-//	<< "-Z              Check filter syntax and exit." << std::endl
+	<< "-Z              Check filters syntax and exit." << std::endl
 	<< "-t <time>       time window for filtering packets" << std::endl
 	<< "                yyyy/MM/dd.hh:mm:ss[-yyyy/MM/dd.hh:mm:ss]" << std::endl
 	<< "-C <path>       path to configuration file. Default is " << CONFIG_XML << std::endl

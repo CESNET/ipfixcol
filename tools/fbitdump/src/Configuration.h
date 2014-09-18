@@ -49,7 +49,7 @@
 namespace fbitdump {
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "hVlaA::r:f:n:c:D:Ns:qeIM:m::R:o:v:Z:t:i::d::C:Tp:SO"
+#define OPTSTRING "hVlaA::r:f:n:c:D:Ns:qeIM:m::R:o:v:Zt:i::d::C:Tp:SO"
 
 #define CONFIG_XML "/usr/share/fbitdump/fbitdump.xml"
 
@@ -288,6 +288,13 @@ public:
      * \brief Unload plugins
      */
     void unloadModules();
+    
+    /**
+     * \brief Returns true when user only wants to check filter syntax
+     * 
+     * @return true when user only wants to check filter syntax
+     */
+    bool getCheckFilters() const { return this->checkFilters; }
 private:
     /**
      * \brief Load plugins for parsing input and formatting output
@@ -416,6 +423,7 @@ private:
 	stringSet indexColumns;				/**< Indexes specified by -i or -d option. Empty means all */
 	std::string configFile;				/**< Configuration file path */
 	bool templateInfo;					/**< Print information about used templates */
+        bool checkFilters = false;          /**< -Z option flag (only check filter syntax and exit) */
 }; /* end of Configuration class */
 
 } /* end of fbitdump namespace */
