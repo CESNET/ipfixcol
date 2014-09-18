@@ -49,22 +49,26 @@
 namespace fbitdump {
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "hVlaA::r:f:n:c:D:Ns:qeIM:m::R:o:v:Zt:i::d::C:Tp:SO"
+#define OPTSTRING "hVlaA::r:f:n:c:D:N:s:qeIM:m::R:o:v:Zt:i::d::C:Tp:SO"
 
 #define CONFIG_XML "/usr/share/fbitdump/fbitdump.xml"
 
+#define DEFAULT_PLUGIN_PLAIN_LEVEL 10
+    
 /**
  * \brief Struct with pointers to plugin functions
  */
 struct pluginConf {
 	pluginConf(): init(NULL), close(NULL), format(NULL), /* Structure initialization */
-				  parse(NULL), info(NULL), handle(NULL) {};
+		parse(NULL), info(NULL), handle(NULL),
+                plainLevel(DEFAULT_PLUGIN_PLAIN_LEVEL) {};
 	int (*init) (void);     		/**< Plugin initialization */
 	void (*close) (void); 			/**< Plugin close */
 	void (*format)(const union plugin_arg *, int, char*); 	/**< Format data */
 	void (*parse)(char *, char*); 	/**< Parse input */
         char *(*info) (void);           /**< Plugin description */
 	void *handle; 					/**< Plugin handle */
+        int plainLevel;
 };
 
 typedef std::map<std::string, pluginConf> pluginMap;
@@ -136,13 +140,26 @@ public:
     const Column* getOrderByColumn() const;
 
     /**
-     * \brief Returns true when option for printing plain numbers was passed
+     * \brief Returns level of plain numbers limit
      *
-     * @return True when option for printing only plain numbers was passed,
-     * else otherwise
+     * @return level of plain numbers limit
      */
-    bool getPlainNumbers() const;
+    int getPlainLevel() const { return this->plainLevel; }
 
+    /**
+     * \brief Returns true when plain numbers level was set
+     * 
+     * @return true when plain numbers level was set
+     */
+    bool getPlainNumbers() const { return this->plainLevel > 0; }
+    
+    /**
+     * \brief Returns true when specified plugin should print plain numbers
+     * 
+     * @return true when specified plugin should print plain numbers
+     */
+    bool getPlainNumbers(std::string plugin)  { return (this->plainLevel >= this->plugins[plugin].plainLevel); }
+    
     /**
      * \brief Returns ceil limit of records to print
      * @return Maximum records number to print
@@ -402,7 +419,7 @@ private:
     stringVector parts;                 /**< Fastbit parts paths to be used*/
     stringSet aggregateColumnsAliases;  /**< Aggregate columns aliases set */
 	uint64_t maxRecords;                /**< Limit number of printed records */
-	bool plainNumbers;                  /**< Don't convert protocol numbers to strings*/
+	int plainLevel;                     /**< Don't convert protocol numbers to strings*/
 	bool aggregate;                     /**< Are we in aggreagate mode? */
 	bool quiet;                         /**< Don't print header and statistics */
 	std::string filter;                 /**< User specified filter string */

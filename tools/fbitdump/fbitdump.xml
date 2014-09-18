@@ -1699,46 +1699,57 @@
 	<plugin>
 		<name>httprt</name>
 		<path>/usr/share/fbitdump/plugins/httprt.so</path>
+                <plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>http_status_code</name>
 		<path>/usr/share/fbitdump/plugins/http_status_code.so</path>
+                <plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>sip_method</name>
 		<path>/usr/share/fbitdump/plugins/sip_method.so</path>
+                <plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>dns_rcode</name>
 		<path>/usr/share/fbitdump/plugins/dns_rcode.so</path>
+                <plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>tls_version</name>
 		<path>/usr/share/fbitdump/plugins/tls_version.so</path>
+                <plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>tls_csuites</name>
 		<path>/usr/share/fbitdump/plugins/tls_csuites.so</path>
+                <plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>tls_csuites_array</name>
 		<path>/usr/share/fbitdump/plugins/tls_csuites_array.so</path>
+                <plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>voip_type</name>
 		<path>/usr/share/fbitdump/plugins/voip_type.so</path>
+                <plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>voip_rtpcodec</name>
 		<path>/usr/share/fbitdump/plugins/voip_rtpcodec.so</path>
+                <plainLevel>1</plainLevel>
     </plugin>
 	<plugin>
 		<name>smtp_statuscode</name>
 		<path>/usr/share/fbitdump/plugins/smtp_statuscode.so</path>
+                <plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>smtp_command</name>
 		<path>/usr/share/fbitdump/plugins/smtp_command.so</path>
+                <plainLevel>1</plainLevel>
 	</plugin>
 </plugins>
 </configuration>

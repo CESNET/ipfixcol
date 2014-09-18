@@ -130,7 +130,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			}
 			break;
 		case 'N': /* print plain numbers */
-			this->plainNumbers = true;
+			this->plainLevel = atoi(optarg);
 			break;
 		case 's': {
 			/* Similar to -A option*/
@@ -394,6 +394,9 @@ void Configuration::printModules()
 	std::cout << "                                \n";
 	for (pluginMap::iterator it = this->plugins.begin(); it != this->plugins.end(); ++it) {
 		std::cout << "[Name] " << it->first << std::endl;
+		if (it->second.format) {
+			std::cout << "[Plain level] " << it->second.plainLevel << std::endl;
+		}
 		std::cout << it->second.info() << std::endl << std::endl;
 	}
 }
@@ -606,11 +609,6 @@ const Column *Configuration::getOrderByColumn() const
 	return this->orderColumn;
 }
 
-bool Configuration::getPlainNumbers() const
-{
-	return this->plainNumbers;
-}
-
 size_t Configuration::getMaxRecords() const
 {
 	return this->maxRecords;
@@ -760,7 +758,7 @@ void Configuration::help() const
 	<< "-n              Define number of top N. -c option takes precedence over -n." << std::endl
 	<< "-c              Limit number of records to display" << std::endl
 	<< "-D <dns>        Use nameserver <dns> for host lookup. Does not support IPv6 addresses." << std::endl
-	<< "-N              Print plain numbers" << std::endl
+	<< "-N <level>      Set level of plain numbers printing." << std::endl
 	<< "-s <column>[/<order>]     Generate statistics for <column> any valid record element." << std::endl
 	<< "                and ordered by <order>. Order can be any summarizable column, just as for -m option." << std::endl
 	<< "-q              Quiet: Do not print the header and bottom stat lines." << std::endl
@@ -813,7 +811,7 @@ bool Configuration::getOptionm() const
 	return this->optm;
 }
 
-Configuration::Configuration(): maxRecords(0), plainNumbers(false), aggregate(false), quiet(false),
+Configuration::Configuration(): maxRecords(0), plainLevel(0), aggregate(false), quiet(false),
 		optm(false), orderColumn(NULL), resolver(NULL), statistics(false), orderAsc(true), extendedStats(false),
 		createIndexes(false), deleteIndexes(false), configFile(CONFIG_XML), templateInfo(false)
 {
@@ -1019,7 +1017,7 @@ Resolver *Configuration::getResolver() const
 void Configuration::loadModules()
 {
 	pugi::xpath_node_set nodes = this->getXMLConfiguration().select_nodes("/configuration/plugins/plugin");
-	std::string path;
+	std::string path, plainLevel;
 	pluginConf aux_conf;
 	
 	for (pugi::xpath_node_set::const_iterator ii = nodes.begin(); ii != nodes.end(); ii++) {
@@ -1030,7 +1028,14 @@ void Configuration::loadModules()
 		}
 
 		path = node.node().child_value("path");
-
+		plainLevel = node.node().child_value("plainLevel");
+		
+		if (!plainLevel.empty()) {
+			aux_conf.plainLevel = atoi(plainLevel.c_str());
+		} else {
+			aux_conf.plainLevel = 1;
+		}
+		
 		if (access(path.c_str(), X_OK) != 0) {
 			MSG_WARNING(msg_module, "Cannot access %s", path.c_str());
 		}
