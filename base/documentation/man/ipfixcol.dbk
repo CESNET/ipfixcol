@@ -50,6 +50,7 @@
             <arg>-c file</arg>
             <arg>-dhVs</arg>
             <arg>-v level</arg>
+            <arg>-S time</arg>
         </cmdsynopsis>
     </refsynopsisdiv>
 
@@ -131,6 +132,14 @@
 				</listitem>
 			</varlistentry>
 
+                        <varlistentry>
+				<term>-S <replaceable class="parameter">time</replaceable></term>
+				<listitem>
+					<simpara>
+						Print proccessing statistics every <replaceable class="parameter">time</replaceable> seconds.
+					</simpara>
+				</listitem>
+			</varlistentry>
 		</variablelist>
 	</refsect1>
 
