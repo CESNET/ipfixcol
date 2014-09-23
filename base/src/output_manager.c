@@ -45,6 +45,7 @@
 #include <sys/prctl.h>
 
 #include <ipfixcol.h>
+#include <signal.h>
 
 #include "data_manager.h"
 #include "output_manager.h"
@@ -197,7 +198,10 @@ static void *output_manager_plugin_thread(void* config)
 			continue;
 
 		}
-
+		
+		__sync_fetch_and_add(&(conf->packets), 1);
+		__sync_fetch_and_add(&(conf->data_records), msg->data_records_count);
+		
 		/* Write data into input queue of Storage Plugins */
 		if (rbuffer_write(data_config->store_queue, msg, data_config->plugins_count) != 0) {
 			MSG_WARNING(msg_module, "[%u] Unable to write into Data manager's input queue, skipping data.", data_config->observation_domain_id);
@@ -215,16 +219,56 @@ static void *output_manager_plugin_thread(void* config)
 	return (void *) 0;
 }
 
+/**
+ * \brief Periodically prints statistics about proccessing speed
+ * 
+ * @param config output manager's configuration
+ * @return 0;
+ */
+static void *statistics_thread(void* config)
+{
+	struct output_manager_config *conf = (struct output_manager_config *) config;
+	const char *module = "stat";
+	time_t begin = time(NULL), now, diff_time;
+	uint64_t pkts, last_pkts, records, last_records, diff_pkts, diff_records;
+	pkts = last_pkts = records = last_records = diff_pkts = diff_records = 0;
+	
+	while (conf->stat_interval) {
+		sleep(conf->stat_interval);
+		
+		/* Compute time */
+		now = time(NULL);
+		diff_time = now - begin;
+		
+		/* Update and save packets counter */
+		pkts = conf->packets;
+		diff_pkts = pkts - last_pkts;
+		last_pkts = pkts;
+		
+		/* Update and save data records counter */
+		records = conf->data_records;
+		diff_records = records - last_records;
+		last_records = records;
+		
+		/* print info */
+		MSG_INFO(module, "now: %lu", now);
+		MSG_INFO(module, "%15s, %15s, %15s, %15s, %15s", "total time", "total packets", "tot. data rec.", "packets/s", "data records/s");
+		MSG_INFO(module, "%15lu, %15lu, %15lu, %15lu, %15lu", diff_time, pkts, records, diff_pkts/conf->stat_interval, diff_records/conf->stat_interval);
+	}
+	
+	return NULL;
+}
 
 /**
  * \brief Creates new Output Manager
  *
  * @param[in] storages list of storage plugin
  * @param[in] in_queue manager's input queue
+ * @param[in] stat_interval statistics printing interval
  * @param[out] config configuration structure
  * @return 0 on success, negative value otherwise
  */
-int output_manager_create(struct storage_list *storages, struct ring_buffer *in_queue, void **config) {
+int output_manager_create(struct storage_list *storages, struct ring_buffer *in_queue, int stat_interval, void **config) {
 
 	struct output_manager_config *conf;
 	int retval;
@@ -238,6 +282,7 @@ int output_manager_create(struct storage_list *storages, struct ring_buffer *in_
 
 	conf->storage_plugins = storages;
 	conf->in_queue = in_queue;
+	conf->stat_interval = stat_interval;
 
 	/* Create Output Manager's thread */
 	retval = pthread_create(&(conf->thread_id), NULL, &output_manager_plugin_thread, (void *) conf);
@@ -247,6 +292,15 @@ int output_manager_create(struct storage_list *storages, struct ring_buffer *in_
 		return -1;
 	}
 
+	if (conf->stat_interval > 0) {
+		retval = pthread_create(&(conf->stat_thread), NULL, &statistics_thread, (void *) conf);
+		if (retval != 0) {
+			MSG_ERROR(msg_module, "Unable to create statistic's thread.");
+			free(conf);
+			return -1;
+		}
+	}
+	
 	*config = conf;
 	return 0;
 }
@@ -264,6 +318,12 @@ void output_manager_close(void *config) {
 	rbuffer_write(manager->in_queue, NULL, 1);
 	pthread_join(manager->thread_id, NULL);
 	rbuffer_free(manager->in_queue);
+	
+	/* Close statistics thread */
+	if (manager->stat_interval > 0) {
+		pthread_kill(manager->stat_thread, SIGUSR1);
+		pthread_join(manager->stat_thread, NULL);
+	}
 
 	aux_config = manager->data_managers;
 	/* Close all data managers */

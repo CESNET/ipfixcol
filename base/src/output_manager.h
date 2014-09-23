@@ -61,6 +61,10 @@ struct output_manager_config {
 	struct storage_list *storage_plugins;    /* list of storage structures */
 	struct ring_buffer *in_queue;     /* input queue */
 	pthread_t thread_id;              /* manager's thread ID */
+        pthread_t stat_thread;
+        int stat_interval;
+        uint64_t data_records;
+        uint64_t packets;
 };
 
 
@@ -69,10 +73,11 @@ struct output_manager_config {
  *
  * @param[in] storages list of storage plugin
  * @param[in] in_queue manager's input queue
+ * @param[in] stat_interval statistics printing interval
  * @param[out] config configuration structure
  * @return 0 on success, negative value otherwise
  */
-int output_manager_create(struct storage_list *storages, struct ring_buffer *in_queue, void **config);
+int output_manager_create(struct storage_list *storages, struct ring_buffer *in_queue, int stat_interval, void **config);
 
 
 /**

@@ -75,7 +75,7 @@
 
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "c:dhv:Vsr:i:"
+#define OPTSTRING "c:dhv:Vsr:i:S:"
 
 /* main loop indicator */
 volatile int done = 0;
@@ -109,7 +109,9 @@ void help ()
 	printf ("  -v level  Print verbose messages up to specified level\n");
 	printf ("  -V        Print version information\n");
 	printf ("  -s        Skip invalid sequence number error (especially when receiving Netflow v9 data format)\n");
-	printf ("  -r        Ring buffer size\n\n");
+	printf ("  -r        Ring buffer size\n");
+	printf ("  -S num    Print proccessing statistics every \"num\" seconds\n");
+	printf ("\n");
 }
 
 void term_signal_handler(int sig)
@@ -126,7 +128,7 @@ void term_signal_handler(int sig)
 int main (int argc, char* argv[])
 {
 	int c, i, fd, retval = 0, get_retval, proc_count = 0, proc_id = 0, collector_mode = 0;
-	int source_status = SOURCE_STATUS_OPENED;
+	int source_status = SOURCE_STATUS_OPENED, stat_interval = 0;
 	pid_t pid = 0;
 	bool daemonize = false;
 	char *config_file = NULL, *internal_file = NULL;
@@ -187,6 +189,9 @@ int main (int argc, char* argv[])
 			break;
 		case 'r':
 			ring_buffer_size = atoi (optarg);
+			break;
+		case 'S':
+			stat_interval = atoi(optarg);
 			break;
 		default:
 			MSG_ERROR(msg_module, "Unknown parameter %c", c);
@@ -579,7 +584,7 @@ int main (int argc, char* argv[])
 	core_initialized = 1;
 
 	/* configure output subsystem */
-	retval = output_manager_create(storage_list, aux_queue, &output_manager_config);
+	retval = output_manager_create(storage_list, aux_queue, stat_interval, &output_manager_config);
 	if (retval != 0) {
 		MSG_ERROR(msg_module, "[%d] Initiating Storage Manager failed.", proc_id);
 		goto cleanup;
