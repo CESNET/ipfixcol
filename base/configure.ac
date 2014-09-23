@@ -207,6 +207,7 @@ AC_CONFIG_FILES([Makefile
 				src/intermediate/joinflows/Makefile
 				src/intermediate/filter/Makefile
 				src/intermediate/odip/Makefile
+				src/intermediate/hooks/Makefile
 				src/utils/Makefile
 				src/utils/ipfixconf/Makefile
 				config/Makefile

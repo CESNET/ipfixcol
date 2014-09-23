@@ -100,4 +100,9 @@
 		<file>@pkgdatadir@/plugins/ipfixcol-odip-inter.so</file>
 		<threadName>odip_inter</threadName>
 	</intermediatePlugin>
+        <intermediatePlugin>
+		<name>hooks</name>
+		<file>@pkgdatadir@/plugins/ipfixcol-hooks-inter.so</file>
+		<threadName>hooks_inter</threadName>
+	</intermediatePlugin>
 </ipfixcol>

@@ -2,7 +2,7 @@ SUBDIRS = utils \
 	. \
 	input/tcp input/udp input/ipfix \
 	intermediate/anonymization intermediate/dummy intermediate/joinflows \
-	intermediate/filter intermediate/odip \
+	intermediate/filter intermediate/odip intermediate/hooks \
 	storage/ipfix storage/dummy storage/forwarding \
 	ipfixviewer
 
