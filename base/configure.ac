@@ -210,6 +210,7 @@ AC_CONFIG_FILES([Makefile
 				src/intermediate/hooks/Makefile
 				src/utils/Makefile
 				src/utils/ipfixconf/Makefile
+				src/utils/ipfixsend/Makefile
 				config/Makefile
 				headers/Makefile
 				documentation/doxygen/Makefile
