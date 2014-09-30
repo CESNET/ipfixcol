@@ -70,5 +70,14 @@ char **read_packets(char *input);
  */
 void free_packets(char **packets);
 
+/**
+ * \brief Read file
+ * 
+ * @param input input path to file
+ * @param fsize file size
+ * @return whole file content
+ */
+char *read_file(char *input, long *fsize);
+
 #endif	/* READER_H */
 

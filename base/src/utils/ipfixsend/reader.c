@@ -180,3 +180,52 @@ char **read_packets(char *input)
     packets[pkt_cnt] = NULL;
     return packets;
 }
+
+/**
+ * \brief Get file length
+ * 
+ * @return file length
+ */
+long file_size(FILE *f)
+{
+	/* Go to end of file */
+	fseek(f, 0, SEEK_END);
+	
+	/* Get position */
+	long fsize = ftell(f);
+	
+	/* Back to beginning */
+	fseek(f, 0, SEEK_SET);
+	
+	return fsize;
+}
+
+/**
+ * \brief Read file
+ */
+char *read_file(char *input, long *fsize)
+{
+	FILE *f = fopen(input, "r");
+	
+    if (!f) {
+        fprintf(stderr, "Cannot open file \"%s\"!", input);
+        return NULL;
+    }
+	
+	/* Get file size and allocate space */
+	*fsize = file_size(f);
+	char *data = calloc(1, *fsize + 1);
+	if (!data) {
+		ERR_MEM;
+		return NULL;
+	}
+	
+	/* Read file */
+	fread(data, *fsize, 1, f);
+	data[*fsize] = 0;
+	
+	/* Close */
+	fclose(f);
+	
+	return data;
+}

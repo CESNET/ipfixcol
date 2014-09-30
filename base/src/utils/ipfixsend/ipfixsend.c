@@ -40,6 +40,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <ipfixcol.h>
 
 #include "ipfixsend.h"
@@ -51,7 +52,7 @@
 #endif
 
 
-#define OPTSTRING "hi:d:p:t:n:"
+#define OPTSTRING "hi:d:p:t:n:s:"
 #define DEFAULT_PORT 4739
 #define INFINITY_LOOPS (-1)
 
@@ -62,6 +63,8 @@ do { \
         return 1; \
     } \
 } while (0)
+
+#define KILOBYTE(_byte_) ((_byte_) * 1024)
 
 /**
  * \brief Print usage
@@ -76,6 +79,7 @@ void usage()
     printf("  -p port  Destination port number, default is %d\n", DEFAULT_PORT);
     printf("  -t type  Connection type (udp, tcp or sctp), default is udp\n");
 	printf("  -n num   How many times should file be sent, default is infinity\n");
+	printf("  -s speed Maximum data sending speed (kB/s)\n");
     printf("\n");
 }
 
@@ -86,6 +90,7 @@ int main(int argc, char** argv)
 {
     char *ip = NULL, *input = NULL;
     int c, port = DEFAULT_PORT, type = CT_UDP, loops = INFINITY_LOOPS;
+	int speed = 0;
     
 	if (argc == 1) {
 		usage();
@@ -123,6 +128,9 @@ int main(int argc, char** argv)
 		case 'n':
 			loops = atoi(optarg);
 			break;
+		case 's':
+			speed = KILOBYTE(atoi(optarg));
+			break;
         default:
             fprintf(stderr, "Unknown option\n");
             return 1;
@@ -140,22 +148,28 @@ int main(int argc, char** argv)
     }
     
     /* Read input file */
-    char **packets = read_packets(input);
-    if (!packets) {
-        return 1;
-    }
-    
+	long fsize;
+	char *data = read_file(input, &fsize);
+	if (!data) {
+		return 1;
+	}
+	
+	/* If speed not set, set it to file size */
+	if (!speed) {
+		speed = KILOBYTE(fsize);
+	}
+	
     /* Create connection */
     int sockfd = create_connection(&addr, type);
     if (sockfd <= 0) {
-        free_packets(packets);
-        return 1;
+		free(data);
+		return 1;
     }
     
     /* Send packets */
 	int i, ret;
     for (i = 0; loops == INFINITY_LOOPS || i < loops; ++i) {
-        ret = send_packets(packets, sockfd);
+		ret = send_data_limited(data, fsize, sockfd, speed);
 		if (ret != 0) {
 			break;
 		}
@@ -163,7 +177,7 @@ int main(int argc, char** argv)
     
     /* Close connection and free resources */
     close_connection(sockfd);
-    free_packets(packets);
+	free(data);
     
     return 0;
 }

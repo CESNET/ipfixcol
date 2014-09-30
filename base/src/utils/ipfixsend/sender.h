@@ -116,5 +116,15 @@ void close_connection(int sockfd);
  */
 int parse_ip(struct ip_addr *addr, char *ip, int port);
 
+/**
+ * \brief Send data with limited maximum speed
+ * @param data message to be send
+ * @param datasize message size
+ * @param sockfd socket
+ * @param max_speed speed limit
+ * @return 0 on success
+ */
+int send_data_limited(char *data, long datasize, int sockfd, int max_speed);
+
 #endif	/* SENDER_H */
 

@@ -43,6 +43,7 @@
 #include <netdb.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -78,6 +79,43 @@ int decode_type(char *type)
 }
 
 /**
+ * \brief Send data with limited max_speed
+ */
+int send_data_limited(char *data, long datasize, int sockfd, int max_speed)
+{
+	ssize_t len = 0, towrite = 0, todo = datasize;
+	clock_t begin, end;
+	double elapsed = 1000.0;
+	char *ptr = data;
+	
+//	printf("size: %d B\t limit: %d B/s\n", datasize, max_speed);
+	
+	while (todo > 0) {
+		/* sleep */
+		if (elapsed < 1000.0) {
+			usleep(1000.0 * (1000.0 - elapsed));
+		}
+		
+		/* send data */
+		towrite = (todo > max_speed) ? max_speed : todo;
+		begin = clock();
+		len = send(sockfd, ptr, towrite, 0);
+		if (len != towrite) {
+			fprintf(stderr, "Error while sending packet (%s)\n", sys_errlist[errno]);
+			return -1;
+		}
+		
+		/* how long should i sleep? */
+		todo -= len;
+		ptr += len;
+		end = clock();
+		elapsed = (((double) end - (double) begin) / CLOCKS_PER_SEC) * 1000.0;
+	}
+	
+	return 0;
+}
+
+/**
  * \brief Send data into socket
  * 
  * @param data Data buffer
@@ -90,13 +128,13 @@ int send_data(char *data, int len, int sockfd)
     int sent = 0, sent_now;
     
     while (sent != len) {
-        sent_now = send(sockfd, data, len, 0);
-        if (sent_now == -1) {
-            fprintf(stderr, "Error when sending packet (%s)\n", sys_errlist[errno]);
-            return -1;
-        }
-        
-        sent += sent_now;
+		sent_now = send(sockfd, data, len, 0);
+		if (sent_now == -1) {
+			fprintf(stderr, "Error when sending packet (%s)\n", sys_errlist[errno]);
+			return -1;
+		}
+
+		sent += sent_now;
     }
     
     return 0;
