@@ -71,7 +71,7 @@ _NOT not|NOT
 _EXISTS exists|EXISTS
 _BRACKET "("|")"
 _WHITESPACE " "+|\t+
-_STRING [^ =><!()]+|!
+_STRING \'[^']*\'|[^ =><!()]+|!
 %%
 
 %{
