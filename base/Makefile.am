@@ -11,7 +11,7 @@ SUBDIRS +=  documentation/man \
 	    documentation/doxygen
 endif
 
-EXTRA_DIST = README.md ipfixcol.png
+EXTRA_DIST = README.md
 
 .PHONY: doc
 doc: 
