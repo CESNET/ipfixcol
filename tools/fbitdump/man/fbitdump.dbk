@@ -372,7 +372,7 @@
 				<member>IPv4/v6 address in decimal format with subnet (address/xx)</member>
 				<member>Hostname</member>
 				<member>Timestamp in yyyy/MM/dd.hh:mm:ss format</member>
-				<member>String value which can contain '%' to filter by substrings</member>
+				<member>String value which can contain '%' to filter by substrings. String with spaces, brackets etc. must be in signle quotes.</member>
 		</simplelist>
 		<simpara><emphasis>exists</emphasis> specifies that selected column MUST exist (it can't be NULL)</simpara>
 		
