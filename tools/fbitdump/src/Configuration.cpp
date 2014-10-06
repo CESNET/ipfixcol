@@ -884,9 +884,34 @@ void Configuration::processMOption(stringVector &tables, const char *optarg, std
 		 */
 		std::string firstOpt = optionr.substr(0, found);
 		std::string secondOpt = optionr.substr(found+1, optionr.length()-found);
+		
+		Utils::sanitizePath(secondOpt);
+		uint16_t right_depth = std::count(secondOpt.begin(), secondOpt.end(), '/');
+
+		std::string root = firstOpt;
+		while (right_depth--) {
+			size_t slash = root.find_last_of('/');
+			if (slash == root.npos) {
+				/* No more parents */
+				root = "";
+				break;
+			}
+
+			/* Go one level up */
+			root = root.substr(0, root.find_last_of('/'));
+		}
+
+		if (firstOpt == root || root.empty()) { 
+			root = "";
+		} else {
+			firstOpt = firstOpt.substr(root.length() + 1);
+			Utils::sanitizePath(root);
+		}
+
+		Utils::sanitizePath(firstOpt);
 
 		for (unsigned int u = 0; u < dirs.size(); u++) {
-			Utils::loadDirRange(dirs[u], firstOpt, secondOpt, tables);
+			Utils::loadDirsTree(dirs[u] + root, firstOpt, secondOpt, tables);
 		}
 	} else {
 		/* no colon */
@@ -928,7 +953,11 @@ void Configuration::processROption(stringVector &tables, const char *optarg)
     }
 
     /* Get first firectory */
-    left = arg.substr(root.length() + 1, pos - root.length() - 1);
+    if (root == left) {
+	root = "./";
+    } else {
+	left = left.substr(root.length() + 1);
+    }
 
     Utils::sanitizePath(root);
     Utils::sanitizePath(left);
