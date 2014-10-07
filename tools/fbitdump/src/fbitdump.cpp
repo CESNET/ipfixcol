@@ -45,6 +45,7 @@
 #include <fstream>
 #include <iostream>
 
+#include "AggregateFilter.h"
 #include "Configuration.h"
 #include "TableManager.h"
 #include "Printer.h"
@@ -85,9 +86,17 @@ int main(int argc, char *argv[])
 
 	if (conf.getCheckFilters()) {
 		try {
+			/* Check basic filter */
 			std::cout << "Testing filter syntax: " << std::flush;
 			Filter filter(conf);
 			if (filter.checkFilter()) {
+				std::cout << "OK\n";
+			}
+			
+			/* Check post aggregate filter */
+			std::cout << "Testing post-aggregate filter syntax: " << std::flush;
+			AggregateFilter aggregateFilter(conf);
+			if (aggregateFilter.checkFilter()) {
 				std::cout << "OK\n";
 			}
 		}  catch (std::exception &e) {
@@ -99,12 +108,14 @@ int main(int argc, char *argv[])
 	}
 
 	try {
-		/* create filter */
-		Utils::printStatus( "Creating filter");
+		/* create filters */
+		Utils::printStatus( "Creating filters");
 
 		Filter filter(conf);
+		AggregateFilter aggregateFilter(conf);
+		
 		Utils::printStatus( "Initializing printer");
-
+		
 		/* initialise printer */
 		Printer print(std::cout, conf);
 		Utils::printStatus( "Initializing tables");
@@ -157,6 +168,12 @@ int main(int argc, char *argv[])
 			if (conf.getAggregate()) {
 				Utils::printStatus( "Aggregating tables");
 				tm.aggregate(conf.getAggregateColumns(), conf.getSummaryColumns(), filter);
+				
+				/* Apply post aggregate filter */
+				if (!conf.getAggregateFilter().empty()) {
+					Utils::printStatus("Filtering aggregated tables");
+					tm.filter(aggregateFilter, true);
+				}
 			} else {
 				tm.filter(filter);
 			}

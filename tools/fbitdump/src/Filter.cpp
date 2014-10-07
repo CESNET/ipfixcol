@@ -130,7 +130,7 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		/* clear the context */
 		yylex_destroy(this->scaninfo);
 	}
-	MSG_FILTER(this->filterString.c_str());
+	MSG_FILTER("Filter", this->filterString.c_str());
 
 }
 
@@ -522,7 +522,7 @@ bool Filter::parseColumnGroup(parserStruct *ps, std::string alias, bool aggerega
 	return true;
 }
 
-void Filter::parseColumn(parserStruct *ps, std::string alias) const throw (std::invalid_argument)
+void Filter::parseColumn(parserStruct *ps, std::string alias) const
 {
 	if (ps == NULL) {
 		throw std::invalid_argument(std::string("Cannot parse column, NULL parser structure"));
@@ -576,7 +576,7 @@ void Filter::parseColumn(parserStruct *ps, std::string alias) const throw (std::
 
 }
 
-void Filter::parseRawcolumn(parserStruct *ps, std::string colname) const throw (std::invalid_argument)
+void Filter::parseRawcolumn(parserStruct *ps, std::string colname) const
 {
 	if (ps == NULL) {
 		throw std::invalid_argument(std::string("Cannot parse raw column, NULL parser structure"));
@@ -651,6 +651,14 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 			/* If it was IPv6 hostname, we need to combine "and" and "or" operators - parse it somewhere else */
 			return this->parseExpHost6(left, cmp, right);
 		default:
+			if (left->parse) {
+				char buff[PLUGIN_BUFFER_SIZE];
+				left->parse((char *) right->parts[0].c_str(), buff);
+				if (strlen(buff) > 0) {
+					right->parts[0] = std::string(buff);
+					right->type = PT_NUMBER;
+				}
+			}
 			break;
 	}
 

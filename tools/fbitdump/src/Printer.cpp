@@ -106,7 +106,7 @@ void Printer::printHeader() const
 	/* print column names */
 	for (size_t i = 0; i < conf.getColumns().size(); i++) {
 		/* set defined column width */
-		if (conf.getStatistics() && conf.getColumns()[i]->isSummary()) {
+		if (conf.getStatistics() && conf.getColumns()[i]->isSumSummary()) {
 			/* widen for percentage */
 			out.width(conf.getColumns()[i]->getWidth() + this->percentageWidth);
 		} else {
@@ -138,9 +138,14 @@ void Printer::printFooter(uint64_t numPrinted) const
 
 		columnVector stats = conf.getStatisticsColumns();
 
-		for (columnVector::const_iterator it = stats.begin(); it != stats.end(); it++) {
-			out << "Total " << (*it)->getName() << ": ";
-			std::string s = "sum(" + *(*it)->getColumns().begin() + ")";
+		for (auto col: stats) {
+			if (col->isAvgSummary()) {
+				out << "Average ";
+			} else {
+				out << "Total ";
+			}
+			out << col->getName() << ": ";
+			std::string s = col->getSummaryType() + col->getSelectName();
 			Utils::formatNumber(st->getValue(s), out, conf.getPlainNumbers());
 			out << std::endl;
 		}
@@ -152,7 +157,7 @@ void Printer::printRow(const Cursor *cur) const
 	/* go over all defined columns */
 	for (size_t i = 0; i < conf.getColumns().size(); i++) {
 		/* set defined column width */
-		if (conf.getStatistics() && conf.getColumns()[i]->isSummary()) {
+		if (conf.getStatistics() && conf.getColumns()[i]->isSumSummary()) {
 			/* widen for percentage */
 			out.width(conf.getColumns()[i]->getWidth() + this->percentageWidth);
 		} else {
@@ -187,6 +192,7 @@ const std::string Printer::printValue(const Column *col, const Cursor *cur) cons
 	}
 
 	std::string valueStr;
+
 	if (!col->getSemantics().empty() && ( col->getSemantics() != "flows" ) && ( col->format != NULL)) {
 		col->format( (const plugin_arg * )val->value, (int) this->conf.getPlainNumbers(col->getSemantics()), plugin_buffer );
 		valueStr.append(plugin_buffer);
@@ -194,11 +200,10 @@ const std::string Printer::printValue(const Column *col, const Cursor *cur) cons
 	} else {
 		valueStr = val->toString(conf.getPlainNumbers());
 		/* when printing statistics, add percent part */
-		if (conf.getStatistics() && col->isSummary()) {
+		if (conf.getStatistics() && col->isSumSummary()) {
 			std::ostringstream ss;
 			double sum;
-			std::string name = std::string("sum(") + *col->getColumns().begin() + ")";
-
+			std::string name = col->getSummaryType() + col->getSelectName();
 			sum = this->tableManager->getSummary()->getValue(name);
 
 			ss.precision(1);

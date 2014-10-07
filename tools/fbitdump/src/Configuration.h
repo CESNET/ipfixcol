@@ -49,7 +49,7 @@
 namespace fbitdump {
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "hVlaA::r:f:n:c:D:N:s:qeIM:m::R:o:v:Zt:i::d::C:Tp:SO"
+#define OPTSTRING "hVlaA::r:f:n:c:D:N:s:qeIM:m::R:o:v:Zt:i::d::C:Tp:SOP:"
 
 #define CONFIG_XML "/usr/share/fbitdump/fbitdump.xml"
 
@@ -111,24 +111,31 @@ public:
      * @return Strings containing filter from user
      */
     std::string getFilter() const;
+    
+    /**
+     * \brief Returns filter string for aggregated table
+     * 
+     * @return Strings containing filter from user
+     */
+    std::string getAggregateFilter() const { return aggregateFilter; }
 
     /**
-     * \brief Returns set of fastbit column names containing columns
+     * \brief Returns vector of fastbit columns containing columns
      * to be used in select clause of aggregation query
      * These columns are used to aggregate by
      *
-     * @return stringSet
+     * @return columnVector
      */
-    const stringSet getAggregateColumns() const;
+    const columnVector getAggregateColumns() const;
 
     /**
-     * \brief Returns set of column names containing columns
+     * \brief Returns vector of columns containing columns
      * to be used in select clause of aggregation query
      * These columns are used with summary function (sum, min, max)
      *
-     * @return stringSet
+     * @return columnVector
      */
-    const stringSet getSummaryColumns() const;
+    const columnVector getSummaryColumns() const;
 
     /**
      * \brief Returns column to order by
@@ -423,6 +430,7 @@ private:
 	bool aggregate;                     /**< Are we in aggreagate mode? */
 	bool quiet;                         /**< Don't print header and statistics */
 	std::string filter;                 /**< User specified filter string */
+        std::string aggregateFilter;        /**< User specified filter string for aggregated table */
 	std::string format;                 /**< Output format*/
 	columnVector columns;               /**< Vector of columns to print */
 	std::string firstdir;               /**< First table (directory) user wants to work with */

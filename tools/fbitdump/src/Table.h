@@ -87,28 +87,45 @@ public:
 	 * @return Pointer to new Cursor class instance
 	 */
 	Cursor* createCursor();
-
-	/**
+        
+        /**
 	 * \brief Run query that aggregates columns and filters the table
 	 *
 	 * aggregateColumns must contain only columns that are in this table
-	 * Function creates namesColumnsMap
 	 *
-	 * @param aggregateColumns Set of column to aggregate by
-	 * @param summaryColumns Set of columns to summarize
+	 * @param aggregateColumns vector of columns to aggregate by
+	 * @param summaryColumns vector of columns to summarize
+	 * @param filter Filter to use
+         * @param summary flag indicating summary creation
+         * @param select_flows true when flows are required
+	 */
+        void aggregate(const columnVector &aggregateColumns, const columnVector &summaryColumns, const Filter &filter, bool summary = false, bool select_flows = false);
+        
+        /**
+	 * \brief Run query that aggregates columns and filters the table using aggregation functions
+	 *
+	 * aggregateColumns must contain only columns that are in this table
+	 *
+	 * @param aggregateColumns vector of columns to aggregate by
+	 * @param summaryColumns vector of columns to summarize
 	 * @param filter Filter to use
 	 */
-	void aggregate(const stringSet &aggregateColumns, const stringSet &summaryColumns,
-			const Filter &filter);
-
-	/**
+        void aggregateWithFunctions(const columnVector &aggregateColumns, const columnVector &summaryColumns, const Filter &filter);
+        
+        /**
 	 * \brief Run query that filters data in this table
 	 *
-	 * @param columnNames Set of column names to use in query
+	 * @param columns vector of columns names to use in query
 	 * @param filter Filter to use
 	 */
-	void filter(stringSet columnNames, Filter &filter);
-
+        void filter(columnVector columns, Filter &filter);
+        
+        /**
+         * \brief Only apply given filter on whole table
+         * 
+         * @param filter Filter
+         */
+        void filter(Filter &filter);
 
 	/**
 	 * \brief Get number of rows
@@ -124,14 +141,6 @@ public:
 	const ibis::table* getFastbitTable();
 
 	/**
-	 * \brief Returns map of column names to column numbers
-	 * (Mainly for cursor)
-	 *
-	 * @return Map of column names to column numbers
-	 */
-	const namesColumnsMap& getNamesColumns();
-
-	/**
 	 * \brief Return pointer to used filter
 	 * (For cursor)
 	 *
@@ -141,11 +150,7 @@ public:
 
 	/**
 	 * \brief Specify string set with columns names to order by
-	 *
-	 * More strings will be used when column has mutiple parts
-	 * Strings must be put through namesColumnsMap,
-	 * so this function is valid only after the map exists
-	 *
+         * 
 	 * @param orderColumns list of strings to order by
 	 * @param orderAsc true implies increasing order
 	 */
@@ -191,21 +196,34 @@ private:
 	 */
 	void queueQuery(std::string select, const Filter &filter);
 
-	/**
-	 * \brief Translate column names to table columns
-	 *
-	 * With summary columns strips the function from name, does translation
-	 * and puts the function back
-	 *
-	 * @param columns Set of column names to translate
-	 * @param summary True when given columns are summary, default is false
-	 * @return New set with translated columns
-	 */
-	stringPairVector translateColumns(const stringSet &columns, bool summary=false);
-
+        /**
+         * \brief Create select clause from column vector
+         * 
+         * @param columns column vector
+         * @param summary true when creating summary
+         * @return select clause
+         */
+        std::string createSelect(const columnVector columns, bool summary = false, bool has_flows = false);
+        
+        /**
+         * \brief Get list of column names from vector
+         * 
+         * @param columns column vector
+         * @return columns names
+         */
+        stringSet getColumnsNames(const columnVector &columns);
+        
+        /**
+         * \brief Get columns with same names as in given set
+         * 
+         * @param columns column vector
+         * @param names names to be matched
+         * @return matching columns
+         */
+        columnVector getColumnsByNames(const columnVector columns, const stringSet names);
+        
 	ibis::table *table; /**< wrapped cursors table */
 	const Filter *usedFilter; /**< Saved filter for cursor */
-	namesColumnsMap namesColumns; /**< Map of column names to column numbers */
 	bool queryDone; /**< Indicates that query was already preformed */
 	std::string select; /**< Select string to be used on next query */
 	stringSet orderColumns; /**< Set of columns to order by */

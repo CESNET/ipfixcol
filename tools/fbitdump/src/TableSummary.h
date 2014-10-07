@@ -46,6 +46,7 @@
 namespace fbitdump {
 
 typedef std::map<std::string, double> valuesMap;
+typedef std::map<std::string, int> occurenceMap;
 
 /**
  * \brief Computes table summary on given columns
@@ -61,9 +62,9 @@ public:
 	 * \brief Constructor takes Tables in vector and reads summary data from them
 	 *
 	 * @param tables Tables to create summary data for
-	 * @param summaryColumns set of columns to create summaries for
+	 * @param summaryColumns vector of columns to create summaries for
 	 */
-	TableSummary(tableVector const &tables, stringSet const &summaryColumns);
+        TableSummary(tableVector const &tables, columnVector const &summaryColumns);
 
 	/**
 	 * \brief Returns summary value for specified column
@@ -74,6 +75,7 @@ public:
 
 private:
 	valuesMap values; /**< Map of column names and Values */
+        occurenceMap occurences; /**< Map of column names and their occurences in tables */
 };
 
 } /* end of fbitdump namespace */

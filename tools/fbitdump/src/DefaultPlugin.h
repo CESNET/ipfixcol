@@ -48,7 +48,7 @@ using namespace fbitdump;
 void parseFlags(char *strFlags, char *out);
 void parseProto(char *strProto, char *out);
 void parseHostname(parserStruct *ps, uint8_t af_type);
-
+void parseDuration(char *duration, char *out);
 
 /* output formatting */
 void printProtocol(const union plugin_arg * val, int plain_numbers, char * buff);

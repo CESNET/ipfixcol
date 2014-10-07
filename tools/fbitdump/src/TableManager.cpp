@@ -43,49 +43,58 @@
 
 namespace fbitdump {
 
-void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumns,
-		Filter &filter)
+void TableManager::aggregate(columnVector aggregateColumns, columnVector summaryColumns, Filter &filter)
 {
 	std::vector<stringSet> colIntersect;
-	stringSet partCols;
-	Table *table;
-	ibis::partList parts; /* this overrides class attribute parts */
-	size_t size = 0;
-	/* omit parts that don't have necessary summary columns */
-	/* strip summary columns of aggregation functions to get plain names */
-	stringSet sCols;
-	for (stringSet::const_iterator it = summaryColumns.begin(); it != summaryColumns.end(); it++) {
-		int begin = it->find_first_of('(') + 1;
-		int end = it->find_first_of(')');
-		std::string tmp = it->substr(begin, end-begin);
-		if (tmp != "*") { /* ignore column * used for flows aggregation */
-			sCols.insert(tmp);
+	stringSet aCols, partCols;
+	
+	/* get names (eXidYYY) of all aggregating columns */
+	for (auto col: aggregateColumns) {
+		for (auto name: col->getColumns()) {
+			aCols.insert(name);
 		}
 	}
-
+	
+	Table *table;
+	ibis::partList parts;
+	size_t size = 0;
+	
+	/* get names (eXidYYY) of all summary columns */
+	stringSet sCols;
+	for (auto col: summaryColumns) {
+		for (auto name: col->getColumns()) {
+			int begin = name.find_first_of('(') + 1;
+			int end = name.find_first_of(')');
+			std::string tmp = name.substr(begin, end-begin);
+			if (tmp != "*") { /* ignore column * used for flows aggregation */
+				sCols.insert(tmp);
+			}
+		}
+	}
+	
 	size = this->parts.size();
-	/* filter out parts */
-	for (size_t i = 0; i < this->parts.size(); i++) {
-		/* put columns from part to set */
+	
+	/* filter out parts without summary columns */
+	for (size_t i = 0; i < this->parts.size(); ++i) {
 		stringSet partColumns;
 		Utils::progressBar( "Aggregating [1/2]  ", "   ", size, i );
 		for (size_t j = 0; j < this->parts[i]->columnNames().size(); j++) {
 			partColumns.insert(this->parts[i]->columnNames()[j]);
 		}
-
+		
 		/* compute set difference */
 		stringSet difference;
 		std::set_difference(sCols.begin(), sCols.end(), partColumns.begin(),
 				partColumns.end(), std::inserter(difference, difference.begin()));
-
+		
 		/* When all summary columns are in current part, difference is empty */
 		if (difference.empty()) {
 			parts.push_back(this->parts[i]);
 		} else {
 			std::cerr << "Ommiting part " << this->parts[i]->currentDataDir() << ", does not have column '" << *difference.begin() << "'" << std::endl;
 		}
-
 	}
+	
 	size = parts.size();
 	/* go over all parts and build vector of intersection between part columns and aggregation columns */
 	/* put together the parts that have same intersection - this ensures for example that ipv4 and ipv6 are aggregate separately by default */
@@ -100,8 +109,8 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 		colIntersect.push_back(stringSet());
 
 		/* make an intersection */
-		std::set_intersection(partCols.begin(), partCols.end(), aggregateColumns.begin(),
-				aggregateColumns.end(), std::inserter(colIntersect[i], colIntersect[i].begin()));
+		std::set_intersection(partCols.begin(), partCols.end(), aCols.begin(),
+				aCols.end(), std::inserter(colIntersect[i], colIntersect[i].begin()));
 
 #ifdef DEBUG
 		std::cerr << "Intersection has " << colIntersect[i].size() << " columns" << std::endl;
@@ -118,7 +127,7 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 
 		Utils::progressBar( "Aggregating [2/2]  ", "   ", size, i );
 	}
-
+	
 	/* group parts with same intersection to one table */
 	ibis::partList pList;
 	size_t partsCount = parts.size();
@@ -204,8 +213,22 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 		if (!outerIter->empty() || aggregateColumns.empty()) {
 			table = new Table(pList);
 
+			columnVector aggCols;
+			for (auto col: aggregateColumns) {
+				bool isThere = true;
+				for (auto name: col->getColumns()) {
+					if (outerIter->find(name) == outerIter->end()) {
+						isThere = false;
+						break;
+					}
+				}
+				if (isThere) {
+					aggCols.push_back(col);
+				}
+			}
+			
 			/* aggregate the table, use only present aggregation columns */
-			table->aggregate(*outerIter, summaryColumns, filter);
+			table->aggregateWithFunctions(aggCols, summaryColumns, filter);
 			table->orderBy(this->orderColumns, this->orderAsc);
 			this->tables.push_back(table);
 		}
@@ -216,32 +239,35 @@ void TableManager::aggregate(stringSet aggregateColumns, stringSet summaryColumn
 	}
 }
 
-void TableManager::filter(Filter &filter)
+
+void TableManager::postAggregateFilter(Filter& filter)
 {
+	for (auto table: this->tables) {
+		table->filter(filter);
+	}
+}
+
+void TableManager::filter(Filter &filter, bool postAggregate)
+{
+	if (postAggregate) {
+		this->postAggregateFilter(filter);
+		return;
+	}
+	
 	Table *table;
 	int size = conf.getColumns().size();
 	int i = 0;
 	
-	stringSet columnNames;
+	columnVector columns;
 	
-	
-	for (columnVector::const_iterator it = conf.getColumns().begin(); it != conf.getColumns().end(); it++) {
-
-		// print progress bar
-		Utils::progressBar( "Initializing filter", "   ", size, i );
-		
-		i++;
-
-		/* don't add flows as count(*) */
-		if (!(*it)->isSeparator() && (*it)->getSemantics() == "flows") {
+	for (auto col: conf.getColumns()) {
+		if (col->isSeparator() || col->getSemantics() == "flows") {
 			continue;
 		}
-		stringSet tmp = (*it)->getColumns();
-		if (tmp.size() > 0) {
-			columnNames.insert(tmp.begin(), tmp.end());
-		}
 
+		columns.push_back(col);
 	}
+	
 	//Utils::progressBar( "Initializing filter", "DONE", 1, 1 );
 	//std::cout.flush();
 	
@@ -257,7 +283,7 @@ void TableManager::filter(Filter &filter)
 		table = new Table(*it);
 
 		/* add to managed tables */
-		table->filter(columnNames, filter);
+		table->filter(columns, filter);
 		table->orderBy(this->orderColumns, this->orderAsc);
 		this->tables.push_back(table);
 
@@ -333,22 +359,30 @@ TableManager::TableManager(Configuration &conf): conf(conf), tableSummary(NULL)
 	}
 	/* create order by string list if necessary */
 	if (conf.getOptionm()) {
-		this->orderColumns = conf.getOrderByColumn()->getColumns();
+		this->orderColumns.insert(conf.getOrderByColumn()->getSelectName());
 		this->orderAsc = conf.getOrderAsc();
 	}
 }
 
 const TableSummary* TableManager::getSummary()
 {
-	if (this->tableSummary == NULL) { /* create summary if not already existing */
-		stringSet columns, summaryColumns = conf.getSummaryColumns();
-
-		for (stringSet::const_iterator it = summaryColumns.begin(); it != summaryColumns.end(); it++) {
-			columns.insert("sum(" + *it + ")");
-		}
-		this->tableSummary = new TableSummary(this->tables, columns);
+	if (this->tableSummary == NULL) {
+		this->tableSummary = new TableSummary(this->tables, conf.getSummaryColumns());
+		
+//		columnVector columns;
+//		columnVector summaryColumns = conf.getSummaryColumns();
+		
+//		for (auto col: summaryColumns) {
+//			if (col->getSemantics() == "flows") {
+//				columns.insert(col->getElement());
+//			} else {
+//				columns.insert(col->getSummaryType() + "(" + col->getSelectName() + ")");
+//			}
+//		}
+		
+//		this->tableSummary = new TableSummary(this->tables, columns);
 	}
-
+	
 	return this->tableSummary;
 }
 

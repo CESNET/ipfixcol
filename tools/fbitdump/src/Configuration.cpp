@@ -263,6 +263,9 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		case 'l':
 			print_modules = true;
 			break;
+		case 'P':
+			this->aggregateFilter = optarg;
+			break;
 		default:
 			help ();
 			return 1;
@@ -332,6 +335,10 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	}
 	
 	if (this->checkFilters) {
+		/* Get summary columns for aggregate filter */
+		this->loadOutputFormat();
+		this->parseFormat(this->format, optionm);
+		
 		this->instance = this;
 		return 0;
 	}
@@ -348,6 +355,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 
 	this->plugins["tcpflags"].parse = parseFlags;
 	this->plugins["protocol"].parse = parseProto;
+	this->plugins["duration"].parse = parseDuration;
 
 	Utils::printStatus( "Preparing output format");
 
@@ -569,18 +577,17 @@ std::string Configuration::getFilter() const
 	return this->filter;
 }
 
-const stringSet Configuration::getAggregateColumns() const
+const columnVector Configuration::getAggregateColumns() const
 {
-	stringSet aggregateColumns;
+	columnVector aggregateColumns;
 
 	/* go over all aliases */
 	for (stringSet::const_iterator aliasIt = this->aggregateColumnsAliases.begin();
 			aliasIt != this->aggregateColumnsAliases.end(); aliasIt++) {
 
 		try {
-			Column col = Column(this->doc, *aliasIt, this->aggregate);
-			stringSet cols = col.getColumns();
-			aggregateColumns.insert(cols.begin(), cols.end());
+			Column *col = new Column(this->doc, *aliasIt, this->aggregate);
+			aggregateColumns.push_back(col);
 		} catch (std::exception &e) {
 			std::cerr << e.what() << std::endl;
 		}
@@ -589,16 +596,15 @@ const stringSet Configuration::getAggregateColumns() const
 	return aggregateColumns;
 }
 
-const stringSet Configuration::getSummaryColumns() const
+const columnVector Configuration::getSummaryColumns() const
 {
-	stringSet summaryColumns, tmp;
+	columnVector summaryColumns, tmp;
 
 	/* go over all columns */
 	for (columnVector::const_iterator it = columns.begin(); it != columns.end(); it++) {
 		/* if column is aggregable (has summarizable columns) */
 		if ((*it)->getAggregate()) {
-			tmp = (*it)->getColumns();
-			summaryColumns.insert(tmp.begin(), tmp.end());
+			summaryColumns.push_back(*it);
 		}
 	}
 	return summaryColumns;
@@ -727,17 +733,12 @@ void Configuration::processmOption(std::string &order)
 	try {
 		Column *col = new Column(doc, order, this->getAggregate());
 
-		if (!col->isOperation()) { /* column is not an operation, it is ok to sort by it */
-			this->orderColumn = col;
-			return;
-		}
+		this->orderColumn = col;
+		return;
 	} catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
 		std::cerr << "Cannot find column '" << order << "' to order by" << std::endl;
 	}
-
-	std::cerr << "Cannot sort by operation column '" << order << "'." << std::endl;
-	this->optm = false;
 }
 
 void Configuration::help() const
@@ -803,6 +804,7 @@ void Configuration::help() const
 	<< "-S              print available semantics" << std::endl
 	<< "-O              print available output formats" << std::endl
 	<< "-l              print plugin list" << std::endl
+	<< "-P <filter>     Post-aggregate filter (only when aggregating, containing columns in aggregated table only)" << std::endl
 	;
 }
 
@@ -999,12 +1001,6 @@ void Configuration::loadOutputFormat() throw (std::invalid_argument)
 	/* Look out for custom format */
 	if (this->format.substr(0,4) == "fmt:") {
 		this->format = this->format.substr(4);
-		/* when aggregating, always add flows */
-		size_t pos;
-		if (this->getAggregate() && ((pos = this->format.find("%fl")) == std::string::npos
-				|| isalnum(this->format[pos+3]))) {
-			this->format += " %fl";
-		}
 		return;
 	}
 

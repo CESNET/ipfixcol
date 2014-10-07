@@ -108,6 +108,10 @@ void parseProto(char *strProto, char out[PLUGIN_BUFFER_SIZE])
 	out[0] = '\0';
 }
 
+void parseDuration(char *duration, char out[PLUGIN_BUFFER_SIZE])
+{	
+	snprintf(out, PLUGIN_BUFFER_SIZE, "%f", std::atof(duration) * 1000.0);
+}
 
 void printProtocol(const union plugin_arg * val, int plain_numbers, char ret[PLUGIN_BUFFER_SIZE]) {
 	if (!plain_numbers) {
@@ -233,7 +237,7 @@ void printDuration(const union plugin_arg * val, int plain_numbers, char buff[PL
 	ss << std::fixed;
 	ss.precision(3);
 
-	ss << (float) val[0].uint64/1000;
+	ss << (float) val[0].dbl/1000.0;
 
 	str = ss.str();
 	ss.str("");
