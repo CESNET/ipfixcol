@@ -96,8 +96,7 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 
 	conf->ip_id = ip_id;
 	conf->ip_config = ip_config;
-//	conf->tm = template_mgr;
-	conf->tm = tm_create();
+	conf->tm = template_mgr;
 
 	*config = conf;
 	MSG_NOTICE(msg_module, "Successfully initialized");
@@ -161,7 +160,8 @@ void templates_processor(uint8_t *rec, int rec_len, void *data)
 	
 	/* save template into template manager */
 	proc->key.tid = ntohs(new_rec->template_id);
-	tm_add_template(proc->tm, (void *) new_rec, rec_len + add, proc->type, &(proc->key));
+	struct ipfix_template *t = tm_add_template(proc->tm, (void *) new_rec, rec_len + add, proc->type, &(proc->key));
+	new_rec->template_id = htons(t->template_id);
 }
 
 /**
@@ -306,7 +306,7 @@ int process_message(void *config, void *message)
 		if (!templ) {
 			continue;
 		}
-		proc.key.tid = ntohs(msg->data_couple[i].data_set->header.flowset_id);
+		proc.key.tid = templ->template_id;
 		struct ipfix_template *new_templ = tm_get_template(conf->tm, &(proc.key));
 		if (new_templ == NULL) {
 			MSG_WARNING(msg_module, "[%u] %d not found, something is wrong!", info->odid, templ->template_id);
@@ -330,9 +330,6 @@ int process_message(void *config, void *message)
 		tm_template_reference_inc(new_templ);
 
 		data_set_process_records(msg->data_couple[i].data_set, templ, &data_processor, (void *) &proc);
-				
-		new_templ->template_id = templ->template_id;
-		new_templ->original_id = templ->original_id;
 
 		new_msg->data_couple[i].data_set->header.length = htons(proc.length);
 		new_msg->data_couple[i].data_set->header.flowset_id = htons(new_msg->data_couple[i].data_template->template_id);
@@ -363,8 +360,6 @@ int intermediate_plugin_close(void *config)
 	struct odip_ip_config *conf;
 	
 	conf = (struct odip_ip_config *) config;
-	
-	tm_destroy(conf->tm);
 	
 	free(conf);
 
