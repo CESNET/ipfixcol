@@ -8,6 +8,5 @@
 *  Supported ordering by computed columns (bps...)
 *  %fl column is not required in output format
 *  Added post-aggregate filter (option -P)
-
-
+*  Added filter check option (-Z)
 
