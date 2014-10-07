@@ -309,6 +309,24 @@
 		</value>
 	</column>
 	<column>
+		<name>Exporter IPv4</name>
+		<alias>%eip4</alias>
+		<width>12</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element semantics="ipv4">e0id403</element>
+		</value>
+	</column>
+	<column>
+		<name>Exporter IPv6</name>
+		<alias>%eip6</alias>
+		<width>20</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element semantics="ipv6" parts="2">e0id404</element>
+		</value>
+	</column>
+	<column>
 		<name>ODID</name>
 		<alias>%odid</alias>
 		<width>4</width>
