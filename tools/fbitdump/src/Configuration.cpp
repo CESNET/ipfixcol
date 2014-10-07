@@ -884,9 +884,34 @@ void Configuration::processMOption(stringVector &tables, const char *optarg, std
 		 */
 		std::string firstOpt = optionr.substr(0, found);
 		std::string secondOpt = optionr.substr(found+1, optionr.length()-found);
+		
+		Utils::sanitizePath(secondOpt);
+		uint16_t right_depth = std::count(secondOpt.begin(), secondOpt.end(), '/');
+
+		std::string root = firstOpt;
+		while (right_depth--) {
+			size_t slash = root.find_last_of('/');
+			if (slash == root.npos) {
+				/* No more parents */
+				root = "";
+				break;
+			}
+
+			/* Go one level up */
+			root = root.substr(0, root.find_last_of('/'));
+		}
+
+		if (firstOpt == root || root.empty()) { 
+			root = "";
+		} else {
+			firstOpt = firstOpt.substr(root.length() + 1);
+			Utils::sanitizePath(root);
+		}
+
+		Utils::sanitizePath(firstOpt);
 
 		for (unsigned int u = 0; u < dirs.size(); u++) {
-			Utils::loadDirRange(dirs[u], firstOpt, secondOpt, tables);
+			Utils::loadDirsTree(dirs[u] + root, firstOpt, secondOpt, tables);
 		}
 	} else {
 		/* no colon */
@@ -901,50 +926,44 @@ void Configuration::processMOption(stringVector &tables, const char *optarg, std
 
 void Configuration::processROption(stringVector &tables, const char *optarg)
 {
+    std::string arg = optarg;
 
-	/* find dirname() */
-	char *optarg_copy = strdup(optarg);
-	if (!optarg_copy) {
-		std::cerr << "Not enough memory (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;
-		exit(EXIT_FAILURE);
-	}
+    /* Find separator */
+    size_t pos = arg.find(':');
+    if (pos == arg.npos) {
+        /* Specified only one directory */
+	Utils::sanitizePath(arg);
+        tables.push_back(arg);
+        return;
+    }
 
-	std::string dname(dirname(optarg_copy));
-	free(optarg_copy);
-	optarg_copy = NULL;
+    /* Get left and right path */
+    std::string left = arg.substr(0, pos);
+    std::string right = arg.substr(pos + 1);
 
-	/* add slash on the end */
-	Utils::sanitizePath(dname);
+    /* Right path is ready and can be sanitized */
+    Utils::sanitizePath(right);
 
-	/* find basename() */
-	optarg_copy = strdup(optarg);
-	if (!optarg_copy) {
-		std::cerr << "Not enough memory (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;
-		exit(EXIT_FAILURE);
-	}
+    /* Get root directory (== left - depth of right) */
+    uint16_t right_depth = std::count(right.begin(), right.end(), '/');
 
-	std::string bname(basename(optarg_copy));
-	free(optarg_copy);
-	optarg_copy = NULL;
+    std::string root = left;
+    while (right_depth--) {
+	root = root.substr(0, root.find_last_of('/'));
+    }
 
-	/* check whether user specified region defined like fromDirX:toDirY */
-	/* NOTE: this will not work correctly if directory name contains colon */
-	size_t found = bname.find(':');
+    /* Get first firectory */
+    if (root == left) {
+	root = "./";
+    } else {
+	left = left.substr(root.length() + 1);
+    }
 
-	if (found != std::string::npos) {
-		/* yep, user specified region */
-		std::string firstDir = bname.substr(0, found);
-		std::string lastDir = bname.substr(found+1, bname.length()-(found+1));
+    Utils::sanitizePath(root);
+    Utils::sanitizePath(left);
 
-		Utils::loadDirRange(dname, firstDir, lastDir, tables);
-	} else {
-		/* user specified parent directory only, so he wants to include
-		 * all subdirectories */
-
-		std::string parentDir(optarg);
-		Utils::sanitizePath(parentDir);
-		tables.push_back(std::string(parentDir));
-	}
+    /* Load dirs */
+    Utils::loadDirsTree(root, left, right, tables);
 }
 
 void Configuration::parseAggregateArg(char *arg) throw (std::invalid_argument)

@@ -112,6 +112,16 @@ bool isFastbitPart(std::string dir);
 void sanitizePath(std::string &path);
 
 /**
+ * @brief Load directory tree from first to last directory
+ *
+ * @param basedir Root directory of both subtrees
+ * @param first Subtree with first directory (if empty, start with first dir in folder)
+ * @param last Subtree with last directory
+ * @param tables table vector
+ */
+void loadDirsTree(std::string basedir, std::string first, std::string last, stringVector &tables);
+
+/**
  * \brief Reads all subdirectories of basedir in range between firstDir and lastDir and saves the paths to tables
  *
  * @param basedir Basic path to directories in range
