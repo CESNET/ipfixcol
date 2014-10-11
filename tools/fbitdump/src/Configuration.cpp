@@ -834,47 +834,56 @@ void Configuration::processMOption(stringVector &tables, const char *optarg, std
 		throw std::invalid_argument("Option -M requires -r to specify subdirectories!");
 	}
 
-	char *optarg_copy = strdup(optarg);
-	if (!optarg_copy) {
-		std::cerr << "Not enough memory (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;
-	}
-
-	std::string dname = dirname(optarg_copy);
-	Utils::sanitizePath(dname);
-	free(optarg_copy);
-	optarg_copy = NULL;
-
-	optarg_copy = strdup(optarg);
-	if (!optarg_copy) {
-		std::cerr << "Not enough memory (" << __FILE__ << ":" << __LINE__ << ")" << std::endl;
-	}
-
-	std::string bname = basename(optarg_copy);
-	free(optarg_copy);
-
 	std::vector<std::string> dirs;
 
-	size_t last_pos = bname.length()-1;
-	size_t found;
-	/* separate directories (dir1:dir2:dir3) */
-	while ((found = bname.rfind(':')) != std::string::npos) {
-		std::string dir(dname);
-		dir += bname.substr(found + 1, last_pos - found);
-		Utils::sanitizePath(dir);
+	std::string arg = optarg;
+	size_t pos = arg.find(':');
 
-		this->pushCheckDir(dir, dirs);
+	if (pos == arg.npos) {
+		/* Only one directory */
+		dirs.push_back(arg);
+	} else {
+		/* Get base directory (first in list) */
+		std::string base = arg.substr(0, pos);
+		do {
+			/* Get next directory in list */
+			std::string root = base;
+			arg = arg.substr(pos + 1);
+			pos = arg.find(':');
+			std::string sub = (pos == arg.npos) ? arg : arg.substr(0, pos);
+			Utils::sanitizePath(sub);
+			
+			/* Count directory depth */
+			int depth = std::count(sub.begin(), sub.end(), '/');
+			while (depth--) {
+				/* Base must be the same depth */
+				size_t slash = root.find_last_of('/');
+				if (slash == root.npos) {
+					root = "";
+					break;
+				}
 
-		bname.resize(found);
+				/* One level up */
+				root = root.substr(0, slash);
+			}
 
-		last_pos = found - 1;
+
+			if (!root.empty()) {
+				Utils::sanitizePath(root);
+			}
+
+			/* Store directory */
+			std::string ndir = root +  sub;
+			dirs.push_back(root + sub);
+		} while (pos != arg.npos);
+
+		/* Store base directory */
+		Utils::sanitizePath(base);
+		dirs.push_back(base);	
 	}
-	/* don't forget last directory */
-	std::string dir(dname + bname.substr(0, found));
-	Utils::sanitizePath(dir);
-	this->pushCheckDir(dir, dirs);
-
+	
 	/* process the -r option */
-	found = optionr.find(':');
+	size_t found = optionr.find(':');
 
 	if (found != std::string::npos) {
 		/* rOptarg contains colon */
