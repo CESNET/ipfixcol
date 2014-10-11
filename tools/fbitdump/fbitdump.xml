@@ -1769,5 +1769,10 @@
 		<path>/usr/share/fbitdump/plugins/smtp_command.so</path>
                 <plainLevel>1</plainLevel>
 	</plugin>
+	<plugin>
+		<name>mac</name>
+		<path>/usr/share/fbitdump/plugins/mac.so</path>
+		<plainLevel>1</plainLevel>
+	</plugin>
 </plugins>
 </configuration>

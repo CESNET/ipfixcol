@@ -2,7 +2,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 pluginsdir = $(datadir)/fbitdump/plugins
 
-plugins_LTLIBRARIES = httprt.la http_status_code.la sip_method.la dns_rcode.la tls_csuites.la tls_version.la tls_csuites_array.la voip_type.la voip_rtpcodec.la smtp_statuscode.la smtp_command.la
+plugins_LTLIBRARIES = httprt.la http_status_code.la sip_method.la dns_rcode.la tls_csuites.la tls_version.la tls_csuites_array.la voip_type.la voip_rtpcodec.la smtp_statuscode.la smtp_command.la mac.la
 
 httprt_la_SOURCES= httprt.c
 httprt_la_LDFLAGS= -shared -module -avoid-version
@@ -36,5 +36,8 @@ smtp_statuscode_la_LDFLAGS= -shared -module -avoid-version
 
 smtp_command_la_SOURCES= smtp_command.c
 smtp_command_la_LDFLAGS= -shared -module -avoid-version
+
+mac_la_SOURCES= mac.c
+mac_la_LDFLAGS= -shared -module -avoid-version
 
 EXTRA_DIST = plugin_header.h
