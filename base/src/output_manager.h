@@ -50,6 +50,24 @@
 #include "preprocessor.h"
 #include "data_manager.h"
 
+#define MAX_DIR_LEN 256
+
+/* Thread structure (for statistics) */
+struct stat_thread {
+	unsigned long tid;
+	uint64_t proc_time;
+	struct stat_thread *next;
+};
+
+/* Statistics configuration */
+struct stat_conf {
+	char tasks_dir[MAX_DIR_LEN];
+	long total_cpu;
+	int cpus;
+	struct stat_thread *threads;
+        int done;
+};
+
 /**
  * \struct output_mm_config
  *
@@ -65,6 +83,7 @@ struct output_manager_config {
         int stat_interval;
         uint64_t data_records;
         uint64_t packets;
+        struct stat_conf stats;
 };
 
 

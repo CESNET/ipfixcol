@@ -50,7 +50,10 @@
 #include "data_manager.h"
 #include "output_manager.h"
 
+#include <dirent.h>
+
 static const char *msg_module = "output manager";
+static const char *stat_module = "stat";
 extern struct ipfix_template_mgr *tm;
 
 /**
@@ -220,6 +223,147 @@ static void *output_manager_plugin_thread(void* config)
 }
 
 /**
+ * \brief Get total cpu time
+ * 
+ * @return total cpu time
+ */
+uint64_t statistics_total_cpu()
+{
+	FILE *stat = fopen("/proc/stat", "r");
+	if (!stat) {
+		MSG_WARNING(stat_module, "Cannot open file '%s'", "/proc/stat");
+		return 0;
+	}
+	
+	uint64_t user, nice, sys, idle;
+	
+	fscanf(stat, "%*s %llu %llu %llu %llu", &user, &nice, &sys, &idle);
+	fclose(stat);
+	
+	return (user + nice + sys + idle);
+}
+
+/**
+ * \brief Search thread statistics
+ * 
+ * @param conf statiscics conf
+ * @param tid thread id
+ * @return thread
+ */
+struct stat_thread *statistics_get_thread(struct stat_conf *conf, unsigned long tid)
+{
+	struct stat_thread *aux_thread;
+	for (aux_thread = conf->threads; aux_thread; aux_thread = aux_thread->next) {
+		if (aux_thread->tid == tid) {
+			break;
+		}
+	}
+	
+	return aux_thread;
+}
+
+/**
+ * \brief Add thread to list
+ * 
+ * @param conf statistics conf
+ * @param tid thread id
+ * @return thread
+ */
+struct stat_thread *statistics_add_thread(struct stat_conf *conf, long tid)
+{
+	struct stat_thread *thread = calloc(1, sizeof(struct stat_thread));
+	if (!thread) {
+		MSG_ERROR(stat_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
+	
+	
+	thread->tid = tid;
+	thread->next = conf->threads;
+	conf->threads = thread;
+	
+	return thread;
+}
+
+/**
+ * \brief Print cpu usage for each collector's thread
+ * 
+ * @param conf statistics conf
+ */
+static void statistics_print_cpu(struct stat_conf *conf)
+{
+	DIR *dir = opendir(conf->tasks_dir);
+	if (!dir) {
+		MSG_WARNING(stat_module, "Cannot open directory '%s'", conf->tasks_dir);
+		return;
+	}
+	
+	FILE *stat;
+	struct dirent *entry;
+	char stat_path[MAX_DIR_LEN], thread_name[MAX_DIR_LEN], state;
+	uint64_t tid = 0, utime, systime, proc_time;
+	uint64_t total_cpu = statistics_total_cpu();
+	float usage;
+	
+	MSG_INFO(stat_module, "");
+	MSG_INFO(stat_module, "%10s %15s %7s %10s", "TID", "thread name", "state", "cpu usage");
+	while ((entry = readdir(dir)) != NULL) {
+		if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) {
+			continue;
+		}
+		
+		/* parse stat file */
+		snprintf(stat_path, MAX_DIR_LEN, "%s/%s/stat", conf->tasks_dir, entry->d_name);
+		stat = fopen(stat_path, "r");
+		if (!stat) {
+			MSG_WARNING(stat_module, "Cannot open file '%s'", stat_path);
+			continue;
+		}
+		
+		/* read thread info */
+		fscanf(stat, "%d (%[^)]) %c %*d %*d %*d %*d %*d %*u %*lu %*lu %*lu %*lu %lu %lu", &tid, thread_name, &state, &utime, &systime);
+		fclose(stat);
+		
+		/* Count thread cpu time */
+		proc_time = utime + systime;
+		
+		struct stat_thread *thread = statistics_get_thread(conf, tid);
+		if (!thread) {
+			thread = statistics_add_thread(conf, tid);
+			if (!thread) {
+				continue;
+			}
+		}
+		
+		/* Count thread cpu usage (%) */
+		if (thread->proc_time && total_cpu - conf->total_cpu > 0) {
+			usage = conf->cpus * (proc_time - thread->proc_time) * 100 / (float) (total_cpu - conf->total_cpu);
+		} else {
+			usage = 0.0;
+		}
+		
+		/* print statistics */
+		MSG_INFO(stat_module, "%10d %15s %7c %8.2f %%", tid, thread_name, state, usage);
+		
+		/* update stats */
+		thread->proc_time = proc_time;
+	}
+	MSG_INFO(stat_module, "");
+	closedir(dir);
+	
+	/* update stats */
+	conf->total_cpu = total_cpu;
+}
+
+/**
+ * \brief Dummy SIGUSR1 signal handler
+ */
+void sig_handler(int s) 
+{
+	(void) s;
+}
+
+/**
  * \brief Periodically prints statistics about proccessing speed
  * 
  * @param config output manager's configuration
@@ -228,13 +372,29 @@ static void *output_manager_plugin_thread(void* config)
 static void *statistics_thread(void* config)
 {
 	struct output_manager_config *conf = (struct output_manager_config *) config;
-	const char *module = "stat";
 	time_t begin = time(NULL), now, diff_time;
 	uint64_t pkts, last_pkts, records, last_records, diff_pkts, diff_records;
 	pkts = last_pkts = records = last_records = diff_pkts = diff_records = 0;
 	
+	/* create statistics config */
+	conf->stats.total_cpu = 0;
+	conf->stats.threads = NULL;
+	conf->stats.cpus = sysconf(_SC_NPROCESSORS_ONLN);
+	snprintf(conf->stats.tasks_dir, MAX_DIR_LEN, "/proc/%d/task/", getpid());
+	
+	/* Catch SIGUSR1 */
+	signal(SIGUSR1, sig_handler);
+	
+	/* set thread name */
+	prctl(PR_SET_NAME, "ipfixcol:stats", 0, 0, 0);
+	
 	while (conf->stat_interval) {
 		sleep(conf->stat_interval);
+		
+		/* killed by output manager*/
+		if (conf->stats.done) {
+			break;
+		}
 		
 		/* Compute time */
 		now = time(NULL);
@@ -251,9 +411,12 @@ static void *statistics_thread(void* config)
 		last_records = records;
 		
 		/* print info */
-		MSG_INFO(module, "now: %lu", now);
-		MSG_INFO(module, "%15s, %15s, %15s, %15s, %15s", "total time", "total packets", "tot. data rec.", "packets/s", "data records/s");
-		MSG_INFO(module, "%15lu, %15lu, %15lu, %15lu, %15lu", diff_time, pkts, records, diff_pkts/conf->stat_interval, diff_records/conf->stat_interval);
+		MSG_INFO(stat_module, "now: %lu", now);
+		MSG_INFO(stat_module, "%15s %15s %15s %15s %15s", "total time", "total packets", "tot. data rec.", "packets/s", "data records/s");
+		MSG_INFO(stat_module, "%15lu %15lu %15lu %15lu %15lu", diff_time, pkts, records, diff_pkts/conf->stat_interval, diff_records/conf->stat_interval);
+		
+		/* print cpu usage by threads */
+		statistics_print_cpu(&(conf->stats));
 	}
 	
 	return NULL;
@@ -313,6 +476,7 @@ int output_manager_create(struct storage_list *storages, struct ring_buffer *in_
 void output_manager_close(void *config) {
 	struct output_manager_config *manager = (struct output_manager_config *) config;
 	struct data_manager_config *aux_config = NULL, *tmp = NULL;
+	struct stat_thread *aux_thread = NULL, *tmp_thread = NULL;
 
 	/* Stop Output Manager's thread and free input buffer */
 	rbuffer_write(manager->in_queue, NULL, 1);
@@ -321,6 +485,7 @@ void output_manager_close(void *config) {
 	
 	/* Close statistics thread */
 	if (manager->stat_interval > 0) {
+		manager->stats.done = 1;
 		pthread_kill(manager->stat_thread, SIGUSR1);
 		pthread_join(manager->stat_thread, NULL);
 	}
@@ -331,6 +496,14 @@ void output_manager_close(void *config) {
 		tmp = aux_config;
 		aux_config = aux_config->next;
 		data_manager_close(&tmp);
+	}
+	
+	/* Free all thread structures for statistics */
+	aux_thread = manager->stats.threads;
+	while (aux_thread) {
+		tmp_thread = aux_thread;
+		aux_thread = aux_thread->next;
+		free(tmp_thread);
 	}
 
 	free(manager);
