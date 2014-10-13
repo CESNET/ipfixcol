@@ -87,9 +87,10 @@ int send_packet(char *packet, int sockfd);
  * 
  * @param packets Packets array
  * @param sockfd socket
+ * @param speed packets/s limit
  * @return 0 on success
  */
-int send_packets(char **packets, int sockfd);
+int send_packets(char **packets, int sockfd, int speed);
 
 /**
  * \brief Create new connection

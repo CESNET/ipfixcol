@@ -49,10 +49,14 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 
+#include <sys/time.h>
 #include <ipfixcol.h>
 
 #include "ipfixsend.h"
 #include "sender.h"
+
+/* Ethernet MTU */
+static int ETH_MTU = 1500;
 
 /*
  * Connection types by names 
@@ -79,6 +83,34 @@ int decode_type(char *type)
 }
 
 /**
+ * \brief Send data into socket
+ * 
+ * @param data Data buffer
+ * @param len Data length
+ * @param sockfd socket
+ * @return 0 on success
+ */
+int send_data(char *data, int len, int sockfd)
+{
+    int sent_now;
+	char *ptr = data;
+    int to_send = len;
+	
+    while (to_send > 0) {
+		sent_now = send(sockfd, ptr, (to_send < ETH_MTU) ? to_send : ETH_MTU, 0);
+		if (sent_now == -1) {
+			fprintf(stderr, "Error when sending packet (%s)\n", sys_errlist[errno]);
+			return -1;
+		}
+
+		ptr += sent_now;
+		to_send -= sent_now;
+    }
+    
+    return len;
+}
+
+/**
  * \brief Send data with limited max_speed
  */
 int send_data_limited(char *data, long datasize, int sockfd, int max_speed)
@@ -99,9 +131,8 @@ int send_data_limited(char *data, long datasize, int sockfd, int max_speed)
 		/* send data */
 		towrite = (todo > max_speed) ? max_speed : todo;
 		begin = clock();
-		len = send(sockfd, ptr, towrite, 0);
+		len = send_data(ptr, towrite, sockfd);
 		if (len != towrite) {
-			fprintf(stderr, "Error while sending packet (%s)\n", sys_errlist[errno]);
 			return -1;
 		}
 		
@@ -116,31 +147,6 @@ int send_data_limited(char *data, long datasize, int sockfd, int max_speed)
 }
 
 /**
- * \brief Send data into socket
- * 
- * @param data Data buffer
- * @param len Data length
- * @param sockfd socket
- * @return 0 on success
- */
-int send_data(char *data, int len, int sockfd)
-{
-    int sent = 0, sent_now;
-    
-    while (sent != len) {
-		sent_now = send(sockfd, data, len, 0);
-		if (sent_now == -1) {
-			fprintf(stderr, "Error when sending packet (%s)\n", sys_errlist[errno]);
-			return -1;
-		}
-
-		sent += sent_now;
-    }
-    
-    return 0;
-}
-
-/**
  * \brief Send packet
  */
 int send_packet(char *packet, int sockfd)
@@ -151,15 +157,39 @@ int send_packet(char *packet, int sockfd)
 /**
  * \brief Send all packets from array
  */
-int send_packets(char **packets, int sockfd)
+int send_packets(char **packets, int sockfd, int speed)
 {
     int i, ret;
+	struct timeval end;
+	double ellapsed;
+	
+	/* These must be static variables - local would be rewrited with each call of send_packets */
+	static int pkts_from_begin = 0;
+	static struct timeval begin = {0};
+	
     for (i = 0; packets[i]; ++i) {
         /* send packet */
         ret = send_packet(packets[i], sockfd);
-        if (ret) {
+        if (ret < 0) {
             return -1;
         }
+		
+		pkts_from_begin++;
+		/* packets counter reached, sleep? */
+		if (pkts_from_begin >= speed || begin.tv_sec == 0) {
+			/* end of sending interval in microseconds */
+			gettimeofday(&end, NULL);
+			
+			/* Should sleep? */
+			ellapsed = end.tv_usec - begin.tv_usec;
+			if (ellapsed < 1000000.0) {
+				usleep(1000000.0 - ellapsed);
+				gettimeofday(&end, NULL);
+			}
+			
+			begin = end;
+			pkts_from_begin = 0;
+		}
     }
 	
     return 0;
@@ -209,7 +239,7 @@ int create_connection(struct ip_addr *addr, int type)
 		}
 	}
 	
-    return sockfd;
+	return sockfd;
 }
 
 

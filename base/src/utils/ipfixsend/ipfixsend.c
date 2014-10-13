@@ -52,7 +52,7 @@
 #endif
 
 
-#define OPTSTRING "hi:d:p:t:n:s:"
+#define OPTSTRING "hi:d:p:t:n:s:S:"
 #define DEFAULT_PORT 4739
 #define INFINITY_LOOPS (-1)
 
@@ -64,7 +64,9 @@ do { \
     } \
 } while (0)
 
-#define KILOBYTE(_byte_) ((_byte_) * 1024)
+#define KB_TO_BYTE(_size_) ((_size_) * 1024)
+#define MB_TO_BYTE(_size_) (KB_TO_BYTE(_size_) * 1024)
+#define GB_TO_BYTE(_size_) (MB_TO_BYTE(_size_) * 1024)
 
 /**
  * \brief Print usage
@@ -73,14 +75,43 @@ void usage()
 {
     printf("\n");
     printf("Usage: ipfixsend [options]\n");
-    printf("  -h       show this text\n");
-    printf("  -i path  IPFIX input file\n");
-    printf("  -d ip    Destination IP address\n");
-    printf("  -p port  Destination port number, default is %d\n", DEFAULT_PORT);
-    printf("  -t type  Connection type (udp, tcp or sctp), default is udp\n");
-	printf("  -n num   How many times should file be sent, default is infinity\n");
-	printf("  -s speed Maximum data sending speed (kB/s)\n");
+    printf("  -h         show this text\n");
+    printf("  -i path    IPFIX input file\n");
+    printf("  -d ip      Destination IP address\n");
+    printf("  -p port    Destination port number, default is %d\n", DEFAULT_PORT);
+    printf("  -t type    Connection type (udp, tcp or sctp), default is udp\n");
+	printf("  -n num     How many times should file be sent, default is infinity\n");
+	printf("  -s speed   Maximum data sending speed/s\n");
+	printf("             Supported suffixes: B (default), K, M, G\n");
+	printf("  -S packets Speed limit in packets/s\n");
     printf("\n");
+}
+
+/**
+ * \brief Decode speed string
+ * 
+ * @param arg speed
+ * @return decoded speed
+ */
+uint64_t decode_speed(char *arg)
+{
+	char last = arg[strlen(arg) - 1];
+	uint64_t size = strtol(arg, NULL, 10);
+	
+	switch (last) {
+	case 'k': case 'K':
+		size = KB_TO_BYTE(size);
+		break;
+	case 'm': case 'M':
+		size = MB_TO_BYTE(size);
+		break;
+	case 'g': case 'G':
+		size = GB_TO_BYTE(size);
+	default:
+		break;
+	}
+	
+	return size;
 }
 
 /**
@@ -90,7 +121,8 @@ int main(int argc, char** argv)
 {
     char *ip = NULL, *input = NULL;
     int c, port = DEFAULT_PORT, type = CT_UDP, loops = INFINITY_LOOPS;
-	int speed = 0;
+	int packets_s = 0;
+	uint64_t speed = 0;
     
 	if (argc == 1) {
 		usage();
@@ -129,7 +161,10 @@ int main(int argc, char** argv)
 			loops = atoi(optarg);
 			break;
 		case 's':
-			speed = KILOBYTE(atoi(optarg));
+			speed = decode_speed(optarg);
+			break;
+		case 'S':
+			packets_s = atoi(optarg);
 			break;
         default:
             fprintf(stderr, "Unknown option\n");
@@ -140,6 +175,11 @@ int main(int argc, char** argv)
     /* Check whether everything is set */
     CHECK_SET(input, "Input file");
     CHECK_SET(ip,    "IP address");
+	
+	if (speed > 0 && packets_s > 0) {
+		fprintf(stderr, "-S and -s cannot be set together!\n");
+		return 1;
+	}
    
     /* Get collector's address */
     struct ip_addr addr;
@@ -147,37 +187,59 @@ int main(int argc, char** argv)
         return 1;
     }
     
-    /* Read input file */
-	long fsize;
-	char *data = read_file(input, &fsize);
-	if (!data) {
-		return 1;
-	}
-	
-	/* If speed not set, set it to file size */
-	if (!speed) {
-		speed = KILOBYTE(fsize);
-	}
-	
-    /* Create connection */
+	/* Create connection */
     int sockfd = create_connection(&addr, type);
     if (sockfd <= 0) {
-		free(data);
 		return 1;
     }
     
-    /* Send packets */
-	int i, ret;
-    for (i = 0; loops == INFINITY_LOOPS || i < loops; ++i) {
-		ret = send_data_limited(data, fsize, sockfd, speed);
-		if (ret != 0) {
-			break;
+	if (packets_s > 0) {
+		char **packets = read_packets(input);
+		if (!packets) {
+			close_connection(sockfd);
+			return 1;
 		}
-    }
+		
+		/* Send packets */
+		int i, ret;
+		for (i = 0; loops == INFINITY_LOOPS || i < loops; ++i) {
+			ret = send_packets(packets, sockfd, packets_s);
+			if (ret != 0) {
+				break;
+			}
+		}
+		
+		/* Free resources*/
+		free_packets(packets);
+	} else {
+		/* Read input file */
+		long fsize;
+		char *data = read_file(input, &fsize);
+		if (!data) {
+			close_connection(sockfd);
+			return 1;
+		}
+
+		/* If speed not set, set it to file size */
+		if (!speed) {
+			speed = fsize;
+		}
+
+		/* Send packets */
+		int i, ret;
+		for (i = 0; loops == INFINITY_LOOPS || i < loops; ++i) {
+			ret = send_data_limited(data, fsize, sockfd, speed);
+			if (ret != 0) {
+				break;
+			}
+		}
+	
+		/* Free resources */
+		free(data);
+	}
     
-    /* Close connection and free resources */
+    /* Close connection */
     close_connection(sockfd);
-	free(data);
     
     return 0;
 }
