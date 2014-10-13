@@ -74,23 +74,15 @@ enum connection_type {
 int decode_type(char *type);
 
 /**
- * \brief Send packet
- * 
- * @param packet
- * @param sockfd socket
- * @return 0 on success
- */
-int send_packet(char *packet, int sockfd);
-
-/**
  * \brief Send all packets from array
  * 
  * @param packets Packets array
  * @param sockfd socket
- * @param speed packets/s limit
+ * @param packets_s packets/s limit
+ * @param speed bytes/s limit
  * @return 0 on success
  */
-int send_packets(char **packets, int sockfd, int speed);
+int send_packets(char **packets, int sockfd, int packets_s, int speed);
 
 /**
  * \brief Create new connection
@@ -118,14 +110,9 @@ void close_connection(int sockfd);
 int parse_ip(struct ip_addr *addr, char *ip, int port);
 
 /**
- * \brief Send data with limited maximum speed
- * @param data message to be send
- * @param datasize message size
- * @param sockfd socket
- * @param max_speed speed limit
- * @return 0 on success
+ * \brief Stop sending data
  */
-int send_data_limited(char *data, long datasize, int sockfd, int max_speed);
+void sender_stop();
 
 #endif	/* SENDER_H */
 

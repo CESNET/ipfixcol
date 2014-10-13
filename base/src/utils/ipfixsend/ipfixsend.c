@@ -42,6 +42,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ipfixcol.h>
+#include <signal.h>
 
 #include "ipfixsend.h"
 #include "reader.h"
@@ -68,6 +69,8 @@ do { \
 #define MB_TO_BYTE(_size_) (KB_TO_BYTE(_size_) * 1024)
 #define GB_TO_BYTE(_size_) (MB_TO_BYTE(_size_) * 1024)
 
+static int stop = 0;
+
 /**
  * \brief Print usage
  */
@@ -85,6 +88,12 @@ void usage()
 	printf("             Supported suffixes: B (default), K, M, G\n");
 	printf("  -S packets Speed limit in packets/s\n");
     printf("\n");
+}
+
+void handler(int signal)
+{
+	sender_stop();
+	stop = 1;
 }
 
 /**
@@ -175,12 +184,15 @@ int main(int argc, char** argv)
     /* Check whether everything is set */
     CHECK_SET(input, "Input file");
     CHECK_SET(ip,    "IP address");
+//	
+//	if (speed > 0 && packets_s > 0) {
+//		fprintf(stderr, "-S and -s cannot be set together!\n");
+//		return 1;
+//	}
 	
-	if (speed > 0 && packets_s > 0) {
-		fprintf(stderr, "-S and -s cannot be set together!\n");
-		return 1;
-	}
-   
+	
+	signal(SIGINT, handler);
+	
     /* Get collector's address */
     struct ip_addr addr;
     if (parse_ip(&addr, ip, port)) {
@@ -193,50 +205,23 @@ int main(int argc, char** argv)
 		return 1;
     }
     
-	if (packets_s > 0) {
-		char **packets = read_packets(input);
-		if (!packets) {
-			close_connection(sockfd);
-			return 1;
-		}
-		
-		/* Send packets */
-		int i, ret;
-		for (i = 0; loops == INFINITY_LOOPS || i < loops; ++i) {
-			ret = send_packets(packets, sockfd, packets_s);
-			if (ret != 0) {
-				break;
-			}
-		}
-		
-		/* Free resources*/
-		free_packets(packets);
-	} else {
-		/* Read input file */
-		long fsize;
-		char *data = read_file(input, &fsize);
-		if (!data) {
-			close_connection(sockfd);
-			return 1;
-		}
-
-		/* If speed not set, set it to file size */
-		if (!speed) {
-			speed = fsize;
-		}
-
-		/* Send packets */
-		int i, ret;
-		for (i = 0; loops == INFINITY_LOOPS || i < loops; ++i) {
-			ret = send_data_limited(data, fsize, sockfd, speed);
-			if (ret != 0) {
-				break;
-			}
-		}
-	
-		/* Free resources */
-		free(data);
+	char **packets = read_packets(input);
+	if (!packets) {
+		close_connection(sockfd);
+		return 1;
 	}
+		
+	/* Send packets */
+	int i, ret;
+	for (i = 0; stop == 0 && (loops == INFINITY_LOOPS || i < loops); ++i) {
+		ret = send_packets(packets, sockfd, packets_s, speed);
+		if (ret != 0) {
+			break;
+		}
+	}
+		
+	/* Free resources*/
+	free_packets(packets);
     
     /* Close connection */
     close_connection(sockfd);

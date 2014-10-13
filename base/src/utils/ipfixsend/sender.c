@@ -57,6 +57,7 @@
 
 /* Ethernet MTU */
 static int ETH_MTU = 1500;
+static int stop_sending = 0;
 
 /*
  * Connection types by names 
@@ -80,6 +81,11 @@ int decode_type(char *type)
     }
     
     return i;
+}
+
+void sender_stop()
+{
+	stop_sending = 1;
 }
 
 /**
@@ -110,37 +116,47 @@ int send_data(char *data, int len, int sockfd)
     return len;
 }
 
+static struct timeval begin = {0};
+
 /**
  * \brief Send data with limited max_speed
  */
 int send_data_limited(char *data, long datasize, int sockfd, int max_speed)
 {
 	ssize_t len = 0, towrite = 0, todo = datasize;
-	clock_t begin, end;
-	double elapsed = 1000.0;
+	double elapsed;
 	char *ptr = data;
+	struct timeval end;
+	static int sent = 0;
 	
 //	printf("size: %d B\t limit: %d B/s\n", datasize, max_speed);
 	
 	while (todo > 0) {
-		/* sleep */
-		if (elapsed < 1000.0) {
-			usleep(1000.0 * (1000.0 - elapsed));
-		}
-		
 		/* send data */
 		towrite = (todo > max_speed) ? max_speed : todo;
-		begin = clock();
 		len = send_data(ptr, towrite, sockfd);
 		if (len != towrite) {
 			return -1;
 		}
 		
+		sent += len;
+		if (sent >= max_speed) {
+			gettimeofday(&end, NULL);
+			
+			/* Should sleep? */
+			elapsed = end.tv_usec - begin.tv_usec;
+			if (elapsed < 1000000.0) {
+				usleep(1000000.0 - elapsed);
+				gettimeofday(&end, NULL);
+			}
+			
+			begin = end;
+			sent = 0;
+		}
+		
 		/* how long should i sleep? */
 		todo -= len;
 		ptr += len;
-		end = clock();
-		elapsed = (((double) end - (double) begin) / CLOCKS_PER_SEC) * 1000.0;
 	}
 	
 	return 0;
@@ -149,15 +165,19 @@ int send_data_limited(char *data, long datasize, int sockfd, int max_speed)
 /**
  * \brief Send packet
  */
-int send_packet(char *packet, int sockfd)
+int send_packet(char *packet, int sockfd, int speed)
 {
+	if (speed > 0) {
+		return send_data_limited(packet, (int) ntohs(((struct ipfix_header *) packet)->length), sockfd, speed);
+	}
+	
     return send_data(packet, (int) ntohs(((struct ipfix_header *) packet)->length), sockfd);
 }
 
 /**
  * \brief Send all packets from array
  */
-int send_packets(char **packets, int sockfd, int speed)
+int send_packets(char **packets, int sockfd, int packets_s, int speed)
 {
     int i, ret;
 	struct timeval end;
@@ -165,18 +185,18 @@ int send_packets(char **packets, int sockfd, int speed)
 	
 	/* These must be static variables - local would be rewrited with each call of send_packets */
 	static int pkts_from_begin = 0;
-	static struct timeval begin = {0};
 	
-    for (i = 0; packets[i]; ++i) {
+	
+    for (i = 0; packets[i] && stop_sending == 0; ++i) {
         /* send packet */
-        ret = send_packet(packets[i], sockfd);
+        ret = send_packet(packets[i], sockfd, speed);
         if (ret < 0) {
             return -1;
         }
 		
 		pkts_from_begin++;
 		/* packets counter reached, sleep? */
-		if (pkts_from_begin >= speed || begin.tv_sec == 0) {
+		if (packets_s > 0 && (pkts_from_begin >= packets_s || begin.tv_sec == 0)) {
 			/* end of sending interval in microseconds */
 			gettimeofday(&end, NULL);
 			
