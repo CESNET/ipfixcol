@@ -118,12 +118,12 @@
       <simpara>The separators group the flags by the first number of the status code.</simpara>
       <example>
          <simpara>This is an output for a flow containing all supported status codes:</simpara>
-         <simpara>SHRCOUV|I|NMLSP|CAISPMUENFR|U</simpara>
-         <simpara>Note 4 groups of flags plus special Unknown flag (U)</simpara>
+         <simpara>SHRCOUV|I|NMLSP|CAISPMUENFR|SU</simpara>
+         <simpara>Note 4 groups of flags plus special Unknown flags (S,U)</simpara>
       </example>
       <example>
          <simpara>This is an output for a flow containing only some of supported status codes:</simpara>
-         <simpara>--R-O-V|-|---S-|--------N--|-</simpara>
+         <simpara>--R-O-V|-|---S-|--------N--|--</simpara>
       </example>
       <simpara>Supported Status Codes</simpara>
       <simplelist>
@@ -155,6 +155,7 @@
          <member>F:	554 Transaction failed</member>
          <member>R:	555 Cannot recognize or implement parameter</member>
          <member>--- Separator here ---</member>
+         <member>S:	SPAM word detected (see flowmonexp's smtp plugin)</member>
          <member>U:	XXX Unknown status code</member>
       </simplelist>
    </refsection>

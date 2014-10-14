@@ -24,6 +24,7 @@
 #define SEP_CHAR '|'
 #define DEFAULT_CHAR '-'
 #define SC_UNKNOWN 0x80000000
+#define SC_SPAM 0x40000000
 
 /***** TYPEDEFs and DATA *****/
 
@@ -75,9 +76,10 @@ static const int NAMES_SIZE = sizeof(values) / sizeof(item_t);
 
 // Get room for:
 // - 4 separators
+// - Spam flag
 // - Unknown flag
 // - null byte
-#define FLAGSIZE (NAMES_SIZE + 6)
+#define FLAGSIZE (NAMES_SIZE + 7)
 
 
 /***** FUNCTIONS *****/
@@ -151,6 +153,11 @@ void format( const union plugin_arg * arg,
     {
         buffer[FLAGSIZE - 2] = 'U';
     }
+
+    if(arg->uint32 & SC_SPAM)
+    {
+        buffer[FLAGSIZE - 3] = 'S';
+    }
 }
 
 /**
@@ -179,6 +186,11 @@ void parse(char *input, char out[PLUGIN_BUFFER_SIZE])
     if(input[FLAGSIZE - 2] == 'U')
     {
         result |= SC_UNKNOWN;
+    }
+
+    if(input[FLAGSIZE - 3] == 'S')
+    {
+        result |= SC_SPAM;
     }
 
     snprintf(out, PLUGIN_BUFFER_SIZE, "%u", result);
