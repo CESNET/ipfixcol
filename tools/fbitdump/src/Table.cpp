@@ -42,6 +42,8 @@
 
 namespace fbitdump {
 
+static const Filter emptyFilter;
+
 Table::Table(ibis::part *part): queryDone(true), orderAsc(true), deleteTable(true)
 {
 	this->table = ibis::table::create(*part);
@@ -174,8 +176,7 @@ void Table::aggregateWithFunctions(const columnVector& aggregateColumns, const c
 		}
 	}
 	
-	emptyFilter = new Filter();
-	aggregate(aCols, sCols, *emptyFilter, false, flows);
+	aggregate(aCols, sCols, emptyFilter, false, flows);
 }
 
 void Table::aggregate(const columnVector &aggregateColumns, const columnVector &summaryColumns, const Filter &filter, bool summary, bool select_flows)
@@ -349,9 +350,6 @@ Table::~Table()
 {
 	if (this->deleteTable) { /* do not delete tables not managed by this class */
 		delete this->table;
-	}
-	if (emptyFilter) {
-		delete emptyFilter;
 	}
 }
 
