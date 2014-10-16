@@ -306,7 +306,7 @@ static void statistics_print_cpu(struct stat_conf *conf)
 	float usage;
 	
 	MSG_INFO(stat_module, "");
-	MSG_INFO(stat_module, "%10s %15s %7s %10s", "TID", "thread name", "state", "cpu usage");
+	MSG_INFO(stat_module, "%10s %7s %10s %15s", "TID", "state", "cpu usage", "thread name");
 	while ((entry = readdir(dir)) != NULL) {
 		if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) {
 			continue;
@@ -343,7 +343,7 @@ static void statistics_print_cpu(struct stat_conf *conf)
 		}
 		
 		/* print statistics */
-		MSG_INFO(stat_module, "%10d %15s %7c %8.2f %%", tid, thread_name, state, usage);
+		MSG_INFO(stat_module, "%10d %7c %8.2f %% %15s", tid, state, usage, thread_name);
 		
 		/* update stats */
 		thread->proc_time = proc_time;
