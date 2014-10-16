@@ -221,7 +221,8 @@ private:
          * @return matching columns
          */
         columnVector getColumnsByNames(const columnVector columns, const stringSet names);
-        
+ 
+	Filter *emptyFilter{NULL};  /**< Empty filter for creating column aliases */     
 	ibis::table *table; /**< wrapped cursors table */
 	const Filter *usedFilter; /**< Saved filter for cursor */
 	bool queryDone; /**< Indicates that query was already preformed */

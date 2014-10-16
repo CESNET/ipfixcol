@@ -174,7 +174,8 @@ void Table::aggregateWithFunctions(const columnVector& aggregateColumns, const c
 		}
 	}
 	
-	aggregate(aCols, sCols, filter, false, flows);
+	emptyFilter = new Filter();
+	aggregate(aCols, sCols, *emptyFilter, false, flows);
 }
 
 void Table::aggregate(const columnVector &aggregateColumns, const columnVector &summaryColumns, const Filter &filter, bool summary, bool select_flows)
@@ -348,6 +349,9 @@ Table::~Table()
 {
 	if (this->deleteTable) { /* do not delete tables not managed by this class */
 		delete this->table;
+	}
+	if (emptyFilter) {
+		delete emptyFilter;
 	}
 }
 
