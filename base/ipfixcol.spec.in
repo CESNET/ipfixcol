@@ -76,6 +76,12 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %{_datadir}/%{name}/plugins/ipfixcol-filter-inter.la
 %{_datadir}/%{name}/plugins/ipfixcol-filter-inter.so
 %{_mandir}/man1/ipfixcol-filter-inter.1.gz
+%{_datadir}/%{name}/plugins/ipfixcol-hooks-inter.la
+%{_datadir}/%{name}/plugins/ipfixcol-hooks-inter.so
+%{_mandir}/man1/ipfixcol-hooks-inter.1.gz
+%{_datadir}/%{name}/plugins/ipfixcol-odip-inter.la
+%{_datadir}/%{name}/plugins/ipfixcol-odip-inter.so
+%{_mandir}/man1/ipfixcol-odip-inter.1.gz
 #ipfixviewer
 %{_datadir}/%{name}/plugins/ipfixcol-ipfixviewer-output.*
 %{_datadir}/%{name}/ipfixviewer_startup.xml
