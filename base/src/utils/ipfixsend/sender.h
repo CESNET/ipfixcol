@@ -82,7 +82,7 @@ int decode_type(char *type);
  * @param speed bytes/s limit
  * @return 0 on success
  */
-int send_packets(char **packets, int sockfd, int packets_s, int speed);
+int send_packets(char **packets, int sockfd, int packets_s, int speed, struct ip_addr *addr);
 
 /**
  * \brief Create new connection

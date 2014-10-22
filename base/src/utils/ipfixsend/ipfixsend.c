@@ -214,7 +214,7 @@ int main(int argc, char** argv)
 	/* Send packets */
 	int i, ret;
 	for (i = 0; stop == 0 && (loops == INFINITY_LOOPS || i < loops); ++i) {
-		ret = send_packets(packets, sockfd, packets_s, speed);
+		ret = send_packets(packets, sockfd, packets_s, speed, &addr);
 		if (ret != 0) {
 			break;
 		}

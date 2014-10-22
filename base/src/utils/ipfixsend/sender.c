@@ -56,8 +56,14 @@
 #include "sender.h"
 
 /* Ethernet MTU */
-static int ETH_MTU = 1500;
+/* Should be 65535 (- some bytes) */
+#define UDP_MTU 65000
+
 static int stop_sending = 0;
+static int conn_type = 0;
+static struct ip_addr *send_addr = NULL;
+
+#define MIN(_first_, _second_) ((_first_) < (_second_)) ? (_first_) : (_second_)
 
 /*
  * Connection types by names 
@@ -80,6 +86,7 @@ int decode_type(char *type)
         }
     }
     
+	conn_type = i;
     return i;
 }
 
@@ -103,7 +110,15 @@ int send_data(char *data, int len, int sockfd)
     int to_send = len;
 	
     while (to_send > 0) {
-		sent_now = send(sockfd, ptr, (to_send < ETH_MTU) ? to_send : ETH_MTU, 0);
+		if (conn_type == CT_UDP) {
+			if (send_addr->type == AF_INET) {
+				sent_now = sendto(sockfd, ptr, MIN(to_send, UDP_MTU), 0, (struct sockaddr *) &(send_addr->addr.addr4), sizeof(send_addr->addr.addr4));
+			} else {
+				sent_now = sendto(sockfd, ptr, MIN(to_send, UDP_MTU), 0, (struct sockaddr *) &(send_addr->addr.addr6), sizeof(send_addr->addr.addr6));
+			}
+		} else {
+			sent_now = send(sockfd, ptr, to_send, 0);
+		}
 		if (sent_now == -1) {
 			fprintf(stderr, "Error when sending packet (%s)\n", sys_errlist[errno]);
 			return -1;
@@ -177,11 +192,12 @@ int send_packet(char *packet, int sockfd, int speed)
 /**
  * \brief Send all packets from array
  */
-int send_packets(char **packets, int sockfd, int packets_s, int speed)
+int send_packets(char **packets, int sockfd, int packets_s, int speed, struct ip_addr *addr)
 {
     int i, ret;
 	struct timeval end;
 	double ellapsed;
+	send_addr = addr;
 	
 	/* These must be static variables - local would be rewrited with each call of send_packets */
 	static int pkts_from_begin = 0;
@@ -242,6 +258,11 @@ int create_connection(struct ip_addr *addr, int type)
 	if (sockfd < 0) {
 		fprintf(stderr, "Cannot create socket\n");
 		return -1;
+	}
+	
+	/* UDP - dont connect */
+	if (type == CT_UDP) {
+		return sockfd;
 	}
 	
 	/* connect to collector */
