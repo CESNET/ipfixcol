@@ -477,7 +477,7 @@ uint16_t el_uint::fill(uint8_t * data) {
 		this->append(&(uint_value.ushort));
 		break;
 	case 3:
-		byte_reorder((uint8_t *) &(uint_value.uint),data,_size, sizeof(uint));
+		byte_reorder((uint8_t *) &(uint_value.uint),data,_real_size, sizeof(uint));
 		this->append(&(uint_value.uint));
 		break;
 	case 4:
@@ -488,7 +488,7 @@ uint16_t el_uint::fill(uint8_t * data) {
 	case 5:
 	case 6:
 	case 7:
-		byte_reorder((uint8_t *) &(uint_value.ulong),data,_size, sizeof(ulong));
+		byte_reorder((uint8_t *) &(uint_value.ulong),data,_real_size, sizeof(ulong));
 		this->append(&(uint_value.ulong));
 		break;
 	case 8:
