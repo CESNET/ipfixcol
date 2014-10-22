@@ -90,6 +90,7 @@ namespace fbitdump {
 %token <s> RAWCOLUMN	"raw column"
 %token <s> OPERATOR		"operator"
 %token <s> BITOPERATOR	"bit operator"
+%token <s> MAC                  "MAC address"
 %token <s> IPv4			"IPv4 address"
 %token <s> IPv4_SUB		"IPv4 address with subnet"
 %token <s> IPv6			"IPv6 address"
@@ -161,6 +162,7 @@ value:
 	  NUMBER { $$ = new fbitdump::_parserStruct; filter.parseNumber($$, *$1); delete $1; }
 	| HEXNUM { $$ = new fbitdump::_parserStruct; filter.parseHex($$, *$1); delete $1; }
         | FLOAT  { $$ = new fbitdump::_parserStruct; filter.parseFloat($$, *$1); delete $1; }
+        | MAC  { $$ = new fbitdump::_parserStruct; filter.parseMac($$, *$1); delete $1; }
 	| IPv4 { $$ = new fbitdump::_parserStruct; filter.parseIPv4($$, *$1); delete $1; }
 	| IPv4_SUB { $$ = new fbitdump::_parserStruct; filter.parseIPv4Sub($$, *$1); delete $1; }
 	| IPv6 { $$ = new fbitdump::_parserStruct; filter.parseIPv6($$, *$1); delete $1; }

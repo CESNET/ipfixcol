@@ -1520,6 +1520,22 @@
 			<element>e39499id50</element>
 		</value>
 	</column>
+	<column>
+		<name>Src MAC</name>
+		<alias>%smac</alias>
+		<width>18</width>
+		<value type="plain">
+			<element semantics="mac">e0id56</element>
+		</value>
+	</column>
+	<column>
+		<name>Dst MAC</name>
+		<alias>%dmac</alias>
+		<width>18</width>
+		<value type="plain">
+			<element semantics="mac">e0id80</element>
+		</value>
+	</column>
 </columns>
 
 <groups>

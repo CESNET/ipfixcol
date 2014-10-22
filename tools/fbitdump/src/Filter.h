@@ -73,6 +73,7 @@ enum partsType {
 	PT_NUMBER,
 	PT_CMP,
 	PT_BITCOLVAL,
+        PT_MAC,
 	PT_IPv4,
 	PT_IPv4_SUB,
 	PT_IPv6,
@@ -296,6 +297,14 @@ public:
 
 	yyscan_t scaninfo;	/**< lexer context */
 
+        /**
+	 * \brief Parses mac address (only fills parser structure)
+	 *
+	 * @param ps Parser structure
+	 * @param text String from parser
+	 */
+	void parseMac(parserStruct *ps, std::string text) const;
+        
 	/**
 	 * \brief Parses string (only fills parser structure)
 	 *

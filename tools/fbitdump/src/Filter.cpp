@@ -843,6 +843,13 @@ std::string Filter::parseExpHost6(parserStruct *left, std::string cmp, parserStr
 	return exp;
 }
 
+void Filter::parseMac(parserStruct *ps, std::string text) const
+{
+	ps->nParts = 1;
+	ps->type = PT_MAC;
+	ps->parts.push_back(text);
+}
+
 void Filter::parseString(parserStruct *ps, std::string text) const throw (std::invalid_argument)
 {
 	if (ps == NULL) {
