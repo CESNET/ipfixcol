@@ -45,6 +45,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #include "reader.h"
 #include "ipfixsend.h"
@@ -140,8 +141,8 @@ char **read_packets(char *input)
     int fd = open(input, O_RDONLY);
     int status = READ_OK;
 	
-    if (!fd) {
-        fprintf(stderr, "Cannot open file \"%s\"!", input);
+    if (fd == -1) {
+        fprintf(stderr, "Cannot open file \"%s\": %s.\n", input, sys_errlist[errno]);
         return NULL;
     }
     
