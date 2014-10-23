@@ -97,7 +97,8 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 	conf->ip_id = ip_id;
 	conf->ip_config = ip_config;
 	conf->tm = template_mgr;
-
+	conf->tm = tm_create();
+	
 	*config = conf;
 	MSG_NOTICE(msg_module, "Successfully initialized");
 	return 0;
@@ -360,7 +361,7 @@ int intermediate_plugin_close(void *config)
 	struct odip_ip_config *conf;
 	
 	conf = (struct odip_ip_config *) config;
-	
+	tm_destroy(conf->tm);
 	free(conf);
 
 	return 0;
