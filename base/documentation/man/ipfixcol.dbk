@@ -48,6 +48,8 @@
         <cmdsynopsis>
             <command>ipfixcol</command>
             <arg>-c file</arg>
+            <arg>-i file</arg>
+            <arg>-e file</arg>
             <arg>-dhVs</arg>
             <arg>-v level</arg>
             <arg>-S time</arg>
@@ -90,6 +92,13 @@
 				<term>-i <replaceable class="parameter">file</replaceable></term>
 				<listitem>
 					<simpara>Read internal configuration from <replaceable class="parameter">file</replaceable>.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-e <replaceable class="parameter">file</replaceable></term>
+				<listitem>
+					<simpara>Read set of ipfix elements from <replaceable class="parameter">file</replaceable>.</simpara>
 				</listitem>
 			</varlistentry>
 			
