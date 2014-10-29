@@ -38,7 +38,7 @@
  */
 
 extern "C" {
-#include <ipfixcol/verbose.h>
+#include <ipfixcol.h>
 #include <endian.h>
 }
 
@@ -54,11 +54,11 @@ int load_types_from_xml(struct fastbit_config *conf) {
 	enum store_type type;
 	std::string str_value;
 
-	result = doc.load_file("/etc/ipfixcol/ipfix-elements.xml");
+	result = doc.load_file(ipfix_elements);
 
 	/* Check for errors */
 	if (!result) {
-		MSG_ERROR(MSG_MODULE, "/etc/ipfixcol/ipfix-elements.xml parsed with errors!");
+		MSG_ERROR(MSG_MODULE, "%s parsed with errors!", ipfix_elements);
 		MSG_ERROR(MSG_MODULE, "Error description: %s", result.description());
 
 		return -1;

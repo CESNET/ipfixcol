@@ -41,7 +41,7 @@
 #define FASTBIT_ELEMENT
 
 extern "C" {
-#include <ipfixcol/storage.h>
+#include <ipfixcol.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -64,15 +64,13 @@ extern "C" {
 
 const int IE_NAME_LENGTH = 16;
 const int TYPE_NAME_LENGTH = 10;
-const char ELEMENTS_XML[] = "/etc/ipfixcol/ipfix-elements.xml";
-
 
 class template_table; //Needed becouse of Circular dependency
 
 /**
  * \brief Load elements types from xml to configure structure
  *
- * This function reads /etc/ipfixcol/ipfix-elements.xml
+ * This function reads ipfix-elements.xml
  * and stores elements data type in configuration structure
  *
  * @param conf fastbit storage plug-in configuration structure

@@ -60,8 +60,6 @@
 
 static const char *msg_module = "filter";
 
-#define DEFAULT_ELEMENTS_FILE "/etc/ipfixcol/ipfix-elements.xml"
-
 #define CHECK_ALLOC(check_alloc_ptr) \
 	if (!(check_alloc_ptr)) { \
 		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__); \
@@ -131,9 +129,9 @@ void filter_free_profile(struct filter_profile *profile)
  */
 void filter_init_elements(struct filter_parser_data *pdata)
 {
-	pdata->doc = xmlReadFile(DEFAULT_ELEMENTS_FILE, NULL, 0);
+	pdata->doc = xmlReadFile(ipfix_elements, NULL, 0);
 	if (!pdata->doc) {
-		MSG_ERROR(msg_module, "Unable to parse elements configuration file %s", DEFAULT_ELEMENTS_FILE);
+		MSG_ERROR(msg_module, "Unable to parse elements configuration file %s", ipfix_elements);
 		return;
 	}
 
