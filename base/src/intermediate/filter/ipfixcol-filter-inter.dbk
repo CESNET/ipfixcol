@@ -146,7 +146,7 @@
 								<command>field</command>
 							</term>
 							<listitem>
-								<simpara>field specified by its name according to file <filename>/etc/ipfixcol/ipfix-elements.xml</filename>
+								<simpara>field specified by its name according to file with ipfix elements (set by -e option in ipfixcol)
 								</simpara>
 							</listitem>
 						</varlistentry>
