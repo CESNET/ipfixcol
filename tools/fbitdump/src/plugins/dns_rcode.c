@@ -40,32 +40,32 @@ e.g. \"BADKEY\" -> 17";
 }
 
 
-void format( const union plugin_arg * arg, int plain_numbers, char out[PLUGIN_BUFFER_SIZE])
+void format( const plugin_arg_t * arg, int plain_numbers, char out[PLUGIN_BUFFER_SIZE], void *conf)
 {
 	char *str = NULL;
 	char num[PLUGIN_BUFFER_SIZE];
 
 	if (plain_numbers) {
-		snprintf(out, PLUGIN_BUFFER_SIZE, "%u", arg[0].uint8);
+		snprintf(out, PLUGIN_BUFFER_SIZE, "%u", arg->val[0].uint8);
 		return;
 	}
 	
 	int size = MSG_CNT;
 	
-	if (arg[0].uint8 < size) {
-		str = messages[arg[0].uint8];
+	if (arg->val[0].uint8 < size) {
+		str = messages[arg->val[0].uint8];
 	}
 	
-	if (arg[0].uint8 >= size || strlen(str) == 0) {
+	if (arg->val[0].uint8 >= size || strlen(str) == 0) {
 		/* out of bounds or unassigned rcode */
-		snprintf(num, PLUGIN_BUFFER_SIZE, "%u", arg[0].uint8);
+		snprintf(num, PLUGIN_BUFFER_SIZE, "%u", arg->val[0].uint8);
 		str = num;
 	}
 
 	snprintf(out, PLUGIN_BUFFER_SIZE, "%s", str);
 }
 
-void parse(char *input, char out[PLUGIN_BUFFER_SIZE])
+void parse(char *input, char out[PLUGIN_BUFFER_SIZE], void *conf)
 {
 	int code, size = MSG_CNT;
 	

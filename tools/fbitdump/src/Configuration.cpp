@@ -521,6 +521,11 @@ void Configuration::parseFormat(std::string format, std::string &orderby)
 				} else {
 					if (this->plugins.find(col->getSemantics()) != this->plugins.end()) {
 						col->format = this->plugins[col->getSemantics()].format;
+						if (this->plugins[col->getSemantics()].init) {
+							if (this->plugins[col->getSemantics()].init(col->getSemanticsParams().c_str(), &(col->pluginConf))) {
+								throw std::runtime_error("Error in plugin initialization " + col->getSemantics());
+							}
+						}
 					}
 					this->columns.push_back(col);
 					removeNext = false;
@@ -1091,24 +1096,12 @@ void Configuration::loadModules()
 			continue;
 		}
 		
-		/* Initialize plugin */
-		if (aux_conf.init) {
-			if (aux_conf.init()) {
-				MSG_WARNING(msg_module, "Error in plugin initialization %s", path.c_str());
-				dlclose(aux_conf.handle);
-				continue;
-			}
-		}
-		
 		this->plugins[node.node().child_value("name")] = aux_conf;
 	}
 }
 
 void Configuration::unloadModules() {
 	for (pluginMap::iterator it = this->plugins.begin(); it != this->plugins.end(); ++it) {
-		if (it->second.close) {
-			it->second.close();
-		}
 		if (it->second.handle) {
 			dlclose(it->second.handle);
 		}
@@ -1119,10 +1112,18 @@ void Configuration::unloadModules() {
 Configuration::~Configuration()
 {
 	/* delete columns */
-	for (columnVector::const_iterator it = columns.begin(); it != columns.end(); it++) {
-		delete *it;
+	for (auto col: columns) {
+		if (plugins.find(col->getSemantics()) != plugins.end()) {
+			if (plugins[col->getSemantics()].close) {
+				plugins[col->getSemantics()].close(&(col->pluginConf));
+			}
+		}
+
+		delete col;
 	}
+
 	this->unloadModules();
+
 	delete this->resolver;
 	delete this->orderColumn;
 }

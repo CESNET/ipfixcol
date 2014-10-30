@@ -78,27 +78,27 @@ char *info()
 e.g. \"Gateway Timeout\" -> 504";
 }
 
-void format( const union plugin_arg * arg, int plain_numbers, char out[PLUGIN_BUFFER_SIZE] ) {
+void format( const plugin_arg_t * arg, int plain_numbers, char out[PLUGIN_BUFFER_SIZE], void *conf) {
 	char *str = NULL;
 	char num[15];
 	int i, size = MSG_CNT;
 	
 	for (i = 0; i < size; ++i) {
-		if (status[i].code == arg[0].uint32) {
+		if (status[i].code == arg->val[0].uint32) {
 			str = status[i].name;
 			break;
 		}
 	}
 	
 	if (str == NULL) {
-		snprintf(num, sizeof(num), "%u", arg[0].uint32);
+		snprintf(num, sizeof(num), "%u", arg->val[0].uint32);
 		str = num;
 	}
 
 	snprintf(out, PLUGIN_BUFFER_SIZE, "%s", str);
 }
 
-void parse(char *input, char out[PLUGIN_BUFFER_SIZE])
+void parse(char *input, char out[PLUGIN_BUFFER_SIZE], void *conf)
 {
 	int code, i, size = MSG_CNT;
 	

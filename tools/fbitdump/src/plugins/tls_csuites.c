@@ -41,10 +41,6 @@
 #include "plugin_header.h"
 #include "tls_values.h"
 
-/* Empty init and close functions */
-int init() { return 0; }
-void close() {}
-
 char *info()
 {
 	return "Converts TLS Cipher suite value to human readable string.\n"
@@ -52,13 +48,13 @@ char *info()
 }
 
 /** Funcion to assign given values to strings */
-void format(const union plugin_arg *arg, int plain_numbers, char out[PLUGIN_BUFFER_SIZE]) {
+void format(const plugin_arg_t *arg, int plain_numbers, char out[PLUGIN_BUFFER_SIZE], void *conf) {
 	char *str = NULL;
 	char num[PLUGIN_BUFFER_SIZE];
 	int counter = 0;
 	
 	while (ciphersuites[counter].strptr) {
-		if (ciphersuites[counter].value == arg[0].uint16) {
+		if (ciphersuites[counter].value == arg->val[0].uint16) {
 			str = ciphersuites[counter].strptr;
 			break;
 		}
@@ -68,13 +64,13 @@ void format(const union plugin_arg *arg, int plain_numbers, char out[PLUGIN_BUFF
 	if (str != NULL) {
 		snprintf(out, PLUGIN_BUFFER_SIZE, "%s", str);
 	} else {
-		snprintf(num, sizeof(num), "%u", arg[0].uint16);
+		snprintf(num, sizeof(num), "%u", arg->val[0].uint16);
 		str = num;
 	}
 }
 
 /** Function to parse given strings */
-void parse(char *input, char out[PLUGIN_BUFFER_SIZE])
+void parse(char *input, char out[PLUGIN_BUFFER_SIZE], void *conf)
 {
 	/** Not implemented yet */
 	snprintf(out, PLUGIN_BUFFER_SIZE, "");

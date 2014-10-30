@@ -45,25 +45,25 @@
 using namespace fbitdump;
 
 /* input parsing */
-void parseFlags(char *strFlags, char *out);
-void parseProto(char *strProto, char *out);
+void parseFlags(char *strFlags, char *out, void *conf);
+void parseProto(char *strProto, char *out, void *conf);
 void parseHostname(parserStruct *ps, uint8_t af_type);
-void parseDuration(char *duration, char *out);
+void parseDuration(char *duration, char *out, void *conf);
 
 /* output formatting */
-void printProtocol(const union plugin_arg * val, int plain_numbers, char * buff);
-void printIPv4(const union plugin_arg * val, int plain_numbers, char * buff);
+void printProtocol(const plugin_arg_t * val, int plain_numbers, char * buff, void *conf);
+void printIPv4(const plugin_arg_t * val, int plain_numbers, char * buff, void *conf);
 
-void printIPv6(const union plugin_arg * val, int plain_numbers, char * buff);
+void printIPv6(const plugin_arg_t * val, int plain_numbers, char * buff, void *conf);
 
-void printTimestamp32(const union plugin_arg * va, int plain_numbers, char * buff);
-void printTimestamp64(const union plugin_arg * val, int plain_numbers, char * buff);
+void printTimestamp32(const plugin_arg_t * va, int plain_numbers, char * buff, void *conf);
+void printTimestamp64(const plugin_arg_t * val, int plain_numbers, char * buff, void *conf);
 
 void printTimestamp(struct tm *tm, uint64_t msec, char * buff );
 
-void printTCPFlags(const union plugin_arg * val, int plain_numbers, char * buff);
+void printTCPFlags(const plugin_arg_t * val, int plain_numbers, char * buff, void *conf);
 
-void printDuration(const union plugin_arg * val, int plain_numbers, char * buff);
+void printDuration(const plugin_arg_t * val, int plain_numbers, char * buff, void *conf);
 
 
 

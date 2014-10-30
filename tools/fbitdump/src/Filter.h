@@ -92,7 +92,8 @@ typedef struct _parserStruct {
 	uint16_t nParts;
 	std::string colType;
 	stringSet baseCols;
-	void (*parse)(char *input, char *out);
+	void (*parse)(char *input, char *out, void*);
+        void *parseConf;
 	std::vector<std::string> parts;
 } parserStruct;
 
@@ -397,9 +398,10 @@ protected:
 	 * \brief Decides how to parse string according to type
 	 *
 	 * @param ps Parser structure
+         * @param col Parser structure for column
 	 * @param[in] type Column type
 	 */
-	void parseStringType(parserStruct *ps, void (*parse)(char *input, char *out), std::string &cmp) const throw (std::invalid_argument);
+	void parseStringType(parserStruct *ps, parserStruct *col, std::string &cmp) const throw (std::invalid_argument);
 
 	/**
 	 * \brief Parses hostname and converts it into ip addresses

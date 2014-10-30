@@ -60,9 +60,9 @@ char *info()
 /**
  * Fill the buffer with text representation of field's content
  */
-void format( const union plugin_arg * arg,
+void format(const plugin_arg_t * arg,
                 int plain_numbers,
-                char buffer[PLUGIN_BUFFER_SIZE] )
+                char buffer[PLUGIN_BUFFER_SIZE], void *conf)
 {
     DBG("called");
     // get rid of the warning
@@ -72,20 +72,20 @@ void format( const union plugin_arg * arg,
 
     for(i = 0; i < NAMES_SIZE; i++)
     {
-        if(arg->uint8 == values[i].code)
+        if(arg->val->uint8 == values[i].code)
         {
             snprintf(buffer, PLUGIN_BUFFER_SIZE, "%s", values[i].name);
             return;
         }
     }
 
-    snprintf(buffer, PLUGIN_BUFFER_SIZE, "%u", arg->uint8);
+    snprintf(buffer, PLUGIN_BUFFER_SIZE, "%u", arg->val->uint8);
 }
 
 /**
  * Parse text data and return inner format
  */
-void parse(char *input, char out[PLUGIN_BUFFER_SIZE])
+void parse(char *input, char out[PLUGIN_BUFFER_SIZE], void *conf)
 {
     int i;
 

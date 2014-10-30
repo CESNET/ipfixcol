@@ -101,10 +101,11 @@ static int is_sep_position(unsigned i)
 /**
  * Check for buffer's size
  */
-int init(void)
+int init(const char *params, void **conf)
 {
     DBG("called");
 
+	*conf = NULL;
     if(PLUGIN_BUFFER_SIZE < FLAGSIZE)
         return 1;
     else return 0;
@@ -118,9 +119,10 @@ char *info()
 /**
  * Fill the buffer with text representation of field's content
  */
-void format( const union plugin_arg * arg,
+void format( const plugin_arg_t * arg,
                 int plain_numbers,
-                char buffer[PLUGIN_BUFFER_SIZE] )
+                char buffer[PLUGIN_BUFFER_SIZE],
+				void *conf)
 {
     DBG("called");
 
@@ -143,18 +145,18 @@ void format( const union plugin_arg * arg,
     // Filling in flag values
     for(i = 0; i < NAMES_SIZE; i++)
     {
-        if(arg->uint32 & (((uint32_t)1) << i))
+        if(arg->val->uint32 & (((uint32_t)1) << i))
         {
             buffer[values[i].position] = values[i].flag;
         }
     }
 
-    if(arg->uint32 & SC_UNKNOWN)
+    if(arg->val->uint32 & SC_UNKNOWN)
     {
         buffer[FLAGSIZE - 2] = 'U';
     }
 
-    if(arg->uint32 & SC_SPAM)
+    if(arg->val->uint32 & SC_SPAM)
     {
         buffer[FLAGSIZE - 3] = 'S';
     }
@@ -163,7 +165,7 @@ void format( const union plugin_arg * arg,
 /**
  * Parse text data and return inner format
  */
-void parse(char *input, char out[PLUGIN_BUFFER_SIZE])
+void parse(char *input, char out[PLUGIN_BUFFER_SIZE], void *conf)
 {
     int i;
     int offset = 0;

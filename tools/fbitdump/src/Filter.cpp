@@ -565,11 +565,15 @@ void Filter::parseColumn(parserStruct *ps, std::string alias) const
 	}
 	if (this->actualConf->plugins.find(col->getSemantics()) != this->actualConf->plugins.end()) {
 		ps->parse = this->actualConf->plugins[col->getSemantics()].parse;
+		if (this->actualConf->plugins[col->getSemantics()].init) {
+			this->actualConf->plugins[col->getSemantics()].init(col->getSemanticsParams().c_str(), &(ps->parseConf));
+		}
 	} else {
 		ps->parse = NULL;
 	}
 
 	ps->colType = col->getSemantics();
+	/* add parse params from column object */
 	delete col;
 
 	/* Set type of structure */
@@ -635,7 +639,7 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 		} else if (!left->colType.empty() && left->colType == "ipv6") {
 			this->parseHostname(right, AF_INET6);
 		} else {
-			this->parseStringType(right, left->parse, cmp);
+			this->parseStringType(right, left, cmp);
 		}
 	}
 	if (cmp.empty()) {
@@ -653,7 +657,7 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 		default:
 			if (left->parse) {
 				char buff[PLUGIN_BUFFER_SIZE];
-				left->parse((char *) right->parts[0].c_str(), buff);
+				left->parse((char *) right->parts[0].c_str(), buff, left->parseConf);
 				if (strlen(buff) > 0) {
 					right->parts[0] = std::string(buff);
 					right->type = PT_NUMBER;
@@ -861,15 +865,15 @@ void Filter::parseString(parserStruct *ps, std::string text) const throw (std::i
 	ps->parts.push_back(text);
 }
 
-void Filter::parseStringType(parserStruct *ps, void (*parse)(char *input, char *out), std::string &cmp) const throw (std::invalid_argument)
+void Filter::parseStringType(parserStruct *ps, parserStruct *col, std::string &cmp) const throw (std::invalid_argument)
 {
 	if (ps == NULL) {
 		throw std::invalid_argument(std::string("Cannot parse string by type, NULL parser structure"));
 	}
 
-	if (parse != NULL) {
+	if (col->parse != NULL) {
 		char buff[PLUGIN_BUFFER_SIZE];
-		parse((char *) ps->parts[0].c_str(), buff);
+		col->parse((char *) ps->parts[0].c_str(), buff, col->parseConf);
 		if (strlen(buff) > 0) {
 			ps->parts[0] = std::string(buff);
 			ps->type = PT_NUMBER;

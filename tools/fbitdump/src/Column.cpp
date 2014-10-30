@@ -48,6 +48,7 @@ void Column::init(const pugi::xml_document &doc, const std::string &alias, bool 
 {
 	this->format = NULL;
 	this->parse = NULL;
+	this->pluginConf = NULL;
 
 	/* search xml for an alias */
 	pugi::xpath_node column = doc.select_single_node(("/configuration/columns/column[alias='"+alias+"']").c_str());
@@ -126,6 +127,23 @@ void Column::init(const pugi::xml_document &doc, const std::string &alias, bool 
 	}
 }
 
+void Column::parseSemantics(Column::AST* ast, std::string semantics)
+{
+	ast->semantics = semantics;
+
+	/* Get parameters */
+	size_t par_begin = ast->semantics.find("(");
+	if (par_begin != std::string::npos) {
+		size_t par_end = ast->semantics.find(")");
+		if (par_end == std::string::npos) {
+			throw std::invalid_argument("Wrong semantics format " + ast->semantics);
+		}
+
+		ast->semanticsParams = ast->semantics.substr(par_begin + 1, par_end - par_begin - 1);
+		ast->semantics = ast->semantics.substr(0, par_begin);
+	}
+}
+
 Column::AST* Column::createValueElement(pugi::xml_node element, const pugi::xml_document &doc)
 {
 
@@ -143,7 +161,10 @@ Column::AST* Column::createValueElement(pugi::xml_node element, const pugi::xml_
 
 	ast->type = fbitdump::Column::AST::valueType;
 	ast->value = element.child_value();
-	ast->semantics = element.attribute("semantics").value();
+	
+	parseSemantics(ast, element.attribute("semantics").value());
+
+	/* Get semantics parameters */
 	if (element.attribute("parts")) {
 		ast->parts = atoi(element.attribute("parts").value());
 	}
@@ -165,7 +186,8 @@ Column::AST* Column::createOperationElement(pugi::xml_node operation, const pugi
 	/* set type and operation */
 	ast->type = fbitdump::Column::AST::operationType;
 	ast->operation = operation.attribute("name").value()[0];
-	ast->semantics = operation.attribute("semantics").value();
+	
+	parseSemantics(ast, operation.attribute("semantics").value());
 
 	/* get argument nodes */
 	arg1 = doc.select_single_node(("/configuration/columns/column[alias='"+ std::string(operation.child_value("arg1"))+ "']").c_str());

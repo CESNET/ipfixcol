@@ -62,10 +62,10 @@ struct pluginConf {
 	pluginConf(): init(NULL), close(NULL), format(NULL), /* Structure initialization */
 		parse(NULL), info(NULL), handle(NULL),
                 plainLevel(DEFAULT_PLUGIN_PLAIN_LEVEL) {};
-	int (*init) (void);     		/**< Plugin initialization */
-	void (*close) (void); 			/**< Plugin close */
-	void (*format)(const union plugin_arg *, int, char*); 	/**< Format data */
-	void (*parse)(char *, char*); 	/**< Parse input */
+	int (*init) (const char *params, void **conf);     		/**< Plugin initialization */
+	void (*close) (void*); 			/**< Plugin close */
+	void (*format)(const plugin_arg_t *, int, char*, void*); 	/**< Format data */
+	void (*parse)(char *, char*, void*); 	/**< Parse input */
         char *(*info) (void);           /**< Plugin description */
 	void *handle; 					/**< Plugin handle */
         int plainLevel;

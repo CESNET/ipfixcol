@@ -152,6 +152,13 @@ public:
 	const std::string getSemantics() const;
 
 	/**
+	 * \brief Returns semantics parameters
+	 *
+	 * @return semantics parameters
+	 */
+	const std::string getSemanticsParams() const { return ast->semanticsParams; }
+
+	/**
 	 * \brief Returns true if column is a separator column
 	 *
 	 * @return returns true if column is a separator column, false otherwise
@@ -185,8 +192,9 @@ public:
 	 */
 	~Column();
 
-	void (*format)( const union plugin_arg * val, int, char*);
-	void (*parse)(char *input, char *out);
+	void (*format)(const plugin_arg_t * val, int, char*, void *conf);
+	void (*parse)(char *input, char *out, void *conf);
+	void *pluginConf;
 
         /**
          * \brief Returns summary type
@@ -250,6 +258,7 @@ private:
 		astTypes type; /**< AST type */
 		unsigned char operation; /**< one of '/', '*', '-', '+' */
 		std::string semantics; /**< semantics of the column */
+		std::string semanticsParams; /**< semantics parameters */
 		std::string value; /**< value (column name) */
 		std::string aggregation; /**< how to aggregate this column */
 		int parts; /**< number of parts of column (ipv6 => e0id27p0 and e0id27p1)*/
@@ -298,6 +307,11 @@ private:
 	 * @param ast AST for this column
 	 */
 	void setAST(AST *ast);
+
+	/**
+	 * \brief Parse semantics from xml and fill in members in AST
+	 */ 
+	void parseSemantics(AST *ast, std::string semantics);
 
 	/**
 	 * \brief Create element of type value from XMLnode element

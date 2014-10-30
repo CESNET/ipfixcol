@@ -75,7 +75,7 @@
 		<alias>%duration</alias>
 		<width>9</width>
 		<value type="operation">
-			<operation name="-" semantics="duration">
+			<operation name="-" semantics="multiplier(0.001, 3)">
 				<arg1>%te</arg1>
 				<arg2>%ts</arg2>
 			</operation>
@@ -1788,6 +1788,11 @@
 	<plugin>
 		<name>mac</name>
 		<path>/usr/share/fbitdump/plugins/mac.so</path>
+		<plainLevel>1</plainLevel>
+	</plugin>
+	<plugin>
+		<name>multiplier</name>
+		<path>/usr/share/fbitdump/plugins/multiplier.so</path>
 		<plainLevel>1</plainLevel>
 	</plugin>
 </plugins>

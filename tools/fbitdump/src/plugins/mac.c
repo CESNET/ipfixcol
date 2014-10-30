@@ -16,25 +16,29 @@ char *info()
 "Converts MAC address (six groups of two hex digits separated by colons) to number and vice versa.";
 }
 
+int init(const char *params, void **conf)
+{
+return 0;
+}
 
-void format(const union plugin_arg * arg, int plain_numbers, char buff[PLUGIN_BUFFER_SIZE])
+void format(const plugin_arg_t *arg, int plain_numbers, char buff[PLUGIN_BUFFER_SIZE], void *conf)
 {
         if (plain_numbers) {
-		snprintf(buff, PLUGIN_BUFFER_SIZE, "%lu", arg->uint64);
+		snprintf(buff, PLUGIN_BUFFER_SIZE, "%lu", arg->val->uint64);
                 return;
         }
 	
         snprintf(buff, PLUGIN_BUFFER_SIZE, "%02x:%02x:%02x:%02x:%02x:%02x",
-                ((unsigned char *) &(arg->uint64))[5],
-                ((unsigned char *) &(arg->uint64))[4],
-                ((unsigned char *) &(arg->uint64))[3],
-                ((unsigned char *) &(arg->uint64))[2],
-                ((unsigned char *) &(arg->uint64))[1],
-                ((unsigned char *) &(arg->uint64))[0]);
+                ((unsigned char *) &(arg->val->uint64))[5],
+                ((unsigned char *) &(arg->val->uint64))[4],
+                ((unsigned char *) &(arg->val->uint64))[3],
+                ((unsigned char *) &(arg->val->uint64))[2],
+                ((unsigned char *) &(arg->val->uint64))[1],
+                ((unsigned char *) &(arg->val->uint64))[0]);
 }
 
 
-void parse(char *input, char out[PLUGIN_BUFFER_SIZE])
+void parse(char *input, char out[PLUGIN_BUFFER_SIZE], void *conf)
 {
 	uint64_t addr = 0;
 	sscanf(input, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", 

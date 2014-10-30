@@ -8,18 +8,18 @@ char *info()
 	return "";
 }
 
-void format( const union plugin_arg * arg, int plain_numbers, char buff[PLUGIN_BUFFER_SIZE] ) {
+void format( const plugin_arg_t * arg, int plain_numbers, char buff[PLUGIN_BUFFER_SIZE], void *conf) {
 	char *methods[]={"INVITE", "ACK", "BYE", "CANCEL", "OPTIONS", "REGISTER", "PRACK", "SUBSCRIBE",
 		"NOTIFY", "PUBLISH", "INFO", "REFER", "MESSAGE", "UPDATE"};
 
-	if (arg[0].uint32 > 14 || arg[0].uint32 == 0 || plain_numbers) {
-		snprintf( buff, PLUGIN_BUFFER_SIZE,  "%u", arg[0].uint32 );
+	if (arg->val[0].uint32 > 14 || arg->val[0].uint32 == 0 || plain_numbers) {
+		snprintf( buff, PLUGIN_BUFFER_SIZE,  "%u", arg->val[0].uint32 );
 	} else {
-		snprintf( buff, PLUGIN_BUFFER_SIZE, "%s", methods[(arg[0].uint32)-1] );
+		snprintf( buff, PLUGIN_BUFFER_SIZE, "%s", methods[(arg->val[0].uint32)-1] );
 	}
 }
 
-void parse(char *input, char out[PLUGIN_BUFFER_SIZE])
+void parse(char *input, char out[PLUGIN_BUFFER_SIZE], void *conf)
 {
 	int code;
 	if (!strcasecmp(input, "INVITE")) {
