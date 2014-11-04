@@ -103,6 +103,9 @@ AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please
 if test "$DISTRO" = "suse"; then 
 	AC_CHECK_HEADER([pgsql/libpq-fe.h], ,[AC_MSG_ERROR([libpq-fe.h header not found. Please install postgres-devel package.])])
 	CFLAGS="$CFLAGS -I/usr/include/pgsql" 
+elif test "$DISTRO" = "debian"; then
+	AC_CHECK_HEADER([postgresql/libpq-fe.h], ,[AC_MSG_ERROR([libpq-fe.h header not found. Please install libpq-dev package.])])
+	CFLAGS="$CFLAGS -I/usr/include/postgresql"
 else
 	AC_CHECK_HEADER([libpq-fe.h], ,[AC_MSG_ERROR([libpq-fe.h header not found. Please install postgres-devel package.])])
 fi
