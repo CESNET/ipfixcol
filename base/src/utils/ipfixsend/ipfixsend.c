@@ -92,6 +92,7 @@ void usage()
 
 void handler(int signal)
 {
+	(void) signal; // skip compiler warning
 	sender_stop();
 	stop = 1;
 }
@@ -184,13 +185,7 @@ int main(int argc, char** argv)
     /* Check whether everything is set */
     CHECK_SET(input, "Input file");
     CHECK_SET(ip,    "IP address");
-//	
-//	if (speed > 0 && packets_s > 0) {
-//		fprintf(stderr, "-S and -s cannot be set together!\n");
-//		return 1;
-//	}
-	
-	
+
 	signal(SIGINT, handler);
 	
     /* Get collector's address */
@@ -198,18 +193,19 @@ int main(int argc, char** argv)
     if (parse_ip(&addr, ip, port)) {
         return 1;
     }
+	
+	/* Load packets from file */
+	char **packets = read_packets(input);
+	if (!packets) {
+		return 1;
+	}
     
 	/* Create connection */
     int sockfd = create_connection(&addr, type);
     if (sockfd <= 0) {
+		free_packets(packets);
 		return 1;
     }
-    
-	char **packets = read_packets(input);
-	if (!packets) {
-		close_connection(sockfd);
-		return 1;
-	}
 		
 	/* Send packets */
 	int i, ret;
