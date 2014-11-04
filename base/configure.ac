@@ -81,9 +81,11 @@ AC_ARG_WITH([openssl],
 
 # Check for flex
 AC_CHECK_PROG(FLEX, flex, flex)
+AS_IF([test -z "$FLEX"], [AC_MSG_ERROR([flex not found, please install flex package])])
 
 # Check fol bison
 AC_CHECK_PROG(BISON, bison, bison)
+AS_IF([test -z "$BISON"], [AC_MSG_ERROR([bison not found, please install bison package])])
 
 # Check for doxygen
 AC_CHECK_PROG(DOXYGEN, doxygen, doxygen)
@@ -219,11 +221,6 @@ AM_COND_IF(HAVE_DOXYGEN, AC_CONFIG_FILES([documentation/doxygen/doxyfile]))
 
 AC_OUTPUT
 
-# print warnings
-
-AS_IF([test -z "$FLEX"], AC_MSG_WARN([Due to missing flex you will not be able to generate filter scanner from sources.]))
-
-AS_IF([test -z "$BISON"], AC_MSG_WARN([Due to missing bison you will not be able to generate filter parser from sources.]))
 
 ######################## Checks for xsltproc and doxygen if doc building is enabled ##########################
 AM_COND_IF(HAVE_DOC,
@@ -236,7 +233,6 @@ AM_COND_IF(HAVE_DOC,
 AS_IF([test -z "$RPMBUILD"],
 	AC_MSG_WARN([Due to missing rpmbuild you will not able to generate RPM package.])
 )
-
 
 # Print final summary
 echo "
