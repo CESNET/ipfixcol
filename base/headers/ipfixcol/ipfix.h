@@ -49,6 +49,7 @@
  */
 
 #include <stdint.h>
+#include "api.h"
 
 /** IPFIX identification (NetFlow version 10) */
 #define IPFIX_VERSION 0x000a

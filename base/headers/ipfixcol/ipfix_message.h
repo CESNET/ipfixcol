@@ -48,7 +48,9 @@
 #ifndef IPFIX_MESSAGE_H_
 #define IPFIX_MESSAGE_H_
 
-#include <ipfixcol.h>
+#include "api.h"
+#include "input.h"
+#include "templates.h"
 
 /**
  * \brief Structure for moving in template fields
@@ -124,7 +126,7 @@ API int message_set_data(uint8_t *dest, uint8_t *source, int len);
  * \param[in] template template for data set
  * \return array of pointers to start of the Data Records in Data Set
  */
-API uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_template *template);
+API uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_template *tmplt);
 
 
 /**
@@ -134,7 +136,7 @@ API uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_tem
  * \param[in] template template for data record
  * \return offset of next data record in data set
  */
-API uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template *template);
+API uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template *tmplt);
 
 
 /**

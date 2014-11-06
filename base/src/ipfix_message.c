@@ -314,7 +314,7 @@ int message_set_data(uint8_t *dest, uint8_t *source, int len)
  * \param[in] template template for data record
  * \return offset of next data record in data set
  */
-uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template *template)
+uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template *tmplt)
 {
 	if (!template) {
 		/* we don't have template for this data set */
@@ -368,7 +368,7 @@ uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template
  * \param[in] template template for data set
  * \return array of pointers to start of the Data Records in Data Set
  */
-uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_template *template)
+uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_template *tmplt)
 {
 	uint8_t *data_record;
 	uint32_t offset;
