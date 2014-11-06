@@ -39,7 +39,7 @@
 AC_PREREQ([2.60])
 # Process this file with autoconf to produce a configure script.
 AC_INIT([ipfixcol-json-output], [1.0.0])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability subdir-objects])
 LT_PREREQ([2.2])
 LT_INIT([dlopen disable-static])
 
@@ -105,8 +105,7 @@ AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please
 #CXXFLAGS="$CXXFLAGS $CXXSTD"
 #CXXFLAGS="$my_save_cflags"
 
-AC_SEARCH_LIBS([siso_create], [siso],,
-    	AC_MSG_ERROR([Required library siso missing]))
+AC_SEARCH_LIBS([siso_create],[siso], , AC_MSG_ERROR([Required library siso missing]))
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 AC_HEADER_STDBOOL
