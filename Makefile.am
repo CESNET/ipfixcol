@@ -10,4 +10,5 @@ SUBDIRS = base \
 	plugins/storage/fastbit \
 	plugins/storage/postgres \
 	plugins/storage/unirec \
+	plugins/storage/json \
 	plugins/input/nfdump
