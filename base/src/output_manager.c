@@ -172,7 +172,6 @@ static void *output_manager_plugin_thread(void* config)
 			if (data_config == NULL) {
 				MSG_WARNING(msg_module, "[%u] Unable to create data manager, skipping data.",
 						msg->input_info->odid);
-				free (msg);
 				rbuffer_remove_reference(conf->in_queue, index, 1);
 				continue;
 			}
