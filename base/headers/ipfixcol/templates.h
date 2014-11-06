@@ -55,6 +55,7 @@
 #define IPFIXCOL_TEMPLATES_H_
 
 #include "api.h"
+#include "ipfix.h"
 
 /**
  * \def TM_OPTIONS_TEMPLATE

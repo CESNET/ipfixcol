@@ -42,6 +42,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <ipfixcol/ipfix_message.h>
+#include <ipfixcol/verbose.h>
 
 /** Identifier to MSG_* macros */
 static char *msg_module = "ipfix_message";
@@ -316,7 +317,7 @@ int message_set_data(uint8_t *dest, uint8_t *source, int len)
  */
 uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template *tmplt)
 {
-	if (!template) {
+	if (!tmplt) {
 		/* we don't have template for this data set */
 		return 0;
 	}
@@ -330,9 +331,9 @@ uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template
 	index = count;
 
 	/* go over all fields */
-	while (count != template->field_count) {
-		id = template->fields[index].ie.id;
-		length = template->fields[index].ie.length;
+	while (count != tmplt->field_count) {
+		id = tmplt->fields[index].ie.id;
+		length = tmplt->fields[index].ie.length;
 
 		if (id >> 15) {
 			/* Enterprise Number */
@@ -384,7 +385,7 @@ uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_templat
 	}
 	memset(records, 0, 1023 * sizeof(uint8_t *));
 
-	min_record_length = template->data_length;
+	min_record_length = tmplt->data_length;
 	offset = 0;
 
 	offset += 4;  /* size of the header */
@@ -397,7 +398,7 @@ uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_templat
 	while ((int) ntohs(data_set->header.length) - (int) offset - (int) min_record_length >= 0) {
 		data_record = (((uint8_t *) data_set) + offset);
 		records[records_index] = data_record;
-		offset += get_next_data_record_offset(data_record, template);
+		offset += get_next_data_record_offset(data_record, tmplt);
 	}
 
 	return records;

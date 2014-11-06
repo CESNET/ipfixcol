@@ -51,6 +51,7 @@
 #include "api.h"
 #include "input.h"
 #include "templates.h"
+#include "storage.h"
 
 /**
  * \brief Structure for moving in template fields
