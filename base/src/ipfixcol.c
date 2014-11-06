@@ -59,7 +59,7 @@
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
 
-#include "ipfixcol.h"
+#include <ipfixcol.h>
 #include "intermediate_process.h"
 #include "config.h"
 #include "preprocessor.h"
@@ -478,7 +478,6 @@ int main (int argc, char* argv[])
 			intermediate_plugin_handler = NULL;
 			free(intermediate_list);
 			intermediate_list = aux_intermediate_list;
-			dlclose(intermediate_plugin_handler);
 			continue;
 		}
 
@@ -489,7 +488,6 @@ int main (int argc, char* argv[])
 			intermediate_plugin_handler = NULL;
 			free(intermediate_list);
 			intermediate_list = aux_intermediate_list;
-			dlclose(intermediate_plugin_handler);
 			continue;
 		}
 
@@ -500,7 +498,7 @@ int main (int argc, char* argv[])
 			intermediate_plugin_handler = NULL;
 			free(intermediate_list);
 			intermediate_list = aux_intermediate_list;
-			dlclose(intermediate_plugin_handler);
+
 			continue;
 		}
 

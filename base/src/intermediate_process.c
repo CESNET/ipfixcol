@@ -45,7 +45,7 @@
 #include <string.h>
 #include "queues.h"
 #include "intermediate_process.h"
-//#include "ipfix_message.h"
+#include <ipfixcol/intermediate.h>
 
 static char *msg_module = "Intermediate Process";
 

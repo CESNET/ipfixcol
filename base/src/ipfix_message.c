@@ -41,7 +41,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include "ipfix_message.h"
+#include <ipfixcol/ipfix_message.h>
 
 /** Identifier to MSG_* macros */
 static char *msg_module = "ipfix_message";

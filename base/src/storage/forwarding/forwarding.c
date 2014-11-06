@@ -53,7 +53,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include "../../preprocessor.h"
-#include "../../ipfix_message.h"
+#include <ipfixcol/ipfix_message.h>
 
 #ifdef HAVE_SCTP
 

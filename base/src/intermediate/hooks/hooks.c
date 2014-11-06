@@ -45,8 +45,6 @@
 
 #include <ipfixcol.h>
 #include <libxml/tree.h>
-#include "../../intermediate_process.h"
-#include "../../ipfix_message.h"
 
 /*
  * HOWTO add new hook type

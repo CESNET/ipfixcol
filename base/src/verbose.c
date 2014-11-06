@@ -37,7 +37,7 @@
  *
  */
 
-#include "ipfixcol/verbose.h"
+#include <ipfixcol/verbose.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <syslog.h>

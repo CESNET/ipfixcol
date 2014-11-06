@@ -45,7 +45,7 @@
 #include <errno.h>
 #include <libxml/xpathInternals.h>
 
-#include "ipfixcol.h"
+#include <ipfixcol.h>
 #include "config.h"
 
 #define DEFAULT_STORAGE_PLUGIN "ipfix"

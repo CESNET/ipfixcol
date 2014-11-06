@@ -55,9 +55,6 @@
 #include "scanner.h"
 #include "parser.h"
 
-#include "../../intermediate_process.h"
-#include "../../ipfix_message.h"
-
 static const char *msg_module = "filter";
 
 #define CHECK_ALLOC(check_alloc_ptr) \

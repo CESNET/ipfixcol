@@ -66,5 +66,8 @@
 #include <ipfixcol/verbose.h>
 #include <ipfixcol/centos5.h>
 #include <ipfixcol/utils.h>
+#include <ipfixcol/intermediate.h>
+#include <ipfixcol/api.h>
+#include <ipfixcol/ipfix_message.h>
 
 #endif /* IPFIXCOL_H_ */

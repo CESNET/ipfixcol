@@ -41,8 +41,6 @@
 #include <stdlib.h>
 
 #include <ipfixcol.h>
-#include "../../intermediate_process.h"
-
 
 static char *msg_module = "dummy Intermediate Process";
 

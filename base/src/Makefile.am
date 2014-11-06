@@ -24,7 +24,6 @@ ipfixcol_SOURCES = \
 	intermediate_process.c \
 	intermediate_process.h \
 	ipfix_message.c \
-	ipfix_message.h \
 	ipfixcol.c \
 	output_manager.c \
 	output_manager.h \

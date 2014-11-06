@@ -60,9 +60,7 @@
 #include <ipfixcol.h>
 
 #include "Crypto-PAn/panonymizer.h"
-#include "../../intermediate_process.h"
-#include "../../ipfix_message.h"
-
+#include <ipfixcol.h>
 
 static char *msg_module = "Anon IP";
 

@@ -48,7 +48,6 @@
  */
 
 #include "queues.h"
-//#include "ipfixmed.h"
 #include "config.h"
 
 
@@ -78,25 +77,6 @@ int ip_init(struct ring_buffer *in_queue, struct ring_buffer *out_queue,
  * \return NULL
  */
 void *ip_loop(void *config);
-
-
-/**
- * \brief Pass processed IPFIX message to the output queue.
- *
- * \param[in] config configuration structure
- * \param[in] message IPFIX message
- * \return 0 on success, negative value otherwise
- */
-int pass_message(void *config, struct ipfix_message *message);
-
-/**
- * \brief Drop IPFIX message.
- *
- * \param[in] config configuration structure
- * \param[in] message IPFIX message
- * \return 0 on success, negative value otherwise
- */
-int drop_message(void *config, struct ipfix_message *message);
 
 /**
  * \brief Destroy Intermediate Process

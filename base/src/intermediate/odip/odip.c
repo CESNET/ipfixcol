@@ -44,8 +44,6 @@
 #include <string.h>
 
 #include <ipfixcol.h>
-#include "../../intermediate_process.h"
-#include "../../ipfix_message.h"
 
 #define ODIP4_FIELD  403
 #define ODIP6_FIELD  404

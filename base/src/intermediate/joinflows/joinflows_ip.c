@@ -44,8 +44,6 @@
 #include <string.h>
 
 #include <ipfixcol.h>
-#include "../../intermediate_process.h"
-#include "../../ipfix_message.h"
 
 #include <libxml/parser.h>
 #include <libxml/tree.h>

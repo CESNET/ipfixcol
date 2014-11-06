@@ -45,9 +45,8 @@
 #include "preprocessor.h"
 #include "data_manager.h"
 #include "queues.h"
-#include "ipfixcol.h"
+#include <ipfixcol.h>
 #include "crc.h"
-#include "ipfix_message.h"
 
 /** Identifier to MSG_* macros */
 static char *msg_module = "preprocessor";

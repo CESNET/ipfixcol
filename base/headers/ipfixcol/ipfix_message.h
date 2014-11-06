@@ -66,7 +66,7 @@ struct __attribute__((__packed__)) ipfix_template_row {
  * \param[in] source_status Status of source (new, opened, closed)
  * \return ipfix_message structure on success, NULL otherwise
  */
-struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_info* input_info, int source_state);
+API struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_info* input_info, int source_state);
 
 
 /**
@@ -76,7 +76,7 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
  * \param[in] tm template manager with corresponding templates
  * \return 0 on success, negative value otherwise
  */
-int message_set_templates(struct ipfix_message *msg, struct ipfix_template_mgr *tm, uint32_t src_id);
+API int message_set_templates(struct ipfix_message *msg, struct ipfix_template_mgr *tm, uint32_t src_id);
 
 
 /**
@@ -85,7 +85,7 @@ int message_set_templates(struct ipfix_message *msg, struct ipfix_template_mgr *
  * \param[in] msg original IPFIX message
  * \return copy of original IPFIX message on success, NULL otherwise
  */
-struct ipfix_message *message_create_clone(struct ipfix_message *msg);
+API struct ipfix_message *message_create_clone(struct ipfix_message *msg);
 
 
 /**
@@ -93,7 +93,7 @@ struct ipfix_message *message_create_clone(struct ipfix_message *msg);
  *
  * \return new instance of ipfix_message structure.
  */
-struct ipfix_message *message_create_empty();
+API struct ipfix_message *message_create_empty();
 
 /**
  * \brief Get data from IPFIX message.
@@ -103,7 +103,7 @@ struct ipfix_message *message_create_empty();
  * \param[in] len length of the data
  * \return 0 on success, negative value otherwise
  */
-int message_get_data(uint8_t **dest, uint8_t *source, int len);
+API int message_get_data(uint8_t **dest, uint8_t *source, int len);
 
 
 /**
@@ -114,7 +114,7 @@ int message_get_data(uint8_t **dest, uint8_t *source, int len);
  * \param[in] len length of the data
  * \return 0 on success, negative value otherwise
  */
-int message_set_data(uint8_t *dest, uint8_t *source, int len);
+API int message_set_data(uint8_t *dest, uint8_t *source, int len);
 
 
 /**
@@ -124,7 +124,7 @@ int message_set_data(uint8_t *dest, uint8_t *source, int len);
  * \param[in] template template for data set
  * \return array of pointers to start of the Data Records in Data Set
  */
-uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_template *template);
+API uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_template *template);
 
 
 /**
@@ -134,7 +134,7 @@ uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_templat
  * \param[in] template template for data record
  * \return offset of next data record in data set
  */
-uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template *template);
+API uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template *template);
 
 
 /**
@@ -143,7 +143,7 @@ uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template
  * \param[in] msg IPFIX message to dispose
  * \return 0 on success, negative value otherwise
  */
-int message_free(struct ipfix_message *msg);
+API int message_free(struct ipfix_message *msg);
 
 /**
  * \brief Get data from record
@@ -154,7 +154,7 @@ int message_free(struct ipfix_message *msg);
  * \param[out] data_length Length of returned data
  * \return Pointer to field
  */
-uint8_t *data_record_get_field(uint8_t *record, struct ipfix_template *templ, uint16_t id, int *data_length);
+API uint8_t *data_record_get_field(uint8_t *record, struct ipfix_template *templ, uint16_t id, int *data_length);
 
 /**
  * \brief Set field value
@@ -164,7 +164,7 @@ uint8_t *data_record_get_field(uint8_t *record, struct ipfix_template *templ, ui
  * \param[in] id Field id
  * \param[in] value Field value
  */
-void data_record_set_field(uint8_t *record, struct ipfix_template *templ, uint16_t id, uint8_t *value);
+API void data_record_set_field(uint8_t *record, struct ipfix_template *templ, uint16_t id, uint8_t *value);
 
 /**
  * \brief Set field value for each data record in set
@@ -174,7 +174,7 @@ void data_record_set_field(uint8_t *record, struct ipfix_template *templ, uint16
  * \param[in] id Field ID
  * \param[in] value Field value
  */
-void data_set_set_field(struct ipfix_data_set *set, struct ipfix_template *templ, uint16_t id, uint8_t *value);
+API void data_set_set_field(struct ipfix_data_set *set, struct ipfix_template *templ, uint16_t id, uint8_t *value);
 
 /**
  * \brief Get template record field
@@ -184,7 +184,7 @@ void data_set_set_field(struct ipfix_data_set *set, struct ipfix_template *templ
  * \param[out] data_offset offset data record specified by this template record
  * \return pointer to inserted field
  */
-struct ipfix_template_row *template_record_get_field(struct ipfix_template_record *rec, uint16_t id, int *data_offset);
+API struct ipfix_template_row *template_record_get_field(struct ipfix_template_record *rec, uint16_t id, int *data_offset);
 
 /**
  * \brief Get template record field
@@ -194,7 +194,7 @@ struct ipfix_template_row *template_record_get_field(struct ipfix_template_recor
  * \param[out] data_offset offset data record specified by this template record
  * \return pointer to inserted field
  */
-struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint16_t id, int *data_offset);
+API struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint16_t id, int *data_offset);
 
 /**
  * \brief Compute data record's length
@@ -203,7 +203,7 @@ struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint
  * \param[in] templ Data record's template
  * \return Length
  */
-uint16_t data_record_length(uint8_t *data_record, struct ipfix_template *templ);
+API uint16_t data_record_length(uint8_t *data_record, struct ipfix_template *templ);
 
 /**
  * \brief Callback function for data records processing
@@ -233,7 +233,7 @@ typedef  void (*tset_callback_f)(uint8_t *rec, int rec_len, void *data);
  * \param[in] proc_data Data given to function (besides data record, its's length and template)
  * \return Number of data records in set
  */
-int data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_template *templ, dset_callback_f processor, void *proc_data);
+API int data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_template *templ, dset_callback_f processor, void *proc_data);
 
 /**
  * \brief Get number of records in data set
@@ -242,7 +242,7 @@ int data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_templ
  * \param[in] templ Data set's template
  * \return Number of data records in set
  */
-int data_set_records_count(struct ipfix_data_set *data_set, struct ipfix_template *templ);
+API int data_set_records_count(struct ipfix_data_set *data_set, struct ipfix_template *templ);
 
 /**
  * \brief Process all (options) template records in set
@@ -253,7 +253,7 @@ int data_set_records_count(struct ipfix_data_set *data_set, struct ipfix_templat
  * \param[in] proc_data Data given to function
  * \return Number of template records in set
  */
-int template_set_process_records(struct ipfix_template_set *tset, int type, tset_callback_f processor, void *proc_data);
+API int template_set_process_records(struct ipfix_template_set *tset, int type, tset_callback_f processor, void *proc_data);
 
 #endif /* IPFIX_MESSAGE_H_ */
 
