@@ -54,7 +54,7 @@
 #define IPFIX_VERSION 0x000a
 
 /* Path to ipfix-elements.xml file */
-extern const char *ipfix_elements;
+API extern const char *ipfix_elements;
 
 /**
  * \struct ipfix_header

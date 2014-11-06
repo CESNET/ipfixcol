@@ -54,6 +54,8 @@
 #ifndef IPFIXCOL_TEMPLATES_H_
 #define IPFIXCOL_TEMPLATES_H_
 
+#include "api.h"
+
 /**
  * \def TM_OPTIONS_TEMPLATE
  * \brief Template manager's options template number
@@ -176,7 +178,7 @@ struct ipfix_template_mgr_record {
  * \param[in]  odid Observation Domain ID
  * \return Pointer to new ipfix_template on success, NULL otherwise
  */
-struct ipfix_template *tm_create_template(void *tmp, int max_len, int type, uint32_t odid);
+API struct ipfix_template *tm_create_template(void *tmp, int max_len, int type, uint32_t odid);
 
 
 /**
@@ -191,7 +193,7 @@ struct ipfix_template *tm_create_template(void *tmp, int max_len, int type, uint
  * \param[in]  key Unique identifier of template in Template Manager
  * \return Pointer to new ipfix_template on success, NULL otherwise
  */
-struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm,
+API struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm,
                                           void *tmp, int max_len, int type, struct ipfix_template_key *key);
 
 
@@ -202,7 +204,7 @@ struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm,
  * \param[in] tmpl Existing IPFIX Template
  * \param[in] key Unique identifier of template in Template Manager
  */
-struct ipfix_template *tm_insert_template(struct ipfix_template_mgr *tm, struct ipfix_template *tmpl, struct ipfix_template_key *key);
+API struct ipfix_template *tm_insert_template(struct ipfix_template_mgr *tm, struct ipfix_template *tmpl, struct ipfix_template_key *key);
 
 /**
  * \brief Function for updating an existing templates.
@@ -216,7 +218,7 @@ struct ipfix_template *tm_insert_template(struct ipfix_template_mgr *tm, struct 
  * \param[in]  key Unique identifier of template in Template Manager
  * \return updated ipfix_template on success, NULL if error occurs.
  */
-struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm,
+API struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm,
                                           void *tmp, int max_len, int type, struct ipfix_template_key *key);
 
 /**
@@ -227,7 +229,7 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm,
  * \return pointer on the Temaplate on success, NULL if there is no such
  * Template.
  */
-struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, struct ipfix_template_key *key);
+API struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, struct ipfix_template_key *key);
 
 /**
  * \brief Function for removing Temaplates.
@@ -236,7 +238,7 @@ struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, struct ipf
  * \param[in]  key Unique identifier of template in Template Manager
  * \return 0 on success, negative value otherwise.
  */
-int tm_remove_template(struct ipfix_template_mgr *tm, struct ipfix_template_key *key);
+API int tm_remove_template(struct ipfix_template_mgr *tm, struct ipfix_template_key *key);
 
 /**
  * \brief Function for removing all Temaplates of specific type.
@@ -246,7 +248,7 @@ int tm_remove_template(struct ipfix_template_mgr *tm, struct ipfix_template_key 
  * TM_OPTIONS_TEMPLATE = Options Template.
  * \return 0 on success, negative value otherwise.
  */
-int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type);
+API int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type);
 
 /**
  * \brief Remove all templates for ODID
@@ -254,14 +256,14 @@ int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type);
  * \param[in] tm Template Manager
  * \param[in] odid Observation Domain ID
  */
-void tm_remove_all_odid_templates(struct ipfix_template_mgr *tm, uint32_t odid);
+API void tm_remove_all_odid_templates(struct ipfix_template_mgr *tm, uint32_t odid);
 
 /**
  * \brief Create new template manager and set default values
  *
  * \return struct ipfix_template_mgr New template manager
  */
-struct ipfix_template_mgr *tm_create();
+API struct ipfix_template_mgr *tm_create();
 
 /**
  * \brief Determines whether specific template contains given field
@@ -270,7 +272,7 @@ struct ipfix_template_mgr *tm_create();
  * \param[in]  field field
  * \return 0 on success, negative value otherwise.
  */
-int template_contains_field(struct ipfix_template *templ, uint16_t field);
+API int template_contains_field(struct ipfix_template *templ, uint16_t field);
 
 
 /**
@@ -278,21 +280,21 @@ int template_contains_field(struct ipfix_template *templ, uint16_t field);
  *
  * \param[in] templ template
  */
-void tm_template_reference_inc(struct ipfix_template *templ);
+API void tm_template_reference_inc(struct ipfix_template *templ);
 
 /**
  * \brief Decrement number of references to template
  *
  * \param[in] templ template
  */
-void tm_template_reference_dec(struct ipfix_template *templ);
+API void tm_template_reference_dec(struct ipfix_template *templ);
 
 /**
  * \brief Destroys and frees specified template manager
  *
  * \param[in] ipfix_template_mgr Template manager to be destroyed
  */
-void tm_destroy(struct ipfix_template_mgr *tm);
+API void tm_destroy(struct ipfix_template_mgr *tm);
 
 /**
  * \brief Make ipfix_template_key from ODID, crc and template id
@@ -302,7 +304,7 @@ void tm_destroy(struct ipfix_template_mgr *tm);
  * @param tid  Template ID
  * @return pointer to ipfix_template_key
  */
-struct ipfix_template_key *tm_key_create(uint32_t odid, uint32_t crc, uint32_t tid);
+API struct ipfix_template_key *tm_key_create(uint32_t odid, uint32_t crc, uint32_t tid);
 
 /**
  * \brief Change Template ID in template_key
@@ -311,14 +313,14 @@ struct ipfix_template_key *tm_key_create(uint32_t odid, uint32_t crc, uint32_t t
  * @param tid New Template ID
  * @return pointer to changed ipfix_template_key
  */
-struct ipfix_template_key *tm_key_change_template_id(struct ipfix_template_key *key, uint32_t tid);
+API struct ipfix_template_key *tm_key_change_template_id(struct ipfix_template_key *key, uint32_t tid);
 
 /**
  * \brief Destroy ipfix_template_key structure
  * 
  * @param key IPFIX template key
  */
-void tm_key_destroy(struct ipfix_template_key *key);
+API void tm_key_destroy(struct ipfix_template_key *key);
 
 /**
  * \brief Get template record length
@@ -330,7 +332,7 @@ void tm_key_destroy(struct ipfix_template_key *key);
  * TM_OPTIONS_TEMPLATE = Options Template.
  * @param data_length Length of the data record specified by this template record
  */
-uint16_t tm_template_record_length(struct ipfix_template_record *templ, int max_len, int type, uint32_t *data_length);
+API uint16_t tm_template_record_length(struct ipfix_template_record *templ, int max_len, int type, uint32_t *data_length);
 
 /**
  * \brief Compare 2 template records
@@ -339,7 +341,7 @@ uint16_t tm_template_record_length(struct ipfix_template_record *templ, int max_
  * @param second Second template record
  * @return non-zero if templates are equal
  */
-int tm_compare_template_records(struct ipfix_template_record *first, struct ipfix_template_record *second);
+API int tm_compare_template_records(struct ipfix_template_record *first, struct ipfix_template_record *second);
 
 #endif /* IPFIXCOL_TEMPLATES_H_ */
 

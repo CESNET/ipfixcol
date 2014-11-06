@@ -41,9 +41,11 @@
 #ifndef VERBOSE_H_
 #define VERBOSE_H_
 
-extern int verbose;
-extern int use_syslog;
-extern int skip_seq_err;
+#include "api.h"
+
+API extern int verbose;
+API extern int use_syslog;
+API extern int skip_seq_err;
 
 typedef enum {
 	ICMSG_ERROR,
@@ -94,7 +96,7 @@ typedef enum {
  * @param lvl Level of the message (for syslog severity)
  * @param format
  */
-void icmsg_print(ICMSG_LEVEL lvl, const char *format, ...);
+API void icmsg_print(ICMSG_LEVEL lvl, const char *format, ...);
 
 
 #endif /* VERBOSE_H_ */

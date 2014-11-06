@@ -102,6 +102,10 @@ AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
+# Check compiler visibility option
+LBR_CHECK_VISIBILITY([hidden])
+AS_IF([test "$VISIBILITY" = "no"], [AC_MSG_ERROR([compiler does not support -fvisibility])])
+
 ############################ Check for libraries ###############################
 
 ### LibXML2 ###

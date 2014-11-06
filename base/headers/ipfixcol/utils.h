@@ -40,8 +40,10 @@
 #ifndef UTILS_H
 #define	UTILS_H
 
-char **utils_files_from_path(char *path);
-char  *utils_dir_from_path(char *path);
+#include "api.h"
+
+API char **utils_files_from_path(char *path);
+API char  *utils_dir_from_path(char *path);
 
 #endif	/* UTILS_H */
 

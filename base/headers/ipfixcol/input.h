@@ -55,6 +55,7 @@
 
 #include <stdint.h>
 #include <arpa/inet.h>
+#include "api.h"
 
 /**
  * \def INPUT_CLOSED
@@ -172,7 +173,7 @@ struct __attribute__((__packed__)) input_info_file {
  * of input API's functions.
  * \return 0 on success, nonzero else.
  */
-int input_init(char *params, void **config);
+API int input_init(char *params, void **config);
 
 /**
  * \brief Pass input data from the input plugin into the ipfixcol core.
@@ -196,7 +197,7 @@ int input_init(char *params, void **config);
  * \return the length of packet on success, INPUT_CLOSE when some connection 
  *  closed, INPUT_INTR when interrupted by SIGINT signal, INPUT_ERROR on error.
  */
-int get_packet(void *config, struct input_info** info, char **packet, int *source_status);
+API int get_packet(void *config, struct input_info** info, char **packet, int *source_status);
 
 /**
  * \brief Input plugin "destructor".
@@ -208,7 +209,7 @@ int get_packet(void *config, struct input_info** info, char **packet, int *sourc
  * \param[in,out] config  Plugin-specific configuration data prepared by init
  * \return 0 on success and config is changed to NULL, nonzero else.
  */
-int input_close(void **config);
+API int input_close(void **config);
 
 #endif /* IPFIXCOL_INPUT_H_ */
 

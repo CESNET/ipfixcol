@@ -43,6 +43,7 @@
 #include "ipfix.h"
 #include "input.h"
 #include "templates.h"
+#include "api.h"
 
 /**
  * \defgroup storageAPI Storage Plugins API
@@ -109,7 +110,7 @@ struct __attribute__((__packed__)) ipfix_message {
  * of storage API's functions.
  * \return 0 on success, nonzero else.
  */
-int storage_init (char *params, void **config);
+API int storage_init (char *params, void **config);
 
 /**
  * \brief Pass IPFIX data with supplemental structures from ipfixcol core into
@@ -128,7 +129,7 @@ int storage_init (char *params, void **config);
  * better/faster data processing.
  * \return 0 on success, nonzero else.
  */
-int store_packet (void *config, const struct ipfix_message *ipfix_msg,
+API int store_packet (void *config, const struct ipfix_message *ipfix_msg,
         const struct ipfix_template_mgr *template_mgr);
 
 /**
@@ -143,7 +144,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
  * function.
  * \return 0 on success, nonzero else.
  */
-int store_now (const void *config);
+API int store_now (const void *config);
 
 /**
  * \brief Storage plugin "destructor".
@@ -155,7 +156,7 @@ int store_now (const void *config);
  * \param[in,out] config  Plugin-specific configuration data prepared by init
  * \return 0 on success and config is changed to NULL, nonzero else.
  */
-int storage_close (void **config);
+API int storage_close (void **config);
 
 /**@}*/
 
