@@ -52,6 +52,10 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %{_bindir}/ipfixconf
 #ipfixsend
 %{_bindir}/ipfixsend
+#libsiso
+%{_libdir}/libsiso.so
+%{_libdir}/libsiso.la
+%{_includedir}/siso.h
 #input plugins
 %{_datadir}/%{name}/plugins/ipfixcol-udp-input.*
 %{_datadir}/%{name}/plugins/ipfixcol-tcp-input.*

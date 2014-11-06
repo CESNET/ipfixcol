@@ -213,6 +213,7 @@ AC_CONFIG_FILES([Makefile
 				src/utils/Makefile
 				src/utils/ipfixconf/Makefile
 				src/utils/ipfixsend/Makefile
+				src/utils/libsiso/Makefile
 				config/Makefile
 				headers/Makefile
 				documentation/doxygen/Makefile

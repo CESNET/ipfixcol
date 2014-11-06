@@ -1,0 +1,336 @@
+/**
+ * \file Storage.cpp
+ * \author Michal Kozubik <kozubik@cesnet.cz>
+ * \brief Class for JSON storage plugin
+ *
+ * Copyright (C) 2014 CESNET, z.s.p.o.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is, and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
+extern "C" {
+#include <ipfixcol.h>
+}
+
+#include "Storage.h"
+#include <stdexcept>
+#include <sstream>
+
+#include <iostream>
+#include <iomanip>
+#include <map>
+
+static const char *msg_module = "json_storage";
+
+#define IPV6_LEN 16
+#define MAC_LEN  6
+
+#define READ_BYTE_ARR(_dst_, _src_, _len_) \
+do {\
+	for (int i = 0; i < (_len_); ++i) { \
+		(_dst_)[i] = read8((_src_) + i); \
+	} \
+} while(0)
+
+/**
+ * \brief Constructor
+ */
+Storage::Storage(sisoconf *new_sender): sender{new_sender}
+{
+	/* Load only once for all plugins */
+	if (elements.empty()) {
+		this->loadElements();
+	}
+}
+
+/**
+ * \brief Load elements into memory
+ */
+void Storage::loadElements()
+{
+	pugi::xml_document doc;
+
+	/* Load file */
+	pugi::xml_parse_result result = doc.load_file(ipfix_elements);
+
+	/* Check for errors */
+	if (!result) {
+		std::stringstream ss;
+		ss << "Error when parsing '" << ipfix_elements << "': " << result.description();
+		throw std::invalid_argument(ss.str());
+	}
+
+	/* Get all elements */
+	pugi::xpath_node_set elements_set = doc.select_nodes("/ipfix-elements/element");
+	for (auto node: elements_set) {
+		uint32_t en = strtoul(node.node().child_value("enterprise"), NULL, 0);
+		uint64_t id = strtoul(node.node().child_value("id"), NULL, 0);
+
+		struct ipfix_element element{};
+		
+		element.name = node.node().child_value("name");
+		std::string dataType = node.node().child_value("dataType");
+
+		if		(element.name == "protocolIdentifier")	 element.type = PROTOCOL;
+		else if (element.name == "tcpControlBits")		 element.type = FLAGS;
+		else if (dataType	  == "ipv4Address")			 element.type = IPV4;
+		else if (dataType	  == "ipv6Address")			 element.type = IPV6;
+		else if (dataType	  == "macAddress")			 element.type = MAC;
+		else if (dataType	  == "dateTimeSeconds")		 element.type = TSTAMP_SEC;
+		else if (dataType	  == "dateTimeMilliseconds") element.type = TSTAMP_MILLI;
+		else if (dataType	  == "dateTimeMicroseconds") element.type = TSTAMP_MICRO;
+		else if (dataType	  == "dateTimeNanoseconds")  element.type = TSTAMP_NANO;
+		else if (dataType	  == "string")				 element.type = STRING;
+		else											 element.type = RAW;
+		
+		elements[en][id] = element;
+	}
+}
+
+/**
+ * \brief Send data
+ */
+void Storage::sendData()
+{
+	/* Serialize data */
+	std::string serialized = json::Serialize(jData);
+	if (serialized.empty()) {
+		/* TODO: is this error or not? */
+		MSG_WARNING(msg_module, "Empty serialized data");
+		return;
+	}
+	
+	/* Send data */
+	if (siso_send(sender, serialized.c_str(), serialized.length()) != SISO_OK) {
+		throw std::runtime_error(std::string("Sending data: ") + siso_get_last_err(sender));
+	}
+}
+
+/**
+ * \brief Store data sets
+ */
+void Storage::storeDataSets(const ipfix_message* ipfix_msg)
+{
+	jData.Clear();
+	jRecords.Clear();
+	
+	jData["@type"] = "ipfix.entry";
+	
+	struct ipfix_data_set *data_set;
+
+	for (int i = 0; (data_set = ipfix_msg->data_couple[i].data_set) != NULL; ++i) {
+		struct ipfix_template *templ = ipfix_msg->data_couple[i].data_template;
+		if (!templ) {
+			/* Data set without template, skip it */
+			continue;
+		}
+		
+		uint16_t min_record_length = templ->data_length;
+		
+		/* Skip header */
+		uint32_t offset = 4;
+
+		if (min_record_length & 0x8000) {
+			/* oops, record contains fields with variable length */
+			min_record_length = min_record_length & 0x7fff; /* size of the fields, variable fields excluded  */
+		}
+
+		while ((int) ntohs(data_set->header.length) - (int) offset - (int) min_record_length >= 0) {
+			uint8_t *data_record = (((uint8_t *) data_set) + offset);
+			/* store data record */
+			offset += this->storeDataRecord(data_record, templ);
+		}
+	}
+	
+	if (jRecords.size() > 0) {
+		jData["ipfix"] = jRecords;
+		sendData();
+	}
+}
+
+/**
+ * \brief Get real field length
+ */
+uint16_t Storage::realLength(uint16_t length, uint8_t *data_record, uint16_t &offset)
+{
+	/* Static length */
+	if (length != 65535) {
+		return length;
+	}
+	
+	/* Variable length */
+	length = static_cast<int>(read8(data_record + offset));
+	offset++;
+	
+	if (length == 255) {
+		length = ntohs(read16(data_record + offset));
+		offset += 2;
+	}
+	
+	return length;
+}
+
+/**
+ * \brief Read string field
+ */
+std::string Storage::readString(uint16_t& length, uint8_t *data_record, uint16_t &offset)
+{
+	/* Get string length */
+	length = this->realLength(length, data_record, offset);
+	
+	/* Read string */
+	return std::string((const char *)(data_record + offset), length);
+}
+
+/**
+ * \brief Read raw data from record
+ */
+std::string Storage::readRawData(uint16_t &length, uint8_t* data_record, uint16_t &offset)
+{
+	/* Read raw value */
+	std::stringstream ss;
+
+	switch (length) {
+	case (1):
+		ss << static_cast<int>(read8(data_record + offset));
+		break;
+	case (2):
+		ss << ntohs(read16(data_record + offset));
+		break;
+	case (4):
+		ss << ntohl(read32(data_record + offset));
+		break;
+	case (8):
+		ss << be64toh(read64(data_record + offset));
+		break;
+	default:
+		length = this->realLength(length, data_record, offset);
+		ss << "0x" << std::hex;
+		for (int i = 0; i < length; i++) {
+			ss << std::setw(2) << std::setfill('0') << static_cast<int>((data_record + offset)[i]);
+		}
+	}
+	
+	return ss.str();
+}
+
+/**
+ * \brief Create raw name for unknown elements
+ */
+std::string Storage::rawName(uint32_t en, uint16_t id) const
+{
+	std::stringstream ss;
+	ss << "e" << en << "id" << id;
+	return ss.str();
+}
+
+/**
+ * \brief Store data record
+ */
+uint16_t Storage::storeDataRecord(uint8_t *data_record, ipfix_template *templ)
+{
+	uint16_t offset = 0;
+	json::Object jRecord;
+	
+	/* get all fields */
+	for (uint16_t count = 0, index = 0; count < templ->field_count; ++count, ++index) {
+		/* Get Enterprise number and ID */
+		uint16_t id = templ->fields[index].ie.id;
+		uint16_t length = templ->fields[index].ie.length;
+		uint32_t enterprise = 0;
+		
+		if (id & 0x8000) {
+			id &= 0x7fff;
+			enterprise = templ->fields[++index].enterprise_number;
+		}
+		
+		/* Get element informations */
+		struct ipfix_element element = this->getElement(enterprise, id);
+		std::string value{};
+		
+		switch (element.type) {
+		case PROTOCOL:
+			value = translator.formatProtocol(read8(data_record + offset));
+			break;
+		case FLAGS:
+			value = translator.formatFlags(read16(data_record + offset));
+			break;
+		case IPV4:
+			value = translator.formatIPv4(read32(data_record + offset));
+			break;
+		case IPV6:{
+			uint8_t addr[IPV6_LEN];
+			READ_BYTE_ARR(addr, data_record + offset, IPV6_LEN);
+			value = translator.formatIPv6(addr);
+			break;}
+		case MAC: {
+			uint8_t addr[MAC_LEN];
+			READ_BYTE_ARR(addr, data_record + offset, MAC_LEN);
+			value = translator.formatMac(addr);
+			break;}
+		case TSTAMP_SEC:
+			value = translator.formatTimestamp(read64(data_record + offset), t_units::SEC);
+			break;
+		case TSTAMP_MILLI:
+			value = translator.formatTimestamp(read64(data_record + offset), t_units::MILLISEC);
+			break;
+		case TSTAMP_MICRO:
+			value = translator.formatTimestamp(read64(data_record + offset), t_units::MICROSEC);
+			break;
+		case TSTAMP_NANO:
+			value = translator.formatTimestamp(read64(data_record + offset), t_units::NANOSEC);
+			break;
+		case STRING:
+			value = this->readString(length, data_record, offset);
+			break;
+		case RAW:
+			value = this->readRawData(length, data_record, offset);
+			break;
+		default:
+			MSG_DEBUG(msg_module, "Unknown element (enterprise %u, id %u)", enterprise, id);
+			element.name = rawName(enterprise, id);
+			value = this->readRawData(length, data_record, offset);
+			break;
+		}
+		
+		offset += length;
+		
+		jRecord[element.name] = value;
+	}
+	
+	/* Add record into array */
+	if (jRecord.size() > 0) {
+		jRecords.push_back(jRecord);
+	}
+	
+	return offset;
+}
