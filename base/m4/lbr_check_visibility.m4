@@ -18,8 +18,8 @@ AC_DEFUN([LBR_CHECK_VISIBILITY],
 [m4_ifval([$1],[OPTION=$1],[OPTION="hidden"])
 # Check for compiler's visibility attribute
 AC_MSG_WARN([beware of $OPTION])
-SAVE_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS -fvisibility=$OPTION"
+SAVE_AM_CFLAGS="$AM_CFLAGS"
+AM_CFLAGS="$AM_CFLAGS -fvisibility=$OPTION"
 AC_MSG_CHECKING(for ELF visibility)
 AC_COMPILE_IFELSE([
 	AC_LANG_PROGRAM([[
@@ -33,7 +33,7 @@ AC_COMPILE_IFELSE([
 	VISIBILITY="yes"
 	],[
 	AC_MSG_RESULT([no])
-	CFLAGS="$SAVE_CFLAGS"
+	AM_CFLAGS="$SAVE_AM_CFLAGS"
 	VISIBILITY="no"
 	]
 )
