@@ -55,10 +55,44 @@
 
 #include "api.h"
 
+/**
+ * \brief Initialize intermediate plugin
+ * 
+ * The function is called just once before any other input API's function.
+ * 
+ * \param[in] params String with specific parameters for the intermediate plugin.
+ * \param[in] ip_config This is IPFIXcol's configuration for specific plugin. 
+ * Intermediate plugin MUST keep this config and pass it into EACH call of
+ * "pass_message" and "drop_message"
+ * \param[in] ip_id Unique source identifier for template manager
+ * \param[in] template_mgr Template manager
+ * \param[out] config Plugin-specific configuration structure. ipfixcol is not
+ * involved in the config's structure, it is just passed to the following calls
+ * of intermediate API's functions.
+ * \return 0 on success, nonzero else.
+ */
 API int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config);
 
+/**
+ * \brief Intermediate plugin "destructor".
+ *
+ * Clean up all used plugin-specific structures and memory allocations. This
+ * function is used only once as a last function call of the specific plugin.
+ *
+ * \param[in,out] config  Plugin-specific configuration data prepared by init
+ * \return 0 on success and config is changed to NULL, nonzero else.
+ */
 API int intermediate_plugin_close(void *config);
 
+/**
+ * \brief Process one IPFIX message
+ * 
+ * Part of this function should be call of "pass_message" or "drop_message"
+ * 
+ * \param[in] config
+ * \param[in] message
+ * \return 0 on success, nonzero else.
+ */
 API int process_message(void *config, void *message);
 
 /**
@@ -73,6 +107,8 @@ API int pass_message(void *config, struct ipfix_message *message);
 /**
 * \brief Drop IPFIX message.
 *
+* Message resources are freed and data are not valid anymore
+* 
 * \param[in] config configuration structure
 * \param[in] message IPFIX message
 * \return 0 on success, negative value otherwise
