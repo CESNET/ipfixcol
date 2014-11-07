@@ -71,17 +71,6 @@ struct __attribute__((__packed__)) ipfix_template_row {
  */
 API struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_info* input_info, int source_state);
 
-
-/**
- * \brief Set corresponding templates for data records in IPFIX message.
- *
- * \param[in] msg IPFIX message
- * \param[in] tm template manager with corresponding templates
- * \return 0 on success, negative value otherwise
- */
-API int message_set_templates(struct ipfix_message *msg, struct ipfix_template_mgr *tm, uint32_t src_id);
-
-
 /**
  * \brief Copy IPFIX message
  *
