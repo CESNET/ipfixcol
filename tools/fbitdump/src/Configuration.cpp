@@ -764,7 +764,7 @@ void Configuration::help() const
 	<< "-n              Define number of top N. -c option takes precedence over -n." << std::endl
 	<< "-c              Limit number of records to display" << std::endl
 	<< "-D <dns>        Use nameserver <dns> for host lookup. Does not support IPv6 addresses." << std::endl
-	<< "-N <level>      Set level of plain numbers printing." << std::endl
+	<< "-N <level>      Set level of plain numbers printing. For detailed informations see man fbitdump(1)" << std::endl
 	<< "-s <column>[/<order>]     Generate statistics for <column> any valid record element." << std::endl
 	<< "                and ordered by <order>. Order can be any summarizable column, just as for -m option." << std::endl
 	<< "-q              Quiet: Do not print the header and bottom stat lines." << std::endl

@@ -181,7 +181,11 @@
 			<varlistentry>
 				<term>-N <replaceable class="parameter">level</replaceable></term>
 				<listitem>
-					<simpara>Set plain level limit for printing plain numbers. See <citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry> plugins section for detailed informations.</simpara>
+					<simpara>Set plain level limit for printing plain numbers.</simpara>
+					<simpara>Each plugin has a "plainLevel" value. If <replaceable class="parameter">level</replaceable> in this option is greater than or equal to the plugin's plainLevel, columns formatted
+					by this plugin are printed as plain numbers. Otherwise they are formatted as without -N option.</simpara>
+					<simpara>Default plugins (for IP addresses, protocols etc.) have plainLevel set to the value of 10.</simpara>
+					<simpara>For more informations about setting plugin's plainLevel see <citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry></simpara>
 				</listitem>
 			</varlistentry>
 			
