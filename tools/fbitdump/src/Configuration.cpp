@@ -846,6 +846,7 @@ void Configuration::processMOption(stringVector &tables, const char *optarg, std
 
 	if (pos == arg.npos) {
 		/* Only one directory */
+		Utils::sanitizePath(arg);
 		dirs.push_back(arg);
 	} else {
 		/* Get base directory (first in list) */
