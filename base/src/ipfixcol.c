@@ -76,10 +76,9 @@
 
 /** Acceptable command-line parameters */
 #define OPTSTRING "c:dhv:Vsr:i:S:e:"
-#define DEFAULT_ELEMENTS "/etc/ipfixcol/ipfix-elements.xml"
 
 /* Path to ipfix-elements.xml file */
-extern const char *ipfix_elements = DEFAULT_ELEMENTS;
+extern const char *ipfix_elements = DEFAULT_IPFIX_ELEMENTS;
 
 /* main loop indicator */
 volatile int done = 0;
@@ -108,7 +107,7 @@ void help ()
 	printf ("Usage: %s [-c file] [-i file] [-dhVs] [-v level]\n", PACKAGE);
 	printf ("  -c file   Path to configuration file (%s by default)\n", DEFAULT_CONFIG_FILE);
 	printf ("  -i file   Path to internal configuration file (%s by default)\n", INTERNAL_CONFIG_FILE);
-	printf ("  -e file   Path to ipfix-elements.xml file (%s by default)\n", DEFAULT_ELEMENTS);
+	printf ("  -e file   Path to ipfix-elements.xml file (%s by default)\n", DEFAULT_IPFIX_ELEMENTS);
 	printf ("  -d        Daemonize\n");
 	printf ("  -h        Print this help\n");
 	printf ("  -v level  Print verbose messages up to specified level\n");
