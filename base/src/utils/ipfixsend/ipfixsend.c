@@ -44,6 +44,8 @@
 #include <ipfixcol.h>
 #include <signal.h>
 
+#include <siso.h>
+
 #include "ipfixsend.h"
 #include "reader.h"
 #include "sender.h"
@@ -54,7 +56,8 @@
 
 
 #define OPTSTRING "hi:d:p:t:n:s:S:"
-#define DEFAULT_PORT 4739
+#define DEFAULT_PORT "4739"
+#define DEFAULT_TYPE "UDP"
 #define INFINITY_LOOPS (-1)
 
 #define CHECK_SET(_ptr_, _name_) \
@@ -64,10 +67,6 @@ do { \
         return 1; \
     } \
 } while (0)
-
-#define KB_TO_BYTE(_size_) ((_size_) * 1024)
-#define MB_TO_BYTE(_size_) (KB_TO_BYTE(_size_) * 1024)
-#define GB_TO_BYTE(_size_) (MB_TO_BYTE(_size_) * 1024)
 
 static int stop = 0;
 
@@ -81,7 +80,7 @@ void usage()
     printf("  -h         show this text\n");
     printf("  -i path    IPFIX input file\n");
     printf("  -d ip      Destination IP address\n");
-    printf("  -p port    Destination port number, default is %d\n", DEFAULT_PORT);
+    printf("  -p port    Destination port number, default is %s\n", DEFAULT_PORT);
     printf("  -t type    Connection type (udp, tcp or sctp), default is udp\n");
 	printf("  -n num     How many times should file be sent, default is infinity\n");
 	printf("  -s speed   Maximum data sending speed/s\n");
@@ -98,41 +97,13 @@ void handler(int signal)
 }
 
 /**
- * \brief Decode speed string
- * 
- * @param arg speed
- * @return decoded speed
- */
-uint64_t decode_speed(char *arg)
-{
-	char last = arg[strlen(arg) - 1];
-	uint64_t size = strtol(arg, NULL, 10);
-	
-	switch (last) {
-	case 'k': case 'K':
-		size = KB_TO_BYTE(size);
-		break;
-	case 'm': case 'M':
-		size = MB_TO_BYTE(size);
-		break;
-	case 'g': case 'G':
-		size = GB_TO_BYTE(size);
-	default:
-		break;
-	}
-	
-	return size;
-}
-
-/**
  * \brief Main function
  */
 int main(int argc, char** argv) 
 {
-    char *ip = NULL, *input = NULL;
-    int c, port = DEFAULT_PORT, type = CT_UDP, loops = INFINITY_LOOPS;
+    char *ip = NULL, *input = NULL, *speed = NULL, *type = DEFAULT_TYPE, *port = NULL;
+    int c, loops = INFINITY_LOOPS;
 	int packets_s = 0;
-	uint64_t speed = 0;
     
 	if (argc == 1) {
 		usage();
@@ -152,26 +123,16 @@ int main(int argc, char** argv)
             ip = optarg;
             break;
         case 'p':
-            port = atoi(optarg);
+			port = optarg;
             break;
         case 't':
-            type = decode_type(optarg);
-            if (type == CT_UNKNOWN) {
-                fprintf(stderr, "Unknown type \"%s\"!\n", optarg);
-                return 1;
-            }
-#ifndef HAVE_SCTP
-			if (type == CT_SCTP) {
-				fprintf(stderr, "Tool built without SCTP support!\n");
-				return 1;
-			}
-#endif
+			type = optarg;
             break;
 		case 'n':
 			loops = atoi(optarg);
 			break;
 		case 's':
-			speed = decode_speed(optarg);
+			speed = optarg;
 			break;
 		case 'S':
 			packets_s = atoi(optarg);
@@ -189,10 +150,10 @@ int main(int argc, char** argv)
 	signal(SIGINT, handler);
 	
     /* Get collector's address */
-    struct ip_addr addr;
-    if (parse_ip(&addr, ip, port)) {
-        return 1;
-    }
+	sisoconf *sender = siso_create();
+	if (!sender) {
+		fprintf(stderr, "Memory allocation error, cannot create sender\n");
+	}
 	
 	/* Load packets from file */
 	char **packets = read_packets(input);
@@ -201,17 +162,24 @@ int main(int argc, char** argv)
 	}
     
 	/* Create connection */
-    int sockfd = create_connection(&addr, type);
-    if (sockfd <= 0) {
-		free_packets(packets);
+	int ret = siso_create_connection(sender, ip, port, type);
+	if (ret != SISO_OK) {
+		fprintf(stderr, "%s\n", siso_get_last_err(sender));
+		siso_destroy(sender);
 		return 1;
-    }
-		
+	}
+	
+	/* Set max. speed */
+	if (speed) {
+		siso_set_speed_str(sender, speed);
+	}
+	
 	/* Send packets */
-	int i, ret;
+	int i;
 	for (i = 0; stop == 0 && (loops == INFINITY_LOOPS || i < loops); ++i) {
-		ret = send_packets(packets, sockfd, packets_s, speed, &addr);
-		if (ret != 0) {
+		ret = send_packets(sender, packets, packets_s);
+		if (ret != SISO_OK) {
+			fprintf(stderr, "%s\n", siso_get_last_err(sender));
 			break;
 		}
 	}
@@ -219,9 +187,7 @@ int main(int argc, char** argv)
 	/* Free resources*/
 	free_packets(packets);
     
-    /* Close connection */
-    close_connection(sockfd);
-    
+	siso_destroy(sender);
     return 0;
 }
 

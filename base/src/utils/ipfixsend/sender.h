@@ -41,73 +41,17 @@
 #define	SENDER_H
 
 #include <netdb.h>
-
-/*
- * Structure for IP address
- */
-struct ip_addr {
-    int type;
-    int port;
-    union {
-        struct sockaddr_in  addr4;
-        struct sockaddr_in6 addr6;
-    } addr;
-};
-
-
-/*
- * Connection types enumeration
- */
-enum connection_type {
-    CT_UDP,
-    CT_TCP,
-    CT_SCTP,
-    CT_UNKNOWN
-};
-
-/**
- * \brief Decode connection type
- * 
- * @param type connection name
- * @return  connection type
- */
-int decode_type(char *type);
+#include <siso.h>
 
 /**
  * \brief Send all packets from array
  * 
+ * @param sender sisoconf object
  * @param packets Packets array
- * @param sockfd socket
  * @param packets_s packets/s limit
- * @param speed bytes/s limit
- * @return 0 on success
+ * @return SISO_OK on success
  */
-int send_packets(char **packets, int sockfd, int packets_s, int speed, struct ip_addr *addr);
-
-/**
- * \brief Create new connection
- * 
- * @param addr Destination address
- * @param type Connection type
- * @return new socket
- */
-int create_connection(struct ip_addr *addr, int type);
-
-/**
- * \brief Close active connection
- * 
- * @param sockfd socket
- */
-void close_connection(int sockfd);
-
-/**
- * \brief Parse IP address string
- * 
- * @param addr structure with result
- * @param ip IP address
- * @return 0 on success
- */
-int parse_ip(struct ip_addr *addr, char *ip, int port);
+int send_packets(sisoconf *sender, char **packets, int packets_s);
 
 /**
  * \brief Stop sending data

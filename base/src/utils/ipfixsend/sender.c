@@ -55,40 +55,15 @@
 #include "ipfixsend.h"
 #include "sender.h"
 
+#include <siso.h>
+
 /* Ethernet MTU */
 /* Should be 65535 (- some bytes) */
 #define UDP_MTU 65000
-
-static int stop_sending = 0;
-static int conn_type = 0;
-static struct ip_addr *send_addr = NULL;
-
 #define MIN(_first_, _second_) ((_first_) < (_second_)) ? (_first_) : (_second_)
 
-/*
- * Connection types by names 
- */
-static const char *con_types[] = {
-    "UDP",
-    "TCP",
-    "SCTP"
-};
-
-/**
- * \brief Decode connection type
- */
-int decode_type(char *type)
-{
-    int i;
-    for (i = 0; i < CT_UNKNOWN; ++i) {
-        if (!strcasecmp(con_types[i], type)) {
-            break;
-        }
-    }
-    
-	conn_type = i;
-    return i;
-}
+static int stop_sending = 0;
+static struct timeval begin = {0};
 
 void sender_stop()
 {
@@ -96,118 +71,30 @@ void sender_stop()
 }
 
 /**
- * \brief Send data into socket
- * 
- * @param data Data buffer
- * @param len Data length
- * @param sockfd socket
- * @return 0 on success
- */
-int send_data(char *data, int len, int sockfd)
-{
-    int sent_now;
-	char *ptr = data;
-    int to_send = len;
-	
-    while (to_send > 0) {
-		if (conn_type == CT_UDP) {
-			if (send_addr->type == AF_INET) {
-				sent_now = sendto(sockfd, ptr, MIN(to_send, UDP_MTU), 0, (struct sockaddr *) &(send_addr->addr.addr4), sizeof(send_addr->addr.addr4));
-			} else {
-				sent_now = sendto(sockfd, ptr, MIN(to_send, UDP_MTU), 0, (struct sockaddr *) &(send_addr->addr.addr6), sizeof(send_addr->addr.addr6));
-			}
-		} else {
-			sent_now = send(sockfd, ptr, to_send, 0);
-		}
-		if (sent_now == -1) {
-			fprintf(stderr, "Error when sending packet (%s)\n", sys_errlist[errno]);
-			return -1;
-		}
-
-		ptr += sent_now;
-		to_send -= sent_now;
-    }
-    
-    return len;
-}
-
-static struct timeval begin = {0};
-
-/**
- * \brief Send data with limited max_speed
- */
-int send_data_limited(char *data, long datasize, int sockfd, int max_speed)
-{
-	ssize_t len = 0, towrite = 0, todo = datasize;
-	double elapsed;
-	char *ptr = data;
-	struct timeval end;
-	static int sent = 0;
-	
-//	printf("size: %d B\t limit: %d B/s\n", datasize, max_speed);
-	
-	while (todo > 0) {
-		/* send data */
-		towrite = (todo > max_speed) ? max_speed : todo;
-		len = send_data(ptr, towrite, sockfd);
-		if (len != towrite) {
-			return -1;
-		}
-		
-		sent += len;
-		if (sent >= max_speed) {
-			gettimeofday(&end, NULL);
-			
-			/* Should sleep? */
-			elapsed = end.tv_usec - begin.tv_usec;
-			if (elapsed < 1000000.0) {
-				usleep(1000000.0 - elapsed);
-				gettimeofday(&end, NULL);
-			}
-			
-			begin = end;
-			sent = 0;
-		}
-		
-		/* how long should i sleep? */
-		todo -= len;
-		ptr += len;
-	}
-	
-	return 0;
-}
-
-/**
  * \brief Send packet
  */
-int send_packet(char *packet, int sockfd, int speed)
+inline int send_packet(sisoconf *sender, char *packet)
 {
-	if (speed > 0) {
-		return send_data_limited(packet, (int) ntohs(((struct ipfix_header *) packet)->length), sockfd, speed);
-	}
-	
-    return send_data(packet, (int) ntohs(((struct ipfix_header *) packet)->length), sockfd);
+	return siso_send(sender, packet, (int) ntohs(((struct ipfix_header *) packet)->length));
 }
 
 /**
  * \brief Send all packets from array
  */
-int send_packets(char **packets, int sockfd, int packets_s, int speed, struct ip_addr *addr)
+int send_packets(sisoconf *sender, char **packets, int packets_s)
 {
     int i, ret;
 	struct timeval end;
 	double ellapsed;
-	send_addr = addr;
 	
 	/* These must be static variables - local would be rewrited with each call of send_packets */
 	static int pkts_from_begin = 0;
 	
-	
     for (i = 0; packets[i] && stop_sending == 0; ++i) {
         /* send packet */
-        ret = send_packet(packets[i], sockfd, speed);
-        if (ret < 0) {
-            return -1;
+        ret = send_packet(sender, packets[i]);
+        if (ret != SISO_OK) {
+            return SISO_ERR;
         }
 		
 		pkts_from_begin++;
@@ -229,93 +116,4 @@ int send_packets(char **packets, int sockfd, int packets_s, int speed, struct ip
     }
 	
     return 0;
-}
-
-/**
- * \brief Create connection with collector
- */
-int create_connection(struct ip_addr *addr, int type)
-{
-    int sockfd, family = addr->type;
-    int socktype, proto = 0;
-	
-	if (type == CT_UDP) {
-		/* create socket for UDP */
-		socktype = SOCK_DGRAM;
-	}
-#ifdef HAVE_SCTP
-	else if (type == CT_SCTP) {
-		socktype = SOCK_STREAM;
-		proto = IPPROTO_SCTP;
-	}
-#endif
-	else {
-		socktype = SOCK_STREAM;
-	}
-	
-	/* create socket for TCP/SCTP */
-	sockfd = socket(family, socktype, proto);
-	if (sockfd < 0) {
-		fprintf(stderr, "Cannot create socket\n");
-		return -1;
-	}
-	
-	/* UDP - dont connect */
-	if (type == CT_UDP) {
-		return sockfd;
-	}
-	
-	/* connect to collector */
-	if (addr->type == AF_INET) {
-		/* IPv4 connection */
-		if (connect(sockfd, (struct sockaddr *) &(addr->addr.addr4), sizeof(addr->addr.addr4)) < 0) {
-			fprintf(stderr, "Cannot connect to collector (%s)\n", sys_errlist[errno]);
-			return -1;
-		}
-	} else {
-		/* IPv6 connection */
-		if (connect(sockfd, (struct sockaddr *) &(addr->addr.addr6), sizeof(addr->addr.addr6)) < 0) {
-			fprintf(stderr, "Cannot connect to collector (%s)\n", sys_errlist[errno]);
-			return -1;
-		}
-	}
-	
-	return sockfd;
-}
-
-
-/**
- * \brief Parse IP address string
- */
-int parse_ip(struct ip_addr *addr, char *ip, int port)
-{
-    struct hostent *dest = gethostbyname(ip);
-    if (!dest) {
-        fprintf(stderr, "No such host \"%s\"!\n", ip);
-        return -1;
-    }
-	
-    if (dest->h_addrtype == AF_INET) {
-		memmove((char *) &(addr->addr.addr4.sin_addr), (char *) dest->h_addr, dest->h_length);
-		addr->addr.addr4.sin_family = AF_INET;
-		addr->addr.addr4.sin_port = htons(port);
-	} else {
-		memmove((char *) &(addr->addr.addr4.sin_addr), (char *) dest->h_addr, dest->h_length);
-		addr->addr.addr6.sin6_flowinfo = 0;
-		addr->addr.addr6.sin6_family = AF_INET6;
-		addr->addr.addr6.sin6_port = htons(port);
-	}
-	
-	addr->type = dest->h_addrtype;
-	addr->port = port;
-	
-    return 0;
-}
-
-/**
- * \brief Close connection
- */
-void close_connection(int sockfd)
-{
-    close(sockfd);
 }
