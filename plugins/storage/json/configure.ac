@@ -101,11 +101,10 @@ AS_IF([test -d $srcdir/../../../base/headers],
 
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
 
-#my_save_cxxflags="$CXXFLAGS"
-#CXXFLAGS="$CXXFLAGS $CXXSTD"
-#CXXFLAGS="$my_save_cflags"
-
+my_save_ldflags="$LDFLAGS"
+LDFLAGS="$LDFLAGS -L$srcdir/../../../base/src/utils/libsiso/.libs"
 AC_SEARCH_LIBS([siso_create],[siso], , AC_MSG_ERROR([Required library siso missing]))
+LDFLAGS="$my_save_ldflags"
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 AC_HEADER_STDBOOL
