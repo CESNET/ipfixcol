@@ -57,8 +57,13 @@ fbitdump_SOURCES = \
 BUILT_SOURCES = parser.h parser.cpp stack.hh location.hh position.hh scanner.h scanner.cpp protocols.cpp
 
 MAINTAINERCLEANFILES = parser.h parser.cpp stack.hh location.hh position.hh scanner.h scanner.cpp protocols.cpp
-EXTRA_DIST = parser.h parser.cpp stack.hh location.hh position.hh parser.y scanner.h scanner.cpp scanner.l protocols.cpp
+EXTRA_DIST = parser.h parser.cpp stack.hh location.hh position.hh parser.y scanner.h scanner.cpp scanner.l protocols.cpp Configuration.h
 # Such scripts for which a build rule has been supplied need to be deleted explicitly using CLEANFILES (see Clean), and their sources have to be distributed, usually with EXTRA_DIST (see Basics of Distribution).
+
+CLEANFILES = Configuration.h
+
+Configuration.h: Configuration.h.in
+	sed 's|@datadir[@]|$(datadir)|g' $< > $@
 
 parser.h parser.cpp stack.hh location.hh position.hh: parser.y
 	$(BISON) --defines=parser.h -o parser.cpp $<
