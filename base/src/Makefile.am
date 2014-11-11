@@ -11,8 +11,8 @@ SUBDIRS += input/sctp
 endif
 
 bin_PROGRAMS = ipfixcol
-AM_CPPFLAGS = -I$(top_srcdir)/headers
-AM_CFLAGS = -rdynamic
+AM_CPPFLAGS += -I$(top_srcdir)/headers
+AM_CFLAGS += -rdynamic
 
 # create config.h with proper paths to configuration files
 EXTRA_DIST = config.h.in

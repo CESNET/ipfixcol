@@ -1,5 +1,5 @@
 AM_CPPFLAGS = -I$(top_srcdir)/headers 
-AM_CFLAGS = -rdynamic
+AM_CFLAGS += -rdynamic
 
 SUBDIRS = libsiso ipfixconf ipfixsend .
 
