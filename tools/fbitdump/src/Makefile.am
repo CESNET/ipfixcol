@@ -54,15 +54,16 @@ fbitdump_SOURCES = \
 	position.hh
 
 # Build these before everyting else
-BUILT_SOURCES = parser.h parser.cpp stack.hh location.hh position.hh scanner.h scanner.cpp protocols.cpp
+BUILT_SOURCES = parser.h parser.cpp stack.hh location.hh position.hh scanner.h scanner.cpp protocols.cpp Configuration.h
 
 MAINTAINERCLEANFILES = parser.h parser.cpp stack.hh location.hh position.hh scanner.h scanner.cpp protocols.cpp
-EXTRA_DIST = parser.h parser.cpp stack.hh location.hh position.hh parser.y scanner.h scanner.cpp scanner.l protocols.cpp Configuration.h
-# Such scripts for which a build rule has been supplied need to be deleted explicitly using CLEANFILES (see Clean), and their sources have to be distributed, usually with EXTRA_DIST (see Basics of Distribution).
+EXTRA_DIST = parser.h parser.cpp stack.hh location.hh position.hh parser.y scanner.h scanner.cpp scanner.l protocols.cpp Configuration.h.in
 
+# Such scripts for which a build rule has been supplied need to be deleted explicitly using CLEANFILES (see Clean), and their sources have to be distributed, usually with EXTRA_DIST (see Basics of Distribution).
 CLEANFILES = Configuration.h
 
-Configuration.h: Configuration.h.in
+# Set configuration based on parameters of configure script
+Configuration.h: Configuration.h.in ../config.status
 	sed 's|@datadir[@]|$(datadir)|g' $< > $@
 
 parser.h parser.cpp stack.hh location.hh position.hh: parser.y
