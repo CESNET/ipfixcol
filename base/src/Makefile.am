@@ -18,7 +18,8 @@ AM_CFLAGS = -rdynamic
 EXTRA_DIST = config.h.in
 CLEANFILES = config.h
 
-config.h: config.h.in
+# Rebuild after executing configure
+config.h: config.h.in ../config.status
 	sed 's|@sysconfdir[@]|$(sysconfdir)|g' $< > $@
 
 ipfixcol_SOURCES = \
