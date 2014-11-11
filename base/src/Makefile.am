@@ -18,6 +18,9 @@ AM_CFLAGS = -rdynamic
 EXTRA_DIST = config.h.in
 CLEANFILES = config.h
 
+# Build these before everyting else
+BUILT_SOURCES = config.h
+
 # Rebuild after executing configure
 config.h: config.h.in ../config.status
 	sed 's|@sysconfdir[@]|$(sysconfdir)|g' $< > $@
