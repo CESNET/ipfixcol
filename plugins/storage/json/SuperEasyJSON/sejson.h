@@ -478,7 +478,7 @@ namespace json
 	// Converts a JSON Object or Array instance into a JSON string representing it. RETURNS EMPTY STRING ON ERROR. 
 	// As per JSON specification, a JSON data structure must be an array or an object. Thus, you must either pass in a
 	// json::Array, json::Object, or a json::Value that has an Array or Object as its underlying type. 
-	std::string Serialize(const Value& obj);
+	std::string Serialize(const Value& obj, int indent = 0);
 
 	// If there is an error, Value will be NULLVal. Pass in a valid JSON string (such as one returned from Serialize, or obtained
 	// elsewhere) to receive a Value in return that represents the JSON structure. Check the type of Value by calling GetType().
