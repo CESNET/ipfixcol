@@ -1,7 +1,10 @@
 ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = pugixml
-AM_CPPFLAGS = -I$(top_srcdir)/pugixml -I$(top_srcdir)/../../../base/src/utils/libsiso/
+AM_CPPFLAGS += -I$(top_srcdir)/pugixml $(SISO_CPPFLAGS)
+#-I$(top_srcdir)/../../../base/src/utils/libsiso/
+AM_LDFLAGS += $(SISO_LDFLAGS) -module -avoid-version -shared 
+ 
 
 pluginsdir = $(datadir)/ipfixcol/plugins
 
@@ -9,7 +12,8 @@ sofile = $(pluginsdir)/ipfixcol-json-output.so
 internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
 
 plugins_LTLIBRARIES = ipfixcol-json-output.la
-ipfixcol_json_output_la_LDFLAGS = -module -avoid-version -shared -L$(top_srcdir)/../../../base/src/utils/libsiso/.libs/
+#ipfixcol_json_output_la_LDFLAGS = $(AM_LDFLAGS) -module -avoid-version -shared 
+#-L$(top_srcdir)/../../../base/src/utils/libsiso/.libs/
 ipfixcol_json_output_la_SOURCES = json.cpp Storage.cpp Storage.h Translator.cpp Translator.h protocols.h protocols.cpp SuperEasyJSON/sejson.cpp SuperEasyJSON/sejson.h
 ipfixcol_json_output_la_LIBADD = pugixml/libpugixml.la
 

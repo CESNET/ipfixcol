@@ -90,21 +90,35 @@ AC_ARG_ENABLE([debug],
 AC_ARG_ENABLE([doc],
         AC_HELP_STRING([--disable-doc],[disable documentation building]))
 AM_CONDITIONAL([HAVE_DOC], [test "$enable_doc" != "no"])
-      
+
+############################ Check for libraries ###############################
+libsisodir="$srcdir/../../../base/src/utils/libsiso/"
+my_save_ldflags="$LDFLAGS"
+AS_IF([test -d "$libsisodir.libs"],
+	[AC_MSG_NOTICE([ahoj jsem tu])
+	LDFLAGS="$LDFLAGS -L$libsisodir.libs"
+	AC_SEARCH_LIBS([siso_create],[siso], [
+		SISO_LDFLAGS="-L$libsisodir.libs"
+		SISO_CPPFLAGS="-I$libsisodir"
+		HAVE_SISO="yes"
+		AC_MSG_NOTICE([Using libsiso from $libsisodir])],
+		[HAVE_SISO="no"])],
+	[AC_SEARCH_LIBS([siso_create],[siso], [HAVE_SISO="yes"], [HAVE_SISO="no"]])
+)
+LDFLAGS="$my_save_ldflags"
+AS_IF([test "$HAVE_SISO" = "no"], AC_MSG_ERROR([Required library siso missing]))
+AC_SUBST([SISO_CPPFLAGS])
+AC_SUBST([SISO_LDFLAGS])
+
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar.h])
 
 # Check whether we can find headers dir in relative path (git repository)
 AS_IF([test -d $srcdir/../../../base/headers], 
-	[CPPFLAGS="$CPPFLAGS -I$srcdir/../../../base/headers"]
+	[AM_CPPFLAGS+="-I$srcdir/../../../base/headers"]
 )
 
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
-
-my_save_ldflags="$LDFLAGS"
-LDFLAGS="$LDFLAGS -L$srcdir/../../../base/src/utils/libsiso/.libs"
-AC_SEARCH_LIBS([siso_create],[siso], , AC_MSG_ERROR([Required library siso missing]))
-LDFLAGS="$my_save_ldflags"
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 AC_HEADER_STDBOOL
@@ -131,6 +145,7 @@ AC_CHECK_DECL([be64toh], [AC_DEFINE([HAVE_BE64TOH], [1],
 # Substitute compiler flags
 AC_SUBST([AM_CXXFLAGS])
 AC_SUBST([AM_CPPFLAGS])
+AC_SUBST([AM_LDFLAGS])
 
 AC_SUBST(RPMBUILD)
 if test -z "$RPMBUILD"; then
@@ -168,8 +183,8 @@ echo "
   $PACKAGE_NAME version $PACKAGE_VERSION
   Prefix........: $prefix
   Distribution..: $DISTRO
-  C++ Compiler..: $CXX $AM_CXXFLAGS $CXXFLAGS $CPPFLAGS
-  Linker........: $LDFLAGS $LIBS
+  C++ Compiler..: $CXX $AM_CXXFLAGS $CXXFLAGS $AM_CPPFLAGS $CPPFLAGS
+  Linker........: $AM_LDFLAGS $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
   Build doc.....: ${enable_doc:-yes}
   xsltproc......: ${XSLTPROC:-NONE}
