@@ -160,7 +160,7 @@ int store_now (const void *config)
 extern "C"
 int storage_close (void **config)
 {
-	MSG_ERROR(msg_module, "CLOSING\n");
+	MSG_DEBUG(msg_module, "CLOSING\n");
 	struct json_conf *conf = (struct json_conf *) *config;
 	
 	/* Destroy sender */
