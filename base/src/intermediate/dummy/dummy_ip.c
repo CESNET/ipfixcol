@@ -53,7 +53,7 @@ struct dummy_ip_config {
 	struct ipfix_template_mgr *tm;
 };
 
-int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config)
+int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config)
 {
 	struct dummy_ip_config *conf;
 
@@ -78,7 +78,7 @@ int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, stru
 
 
 /* Do nothing, just pass the message to the output queue */
-int process_message(void *config, void *message)
+int intermediate_process_message(void *config, void *message)
 {
 	struct dummy_ip_config * conf;
 	conf = (struct dummy_ip_config *) config;
@@ -91,7 +91,7 @@ int process_message(void *config, void *message)
 }
 
 
-int intermediate_plugin_close(void *config)
+int intermediate_close(void *config)
 {
 	struct dummy_ip_config *conf;
 

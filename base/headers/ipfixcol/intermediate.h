@@ -71,7 +71,7 @@
  * of intermediate API's functions.
  * \return 0 on success, nonzero else.
  */
-API int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config);
+API int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config);
 
 /**
  * \brief Intermediate plugin "destructor".
@@ -82,7 +82,7 @@ API int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, 
  * \param[in,out] config  Plugin-specific configuration data prepared by init
  * \return 0 on success and config is changed to NULL, nonzero else.
  */
-API int intermediate_plugin_close(void *config);
+API int intermediate_close(void *config);
 
 /**
  * \brief Process one IPFIX message
@@ -93,7 +93,7 @@ API int intermediate_plugin_close(void *config);
  * \param[in] message
  * \return 0 on success, nonzero else.
  */
-API int process_message(void *config, void *message);
+API int intermediate_process_message(void *config, void *message);
 
 /**
 * \brief Pass processed IPFIX message to the output queue.

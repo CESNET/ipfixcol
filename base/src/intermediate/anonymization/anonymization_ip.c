@@ -156,7 +156,7 @@ static void truncate_IPv6Address(uint8_t *data)
  * \param[out] config configuration structure
  * \return 0 on success, negative value otherwise
  */
-int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config)
+int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config)
 {
 	struct anonymization_ip_config *conf;
 	int retval;
@@ -257,7 +257,7 @@ out:
  * \param[in] message IPFIX message
  * \return 0 on success, negative value otherwise
  */
-int process_message(void *config, void *message)
+int intermediate_process_message(void *config, void *message)
 {
 	struct ipfix_message *msg;
 	struct ipfix_data_set *data_set;
@@ -434,7 +434,7 @@ int process_message(void *config, void *message)
  * \param[in] config configuration structure
  * \return 0 on success, negative value otherwise
  */
-int intermediate_plugin_close(void *config)
+int intermediate_close(void *config)
 {
 	struct anonymization_ip_config *conf;
 

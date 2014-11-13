@@ -129,7 +129,7 @@ void hooks_add_hook(struct hooks_ip_config *conf, int type, struct operation_s *
  * \param[out] config Plugin configuration
  * \return 0 if everything OK
  */
-int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config)
+int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config)
 {
 	struct hooks_ip_config *conf;
 	conf = (struct hooks_ip_config *) calloc(1, sizeof(*conf));
@@ -255,7 +255,7 @@ void hooks_do_operations(struct operation_s *op)
  * @param message IPFIX message
  * @return 0 on success
  */
-int process_message(void *config, void *message)
+int intermediate_process_message(void *config, void *message)
 {
 	struct hooks_ip_config *conf = (struct hooks_ip_config *) config;
 	struct ipfix_message  *msg  = (struct ipfix_message  *) message;
@@ -294,7 +294,7 @@ void hooks_free_operation(struct operation_s *op)
  * @param config plugin configuration
  * @return 0 on success
  */
-int intermediate_plugin_close(void *config)
+int intermediate_close(void *config)
 {
 	struct hooks_ip_config *conf;
 	struct operation_s *aux_op;

@@ -54,9 +54,9 @@ struct ip_config {
 	struct ring_buffer *in_queue;
 	struct ring_buffer *out_queue;
 	char *xmldata;
-	int (*intermediate_plugin_init)(char *, void *, uint32_t, struct ipfix_template_mgr *, void **);
-	int (*process_message)(void *, void *);
-	int (*intermediate_plugin_close)(void *);
+	int (*intermediate_init)(char *, void *, uint32_t, struct ipfix_template_mgr *, void **);
+	int (*intermediate_process_message)(void *, void *);
+	int (*intermediate_close)(void *);
 	void *plugin_config;
 	pthread_t thread_id;
 	char thread_name[16];
@@ -98,7 +98,7 @@ void *ip_loop(void *config)
 		conf->index = index;
 		conf->dropped = false;
 		/* process message */
-		conf->process_message(conf->plugin_config, message);
+		conf->intermediate_process_message(conf->plugin_config, message);
 
 		if (!conf->dropped) {
 			/* remove message from input queue, but do not free memory (it must be done later in output manager) */
@@ -140,14 +140,14 @@ int ip_init(struct ring_buffer *in_queue, struct ring_buffer *out_queue,
 
 	conf->in_queue = in_queue;
 	conf->out_queue = out_queue;
-	conf->intermediate_plugin_init = intermediate->intermediate_plugin_init;
-	conf->process_message = intermediate->process_message;
-	conf->intermediate_plugin_close = intermediate->intermediate_plugin_close;
+	conf->intermediate_init = intermediate->intermediate_init;
+	conf->intermediate_process_message = intermediate->intermediate_process_message;
+	conf->intermediate_close = intermediate->intermediate_close;
 	conf->xmldata = xmldata;
 	snprintf(conf->thread_name, 16, "%s", intermediate->thread_name);
 //	conf->thread_name = intermediate->thread_name;
 
-	conf->intermediate_plugin_init(conf->xmldata, conf, ip_id, template_mgr, &(conf->plugin_config));
+	conf->intermediate_init(conf->xmldata, conf, ip_id, template_mgr, &(conf->plugin_config));
 	if (conf->plugin_config == NULL) {
 		MSG_ERROR(msg_module, "Unable to initialize Intermediate Process");
 		return -1;
@@ -238,7 +238,7 @@ int ip_destroy(void *config)
 	rbuffer_free(conf->in_queue);
 
 	/* Close plugin */
-	conf->intermediate_plugin_close(conf->plugin_config);
+	conf->intermediate_close(conf->plugin_config);
 
 	free(conf);
 

@@ -531,7 +531,7 @@ void mapping_destroy(struct mapping_header *map)
  * \param[out] config Plugin configuration
  * \return 0 if everything OK
  */
-int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config)
+int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config)
 {
 	struct joinflows_ip_config *conf;
 	conf = (struct joinflows_ip_config *) calloc(1, sizeof(*conf));
@@ -777,7 +777,7 @@ void joinflows_copy_template_info(struct ipfix_template *to, struct ipfix_templa
 	to->last_transmission = from->last_message;
 }
 
-int process_message(void *config, void *message)
+int intermediate_process_message(void *config, void *message)
 {
 	uint32_t orig_odid, i, prevoffset, tsets = 0, otsets = 0, trec, otrec;
 	uint32_t newsn;
@@ -929,7 +929,7 @@ int process_message(void *config, void *message)
 	return 0;
 }
 
-int intermediate_plugin_close(void *config)
+int intermediate_close(void *config)
 {
 	struct joinflows_ip_config *conf;
 	struct mapping_header *aux_map;

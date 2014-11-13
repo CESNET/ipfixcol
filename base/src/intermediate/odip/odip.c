@@ -83,7 +83,7 @@ struct odip_processor {
  * \param[out] config Plugin configuration
  * \return 0 if everything OK
  */
-int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config)
+int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config)
 {
 	struct odip_ip_config *conf;
 	conf = (struct odip_ip_config *) calloc(1, sizeof(*conf));
@@ -214,7 +214,7 @@ void odip_copy_template_info(struct ipfix_template *to, struct ipfix_template *f
  * @param message IPFIX message
  * @return 0 on success
  */
-int process_message(void *config, void *message)
+int intermediate_process_message(void *config, void *message)
 {
 	struct odip_ip_config *conf = (struct odip_ip_config *) config;
 	struct ipfix_message  *msg  = (struct ipfix_message  *) message;
@@ -354,7 +354,7 @@ int process_message(void *config, void *message)
  * @param config plugin configuration
  * @return 0 on success
  */
-int intermediate_plugin_close(void *config)
+int intermediate_close(void *config)
 {
 	struct odip_ip_config *conf;
 	

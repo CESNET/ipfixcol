@@ -470,8 +470,8 @@ int main (int argc, char* argv[])
 		snprintf(intermediate_list->intermediate.thread_name, 16, "med:%s", aux_plugins->config.name);
 
 		/* prepare Input API routines */
-		intermediate_list->intermediate.process_message = dlsym(intermediate_plugin_handler, "process_message");
-		if (intermediate_list->intermediate.process_message == NULL) {
+		intermediate_list->intermediate.intermediate_process_message = dlsym(intermediate_plugin_handler, "intermediate_process_message");
+		if (intermediate_list->intermediate.intermediate_process_message == NULL) {
 			MSG_ERROR(msg_module, "Unable to load intermediate xml_conf (%s)", dlerror());
 			dlclose(intermediate_plugin_handler);
 			intermediate_plugin_handler = NULL;
@@ -480,8 +480,8 @@ int main (int argc, char* argv[])
 			continue;
 		}
 
-		intermediate_list->intermediate.intermediate_plugin_init = dlsym(intermediate_plugin_handler, "intermediate_plugin_init");
-		if (intermediate_list->intermediate.intermediate_plugin_init == NULL) {
+		intermediate_list->intermediate.intermediate_init = dlsym(intermediate_plugin_handler, "intermediate_init");
+		if (intermediate_list->intermediate.intermediate_init == NULL) {
 			MSG_ERROR(msg_module, "Unable to load intermediate xml_conf (%s)", dlerror());
 			dlclose(intermediate_plugin_handler);
 			intermediate_plugin_handler = NULL;
@@ -490,8 +490,8 @@ int main (int argc, char* argv[])
 			continue;
 		}
 
-		intermediate_list->intermediate.intermediate_plugin_close = dlsym(intermediate_plugin_handler, "intermediate_plugin_close");
-		if (intermediate_list->intermediate.intermediate_plugin_close == NULL) {
+		intermediate_list->intermediate.intermediate_close = dlsym(intermediate_plugin_handler, "intermediate_close");
+		if (intermediate_list->intermediate.intermediate_close == NULL) {
 			MSG_ERROR(msg_module, "Unable to load intermediate xml_conf (%s)", dlerror());
 			dlclose(intermediate_plugin_handler);
 			intermediate_plugin_handler = NULL;

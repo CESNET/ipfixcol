@@ -149,7 +149,7 @@ void filter_init_elements(struct filter_parser_data *pdata)
  * \param[out] config Plugin configuration
  * \return 0 if everything OK
  */
-int intermediate_plugin_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config)
+int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config)
 {
 	(void) ip_id; (void) template_mgr;
 	struct filter_config *conf = NULL;
@@ -690,7 +690,7 @@ struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct fil
 	return new_msg;
 }
 
-int process_message(void *config, void *message)
+int intermediate_process_message(void *config, void *message)
 {
 	struct ipfix_message *msg = (struct ipfix_message *) message, *new_msg;
 	struct filter_config *conf = (struct filter_config *) config;
@@ -744,7 +744,7 @@ int process_message(void *config, void *message)
 	return 0;
 }
 
-int intermediate_plugin_close(void *config)
+int intermediate_close(void *config)
 {
 	struct filter_config *conf = (struct filter_config *) config;
 	struct filter_profile *aux_profile = conf->profiles;
