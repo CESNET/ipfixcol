@@ -61,6 +61,9 @@
 
 #define PERROR_LAST sys_errlist[errno]
 
+#define SISO_UDP_MAX 1500
+#define SISO_MIN(_frst_, _scnd_) ((_frst_) > (_scnd_) ? (_scnd_) : (_frst_))
+
 /**
 * \brief Accepted connection types
 */
@@ -332,7 +335,7 @@ int siso_send(sisoconf *conf, const char *data, ssize_t length)
         /* Send data */
 		switch (conf->type) {
 		case SC_UDP:
-			sent_now = sendto(conf->sockfd, ptr, todo, 0, conf->servinfo->ai_addr, conf->servinfo->ai_addrlen);
+			sent_now = sendto(conf->sockfd, ptr, SISO_MIN(todo, SISO_UDP_MAX), 0, conf->servinfo->ai_addr, conf->servinfo->ai_addrlen);
 			break;
 		case SC_TCP:
 		case SC_SCTP:
