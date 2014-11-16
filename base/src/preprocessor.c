@@ -352,7 +352,9 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 			MSG_NOTICE(msg_module, "[%u] New %s ID %i", key->odid, (type==TM_TEMPLATE)?"template":"options template", ntohs(template_record->template_id));
 			template = tm_add_template(tm, tmpl, max_len, type, key);
 			/* Set new template ID according to ODID */
-			template->template_id = odid_info_get_free_tid(key->odid);
+			if (template) {
+				template->template_id = odid_info_get_free_tid(key->odid);
+			}
 		}
 	} else {
 		/* template already exists */
