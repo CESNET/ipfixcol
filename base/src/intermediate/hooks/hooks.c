@@ -244,7 +244,9 @@ void hooks_do_operations(struct operation_s *op)
 	struct operation_s *aux_op;
 	
 	for (aux_op = op; aux_op; aux_op = aux_op->next) {
-		system(aux_op->operation);
+		if (system(aux_op->operation) == -1) {
+			MSG_ERROR(msg_module, "Error when running \"%s\"", aux_op->operation);
+		}
 	}
 }
 

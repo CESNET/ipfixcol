@@ -435,7 +435,7 @@ struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint
  */
 int data_record_field_offset(uint8_t *data_record, struct ipfix_template *template, uint16_t id, int *data_length)
 {
-	int i, ieid;
+	int ieid;
 	int count, offset = 0, index, length, prevoffset;
 	struct ipfix_template_row *row = NULL;
 
@@ -537,7 +537,6 @@ void data_record_set_field(uint8_t *record, struct ipfix_template *templ, uint16
  */
 uint16_t data_record_length(uint8_t *data_record, struct ipfix_template *template)
 {
-	int i;
 	uint16_t count, offset = 0, index, length;
 
 	if (!(template->data_length & 0x80000000)) {
@@ -586,7 +585,7 @@ uint16_t data_record_length(uint8_t *data_record, struct ipfix_template *templat
  */
 int data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_template *templ, dset_callback_f processor, void *proc_data)
 {
-	uint16_t setlen = ntohs(data_set->header.length), data_len = templ->data_length, rec_len, count = 0;
+	uint16_t setlen = ntohs(data_set->header.length), rec_len, count = 0;
 	uint8_t *ptr = data_set->records;
 
 	uint16_t min_record_length = templ->data_length;
@@ -615,7 +614,7 @@ int data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_templ
  */
 int template_set_process_records(struct ipfix_template_set *tset, int type, tset_callback_f processor, void *proc_data)
 {
-	int offset = 0, max_len, rec_len, count = 0;
+	int max_len, rec_len, count = 0;
 	uint8_t *ptr = (uint8_t*) &tset->first_record;
 
 	while (ptr < (uint8_t*) tset + ntohs(tset->header.length)) {
@@ -640,7 +639,7 @@ int template_set_process_records(struct ipfix_template_set *tset, int type, tset
 void data_set_set_field(struct ipfix_data_set *data_set, struct ipfix_template *templ, uint16_t id, uint8_t *value)
 {
 	int field_offset;
-	uint16_t record_offset = 0, setlen = ntohs(data_set->header.length), data_len = templ->data_length;
+	uint16_t setlen = ntohs(data_set->header.length);
 	uint8_t *ptr = data_set->records;
 	struct ipfix_template_row *row = template_get_field(templ, id, &field_offset);
 

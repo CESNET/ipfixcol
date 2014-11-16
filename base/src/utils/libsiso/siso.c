@@ -59,7 +59,7 @@
 #define CHECK_PTR(_ptr_) if (!(_ptr_)) return (SISO_ERR)
 #define CHECK_RETVAL(_retval_) if ((_retval_) != SISO_OK) return (SISO_ERR)
 
-#define PERROR_LAST sys_errlist[errno]
+#define PERROR_LAST strerror(errno)
 
 #define SISO_UDP_MAX 1500
 #define SISO_MIN(_frst_, _scnd_) ((_frst_) > (_scnd_) ? (_scnd_) : (_frst_))
@@ -340,6 +340,8 @@ int siso_send(sisoconf *conf, const char *data, ssize_t length)
 		case SC_TCP:
 		case SC_SCTP:
 			sent_now = send(conf->sockfd, ptr, todo, 0);
+			break;
+		default:
 			break;
 		}
 

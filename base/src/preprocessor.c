@@ -410,7 +410,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 	int max_len;     /* length to the end of the set = max length of the template */
 	uint32_t msg_counter = 0;
 
-	struct udp_conf udp_conf;
+	struct udp_conf udp_conf = {0};
 	struct ipfix_template_key key;
 	
 	msg->data_records_count = msg->templ_records_count = msg->opt_templ_records_count = 0;

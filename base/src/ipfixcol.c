@@ -78,7 +78,7 @@
 #define OPTSTRING "c:dhv:Vsr:i:S:e:"
 
 /* Path to ipfix-elements.xml file */
-extern const char *ipfix_elements = DEFAULT_IPFIX_ELEMENTS;
+const char *ipfix_elements = DEFAULT_IPFIX_ELEMENTS;
 
 /* main loop indicator */
 volatile int done = 0;
@@ -153,7 +153,7 @@ int main (int argc, char* argv[])
 	uint32_t ip_id = 0;
 
 	xmlXPathObjectPtr collectors;
-	xmlNodePtr collector_node;
+	xmlNodePtr collector_node = NULL;
 	xmlDocPtr xml_config;
 	xmlChar *plugin_params;
 	xmlChar *ip_params;

@@ -91,7 +91,6 @@ static void* storage_plugin_thread (void* cfg)
     struct storage *config = (struct storage*) cfg; 
 	struct ipfix_message* msg;
 	unsigned int index = config->thread_config->queue->read_offset;
-	int i;
 
 	/* set the thread name to reflect the configuration */
 	prctl(PR_SET_NAME, config->thread_name, 0, 0, 0);
