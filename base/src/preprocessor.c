@@ -55,28 +55,29 @@ static struct ring_buffer *preprocessor_out_queue = NULL;
 struct ipfix_template_mgr *tm = NULL;
 
 /* Sequence number counter for each ODID */
-struct sequence_number_counter {
+struct odid_info {
 	uint32_t odid, sequence_number;
+	uint32_t free_tid;
 	int sources;
-	struct sequence_number_counter *next;
+	struct odid_info *next;
 };
 
-struct sequence_number_counter *snc = NULL;
+struct odid_info *odid_info = NULL;
 
 /**
  * \brief Get sequence number counter for given ODID
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number counter
  */
-struct sequence_number_counter *snc_get(uint32_t odid)
+struct odid_info *odid_info_get(uint32_t odid)
 {
-	struct sequence_number_counter *aux_snc = snc;
-	while (aux_snc) {
-		if (aux_snc->odid == odid) {
-			return aux_snc;
+	struct odid_info *aux_info = odid_info;
+	while (aux_info) {
+		if (aux_info->odid == odid) {
+			return aux_info;
 		}
 
-		aux_snc = aux_snc->next;
+		aux_info = aux_info->next;
 	}
 	return NULL;
 }
@@ -86,26 +87,27 @@ struct sequence_number_counter *snc_get(uint32_t odid)
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number counter
  */
-struct sequence_number_counter *snc_add(uint32_t odid)
+struct odid_info *odid_info_add(uint32_t odid)
 {
-	struct sequence_number_counter *aux_snc;
+	struct odid_info *aux_info;
 
-	aux_snc = calloc(1, sizeof(struct sequence_number_counter));
-	if (!aux_snc) {
+	aux_info = calloc(1, sizeof(struct odid_info));
+	if (!aux_info) {
 		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
 		return NULL;
 	}
-	aux_snc->odid = odid;
-	aux_snc->sources = 1;
+	aux_info->odid = odid;
+	aux_info->sources = 1;
+	aux_info->free_tid = 256;
 
-	if (!snc) {
-		snc = aux_snc;
+	if (!odid_info) {
+		odid_info = aux_info;
 	} else {
-		aux_snc->next = snc->next;
-		snc->next = aux_snc;
+		aux_info->next = odid_info->next;
+		odid_info->next = aux_info;
 	}
 
-	return aux_snc;
+	return aux_info;
 }
 
 /**
@@ -113,34 +115,50 @@ struct sequence_number_counter *snc_add(uint32_t odid)
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number counter
  */
-struct sequence_number_counter *snc_add_source(uint32_t odid)
+struct odid_info *odid_info_add_source(uint32_t odid)
 {
-	struct sequence_number_counter *aux_snc = snc_get(odid);
+	struct odid_info *aux_info = odid_info_get(odid);
 
-	if (!aux_snc) {
-		return snc_add(odid);
+	if (!aux_info) {
+		return odid_info_add(odid);
 	}
 
-	aux_snc->sources++;
-	MSG_NOTICE(msg_module, "[%u] Accepted data from %d. source with this ODID", odid, aux_snc->sources);
-	return aux_snc;
+	aux_info->sources++;
+	MSG_NOTICE(msg_module, "[%u] Accepted data from %d. source with this ODID", odid, aux_info->sources);
+	return aux_info;
 }
 
 /**
  * \brief Remove source from SN counter
  * \param[in] odid Observation Domain ID
  */
-void snc_remove_source(uint32_t odid)
+void odid_info_remove_source(uint32_t odid)
 {
-	struct sequence_number_counter *aux_snc = snc_get(odid);
-	if (!aux_snc) {
+	struct odid_info *aux_info = odid_info_get(odid);
+	if (!aux_info) {
 		return;
 	}
 
-	aux_snc->sources--;
-	if (aux_snc->sources <= 0) {
-		aux_snc->sequence_number = 0;
+	aux_info->sources--;
+	if (aux_info->sources <= 0) {
+		aux_info->sequence_number = 0;
 	}
+}
+
+/**
+ * \brief Get odid_info struct or add a new one
+ * 
+ * @param odid ODID
+ * @return odid_info
+ */
+struct odid_info *odid_info_get_or_add(uint32_t odid)
+{
+	struct odid_info *aux_info = odid_info_get(odid);
+	if (!aux_info) {
+		aux_info = odid_info_add(odid);
+	}
+	
+	return aux_info;
 }
 
 /**
@@ -148,29 +166,42 @@ void snc_remove_source(uint32_t odid)
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number value
  */
-int *snc_get_sequence_number(uint32_t odid)
+uint32_t *odid_info_get_sequence_number(uint32_t odid)
 {
-	struct sequence_number_counter *aux_snc = snc_get(odid);
-	if (!aux_snc) {
-		aux_snc = snc_add(odid);
-		if (!aux_snc) {
-			return NULL;
-		}
+	struct odid_info *aux_info = odid_info_get_or_add(odid);
+	if (!aux_info) {
+		return NULL;
 	}
 
-	return &(aux_snc->sequence_number);
+	return &(aux_info->sequence_number);
+}
+
+/**
+ * \brief Get free template ID
+ * 
+ * @param odid ODID
+ * @return template id
+ */
+uint32_t odid_info_get_free_tid(uint32_t odid)
+{
+	struct odid_info *aux_info = odid_info_get_or_add(odid);
+	if (!aux_info) {
+		return 256;
+	}
+	
+	return aux_info->free_tid++;
 }
 
 /**
  * \brief Remove all counters
  */
-void snc_destroy()
+void odid_info_destroy()
 {
-	struct sequence_number_counter *aux_snc = snc;
-	while (aux_snc) {
-		snc = snc->next;
-		free(aux_snc);
-		aux_snc = snc;
+	struct odid_info *aux_info = odid_info;
+	while (aux_info) {
+		odid_info = odid_info->next;
+		free(aux_info);
+		aux_info = odid_info;
 	}
 }
 
@@ -320,6 +351,8 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 		} else {
 			MSG_NOTICE(msg_module, "[%u] New %s ID %i", key->odid, (type==TM_TEMPLATE)?"template":"options template", ntohs(template_record->template_id));
 			template = tm_add_template(tm, tmpl, max_len, type, key);
+			/* Set new template ID according to ODID */
+			template->template_id = odid_info_get_free_tid(key->odid);
 		}
 	} else {
 		/* template already exists */
@@ -336,7 +369,7 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 		template->last_message = msg_counter;
 		template->last_transmission = time(NULL);
 	}
-
+	
 	/* Set new template id to original template record */
 	template_record->template_id = htons(template->template_id);
 
@@ -373,13 +406,6 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 	uint32_t records_count = 0;
 	int i, ret;
 	int max_len;     /* length to the end of the set = max length of the template */
-	uint16_t count;
-	uint16_t length = 0;
-	uint16_t offset = 0;
-	uint8_t var_len = 0;
-	struct ipfix_template *template;
-	uint16_t min_data_length;
-	uint16_t data_length;
 	uint32_t msg_counter = 0;
 
 	struct udp_conf udp_conf;
@@ -466,14 +492,14 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins, int source_status)
 {
 	struct ipfix_message* msg;
-	int *seqn;
+	uint32_t *seqn;
 
 	if (source_status == SOURCE_STATUS_CLOSED) {
 		/* Inform intermediate plugins and output manager about closed input */
 		msg = calloc(1, sizeof(struct ipfix_message));
 		msg->input_info = input_info;
 		msg->source_status = source_status;
-		snc_remove_source(input_info->odid);
+		odid_info_remove_source(input_info->odid);
 	} else {
 		if (packet == NULL) {
 			MSG_WARNING(msg_module, "[%u] Received empty packet", input_info->odid);
@@ -496,13 +522,13 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		}
 
 		if (source_status == SOURCE_STATUS_NEW) {
-			snc_add_source(ntohl(msg->pkt_header->observation_domain_id));
+			odid_info_add_source(ntohl(msg->pkt_header->observation_domain_id));
 		}
 
 		/* Process templates and correct sequence number */
 		preprocessor_process_templates(tm, msg);
 
-		seqn = snc_get_sequence_number(ntohl(msg->pkt_header->observation_domain_id));
+		seqn = odid_info_get_sequence_number(ntohl(msg->pkt_header->observation_domain_id));
 
 		if (msg->input_info->sequence_number != ntohl(msg->pkt_header->sequence_number) && msg->data_records_count > 0) {
 			if (!skip_seq_err) {
@@ -530,6 +556,6 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 void preprocessor_close()
 {
 	/* output queue will be closed by intermediate process or output manager */
-	snc_destroy();
+	odid_info_destroy();
 	return;
 }
