@@ -171,7 +171,6 @@ private:
     void sendData();
     
     Translator translator;          /**< number -> string translator */
-    json::Array jRecords;           /**< data records */
     json::Object jData;             /**< data in JSON format */
     sisoconf *sender;               /**< sender "class" */
     
