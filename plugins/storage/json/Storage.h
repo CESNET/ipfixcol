@@ -163,6 +163,11 @@ private:
      */
     void loadElements();
     
+    /**
+     * \brief Initialize JSON record
+     */
+    void initRecord();
+    
     void sendData();
     
     Translator translator;          /**< number -> string translator */

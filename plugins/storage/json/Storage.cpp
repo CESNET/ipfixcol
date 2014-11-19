@@ -139,12 +139,7 @@ void Storage::sendData()
  * \brief Store data sets
  */
 void Storage::storeDataSets(const ipfix_message* ipfix_msg)
-{
-	jData.Clear();
-	jRecords.Clear();
-	
-	jData["@type"] = "ipfix.entry";
-	
+{	
 	struct ipfix_data_set *data_set;
 
 	for (int i = 0; (data_set = ipfix_msg->data_couple[i].data_set) != NULL; ++i) {
@@ -169,11 +164,6 @@ void Storage::storeDataSets(const ipfix_message* ipfix_msg)
 			/* store data record */
 			offset += this->storeDataRecord(data_record, templ);
 		}
-	}
-	
-	if (jRecords.size() > 0) {
-		jData["ipfix"] = jRecords;
-		sendData();
 	}
 }
 
@@ -254,6 +244,15 @@ std::string Storage::rawName(uint32_t en, uint16_t id) const
 }
 
 /**
+ * \brief Initialize JSON record
+ */
+void Storage::initRecord()
+{
+	jData.Clear();
+	jData["@type"] = "ipfix.entry";
+}
+
+/**
  * \brief Store data record
  */
 uint16_t Storage::storeDataRecord(uint8_t *data_record, ipfix_template *templ)
@@ -327,10 +326,10 @@ uint16_t Storage::storeDataRecord(uint8_t *data_record, ipfix_template *templ)
 		jRecord[element.name] = value;
 	}
 	
-	/* Add record into array */
-	if (jRecord.size() > 0) {
-		jRecords.push_back(jRecord);
-	}
+	initRecord();
+	jData["ipfix"] = jRecord;
+	sendData();
+	
 	
 	return offset;
 }
