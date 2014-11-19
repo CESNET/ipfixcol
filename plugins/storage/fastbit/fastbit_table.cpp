@@ -280,10 +280,12 @@ int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_co
 	element *new_element;
 	//Is there anything to parse?
 	if(tmp == NULL){
+		MSG_WARNING(MSG_MODULE, "Received data without template, skipping");
 		return 1;
 	}
 	//we dont want to parse option tables ect. so check it!
 	if(tmp->template_type != TM_TEMPLATE){
+		MSG_WARNING(MSG_MODULE, "Received Options Template, skipping data");
 		return 1; 
 	}
 	_template_id = tmp->template_id;

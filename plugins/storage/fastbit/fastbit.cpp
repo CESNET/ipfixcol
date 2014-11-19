@@ -424,7 +424,12 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 		if ((table = templates->find(template_id)) == templates->end()) {
 			MSG_DEBUG(MSG_MODULE,"Received new template: %hu", template_id);
 			template_table *table_tmp = new template_table(template_id, conf->buff_size);
-			table_tmp->parse_template(ipfix_msg->data_couple[i].data_template, conf);
+			if (table_tmp->parse_template(ipfix_msg->data_couple[i].data_template, conf) != 0) {
+				/* Template cannot be parsed, skip data set */
+				delete table_tmp;
+				continue;
+			}
+			
 			templates->insert(std::pair<uint16_t,template_table*>(template_id,table_tmp));
 			table = templates->find(template_id);
 		} else {
@@ -452,7 +457,11 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 
 				/* Add the new template */
 				template_table *table_tmp = new template_table(template_id, conf->buff_size);
-				table_tmp->parse_template(ipfix_msg->data_couple[i].data_template, conf);
+				if (table_tmp->parse_template(ipfix_msg->data_couple[i].data_template, conf) != 0) {
+					/* Template cannot be parsed, skip data set */
+					delete table_tmp;
+					continue;
+				}
 				templates->insert(std::pair<uint16_t,template_table*>(template_id,table_tmp));
 				table = templates->find(template_id);
 				/* New template was created, it creates new directory if necessary */
