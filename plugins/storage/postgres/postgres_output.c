@@ -59,7 +59,6 @@
 #include "ipfix_entities.h"
 #include "ipfix_postgres_types.h"
 
-
 /* default database name, used if not specified otherwise */
 #define DEFAULT_CONFIG_DBNAME "ipfix_data"
 /* prefix for every table that will be created in database */
@@ -69,7 +68,7 @@
 /* default length of the SQL commands */
 #define SQL_COMMAND_LENGTH 2048
 /* number of store packet call in one transaction */
-#define TRANSACTION_MAX 1000
+#define TRANSACTION_MAX 2
 
 /** Identifier to MSG_* macros */
 static char *msg_module = "postgres storage";
@@ -128,7 +127,7 @@ inline static void commit_transaction(struct postgres_config *conf)
 	PGresult *res;
 
 	/* when transaction counter is zero, it's time to commit */
-	if (conf->transaction_counter == 0) {
+	if (conf->transaction_counter == 0) { 
 		res = PQexec(conf->conn, "COMMIT;");
 		if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 			MSG_ERROR(msg_module, "PostgreSQL: %s", PQerrorMessage(conf->conn));
@@ -280,7 +279,7 @@ static int create_table(struct postgres_config *config, struct ipfix_template *t
 
 	sql_len = 0;
 	/* create SQL command */
-	sql_len += snprintf(sql_command, sql_command_len, "%s%u%s", "CREATE TABLE \"Template", template->template_id, "\" (");
+	sql_len += snprintf(sql_command, sql_command_len, "%s%u%s", "CREATE TABLE IF NOT EXISTS \"Template", template->original_id, "\" (");
 
 	/* get columns from template */
 	index = 0;
@@ -851,7 +850,8 @@ static int process_new_templates(struct postgres_config *conf, const struct ipfi
 		flag = 1;	/* create table if list is empty */
 		/* check whether table for the template exists */
 		for (u = 0; u < conf->table_counter; u++) {
-			if (conf->table_names[u] == template->template_id) {
+
+			if (conf->table_names[u] == template->original_id) {
 				/* table for this template already exists */
 				flag = 0;
 				break;
@@ -870,7 +870,7 @@ static int process_new_templates(struct postgres_config *conf, const struct ipfi
 					conf->table_size *= 2;
 				}
 			}
-			conf->table_names[conf->table_counter] = template->template_id;
+			conf->table_names[conf->table_counter] = template->original_id;
 			conf->table_counter += 1;
 
 			flag = 0;
@@ -906,7 +906,7 @@ static int process_data_records(struct postgres_config *conf, const struct ipfix
 			set_index++;
 			continue;
 		}
-		snprintf(table_name, TABLE_NAME_LEN, TABLE_NAME_PREFIX "%u", ipfix_msg->data_couple[set_index].data_template->template_id);
+		snprintf(table_name, TABLE_NAME_LEN, TABLE_NAME_PREFIX "%u", ipfix_msg->data_couple[set_index].data_template->original_id);
 		insert_into(conf, table_name, &(ipfix_msg->data_couple[set_index]));
 
 		set_index++;
