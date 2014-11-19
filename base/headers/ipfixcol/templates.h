@@ -56,6 +56,7 @@
 
 #include "api.h"
 #include "ipfix.h"
+#include <pthread.h>
 
 /**
  * \def TM_OPTIONS_TEMPLATE
@@ -117,32 +118,14 @@ struct ipfix_template {
 	template_ie fields[1];       /**Template fields */
 };
 
-
-struct released_tid {
-	uint16_t tid;
-	struct released_tid *next;
-};
-
-/**
- * \struct ipfix_free_tid
- * \brief Structure for storing free Template IDs for ODID
- */
-struct ipfix_free_tid {
-	struct released_tid *released; /** Released Template IDs */
-	uint32_t odid;     /** Observation Domain ID */
-	uint16_t tid;      /** Free Template ID */
-};
-
 /**
  * \struct ipfix_template_mgr
  * \brief Template Manager structure.
  */
 struct ipfix_template_mgr {
-	int free_tid_cnt;     /** Number of ipfix_free_tid structures */
-	int free_tid_max;     /** Maximum number of ipfix_free_tid structures (allocated space) */
-	struct ipfix_free_tid **free_tid;  /** Array of free Template IDs */
 	struct ipfix_template_mgr_record *first; /** list of template manager's record for each source */
 	struct ipfix_template_mgr_record *last;  /** last member of list */
+	pthread_mutex_t tmr_lock;
 };
 
 /**

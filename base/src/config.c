@@ -572,7 +572,6 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 	struct plugin_xml_conf_list *aux_plugin = NULL;
 	struct plugin_xml_conf_list *last_plugin = NULL;
 	xmlNodePtr node;
-	xmlNodePtr plugin_config;
 	xmlNodePtr plugin_config_internal;
 	xmlChar *plugin_file = NULL, *thread_name = NULL;
 	xmlDocPtr xmldata = NULL;

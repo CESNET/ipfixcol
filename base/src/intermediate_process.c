@@ -220,8 +220,6 @@ int drop_message(void *config, struct ipfix_message *message)
 int ip_destroy(void *config)
 {
 	struct ip_config *conf;
-	void *retval;
-	int ret;
 
 	conf = (struct ip_config *) config;
 

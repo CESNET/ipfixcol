@@ -134,7 +134,7 @@ int forwarding_connect4(forwarding *conf, char *destination)
 			return 1;
 		}
 		if (connect(conf->sockfd, (struct sockaddr *) &(conf->addr.addr4), sizeof(conf->addr.addr4)) < 0) {
-			MSG_ERROR(msg_module, "Cannot connect to \"%s:%d\" - %s", destination, conf->port, sys_errlist[errno]);
+			MSG_ERROR(msg_module, "Cannot connect to \"%s:%d\" - %s", destination, conf->port, strerror(errno));
 			return 1;
 		}
 		MSG_NOTICE(msg_module, "Connected to %s:%d", destination, conf->port);
@@ -182,7 +182,7 @@ int forwarding_connect6(forwarding *conf, char *destination)
 			return 1;
 		}
 		if (connect(conf->sockfd, (struct sockaddr *) &(conf->addr.addr6), sizeof(conf->addr.addr6)) < 0) {
-			MSG_ERROR(msg_module, "Cannot connect to \"%s:%d\" - %s", destination, conf->port, sys_errlist[errno]);
+			MSG_ERROR(msg_module, "Cannot connect to \"%s:%d\" - %s", destination, conf->port, strerror(errno));
 			return 1;
 		}
 		MSG_NOTICE(msg_module, "Connected to %s:%d", destination, conf->port);
@@ -630,7 +630,7 @@ void forwarding_send(forwarding *conf, void *packet, int length)
 	}
 
 	if (ret < 0) {
-		MSG_WARNING(msg_module, "%s", sys_errlist[errno]);
+		MSG_WARNING(msg_module, "%s", strerror(errno));
 	}
 }
 

@@ -103,6 +103,7 @@ struct ipfix_template_mgr_record *tm_record_lookup(struct ipfix_template_mgr *tm
  */
 struct ipfix_template_mgr_record *tm_record_lookup_insert(struct ipfix_template_mgr *tm, struct ipfix_template_key *key)
 {
+	pthread_mutex_lock(&tm->tmr_lock);
 	struct ipfix_template_mgr_record *tmr = tm_record_lookup(tm, key);
 
 	/* Template Manager's record not found - create a new one */
@@ -124,6 +125,7 @@ struct ipfix_template_mgr_record *tm_record_lookup_insert(struct ipfix_template_
 		tm->last = tmr;
 	}
 	
+	pthread_mutex_unlock(&tm->tmr_lock);
 	return tmr;
 }
 
@@ -304,30 +306,6 @@ struct ipfix_template *tm_create_template(void *template, int max_len, int type,
 }
 
 /**
- * \brief Release Template ID so it can be used again
- *
- * \param[in] tm Template Manager
- * \param[in] odid Observation Domain ID
- * \param[in] tid Template ID
- */
-void tm_release_tid(struct ipfix_template_mgr *tm, uint32_t odid, uint16_t tid)
-{
-	int i;
-	for (i = 0; i < tm->free_tid_max; ++i) {
-		if (tm->free_tid[i] != NULL && tm->free_tid[i]->odid == odid) {
-			struct released_tid *released = malloc(sizeof(struct released_tid));
-			if (released == NULL) {
-				return;
-			}
-			released->tid = tid;
-			released->next = tm->free_tid[i]->released;
-			tm->free_tid[i]->released = released;
-			break;
-		}
-	}
-}
-
-/**
  * \brief Insert existing template into Template Manager's record
  *
  * \param[in] tmr Template Manager's record
@@ -397,7 +375,7 @@ int tm_record_remove_template(struct ipfix_template_mgr_record *tmr, uint16_t te
 {
 	int i;
 	for (i=0; i < tmr->max_length; i++) {
-		if (tmr->templates[i] != NULL && tmr->templates[i]->template_id == template_id) {
+		if (tmr->templates[i] != NULL && tmr->templates[i]->original_id == template_id) {
 			struct ipfix_template *next = tmr->templates[i];
 			while (next->next != NULL) {
 				tmr->templates[i] = next->next;
@@ -450,6 +428,7 @@ int tm_record_template_index(struct ipfix_template_mgr_record *tmr, uint16_t id)
 struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_record *tmr, void *template, int max_len, int type, uint32_t odid)
 {
 	uint16_t id = ntohs(((struct ipfix_template_record *) template)->template_id);
+	struct ipfix_template *new_tmpl = NULL;
 	
 	/* Get template index */
 	int i = tm_record_template_index(tmr, id);
@@ -458,6 +437,9 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 		MSG_WARNING(msg_module, "[%u] Template %u cannot be updated (not found), creating a new one", odid, id);
 		return tm_record_add_template(tmr, template, max_len, type, odid);
 	}
+	
+	/* save IDs */
+	uint16_t templ_id = tmr->templates[i]->template_id;
 	
 
 	if (tmr->templates[i]->references == 0) {
@@ -470,7 +452,11 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 			}
 			/* create a new one */
 			MSG_DEBUG(msg_module, "Creating new template %d", id);
-			return tm_record_add_template(tmr, template, max_len, type, odid);
+			new_tmpl = tm_record_add_template(tmr, template, max_len, type, odid);
+			if (new_tmpl) {
+				new_tmpl->template_id = templ_id;
+			}
+			return new_tmpl;
 		} else {
 			/* Has some previous template(s) */
 			MSG_DEBUG(msg_module, "[%u] No references, but previous template found, ID (%d)", odid, id);
@@ -483,11 +469,11 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 	}
 
 	/* Create new template and place it on beginning of list */
-	struct ipfix_template *new_tmpl = NULL;
-
 	if ((new_tmpl = tm_create_template(template, max_len, type, odid)) == NULL) {
 		return NULL;
 	}
+	
+	new_tmpl->template_id = templ_id;
 
 	/* Inserting new template */
 	new_tmpl->next = tmr->templates[i];
@@ -540,7 +526,7 @@ void tm_record_remove_all_templates(struct ipfix_template_mgr *tm, struct ipfix_
 				free(next);
 				next = tmr->templates[i];
 			}
-			tm_release_tid(tm, tmr->key >> 32, tmr->templates[i]->template_id);
+			
 			free(tmr->templates[i]);
 			tmr->templates[i] = NULL;
 		}
@@ -577,9 +563,9 @@ struct ipfix_template_mgr *tm_create() {
 	tm->first = NULL;
 	tm->last = NULL;
 
-	tm->free_tid_max = 16;
-	tm->free_tid_cnt = 0;
-	tm->free_tid = calloc(tm->free_tid_max, sizeof(struct ipfix_free_tid *));
+	/* Initialize mutex */
+	pthread_mutex_init(&tm->tmr_lock, NULL);
+	
 	return tm;
 }
 
@@ -601,133 +587,25 @@ void tm_destroy(struct ipfix_template_mgr *tm)
 		tm->first = tmp_rec;
 	}
 	
-	int i, c;
-	struct released_tid *aux_rel;
-	for (i = 0, c = 0; i < tm->free_tid_max, c < tm->free_tid_cnt; ++i) {
-		if (tm->free_tid[i] != NULL) {
-			while (tm->free_tid[i]->released) {
-				aux_rel = tm->free_tid[i]->released;
-				tm->free_tid[i]->released = tm->free_tid[i]->released->next;
-				free(aux_rel);
-			}
-			free(tm->free_tid[i]);
-			c++;
-		}
-	}
-
-	free(tm->free_tid);
+	pthread_mutex_destroy(&tm->tmr_lock);
+	
 	free(tm);
 	tm = NULL;
-}
-
-/**
- * \brief Add ODID into free_tid list
- *
- * \param[in] tm Template Manager
- * \param[in] odid New Observation Domain ID
- * \return Template ID on success, 0 otherwise
- */
-uint32_t tm_add_free_tid(struct ipfix_template_mgr *tm, uint32_t odid)
-{
-	int i;
-	struct ipfix_free_tid *free_tid;
-
-	/* Allocate space */
-	free_tid = calloc(1, sizeof(struct ipfix_free_tid));
-	if (free_tid == NULL) {
-		return 0;
-	}
-
-	free_tid->odid = odid;
-	free_tid->tid = 256;   /* First Template ID */
-
-	if (tm->free_tid_cnt == tm->free_tid_max) {
-		/* Need more space for ODIDs */
-		tm->free_tid_max += 16;
-		tm->free_tid = realloc(tm->free_tid, tm->free_tid_max * sizeof(struct ipfix_free_tid *));
-		if (tm->free_tid == NULL) {
-			MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
-			return 0;
-		}
-		/* Initialize pointers */
-		for (i = tm->free_tid_cnt; i < tm->free_tid_max; ++i) {
-			tm->free_tid[i] = NULL;
-		}
-	}
-
-	/* Find free pointer for new structure */
-	tm->free_tid_cnt++;
-	for (i = 0; i < tm->free_tid_max; ++i) {
-		if (tm->free_tid[i] == NULL) {
-			tm->free_tid[i] = free_tid;
-			MSG_DEBUG(msg_module, "[%u] Adding free Template ID", odid);
-			break;
-		}
-	}
-
-	return free_tid->tid;
-}
-
-/**
- * \brief Get free Template ID
- *
- * \param[in] tm Template Manager
- * \param[in] odid Observation Domain ID
- * \return Template ID on success, 0 otherwise
- */
-uint32_t tm_get_free_tid(struct ipfix_template_mgr *tm, uint32_t odid)
-{
-	int i;
-	/* Look for ODID */
-	for (i = 0; i < tm->free_tid_max; ++i) {
-		if (tm->free_tid[i] != NULL && tm->free_tid[i]->odid == odid) {
-			uint16_t tid;
-			if (tm->free_tid[i]->released != NULL) {
-				/* Recycle used template ID */
-				tid = tm->free_tid[i]->released->tid;
-				tm->free_tid[i]->released = tm->free_tid[i]->released->next;
-				MSG_DEBUG(msg_module, "[%u] Reusing Template ID %d", odid, tid);
-			} else {
-				/* Increment new Template ID */
-				tid = ++(tm->free_tid[i]->tid);
-			}
-			return tid;
-		}
-	}
-
-	/* ODID not found, create new one */
-	return tm_add_free_tid(tm, odid);
 }
 
 /**
  * \brief Add new template into template manager
  */
 struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *template, int max_len, int type, struct ipfix_template_key *key)
-{
-	struct ipfix_template *new_templ;
+{	
 	struct ipfix_template_mgr_record *tmr = tm_record_lookup_insert(tm, key);
-
+	
 	if (tmr == NULL) {
 		return NULL;
 	}
 
 	/* Add template to Template Manager */
-	new_templ = tm_record_add_template(tmr, template, max_len, type, key->odid);
-
-	if (new_templ == NULL) {
-		return NULL;
-	}
-
-	/* Set right Template ID */
-	new_templ->template_id = tm_get_free_tid(tm, key->odid);
-
-	if (new_templ->template_id == 0) {
-		tm_remove_template(tm, key);
-		return NULL;
-	}
-
-//	MSG_DEBUG(msg_module, "Template %u from ODID %u and source %u has new id %u", new_templ->original_id, key->odid, key->crc, new_templ->template_id);
-	return new_templ;
+	return tm_record_add_template(tmr, template, max_len, type, key->odid);
 }
 
 /**
@@ -753,7 +631,10 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *t
 	if (tmr == NULL) {
 		return NULL;
 	}
-	return tm_record_update_template(tmr, template, max_len, type, key->odid);
+	
+	struct ipfix_template *templ = tm_record_update_template(tmr, template, max_len, type, key->odid);
+	
+	return templ;
 
 }
 
@@ -767,9 +648,7 @@ int tm_remove_template(struct ipfix_template_mgr *tm, struct ipfix_template_key 
 	if (tmr == NULL) {
 		return 1;
 	}
-
-	tm_release_tid(tm, key->odid, key->tid);
-
+	
 	return tm_record_remove_template(tmr, key->tid);
 }
 

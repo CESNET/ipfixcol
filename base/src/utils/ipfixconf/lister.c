@@ -65,7 +65,7 @@ void centrePrint(char *s, int width)
 {
     int len = strlen(s);
     if (len >= width) {
-        printf(s);
+        printf("%s", s);
 	} else {
         int remaining = width - len;
         int spacesRight = remaining / 2;

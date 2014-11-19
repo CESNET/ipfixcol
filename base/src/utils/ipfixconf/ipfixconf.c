@@ -97,7 +97,10 @@ xmlXPathObjectPtr eval_xpath(conf_info_t *info, char *tag)
 	xmlXPathObjectPtr xpath_obj_file = NULL;
 	
 	char *path;
-	asprintf(&path, "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:%s", tag);
+	if (asprintf(&path, "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:%s", tag) == -1) {
+		fprintf(stderr, "Unable to allocate memory for asprintf!\n");
+		return NULL;
+	}
 	
 	xpath_obj_file = xmlXPathEvalExpression (BAD_CAST path, info->ctxt);
 	free(path);
@@ -144,7 +147,10 @@ xmlNodePtr get_plugin(conf_info_t *info, char *tag, char *nametag, char *nameval
 	xmlNodePtr plug = NULL;
 	
 	/* Check if plugin already exists */
-	asprintf((char **) &xpath, "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:%s", tag);
+	if (asprintf((char **) &xpath, "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:%s", tag) == -1) {
+		fprintf(stderr, "Unable to allocate memory for asprintf!\n");
+		return NULL;
+	}
 	
 	result = xmlXPathEvalExpression(xpath, info->ctxt);
 	free(xpath);
@@ -171,7 +177,11 @@ xmlNodePtr get_root(conf_info_t *info)
 	xmlXPathObjectPtr result;
 	xmlNodePtr root;
 	
-	asprintf((char **) &xpath, "/cesnet-ipfixcol-int:ipfixcol");
+	if (asprintf((char **) &xpath, "/cesnet-ipfixcol-int:ipfixcol") == -1) {
+		fprintf(stderr, "Unable to allocate memory for asprintf!\n");
+			return NULL;
+	}
+	
 	result = xmlXPathEvalExpression(xpath, info->ctxt);
 	free(xpath);
 	

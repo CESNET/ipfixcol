@@ -46,11 +46,12 @@
 
 #include <ipfixcol.h>
 #include <signal.h>
-
+#include <errno.h>
 #include "data_manager.h"
 #include "output_manager.h"
 
 #include <dirent.h>
+#include <inttypes.h>
 
 static const char *msg_module = "output manager";
 static const char *stat_module = "stat";
@@ -234,9 +235,11 @@ uint64_t statistics_total_cpu()
 		return 0;
 	}
 	
-	uint64_t user, nice, sys, idle;
+	uint64_t user = 0, nice = 0, sys = 0, idle = 0;
+	if (fscanf(stat, "%*s %" SCNu64 "%" SCNu64 "%" SCNu64 "%" SCNu64, &user, &nice, &sys, &idle) == EOF) {
+		MSG_ERROR(stat_module, "Error while reading /proc/stat: %s", strerror(errno));
+	}
 	
-	fscanf(stat, "%*s %llu %llu %llu %llu", &user, &nice, &sys, &idle);
 	fclose(stat);
 	
 	return (user + nice + sys + idle);
@@ -300,7 +303,9 @@ static void statistics_print_cpu(struct stat_conf *conf)
 	FILE *stat;
 	struct dirent *entry;
 	char stat_path[MAX_DIR_LEN], thread_name[MAX_DIR_LEN], state;
-	uint64_t tid = 0, utime, systime, proc_time;
+	int tid = 0;
+	unsigned long utime, systime;
+	uint64_t proc_time;
 	uint64_t total_cpu = statistics_total_cpu();
 	float usage;
 	
@@ -320,7 +325,9 @@ static void statistics_print_cpu(struct stat_conf *conf)
 		}
 		
 		/* read thread info */
-		fscanf(stat, "%d (%[^)]) %c %*d %*d %*d %*d %*d %*u %*lu %*lu %*lu %*lu %lu %lu", &tid, thread_name, &state, &utime, &systime);
+		if (fscanf(stat, "%d (%[^)]) %c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu", &tid, thread_name, &state, &utime, &systime) == EOF) {
+			MSG_ERROR(stat_module, "Error while reading %s: %s", stat_path, strerror(errno));
+		}
 		fclose(stat);
 		
 		/* Count thread cpu time */
