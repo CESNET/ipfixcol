@@ -37,6 +37,16 @@
  *
  */
 
+
+/**
+ * \defgroup dummyInter Dummy Intermediate Process
+ * \ingroup intermediatePlugins
+ *
+ * This plugin does nothing. It't the example of the most basic intermediate plugin.
+ *
+ * @{
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -77,7 +87,9 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 }
 
 
-/* Do nothing, just pass the message to the output queue */
+/**
+ * \brief Do nothing, just pass the message to the output queue 
+ */
 int intermediate_process_message(void *config, void *message)
 {
 	struct dummy_ip_config * conf;
@@ -102,3 +114,4 @@ int intermediate_close(void *config)
 	return 0;
 }
 
+/**@}*/

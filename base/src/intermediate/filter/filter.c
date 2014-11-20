@@ -37,6 +37,17 @@
  *
  */
 
+
+/**
+ * \defgroup filterInter Filter Intermediate Process
+ * \ingroup intermediatePlugins
+ *
+ * This plugin profiles data records by filters specified in configuration xml
+ *
+ * @{
+ */
+
+
 #define _XOPEN_SOURCE
 
 #include <arpa/inet.h>
@@ -1223,3 +1234,4 @@ struct filter_treenode *filter_new_exists_node(struct filter_field *field)
 	return node;
 }
 
+/**@}*/

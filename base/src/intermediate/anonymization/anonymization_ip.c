@@ -39,7 +39,7 @@
 
 
 /**
- * \defgroup Anonymization Intermediate Process
+ * \defgroup anonInter Anonymization Intermediate Process
  * \ingroup intermediatePlugins
  *
  * This plugin anomymize IP addresses (both IPv4 and IPv6) in IPFIX

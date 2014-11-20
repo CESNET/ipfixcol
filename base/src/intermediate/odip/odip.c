@@ -38,6 +38,16 @@
  *
  */
 
+/**
+ * \defgroup odipInter ODIP Intermediate Process
+ * \ingroup intermediatePlugins
+ *
+ * This plugin adds information about exporter's IP address into each 
+ * data record (if it does not contain it yet). Supported are both IPv4 and IPv6.
+ *
+ * @{
+ */
+
 
 #include <stdlib.h>
 #include <stdbool.h>
@@ -362,3 +372,5 @@ int intermediate_close(void *config)
 
 	return 0;
 }
+
+/**@}*/

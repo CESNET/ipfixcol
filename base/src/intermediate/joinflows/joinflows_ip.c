@@ -38,6 +38,14 @@
  *
  */
 
+/**
+ * \defgroup joinflowsInter Joinflows Intermediate Process
+ * \ingroup intermediatePlugins
+ *
+ * This plugin joins flows from multiple sources (ODIDs) into the one
+ *
+ * @{
+ */
 
 #include <stdlib.h>
 #include <stdbool.h>
@@ -961,3 +969,5 @@ int intermediate_close(void *config)
 
 	return 0;
 }
+
+/**@}*/

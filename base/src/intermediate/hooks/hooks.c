@@ -37,6 +37,16 @@
  *
  */
 
+/**
+ * \defgroup hooksInter Hooks Intermediate Process
+ * \ingroup intermediatePlugins
+ *
+ * This plugin calls user-specified operations when some event occures
+ * (e.g. new exporter connected)
+ *
+ * @{
+ */
+
 
 #include <stdlib.h>
 #include <stdbool.h>
@@ -317,3 +327,5 @@ int intermediate_close(void *config)
 
 	return 0;
 }
+
+/**@}*/
