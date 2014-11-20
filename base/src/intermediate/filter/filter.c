@@ -110,14 +110,17 @@ void filter_free_profile(struct filter_profile *profile)
 {
 	struct filter_source *aux_src = profile->sources;
 
+	/* Free sources list */
 	while (aux_src) {
 		profile->sources = profile->sources->next;
 		free(aux_src);
 		aux_src = profile->sources;
 	}
 
+	/* Free filter tree */
 	filter_free_tree(profile->root);
 
+	/* Free input info structure */
 	if (profile->input_info) {
 		free(profile->input_info);
 	}
@@ -127,6 +130,8 @@ void filter_free_profile(struct filter_profile *profile)
 
 /**
  * \brief Initialize ipfix-elements.xml
+ * 
+ * Opens xml file with elements specification and initializes file context
  *
  * \param[in] pdata Parser data structure
  */
@@ -157,7 +162,7 @@ void filter_init_elements(struct filter_parser_data *pdata)
  */
 int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config)
 {
-	(void) ip_id; (void) template_mgr;
+	(void) ip_id; (void) template_mgr; /* suppress compiler warnings */
 	struct filter_config *conf = NULL;
 	struct filter_profile *aux_profile = NULL;
 	struct filter_source *aux_src = NULL;
@@ -169,6 +174,7 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 
 	int ret;
 
+	/* Allocate resources */
 	conf = (struct filter_config *) calloc(1, sizeof(struct filter_config));
 	if (!conf) {
 		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
@@ -192,6 +198,7 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 		goto cleanup_err;
 	}
 
+	/* Initialize IPFIX elements */
 	filter_init_elements(&parser_data);
 
 	/* Iterate throught all profiles */
@@ -303,6 +310,7 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 		}
 	}
 
+	/* Save configuration and free resources */
 	conf->ip_config = ip_config;
 
 	*config = conf;
@@ -354,6 +362,8 @@ cleanup_err:
 bool filter_fits_value(struct filter_treenode *node, uint8_t *rec, struct ipfix_template *templ)
 {
 	int datalen;
+	
+	/* Get data from record */
 	uint8_t *recdata = data_record_get_field(rec, templ, node->field->enterprise, node->field->id, &datalen);
 	if (!recdata) {
 		/* Field not found - if op is '!=' it is success */
@@ -368,20 +378,21 @@ bool filter_fits_value(struct filter_treenode *node, uint8_t *rec, struct ipfix_
 	int cmpres = memcmp(recdata, node->value->value, datalen);
 
 	/* Compare values according to op */
+	/* memcmp return 0 if operands are equal, so it must be negated for OP_EQUAL */
 	switch (node->op) {
-	case OP_EQUAL:
+	case OP_EQUAL:			/* field == value */
 		return !cmpres;
-	case OP_NOT_EQUAL:
+	case OP_NOT_EQUAL:		/* field != value */
 		return cmpres;
-	case OP_LESS_EQUAL:
+	case OP_LESS_EQUAL:		/* field <= value */
 		return cmpres <= 0;
-	case OP_LESS:
+	case OP_LESS:			/* field < value */
 		return cmpres < 0;
-	case OP_GREATER_EQUAL:
+	case OP_GREATER_EQUAL:	/* field >= value */
 		return cmpres >= 0;
-	case OP_GREATER:
+	case OP_GREATER:		/* field > value */
 		return cmpres > 0;
-	default:
+	default:				/* suppress compiler warning */
 		return false;
 	}
 }
@@ -400,12 +411,13 @@ bool filter_fits_string(struct filter_treenode *node, uint8_t *rec, struct ipfix
 	char *pos = NULL, *prevpos = NULL;
 	bool result = false;
 
+	/* Get data from record */
 	uint8_t *recdata = data_record_get_field(rec, templ, node->field->enterprise, node->field->id, &datalen);
 	if (!recdata) {
 		return node->op == OP_NOT_EQUAL;
 	}
 
-	/* recdata is string without terminating '\0' */
+	/* recdata is string without terminating '\0' - append it */
 	char *data = malloc(datalen + 1);
 	memcpy(data, recdata, datalen);
 	data[datalen] = '\0';
@@ -443,6 +455,7 @@ bool filter_fits_string(struct filter_treenode *node, uint8_t *rec, struct ipfix
 		/* Unsupported operation */
 		result = false;
 	}
+	
 	free(data);
 	return result;
 }
@@ -461,12 +474,13 @@ bool filter_fits_regex(struct filter_treenode *node, uint8_t *rec, struct ipfix_
 	bool result = false;
 	regex_t *regex = (regex_t *) node->value->value;
 
+	/* Get data from record */
 	uint8_t *recdata = data_record_get_field(rec, templ, node->field->enterprise, node->field->id, &datalen);
 	if (!recdata) {
 		return node->op == OP_NOT_EQUAL;
 	}
 
-	/* recdata is string without terminating '\0' */
+	/* recdata is string without terminating '\0' - append it */
 	char *data = malloc(datalen + 1);
 	memcpy(data, recdata, datalen);
 	data[datalen] = '\0';
@@ -512,7 +526,7 @@ bool filter_fits_node(struct filter_treenode *node, uint8_t *rec, struct ipfix_t
 		return (node->negate) ^ (filter_fits_node(node->left, rec, templ) || filter_fits_node(node->right, rec, templ));
 	case NODE_EXISTS:
 		return (node->negate) ^ (filter_fits_exists(node, rec, templ));
-	default:
+	default: /* LEAF node */
 		switch (node->value->type) {
 		case VT_STRING:
 			return (node->negate) ^ filter_fits_string(node, rec, templ);
@@ -562,6 +576,7 @@ void filter_process_data_record(uint8_t *rec, int rec_len, struct ipfix_template
 {
 	struct filter_process *conf = (struct filter_process *) data;
 
+	/* Apply filter */
 	if (filter_fits_node(conf->profile->root, rec, templ)) {
 		memcpy(conf->ptr + *(conf->offset), rec, rec_len);
 		*(conf->offset) += rec_len;
@@ -581,6 +596,8 @@ void filter_process_data_record(uint8_t *rec, int rec_len, struct ipfix_template
 uint32_t filter_profile_update_input_info(struct filter_profile *profile, struct input_info *input_info, int records)
 {
 	uint32_t sn;
+	
+	/* Input info not created yet */
 	if (profile->input_info == NULL) {
 		if (input_info->type == SOURCE_TYPE_IPFIX_FILE) {
 			profile->input_info = calloc(1, sizeof(struct input_info_file));
@@ -589,9 +606,13 @@ uint32_t filter_profile_update_input_info(struct filter_profile *profile, struct
 			profile->input_info = calloc(1, sizeof(struct input_info_network));
 			memcpy(profile->input_info, input_info, sizeof(struct input_info_network));
 		}
+		
+		/* Set initial values */
 		profile->input_info->odid = profile->new_odid;
 		profile->input_info->sequence_number = 0;
 	}
+	
+	/* Update sequence number */
 	sn = profile->input_info->sequence_number;
 	profile->input_info->sequence_number += records;
 
@@ -638,12 +659,15 @@ struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct fil
 	/* Copy (options) template sets */
 	filter_add_template_sets(msg, ptr, &offset);
 
+	/* Filter data records */
 	for (i = 0; i < 1024 && msg->data_couple[i].data_set; ++i) {
 		if (!msg->data_couple[i].data_template) {
 			/* Data set without template, skip it */
 			continue;
 		}
+		
 		oldoffset = offset;
+		
 		/* Copy set header */
 		memcpy(ptr + offset, &(msg->data_couple[i].data_set->header), sizeof(struct ipfix_set_header));
 		offset += sizeof(struct ipfix_set_header);
@@ -742,11 +766,13 @@ int intermediate_process_message(void *config, void *message)
 		}
 	}
 
+	/* Remove original message if set */
 	if (conf->remove_original) {
 		drop_message(conf->ip_config, message);
 	} else {
 		pass_message(conf->ip_config, message);
 	}
+	
 	return 0;
 }
 
@@ -755,12 +781,14 @@ int intermediate_close(void *config)
 	struct filter_config *conf = (struct filter_config *) config;
 	struct filter_profile *aux_profile = conf->profiles;
 
+	/* Free all profiles */
 	while (aux_profile) {
 		conf->profiles = conf->profiles->next;
 		filter_free_profile(aux_profile);
 		aux_profile = conf->profiles;
 	}
 
+	/* Free default profile */
 	if (conf->default_profile) {
 		filter_free_profile(conf->default_profile);
 	}
@@ -866,6 +894,7 @@ struct filter_value *filter_parse_number(char *number)
 	struct filter_value *val = malloc(sizeof(struct filter_value));
 	CHECK_ALLOC(val);
 
+	/* Check suffix */
 	uint64_t tmp = strlen(number);
 	long mult = 1;
 	switch (number[tmp - 1]) {
@@ -887,8 +916,10 @@ struct filter_value *filter_parse_number(char *number)
 		break;
 	}
 
+	/* Apply suffix */
 	tmp = strtol(number, NULL, 10) * mult;
 
+	/* Create value */
 	val->type = VT_NUMBER;
 	val->length = sizeof(uint64_t);
 	val->value = filter_num_to_ptr((uint8_t *) &tmp, val->length);
@@ -905,6 +936,7 @@ struct filter_value *filter_parse_hexnum(char *hexnum)
 
 	val->type = VT_NUMBER;
 
+	/* Convert hexa number */
 	uint64_t tmp = strtol(hexnum, NULL, 16);
 
 	val->length = sizeof(uint64_t);
@@ -939,6 +971,8 @@ struct filter_value *filter_parse_string(char *string)
 struct filter_value *filter_parse_regex(char *regexstr)
 {
 	int reglen;
+	
+	/* Allocate space for regex */
 	regex_t *regex = calloc(1, sizeof(regex_t));
 	CHECK_ALLOC(regex);
 
@@ -956,6 +990,7 @@ struct filter_value *filter_parse_regex(char *regexstr)
 		return NULL;
 	}
 
+	/* Create value */
 	struct filter_value *val = malloc(sizeof(struct filter_value));
 	CHECK_ALLOC(val);
 
@@ -978,12 +1013,14 @@ struct filter_value *filter_parse_ipv4(char *addr)
 
 	struct in_addr tmp;
 
+	/* Convert address */
 	if (inet_pton(AF_INET, addr, &tmp) != 1) {
 		MSG_ERROR(msg_module, "Cannot parse IP address %s", addr);
 		free(val);
 		return NULL;
 	}
 
+	/* Create value */
 	val->length = sizeof(struct in_addr);
 	val->value = filter_num_to_ptr((uint8_t *) &tmp, val->length);
 
@@ -1002,12 +1039,14 @@ struct filter_value *filter_parse_ipv6(char *addr)
 
 	struct in6_addr tmp;
 
+	/* Convert address */
 	if (inet_pton(AF_INET6, addr, &tmp) != 1) {
 		MSG_ERROR(msg_module, "Cannot parse IP address %s", addr);
 		free(val);
 		return NULL;
 	}
 
+	/* Create value */
 	val->length = sizeof(struct in6_addr);
 	val->value = filter_num_to_ptr((uint8_t *) &tmp, val->length);
 
@@ -1028,8 +1067,10 @@ struct filter_value *filter_parse_timestamp(char *tstamp)
 
 	ctime.tm_isdst = 0;
 
+	/* Get time in seconds */
 	uint64_t tmp = mktime(&ctime);
 
+	/* Check suffix */
 	switch (tstamp[strlen(tstamp) - 1]) {
 	case 's':
 		break;
@@ -1044,6 +1085,7 @@ struct filter_value *filter_parse_timestamp(char *tstamp)
 		break;
 	}
 
+	/* Create value */
 	struct filter_value *val = malloc(sizeof(struct filter_value));
 	CHECK_ALLOC(val);
 
@@ -1062,10 +1104,6 @@ struct filter_value *filter_parse_timestamp(char *tstamp)
  */
 enum operators filter_decode_operator(char *op)
 {
-	/*
-	 * there must be strNcmp because there is rest of filter string behind operator
-	 * for example filter = "ie20 > 60" =>  op = "> 60"
-	 */
 	if (!strcmp(op, "=") || !strcmp(op, "==")) {
 		return OP_EQUAL;
 	} else if (!strcmp(op, "!=")) {
@@ -1080,6 +1118,7 @@ enum operators filter_decode_operator(char *op)
 		return OP_GREATER_EQUAL;
 	}
 
+	/* Implicit operator */
 	return OP_EQUAL;
 }
 
@@ -1124,7 +1163,7 @@ enum nodetype filter_decode_type(char *type)
 	if (!strcmp(type, "and") || !strcmp(type, "AND") || !strcmp(type, "&&")) {
 		return NODE_AND;
 	}
-
+	
 	return NODE_OR;
 }
 
