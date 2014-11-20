@@ -137,7 +137,7 @@
 								<command>raw field</command>
 							</term>
 							<listitem>
-								<simpara>field specified by its number in format ie[0-9]+
+								<simpara>field specified by its enterprise number and element ID in format e[0-9]+id[0-9]+
 								</simpara>
 							</listitem>
 						</varlistentry>
