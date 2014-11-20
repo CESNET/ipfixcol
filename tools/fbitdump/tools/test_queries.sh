@@ -124,7 +124,7 @@ done
 
 # send mail if any error occured
 if [ ! -z "$ERRORS" ]; then
-    echo -e "$ERRORS" #| mailx -s "$MAIL_SUBJ" "$MAIL_ADDR"
+    echo -e "$ERRORS" | mailx -s "$MAIL_SUBJ" "$MAIL_ADDR"
 fi
 
 # remove tmp files
