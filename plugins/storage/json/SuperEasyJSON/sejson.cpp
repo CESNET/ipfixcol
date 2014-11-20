@@ -495,13 +495,11 @@ void Object::Clear()
 	mValues.clear();
 }
 
-#define INDENT(_ind_) std::string((_ind_)*2, ' ')
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-std::string SerializeArray(const Array& a, int indent);
+std::string SerializeArray(const Array& a);
 
-std::string SerializeValue(const Value& v, int indent)
+std::string SerializeValue(const Value& v)
 {
 	std::string str;
 
@@ -514,36 +512,35 @@ std::string SerializeValue(const Value& v, int indent)
 		case DoubleVal		: snprintf(buff, BUFF_SZ, "%f", (double)v); str = buff; break;
 		case BoolVal		: str = v ? "true" : "false"; break;
 		case NULLVal		: str = "null"; break;
-		case ObjectVal		: str = Serialize(v, indent); break;
-		case ArrayVal		: str = SerializeArray(v, indent); break;
+		case ObjectVal		: str = Serialize(v); break;
+		case ArrayVal		: str = SerializeArray(v); break;
 		case StringVal		: str = std::string("\"") + (std::string)v + std::string("\""); break;
 	}
 
 	return str;
 }
 
-std::string SerializeArray(const Array& a, int indent)
+std::string SerializeArray(const Array& a)
 {
-	std::string str = "[\n";
-	indent++;
+	std::string str = "[";
+	
 	bool first = true;
 	for (size_t i = 0; i < a.size(); i++)
 	{
 		const Value& v = a[i];
 		if (!first)
-			str += std::string(",\n");
+			str += std::string(",");
 
-		str += SerializeValue(v, indent);
+		str += SerializeValue(v);
 
 		first = false;
 	}
 
-	indent--;
-	str += "\n" + INDENT(indent) + "]";
+	str += "]";
 	return str;
 }
 
-std::string json::Serialize(const Value& v, int indent)
+std::string json::Serialize(const Value& v)
 {
 	std::string str;
 
@@ -551,43 +548,35 @@ std::string json::Serialize(const Value& v, int indent)
 	
 	if (v.GetType() == ObjectVal)
 	{
-		str = INDENT(indent) + "{\n";
-		indent++;
+		str = "{";
 		Object obj = v.ToObject();
 		for (Object::ValueMap::const_iterator it = obj.begin(); it != obj.end(); ++it)
 		{
 			if (!first)
-				str += std::string(",\n");
+				str += std::string(",");
 
-			str += INDENT(indent) + std::string("\"") + it->first + std::string("\":") + SerializeValue(it->second, indent);
+			str += std::string("\"") + it->first + std::string("\": ") + SerializeValue(it->second);
 			first = false;
 		}
-		indent--;
-		str += "\n" + INDENT(indent) + "}";
+		str += "}";
 	}
 	else if (v.GetType() == ArrayVal)
 	{
-		str = INDENT(indent) + "[\n";
-		indent++;
+		str = "[";
 		Array a = v.ToArray();
 		for (Array::ValueVector::const_iterator it = a.begin(); it != a.end(); ++it)
 		{
 			if (!first)
-				str += std::string(",\n");
+				str += std::string(",");
 			
-			str += SerializeValue(*it, indent);
+			str += SerializeValue(*it);
 			first = false;
 		}
-		indent--;
-		str += "\n" + INDENT(indent) + "]\n";
+		str += "]";
 			
 	}
 	
-	/* Add new line after last closing bracket */
-	str += (indent == 0 ? "\n" : "");
 	// else it's not valid JSON, as a JSON data structure must be an array or an object. We'll return an empty string.
-		
-	
 	return str;
 }
 

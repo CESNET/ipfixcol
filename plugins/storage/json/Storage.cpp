@@ -122,7 +122,7 @@ void Storage::loadElements()
 void Storage::sendData()
 {
 	/* Serialize data */
-	std::string serialized = json::Serialize(jData);
+	std::string serialized = json::Serialize(jData) + "\n";
 	if (serialized.empty()) {
 		/* TODO: is this error or not? */
 		MSG_WARNING(msg_module, "Empty serialized data");
