@@ -50,6 +50,7 @@
 
 #include <ipfixcol.h>
 #include <regex.h>
+#include <libxml/xmlstring.h>
 
 #include "filter.h"
 #include "scanner.h"
@@ -63,11 +64,14 @@ static const char *msg_module = "filter";
 		return NULL; \
 	}
 
+/**
+ * \brief Structure for processing data/template records
+ */
 struct filter_process {
-	uint8_t *ptr;
-	int *offset;
-	struct filter_profile *profile;
-	int records;
+	uint8_t *ptr;		/**< pointer to new IPFIX message */
+	int *offset;		/**< offset in message */
+	struct filter_profile *profile; /**< used filter profile */
+	int records;		/**< number of filtered records */
 };
 
 /**
@@ -79,9 +83,11 @@ void filter_free_tree(struct filter_treenode *node)
 		return;
 	}
 
+	/* Free left and right subtrees */
 	filter_free_tree(node->left);
 	filter_free_tree(node->right);
 
+	/* Free value */
 	if (node->value) {
 		if (node->value->value) {
 			if (node->value->type == VT_REGEX) {
@@ -348,7 +354,7 @@ cleanup_err:
 bool filter_fits_value(struct filter_treenode *node, uint8_t *rec, struct ipfix_template *templ)
 {
 	int datalen;
-	uint8_t *recdata = data_record_get_field(rec, templ, node->field, &datalen);
+	uint8_t *recdata = data_record_get_field(rec, templ, node->field->enterprise, node->field->id, &datalen);
 	if (!recdata) {
 		/* Field not found - if op is '!=' it is success */
 		return node->op == OP_NOT_EQUAL;
@@ -394,7 +400,7 @@ bool filter_fits_string(struct filter_treenode *node, uint8_t *rec, struct ipfix
 	char *pos = NULL, *prevpos = NULL;
 	bool result = false;
 
-	uint8_t *recdata = data_record_get_field(rec, templ, node->field, &datalen);
+	uint8_t *recdata = data_record_get_field(rec, templ, node->field->enterprise, node->field->id, &datalen);
 	if (!recdata) {
 		return node->op == OP_NOT_EQUAL;
 	}
@@ -455,7 +461,7 @@ bool filter_fits_regex(struct filter_treenode *node, uint8_t *rec, struct ipfix_
 	bool result = false;
 	regex_t *regex = (regex_t *) node->value->value;
 
-	uint8_t *recdata = data_record_get_field(rec, templ, node->field, &datalen);
+	uint8_t *recdata = data_record_get_field(rec, templ, node->field->enterprise, node->field->id, &datalen);
 	if (!recdata) {
 		return node->op == OP_NOT_EQUAL;
 	}
@@ -482,7 +488,7 @@ bool filter_fits_regex(struct filter_treenode *node, uint8_t *rec, struct ipfix_
  */
 bool filter_fits_exists(struct filter_treenode *node, uint8_t *rec, struct ipfix_template *templ)
 {
-	return data_record_get_field(rec, templ, node->field, NULL);
+	return data_record_get_field(rec, templ, node->field->enterprise, node->field->id, NULL);
 }
 
 /**
@@ -766,49 +772,71 @@ int intermediate_close(void *config)
 
 /**
  * \brief Parse field name
- *
- * \param[in] field Field name
- * \param[in] doc XML document
- * \param[in] context XML context
- * \return Information Element ID or -1 on error
  */
-int filter_parse_field(char *field, xmlDoc *doc, xmlXPathContextPtr context)
+struct filter_field *filter_parse_field(char *name, xmlDoc *doc, xmlXPathContextPtr context)
 {
 	xmlChar xpath[100];
 	xmlChar *tmp = NULL;
 	xmlXPathObjectPtr result;
-	int res;
+	
+	/* Allocate memory */
+	struct filter_field *field = calloc(1, sizeof(struct filter_field));
+	CHECK_ALLOC(field);
 
 	/* Prepare XPath */
-	sprintf((char *) xpath, "/ipfix-elements/element[name='%s']/id", field);
+	sprintf((char *) xpath, "/ipfix-elements/element[name='%s']", name);
 	result = xmlXPathEvalExpression(xpath, context);
 
 	if (result == NULL) {
 		MSG_ERROR(msg_module, "Error in xmlXPathEvalExpression\n");
-		return -1;
+		return NULL;
 	}
 
 	if (xmlXPathNodeSetIsEmpty(result->nodesetval)) {
 		xmlXPathFreeObject(result);
-		MSG_ERROR(msg_module, "Unknown field '%s'!", field);
-		return -1;
+		MSG_ERROR(msg_module, "Unknown field '%s'!", name);
+		return NULL;
 	} else {
-		/* Get ID */
-		tmp = xmlNodeListGetString(doc, result->nodesetval->nodeTab[0]->xmlChildrenNode, 1);
-		res = atoi((char *) tmp);
+		xmlNode *info = result->nodesetval->nodeTab[0]->xmlChildrenNode;
+		
+		/* Go through element informations */
+		while (info) {
+			/* Get enterprise number */
+			if (!xmlStrcmp(info->name, (const xmlChar *) "enterprise")) {
+				tmp = xmlNodeListGetString(doc, info->xmlChildrenNode, 1);
+				field->enterprise = strtoul((char *) tmp, NULL, 10);
+				xmlFree(tmp);
+			/* Get field ID */
+			} else if (!xmlStrcmp(info->name, (const xmlChar *) "id")) {
+				tmp = xmlNodeListGetString(doc, info->xmlChildrenNode, 1);
+				field->id = strtoul((char *) tmp, NULL, 10);
+				xmlFree(tmp);
+			}
+			
+			info = info->next;
+		}
 	}
 
 	xmlXPathFreeObject(result);
-	xmlFree(tmp);
-	return res;
+	return field;
 }
 
 /**
  * \brief Parse raw field name
  */
-int filter_parse_rawfield(char *rawfield)
+struct filter_field *filter_parse_rawfield(char *rawfield)
 {
-	return atoi(&(rawfield[2]));
+	char *idptr = NULL;
+	
+	/* Allocate memory */
+	struct filter_field *field = calloc(1, sizeof(struct filter_field));
+	CHECK_ALLOC(field);
+	
+	/* Get enterprise number and element ID  (eXidYY) */
+	field->enterprise = strtoul(rawfield + 1, &idptr, 10);
+	field->id = strtoul(idptr + 2, NULL, 10);
+	
+	return field;
 }
 
 /**
@@ -1058,7 +1086,7 @@ enum operators filter_decode_operator(char *op)
 /**
  * \brief Create new leaf treenode
  */
-struct filter_treenode *filter_new_leaf_node(int field, char *op, struct filter_value *value)
+struct filter_treenode *filter_new_leaf_node(struct filter_field *field, char *op, struct filter_value *value)
 {
 	struct filter_treenode *node = calloc(1, sizeof(struct filter_treenode));
 	CHECK_ALLOC(node);
@@ -1074,7 +1102,7 @@ struct filter_treenode *filter_new_leaf_node(int field, char *op, struct filter_
 /**
  * \brief Create new leaf treenode without specified operator
  */
-struct filter_treenode *filter_new_leaf_node_opless(int field, struct filter_value *value)
+struct filter_treenode *filter_new_leaf_node_opless(struct filter_field *field, struct filter_value *value)
 {
 	/*
 	 * For string values - no operator means "find this substring".
@@ -1143,7 +1171,10 @@ void filter_error(const char *msg, YYLTYPE *loc)
 	MSG_ERROR(msg_module, "%d: %s", loc->last_column, msg);
 }
 
-struct filter_treenode *filter_new_exists_node(int field)
+/**
+ * \brief Create new EXISTS node
+ */
+struct filter_treenode *filter_new_exists_node(struct filter_field *field)
 {
 	struct filter_treenode *node = calloc(1, sizeof(struct filter_treenode));
 	CHECK_ALLOC(node);

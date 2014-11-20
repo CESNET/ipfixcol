@@ -371,16 +371,18 @@ int message_free(struct ipfix_message *msg)
  * \brief Get field with given id
  * \param[in] fields template (record) fields
  * \param[in] cnt number of fields
+ * \param[in] enterprise enterprise field number
  * \param[in] id  field id
  * \param[out] data_offset offset data record specified by this template
  * \param[in] netw Flag indicating network byte order (template record)
  * \return pointer to row in fields
  */
-struct ipfix_template_row *fields_get_field(uint8_t *fields, int cnt, uint16_t id, int *data_offset, int netw)
+struct ipfix_template_row *fields_get_field(uint8_t *fields, int cnt, uint32_t enterprise, uint16_t id, int *data_offset, int netw)
 {
 	int i;
 	if (netw) {
 		id = htons(id);
+		enterprise = ntohl(enterprise);
 	}
 
 	if (data_offset) {
@@ -390,18 +392,35 @@ struct ipfix_template_row *fields_get_field(uint8_t *fields, int cnt, uint16_t i
 	struct ipfix_template_row *row = (struct ipfix_template_row *) fields;
 
 	for (i = 0; i < cnt; ++i, ++row) {
-		/* Check field ID */
-		if (row->id == id) {
+		uint16_t rid = row->id;
+		uint16_t len = (netw) ? ntohs(row->length) : row->length;
+		uint32_t ren = 0;
+		uint8_t has_ren = 0;
+		
+		/* Get field ID and enterprise number */
+		if (!netw && row->id >> 15) { /* Template */
+			rid = row->id & 0x7FFF;
+			++row;
+			ren = *((uint32_t *) row);
+			has_ren = 1;
+		} else if (netw && ntohs(row->id) >> 15) { /* Template record */
+			rid = ntohs(row->id) & 0x7FFF;
+			++row;
+			ren = ntohl(*((uint32_t *) row));
+			has_ren = 1;
+		}
+		
+		/* Check informations */
+		if (rid == id && ren == enterprise) {
+			if (has_ren) {
+				--row;
+			}
 			return row;
 		}
 
 		/* increase data offset */
 		if (data_offset) {
-			if (netw) {
-				*data_offset += ntohs(row->length);
-			} else {
-				*data_offset += row->length;
-			}
+			*data_offset += len;
 		}
 	}
 
@@ -411,17 +430,17 @@ struct ipfix_template_row *fields_get_field(uint8_t *fields, int cnt, uint16_t i
 /**
  * \brief Get template record field
  */
-struct ipfix_template_row *template_record_get_field(struct ipfix_template_record *rec, uint16_t id, int *data_offset)
+struct ipfix_template_row *template_record_get_field(struct ipfix_template_record *rec, uint32_t enterprise, uint16_t id, int *data_offset)
 {
-	return fields_get_field((uint8_t *) rec->fields, ntohs(rec->count), id, data_offset, 1);
+	return fields_get_field((uint8_t *) rec->fields, ntohs(rec->count), enterprise, id, data_offset, 1);
 }
 
 /**
  * \brief Get template record field
  */
-struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint16_t id, int *data_offset)
+struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint32_t enterprise, uint16_t id, int *data_offset)
 {
-	return fields_get_field((uint8_t *) templ->fields, templ->field_count, id, data_offset, 0);
+	return fields_get_field((uint8_t *) templ->fields, templ->field_count, enterprise, id, data_offset, 0);
 }
 
 /**
@@ -429,11 +448,12 @@ struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint
  *
  * \param[in] data_record Data record
  * \param[in] template Data record's template
+ * \param[in] enterprise Enterprise number
  * \param[in] id Field ID
  * \param[out] data_length Field length
  * \return Field offset
  */
-int data_record_field_offset(uint8_t *data_record, struct ipfix_template *template, uint16_t id, int *data_length)
+int data_record_field_offset(uint8_t *data_record, struct ipfix_template *template, uint32_t enterprise, uint16_t id, int *data_length)
 {
 	int ieid;
 	int count, offset = 0, index, length, prevoffset;
@@ -441,7 +461,7 @@ int data_record_field_offset(uint8_t *data_record, struct ipfix_template *templa
 
 	if (!(template->data_length & 0x80000000)) {
 		/* Data record with no variable length field */
-		row = template_get_field(template, id, &offset);
+		row = template_get_field(template, enterprise, id, &offset);
 		if (!row) {
 			return -1;
 		}
@@ -508,9 +528,9 @@ int data_record_field_offset(uint8_t *data_record, struct ipfix_template *templa
 /**
  * \brief Get data from record
  */
-uint8_t *data_record_get_field(uint8_t *record, struct ipfix_template *templ, uint16_t id, int *data_length)
+uint8_t *data_record_get_field(uint8_t *record, struct ipfix_template *templ, uint32_t enterprise, uint16_t id, int *data_length)
 {
-	int offset = data_record_field_offset(record, templ, id, data_length);
+	int offset = data_record_field_offset(record, templ, enterprise, id, data_length);
 
 	if (offset < 0) {
 		return NULL;
@@ -522,10 +542,10 @@ uint8_t *data_record_get_field(uint8_t *record, struct ipfix_template *templ, ui
 /**
  * \brief Set field value
  */
-void data_record_set_field(uint8_t *record, struct ipfix_template *templ, uint16_t id, uint8_t *value)
+void data_record_set_field(uint8_t *record, struct ipfix_template *templ, uint32_t enterprise, uint16_t id, uint8_t *value)
 {
 	int data_length;
-	int offset = data_record_field_offset(record, templ, id, &data_length);
+	int offset = data_record_field_offset(record, templ, enterprise, id, &data_length);
 
 	if (offset >= 0) {
 		memcpy(record + offset, value, data_length);
@@ -636,12 +656,12 @@ int template_set_process_records(struct ipfix_template_set *tset, int type, tset
 /**
  * \brief Set field value for each data record in set
  */
-void data_set_set_field(struct ipfix_data_set *data_set, struct ipfix_template *templ, uint16_t id, uint8_t *value)
+void data_set_set_field(struct ipfix_data_set *data_set, struct ipfix_template *templ, uint32_t enterprise, uint16_t id, uint8_t *value)
 {
 	int field_offset;
 	uint16_t setlen = ntohs(data_set->header.length);
 	uint8_t *ptr = data_set->records;
-	struct ipfix_template_row *row = template_get_field(templ, id, &field_offset);
+	struct ipfix_template_row *row = template_get_field(templ, enterprise, id, &field_offset);
 
 	if (!row) {
 		return;

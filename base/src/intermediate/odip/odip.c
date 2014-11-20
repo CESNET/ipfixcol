@@ -119,9 +119,9 @@ void templates_processor(uint8_t *rec, int rec_len, void *data)
 	
 	/* which version of ip should be added */
 	int add = 0;
-	if (proc->info->l3_proto == 4 && template_record_get_field(record, ODIP4_FIELD, NULL) == NULL) {
+	if (proc->info->l3_proto == 4 && template_record_get_field(record, 0, ODIP4_FIELD, NULL) == NULL) {
 		add = 4;
-	} else if (proc->info->l3_proto == 6 && template_record_get_field(record, ODIP6_FIELD, NULL) == NULL) {
+	} else if (proc->info->l3_proto == 6 && template_record_get_field(record, 0, ODIP6_FIELD, NULL) == NULL) {
 		add = 6;
 	}
 	
@@ -315,9 +315,9 @@ int intermediate_process_message(void *config, void *message)
 		proc.offset += 4;
 		proc.length = 4;
 		if (info->l3_proto == 4) {
-			proc.add_orig_odip = (bool) !template_get_field(templ, ODIP4_FIELD, NULL);
+			proc.add_orig_odip = (bool) !template_get_field(templ, 0, ODIP4_FIELD, NULL);
 		} else {
-			proc.add_orig_odip = (bool) !template_get_field(templ, ODIP6_FIELD, NULL);
+			proc.add_orig_odip = (bool) !template_get_field(templ, 0, ODIP6_FIELD, NULL);
 		}
 
 		new_msg->data_couple[i].data_set = ((struct ipfix_data_set *) ((uint8_t *)proc.msg + proc.offset - 4));

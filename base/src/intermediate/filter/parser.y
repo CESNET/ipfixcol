@@ -84,6 +84,7 @@ char *s;
 int i;
 struct filter_value *v;
 struct filter_treenode *n;
+struct filter_field *f;
 }
 
 /* tokens that are later also included in lexer */
@@ -106,7 +107,7 @@ struct filter_treenode *n;
 
 %type <n> explist exp start
 %type <v> value
-%type <i> field
+%type <f> field
 
 %left OPERATOR
 
@@ -143,8 +144,8 @@ value:
 	;
 	
 field:
-	  FIELD { $$ = filter_parse_field($1, doc, context); free($1); if ($$ < 0) YYABORT; }
-	| RAWFIELD { $$ = filter_parse_rawfield($1); free($1); if ($$ < 0) YYABORT; }
+	  FIELD    { $$ = filter_parse_field($1, doc, context); free($1); if (!$$) YYABORT; }
+	| RAWFIELD { $$ = filter_parse_rawfield($1);            free($1); if (!$$) YYABORT; }
 	;
 
 %%

@@ -51,93 +51,139 @@
 
 //#define YY_DECL int yylex(yyscan_t scanner)
 
+/**
+ * \brief Type of tree nodes
+ */
 enum nodetype {
-	NODE_LEAF,
-	NODE_AND,
-	NODE_OR,
-	NODE_EXISTS
+	NODE_LEAF,  /**< leaf node */
+	NODE_AND,   /**< subtree && subtree */
+	NODE_OR,    /**< subtree || subtree */
+	NODE_EXISTS /**< leaf node for testing presence of some field in record */
 };
 
-
+/**
+ * \brief Comparison operators
+ */
 enum operators {
-	OP_EQUAL,
-	OP_LESS,
-	OP_LESS_EQUAL,
-	OP_GREATER,
-	OP_GREATER_EQUAL,
-	OP_NOT_EQUAL,
-	OP_NONE,  /* string values only */
+	OP_EQUAL,           /**< == */
+	OP_LESS,            /**< <  */
+	OP_LESS_EQUAL,      /**< <= */
+	OP_GREATER,         /**< >  */
+	OP_GREATER_EQUAL,   /**< >= */
+	OP_NOT_EQUAL,       /**< != */
+	OP_NONE,            /**< string values only */
 };
 
+/**
+ * \brief Value types
+ */
 enum valtype {
-	VT_NUMBER,
-	VT_STRING,
-	VT_REGEX
+	VT_NUMBER,  /**< numeric value */
+	VT_STRING,  /**< string value  */
+	VT_REGEX    /**< regular expression */
 };
 
+/**
+ * \brief List of known sources
+ */
 struct filter_source {
-	uint32_t id;
-	struct filter_source *next;
+	uint32_t id;                /**< ODID */
+	struct filter_source *next; /**< next source in list */
 };
 
-
+/**
+ * \brief Plugin configuration
+ */
 struct filter_config {
-	bool remove_original;
-	void *ip_config;
-	struct filter_profile *profiles;
-	struct filter_profile *default_profile;
+	bool remove_original;   /**< keep only filtered records */
+	void *ip_config;        /**< plugin configuration for IPFIXcol */
+	struct filter_profile *profiles;        /**< list of filter profiles */
+	struct filter_profile *default_profile; /**< default profile */
 };
 
+/**
+ * \brief Tree node value structure
+ */
 struct filter_value {
-	enum valtype type;
-	uint8_t *value;
-	int length;
+	enum valtype type;  /**< value type */
+	uint8_t *value;     /**< data */
+	int length;         /**< data length */
 };
 
+/**
+ * \brief Field identifier
+ */
+struct filter_field {
+    uint32_t enterprise;/**< enterprise number */
+    uint16_t id;        /**< element ID */
+};
+
+/**
+ * \brief Tree node structure
+ * 
+ * Each treenode keeps some part of filter expression
+ * Leaf nodes: field op value
+ * Exists nodes: EXISTS field
+ * And nodes: left && right
+ * Or nodes:  left || right
+ */
 struct filter_treenode {
-	bool negate;
-	bool fits;
-	int field;
-	enum nodetype type;
-	enum operators op;
-	struct filter_value *value;
-	struct filter_treenode *left, *right;
+	bool negate;        /**< negation flag */
+	enum nodetype type; /**< type of node (leaf | exists | or | and) */
+	enum operators op;  /**< comparison operator */
+        struct filter_field *field; /**< IPFIX field identifier */
+	struct filter_value *value; /**< value compared with the same field in data records */
+	struct filter_treenode *left, *right; /**< subtrees */
 };
 
+/**
+ * \brief Profile structure
+ * 
+ * Each filter string is representing one filter profile
+ */
 struct filter_profile {
-	struct input_info *input_info;
-	uint32_t new_odid;
-	struct filter_treenode *root;
-	struct filter_source *sources;
-	struct filter_profile *next;
+	struct input_info *input_info;  /**< input info for filtered messages */
+	uint32_t new_odid;              /**< ODID for filtered messages */
+	struct filter_treenode *root;   /**< filter tree */
+	struct filter_source *sources;  /**< list of supported sources (ODIDs) */
+	struct filter_profile *next;    /**< next profile in list */
 };
 
+/**
+ * \brief Data for parsing filter
+ * 
+ * This structure is given into BISON parser and may be passed into parsing functions
+ */
 struct filter_parser_data {
-	struct filter_profile *profile;
-	xmlDoc *doc;
-	xmlXPathContextPtr context;
-	void *scanner;
-	char *filter;
+	struct filter_profile *profile; /**< actual profile */
+	xmlDoc *doc;                    /**< ipfix-elements.xml */
+	xmlXPathContextPtr context;     /**< xml context */
+	void *scanner;                  /**< FLEX scanner */
+	char *filter;                   /**< parsed filter */
 };
 
 
 /**
  * \brief Parse field name
  *
- * \param[in] field Field name
+ * Searches field name in ipfix-elements.xml and converts it into field ID
+ * 
+ * \param[in] name Field name
  * \param[in] doc Elements document
  * \param[in] context Elements XML context
- * \return Information Element ID
+ * \return filter field structure
  */
-int filter_parse_field(char *field, xmlDoc *doc, xmlXPathContextPtr context);
+struct filter_field *filter_parse_field(char *name, xmlDoc *doc, xmlXPathContextPtr context);
 
 /**
  * \brief Parse raw field name
+ * 
+ * Converts raw field name (eXidYY) into ID
  *
  * \param[in] rawfield Raw field name
- * \return Information Element ID
+ * \return filter field structure
  */
-int filter_parse_rawfield(char *rawfield);
+struct filter_field *filter_parse_rawfield(char *rawfield);
 
 /**
  * \brief Parse number in format [0-9]+[kKmMgGtT]
@@ -198,21 +244,21 @@ struct filter_value *filter_parse_timestamp(char *tstamp);
 /**
  * \brief Create new leaf treenode
  *
- * \param[in] field Field number
+ * \param[in] field Field ID
  * \param[in] operator Operator type
  * \param[in] value Pointer to value
  * \return Pointer to new leaf treenode
  */
-struct filter_treenode *filter_new_leaf_node(int field, char *op, struct filter_value *value);
+struct filter_treenode *filter_new_leaf_node(struct filter_field *field, char *op, struct filter_value *value);
 
 /**
  * \brief Create new leaf treenode without specified operator
  *
- * \param[in] field Field number
+ * \param[in] field Field ID
  * \param[in] value Pointer to value
  * \return Pointer to new leaf treenode
  */
-struct filter_treenode *filter_new_leaf_node_opless(int field, struct filter_value *value);
+struct filter_treenode *filter_new_leaf_node_opless(struct filter_field *field, struct filter_value *value);
 
 /**
  * \brief Decode node type
@@ -238,7 +284,7 @@ struct filter_treenode *filter_new_parent_node(struct filter_treenode *left, cha
  * \param[in] field Field ID
  * \return Pointer to new node
  */
-struct filter_treenode *filter_new_exists_node(int field);
+struct filter_treenode *filter_new_exists_node(struct filter_field *field);
 
 /**
  * \brief Set node negated

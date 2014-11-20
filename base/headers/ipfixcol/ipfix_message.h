@@ -142,51 +142,56 @@ API int message_free(struct ipfix_message *msg);
  *
  * \param[in] record Pointer to data record
  * \param[in] templ Data record's template
+ * \param[in] enterprise Enterprise number
  * \param[in] id Field id
  * \param[out] data_length Length of returned data
  * \return Pointer to field
  */
-API uint8_t *data_record_get_field(uint8_t *record, struct ipfix_template *templ, uint16_t id, int *data_length);
+API uint8_t *data_record_get_field(uint8_t *record, struct ipfix_template *templ, uint32_t enterprise, uint16_t id, int *data_length);
 
 /**
  * \brief Set field value
  *
  * \param[in] record Pointer to data record
  * \param[in] templ Data record's template
+ * \param[in] enterprise Enterprise number
  * \param[in] id Field id
  * \param[in] value Field value
  */
-API void data_record_set_field(uint8_t *record, struct ipfix_template *templ, uint16_t id, uint8_t *value);
+API void data_record_set_field(uint8_t *record, struct ipfix_template *templ, uint32_t enterprise, uint16_t id, uint8_t *value);
 
 /**
  * \brief Set field value for each data record in set
  *
  * \param[in] set Data set
  * \param[in] templ Data set's template
+ * \param[in] enterprise Enterprise number
  * \param[in] id Field ID
  * \param[in] value Field value
  */
-API void data_set_set_field(struct ipfix_data_set *set, struct ipfix_template *templ, uint16_t id, uint8_t *value);
+API void data_set_set_field(struct ipfix_data_set *set, struct ipfix_template *templ, uint32_t enterprise, uint16_t id, uint8_t *value);
 
 /**
  * \brief Get template record field
  *
  * \param[in] rec Template record
+ * * \param[in] enterprise Enterprise number
  * \param[in] id  field id
  * \param[out] data_offset offset data record specified by this template record
  * \return pointer to inserted field
  */
-API struct ipfix_template_row *template_record_get_field(struct ipfix_template_record *rec, uint16_t id, int *data_offset);
+API struct ipfix_template_row *template_record_get_field(struct ipfix_template_record *rec, uint32_t enterprise, uint16_t id, int *data_offset);
 
 /**
  * \brief Get template record field
  *
  * \param[in] templ Template
+ * \param[in] enterprise Enterprise number
  * \param[in] id  field id
  * \param[out] data_offset offset data record specified by this template record
  * \return pointer to inserted field
  */
-API struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint16_t id, int *data_offset);
+API struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint32_t enterprise, uint16_t id, int *data_offset);
 
 /**
  * \brief Compute data record's length
