@@ -1,0 +1,31 @@
+# Arguments for fbitdump tests. More info below arguments.
+-s%srcip4/%byt -o "fmt:%srcip4 %byt" 
+-s%dstip4/%byt -o "fmt:%dstip4 %byt" 
+-s%srcip6/%byt -o "fmt:%srcip6 %byt" 
+-s%dstip6/%byt -o "fmt:%dstip6 %byt" 
+-s%dstip4/%byt "(%srcport 80 or %srcport 443) and %proto tcp" -o "fmt:%dstip4 %byt" 
+-s%dstip6/%byt "(%srcport 80 or %srcport 443) and %proto tcp" -o "fmt:%dstip6 %byt" 
+-s%srcip4/%byt "(%srcport 80 or %srcport 443) and %proto tcp" -o "fmt:%srcip4 %byt" 
+-s%srcip6/%byt "(%srcport 80 or %srcport 443) and %proto tcp" -o "fmt:%srcip6 %byt" 
+-s%srcip4/%byt -o "fmt:%srcip4 %byt %fl" 
+-s%srcip6/%byt -o "fmt:%srcip6 %byt %fl" 
+-s%dstip4/%byt -o "fmt:%dstip4 %byt %bps" 
+-s%dstip6/%byt -o "fmt:%dstip6 %byt %bps" 
+-s%srcip4/%byt -o "fmt:%srcip4 %byt %bps" 
+-s%srcip6/%byt -o "fmt:%srcip6 %byt %bps" 
+-s%srcip4/%fl -o "fmt:%srcip4 %fl" 
+-s%dstip4/%fl -o "fmt:%dstip4 %fl" 
+-s%srcip6/%fl -o "fmt:%srcip6 %fl" 
+-s%dstip6/%fl -o "fmt:%dstip6 %fl" 
+-s%srcport/%byt "%proto UDP" -o "fmt:%srcport %byt" 
+-s%dstport/%byt "%proto UDP" -o "fmt:%dstport %byt" 
+-s%srcport/%byt "%proto TCP" -o "fmt:%srcport %byt" 
+-s%dstport/%byt "%proto TCP" -o "fmt:%srcport %byt" 
+-s%dstas/%byt -o "fmt:%dstas %byt %bps" 
+-s%srcas/%byt -o "fmt:%srcas %byt %bps" 
+-s%httph -o http4-invea -o "fmt:%httph %fl" 
+END
+
+Please, avoid whitespaces until "END" keyword.
+You can add/remove test by simply adding/removing one line of arguments.
+You can add hash symbol (#) in front of the line, if you want to skip test.
