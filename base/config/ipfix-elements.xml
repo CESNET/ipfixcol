@@ -2520,6 +2520,35 @@
 
 	<element>
 		<enterprise>8057</enterprise>
+		<id>700</id>
+		<name>HBType</name>
+		<dataType>unsigned8</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>701</id>
+		<name>HBDir</name>
+		<dataType>unsigned8</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>702</id>
+		<name>HBSizeMsg</name>
+		<dataType>unsigned16</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>703</id>
+		<name>HBSizePayload</name>
+		<dataType>unsigned16</dataType>
+		<semantic></semantic>
+	</element>
+
+	<element>
+		<enterprise>8057</enterprise>
 		<id>800</id>
 		<name>HTTPRequestMethod</name>
 		<dataType>unsigned32</dataType>
