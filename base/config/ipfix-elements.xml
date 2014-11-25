@@ -226,6 +226,20 @@
 	</element>
 	<element>
 		<enterprise>0</enterprise>
+		<id>34</id>
+		<name>samplingInterval</name>
+		<dataType>unsigned32</dataType>
+		<semantic>quantity</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>35</id>
+		<name>samplingAlgorithm</name>
+		<dataType>unsigned8</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
 		<id>36</id>
 		<name>flowActiveTimeout</name>
 		<dataType>unsigned16</dataType>
