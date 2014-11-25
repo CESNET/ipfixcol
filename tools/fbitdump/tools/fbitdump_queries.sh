@@ -36,54 +36,61 @@
 # if advised of the possibility of such damage.
 #
 
-queries=(
-'fbitdump -R DATA_DIR -s%srcip4/%byt -o "fmt:%srcip4 %byt"'
-'fbitdump -R DATA_DIR -s%dstip4/%byt -o "fmt:%dstip4 %byt"'
-'fbitdump -R DATA_DIR -s%srcip6/%byt -o "fmt:%srcip6 %byt"'
-'fbitdump -R DATA_DIR -s%dstip6/%byt -o "fmt:%dstip6 %byt"'
-'fbitdump -R DATA_DIR -s%dstip4/%byt "(%srcport 80 or %srcport 443) and %proto tcp" -o "fmt:%dstip4 %byt"'
-'fbitdump -R DATA_DIR -s%dstip6/%byt "(%srcport 80 or %srcport 443) and %proto tcp" -o "fmt:%dstip6 %byt"'
-'fbitdump -R DATA_DIR -s%srcip4/%byt "(%srcport 80 or %srcport 443) and %proto tcp" -o "fmt:%srcip4 %byt"'
-'fbitdump -R DATA_DIR -s%srcip6/%byt "(%srcport 80 or %srcport 443) and %proto tcp" -o "fmt:%srcip6 %byt"'
-'fbitdump -R DATA_DIR -s%srcip4/%byt -o "fmt:%srcip4 %byt %fl"'
-'fbitdump -R DATA_DIR -s%srcip6/%byt -o "fmt:%srcip6 %byt %fl"'
-'fbitdump -R DATA_DIR -s%dstip4/%byt -o "fmt:%dstip4 %byt %bps"'
-'fbitdump -R DATA_DIR -s%dstip6/%byt -o "fmt:%dstip6 %byt %bps"'
-'fbitdump -R DATA_DIR -s%srcip4/%byt -o "fmt:%srcip4 %byt %bps"'
-'fbitdump -R DATA_DIR -s%srcip6/%byt -o "fmt:%srcip6 %byt %bps"'
-'fbitdump -R DATA_DIR -s%srcip4/%fl -o "fmt:%srcip4 %fl"'
-'fbitdump -R DATA_DIR -s%dstip4/%fl -o "fmt:%dstip4 %fl"'
-'fbitdump -R DATA_DIR -s%srcip6/%fl -o "fmt:%srcip6 %fl"'
-'fbitdump -R DATA_DIR -s%dstip6/%fl -o "fmt:%dstip6 %fl"'
-'fbitdump -R DATA_DIR -s%srcport/%byt "%proto UDP" -o "fmt:%srcport %byt"'
-'fbitdump -R DATA_DIR -s%dstport/%byt "%proto UDP" -o "fmt:%dstport %byt"'
-'fbitdump -R DATA_DIR -s%srcport/%byt "%proto TCP" -o "fmt:%srcport %byt"'
-'fbitdump -R DATA_DIR -s%dstport/%byt "%proto TCP" -o "fmt:%srcport %byt"'
-'fbitdump -R DATA_DIR -s%dstas/%byt  -o "fmt:%dstas %byt %bps"'
-'fbitdump -R DATA_DIR -s%srcas/%byt  -o "fmt:%srcas %byt %bps"'
-'fbitdump -R DATA_DIR -s%httph -o http4-invea -o "fmt:%httph %fl"'
-)
-
 # error report settings
 MAIL_SUBJ="report"
 MAIL_ADDR="petr.velan@cesnet.cz"
 
+# initialize paths
+DATA_DIR="";
+REPORT_DIR="";
+QUERIES="";
+
 # print usage
 function usage()
 {
-    echo -e "\nUsage: $0 /path/to/data/dir/ /path/to/reports/dir"
-    echo -e "\n  data dir can be set in fbitdump -R option notation (/some/dir/first:last)\n"
-    exit 1
+    echo "";
+    echo "Usage: $0 -d <data_dir> -r <reports_dir> -q <queries_file>"
+    echo "  -h                  Show this text"
+    echo "  -d <data_dir>       Path to directory with fastbit data, can be set in fbitdump -R option notation (/some/dir/first:last)"
+    echo "  -r <repors_dir>     Path to directory with reports, subdirs Year/month/day will be created automatically"
+    echo "  -q <queries_file>   File with queries that will be performed (fbitdump arguments without specified data directory)"
+    echo "";
+    exit 1;
 }
 
-# check arguments
-if [ $# -ne 2 ] || [ $1 = "-h" ] || [ $1 = "--help" ]; then usage; fi
+# parse arguments
+while getopts ":hd:r:q:" opt; do
+    case $opt in
+    h)
+        usage;
+        ;;
+    d)
+        DATA_DIR=$OPTARG
+        ;;
+    r)
+        REPORT_DIR=$OPTARG
+        ;;
+    q)
+        QUERIES=$OPTARG
+        ;;
+    \?)
+        echo "Invalid option: -$OPTARG" >&2
+        usage;
+        ;;
+    :)
+        echo "Option -$OPTARG requires an argument." >&2
+        usage;
+        ;;
+    esac
+done
 
-# save data directory
-DATADIR="$1"
+# check directories
+if [ -z $DATA_DIR ];   then echo "Path to data directory must be set"    >&2; exit 1; fi
+if [ -z $REPORT_DIR ]; then echo "Path to reports directory must be set" >&2; exit 1; fi
+if [ -z $QUERIES ];    then echo "Path to file with fbitdump queries"    >&2; exit 1; fi
 
 # create directory for report
-REPORTDIR="$2/$(date +%Y/%m/%d)"
+REPORTDIR="$REPORT_DIR/$(date +%Y/%m/%d)"
 mkdir -p "$REPORTDIR"
 
 # initialize report file
@@ -98,13 +105,15 @@ OUT=`mktemp`
 ERR=`mktemp`
 
 # Do queries
-for query in "${queries[@]}"
-do 
-    # substitute data directory
-    fbit="${query/DATA_DIR/$DATADIR}"
+while read query; 
+do
+    # ignore comments, process queries until END occurs
+    if [ "${query:0:1}" = "#" ]; then continue; fi
+    if [ "$query" = "END" ];     then break; fi
 
-    # perform operation
-    eval "$fbit" 1>"$OUT" 2>"$ERR"
+    # process test
+    fbit="fbitdump -R $DATA_DIR $query";
+    eval $fbit >"$OUT" 2>"$ERR"
     ret=$?
     
     # check return value
@@ -120,7 +129,7 @@ do
     # clear stdout and stderr
     echo "" > "$OUT"
     echo "" > "$ERR"
-done
+done < "$QUERIES"
 
 # send mail if any error occured
 if [ ! -z "$ERRORS" ]; then
