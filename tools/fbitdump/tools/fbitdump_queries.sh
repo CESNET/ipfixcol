@@ -45,6 +45,9 @@ DATA_DIR="";
 REPORT_DIR="";
 QUERIES="";
 
+OFFSET=400;
+ALIGN=300;
+
 # print usage
 function usage()
 {
@@ -93,6 +96,9 @@ if [ -z $QUERIES ];    then echo "Path to file with fbitdump queries"    >&2; ex
 REPORTDIR="$REPORT_DIR/$(date +%Y/%m/%d)"
 mkdir -p "$REPORTDIR"
 
+DATAH=`nftime -f "%Y/%m/%d/ic%Y%m%d%H0000:%Y/%m/%d/ic%Y%m%d%H5500" -w $ALIGN -o $OFFSET`
+DATADIR="$DATA_DIR/$DATAH"
+
 # initialize report file
 REPORT="$REPORTDIR/report-$(date +%H%M).txt"
 rm -f "$REPORT"
@@ -112,7 +118,7 @@ do
     if [ "$query" = "END" ];     then break; fi
 
     # process test
-    fbit="fbitdump -R $DATA_DIR $query";
+    fbit="fbitdump -R $DATADIR $query";
     eval $fbit >"$OUT" 2>"$ERR"
     ret=$?
     
