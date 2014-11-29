@@ -519,17 +519,16 @@ static int process_data_sets(const struct ipfix_message *ipfix_msg, unirec_confi
 							conf->ifc[i].buffer,
 							conf->ifc[i].bufferStaticSize + conf->ifc[i].bufferDynSize);
 							// conf->ifc[i].timeout); // Timeout is set by IFCCTL	
+				} else {
+					// Set default values for dynamic fields
+					for (int j = 0; j < conf->ifc[i].dynCount; j++) {
+						conf->ifc[i].dynAr[j]->valueFilled = 0;
+						conf->ifc[i].dynAr[j]->valueSize = 0;
+					}
 				}
 
 				// Clear static fields
 				memset(conf->ifc[i].buffer, 0, conf->ifc[i].bufferStaticSize);
-
-
-				// Clear dynamic fields
-				for (int j = 0; j < conf->ifc[i].dynCount; j++) {
-					conf->ifc[i].dynAr[j]->valueFilled = 0;
-				}
-
 
 				conf->ifc[i].requiredFilled = 0;
 				conf->ifc[i].bufferDynSize = 0;
@@ -1289,7 +1288,7 @@ int storage_close (void **config)
 {
 	unirec_config *conf = (unirec_config*) *config;
 
-	printf("Plugine is shuting down for ODID: %u\n", conf->odid);
+	printf("Plugin is shuting down for ODID: %u\n", conf->odid);
 
 	trap_ctx_finalize(&conf->trap_ctx_ptr);
 
