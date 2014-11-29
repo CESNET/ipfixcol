@@ -2893,4 +2893,18 @@
 		<dataType>unsigned8</dataType>
 		<semantic></semantic>
 	</element>
+	<element>
+                <enterprise>39499</enterprise>
+                <id>51</id>
+                <name>sipUserAgent</name>
+                <dataType>string</dataType>
+                <semantic></semantic>
+        </element>
+        <element>
+                <enterprise>39499</enterprise>
+                <id>52</id>
+                <name>sipRequestUri</name>
+                <dataType>string</dataType>
+                <semantic></semantic>
+        </element> 
 </ipfix-elements>

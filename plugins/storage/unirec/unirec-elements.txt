@@ -80,3 +80,5 @@ INVEA_RTCP_LOST                 4               e39499id47              RTCP los
 INVEA_RTCP_PACKETS              8               e39499id48              RTCP packets
 INVEA_RTCP_OCTETS               8               e39499id49              RTCP octets
 INVEA_RTCP_SOURCE_COUNT         1               e39499id50              RTCP source count
+INVEA_SIP_USER_AGENT		-1              e39499id51              SIP User Agent
+INVEA_SIP_REQUEST_URI		-1              e39499id52              SIP Request-URI
