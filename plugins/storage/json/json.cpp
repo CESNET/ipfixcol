@@ -125,7 +125,7 @@ int storage_init (char *params, void **config)
 		*config = conf;
 	} catch (std::exception &e) {
 		*config = NULL;
-		MSG_ERROR(msg_module, "%s\n", e.what());
+		MSG_ERROR(msg_module, "%s", e.what());
 		return 1;
 	}
 	
@@ -143,7 +143,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	try {
 		conf->storage->storeDataSets(ipfix_msg);
 	} catch (std::exception &e) {
-		MSG_WARNING(msg_module, "%s\n", e.what());
+		MSG_WARNING(msg_module, "%s", e.what());
 		return 1;
 	}
 	
@@ -160,7 +160,7 @@ int store_now (const void *config)
 extern "C"
 int storage_close (void **config)
 {
-	MSG_DEBUG(msg_module, "CLOSING\n");
+	MSG_DEBUG(msg_module, "CLOSING");
 	struct json_conf *conf = (struct json_conf *) *config;
 	
 	/* Destroy sender */
@@ -174,7 +174,6 @@ int storage_close (void **config)
 	
 	*config = NULL;
 	
-	MSG_DEBUG(msg_module, "CLOSE");
 	return 0;
 }
 
