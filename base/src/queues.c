@@ -248,9 +248,12 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
 					}
 
 					/* Decrement reference on templates */
-					for (i = 0; i < 1024 && rbuffer->data[rbuffer->read_offset]->data_couple[i].data_template != NULL; ++i) {
-						tm_template_reference_dec(rbuffer->data[rbuffer->read_offset]->data_couple[i].data_template);
+					for (i = 0; i < 1024 && rbuffer->data[rbuffer->read_offset]->data_couple[i].data_set != NULL; ++i) {
+						if (rbuffer->data[rbuffer->read_offset]->data_couple[i].data_template != NULL) {
+							tm_template_reference_dec(rbuffer->data[rbuffer->read_offset]->data_couple[i].data_template);
+						}
 					}
+					
 					free (rbuffer->data[rbuffer->read_offset]);
 				}
 			}

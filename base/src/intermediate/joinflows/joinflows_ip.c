@@ -787,7 +787,7 @@ void joinflows_copy_template_info(struct ipfix_template *to, struct ipfix_templa
 
 int intermediate_process_message(void *config, void *message)
 {
-	uint32_t orig_odid, i, prevoffset, tsets = 0, otsets = 0, trec, otrec;
+	uint32_t orig_odid, i, new_i = 0, prevoffset, tsets = 0, otsets = 0, trec, otrec;
 	uint32_t newsn;
 	struct joinflows_processor proc;
 	struct ipfix_message *msg, *new_msg;
@@ -900,17 +900,20 @@ int intermediate_process_message(void *config, void *message)
 		proc.length = 4;
 		proc.add_orig_odid = (bool) !template_get_field(templ, 0, ORIGINAL_ODID_FIELD, NULL);
 
-		new_msg->data_couple[i].data_set = ((struct ipfix_data_set *) ((uint8_t *)proc.msg + proc.offset - 4));
-		new_msg->data_couple[i].data_template = map->new_templ->templ;
+		new_msg->data_couple[new_i].data_set = ((struct ipfix_data_set *) ((uint8_t *)proc.msg + proc.offset - 4));
+		new_msg->data_couple[new_i].data_template = map->new_templ->templ;
 
 		/* Copy template info and increment reference */
-		joinflows_copy_template_info(new_msg->data_couple[i].data_template, templ);
-		tm_template_reference_inc(new_msg->data_couple[i].data_template);
+		joinflows_copy_template_info(new_msg->data_couple[new_i].data_template, templ);
+		tm_template_reference_inc(new_msg->data_couple[new_i].data_template);
 
 		data_set_process_records(msg->data_couple[i].data_set, templ, &data_processor, (void *) &proc);
 
-		new_msg->data_couple[i].data_set->header.length = htons(proc.length);
-		new_msg->data_couple[i].data_set->header.flowset_id = htons(new_msg->data_couple[i].data_template->template_id);
+		new_msg->data_couple[new_i].data_set->header.length = htons(proc.length);
+		new_msg->data_couple[new_i].data_set->header.flowset_id = htons(new_msg->data_couple[new_i].data_template->template_id);
+		
+		/* Move to the next data_couple in new message */
+		new_i++;
 	}
 
 	/* Dont send empty message */
@@ -921,7 +924,7 @@ int intermediate_process_message(void *config, void *message)
 		return 0;
 	}
 
-	new_msg->data_couple[i].data_set = NULL;
+	new_msg->data_couple[new_i].data_set = NULL;
 
 	new_msg->pkt_header->observation_domain_id = htonl(src->new_odid);
 	new_msg->pkt_header->sequence_number = htonl(newsn);

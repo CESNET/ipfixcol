@@ -231,7 +231,7 @@ int intermediate_process_message(void *config, void *message)
 	
 	struct input_info_network *info = (struct input_info_network *) msg->input_info;
 	struct odip_processor proc;
-	int i, prevoffset, tsets = 0, otsets = 0;
+	int i, new_i = 0, prevoffset, tsets = 0, otsets = 0;
 	
 	/* source closed or not network source */
 	if (msg->source_status == SOURCE_STATUS_CLOSED || msg->input_info->type == SOURCE_TYPE_IPFIX_FILE) {
@@ -330,8 +330,8 @@ int intermediate_process_message(void *config, void *message)
 			proc.add_orig_odip = (bool) !template_get_field(templ, 0, ODIP6_FIELD, NULL);
 		}
 
-		new_msg->data_couple[i].data_set = ((struct ipfix_data_set *) ((uint8_t *)proc.msg + proc.offset - 4));
-		new_msg->data_couple[i].data_template = new_templ;
+		new_msg->data_couple[new_i].data_set = ((struct ipfix_data_set *) ((uint8_t *)proc.msg + proc.offset - 4));
+		new_msg->data_couple[new_i].data_template = new_templ;
 
 		/* Copy template info and increment reference */
 		odip_copy_template_info(new_templ, templ);
@@ -339,11 +339,14 @@ int intermediate_process_message(void *config, void *message)
 
 		data_set_process_records(msg->data_couple[i].data_set, templ, &data_processor, (void *) &proc);
 
-		new_msg->data_couple[i].data_set->header.length = htons(proc.length);
-		new_msg->data_couple[i].data_set->header.flowset_id = htons(new_msg->data_couple[i].data_template->template_id);
+		new_msg->data_couple[new_i].data_set->header.length = htons(proc.length);
+		new_msg->data_couple[new_i].data_set->header.flowset_id = htons(new_msg->data_couple[new_i].data_template->template_id);
+		
+		/* Move to the next data_couple in new message */
+		new_i++;
 	}
 	
-	new_msg->data_couple[i].data_set = NULL;
+	new_msg->data_couple[new_i].data_set = NULL;
 
 	new_msg->pkt_header->length = htons(proc.offset);
 	new_msg->input_info = msg->input_info;
