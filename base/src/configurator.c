@@ -70,6 +70,16 @@ do {\
 } while (0)
 
 /**
+ * \addtogroup internalConfig
+ * \ingroup internalAPIs
+ *
+ * These functions implements processing of configuration data of the
+ * collector (mainly plugins (re)configuration etc.).
+ *
+ * @{
+ */
+
+/**
  * \brief Open xml document
  * 
  * \param filename Path to xml file
@@ -772,3 +782,5 @@ void config_destroy(configurator *config)
 	/* Free configurator */
 	free(config);
 }
+
+/**@}*/

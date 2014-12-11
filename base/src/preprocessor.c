@@ -65,6 +65,7 @@ struct odid_info *odid_info = NULL;
 
 /**
  * \brief Get sequence number counter for given ODID
+ * 
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number counter
  */
@@ -82,7 +83,8 @@ struct odid_info *odid_info_get(uint32_t odid)
 }
 
 /**
- * \brief Add new SN counter
+ * \brief Add new odid info
+ * 
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number counter
  */
@@ -110,7 +112,8 @@ struct odid_info *odid_info_add(uint32_t odid)
 }
 
 /**
- * \brief Add new source for SN counter
+ * \brief Add new source for odid info
+ * 
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number counter
  */
@@ -128,7 +131,8 @@ struct odid_info *odid_info_add_source(uint32_t odid)
 }
 
 /**
- * \brief Remove source from SN counter
+ * \brief Remove source from odid info
+ * 
  * \param[in] odid Observation Domain ID
  */
 void odid_info_remove_source(uint32_t odid)
@@ -162,6 +166,7 @@ struct odid_info *odid_info_get_or_add(uint32_t odid)
 
 /**
  * \brief Get sequence number for given ODID
+ * 
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number value
  */
@@ -206,8 +211,6 @@ void odid_info_destroy()
 
 /**
  * \brief Set new output queue
- * 
- * @param out_queue
  */
 void preprocessor_set_output_queue(struct ring_buffer *out_queue)
 {
@@ -216,8 +219,6 @@ void preprocessor_set_output_queue(struct ring_buffer *out_queue)
 
 /**
  * \brief Returns pointer to preprocessors output queue.
- *
- * @return preprocessors output queue
  */
 struct ring_buffer *get_preprocessor_output_queue()
 {
@@ -288,7 +289,6 @@ static void preprocessor_udp_init (struct input_info_network *input_info, struct
 /**
  * \brief Process one template from template set
  *
- * \param[in] tm   template manager
  * \param[in] tmpl template
  * \param[in] max_len maximal length of this template
  * \param[in] type type of the template
@@ -387,7 +387,6 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
  *   rest of the template set is discarded (template length cannot be
  *   determined)
  *
- * @param[in,out] template_mgr	Template manager
  * @param[in] msg IPFIX			message
  * @return uint32_t Number of received data records
  */

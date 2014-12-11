@@ -92,8 +92,6 @@ void preprocessor_set_output_queue(struct ring_buffer *out_queue);
 
 /**
  * \brief Close all data managers and their storage plugins
- *
- * @return void
  */
 void preprocessor_close ();
 

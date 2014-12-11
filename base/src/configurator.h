@@ -42,6 +42,16 @@
 
 #include "config.h"
 
+/**
+ * \addtogroup internalConfig
+ * \ingroup internalAPIs
+ *
+ * These functions implements processing of configuration data of the
+ * collector (mainly plugins (re)configuration etc.).
+ *
+ * @{
+ */
+
 /* Plugin type */
 enum plugin_types {
     PLUGIN_INPUT,
@@ -81,13 +91,11 @@ typedef struct ipfix_config {
     int ip_id;                      /**< Internal process ID */
 } configurator;
 
-
-/* Public: */
 /**
  * \brief Initialize configurator
  * 
- * \param internal path to internalcfg.xml
- * \param startup  path to startup.xml
+ * \param[in] internal path to internalcfg.xml
+ * \param[in] startup  path to startup.xml
  * \return initialized configurator
  */
 configurator *config_init(const char *internal, const char *startup);
@@ -95,7 +103,7 @@ configurator *config_init(const char *internal, const char *startup);
 /**
  * \brief Reconfigure collector
  * 
- * \param config configurator structure
+ * \param[in] config configurator structure
  * \return 0 on success
  */
 int config_reconf(configurator *config);
@@ -103,9 +111,10 @@ int config_reconf(configurator *config);
 /**
  * \brief Destroy configurator
  * 
- * \param config configurator structure
+ * \param[in] config configurator structure
  */
 void config_destroy(configurator *config);
 
-#endif	/* CONFIGURER_H */
+/**@}*/
 
+#endif	/* CONFIGURER_H */

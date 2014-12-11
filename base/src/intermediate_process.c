@@ -1,6 +1,7 @@
 /**
  * \file intermediate_process.c
  * \author Michal Srb <michal.srb@cesnet.cz>
+ * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief Intermediate Process
  *
  * Copyright (C) 2012 CESNET, z.s.p.o.
@@ -94,17 +95,8 @@ void *ip_loop(void *config)
 	return NULL;
 }
 
-
 /**
  * \brief Initialize Intermediate Process.
- *
- * \param[in] in_queue input queue
- * \param[in] out_queue output queue
- * \param[in] intermediate intermediate plugin structure
- * \param[in] xmldata XML configuration for this plugin
- * \param[in] ip_id source ID for creating templates
- * \param[out] config configuration structure
- * \return 0 on success, negative value otherwise
  */
 int ip_init(struct intermediate *conf, uint32_t ip_id)
 {
@@ -132,13 +124,8 @@ int ip_init(struct intermediate *conf, uint32_t ip_id)
 	return 0;
 }
 
-
 /**
  * \brief Pass processed IPFIX message to the output queue.
- *
- * \param[in] config configuration structure
- * \param[in] message IPFIX message
- * \return 0 on success, negative value otherwise
  */
 int pass_message(void *config, struct ipfix_message *message)
 {
@@ -156,13 +143,8 @@ int pass_message(void *config, struct ipfix_message *message)
 	return ret;
 }
 
-
 /**
  * \brief Drop IPFIX message.
- *
- * \param[in] config configuration structure
- * \param[in] message IPFIX message
- * \return 0 on success, negative value otherwise
  */
 int drop_message(void *config, struct ipfix_message *message)
 {
@@ -176,9 +158,6 @@ int drop_message(void *config, struct ipfix_message *message)
 
 /**
  * \brief Close Intermediate Process
- *
- * \param[in] config configuration structure
- * \return 0 on success
  */
 int ip_destroy(struct intermediate *conf)
 {
@@ -199,9 +178,6 @@ int ip_destroy(struct intermediate *conf)
 
 /**
  * \brief Stop Intermediate Process
- *
- * \param[in] config configuration structure
- * \return 0 on success, negative value otherwise
  */
 int ip_stop(struct intermediate *conf)
 {

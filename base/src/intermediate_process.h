@@ -1,6 +1,7 @@
 /**
  * \file intermediate_process.h
  * \author Michal Srb <michal.srb@cesnet.cz>
+ * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief Intermediate Process
  *
  * Copyright (C) 2012 CESNET, z.s.p.o.
@@ -50,17 +51,11 @@
 #include "queues.h"
 #include "config.h"
 
-
 /**
  * \brief Initialize Intermediate Process.
  *
- * \param[in] in_queue input queue
- * \param[in] out_queue output queue
  * \param[in] intermediate intermediate plugin structure
- * \param[in] xmldata XML configuration for this plugin
  * \param[in] ip_id source ID for creating templates
- * \param[in] template_mgr collector's Template Manager
- * \param[out] config configuration structure
  * \return 0 on success, negative value otherwise
  */
 int ip_init(struct intermediate *intermediate, uint32_t ip_id);

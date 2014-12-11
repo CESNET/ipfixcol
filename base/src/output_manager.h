@@ -105,6 +105,12 @@ int output_manager_start(struct storage_list *storages, int stat_interval, void 
  */
 void output_manager_close(void *config);
 
+/**
+ * \brief Set new input queue
+ * 
+ * @param in_queue input queue
+ * @return 0 on success
+ */
 int output_manager_set_in_queue(struct ring_buffer *in_queue);
 
 #endif /* OUTPUT_MANAGER_H_ */

@@ -83,6 +83,7 @@ static struct data_manager_config *get_data_mngmt_config (uint32_t id, struct da
 
 /**
  * \brief Insert new Data manager into list
+ * 
  * \param[in] output_manager Output Manager structure
  * \param[in] new_manager New Data manager
  */
@@ -99,6 +100,7 @@ void output_manager_insert(struct output_manager_config *output_manager, struct 
 
 /**
  * \brief Remove data manager from list, close it and free templates
+ * 
  * \param[in] output_manager Output Manager structure
  * \param[in] old_manager Data Manager to remove and close
  */
@@ -130,6 +132,9 @@ void output_manager_remove(struct output_manager_config *output_manager, struct 
 	tm_remove_all_odid_templates(template_mgr, odid);
 }
 
+/**
+ * \brief Set new input queue
+ */
 int output_manager_set_in_queue(struct ring_buffer *in_queue)
 {
 	if (!conf) {

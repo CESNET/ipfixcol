@@ -82,6 +82,7 @@
 /* Path to ipfix-elements.xml file */
 const char *ipfix_elements = DEFAULT_IPFIX_ELEMENTS;
 
+/* Template Manager */
 struct ipfix_template_mgr *template_mgr = NULL;
 
 /* main loop indicator */
