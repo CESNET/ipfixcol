@@ -49,22 +49,6 @@
 
 static char *msg_module = "Intermediate Process";
 
-/** configuration structure for Intermediate Process */
-struct ip_config {
-	struct ring_buffer *in_queue;
-	struct ring_buffer *out_queue;
-	char *xmldata;
-	int (*intermediate_init)(char *, void *, uint32_t, struct ipfix_template_mgr *, void **);
-	int (*intermediate_process_message)(void *, void *);
-	int (*intermediate_close)(void *);
-	void *plugin_config;
-	pthread_t thread_id;
-	char thread_name[16];
-	unsigned int index;
-	bool dropped;
-};
-
-
 /**
  * \brief Wait for data from input queue in loop.
  *
@@ -75,11 +59,9 @@ struct ip_config {
  */
 void *ip_loop(void *config)
 {
-	struct ip_config *conf;
+	struct intermediate *conf = (struct intermediate *) config;
 	struct ipfix_message *message;
 	unsigned int index;
-
-	conf = (struct ip_config *) config;
 
 	prctl(PR_SET_NAME, conf->thread_name, 0, 0, 0);
 
@@ -108,8 +90,8 @@ void *ip_loop(void *config)
 		/* update index */
 		index = (index + 1) % conf->in_queue->size;
 	}
-
-	return (void *) 0;
+	
+	return NULL;
 }
 
 
@@ -124,49 +106,30 @@ void *ip_loop(void *config)
  * \param[out] config configuration structure
  * \return 0 on success, negative value otherwise
  */
-int ip_init(struct ring_buffer *in_queue, struct ring_buffer *out_queue, 
-	struct intermediate *intermediate, char *xmldata, uint32_t ip_id,
-	struct ipfix_template_mgr *template_mgr, void **config)
+int ip_init(struct intermediate *conf, uint32_t ip_id)
 {
-	struct ip_config *conf;
 	int ret;
 
-	conf = (struct ip_config *) malloc(sizeof(*conf));
-	if (!conf) {
-		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
-		return -1;
-	}
-	memset(conf, 0, sizeof(*conf));
-
-	conf->in_queue = in_queue;
-	conf->out_queue = out_queue;
-	conf->intermediate_init = intermediate->intermediate_init;
-	conf->intermediate_process_message = intermediate->intermediate_process_message;
-	conf->intermediate_close = intermediate->intermediate_close;
-	conf->xmldata = xmldata;
-	snprintf(conf->thread_name, 16, "%s", intermediate->thread_name);
-//	conf->thread_name = intermediate->thread_name;
-
-	conf->intermediate_init(conf->xmldata, conf, ip_id, template_mgr, &(conf->plugin_config));
+	/* Initialize plugin */
+	xmlChar *ip_params = NULL;
+	xmlDocDumpMemory(conf->xml_conf->xmldata, &ip_params, NULL);
+	
+	conf->intermediate_init((char *) ip_params, conf, ip_id, template_mgr, &(conf->plugin_config));
 	if (conf->plugin_config == NULL) {
 		MSG_ERROR(msg_module, "Unable to initialize Intermediate Process");
 		return -1;
 	}
 
+	free(ip_params);
+	
 	/* start main thread */
-	ret = pthread_create(&(conf->thread_id), NULL, ip_loop, conf);
+	ret = pthread_create(&(conf->thread_id), NULL, ip_loop, (void *)conf);
 	if (ret != 0) {
 		MSG_ERROR(msg_module, "Unable to create thread for Intermediate Process");
-		goto err_init;
+		return -1;
 	}
 
-	*config = conf;
-
 	return 0;
-
-err_init:
-	free(conf);
-	return -1;
 }
 
 
@@ -179,10 +142,10 @@ err_init:
  */
 int pass_message(void *config, struct ipfix_message *message)
 {
-	struct ip_config *conf;
+	struct intermediate *conf;
 	int ret;
 
-	conf = (struct ip_config *) config;
+	conf = (struct intermediate *) config;
 
 	if (message == NULL) {
 		MSG_WARNING(msg_module, "NULL message from intermediate plugin, skipping.");
@@ -203,7 +166,7 @@ int pass_message(void *config, struct ipfix_message *message)
  */
 int drop_message(void *config, struct ipfix_message *message)
 {
-	struct ip_config *conf = (struct ip_config *) config;
+	struct intermediate *conf = (struct intermediate *) config;
 
 	rbuffer_remove_reference(conf->in_queue, conf->index, 1);
 	
@@ -217,19 +180,10 @@ int drop_message(void *config, struct ipfix_message *message)
  * \param[in] config configuration structure
  * \return 0 on success
  */
-int ip_destroy(void *config)
+int ip_destroy(struct intermediate *conf)
 {
-	struct ip_config *conf;
-
-	conf = (struct ip_config *) config;
-
 	if (!conf) {
 		return -1;
-	}
-
-	/* free XML configuration */
-	if (conf->xmldata) {
-		free(conf->xmldata);
 	}
 
 	/* free input queue (output queue will be freed by next intermediate process) */
@@ -249,14 +203,11 @@ int ip_destroy(void *config)
  * \param[in] config configuration structure
  * \return 0 on success, negative value otherwise
  */
-int ip_stop(void *config)
+int ip_stop(struct intermediate *conf)
 {
-	struct ip_config *conf;
 	void *retval;
 	int ret;
-
-	conf = (struct ip_config *) config;
-
+	
 	if (!conf) {
 		return -1;
 	}

@@ -327,6 +327,8 @@ API uint16_t tm_template_record_length(struct ipfix_template_record *templ, int 
  */
 API int tm_compare_template_records(struct ipfix_template_record *first, struct ipfix_template_record *second);
 
+
+API extern struct ipfix_template_mgr *template_mgr;
 #endif /* IPFIXCOL_TEMPLATES_H_ */
 
 /**@}*/

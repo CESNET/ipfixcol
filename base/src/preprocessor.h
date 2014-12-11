@@ -76,21 +76,18 @@ struct udp_conf {
 void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins, int source_state);
 
 /**
- * \brief This function sets the queue for preprocessor and inits crc computing.
- *
- * @param out_queue preprocessor's output queue
- * @param template_mgr collector's Template Manager
- * @return 0 on success, negative value otherwise
- */
-int preprocessor_init(struct ring_buffer *out_queue, struct ipfix_template_mgr *template_mgr);
-
-
-/**
  * \brief Returns pointer to preprocessors output queue.
  *
  * @return preprocessors output queue
  */
 struct ring_buffer *get_preprocessor_output_queue();
+
+/**
+ * \brief Set new preprocessor output queue
+ * 
+ * @param out_queue
+ */
+void preprocessor_set_output_queue(struct ring_buffer *out_queue);
 
 
 /**

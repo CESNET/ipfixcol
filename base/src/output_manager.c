@@ -55,7 +55,8 @@
 
 static const char *msg_module = "output manager";
 static const char *stat_module = "stat";
-extern struct ipfix_template_mgr *tm;
+
+struct output_manager_config *conf = NULL;
 
 /**
  * \brief Search for Data manager handling specified Observation Domain ID
@@ -126,7 +127,22 @@ void output_manager_remove(struct output_manager_config *output_manager, struct 
 	}
 	uint32_t odid = old_manager->observation_domain_id;
 	data_manager_close(&old_manager);
-	tm_remove_all_odid_templates(tm, odid);
+	tm_remove_all_odid_templates(template_mgr, odid);
+}
+
+int output_manager_set_in_queue(struct ring_buffer *in_queue)
+{
+	if (!conf) {
+		conf = (struct output_manager_config *) calloc(1, sizeof(*conf));
+		if (!conf) {
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+			return -1;
+		}
+	}
+	
+	conf->in_queue = in_queue;
+	
+	return 0;
 }
 
 /**
@@ -137,7 +153,6 @@ void output_manager_remove(struct output_manager_config *output_manager, struct 
  */
 static void *output_manager_plugin_thread(void* config)
 {
-	struct output_manager_config *conf = NULL;
 	struct data_manager_config *data_config = NULL;
 	struct ipfix_message* msg = NULL;
 	unsigned int index;
@@ -437,20 +452,20 @@ static void *statistics_thread(void* config)
  * @param[out] config configuration structure
  * @return 0 on success, negative value otherwise
  */
-int output_manager_create(struct storage_list *storages, struct ring_buffer *in_queue, int stat_interval, void **config) {
+int output_manager_start(struct storage_list *storages, int stat_interval, void **config) {
 
-	struct output_manager_config *conf;
 	int retval;
 
 	/* Allocate new Output Manager's configuration */
-	conf = (struct output_manager_config *) calloc(1, sizeof(*conf));
 	if (!conf) {
-		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
-		return -1;
+		conf = (struct output_manager_config *) calloc(1, sizeof(*conf));
+		if (!conf) {
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+			return -1;
+		}
 	}
 
 	conf->storage_plugins = storages;
-	conf->in_queue = in_queue;
 	conf->stat_interval = stat_interval;
 
 	/* Create Output Manager's thread */

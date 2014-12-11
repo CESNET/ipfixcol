@@ -52,7 +52,6 @@
 static char *msg_module = "preprocessor";
 
 static struct ring_buffer *preprocessor_out_queue = NULL;
-struct ipfix_template_mgr *tm = NULL;
 
 /* Sequence number counter for each ODID */
 struct odid_info {
@@ -206,23 +205,13 @@ void odid_info_destroy()
 }
 
 /**
- * \brief This function sets the queue for preprocessor and inits crc computing.
- *
- * @param out_queue preprocessor's output queue
- * @return 0 on success, negative value otherwise
+ * \brief Set new output queue
+ * 
+ * @param out_queue
  */
-int preprocessor_init(struct ring_buffer *out_queue, struct ipfix_template_mgr *template_mgr)
+void preprocessor_set_output_queue(struct ring_buffer *out_queue)
 {
-	if (preprocessor_out_queue) {
-		MSG_WARNING(msg_module, "Redefining preprocessor's output queue.");
-	}
-
-	/* Set output queue */
 	preprocessor_out_queue = out_queue;
-
-	tm = template_mgr;
-
-	return 0;
 }
 
 /**
@@ -308,7 +297,7 @@ static void preprocessor_udp_init (struct input_info_network *input_info, struct
  * \param[in] key template key with filled crc and odid
  * \return length of the template
  */
-static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void *tmpl, int max_len, int type, 
+static int preprocessor_process_one_template(void *tmpl, int max_len, int type, 
 	uint32_t msg_counter, struct input_info *input_info, struct ipfix_template_key *key)
 {
 	struct ipfix_template_record *template_record;
@@ -329,12 +318,12 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 				ntohs(template_record->template_id) == IPFIX_OPTION_FLOWSET_ID) &&
 			ntohs(template_record->count) == 0) {
 		/* withdraw template or option template */
-		tm_remove_all_templates(tm, type);
+		tm_remove_all_templates(template_mgr, type);
 		/* don't try to parse the withdraw template */
 		return TM_TEMPLATE_WITHDRAW_LEN;
 		/* check for withdraw template message */
 	} else if (ntohs(template_record->count) == 0) {
-		ret = tm_remove_template(tm, key);
+		ret = tm_remove_template(template_mgr, key);
 		MSG_NOTICE(msg_module, "[%u] Got %s withdraw message.", input_info->odid, (type==TM_TEMPLATE)?"Template":"Options template");
 		/* Log error when removing unknown template */
 		if (ret == 1) {
@@ -343,14 +332,14 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 		}
 		return TM_TEMPLATE_WITHDRAW_LEN;
 		/* check whether template exists */
-	} else if ((template = tm_get_template(tm, key)) == NULL) {
+	} else if ((template = tm_get_template(template_mgr, key)) == NULL) {
 		/* add template */
 		/* check that the template has valid ID ( < 256 ) */
 		if (ntohs(template_record->template_id) < 256) {
 			MSG_WARNING(msg_module, "[%u] %s ID %i is reserved and not valid for data set!", key->odid, (type==TM_TEMPLATE)?"Template":"Options template", ntohs(template_record->template_id));
 		} else {
 			MSG_NOTICE(msg_module, "[%u] New %s ID %i", key->odid, (type==TM_TEMPLATE)?"template":"options template", ntohs(template_record->template_id));
-			template = tm_add_template(tm, tmpl, max_len, type, key);
+			template = tm_add_template(template_mgr, tmpl, max_len, type, key);
 			/* Set new template ID according to ODID */
 			if (template) {
 				template->template_id = odid_info_get_free_tid(key->odid);
@@ -360,7 +349,7 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 		/* template already exists */
 		MSG_WARNING(msg_module, "[%u] %s ID %i already exists. Rewriting.", key->odid,
 				(type==TM_TEMPLATE)?"Template":"Options template", template->template_id);
-		template = tm_update_template(tm, tmpl, max_len, type, key);
+		template = tm_update_template(template_mgr, tmpl, max_len, type, key);
 	}
 	if (template == NULL) {
 		MSG_WARNING(msg_module, "[%u] Cannot parse %s set, skipping to next set", key->odid,
@@ -402,7 +391,7 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
  * @param[in] msg IPFIX			message
  * @return uint32_t Number of received data records
  */
-static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *template_mgr, struct ipfix_message *msg)
+static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
 {
 	uint8_t *ptr;
 	uint32_t records_count = 0;
@@ -425,7 +414,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 		ptr = (uint8_t*) &msg->templ_set[i]->first_record;
 		while (ptr < (uint8_t*) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) {
 			max_len = ((uint8_t *) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) - ptr;
-			ret = preprocessor_process_one_template(template_mgr, ptr, max_len, TM_TEMPLATE, msg_counter, msg->input_info, &key);
+			ret = preprocessor_process_one_template(ptr, max_len, TM_TEMPLATE, msg_counter, msg->input_info, &key);
 			if (ret == 0) {
 				break;
 			} else {
@@ -440,7 +429,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 		ptr = (uint8_t*) &msg->opt_templ_set[i]->first_record;
 		max_len = ((uint8_t *) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) - ptr;
 		while (ptr < (uint8_t*) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) {
-			ret = preprocessor_process_one_template(template_mgr, ptr, max_len, TM_OPTIONS_TEMPLATE, msg_counter, msg->input_info, &key);
+			ret = preprocessor_process_one_template(ptr, max_len, TM_OPTIONS_TEMPLATE, msg_counter, msg->input_info, &key);
 			if (ret == 0) {
 				break;
 			} else {
@@ -528,7 +517,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		}
 
 		/* Process templates and correct sequence number */
-		preprocessor_process_templates(tm, msg);
+		preprocessor_process_templates(msg);
 
 		seqn = odid_info_get_sequence_number(ntohl(msg->pkt_header->observation_domain_id));
 

@@ -1,8 +1,50 @@
+/**
+ * \file configurator.c
+ * \author Michal Kozubik <kozubik@cesnet.cz>
+ * \brief Configurator implementation.
+ *
+ * Copyright (C) 2014 CESNET, z.s.p.o.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is, and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
 
 #include <ipfixcol.h>
 
 #include "configurator.h"
 #include "config.h"
+#include "queues.h"
+#include "preprocessor.h"
+#include "intermediate_process.h"
+#include "output_manager.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -128,11 +170,7 @@ int config_remove_storage(configurator *config, int index)
  * \return 0 on success
  */
 int config_add_input(configurator *config, struct plugin_config *plugin, int index)
-{
-	MSG_ERROR(msg_module, "[%d] Input add %s", config->proc_id, plugin->conf.name);
-	config->startup->input[index] = plugin;
-	config->startup->input[index]->input = &(config->input);
-	
+{	
 	MSG_NOTICE(msg_module, "[%d] Opening input plugin: %s", config->proc_id, plugin->conf.file);
 	
 	/* Save configuration */
@@ -185,6 +223,9 @@ int config_add_input(configurator *config, struct plugin_config *plugin, int ind
 		return 1;
 	}
 	
+	config->startup->input[index] = plugin;
+	config->startup->input[index]->input = &(config->input);
+	
 	return 0;
 }
 
@@ -198,8 +239,78 @@ int config_add_input(configurator *config, struct plugin_config *plugin, int ind
  */
 int config_add_inter(configurator *config, struct plugin_config *plugin, int index)
 {
-	MSG_ERROR(msg_module, "[%d] Inter add %s", config->proc_id, plugin->conf.name);
+	MSG_NOTICE(msg_module, "[%d] Opening intermediate xml_conf: %s", config->proc_id, plugin->conf.file);
+	
+	struct intermediate *im_plugin = calloc(1, sizeof(struct intermediate));
+	CHECK_ALLOC(im_plugin, 1);
+	
+	/* Save xml config */
+	im_plugin->xml_conf = &(plugin->conf);
+	
+	im_plugin->dll_handler = dlopen(plugin->conf.file, RTLD_LAZY);
+	if (im_plugin->dll_handler == NULL) {
+		MSG_ERROR(msg_module, "[%d] Unable to load intermediate xml_conf (%s)", config->proc_id, dlerror());
+		free(im_plugin);
+		return 1;
+	}
+	
+	/* set intermediate thread name */
+	snprintf(im_plugin->thread_name, 16, "med:%s", plugin->conf.name);
+	
+	/* prepare Input API routines */
+	im_plugin->intermediate_process_message = dlsym(im_plugin->dll_handler, "intermediate_process_message");
+	if (!im_plugin->intermediate_process_message) {
+		MSG_ERROR(msg_module, "Unable to load intermediate xml_conf (%s)", dlerror());
+		dlclose(im_plugin->dll_handler);
+		free(im_plugin);
+		return 1;
+	}
+	
+	im_plugin->intermediate_init = dlsym(im_plugin->dll_handler, "intermediate_init");
+	if (im_plugin->intermediate_init == NULL) {
+		MSG_ERROR(msg_module, "Unable to load intermediate xml_conf (%s)", dlerror());
+		dlclose(im_plugin->dll_handler);
+		free(im_plugin);
+		return 1;
+	}
+
+	im_plugin->intermediate_close = dlsym(im_plugin->dll_handler, "intermediate_close");
+	if (im_plugin->intermediate_close == NULL) {
+		MSG_ERROR(msg_module, "Unable to load intermediate xml_conf (%s)", dlerror());
+		dlclose(im_plugin->dll_handler);
+		free(im_plugin);
+		return 1;
+	}
+
+	/* Create new output buffer for plugin */
+	im_plugin->out_queue = rbuffer_init(ring_buffer_size);
+	
+	/* Set input queue */
+	/* Find previous plugin */
+	for (int i = index - 1; i >= 0; --i) {
+		/* Found some previous plugin */
+		if (config->startup->inter[i]) {
+			im_plugin->in_queue = config->startup->inter[i]->inter->out_queue;
+			break;
+		}
+	}
+	
+	/* No plugin before this one, input == preprocessor's output */
+	if (!im_plugin->in_queue) {
+		im_plugin->in_queue = get_preprocessor_output_queue();
+	}
+	
+	/* Start plugin */
+	if (ip_init(im_plugin, config->ip_id) != 0) {
+		dlclose(im_plugin->dll_handler);
+		free(im_plugin);
+		return 1;
+	}
+	
+	/* Save data into an array */
 	config->startup->inter[index] = plugin;
+	config->startup->inter[index]->inter = im_plugin;
+	
 	return 0;
 }
 
@@ -213,8 +324,66 @@ int config_add_inter(configurator *config, struct plugin_config *plugin, int ind
  */
 int config_add_storage(configurator *config, struct plugin_config *plugin, int index)
 {
-	MSG_ERROR(msg_module, "[%d] Storage add %s", config->proc_id, plugin->conf.name);
+	MSG_NOTICE(msg_module, "[%d] Opening storage xml_conf: %s", config->proc_id, plugin->conf.file);
+	
+	/* Create storage plugin structure */
+	struct storage *st_plugin = calloc(1, sizeof(struct storage));
+	CHECK_ALLOC(st_plugin, 1);
+	
+	/* Save xml config */
+	st_plugin->xml_conf = &(plugin->conf);
+	
 	config->startup->storage[index] = plugin;
+	config->startup->storage[index]->storage = st_plugin;
+	return 0;
+	
+	st_plugin->dll_handler = dlopen(plugin->conf.file, RTLD_LAZY);
+	if (!st_plugin->dll_handler) {
+		MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", config->proc_id, dlerror());
+		free(st_plugin);
+		return 1;
+	}
+	
+	/* set storage thread name */
+	snprintf(st_plugin->thread_name, 16, "out:%s", plugin->conf.name);
+	
+	/* prepare Input API routines */
+	st_plugin->init = dlsym(st_plugin->dll_handler, "storage_init");
+	if (!st_plugin->init) {
+		MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", config->proc_id, dlerror());
+		dlclose(st_plugin->dll_handler);
+		free(st_plugin);
+		return 1;
+	}
+	
+	st_plugin->store = dlsym(st_plugin->dll_handler, "store_packet");
+	if (!st_plugin->store) {
+		MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", config->proc_id, dlerror());
+		dlclose(st_plugin->dll_handler);
+		free(st_plugin);
+		return 1;
+	}
+	
+	st_plugin->store_now = dlsym(st_plugin->dll_handler, "store_now");
+	if (!st_plugin->store_now) {
+		MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", config->proc_id, dlerror());
+		dlclose(st_plugin->dll_handler);
+		free(st_plugin);
+		return 1;
+	}
+	
+	st_plugin->close = dlsym(st_plugin->dll_handler, "storage_close");
+	if (!st_plugin->close) {
+		MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", config->proc_id, dlerror());
+		dlclose(st_plugin->dll_handler);
+		free(st_plugin);
+		return 1;
+	}
+	
+	/* Save data into an array */
+	config->startup->storage[index] = plugin;
+	config->startup->storage[index]->storage = st_plugin;
+	
 	return 0;
 }
 
@@ -337,6 +506,7 @@ int config_process_changes(configurator *config, struct plugin_config *old_plugi
 					config_add(config, new_plugins[j], j, type);
 				}
 				
+				new_plugins[j] = NULL;
 				found = 1;
 				break;
 			}
@@ -489,6 +659,19 @@ int config_reconf(configurator *config)
 	/* Free resources */
 	free(new_startup);
 	
+	/* Set output manager's input queue */
+	int i;
+	
+	/* Get last intermediate plugin */
+	for (i = 0; config->startup->inter[i]; ++i) {}
+	
+	if (i == 0) {
+		/* None? Set preprocessor's output */
+		output_manager_set_in_queue(get_preprocessor_output_queue());
+	} else {
+		output_manager_set_in_queue(config->startup->inter[i - 1]->inter->out_queue);
+	}
+	
 	return ret;
 }
 
@@ -509,10 +692,24 @@ void config_free_plugin(struct plugin_config *plugin)
 			
 			dlclose(plugin->input->dll_handler);
 		}
+//		free(plugin->input);
+		
 		break;
 	case PLUGIN_INTER:
+		/* TODO - nahradit remove */
+		if (plugin->inter->dll_handler) {
+			plugin->inter->intermediate_close(plugin->inter->plugin_config);
+			dlclose(plugin->inter->dll_handler);
+		}
+		free(plugin->inter);
+		
 		break;
 	case PLUGIN_STORAGE:
+		if (plugin->conf.observation_domain_id) {
+			free(plugin->conf.observation_domain_id);
+		}
+		
+		free(plugin->storage);
 		break;
 	default:
 		break;
@@ -543,19 +740,29 @@ void config_destroy(configurator *config)
 	
 	int i = 0;
 	if (config->startup) {
+		
 		/* Close and free input plugins */
 		for (i = 0; config->startup->input[i]; ++i) {
 			config_free_plugin(config->startup->input[i]);
 		}
 		
-		/* Close and freeintermediate plugins */
+		/*
+		* Stop all intermediate plugins and flush buffers
+		* Plugins will be closed later - they can have data needed by storage plugins
+		* (templates etc.)
+		*/
 		for (i = 0; config->startup->inter[i]; ++i) {
-			config_free_plugin(config->startup->inter[i]);
+			ip_stop(config->startup->inter[i]->inter);
 		}
 		
 		/* Close and free storage plugins */
 		for (i = 0; config->startup->storage[i]; ++i) {
 			config_free_plugin(config->startup->storage[i]);
+		}
+		
+		/* Close and free intermediate plugins */
+		for (i = 0; config->startup->inter[i]; ++i) {
+			config_free_plugin(config->startup->inter[i]);
 		}
 		
 		/* Free startup configuration */

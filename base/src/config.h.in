@@ -42,6 +42,7 @@
 
 #include <libxml/tree.h>
 #include <libxml/xpath.h>
+#include <stdbool.h>
 
 /**
  * \defgroup internalConfig Configuration Processing
@@ -126,13 +127,18 @@ struct storage {
  * \brief Intermediate plugin handler structure.
  */
 struct intermediate {
-	void *ip_config;		/**< config structure of intermediate process */
-	void *config;           /**< intermediate plugin's config structure */
-	int (*intermediate_init)(char *, void *, uint32_t, struct ipfix_template_mgr *, void **);
-	int (*intermediate_process_message)(void *, void *);
-	int (*intermediate_close)(void *);
-	void *dll_handler;
-	struct plugin_xml_conf *xml_conf;
+    struct ring_buffer *in_queue;
+    struct ring_buffer *out_queue;
+    void *plugin_config;		/**< config structure of intermediate process */
+    void *config;           /**< intermediate plugin's config structure */
+    int (*intermediate_init)(char *, void *, uint32_t, struct ipfix_template_mgr *, void **);
+    int (*intermediate_process_message)(void *, void *);
+    int (*intermediate_close)(void *);
+    void *dll_handler;
+    struct plugin_xml_conf *xml_conf;
+    pthread_t thread_id;
+    int index;
+    bool dropped;
     char thread_name[16];	/**< Name for storage threads (from configuration) */
 };
 

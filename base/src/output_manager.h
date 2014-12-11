@@ -88,15 +88,14 @@ struct output_manager_config {
 
 
 /**
- * \brief Creates new Output Manager
+ * \brief Start Output Manager
  *
  * @param[in] storages list of storage plugin
- * @param[in] in_queue manager's input queue
  * @param[in] stat_interval statistics printing interval
  * @param[out] config configuration structure
  * @return 0 on success, negative value otherwise
  */
-int output_manager_create(struct storage_list *storages, struct ring_buffer *in_queue, int stat_interval, void **config);
+int output_manager_start(struct storage_list *storages, int stat_interval, void **config);
 
 
 /**
@@ -105,5 +104,7 @@ int output_manager_create(struct storage_list *storages, struct ring_buffer *in_
  * @param[in] config Configuration of the output manager to be closed
  */
 void output_manager_close(void *config);
+
+int output_manager_set_in_queue(struct ring_buffer *in_queue);
 
 #endif /* OUTPUT_MANAGER_H_ */

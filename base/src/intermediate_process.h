@@ -63,20 +63,7 @@
  * \param[out] config configuration structure
  * \return 0 on success, negative value otherwise
  */
-int ip_init(struct ring_buffer *in_queue, struct ring_buffer *out_queue,
-		struct intermediate *intermediate, char *xmldata, uint32_t ip_id,
-		struct ipfix_template_mgr *template_mgr, void **config);
-
-
-/**
- * \brief Wait for data from input queue in loop.
- *
- * This function runs in separated thread.
- *
- * \param[in] config configuration structure
- * \return NULL
- */
-void *ip_loop(void *config);
+int ip_init(struct intermediate *intermediate, uint32_t ip_id);
 
 /**
  * \brief Destroy Intermediate Process
@@ -84,7 +71,7 @@ void *ip_loop(void *config);
  * \param[in] config configuration structure
  * \return 0 on success, negative value otherwise
  */
-int ip_destroy(void *config);
+int ip_destroy(struct intermediate *config);
 
 /**
  * \brief Stop Intermediate Process
@@ -92,6 +79,6 @@ int ip_destroy(void *config);
  * \param[in] config configuration structure
  * \return 0 on success, negative value otherwise
  */
-int ip_stop(void *config);
+int ip_stop(struct intermediate *config);
 
 /**@}*/
