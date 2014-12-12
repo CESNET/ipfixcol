@@ -380,10 +380,6 @@ int message_free(struct ipfix_message *msg)
 struct ipfix_template_row *fields_get_field(uint8_t *fields, int cnt, uint32_t enterprise, uint16_t id, int *data_offset, int netw)
 {
 	int i;
-	if (netw) {
-		id = htons(id);
-		enterprise = ntohl(enterprise);
-	}
 
 	if (data_offset) {
 		*data_offset = 0;
