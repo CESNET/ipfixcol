@@ -117,6 +117,8 @@ configurator *config_init(const char *internal, const char *startup)
 	/* Save file paths */
 	config->internal_file = internal;
 	config->startup_file = startup;
+	config->ip_id = 1; /* 0 == ALL */
+	config->sp_id = 1; /* 0 == ALL */
 
 	/* Open startup.xml */
 	config->act_doc = config_open_xml(startup);
@@ -137,6 +139,7 @@ configurator *config_init(const char *internal, const char *startup)
  */
 int config_remove_input(configurator *config, int index)
 {
+	/* TODO: */
 	MSG_ERROR(msg_module, "[%d] Input remove %d", config->proc_id, index);
 	
 	config->startup->input[index] = NULL;
@@ -152,6 +155,7 @@ int config_remove_input(configurator *config, int index)
  */
 int config_remove_inter(configurator *config, int index)
 {
+	/* TODO: */
 	MSG_ERROR(msg_module, "[%d] Inter remove %d", config->proc_id, index);
 	config->startup->inter[index] = NULL;
 	return 0;
@@ -166,6 +170,7 @@ int config_remove_inter(configurator *config, int index)
  */
 int config_remove_storage(configurator *config, int index)
 {
+	/* TODO: */
 	MSG_ERROR(msg_module, "[%d] Storage remove %d", config->proc_id, index);
 	config->startup->storage[index] = NULL;
 	return 0;
@@ -190,29 +195,26 @@ int config_add_input(configurator *config, struct plugin_config *plugin, int ind
 	config->input.dll_handler = dlopen(plugin->conf.file, RTLD_LAZY);
 	if (!config->input.dll_handler) {
 		MSG_ERROR(msg_module, "[%d] Unable to load input xml_conf (%s)", config->proc_id, dlerror());
-		return 1;
+		goto err;
 	}
 	
 	/* prepare Input API routines */
 	config->input.init = dlsym(config->input.dll_handler, "input_init");
 	if (!config->input.init) {
 		MSG_ERROR(msg_module, "[%d] Unable to load input xml_conf (%s)", config->proc_id, dlerror());
-		dlclose(config->input.dll_handler);
-		return 1;
+		goto err;
 	}
 	
 	config->input.get = dlsym(config->input.dll_handler, "get_packet");
 	if (!config->input.get) {
 		MSG_ERROR(msg_module, "[%d] Unable to load input xml_conf (%s)", config->proc_id, dlerror());
-		dlclose(config->input.dll_handler);
-		return 1;
+		goto err;
 	}
 	
 	config->input.close = dlsym(config->input.dll_handler, "input_close");
 	if (config->input.close == NULL) {
 		MSG_ERROR(msg_module, "[%d] Unable to load input xml_conf (%s)", config->proc_id, dlerror());
-		dlclose(config->input.dll_handler);
-		return 1;
+		goto err;
 	}
 
 	/* extend the process name variable by input name */
@@ -229,14 +231,21 @@ int config_add_input(configurator *config, struct plugin_config *plugin, int ind
 	
 	if (retval != 0) {
 		MSG_ERROR(msg_module, "[%d] Initiating input xml_conf failed.", config->proc_id);
-		dlclose(config->input.dll_handler);
-		return 1;
+		goto err;
 	}
 	
+	/* Save into an array */
 	config->startup->input[index] = plugin;
 	config->startup->input[index]->input = &(config->input);
 	
 	return 0;
+	
+err:
+	if (config->input.dll_handler) {
+		dlclose(config->input.dll_handler);
+	}
+	
+	return 1;
 }
 
 /**
@@ -260,8 +269,7 @@ int config_add_inter(configurator *config, struct plugin_config *plugin, int ind
 	im_plugin->dll_handler = dlopen(plugin->conf.file, RTLD_LAZY);
 	if (im_plugin->dll_handler == NULL) {
 		MSG_ERROR(msg_module, "[%d] Unable to load intermediate xml_conf (%s)", config->proc_id, dlerror());
-		free(im_plugin);
-		return 1;
+		goto err;
 	}
 	
 	/* set intermediate thread name */
@@ -271,25 +279,19 @@ int config_add_inter(configurator *config, struct plugin_config *plugin, int ind
 	im_plugin->intermediate_process_message = dlsym(im_plugin->dll_handler, "intermediate_process_message");
 	if (!im_plugin->intermediate_process_message) {
 		MSG_ERROR(msg_module, "Unable to load intermediate xml_conf (%s)", dlerror());
-		dlclose(im_plugin->dll_handler);
-		free(im_plugin);
-		return 1;
+		goto err;
 	}
 	
 	im_plugin->intermediate_init = dlsym(im_plugin->dll_handler, "intermediate_init");
 	if (im_plugin->intermediate_init == NULL) {
 		MSG_ERROR(msg_module, "Unable to load intermediate xml_conf (%s)", dlerror());
-		dlclose(im_plugin->dll_handler);
-		free(im_plugin);
-		return 1;
+		goto err;
 	}
 
 	im_plugin->intermediate_close = dlsym(im_plugin->dll_handler, "intermediate_close");
 	if (im_plugin->intermediate_close == NULL) {
 		MSG_ERROR(msg_module, "Unable to load intermediate xml_conf (%s)", dlerror());
-		dlclose(im_plugin->dll_handler);
-		free(im_plugin);
-		return 1;
+		goto err;
 	}
 
 	/* Create new output buffer for plugin */
@@ -312,16 +314,26 @@ int config_add_inter(configurator *config, struct plugin_config *plugin, int ind
 	
 	/* Start plugin */
 	if (ip_init(im_plugin, config->ip_id) != 0) {
-		dlclose(im_plugin->dll_handler);
-		free(im_plugin);
-		return 1;
+		goto err;
 	}
+
+	config->ip_id++;
 	
 	/* Save data into an array */
 	config->startup->inter[index] = plugin;
 	config->startup->inter[index]->inter = im_plugin;
 	
 	return 0;
+	
+err:
+	if (im_plugin) {
+		if (im_plugin->dll_handler) {
+			dlclose(im_plugin->dll_handler);
+		}
+		free(im_plugin);
+	}
+	
+	return 1;
 }
 
 /**
@@ -343,15 +355,10 @@ int config_add_storage(configurator *config, struct plugin_config *plugin, int i
 	/* Save xml config */
 	st_plugin->xml_conf = &(plugin->conf);
 	
-	config->startup->storage[index] = plugin;
-	config->startup->storage[index]->storage = st_plugin;
-	return 0;
-	
 	st_plugin->dll_handler = dlopen(plugin->conf.file, RTLD_LAZY);
 	if (!st_plugin->dll_handler) {
 		MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", config->proc_id, dlerror());
-		free(st_plugin);
-		return 1;
+		goto err;
 	}
 	
 	/* set storage thread name */
@@ -361,40 +368,55 @@ int config_add_storage(configurator *config, struct plugin_config *plugin, int i
 	st_plugin->init = dlsym(st_plugin->dll_handler, "storage_init");
 	if (!st_plugin->init) {
 		MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", config->proc_id, dlerror());
-		dlclose(st_plugin->dll_handler);
-		free(st_plugin);
-		return 1;
+		goto err;
 	}
 	
 	st_plugin->store = dlsym(st_plugin->dll_handler, "store_packet");
 	if (!st_plugin->store) {
 		MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", config->proc_id, dlerror());
-		dlclose(st_plugin->dll_handler);
-		free(st_plugin);
-		return 1;
+		goto err;
 	}
 	
 	st_plugin->store_now = dlsym(st_plugin->dll_handler, "store_now");
 	if (!st_plugin->store_now) {
 		MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", config->proc_id, dlerror());
-		dlclose(st_plugin->dll_handler);
-		free(st_plugin);
-		return 1;
+		goto err;
 	}
 	
 	st_plugin->close = dlsym(st_plugin->dll_handler, "storage_close");
 	if (!st_plugin->close) {
 		MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", config->proc_id, dlerror());
-		dlclose(st_plugin->dll_handler);
-		free(st_plugin);
-		return 1;
+		goto err;
 	}
+	
+	/* Set plugin id */
+	st_plugin->id = config->sp_id;
+	
+	/* Add plugin to Output Manager */
+	if (output_manager_add_plugin(st_plugin) != 0) {
+		MSG_ERROR(msg_module, "[%d] Unable to add plugin to Output Manager", config->proc_id);
+		goto err;
+	}
+	
+	config->sp_id++;
 	
 	/* Save data into an array */
 	config->startup->storage[index] = plugin;
 	config->startup->storage[index]->storage = st_plugin;
 	
 	return 0;
+	
+err:	
+	if (st_plugin) {
+		if (st_plugin->dll_handler) {
+			/* Close dll handler */
+			dlclose(st_plugin->dll_handler);
+		}
+		/* Free plugin structure */
+		free(st_plugin);
+	}
+	
+	return 1;
 }
 
 /**
@@ -702,6 +724,7 @@ void config_free_plugin(struct plugin_config *plugin)
 			
 			dlclose(plugin->input->dll_handler);
 		}
+		/* Input is pointer to configurator structure, don't free it */
 //		free(plugin->input);
 		
 		break;
@@ -715,6 +738,10 @@ void config_free_plugin(struct plugin_config *plugin)
 		
 		break;
 	case PLUGIN_STORAGE:
+		if (plugin->storage->dll_handler) {
+			dlclose(plugin->storage->dll_handler);
+		}
+		
 		if (plugin->conf.observation_domain_id) {
 			free(plugin->conf.observation_domain_id);
 		}

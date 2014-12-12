@@ -49,6 +49,7 @@
 #include "queues.h"
 #include "preprocessor.h"
 #include "data_manager.h"
+#include "configurator.h"
 
 #define MAX_DIR_LEN 256
 
@@ -74,28 +75,52 @@ struct stat_conf {
  * Contains all configuration of output managers' manager.
  */
 struct output_manager_config {
-	struct data_manager_config *data_managers;      /* output managers */
-	struct data_manager_config *last;
-	struct storage_list *storage_plugins;    /* list of storage structures */
-	struct ring_buffer *in_queue;     /* input queue */
-	pthread_t thread_id;              /* manager's thread ID */
-        pthread_t stat_thread;
-        int stat_interval;
-        uint64_t data_records;
-        uint64_t packets;
-        struct stat_conf stats;
+	struct data_manager_config *data_managers;  /**< output managers */
+	struct data_manager_config *last;           /**< last Output Manager in list */
+	struct storage *storage_plugins[32];        /**< Storage plugins */
+	struct ring_buffer *in_queue;               /**< input queue */
+	pthread_t thread_id;                        /**< Manager's thread ID */
+        pthread_t stat_thread;                      /**< Stat's thread ID */
+        int stat_interval;                          /**< Stat's interval */
+        uint64_t data_records;                      /**< Number of processed data records */
+        uint64_t packets;                           /**< Number of processed packets */
+        struct stat_conf stats;                     /**< Statistics */
+        configurator *plugins_config;               /**< Plugins configurator */
 };
 
 
 /**
- * \brief Start Output Manager
+ * \brief Create Output Manager
  *
- * @param[in] storages list of storage plugin
+ * @param[in] plugins_config plugins configurator
  * @param[in] stat_interval statistics printing interval
  * @param[out] config configuration structure
  * @return 0 on success, negative value otherwise
  */
-int output_manager_start(struct storage_list *storages, int stat_interval, void **config);
+int output_manager_create(configurator *plugins_config, int stat_interval, void **config);
+
+/**
+ * \brief Start data processing
+ * 
+ * @return 0 on success
+ */
+int output_manager_start();
+
+/**
+ * \brief Add new plugin to active storage plugins
+ * 
+ * @param plugin new plugin
+ * @return 0 on success
+ */
+int output_manager_add_plugin(struct storage *plugin);
+
+/**
+ * \brief Remove plugin from active storage plugins
+ * 
+ * @param id Plugin id
+ * @return 0 on success
+ */
+int output_manager_remove_plugin(int id);
 
 
 /**
@@ -109,8 +134,7 @@ void output_manager_close(void *config);
  * \brief Set new input queue
  * 
  * @param in_queue input queue
- * @return 0 on success
  */
-int output_manager_set_in_queue(struct ring_buffer *in_queue);
+void output_manager_set_in_queue(struct ring_buffer *in_queue);
 
 #endif /* OUTPUT_MANAGER_H_ */

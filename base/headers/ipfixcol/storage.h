@@ -73,7 +73,11 @@ struct data_template_couple{
 	struct ipfix_template *data_template;
 };
 
-
+enum PLUGIN_STATUS {
+    PLUGIN_DATA,    /**< Don't react on this message */
+    PLUGIN_START,   /**< Start reading */
+    PLUGIN_STOP     /**< Stop reading */
+};
 /**
  * \struct ipfix_message
  * \brief Structure covering main parts of the IPFIX packet by pointers into it.
@@ -85,6 +89,8 @@ struct __attribute__((__packed__)) ipfix_message {
 	struct input_info                 *input_info;
 	/** Source status (new, opened, closed) */
 	enum SOURCE_STATUS                source_status;
+        enum PLUGIN_STATUS                plugin_status;
+        int plugin_id;
 	/** Number of data records in message */
 	uint16_t 						  data_records_count;
 	/** Number of template records in message */

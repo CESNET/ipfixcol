@@ -1,6 +1,7 @@
 /**
  * \file data_manager.h
  * \author Radek Krejci <rkrejci@cesnet.cz>
+ * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief Data Manager's functions
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
@@ -56,27 +57,23 @@
  * decides what data manager should get the message.
  */
 struct data_manager_config {
-	uint32_t observation_domain_id;
-	uint32_t references;
-	unsigned int plugins_count;
-	struct ring_buffer *store_queue;
-	struct storage_list* storage_plugins;
-	struct data_manager_config *next;
+	uint32_t observation_domain_id;     /**< DM accepts messages from this ODID */
+	uint32_t references;                /**< Number of data sources working with this DM */
+	unsigned int plugins_count;         /**< Number of running storage plugins */
+	struct ring_buffer *store_queue;    /**< Input queue for storage plugins */
+	struct storage *storage_plugins[8]; /**< Storage plugins */
+	struct data_manager_config *next;   /**< Next DM */
+        int oid_specific_plugins;           /**< Number of ODID specific plugins */
 };
 
 /**
  * \brief Creates new data manager
  *
- * @param[in] observation_domain_id Observation domain id that should be
- * handled by this data manager
- * @param[in] storage_plugins List of storage plugins that should be opened by
- * this data manager
- * @return data_manager_config Configuration strucutre on success, NULL
- * otherwise
+ * @param[in] observation_domain_id Observation domain id that should be handled by this data manager
+ * @param[in] storage_plugins List of storage plugins that should be opened by this data manager
+ * @return data_manager_config Configuration strucutre on success, NULL otherwise
  */
-struct data_manager_config* data_manager_create (
-    uint32_t observation_domain_id,
-    struct storage_list* storage_plugins);
+struct data_manager_config* data_manager_create(uint32_t observation_domain_id, struct storage* storage_plugins[]);
 
 /**
  * \brief Closes data manager specified by its configuration
@@ -85,5 +82,23 @@ struct data_manager_config* data_manager_create (
  * @return void
  */
 void data_manager_close (struct data_manager_config **config);
+
+/**
+ * \brief Add new storage plugin
+ * 
+ * @param config Data Manager's config
+ * @param plugin Plugin's configuration
+ * @return 0 on success
+ */
+int data_manager_add_plugin(struct data_manager_config *config, struct storage *plugin);
+
+/**
+ * \brief Remove storage plugin
+ * 
+ * @param config Data Manager's config
+ * @param id Plugin's id
+ * @return 0 on success
+ */
+int data_manager_remove_plugin(struct data_manager_config *config, int id);
 
 #endif /* DATA_MANAGER_H_ */

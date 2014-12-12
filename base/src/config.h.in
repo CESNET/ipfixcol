@@ -121,6 +121,7 @@ struct storage {
 	struct plugin_xml_conf *xml_conf;
     struct storage_thread_conf *thread_config;
     char thread_name[16];	/**< Name for storage threads (from configuration) */
+    int id;      /**< Storage plugin ID */
 };
 
 /**

@@ -154,10 +154,6 @@ int main (int argc, char* argv[])
 	pid_t pid = 0;
 	bool daemonize = false;
 	char *config_file = NULL, *internal_file = NULL;
-	struct plugin_xml_conf_list *storage_plugins = NULL,
-	        *aux_plugins = NULL;
-	struct storage_list *storage_list = NULL, *aux_storage_list = NULL;
-	void *storage_plugin_handler = NULL;
 	struct sigaction action;
 	char *packet = NULL;
 	struct input_info* input_info;
@@ -249,8 +245,7 @@ int main (int argc, char* argv[])
 	config = config_init(internal_file, config_file);
 	if (!config) {
 		MSG_ERROR(msg_module, "Configurator initialization failed!");
-		retval = EXIT_FAILURE;
-		goto cleanup;
+		goto cleanup_err;
 	}
 	
 	/* Get all collectors */
@@ -258,8 +253,7 @@ int main (int argc, char* argv[])
 	if (collectors == NULL) {
 		/* no collectingProcess configured */
 		MSG_ERROR(msg_module, "No collectingProcess configured - nothing to do.");
-		retval = EXIT_FAILURE;
-		goto cleanup;
+		goto cleanup_err;
 	}
 	
 	/* create separate process for each <collectingProcess> */
@@ -299,104 +293,25 @@ int main (int argc, char* argv[])
 	template_mgr = tm_create();
 	if (template_mgr == NULL) {
 		MSG_ERROR(msg_module, "[%d] Unable to create Template Manager", config->proc_id);
-		retval = EXIT_FAILURE;
-		goto cleanup;
+		goto cleanup_err;
 	}
 	
 	/* Create output queue for preprocessor */
 	preprocessor_set_output_queue(rbuffer_init(ring_buffer_size));
 	
+	/* Create Output Manager */
+	retval = output_manager_create(config, stat_interval, &output_manager_config);
+	if (retval != 0) {
+		MSG_ERROR(msg_module, "[%d] Unable to create Output Manager", config->proc_id);
+		goto cleanup_err;
+	}
+	
 	/* Parse plugins configuration */
 	if (config_reconf(config) != 0) {
 		MSG_ERROR(msg_module, "[%d] Unable to parse plugins configuration", config->proc_id);
-		retval = EXIT_FAILURE;
-		goto cleanup;
+		goto cleanup_err;
 	}
-
-	/* get storage plugins - at least one */
-	storage_plugins = get_storage_plugins (config->collector_node, config->act_doc, internal_file);
-	if (storage_plugins == NULL) {
-		retval = EXIT_FAILURE;
-		goto cleanup;
-	}
-
-	/* prepare storage xml_conf(s) */
-	for (aux_plugins = storage_plugins; aux_plugins != NULL; aux_plugins = aux_plugins->next) {
-		MSG_NOTICE(msg_module, "[%d] Opening storage xml_conf: %s", config->proc_id, aux_plugins->config.file);
-
-		storage_plugin_handler = dlopen (aux_plugins->config.file, RTLD_LAZY);
-		if (storage_plugin_handler == NULL) {
-			MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", config->proc_id, dlerror());
-			continue;
-		}
-
-		aux_storage_list = storage_list;
-		storage_list = (struct storage_list*) malloc (sizeof(struct storage_list));
-		if (storage_list == NULL) {
-			MSG_ERROR(msg_module, "[%d] Memory allocation failed (%s:%d)", config->proc_id, __FILE__, __LINE__);
-			storage_list = aux_storage_list;
-			dlclose(storage_plugin_handler);
-			continue;
-		}
-		memset(storage_list, 0, sizeof(struct storage_list));
-
-		storage_list->storage.dll_handler = storage_plugin_handler;
-		/* set storage thread name */
-		snprintf(storage_list->storage.thread_name, 16, "out:%s", aux_plugins->config.name);
-
-		/* prepare Input API routines */
-		storage_list->storage.init = dlsym (storage_plugin_handler, "storage_init");
-		if (storage_list->storage.init == NULL) {
-			MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", config->proc_id, dlerror());
-			dlclose (storage_plugin_handler);
-			storage_plugin_handler = NULL;
-			free (storage_list);
-			storage_list = aux_storage_list;
-			dlclose(storage_plugin_handler);
-			continue;
-		}
-		storage_list->storage.store = dlsym (storage_plugin_handler, "store_packet");
-		if (storage_list->storage.store == NULL) {
-			MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", config->proc_id, dlerror());
-			dlclose (storage_plugin_handler);
-			storage_plugin_handler = NULL;
-			free (storage_list);
-			storage_list = aux_storage_list;
-			dlclose(storage_plugin_handler);
-			continue;
-		}
-		storage_list->storage.store_now = dlsym (storage_plugin_handler, "store_now");
-		if (storage_list->storage.store_now == NULL) {
-			MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", config->proc_id, dlerror());
-			dlclose (storage_plugin_handler);
-			storage_plugin_handler = NULL;
-			free (storage_list);
-			storage_list = aux_storage_list;
-			dlclose(storage_plugin_handler);
-			continue;
-		}
-		storage_list->storage.close = dlsym (storage_plugin_handler, "storage_close");
-		if (storage_list->storage.close == NULL) {
-			MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", config->proc_id, dlerror());
-			dlclose (storage_plugin_handler);
-			storage_plugin_handler = NULL;
-			free (storage_list);
-			storage_list = aux_storage_list;
-			dlclose(storage_plugin_handler);
-			continue;
-		}
-
-		storage_list->storage.xml_conf = &aux_plugins->config;
-		storage_list->next = aux_storage_list;
-		continue;
-	}
-	/* check if we have found at least one storage plugin */
-	if (!storage_list) {
-		MSG_ERROR(msg_module, "[%d] Loading storage xml_conf(s) failed.", config->proc_id);
-		retval = EXIT_FAILURE;
-		goto cleanup;
-	}
-
+	
 	/* daemonize */
 	if (daemonize) {
 		closelog();
@@ -408,7 +323,7 @@ int main (int argc, char* argv[])
 	}
 
 	/* configure output subsystem */
-	retval = output_manager_start(storage_list, stat_interval, &output_manager_config);
+	retval = output_manager_start();
 	if (retval != 0) {
 		MSG_ERROR(msg_module, "[%d] Initiating Storage Manager failed.", config->proc_id);
 		goto cleanup;
@@ -439,11 +354,16 @@ int main (int argc, char* argv[])
             }
         }
 		/* distribute data to the particular Data Manager for further processing */
-		preprocessor_parse_msg (packet, get_retval, input_info, storage_list, source_status);
+		preprocessor_parse_msg (packet, get_retval, input_info, source_status);
 		source_status = SOURCE_STATUS_OPENED;
 		packet = NULL;
 		input_info = NULL;
 	}
+	
+	goto cleanup;
+	
+cleanup_err:
+	retval = EXIT_FAILURE;
 
 cleanup:
 	/* xml cleanup */
@@ -458,23 +378,6 @@ cleanup:
 
 	/* Close preprocessor */
 	preprocessor_close();
-
-	while (storage_plugins) { /* while is just for sure, it should be always one */
-		if (storage_plugins->config.file) {
-			free (storage_plugins->config.file);
-		}
-		if (storage_plugins->config.observation_domain_id) {
-			free (storage_plugins->config.observation_domain_id);
-		}
-		if (storage_plugins->config.xmldata) {
-			xmlFreeDoc (storage_plugins->config.xmldata);
-		}
-		aux_plugins = storage_plugins->next;
-		free (storage_plugins);
-		storage_plugins = aux_plugins;
-	}
-
-	/* DLLs cleanup */
 	
     /* all storage plugins should be closed now -> free packet */
     if (packet != NULL) {
@@ -484,17 +387,6 @@ cleanup:
 	/* Close all plugins */
 	if (config) {
 		config_destroy(config);
-	}
-
-	
-    /* free allocated resources in storages ( xml configuration closed above ) */
-	while (storage_list) {
-		aux_storage_list = storage_list->next;
-		if (storage_list->storage.dll_handler) {
-			dlclose(storage_list->storage.dll_handler);
-		}
-		free (storage_list);
-		storage_list = aux_storage_list;
 	}
 	
     /* wait for child processes */

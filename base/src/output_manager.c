@@ -47,15 +47,19 @@
 #include <ipfixcol.h>
 #include <signal.h>
 #include <errno.h>
+#include "configurator.h"
 #include "data_manager.h"
 #include "output_manager.h"
+#include "storage.h"
 
 #include <dirent.h>
 #include <inttypes.h>
 
+/* MSG_ macros identifiers */
 static const char *msg_module = "output manager";
 static const char *stat_module = "stat";
 
+/* Output Manager's configuration - singleton */
 struct output_manager_config *conf = NULL;
 
 /**
@@ -71,14 +75,13 @@ static struct data_manager_config *get_data_mngmt_config (uint32_t id, struct da
 {
 	struct data_manager_config *aux_cfg = data_mngmts;
 
-	while (aux_cfg) {
+	for (aux_cfg = data_mngmts; aux_cfg; aux_cfg = aux_cfg->next) {
 		if (aux_cfg->observation_domain_id == id) {
 			break;
 		}
-		aux_cfg = aux_cfg->next;
 	}
 
-	return (aux_cfg);
+	return aux_cfg;
 }
 
 /**
@@ -135,17 +138,82 @@ void output_manager_remove(struct output_manager_config *output_manager, struct 
 /**
  * \brief Set new input queue
  */
-int output_manager_set_in_queue(struct ring_buffer *in_queue)
+inline void output_manager_set_in_queue(struct ring_buffer *in_queue)
 {
-	if (!conf) {
-		conf = (struct output_manager_config *) calloc(1, sizeof(*conf));
-		if (!conf) {
-			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
-			return -1;
+	conf->in_queue = in_queue;
+}
+
+/**
+ * \brief Add new storage plugin
+ */
+int output_manager_add_plugin(struct storage *plugin)
+{
+	int i;
+	struct data_manager_config *data_mgr = NULL;
+	
+	/* Find a place for plugin in array */
+	for (i = 0; conf->storage_plugins[i]; ++i) {}
+	conf->storage_plugins[i] = plugin;
+	
+	if (plugin->xml_conf->observation_domain_id) {
+		/* Plugin for one specific ODID */
+		data_mgr = get_data_mngmt_config(atol(plugin->xml_conf->observation_domain_id), conf->data_managers);
+		
+		if (data_mgr) {
+			/* Update existing Data Manager */
+			data_manager_add_plugin(data_mgr, plugin);
+		}
+	} else {
+		/* Update all existing Data Managers */
+		for (data_mgr = conf->data_managers; data_mgr; data_mgr = data_mgr->next) {
+			/* Add plugin to the Data Manager */
+			data_manager_add_plugin(data_mgr, plugin);
 		}
 	}
 	
-	conf->in_queue = in_queue;
+	return 0;
+}
+
+/**
+ * \brief Remove storage plugin
+ */
+int output_manager_remove_plugin(int id)
+{
+	int i;
+	struct data_manager_config *data_mgr = NULL;
+	struct storage *plugin = NULL;
+	
+	/* Find plugin with given id */
+	for (i = 0; conf->storage_plugins[i]; ++i) {
+		if (conf->storage_plugins[i]->id == id) {
+			/* Remove it from array */
+			plugin = conf->storage_plugins[i];
+			conf->storage_plugins[i] = NULL;
+			break;
+		}
+	}
+	
+	if (!plugin) {
+		/* Plugin not found */
+		return 0;
+	}
+	
+	/* Kill all it's instances */
+	if (plugin->xml_conf->observation_domain_id) {
+		/* Has ODID - max. 1 instance */
+		data_mgr = get_data_mngmt_config(atol(plugin->xml_conf->observation_domain_id), conf->data_managers);
+		
+		if (data_mgr) {
+			/* Kill plugin */
+			data_manager_remove_plugin(data_mgr, id);
+		}
+	} else {
+		/* Multiple instances */
+		for (data_mgr = conf->data_managers; data_mgr; data_mgr = data_mgr->next) {
+			/* Kill plugin */
+			data_manager_remove_plugin(data_mgr, id);
+		}
+	}
 	
 	return 0;
 }
@@ -457,21 +525,30 @@ static void *statistics_thread(void* config)
  * @param[out] config configuration structure
  * @return 0 on success, negative value otherwise
  */
-int output_manager_start(struct storage_list *storages, int stat_interval, void **config) {
+int output_manager_create(configurator *plugins_config, int stat_interval, void **config)
+{
+	conf = calloc(1, sizeof(struct output_manager_config));
+	if (!conf) {
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		return -1;
+	}
+	
+	conf->stat_interval = stat_interval;
+	conf->plugins_config = plugins_config;
+	
+	*config = conf;
+	
+	return 0;
+}
+
+/**
+ * \brief Start Output Manager's thread(s)
+ * 
+ * @return 0 on success
+ */
+int output_manager_start() {
 
 	int retval;
-
-	/* Allocate new Output Manager's configuration */
-	if (!conf) {
-		conf = (struct output_manager_config *) calloc(1, sizeof(*conf));
-		if (!conf) {
-			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
-			return -1;
-		}
-	}
-
-	conf->storage_plugins = storages;
-	conf->stat_interval = stat_interval;
 
 	/* Create Output Manager's thread */
 	retval = pthread_create(&(conf->thread_id), NULL, &output_manager_plugin_thread, (void *) conf);
@@ -490,14 +567,11 @@ int output_manager_start(struct storage_list *storages, int stat_interval, void 
 		}
 	}
 	
-	*config = conf;
 	return 0;
 }
 
 /**
  * \brief Close Ouput Manager and all Data Managers
- * 
- * @param config Output Manager's configuration
  */
 void output_manager_close(void *config) {
 	struct output_manager_config *manager = (struct output_manager_config *) config;

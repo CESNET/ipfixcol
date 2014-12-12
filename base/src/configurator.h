@@ -56,9 +56,10 @@
 enum plugin_types {
     PLUGIN_INPUT,
     PLUGIN_INTER,
-    PLUGIN_STORAGE,
-    PLUGIN_NONE
+    PLUGIN_STORAGE
 };
+
+#define PLUGIN_ID_ALL 0
 
 /* Plugin configuration */
 struct plugin_config {
@@ -89,6 +90,7 @@ typedef struct ipfix_config {
     char process_name[16];          /**< process name */
     int proc_id;                    /**< process ID */
     int ip_id;                      /**< Internal process ID */
+    int sp_id;                      /**< Storage plugin ID */
 } configurator;
 
 /**

@@ -476,10 +476,9 @@ static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
  * @param packet Received data from input plugins
  * @param len Packet length
  * @param input_info Input informations about source etc.
- * @param storage_plugins List of storage plugins
  * @param source_status Status of source (new, opened, closed)
  */
-void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins, int source_status)
+void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, int source_status)
 {
 	struct ipfix_message* msg;
 	uint32_t *seqn;
@@ -496,7 +495,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 			return;
 		}
 
-		if (input_info == NULL || storage_plugins == NULL) {
+		if (!input_info) {
 			MSG_WARNING(msg_module, "[%u] Invalid parameters in function preprocessor_parse_msg().", input_info->odid);
 			free(packet);
 			packet = NULL;
