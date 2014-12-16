@@ -111,6 +111,13 @@ configurator *config_init(const char *internal, const char *startup);
 int config_reconf(configurator *config);
 
 /**
+ * \brief Stop all intermediate plugins and flush their buffers
+ * 
+ * @param config configurator
+ */
+void config_stop_inter(configurator *config);
+
+/**
  * \brief Destroy configurator
  * 
  * \param[in] config configurator structure

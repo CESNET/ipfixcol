@@ -371,13 +371,17 @@ cleanup:
 		xmlXPathFreeObject (collectors);
 	}
 	
+	/* Close preprocessor */
+	preprocessor_close();
+	
+	/* Flush buffers in intermediate plugins */
+	config_stop_inter(config);
+	
 	/* Close whole Output Manager (including Data Managers) */
 	if (output_manager_config) {
 		output_manager_close(output_manager_config);
 	}
 
-	/* Close preprocessor */
-	preprocessor_close();
 	
     /* all storage plugins should be closed now -> free packet */
     if (packet != NULL) {

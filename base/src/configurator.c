@@ -531,7 +531,11 @@ int config_process_changes(configurator *config, struct plugin_config *old_plugi
 				/* Compare configurations */
 				if (config_compare_xml(&(old_plugins[i]->conf), &(new_plugins[j]->conf)) == 0) {
 					/* Same configurations - nothing changed, only position (?) */
-					/* move */
+					if (i != j) {
+						/* move */
+						config_remove(config, i, type);
+						config_add(config, new_plugins[j], j, type);
+					}
 				} else {
 					/* Different configurations - remove old, add new plugin */
 					config_remove(config, i, type);
@@ -548,6 +552,15 @@ int config_process_changes(configurator *config, struct plugin_config *old_plugi
 		if (!found) {
 			/* If not, remove it from running config */
 			config_remove(config, i, type);
+		}
+	}
+	
+	/* Add new plugins */
+	for (j = 0; j < plugs; ++j) {
+		if (new_plugins[j]) {
+			/* New plugin */
+			config_add(config, new_plugins[j], j, type);
+			new_plugins[j] = NULL;
 		}
 	}
 	
@@ -765,6 +778,19 @@ void config_free_plugin(struct plugin_config *plugin)
 }
 
 /**
+ * Stop all intermediate plugins and flush buffers
+ * Output Manager MUST be closed AFTER calling this function
+ * otherwise data from intermediate plugins buffers will be lost
+ */
+void config_stop_inter(configurator *config)
+{
+	int i;
+	for (i = 0; config->startup->inter[i]; ++i) {
+		ip_stop(config->startup->inter[i]->inter);
+	}
+}
+
+/**
  * \brief Destroy configurator structure
  */
 void config_destroy(configurator *config)
@@ -788,9 +814,7 @@ void config_destroy(configurator *config)
 		* Plugins will be closed later - they can have data needed by storage plugins
 		* (templates etc.)
 		*/
-		for (i = 0; config->startup->inter[i]; ++i) {
-			ip_stop(config->startup->inter[i]->inter);
-		}
+		config_stop_inter(config);
 		
 		/* Close and free storage plugins */
 		for (i = 0; config->startup->storage[i]; ++i) {
