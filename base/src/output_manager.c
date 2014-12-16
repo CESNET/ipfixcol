@@ -50,7 +50,6 @@
 #include "configurator.h"
 #include "data_manager.h"
 #include "output_manager.h"
-#include "storage.h"
 
 #include <dirent.h>
 #include <inttypes.h>
