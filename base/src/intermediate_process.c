@@ -46,6 +46,7 @@
 #include <string.h>
 #include "queues.h"
 #include "intermediate_process.h"
+#include "config.h"
 #include <ipfixcol/intermediate.h>
 
 static char *msg_module = "Intermediate Process";
@@ -66,20 +67,28 @@ void *ip_loop(void *config)
 
 	prctl(PR_SET_NAME, conf->thread_name, 0, 0, 0);
 
-	index = conf->in_queue->read_offset;
-
 	/* wait for messages and process them */
 	while (1) {
+		index = -1;
 		/* get message from input buffer */
 		message = rbuffer_read(conf->in_queue, &index);
-
+		
 		if (!message) {
+			rbuffer_remove_reference(conf->in_queue, index, 1);
+			if (conf->new_in) {
+				/* Set new input queue */
+				conf->in_queue = conf->new_in;
+				conf->new_in = NULL;
+				pthread_cond_signal(&conf->in_q_cond);
+				continue;
+			}
 			/* terminating mediator */
-			MSG_DEBUG(msg_module, "NULL message, terminating intermediate process.");
+			MSG_DEBUG(msg_module, "NULL message, terminating intermediate process %s.", conf->thread_name);
 			break;
 		}
 		conf->index = index;
 		conf->dropped = false;
+		
 		/* process message */
 		conf->intermediate_process_message(conf->plugin_config, message);
 
@@ -87,12 +96,28 @@ void *ip_loop(void *config)
 			/* remove message from input queue, but do not free memory (it must be done later in output manager) */
 			rbuffer_remove_reference(conf->in_queue, index, 0);
 		}
-
-		/* update index */
-		index = (index + 1) % conf->in_queue->size;
 	}
 	
 	return NULL;
+}
+
+/**
+ * \brief Change process input queue
+ */
+int ip_change_in_queue(struct intermediate* conf, struct ring_buffer* in_queue)
+{
+	pthread_mutex_lock(&conf->in_q_mutex);
+	
+	conf->new_in = in_queue;
+	rbuffer_write(conf->in_queue, NULL, 1);
+	
+	/* Wait for change */
+	while (conf->in_queue != in_queue) {
+		pthread_cond_wait(&conf->in_q_cond, &conf->in_q_mutex);
+	}
+	
+	pthread_mutex_unlock(&conf->in_q_mutex);
+	return 0;
 }
 
 /**

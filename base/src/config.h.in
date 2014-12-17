@@ -130,6 +130,7 @@ struct storage {
 struct intermediate {
     struct ring_buffer *in_queue;
     struct ring_buffer *out_queue;
+    struct ring_buffer *new_in;
     void *plugin_config;		/**< config structure of intermediate process */
     void *config;           /**< intermediate plugin's config structure */
     int (*intermediate_init)(char *, void *, uint32_t, struct ipfix_template_mgr *, void **);
@@ -141,6 +142,8 @@ struct intermediate {
     int index;
     bool dropped;
     char thread_name[16];	/**< Name for storage threads (from configuration) */
+    pthread_mutex_t in_q_mutex;
+    pthread_cond_t  in_q_cond;
 };
 
 /**

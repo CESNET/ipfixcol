@@ -54,6 +54,7 @@
 #include <sys/prctl.h>
 #include <dlfcn.h>
 #include <unistd.h>
+#include <libxml/xpath.h>
 
 /* ID for MSG_ macros */
 static const char *msg_module = "configurator";
@@ -78,6 +79,18 @@ do {\
  *
  * @{
  */
+
+/* DEBUG */
+void print(configurator *config)
+{
+	MSG_DEBUG("", "%10.10s:              | %p -> ", "preproc", get_preprocessor_output_queue());
+	if (config->startup) {
+		for (int i = 0; config->startup->inter[i]; ++i) {
+			MSG_DEBUG("", "%10.10s: -> %p | %p ->", config->startup->inter[i]->inter->thread_name, config->startup->inter[i]->inter->in_queue, config->startup->inter[i]->inter->out_queue);
+		}
+	}
+	MSG_DEBUG("", "%10.10s: -> %p", "Out. Mgr", output_manager_get_in_queue());
+}
 
 /**
  * \brief Open xml document
@@ -131,6 +144,62 @@ configurator *config_init(const char *internal, const char *startup)
 }
 
 /**
+ * \brief Close plugin and free its resources
+ * 
+ * \param plugin
+ */
+void config_free_plugin(struct plugin_config *plugin)
+{
+	/* Close plugin */
+	switch (plugin->type) {
+	case PLUGIN_INPUT:
+		if (plugin->input->dll_handler) {
+			if (plugin->input->config) {
+				plugin->input->close(&(plugin->input->config));
+			}
+			
+			dlclose(plugin->input->dll_handler);
+		}
+		/* Input is pointer to configurator structure, don't free it */
+//		free(plugin->input);
+		
+		break;
+	case PLUGIN_INTER:
+		if (plugin->inter->dll_handler) {
+			plugin->inter->intermediate_close(plugin->inter->plugin_config);
+			dlclose(plugin->inter->dll_handler);
+		}
+		free(plugin->inter);
+		
+		break;
+	case PLUGIN_STORAGE:
+		if (plugin->storage->dll_handler) {
+			dlclose(plugin->storage->dll_handler);
+		}
+		
+		if (plugin->conf.observation_domain_id) {
+			free(plugin->conf.observation_domain_id);
+		}
+		
+		free(plugin->storage);
+		break;
+	default:
+		break;
+	}
+	
+	/* Free resources */
+	if (plugin->conf.file) {
+		free(plugin->conf.file);
+	}
+	
+	if (plugin->conf.xmldata) {
+		xmlFreeDoc(plugin->conf.xmldata);
+	}
+	
+	free(plugin);
+}
+
+/**
  * \brief Remove input plugin from running config
  * 
  * \param config configurator
@@ -155,9 +224,36 @@ int config_remove_input(configurator *config, int index)
  */
 int config_remove_inter(configurator *config, int index)
 {
-	/* TODO: */
-	MSG_ERROR(msg_module, "[%d] Inter remove %d", config->proc_id, index);
+	MSG_NOTICE(msg_module, "[%d] Closing intermediate plugin %d", config->proc_id, index);
+	
+	struct ring_buffer *in_queue = NULL, *out_queue = NULL;
+	struct plugin_config *plugin = config->startup->inter[index];
+	
 	config->startup->inter[index] = NULL;
+	
+	/* Stop plugin */
+	ip_stop(plugin->inter);
+	
+	/* Get plugin's queues */
+	in_queue  = plugin->inter->in_queue;
+	out_queue = plugin->inter->out_queue;
+	
+	/* Wait until output queue is empty */
+	rbuffer_wait_empty(out_queue);
+	
+	/* Redirect queue of next plugin */
+	if (config->startup->inter[index + 1]) {
+		ip_change_in_queue(config->startup->inter[index + 1]->inter, in_queue);	
+	} else {
+		/* No next plugin, redirect Output Manager's queue */
+		output_manager_set_in_queue(in_queue);
+	}
+	print(config);
+	
+	/* Free plugin and it's queue */
+	rbuffer_free(out_queue);
+	config_free_plugin(plugin);
+	
 	return 0;
 }
 
@@ -312,17 +408,35 @@ int config_add_inter(configurator *config, struct plugin_config *plugin, int ind
 		im_plugin->in_queue = get_preprocessor_output_queue();
 	}
 	
+	struct ring_buffer *backup_queue;
+	
+	/* Set input queue of next plugin */
+	if (config->startup->inter[index + 1]) {
+		backup_queue = config->startup->inter[index + 1]->inter->in_queue;
+		ip_change_in_queue(config->startup->inter[index + 1]->inter, im_plugin->out_queue);
+	} else {
+		backup_queue = output_manager_get_in_queue();
+		output_manager_set_in_queue(im_plugin->out_queue);
+	}
+	
 	/* Start plugin */
 	if (ip_init(im_plugin, config->ip_id) != 0) {
+		/* Restore queues */
+		if (config->startup->inter[index + 1]) {
+			ip_change_in_queue(config->startup->inter[index + 1]->inter, backup_queue);
+		} else {
+			output_manager_set_in_queue(backup_queue);
+		}
 		goto err;
 	}
-
+	
 	config->ip_id++;
 	
 	/* Save data into an array */
 	config->startup->inter[index] = plugin;
 	config->startup->inter[index]->inter = im_plugin;
 	
+	print(config);
 	return 0;
 	
 err:
@@ -454,10 +568,20 @@ int config_compare_xml(struct plugin_xml_conf *first, struct plugin_xml_conf *se
 	const char *scontent = (const char *) xmlBufContent(sbuf);
 	
 	/* Compare contents of subtrees */
-	int ret = strcmp(fcontent, scontent);
+	int ret = 0;
+	if (fcontent && scontent) {
+		/* Both have contents */
+		ret = strcmp(fcontent, scontent);
+	} else if (!fcontent && !scontent) {
+		/* Both without contents */
+		ret = 0;
+	} else {
+		/* One with content and second without contents */
+		ret = 1;
+	}
 	
-	free(fbuf);
-	free(sbuf);
+	xmlBufferFree((xmlBufferPtr) fbuf);
+	xmlBufferFree((xmlBufferPtr) sbuf);
 	
 	return ret;
 }
@@ -516,33 +640,43 @@ int config_add(configurator *config, struct plugin_config *plugin, int index, in
  */
 int config_process_changes(configurator *config, struct plugin_config *old_plugins[], struct plugin_config *new_plugins[], int type)
 {
-	int plugs = 0, found, i, j;
+	int plugs = 0, old_plugs = 0, found, i, j;
 	
-	/* Get number of plugins in new configuration */
+	/* Get number of plugins in configurations */
+	while (old_plugins[old_plugs]) old_plugs++;
 	while (new_plugins[plugs]) plugs++;
 	
 	/* Check plugins */
-	for (i = 0; old_plugins[i]; ++i) {
+	for (i = 0; i < old_plugs; ++i) {
+		/* Array may have holes (removed plugins) */
+		if (!old_plugins[i]) {
+			continue;
+		}
+		
 		found = 0;
 		
 		for (j = 0; j < plugs; ++j) {
+			/* Array may have holes (processed plugins) */
+			if (!new_plugins[j]) {
+				continue;
+			}
+			
 			/* Find plugins with same names */
 			if (!strcmp(old_plugins[i]->conf.name, new_plugins[j]->conf.name)) {
 				/* Compare configurations */
 				if (config_compare_xml(&(old_plugins[i]->conf), &(new_plugins[j]->conf)) == 0) {
 					/* Same configurations - nothing changed, only position (?) */
-					if (i != j) {
+					if (i == j) {
+						new_plugins[j] = NULL;
+					} else {
 						/* move */
 						config_remove(config, i, type);
-						config_add(config, new_plugins[j], j, type);
 					}
 				} else {
 					/* Different configurations - remove old, add new plugin */
 					config_remove(config, i, type);
-					config_add(config, new_plugins[j], j, type);
 				}
 				
-				new_plugins[j] = NULL;
 				found = 1;
 				break;
 			}
@@ -594,16 +728,74 @@ startup_config *config_create_startup(configurator *config)
 	CHECK_ALLOC(startup, NULL);
 	
 	struct plugin_xml_conf_list *aux_list, *aux_conf;
-	int i = 0;
+	int i = 0, found = 0;
+	
+	/* Get new collector's node */
+	xmlNode *collector_node = NULL, *aux_node, *aux_collector;
+	xmlChar *collector_name = NULL, *aux_name;
+	
+	/* Get actual collector name */
+	for (aux_node = config->collector_node->children; aux_node; aux_node = aux_node->next) {
+		if (!xmlStrcmp(aux_node->name, (xmlChar *) "name")) {
+			collector_name = xmlNodeGetContent(aux_node);
+			break;
+		}
+	}
+	
+	/* Get all collectors */
+	xmlXPathObject *collectors = get_collectors(config->new_doc);
+	if (collectors == NULL) {
+		/* no collectingProcess configured */
+		MSG_ERROR(msg_module, "No collectingProcess configured - nothing to do.");
+		goto err;
+	}
+	
+	/* Find node of this collector */
+	for (i = (collectors->nodesetval->nodeNr - 1); i >= 0; i--) {
+		found = 0;
+		
+		/* Find new collector name */
+		aux_collector = collectors->nodesetval->nodeTab[i];
+		for (aux_node = aux_collector->children; aux_node; aux_node = aux_node->next) {
+			if (!xmlStrcmp(aux_node->name, (xmlChar *) "name")) {
+				aux_name = xmlNodeGetContent(aux_node);
+				
+				if (!xmlStrcmp(aux_name, collector_name)) {
+					/* Found new collector node */
+					collector_node = aux_collector;
+					free(aux_name);
+					found = 1;
+					break;
+				}
+				
+				free(aux_name);
+			}
+		}
+		
+		/* Collector node found */
+		if (found) {
+			break;
+		}
+	}
+	
+	xmlXPathFreeObject (collectors);
+	xmlFree(collector_name);
+	
+	if (!collector_node) {
+		MSG_ERROR(msg_module, "No according collecting process found!");
+		goto err;
+	}
+	
+	config->collector_node = collector_node;
 	
 	/* Get input plugins */
 	aux_list = get_input_plugins(config->collector_node, (char *) config->internal_file);
 	if (!aux_list) {
-		free(startup);
-		return NULL;
+		goto err;
 	}
 	
 	/* Store them into array */
+	i = 0;
 	for (aux_conf = aux_list; aux_conf; aux_conf = aux_conf->next, ++i) {
 		startup->input[i] = calloc(1, sizeof(struct plugin_config));
 		CHECK_ALLOC(startup->input[i], NULL);
@@ -613,10 +805,9 @@ startup_config *config_create_startup(configurator *config)
 	free_conf_list(aux_list);
 	
 	/* Get storage plugins */
-	aux_list = get_storage_plugins(config->collector_node, config->act_doc, (char *) config->internal_file);
+	aux_list = get_storage_plugins(config->collector_node, config->new_doc, (char *) config->internal_file);
 	if (!aux_list) {
-		free(startup);
-		return NULL;
+		goto err;
 	}
 	
 	/* Store them into array */
@@ -630,7 +821,7 @@ startup_config *config_create_startup(configurator *config)
 	free_conf_list(aux_list);
 	
 	/* Get (optional) intermediate plugins */
-	aux_list = get_intermediate_plugins(config->act_doc, (char *) config->internal_file);
+	aux_list = get_intermediate_plugins(config->new_doc, (char *) config->internal_file);
 	
 	/* Store them into array */
 	i = 0;
@@ -643,6 +834,13 @@ startup_config *config_create_startup(configurator *config)
 	free_conf_list(aux_list);
 	
 	return startup;
+	
+err:
+	if (startup) {
+		free(startup);
+	}
+	
+	return NULL;
 }
 
 /**
@@ -688,11 +886,43 @@ int config_process_new_startup(configurator *config, startup_config *new_startup
 }
 
 /**
+ * \brief Free startup structure
+ * 
+ * @param startup startup structure
+ */
+void free_startup(startup_config *startup)
+{
+	int i;
+	/* Close and free input plugins */
+	for (i = 0; startup->input[i]; ++i) {
+		config_free_plugin(startup->input[i]);
+	}
+
+	/* Close and free storage plugins */
+	for (i = 0; startup->storage[i]; ++i) {
+		config_free_plugin(startup->storage[i]);
+	}
+
+	/* Close and free intermediate plugins */
+	for (i = 0; startup->inter[i]; ++i) {
+		config_free_plugin(startup->inter[i]);
+	}
+
+	/* Free startup configuration */
+	free(startup);	
+}
+
+/**
  * \brief Reload IPFIXcol startup configuration
  */
 int config_reconf(configurator *config)
-{
+{	
 	/* Create startup configuration from updated xml file */
+	config->new_doc = config_open_xml(config->startup_file);
+	if (!config->new_doc) {
+		return 1;
+	}
+	
 	startup_config *new_startup = config_create_startup(config);
 	if (!new_startup) {
 		return 1;
@@ -717,64 +947,11 @@ int config_reconf(configurator *config)
 		output_manager_set_in_queue(config->startup->inter[i - 1]->inter->out_queue);
 	}
 	
+	/* Replace startup xml */
+	xmlFreeDoc(config->act_doc);
+	config->act_doc = config->new_doc;
+	
 	return ret;
-}
-
-/**
- * \brief Close plugin and free its resources
- * 
- * \param plugin
- */
-void config_free_plugin(struct plugin_config *plugin)
-{
-	/* Close plugin */
-	switch (plugin->type) {
-	case PLUGIN_INPUT:
-		if (plugin->input->dll_handler) {
-			if (plugin->input->config) {
-				plugin->input->close(&(plugin->input->config));
-			}
-			
-			dlclose(plugin->input->dll_handler);
-		}
-		/* Input is pointer to configurator structure, don't free it */
-//		free(plugin->input);
-		
-		break;
-	case PLUGIN_INTER:
-		/* TODO - nahradit remove */
-		if (plugin->inter->dll_handler) {
-			plugin->inter->intermediate_close(plugin->inter->plugin_config);
-			dlclose(plugin->inter->dll_handler);
-		}
-		free(plugin->inter);
-		
-		break;
-	case PLUGIN_STORAGE:
-		if (plugin->storage->dll_handler) {
-			dlclose(plugin->storage->dll_handler);
-		}
-		
-		if (plugin->conf.observation_domain_id) {
-			free(plugin->conf.observation_domain_id);
-		}
-		
-		free(plugin->storage);
-		break;
-	default:
-		break;
-	}
-	
-	/* Free resources */
-	if (plugin->conf.file) {
-		free(plugin->conf.file);
-	}
-	
-	if (plugin->conf.xmldata) {
-		xmlFreeDoc(plugin->conf.xmldata);
-	}
-	
-	free(plugin);
 }
 
 /**
@@ -801,33 +978,8 @@ void config_destroy(configurator *config)
 		config->act_doc = NULL;
 	}
 	
-	int i = 0;
 	if (config->startup) {
-		
-		/* Close and free input plugins */
-		for (i = 0; config->startup->input[i]; ++i) {
-			config_free_plugin(config->startup->input[i]);
-		}
-		
-		/*
-		* Stop all intermediate plugins and flush buffers
-		* Plugins will be closed later - they can have data needed by storage plugins
-		* (templates etc.)
-		*/
-		config_stop_inter(config);
-		
-		/* Close and free storage plugins */
-		for (i = 0; config->startup->storage[i]; ++i) {
-			config_free_plugin(config->startup->storage[i]);
-		}
-		
-		/* Close and free intermediate plugins */
-		for (i = 0; config->startup->inter[i]; ++i) {
-			config_free_plugin(config->startup->inter[i]);
-		}
-		
-		/* Free startup configuration */
-		free(config->startup);
+		free_startup(config->startup);
 	}
 	
 	/* Free configurator */

@@ -61,6 +61,15 @@
 int ip_init(struct intermediate *intermediate, uint32_t ip_id);
 
 /**
+ * \brief Set new input queue
+ * 
+ * \param intermediate intermediate process
+ * \param in_queue new input queue
+ * \return 0 on success
+ */
+int ip_change_in_queue(struct intermediate *intermediate, struct ring_buffer *in_queue);
+
+/**
  * \brief Destroy Intermediate Process
  *
  * \param[in] config configuration structure

@@ -88,6 +88,9 @@ struct ipfix_template_mgr *template_mgr = NULL;
 /* main loop indicator */
 volatile int done = 0;
 
+/* reconfiguration indicator */
+volatile int reconf = 0;
+
 /* plugins configuration */
 configurator *config = NULL;
 
@@ -131,9 +134,7 @@ void term_signal_handler(int sig)
 	/* Reconfiguration signal */
 	if (sig == SIGUSR1) {
 		MSG_COMMON(ICMSG_ERROR, "Signal: %i detected, reloading configuration", sig);
-		if (config) {
-			config_reconf(config);
-		}
+		reconf = 1;
 		return;
 	}
 	
@@ -321,21 +322,27 @@ int main (int argc, char* argv[])
 			MSG_ERROR(msg_module, "%s", strerror(errno));
 		}
 	}
-
+	
 	/* configure output subsystem */
 	retval = output_manager_start();
 	if (retval != 0) {
 		MSG_ERROR(msg_module, "[%d] Initiating Storage Manager failed.", config->proc_id);
 		goto cleanup;
 	}
-
+	
 	/* main loop */
 	while (!done) {
 		/* get data to process */
 		if ((get_retval = config->input.get (config->input.config, &input_info, &packet, &source_status)) < 0) {
-			if (!done || get_retval != INPUT_INTR) { /* if interrupted and closing, it's ok */
+			if ((!reconf && !done) || get_retval != INPUT_INTR) { /* if interrupted and closing, it's ok */
 				MSG_WARNING(msg_module, "[%d] Getting IPFIX data failed!", config->proc_id);
 			}
+			
+			if (reconf) {
+				config_reconf(config);
+				reconf = 0;
+			}
+			
 			if (packet) {
 				free(packet);
 				packet = NULL;

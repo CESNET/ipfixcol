@@ -135,11 +135,38 @@ void output_manager_remove(struct output_manager_config *output_manager, struct 
 }
 
 /**
+ * \brief Get input queue
+ */
+inline struct ring_buffer *output_manager_get_in_queue()
+{
+	return conf->in_queue;
+}
+
+/**
  * \brief Set new input queue
  */
-inline void output_manager_set_in_queue(struct ring_buffer *in_queue)
+void output_manager_set_in_queue(struct ring_buffer *in_queue)
 {
-	conf->in_queue = in_queue;
+	if (conf->in_queue == in_queue) {
+		return;
+	}
+	
+	if (conf->running) {
+		/* If already running, control message must be sent */
+		pthread_mutex_lock(&conf->in_q_mutex);
+		
+		conf->new_in = in_queue;
+		rbuffer_write(conf->in_queue, NULL, 1);
+		
+		/* Wait for change */
+		while (conf->in_queue != in_queue) {
+			pthread_cond_wait(&conf->in_q_cond, &conf->in_q_mutex);
+		}
+		
+		pthread_mutex_unlock(&conf->in_q_mutex);
+	} else {
+		conf->in_queue = in_queue;
+	}
 }
 
 /**
@@ -235,6 +262,7 @@ static void *output_manager_plugin_thread(void* config)
 	/* set the thread name to reflect the configuration */
 	prctl(PR_SET_NAME, "ipfixcol OM", 0, 0, 0);      /* output managers' manager */
 
+	conf->running = 1;
 
     /* loop will break upon receiving NULL from buffer */
 	while (1) {
@@ -244,6 +272,16 @@ static void *output_manager_plugin_thread(void* config)
 		msg = rbuffer_read(conf->in_queue, &index);
 
 		if (!msg) {
+			rbuffer_remove_reference(conf->in_queue, index, 1);
+			if (conf->new_in) {
+				/* Set new input queue */
+				conf->in_queue = (struct ring_buffer *) conf->new_in;
+				conf->new_in = NULL;
+				pthread_cond_signal(&conf->in_q_cond);
+				continue;
+			}
+			
+			/* End manager */
 			MSG_NOTICE(msg_module, "No more data from core.");
 			break;
 		}
@@ -556,7 +594,7 @@ int output_manager_start() {
 		free(conf);
 		return -1;
 	}
-
+	
 	if (conf->stat_interval > 0) {
 		retval = pthread_create(&(conf->stat_thread), NULL, &statistics_thread, (void *) conf);
 		if (retval != 0) {

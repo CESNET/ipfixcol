@@ -84,6 +84,7 @@ typedef struct ipfix_config {
     const char *internal_file;      /**< path to internal configuration file */
     const char *startup_file;       /**< path to startup configuration file */
     xmlDoc *act_doc;                /**< Actual startup configuration */
+    xmlDoc *new_doc;                /**< New startup configuration */
     xmlNode *collector_node;        /**< Collector node in startup.xml */
     struct input input;             /**< Input plugin */
     startup_config *startup;        /**< parser startup file */
