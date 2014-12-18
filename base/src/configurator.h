@@ -37,8 +37,8 @@
  *
  */
 
-#ifndef CONFIGURER_H
-#define	CONFIGURER_H
+#ifndef CONFIGURATOR_H
+#define	CONFIGURATOR_H
 
 #include "config.h"
 
@@ -114,7 +114,7 @@ int config_reconf(configurator *config);
 /**
  * \brief Stop all intermediate plugins and flush their buffers
  * 
- * @param config configurator
+ * \param[in] config configurator
  */
 void config_stop_inter(configurator *config);
 
@@ -127,4 +127,4 @@ void config_destroy(configurator *config);
 
 /**@}*/
 
-#endif	/* CONFIGURER_H */
+#endif	/* CONFIGURATOR_H */

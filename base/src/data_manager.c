@@ -235,15 +235,15 @@ int data_manager_remove_plugin(struct data_manager_config* config, int id)
 	for (i = 0; i < config->plugins_count; ++i) {
 		if (config->storage_plugins[i] && config->storage_plugins[i]->id == id) {
 			/* Remove from array */
-			config->storage_plugins[i] = NULL;
 			plugin = config->storage_plugins[i];
+			config->storage_plugins[i] = NULL;
 			break;
 		}
 	}
 	
 	if (plugin) {
 		/* Create STOP message */
-		struct ipfix_message *msg = malloc(sizeof(struct ipfix_message));
+		struct ipfix_message *msg = calloc(1, sizeof(struct ipfix_message));
 		msg->plugin_status = PLUGIN_STOP;
 		msg->plugin_id = plugin->id;
 		

@@ -95,7 +95,7 @@ void print(configurator *config)
 /**
  * \brief Open xml document
  * 
- * \param filename Path to xml file
+ * \param[in] filename Path to xml file
  * \return xml document
  */
 xmlDoc *config_open_xml(const char *filename)
@@ -146,7 +146,7 @@ configurator *config_init(const char *internal, const char *startup)
 /**
  * \brief Close plugin and free its resources
  * 
- * \param plugin
+ * \param[in] plugin
  */
 void config_free_plugin(struct plugin_config *plugin)
 {
@@ -202,15 +202,20 @@ void config_free_plugin(struct plugin_config *plugin)
 /**
  * \brief Remove input plugin from running config
  * 
- * \param config configurator
- * \param index plugin index in array
+ * \param[in] config configurator
+ * \param[in] index plugin index in array
  * \return 0 on success
  */
 int config_remove_input(configurator *config, int index)
 {
-	/* TODO: */
-	MSG_ERROR(msg_module, "[%d] Input remove %d", config->proc_id, index);
+	struct plugin_config *plugin = config->startup->input[index];
 	
+	MSG_NOTICE(msg_module, "[%d] Closing input plugin %d (%s)", config->proc_id, index, plugin->conf.name);
+	
+	/* Free plugin */
+	config_free_plugin(plugin);
+	
+	/* Remove it from startup config */
 	config->startup->input[index] = NULL;
 	return 0;
 }
@@ -218,17 +223,19 @@ int config_remove_input(configurator *config, int index)
 /**
  * \brief Remove intermediate plugin from running config
  * 
- * \param config configurator
- * \param index plugin index in array
+ * \param[in] config configurator
+ * \param[in] index plugin index in array
  * \return 0 on success
  */
 int config_remove_inter(configurator *config, int index)
 {
-	MSG_NOTICE(msg_module, "[%d] Closing intermediate plugin %d", config->proc_id, index);
-	
-	struct ring_buffer *in_queue = NULL, *out_queue = NULL;
 	struct plugin_config *plugin = config->startup->inter[index];
 	
+	MSG_NOTICE(msg_module, "[%d] Closing intermediate plugin %d (%s)", config->proc_id, index, plugin->conf.name);
+	
+	struct ring_buffer *in_queue = NULL, *out_queue = NULL;
+	
+	/* Remove it from startup config */
 	config->startup->inter[index] = NULL;
 	
 	/* Stop plugin */
@@ -248,7 +255,6 @@ int config_remove_inter(configurator *config, int index)
 		/* No next plugin, redirect Output Manager's queue */
 		output_manager_set_in_queue(in_queue);
 	}
-	print(config);
 	
 	/* Free plugin and it's queue */
 	rbuffer_free(out_queue);
@@ -260,24 +266,34 @@ int config_remove_inter(configurator *config, int index)
 /**
  * \brief Remove storage plugin from running config
  * 
- * \param config configurator
- * \param index plugin index in array
+ * \param[in] config configurator
+ * \param[in] index plugin index in array
  * \return 0 on success
  */
 int config_remove_storage(configurator *config, int index)
 {
-	/* TODO: */
-	MSG_ERROR(msg_module, "[%d] Storage remove %d", config->proc_id, index);
+	struct plugin_config *plugin = config->startup->storage[index];
+	
+	MSG_NOTICE(msg_module, "[%d] Closing storage plugin %d (%s)", config->proc_id, index, plugin->conf.name);
+	
+	/* Remove it from startup config */
 	config->startup->storage[index] = NULL;
+	
+	/* Close plugin in Output Manager*/
+	output_manager_remove_plugin(plugin->storage->id);
+	
+	/* Free plugin */
+	config_free_plugin(plugin);
+	
 	return 0;
 }
 
 /**
  * \brief Add input plugin into running configuration
  * 
- * \param config configurator
- * \param plugin plugin configuration
- * \param index plugin index in array
+ * \param[in] config configurator
+ * \param[in] plugin plugin configuration
+ * \param[in] index plugin index in array
  * \return 0 on success
  */
 int config_add_input(configurator *config, struct plugin_config *plugin, int index)
@@ -347,9 +363,9 @@ err:
 /**
  * \brief Add intermediate plugin into running configuration
  * 
- * \param config configurator
- * \param plugin plugin configuration
- * \param index plugin index in array
+ * \param[in] config configurator
+ * \param[in] plugin plugin configuration
+ * \param[in] index plugin index in array
  * \return 0 on success
  */
 int config_add_inter(configurator *config, struct plugin_config *plugin, int index)
@@ -436,7 +452,6 @@ int config_add_inter(configurator *config, struct plugin_config *plugin, int ind
 	config->startup->inter[index] = plugin;
 	config->startup->inter[index]->inter = im_plugin;
 	
-	print(config);
 	return 0;
 	
 err:
@@ -453,9 +468,9 @@ err:
 /**
  * \brief Add storage plugin into running configuration
  * 
- * \param config configurator
- * \param plugin plugin configuration
- * \param index plugin index in array
+ * \param[in] config configurator
+ * \param[in] plugin plugin configuration
+ * \param[in] index plugin index in array
  * \return 0 on success
  */
 int config_add_storage(configurator *config, struct plugin_config *plugin, int index)
@@ -536,8 +551,8 @@ err:
 /**
  * \brief Compare two plugin configurations
  * 
- * \param first first config
- * \param second second config
+ * \param[in] first first config
+ * \param[in] second second config
  * \return 0 if configurations are the same
  */
 int config_compare_xml(struct plugin_xml_conf *first, struct plugin_xml_conf *second)
@@ -556,13 +571,13 @@ int config_compare_xml(struct plugin_xml_conf *first, struct plugin_xml_conf *se
 	snode = xmlDocGetRootElement(second->xmldata);
 	
 	/* Get first subtree */
-	xmlBufPtr fbuf = calloc(1, 20000);
+	xmlBufPtr fbuf = calloc(1, 2000);
 	CHECK_ALLOC(fbuf, 1);
 	xmlBufGetNodeContent(fbuf, fnode);
 	const char *fcontent = (const char *) xmlBufContent(fbuf);
 	
 	/* Get second subtree */
-	xmlBufPtr sbuf = calloc(1, 20000);
+	xmlBufPtr sbuf = calloc(1, 2000);
 	CHECK_ALLOC(sbuf, 1);
 	xmlBufGetNodeContent(sbuf, snode);
 	const char *scontent = (const char *) xmlBufContent(sbuf);
@@ -589,9 +604,9 @@ int config_compare_xml(struct plugin_xml_conf *first, struct plugin_xml_conf *se
 /**
  * \brief Remove plugin from running config
  * 
- * \param config configurator
- * \param index plugin index in array
- * \param type plugin type
+ * \param[in] config configurator
+ * \param[in] index plugin index in array
+ * \param[in] type plugin type
  * \return 0 on success
  */
 int config_remove(configurator *config, int index, int type)
@@ -609,10 +624,10 @@ int config_remove(configurator *config, int index, int type)
 /**
  * \brief Add plugin into running config
  * 
- * \param config configurator
- * \param plugin plugin configuration
- * \param index plugin index in array
- * \param type plugin type
+ * \param[in] config configurator
+ * \param[in] plugin plugin configuration
+ * \param[in] index plugin index in array
+ * \param[in] type plugin type
  * \return 0 on success
  */
 int config_add(configurator *config, struct plugin_config *plugin, int index, int type)
@@ -632,10 +647,10 @@ int config_add(configurator *config, struct plugin_config *plugin, int index, in
 /**
  * \brief Process changes in plugins
  * 
- * \param config configurator
- * \param old_plugins array of actually used plugins
- * \param new_plugins array of new configurations
- * \param type plugins type
+ * \param[in] config configurator
+ * \param[in] old_plugins array of actually used plugins
+ * \param[in] new_plugins array of new configurations
+ * \param[in] type plugins type
  * \return 0 on success
  */
 int config_process_changes(configurator *config, struct plugin_config *old_plugins[], struct plugin_config *new_plugins[], int type)
@@ -665,12 +680,12 @@ int config_process_changes(configurator *config, struct plugin_config *old_plugi
 			if (!strcmp(old_plugins[i]->conf.name, new_plugins[j]->conf.name)) {
 				/* Compare configurations */
 				if (config_compare_xml(&(old_plugins[i]->conf), &(new_plugins[j]->conf)) == 0) {
-					/* Same configurations - nothing changed, only position (?) */
-					if (i == j) {
-						new_plugins[j] = NULL;
-					} else {
+					/* Same configurations - nothing changed, only position (needed only for intermediate plugins) */
+					if (type == PLUGIN_INTER && i != j) {
 						/* move */
 						config_remove(config, i, type);
+					} else {
+						new_plugins[j] = NULL;
 					}
 				} else {
 					/* Different configurations - remove old, add new plugin */
@@ -704,7 +719,7 @@ int config_process_changes(configurator *config, struct plugin_config *old_plugi
 /**
  * \brief Free list of plugin configurations
  * 
- * \param list
+ * \param[in] list
  */
 void free_conf_list(struct plugin_xml_conf_list *list) 
 {
@@ -719,7 +734,7 @@ void free_conf_list(struct plugin_xml_conf_list *list)
 /**
  * \brief Create startup configuration
  * 
- * \param config configurator
+ * \param[in] config configurator
  */
 startup_config *config_create_startup(configurator *config)
 {
@@ -846,8 +861,8 @@ err:
 /**
  * \brief Apply new startup configuration
  * 
- * \param config configurator
- * \param new_startup new startup configuration
+ * \param[in] config configurator
+ * \param[in] new_startup new startup configuration
  * \return 0 on success
  */
 int config_process_new_startup(configurator *config, startup_config *new_startup)
@@ -888,7 +903,7 @@ int config_process_new_startup(configurator *config, startup_config *new_startup
 /**
  * \brief Free startup structure
  * 
- * @param startup startup structure
+ * \param[in] startup startup structure
  */
 void free_startup(startup_config *startup)
 {
