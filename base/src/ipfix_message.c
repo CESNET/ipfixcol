@@ -380,10 +380,6 @@ int message_free(struct ipfix_message *msg)
 struct ipfix_template_row *fields_get_field(uint8_t *fields, int cnt, uint32_t enterprise, uint16_t id, int *data_offset, int netw)
 {
 	int i;
-	if (netw) {
-		id = htons(id);
-		enterprise = ntohl(enterprise);
-	}
 
 	if (data_offset) {
 		*data_offset = 0;
@@ -392,21 +388,16 @@ struct ipfix_template_row *fields_get_field(uint8_t *fields, int cnt, uint32_t e
 	struct ipfix_template_row *row = (struct ipfix_template_row *) fields;
 
 	for (i = 0; i < cnt; ++i, ++row) {
-		uint16_t rid = row->id;
+		uint16_t rid = (netw) ? ntohs(row->id) : row->id;
 		uint16_t len = (netw) ? ntohs(row->length) : row->length;
 		uint32_t ren = 0;
 		uint8_t has_ren = 0;
 		
 		/* Get field ID and enterprise number */
-		if (!netw && row->id >> 15) { /* Template */
-			rid = row->id & 0x7FFF;
+		if (row->id >> 15) {
+			rid = row->id && 0x7FFF;
 			++row;
-			ren = *((uint32_t *) row);
-			has_ren = 1;
-		} else if (netw && ntohs(row->id) >> 15) { /* Template record */
-			rid = ntohs(row->id) & 0x7FFF;
-			++row;
-			ren = ntohl(*((uint32_t *) row));
+			ren = (netw) ? ntohl(*((uint32_t *) row)) : *((uint32_t *) row);
 			has_ren = 1;
 		}
 		
