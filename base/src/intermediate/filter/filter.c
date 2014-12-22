@@ -108,6 +108,11 @@ void filter_free_tree(struct filter_treenode *node)
 		}
 		free(node->value);
 	}
+	
+	/* Free field */
+	if (node->field) {
+		free(node->field);
+	}
 
 	free(node);
 }
