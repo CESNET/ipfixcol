@@ -61,6 +61,10 @@ do {\
 	} \
 } while(0)
 
+#define QUOTED(_str_) "\"" + (_str_) + "\""
+
+std::map<uint32_t, std::map<uint16_t, struct ipfix_element> > Storage::elements{};
+
 /**
  * \brief Constructor
  */
@@ -117,20 +121,11 @@ void Storage::loadElements()
 }
 
 /**
- * \brief Send data
+ * \brief Send data record
  */
-void Storage::sendData()
+void Storage::sendData() const
 {
-	/* Serialize data */
-	std::string serialized = json::Serialize(jData) + "\n";
-	if (serialized.empty()) {
-		/* TODO: is this error or not? */
-		MSG_WARNING(msg_module, "Empty serialized data");
-		return;
-	}
-	
-	/* Send data */
-	if (siso_send(sender, serialized.c_str(), serialized.length()) != SISO_OK) {
+	if (siso_send(sender, record.c_str(), record.length()) != SISO_OK) {
 		throw std::runtime_error(std::string("Sending data: ") + siso_get_last_err(sender));
 	}
 }
@@ -170,7 +165,7 @@ void Storage::storeDataSets(const ipfix_message* ipfix_msg)
 /**
  * \brief Get real field length
  */
-uint16_t Storage::realLength(uint16_t length, uint8_t *data_record, uint16_t &offset)
+uint16_t Storage::realLength(uint16_t length, uint8_t *data_record, uint16_t &offset) const
 {
 	/* Static length */
 	if (length != 65535) {
@@ -192,7 +187,7 @@ uint16_t Storage::realLength(uint16_t length, uint8_t *data_record, uint16_t &of
 /**
  * \brief Read string field
  */
-std::string Storage::readString(uint16_t& length, uint8_t *data_record, uint16_t &offset)
+std::string Storage::readString(uint16_t& length, uint8_t *data_record, uint16_t &offset) const
 {
 	/* Get string length */
 	length = this->realLength(length, data_record, offset);
@@ -204,10 +199,10 @@ std::string Storage::readString(uint16_t& length, uint8_t *data_record, uint16_t
 /**
  * \brief Read raw data from record
  */
-std::string Storage::readRawData(uint16_t &length, uint8_t* data_record, uint16_t &offset)
+std::string Storage::readRawData(uint16_t &length, uint8_t* data_record, uint16_t &offset) const
 {
 	/* Read raw value */
-	std::stringstream ss;
+	std::ostringstream ss;
 
 	switch (length) {
 	case (1):
@@ -238,18 +233,9 @@ std::string Storage::readRawData(uint16_t &length, uint8_t* data_record, uint16_
  */
 std::string Storage::rawName(uint32_t en, uint16_t id) const
 {
-	std::stringstream ss;
+	std::ostringstream ss;
 	ss << "e" << en << "id" << id;
 	return ss.str();
-}
-
-/**
- * \brief Initialize JSON record
- */
-void Storage::initRecord()
-{
-	jData.Clear();
-	jData["@type"] = "ipfix.entry";
 }
 
 /**
@@ -258,7 +244,7 @@ void Storage::initRecord()
 uint16_t Storage::storeDataRecord(uint8_t *data_record, ipfix_template *templ)
 {
 	uint16_t offset = 0;
-	json::Object jRecord;
+	record = "{\"@type\": \"ipfix.entry\", \"ipfix\": {";
 	
 	/* get all fields */
 	for (uint16_t count = 0, index = 0; count < templ->field_count; ++count, ++index) {
@@ -274,7 +260,7 @@ uint16_t Storage::storeDataRecord(uint8_t *data_record, ipfix_template *templ)
 		
 		/* Get element informations */
 		struct ipfix_element element = this->getElement(enterprise, id);
-		std::string value{};
+		std::string value;
 		
 		switch (element.type) {
 		case PROTOCOL:
@@ -321,15 +307,17 @@ uint16_t Storage::storeDataRecord(uint8_t *data_record, ipfix_template *templ)
 			break;
 		}
 		
-		offset += length;
+		if (count > 0) {
+			record += ", ";
+		}
 		
-		jRecord[element.name] = value;
+		record += QUOTED(element.name) + ": " + QUOTED(value);
+		
+		offset += length;
 	}
 	
-	initRecord();
-	jData["ipfix"] = jRecord;
+	record += "}}\n";
 	sendData();
-	
 	
 	return offset;
 }

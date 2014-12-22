@@ -112,7 +112,7 @@ private:
      * @param offset field offset
      * @return real length;
      */
-    uint16_t realLength(uint16_t length, uint8_t *data, uint16_t &offset);
+    uint16_t realLength(uint16_t length, uint8_t *data, uint16_t &offset) const;
     
     /**
      * \brief Read string field
@@ -122,7 +122,7 @@ private:
      * @param offset field offset
      * @return string
      */
-    std::string readString(uint16_t &length, uint8_t *data, uint16_t &offset);
+    std::string readString(uint16_t &length, uint8_t *data, uint16_t &offset) const;
     
     /**
      * \brief Read raw data from record on given offset
@@ -132,7 +132,7 @@ private:
      * @param offset field offset (will be changed)
      * @return field value
      */
-    std::string readRawData(uint16_t &length, uint8_t *data, uint16_t &offset);
+    std::string readRawData(uint16_t &length, uint8_t *data, uint16_t &offset) const;
     
     /**
      * \brief Store data record
@@ -163,18 +163,13 @@ private:
      */
     void loadElements();
     
-    /**
-     * \brief Initialize JSON record
-     */
-    void initRecord();
-    
-    void sendData();
+    void sendData() const;
     
     Translator translator;          /**< number -> string translator */
-    json::Object jData;             /**< data in JSON format */
+	std::string record;				/**< Data record */
     sisoconf *sender;               /**< sender "class" */
     
-    std::map<uint32_t, std::map<uint16_t, struct ipfix_element> > elements;
+	static std::map<uint32_t, std::map<uint16_t, struct ipfix_element> > elements;
 };
 
 #endif	/* STORAGE_H */
