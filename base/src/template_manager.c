@@ -726,19 +726,6 @@ void tm_template_reference_dec(struct ipfix_template *templ)
 		/* This must be atomic */
 		__sync_fetch_and_sub(&(templ->references), 1);
 	}
-
-	/* We have data for newer template, remove older ones */
-	if (templ->next != NULL && templ->next->references == 0) {
-		struct ipfix_template *aux_templ;
-		while (templ->next) {
-			aux_templ = templ->next;
-			templ->next = templ->next->next;
-			free(aux_templ);
-		}
-
-		free(templ->next);
-		templ->next = NULL;
-	}
 }
 
 /**
