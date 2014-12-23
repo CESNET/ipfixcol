@@ -54,6 +54,9 @@
 #define read32(_ptr_) (*((uint32_t *) (_ptr_)))
 #define read64(_ptr_) (*((uint64_t *) (_ptr_)))
 
+#define IPV6_LEN 16
+#define MAC_LEN  6
+
 enum element_type {
     UNKNOWN,
     PROTOCOL,
@@ -165,8 +168,12 @@ private:
     
     void sendData() const;
     
+	uint8_t addr6[IPV6_LEN];
+	uint8_t addrMac[MAC_LEN];
+	uint16_t offset, id, length;
+	uint32_t enterprise;
     Translator translator;          /**< number -> string translator */
-	std::string record;				/**< Data record */
+	std::string record, value;				/**< Data record */
     sisoconf *sender;               /**< sender "class" */
     
 	static std::map<uint32_t, std::map<uint16_t, struct ipfix_element> > elements;

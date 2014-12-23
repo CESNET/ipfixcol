@@ -51,9 +51,6 @@ extern "C" {
 
 static const char *msg_module = "json_storage";
 
-#define IPV6_LEN 16
-#define MAC_LEN  6
-
 #define READ_BYTE_ARR(_dst_, _src_, _len_) \
 do {\
 	for (int i = 0; i < (_len_); ++i) { \
@@ -243,15 +240,15 @@ std::string Storage::rawName(uint32_t en, uint16_t id) const
  */
 uint16_t Storage::storeDataRecord(uint8_t *data_record, ipfix_template *templ)
 {
-	uint16_t offset = 0;
+	offset = 0;
 	record = "{\"@type\": \"ipfix.entry\", \"ipfix\": {";
 	
 	/* get all fields */
 	for (uint16_t count = 0, index = 0; count < templ->field_count; ++count, ++index) {
 		/* Get Enterprise number and ID */
-		uint16_t id = templ->fields[index].ie.id;
-		uint16_t length = templ->fields[index].ie.length;
-		uint32_t enterprise = 0;
+		id = templ->fields[index].ie.id;
+		length = templ->fields[index].ie.length;
+		enterprise = 0;
 		
 		if (id & 0x8000) {
 			id &= 0x7fff;
@@ -260,7 +257,6 @@ uint16_t Storage::storeDataRecord(uint8_t *data_record, ipfix_template *templ)
 		
 		/* Get element informations */
 		struct ipfix_element element = this->getElement(enterprise, id);
-		std::string value;
 		
 		switch (element.type) {
 		case PROTOCOL:
@@ -273,14 +269,12 @@ uint16_t Storage::storeDataRecord(uint8_t *data_record, ipfix_template *templ)
 			value = translator.formatIPv4(read32(data_record + offset));
 			break;
 		case IPV6:{
-			uint8_t addr[IPV6_LEN];
-			READ_BYTE_ARR(addr, data_record + offset, IPV6_LEN);
-			value = translator.formatIPv6(addr);
+			READ_BYTE_ARR(addr6, data_record + offset, IPV6_LEN);
+			value = translator.formatIPv6(addr6);
 			break;}
 		case MAC: {
-			uint8_t addr[MAC_LEN];
-			READ_BYTE_ARR(addr, data_record + offset, MAC_LEN);
-			value = translator.formatMac(addr);
+			READ_BYTE_ARR(addrMac, data_record + offset, MAC_LEN);
+			value = translator.formatMac(addrMac);
 			break;}
 		case TSTAMP_SEC:
 			value = translator.formatTimestamp(read64(data_record + offset), t_units::SEC);
