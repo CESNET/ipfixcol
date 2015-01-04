@@ -391,19 +391,17 @@ struct ipfix_template_row *fields_get_field(uint8_t *fields, int cnt, uint32_t e
 		uint16_t rid = (netw) ? ntohs(row->id) : row->id;
 		uint16_t len = (netw) ? ntohs(row->length) : row->length;
 		uint32_t ren = 0;
-		uint8_t has_ren = 0;
 		
 		/* Get field ID and enterprise number */
 		if (rid >> 15) {
-			rid = rid && 0x7FFF;
+			rid = rid & 0x7FFF;
 			++row;
 			ren = (netw) ? ntohl(*((uint32_t *) row)) : *((uint32_t *) row);
-			has_ren = 1;
 		}
 		
 		/* Check informations */
 		if (rid == id && ren == enterprise) {
-			if (has_ren) {
+			if (ren != 0) {
 				--row;
 			}
 			return row;
