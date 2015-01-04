@@ -394,8 +394,8 @@ struct ipfix_template_row *fields_get_field(uint8_t *fields, int cnt, uint32_t e
 		uint8_t has_ren = 0;
 		
 		/* Get field ID and enterprise number */
-		if (row->id >> 15) {
-			rid = row->id && 0x7FFF;
+		if (rid >> 15) {
+			rid = rid && 0x7FFF;
 			++row;
 			ren = (netw) ? ntohl(*((uint32_t *) row)) : *((uint32_t *) row);
 			has_ren = 1;
