@@ -297,6 +297,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 						/* now we have a <fileWriter> node with description of storage plugin */
 						/* but first we have to check that we support this storage plugin type (according to fileFormat) */
 						for (k = 0; k < xpath_obj_destinations->nodesetval->nodeNr; k++) {
+							plugin_file = NULL;
 							node_filewriter = get_children(xpath_obj_destinations->nodesetval->nodeTab[k], BAD_CAST "fileWriter");
 							if (node_filewriter == NULL) {
 								/* try next <destination> node */
@@ -349,6 +350,10 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 									aux_plugin->next = plugins;
 									plugins = aux_plugin;
 								}
+							}
+
+							if (plugin_file == NULL) {
+								MSG_ERROR(msg_module, "Unable to load storage plugin; configuration for fileFormat '%s' could not be found", (char *) file_format);
 							}
 						}
 						/* break while loop to get to another exportingProcess */
@@ -528,7 +533,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char 
 
 found_input_plugin_file:
 	if (retval->config.file == NULL) {
-		MSG_ERROR(msg_module, "No definition for collector found.");
+		MSG_ERROR(msg_module, "Unable to load input plugin; configuration for '%s' could not be found", collector_name);
 		free (retval);
 		retval = NULL;
 	}
@@ -652,6 +657,7 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 		}
 
 		if (!plugin_file) {
+			MSG_ERROR(msg_module, "Unable to load intermediate plugin; configuration for '%s' could not be found", (char *) node->name);
 			node = node->next;
 			continue;
 		}
