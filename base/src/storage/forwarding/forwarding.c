@@ -768,7 +768,7 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 
 	/* Copy unsent templates to new message */
 	proc.type = TM_TEMPLATE;
-	for (i = 0; msg->templ_set[i] != NULL && i < 1024; ++i) {
+	for (i = 0; i < 1024 && msg->templ_set[i] != NULL; ++i) {
 		prevo = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->templ_set[i]->header), 4);
 		proc.offset += 4;
