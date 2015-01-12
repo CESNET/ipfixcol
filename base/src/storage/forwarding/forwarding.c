@@ -834,7 +834,7 @@ int forwarding_update_templates(forwarding *conf, const struct ipfix_message *ms
 	struct forwarding_template_record *rec = NULL;
 	
 	/* Check each used template */
-	for (i = 0; msg->data_couple[i].data_set != NULL && i < 1024; ++i) {
+	for (i = 0; i < 1023 && msg->data_couple[i].data_set; ++i) {
 		if (!msg->data_couple[i].data_template) {
 			/* Data set without template, skip it */
 			continue;
