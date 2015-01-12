@@ -451,7 +451,7 @@ int input_init(char *params, void **config)
 					    retval = 1;
 					    goto out;
 					}
-					strncpy(tmp_val, (char *)cur_node->children->content, tmp_val_len);
+					strncpy_safe(tmp_val, (char *)cur_node->children->content, tmp_val_len);
 					
 					if (xmlStrEqual(cur_node->name, BAD_CAST "localCAfile")) {
 						/* location of the CA certificate */
@@ -491,7 +491,7 @@ int input_init(char *params, void **config)
                 retval = 1;
                 goto out;
             }
-            strncpy(tmp_val, (char *)cur_node->children->content, tmp_val_len);
+            strncpy_safe(tmp_val, (char *)cur_node->children->content, tmp_val_len);
 
             if (xmlStrEqual(cur_node->name, BAD_CAST "localPort")) { /* set local port */
                 port = tmp_val;

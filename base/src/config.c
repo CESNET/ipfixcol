@@ -333,16 +333,16 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 										strtol((char*) odid, &odidptr, 10);
 										if (*odidptr == '\0') {
 											aux_plugin->config.observation_domain_id = (char*) malloc (sizeof(char) * (xmlStrlen (odid) + 1));
-											strncpy (aux_plugin->config.observation_domain_id, (char*) odid, xmlStrlen (odid) + 1);
+											strncpy_safe(aux_plugin->config.observation_domain_id, (char*) odid, xmlStrlen (odid) + 1);
 										} else {
 											MSG_WARNING(msg_module, "observationDomainId element '%s' not valid. Ignoring...", (char*) odid);
 										}
 									}
 									aux_plugin->config.file = (char*) malloc (sizeof(char) * (xmlStrlen (plugin_file) + 1));
-									strncpy (aux_plugin->config.file, (char*) plugin_file, xmlStrlen (plugin_file) + 1);
+									strncpy_safe(aux_plugin->config.file, (char*) plugin_file, xmlStrlen (plugin_file) + 1);
 									/* copy thread name to prepared string */
 									if (thread_name != NULL) {
-										strncpy (aux_plugin->config.name, (char*) thread_name, 16);
+										strncpy_safe(aux_plugin->config.name, (char*) thread_name, 16);
 									}
 									aux_plugin->config.xmldata = xmlNewDoc (BAD_CAST "1.0");
 									xmlDocSetRootElement (aux_plugin->config.xmldata, xmlCopyNode (node_filewriter, 1));
@@ -513,7 +513,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char 
 				/* find the processName of specified inputPlugin in internalcfg.xml */
 				while (children3) {
 					if (!xmlStrncmp (children3->name, BAD_CAST "processName", strlen ("processName") + 1)) {
-						strncpy(retval->config.name, (char*) children3->children->content, 16);
+						strncpy_safe(retval->config.name, (char*) children3->children->content, 16);
 					}
 					children3 = children3->next;
 				}
@@ -521,7 +521,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char 
 				while (children2) {
 					if (!xmlStrncmp (children2->name, BAD_CAST "file", strlen ("file") + 1)) {
 						retval->config.file = (char*) malloc (sizeof(char) * (strlen ((char*) children2->children->content) + 1));
-						strncpy (retval->config.file, (char*) children2->children->content, strlen ((char*) children2->children->content) + 1);
+						strncpy_safe(retval->config.file, (char*) children2->children->content, strlen ((char*) children2->children->content) + 1);
 						goto found_input_plugin_file;
 					}
 					children2 = children2->next;
@@ -682,10 +682,10 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 
 		aux_plugin->config.file = (char *) plugin_file;
 		if (thread_name) {
-			strncpy(aux_plugin->config.name, (char*) thread_name, 16);
+			strncpy_safe(aux_plugin->config.name, (char*) thread_name, 16);
 			xmlFree(thread_name);
 		} else {
-			strncpy(aux_plugin->config.name, (char *) node->name, 16);
+			strncpy_safe(aux_plugin->config.name, (char *) node->name, 16);
 		}
 
 		aux_plugin->config.xmldata = xmldata;

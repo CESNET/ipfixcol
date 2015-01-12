@@ -215,7 +215,7 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
                 retval = 1;
                 goto out;
             }
-            strncpy(tmp_val, (char *)cur_node->children->content, tmp_val_len);
+            strncpy_safe(tmp_val, (char *)cur_node->children->content, tmp_val_len);
 
             if (xmlStrEqual(cur_node->name, BAD_CAST "type")) { /* anonymization type */
                 if (!strcmp(tmp_val, "truncation")) {

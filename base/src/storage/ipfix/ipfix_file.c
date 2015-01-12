@@ -217,7 +217,7 @@ int storage_init(char *params, void **config)
 	memset(conf->file, 0, path_len);
 
 	/* copy file path, skip "file:" at the beginning of the URI */
-	strncpy(conf->file, (char *) conf->xml_file + 5, path_len);
+	strncpy_safe(conf->file, (char *) conf->xml_file + 5, path_len);
 
 	/* add timestamp at the end of the file name */
 	memset(&tm, 0, sizeof(tm));
