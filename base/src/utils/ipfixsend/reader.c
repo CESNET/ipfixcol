@@ -158,6 +158,7 @@ char **read_packets(char *input)
         /* Read packet */
         packets[pkt_cnt] = read_packet(fd, &status);
 		if (status == READ_ERROR) {
+			close(fd);
 			free(packets);
 			return NULL;
 		} else if (status == READ_EOF) {
@@ -178,6 +179,8 @@ char **read_packets(char *input)
             packets[pkt_cnt] = NULL;
         }
     }
+
+    close(fd);
     
     packets[pkt_cnt] = NULL;
     return packets;
