@@ -786,7 +786,7 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 
 	/* Copy unsent option templates to new message */
 	proc.type = TM_OPTIONS_TEMPLATE;
-	for (i = 0; msg->opt_templ_set[i] != NULL && i < 1024; ++i) {
+	for (i = 0; i < 1024 && msg->opt_templ_set[i]; ++i) {
 		prevo = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->opt_templ_set[i]->header), 4);
 		proc.offset += 4;
