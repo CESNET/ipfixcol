@@ -281,3 +281,14 @@ char *utils_dir_from_path(char *path)
 	
 	return dir;
 }
+
+/**
+ * \brief Version of strncpy that ensures null-termination.
+ */
+char *strncpy_safe (char *destination, const char *source, size_t num)
+{
+    strncpy(destination, source, num);
+
+    // Ensure null-termination
+    destination[num - 1] = '\0';
+}
