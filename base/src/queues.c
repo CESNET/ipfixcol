@@ -90,6 +90,7 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 		free (retval->data_references);
 		free (retval->data);
 		free (retval);
+		return (NULL);
 	}
 
 	if (pthread_cond_init (&(retval->cond), NULL) != 0) {
