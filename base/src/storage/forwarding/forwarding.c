@@ -531,7 +531,7 @@ void *msg_to_packet(const struct ipfix_message *msg, int *packet_length)
 	offset += IPFIX_HEADER_LENGTH;
 
 	/* Copy template sets */
-	for (i = 0; msg->templ_set[i] != NULL && i < 1024; ++i) {
+	for (i = 0; i < 1024 && msg->templ_set[i]; ++i) {
 		aux_header = &(msg->templ_set[i]->header);
 		len = ntohs(aux_header->length);
 		for (c = 0; c < len; c += 4) {
