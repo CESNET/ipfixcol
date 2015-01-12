@@ -717,13 +717,13 @@ int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, 
 void forwarding_remove_empty_sets(struct ipfix_message *msg)
 {
 	int i, j, len;
-	for (i = 0, j = 0; msg->templ_set[i] != NULL && i < 1024; ++i) {
+	for (i = 0, j = 0; i < 1024 && msg->templ_set[i]; ++i) {
 		len = ntohs(msg->templ_set[i]->header.length);
 		if (len <= 4) {
 			/* Set correct message length */
 			msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) - len);
 			/* Shift all template sets behind this (there must not be hole) */
-			for (j = i; msg->templ_set[j]; ++j) {
+			for (j = i; j < 1024 && msg->templ_set[j]; ++j) {
 				msg->templ_set[j] = msg->templ_set[j + 1];
 			}
 		}
