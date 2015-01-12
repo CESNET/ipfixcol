@@ -833,6 +833,7 @@ struct filter_field *filter_parse_field(char *name, xmlDoc *doc, xmlXPathContext
 
 	if (result == NULL) {
 		MSG_ERROR(msg_module, "Error in xmlXPathEvalExpression\n");
+		free(field);
 		return NULL;
 	}
 
