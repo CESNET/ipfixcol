@@ -813,7 +813,7 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 void forwarding_add_set(struct ipfix_message *msg, struct ipfix_template_set *set)
 {
 	int i;
-	for (i = 0; msg->templ_set[i] && i < 1024; ++i);
+	for (i = 0; i < 1024 && msg->templ_set[i]; ++i);
 	
 	msg->templ_set[i] = set;
 	msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) + ntohs(set->header.length));
