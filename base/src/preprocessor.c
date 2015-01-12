@@ -436,7 +436,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 	}
 
 	/* check for new option templates */
-	for (i=0; msg->opt_templ_set[i] != NULL && i<1024; i++) {
+	for (i = 0; i < 1024 && msg->opt_templ_set[i]; i++) {
 		ptr = (uint8_t*) &msg->opt_templ_set[i]->first_record;
 		max_len = ((uint8_t *) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) - ptr;
 		while (ptr < (uint8_t*) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) {
