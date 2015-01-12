@@ -839,6 +839,7 @@ struct filter_field *filter_parse_field(char *name, xmlDoc *doc, xmlXPathContext
 	if (xmlXPathNodeSetIsEmpty(result->nodesetval)) {
 		xmlXPathFreeObject(result);
 		MSG_ERROR(msg_module, "Unknown field '%s'!", name);
+		free(field);
 		return NULL;
 	} else {
 		xmlNode *info = result->nodesetval->nodeTab[0]->xmlChildrenNode;
