@@ -916,7 +916,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	}
 
 	/* Copy data sets */
-	for (i = 0; i < 1024 && ipfix_msg->data_couple[i].data_set; ++i) {
+	for (i = 0; i < 1023 && ipfix_msg->data_couple[i].data_set; ++i) {
 		setlen = ntohs(ipfix_msg->data_couple[i].data_set->header.length);
 		memcpy(new_msg + length, ipfix_msg->data_couple[i].data_set, setlen);
 		length += setlen;
