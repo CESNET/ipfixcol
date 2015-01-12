@@ -87,7 +87,7 @@ static int regexp_asterisk(char *regexp, char *string)
 		return -1;
 	}
 
-	strcpy(aux_regexp, regexp);
+	strncpy(aux_regexp, regexp, strlen(regexp) + 1);
 	
 	int pos = 1; /* we assume that asterisk is in the middle of the string */
 	if (aux_regexp[0] == asterisk) {
