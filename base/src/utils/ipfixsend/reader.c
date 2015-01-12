@@ -212,16 +212,17 @@ char *read_file(char *input, long *fsize)
 {
 	FILE *f = fopen(input, "r");
 	
-    if (!f) {
-        fprintf(stderr, "Cannot open file \"%s\"!", input);
-        return NULL;
-    }
+	if (!f) {
+		fprintf(stderr, "Cannot open file \"%s\"!", input);
+		return NULL;
+	}
 	
 	/* Get file size and allocate space */
 	*fsize = file_size(f);
 	char *data = calloc(1, *fsize + 1);
 	if (!data) {
 		ERR_MEM;
+		fclose(f);
 		return NULL;
 	}
 	
