@@ -121,6 +121,7 @@ static int prepare_input_file(struct ipfix_config *conf)
 	struct input_info_file_list *info = calloc(1, sizeof(struct input_info_file_list));
 	if (!info) {
 		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+		close(fd);
 		return -1;
 	}
 	
