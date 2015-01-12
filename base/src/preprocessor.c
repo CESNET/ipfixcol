@@ -421,7 +421,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 	preprocessor_udp_init((struct input_info_network *) msg->input_info, &udp_conf);
 
 	/* check for new templates */
-	for (i=0; msg->templ_set[i] != NULL && i<1024; i++) {
+	for (i = 0; i < 1024 && msg->templ_set[i]; i++) {
 		ptr = (uint8_t*) &msg->templ_set[i]->first_record;
 		while (ptr < (uint8_t*) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) {
 			max_len = ((uint8_t *) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) - ptr;
