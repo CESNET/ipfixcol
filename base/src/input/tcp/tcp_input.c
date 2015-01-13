@@ -364,6 +364,7 @@ void *input_listen(void *config)
         /* unset the address so that we do not free it incidentally */
         address = NULL;
 
+        close(new_sock);
         pthread_cleanup_pop(0);
     }
     return NULL;
@@ -505,8 +506,10 @@ int input_init(char *params, void **config)
             } else if (xmlStrEqual(cur_node->name, BAD_CAST "optionsTemplateLifePacket")) {
                 conf->info.options_template_life_packet = tmp_val;
             } else { /* unknown parameter, ignore */
-                free(tmp_val);
+                // Do nothing
             }
+
+            free(tmp_val);
         }
     }
 
