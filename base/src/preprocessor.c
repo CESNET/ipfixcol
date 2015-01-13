@@ -451,7 +451,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 	}
 
 	/* add template to message data_couples */
-	for (i=0; msg->data_couple[i].data_set != NULL && i<1023; i++) {
+	for (i = 0; i < 1023 && msg->data_couple[i].data_set; i++) {
 		key.tid = ntohs(msg->data_couple[i].data_set->header.flowset_id);
 		msg->data_couple[i].data_template = tm_get_template(template_mgr, &key);
 		if (msg->data_couple[i].data_template == NULL) {
