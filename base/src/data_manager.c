@@ -156,10 +156,10 @@ struct data_manager_config* data_manager_create (
 {
 	xmlChar *plugin_params;
 	int retval, name_len, oid_specific_plugins = 0;
-	struct storage_list* aux_storage;
+	struct storage_list *aux_storage;
 	struct storage_list *aux_storage_list;
 	struct data_manager_config *config;
-	struct storage_thread_conf* plugin_cfg;
+	struct storage_thread_conf *plugin_cfg;
 
 	/* prepare Data manager's config structure */
 	config = (struct data_manager_config*) calloc (1, sizeof(struct data_manager_config));
@@ -203,6 +203,9 @@ struct data_manager_config* data_manager_create (
 		}
 
 		/* allocate memory for copy of storage structure for description of storage plugin */
+		if (aux_storage) {
+			free (aux_storage);
+		}
 		aux_storage = (struct storage_list*) malloc (sizeof(struct storage_list));
 		if (aux_storage == NULL) {
 			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
@@ -266,6 +269,7 @@ struct data_manager_config* data_manager_create (
 	if (config->plugins_count == 0) {
 		MSG_WARNING(msg_module, "[%u] No storage plugin for the Data manager initiated.", config->observation_domain_id);
 		data_manager_free (config);
+		free (aux_storage);
 		return (NULL);
 	}
 
