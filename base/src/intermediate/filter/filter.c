@@ -722,8 +722,8 @@ struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct fil
 	new_msg = message_create_from_mem(ptr, offset, profile->input_info, msg->source_status);
 
 	/* Match data couples and increment template references */
-	for (i = 0; i < 1024 && new_msg->data_couple[i].data_set; ++i) {
-		for (j = 0; j < 1024 && msg->data_couple[j].data_set; ++j) {
+	for (i = 0; i < 1023 && new_msg->data_couple[i].data_set; ++i) {
+		for (j = 0; j < 1023 && msg->data_couple[j].data_set; ++j) {
 			if (new_msg->data_couple[i].data_set->header.flowset_id == msg->data_couple[j].data_set->header.flowset_id) {
 				new_msg->data_couple[i].data_template = msg->data_couple[j].data_template;
 				break;
