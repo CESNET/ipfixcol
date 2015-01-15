@@ -292,4 +292,6 @@ char *strncpy_safe (char *destination, const char *source, size_t num)
 
     // Ensure null-termination
     destination[num - 1] = '\0';
+
+	return destination;
 }

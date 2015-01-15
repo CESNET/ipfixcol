@@ -84,6 +84,7 @@
 #include <stdint.h>
 
 #include "panonymizer.h"
+#include <ipfixcol/utils.h> // strncpy_safe
 
 static	uint8_t m_key[16]; //128 bit secret key
 static	uint8_t m_pad[16]; //128 bit secret pad
