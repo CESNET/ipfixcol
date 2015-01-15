@@ -883,7 +883,7 @@ int intermediate_process_message(void *config, void *message)
 	new_msg->opt_templ_set[otsets] = NULL;
 
 	proc.orig_odid = htonl(orig_odid);
-	for (i = 0; i < 1024 && msg->data_couple[i].data_set; ++i) {
+	for (i = 0; i < 1023 && msg->data_couple[i].data_set; ++i) {
 		templ = msg->data_couple[i].data_template;
 		if (!templ) {
 			continue;

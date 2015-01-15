@@ -172,6 +172,7 @@ char **utils_files_from_path(char *path)
 	dir = opendir(dirname);
 	if (dir == NULL) {
 		MSG_ERROR(msg_module, "Unable to open input file(s)\n");
+		free(dirname);
 		return NULL;
 	}
 

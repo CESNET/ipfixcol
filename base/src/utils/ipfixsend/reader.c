@@ -158,6 +158,7 @@ char **read_packets(char *input)
         /* Read packet */
         packets[pkt_cnt] = read_packet(fd, &status);
 		if (status == READ_ERROR) {
+			close(fd);
 			free(packets);
 			return NULL;
 		} else if (status == READ_EOF) {
@@ -178,6 +179,8 @@ char **read_packets(char *input)
             packets[pkt_cnt] = NULL;
         }
     }
+
+    close(fd);
     
     packets[pkt_cnt] = NULL;
     return packets;
@@ -209,16 +212,17 @@ char *read_file(char *input, long *fsize)
 {
 	FILE *f = fopen(input, "r");
 	
-    if (!f) {
-        fprintf(stderr, "Cannot open file \"%s\"!", input);
-        return NULL;
-    }
+	if (!f) {
+		fprintf(stderr, "Cannot open file \"%s\"!", input);
+		return NULL;
+	}
 	
 	/* Get file size and allocate space */
 	*fsize = file_size(f);
 	char *data = calloc(1, *fsize + 1);
 	if (!data) {
 		ERR_MEM;
+		fclose(f);
 		return NULL;
 	}
 	

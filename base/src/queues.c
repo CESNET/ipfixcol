@@ -90,6 +90,7 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 		free (retval->data_references);
 		free (retval->data);
 		free (retval);
+		return (NULL);
 	}
 
 	if (pthread_cond_init (&(retval->cond), NULL) != 0) {
@@ -248,8 +249,8 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
 					}
 
 					/* Decrement reference on templates */
-					for (i = 0; i < 1024 && rbuffer->data[rbuffer->read_offset]->data_couple[i].data_set != NULL; ++i) {
-						if (rbuffer->data[rbuffer->read_offset]->data_couple[i].data_template != NULL) {
+					for (i = 0; i < 1023 && rbuffer->data[rbuffer->read_offset]->data_couple[i].data_set; ++i) {
+						if (rbuffer->data[rbuffer->read_offset]->data_couple[i].data_template) {
 							tm_template_reference_dec(rbuffer->data[rbuffer->read_offset]->data_couple[i].data_template);
 						}
 					}

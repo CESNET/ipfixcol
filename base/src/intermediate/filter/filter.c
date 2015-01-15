@@ -69,12 +69,6 @@
 
 static const char *msg_module = "filter";
 
-#define CHECK_ALLOC(check_alloc_ptr) \
-	if (!(check_alloc_ptr)) { \
-		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__); \
-		return NULL; \
-	}
-
 /**
  * \brief Structure for processing data/template records
  */
@@ -653,7 +647,11 @@ struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct fil
 	if (msg->source_status == SOURCE_STATUS_CLOSED) {
 		filter_profile_update_input_info(profile, msg->input_info, msg->data_records_count);
 		new_msg = calloc(1, sizeof(struct ipfix_message));
-		CHECK_ALLOC(new_msg);
+		if (!new_msg) {
+			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			return NULL;
+		}
+		
 		new_msg->input_info = profile->input_info;
 		new_msg->source_status = msg->source_status;
 		return new_msg;
@@ -661,7 +659,13 @@ struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct fil
 
 	/* Allocate space */
 	ptr = calloc(1, ntohs(msg->pkt_header->length));
-	CHECK_ALLOC(ptr);
+	if (!ptr) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		if (new_msg) {
+			free(new_msg);
+		}
+		return NULL;
+	}
 
 	conf.offset = &offset;
 	conf.ptr = ptr;
@@ -676,7 +680,7 @@ struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct fil
 	filter_add_template_sets(msg, ptr, &offset);
 
 	/* Filter data records */
-	for (i = 0; i < 1024 && msg->data_couple[i].data_set; ++i) {
+	for (i = 0; i < 1023 && msg->data_couple[i].data_set; ++i) {
 		if (!msg->data_couple[i].data_template) {
 			/* Data set without template, skip it */
 			continue;
@@ -718,8 +722,8 @@ struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct fil
 	new_msg = message_create_from_mem(ptr, offset, profile->input_info, msg->source_status);
 
 	/* Match data couples and increment template references */
-	for (i = 0; i < 1024 && new_msg->data_couple[i].data_set; ++i) {
-		for (j = 0; j < 1024 && msg->data_couple[j].data_set; ++j) {
+	for (i = 0; i < 1023 && new_msg->data_couple[i].data_set; ++i) {
+		for (j = 0; j < 1023 && msg->data_couple[j].data_set; ++j) {
 			if (new_msg->data_couple[i].data_set->header.flowset_id == msg->data_couple[j].data_set->header.flowset_id) {
 				new_msg->data_couple[i].data_template = msg->data_couple[j].data_template;
 				break;
@@ -825,7 +829,10 @@ struct filter_field *filter_parse_field(char *name, xmlDoc *doc, xmlXPathContext
 	
 	/* Allocate memory */
 	struct filter_field *field = calloc(1, sizeof(struct filter_field));
-	CHECK_ALLOC(field);
+	if (!field) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
 
 	/* Prepare XPath */
 	sprintf((char *) xpath, "/ipfix-elements/element[name='%s']", name);
@@ -833,12 +840,14 @@ struct filter_field *filter_parse_field(char *name, xmlDoc *doc, xmlXPathContext
 
 	if (result == NULL) {
 		MSG_ERROR(msg_module, "Error in xmlXPathEvalExpression\n");
+		free(field);
 		return NULL;
 	}
 
 	if (xmlXPathNodeSetIsEmpty(result->nodesetval)) {
 		xmlXPathFreeObject(result);
 		MSG_ERROR(msg_module, "Unknown field '%s'!", name);
+		free(field);
 		return NULL;
 	} else {
 		xmlNode *info = result->nodesetval->nodeTab[0]->xmlChildrenNode;
@@ -874,7 +883,10 @@ struct filter_field *filter_parse_rawfield(char *rawfield)
 	
 	/* Allocate memory */
 	struct filter_field *field = calloc(1, sizeof(struct filter_field));
-	CHECK_ALLOC(field);
+	if (!field) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
 	
 	/* Get enterprise number and element ID  (eXidYY) */
 	field->enterprise = strtoul(rawfield + 1, &idptr, 10);
@@ -893,7 +905,10 @@ struct filter_field *filter_parse_rawfield(char *rawfield)
 uint8_t *filter_num_to_ptr(uint8_t *data, int length)
 {
 	uint8_t *value = malloc(length);
-	CHECK_ALLOC(value);
+	if (!value) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
 
 	memcpy(value, data, length);
 	return value;
@@ -908,7 +923,10 @@ uint8_t *filter_num_to_ptr(uint8_t *data, int length)
 struct filter_value *filter_parse_number(char *number)
 {
 	struct filter_value *val = malloc(sizeof(struct filter_value));
-	CHECK_ALLOC(val);
+	if (!val) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
 
 	/* Check suffix */
 	uint64_t tmp = strlen(number);
@@ -948,7 +966,10 @@ struct filter_value *filter_parse_number(char *number)
 struct filter_value *filter_parse_hexnum(char *hexnum)
 {
 	struct filter_value *val = malloc(sizeof(struct filter_value));
-	CHECK_ALLOC(val);
+	if (!val) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
 
 	val->type = VT_NUMBER;
 
@@ -966,13 +987,20 @@ struct filter_value *filter_parse_hexnum(char *hexnum)
 struct filter_value *filter_parse_string(char *string)
 {
 	struct filter_value *val = malloc(sizeof(struct filter_value));
-	CHECK_ALLOC(val);
+	if (!val) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
 
 	int len = strlen(string) + 1;
 
 	val->type = VT_STRING;
 	val->value = malloc(len);
-	CHECK_ALLOC(val->value);
+	if (!val->value) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		free(val);
+		return NULL;
+	}
 
 	/* Add terminating '\0' */
 	memcpy(val->value, string, len - 1);
@@ -990,11 +1018,18 @@ struct filter_value *filter_parse_regex(char *regexstr)
 	
 	/* Allocate space for regex */
 	regex_t *regex = calloc(1, sizeof(regex_t));
-	CHECK_ALLOC(regex);
+	if (!regex) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
 
 	reglen = strlen(regexstr) + 1;
 	char *reg = malloc(reglen);
-	CHECK_ALLOC(reg);
+	if (!reg) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		free(regex);
+		return NULL;
+	}
 
 	memcpy(reg, regexstr, reglen - 1);
 	reg[reglen - 1] = '\0';
@@ -1002,13 +1037,19 @@ struct filter_value *filter_parse_regex(char *regexstr)
 	/* REG_NOSUB == we don't need positions of matches */
 	if (regcomp(regex, reg, REG_NOSUB)) {
 		MSG_ERROR(msg_module, "Can't compile regular expression '%s'", reg);
+		free(regex);
 		free(reg);
 		return NULL;
 	}
 
 	/* Create value */
 	struct filter_value *val = malloc(sizeof(struct filter_value));
-	CHECK_ALLOC(val);
+	if (!val) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		free(regex);
+		free(reg);
+		return NULL;
+	}
 
 	val->type = VT_REGEX;
 	val->value = (uint8_t *) regex;
@@ -1023,7 +1064,10 @@ struct filter_value *filter_parse_regex(char *regexstr)
 struct filter_value *filter_parse_ipv4(char *addr)
 {
 	struct filter_value *val = malloc(sizeof(struct filter_value));
-	CHECK_ALLOC(val);
+	if (!val) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
 
 	val->type = VT_NUMBER;
 
@@ -1049,7 +1093,10 @@ struct filter_value *filter_parse_ipv4(char *addr)
 struct filter_value *filter_parse_ipv6(char *addr)
 {
 	struct filter_value *val = malloc(sizeof(struct filter_value));
-	CHECK_ALLOC(val);
+	if (!val) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
 
 	val->type = VT_NUMBER;
 
@@ -1103,7 +1150,10 @@ struct filter_value *filter_parse_timestamp(char *tstamp)
 
 	/* Create value */
 	struct filter_value *val = malloc(sizeof(struct filter_value));
-	CHECK_ALLOC(val);
+	if (!val) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
 
 	val->type = VT_NUMBER;
 	val->length = sizeof(uint64_t);
@@ -1144,7 +1194,10 @@ enum operators filter_decode_operator(char *op)
 struct filter_treenode *filter_new_leaf_node(struct filter_field *field, char *op, struct filter_value *value)
 {
 	struct filter_treenode *node = calloc(1, sizeof(struct filter_treenode));
-	CHECK_ALLOC(node);
+	if (!node) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
 
 	node->value = value;
 	node->field = field;
@@ -1189,7 +1242,10 @@ enum nodetype filter_decode_type(char *type)
 struct filter_treenode *filter_new_parent_node(struct filter_treenode *left, char *type, struct filter_treenode *right)
 {
 	struct filter_treenode *node = calloc(1, sizeof(struct filter_treenode));
-	CHECK_ALLOC(node);
+	if (!node) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
 
 	node->left = left;
 	node->right = right;
@@ -1232,7 +1288,10 @@ void filter_error(const char *msg, YYLTYPE *loc)
 struct filter_treenode *filter_new_exists_node(struct filter_field *field)
 {
 	struct filter_treenode *node = calloc(1, sizeof(struct filter_treenode));
-	CHECK_ALLOC(node);
+	if (!node) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
 
 	node->type = NODE_EXISTS;
 	node->field = field;
