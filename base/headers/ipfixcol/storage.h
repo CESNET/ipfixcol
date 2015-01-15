@@ -45,6 +45,10 @@
 #include "templates.h"
 #include "api.h"
 
+#define MSG_MAX_OTEMPLATES		1024
+#define MSG_MAX_TEMPLATES		1024
+#define MSG_MAX_DATA_COUPLES	1023
+
 /**
  * \defgroup storageAPI Storage Plugins API
  * \ingroup publicAPIs
@@ -92,11 +96,11 @@ struct __attribute__((__packed__)) ipfix_message {
 	/** Number of options template records in message */
 	uint16_t						  opt_templ_records_count;
 	/** List of Template Sets in the packet */
-	struct ipfix_template_set         *templ_set[1024];
+	struct ipfix_template_set         *templ_set[MSG_MAX_TEMPLATES];
 	/** List of Options Template Sets in the packet */
-	struct ipfix_options_template_set *opt_templ_set[1024];
+	struct ipfix_options_template_set *opt_templ_set[MSG_MAX_OTEMPLATES];
 	/** List of Data Sets (with a link to corresponding template) in the packet */
-	struct data_template_couple       data_couple[1023];
+	struct data_template_couple       data_couple[MSG_MAX_DATA_COUPLES];
 };
 
 /**

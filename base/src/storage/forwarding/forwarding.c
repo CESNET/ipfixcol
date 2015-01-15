@@ -531,7 +531,7 @@ void *msg_to_packet(const struct ipfix_message *msg, int *packet_length)
 	offset += IPFIX_HEADER_LENGTH;
 
 	/* Copy template sets */
-	for (i = 0; i < 1024 && msg->templ_set[i]; ++i) {
+	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; ++i) {
 		aux_header = &(msg->templ_set[i]->header);
 		len = ntohs(aux_header->length);
 		for (c = 0; c < len; c += 4) {
@@ -542,7 +542,7 @@ void *msg_to_packet(const struct ipfix_message *msg, int *packet_length)
 	}
 
 	/* Copy template sets */
-	for (i = 0; i < 1024 && msg->opt_templ_set[i]; ++i) {
+	for (i = 0; i < MSG_MAX_OTEMPLATES && msg->opt_templ_set[i]; ++i) {
 		aux_header = &(msg->opt_templ_set[i]->header);
 		len = ntohs(aux_header->length);
 		for (c = 0; c < len; c += 4) {
@@ -553,7 +553,7 @@ void *msg_to_packet(const struct ipfix_message *msg, int *packet_length)
 	}
 
 	/* Copy data sets */
-	for (i = 0; i < 1023 && msg->data_couple[i].data_set; ++i) {
+	for (i = 0; i < MSG_MAX_DATA_COUPLES && msg->data_couple[i].data_set; ++i) {
 		len = ntohs(msg->data_couple[i].data_set->header.length);
 		memcpy(packet + offset,   &(msg->data_couple[i].data_set->header), 4);
 		memcpy(packet + offset + 4, msg->data_couple[i].data_set->records, len - 4);
@@ -717,13 +717,13 @@ int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, 
 void forwarding_remove_empty_sets(struct ipfix_message *msg)
 {
 	int i, j, len;
-	for (i = 0, j = 0; i < 1024 && msg->templ_set[i]; ++i) {
+	for (i = 0, j = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; ++i) {
 		len = ntohs(msg->templ_set[i]->header.length);
 		if (len <= 4) {
 			/* Set correct message length */
 			msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) - len);
 			/* Shift all template sets behind this (there must not be hole) */
-			for (j = i; j < 1024 && msg->templ_set[j]; ++j) {
+			for (j = i; j < MSG_MAX_TEMPLATES && msg->templ_set[j]; ++j) {
 				msg->templ_set[j] = msg->templ_set[j + 1];
 			}
 		}
@@ -768,7 +768,7 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 
 	/* Copy unsent templates to new message */
 	proc.type = TM_TEMPLATE;
-	for (i = 0; i < 1024 && msg->templ_set[i] != NULL; ++i) {
+	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i] != NULL; ++i) {
 		prevo = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->templ_set[i]->header), 4);
 		proc.offset += 4;
@@ -786,7 +786,7 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 
 	/* Copy unsent option templates to new message */
 	proc.type = TM_OPTIONS_TEMPLATE;
-	for (i = 0; i < 1024 && msg->opt_templ_set[i]; ++i) {
+	for (i = 0; i < MSG_MAX_OTEMPLATES && msg->opt_templ_set[i]; ++i) {
 		prevo = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->opt_templ_set[i]->header), 4);
 		proc.offset += 4;
@@ -813,7 +813,7 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 void forwarding_add_set(struct ipfix_message *msg, struct ipfix_template_set *set)
 {
 	int i;
-	for (i = 0; i < 1024 && msg->templ_set[i]; ++i);
+	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; ++i);
 	
 	msg->templ_set[i] = set;
 	msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) + ntohs(set->header.length));
@@ -834,7 +834,7 @@ int forwarding_update_templates(forwarding *conf, const struct ipfix_message *ms
 	struct forwarding_template_record *rec = NULL;
 	
 	/* Check each used template */
-	for (i = 0; i < 1023 && msg->data_couple[i].data_set; ++i) {
+	for (i = 0; i < MSG_MAX_DATA_COUPLES && msg->data_couple[i].data_set; ++i) {
 		if (!msg->data_couple[i].data_template) {
 			/* Data set without template, skip it */
 			continue;
@@ -916,7 +916,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	}
 
 	/* Copy data sets */
-	for (i = 0; i < 1023 && ipfix_msg->data_couple[i].data_set; ++i) {
+	for (i = 0; i < MSG_MAX_DATA_COUPLES && ipfix_msg->data_couple[i].data_set; ++i) {
 		setlen = ntohs(ipfix_msg->data_couple[i].data_set->header.length);
 		memcpy(new_msg + length, ipfix_msg->data_couple[i].data_set, setlen);
 		length += setlen;

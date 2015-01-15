@@ -560,14 +560,14 @@ void filter_add_template_sets(struct ipfix_message *msg, uint8_t *ptr, int *offs
 	int length, i;
 
 	/* Copy template sets */
-	for (i = 0; i < 1024 && msg->templ_set[i]; ++i) {
+	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; ++i) {
 		length = ntohs(msg->templ_set[i]->header.length);
 		memcpy(ptr + *offset, msg->templ_set[i], length);
 		*offset += length;
 	}
 
 	/* Copy options template sets */
-	for (i = 0; i < 1024 && msg->opt_templ_set[i]; ++i) {
+	for (i = 0; i < MSG_MAX_OTEMPLATES && msg->opt_templ_set[i]; ++i) {
 		length = ntohs(msg->opt_templ_set[i]->header.length);
 		memcpy(ptr + *offset, msg->opt_templ_set[i], length);
 		*offset += length;
@@ -680,7 +680,7 @@ struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct fil
 	filter_add_template_sets(msg, ptr, &offset);
 
 	/* Filter data records */
-	for (i = 0; i < 1023 && msg->data_couple[i].data_set; ++i) {
+	for (i = 0; i < MSG_MAX_DATA_COUPLES && msg->data_couple[i].data_set; ++i) {
 		if (!msg->data_couple[i].data_template) {
 			/* Data set without template, skip it */
 			continue;
@@ -722,8 +722,8 @@ struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct fil
 	new_msg = message_create_from_mem(ptr, offset, profile->input_info, msg->source_status);
 
 	/* Match data couples and increment template references */
-	for (i = 0; i < 1023 && new_msg->data_couple[i].data_set; ++i) {
-		for (j = 0; j < 1023 && msg->data_couple[j].data_set; ++j) {
+	for (i = 0; i < MSG_MAX_DATA_COUPLES && new_msg->data_couple[i].data_set; ++i) {
+		for (j = 0; j < MSG_MAX_DATA_COUPLES && msg->data_couple[j].data_set; ++j) {
 			if (new_msg->data_couple[i].data_set->header.flowset_id == msg->data_couple[j].data_set->header.flowset_id) {
 				new_msg->data_couple[i].data_template = msg->data_couple[j].data_template;
 				break;
