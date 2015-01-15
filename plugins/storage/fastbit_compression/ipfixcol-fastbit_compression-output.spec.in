@@ -1,0 +1,43 @@
+Summary: Fastbit storage plugin for ipfixcol.
+Name: @PACKAGE_NAME@
+Version: @PACKAGE_VERSION@
+Release: @RELEASE@
+URL: http://www.liberouter.org/
+Source: http://homeproj.cesnet.cz/rpm/liberouter/stable/SOURCES/%{name}-%{version}-%{release}.tar.gz
+Group: Liberouter
+License: BSD
+Vendor: CESNET, z.s.p.o.
+Packager: @USERNAME@ <@USERMAIL@>
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
+
+BuildRequires: gcc make doxygen
+Requires: fastbit-liberouter
+BuildRequires: fastbit-liberouter-devel, ipfixcol-devel >= 0.7.1
+Requires: ipfixcol >= 0.7.1
+
+%description
+Fastbit storage plugin for ipfixcol.
+
+
+%prep
+%setup
+
+%post
+ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p o -n fastbit_compression -t fastbitc -s "%{_datadir}/ipfixcol/plugins/ipfixcol-fastbit_compression-output.so" -f
+
+%preun
+
+%postun
+ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p o -n fastbit_compression
+
+%build
+%configure --with-distro=@DISTRO@
+make
+
+%install
+make DESTDIR=%{buildroot} install
+
+%files
+#storage plugins
+%{_datadir}/ipfixcol/plugins/ipfixcol-fastbit_compression-output.*
+%{_mandir}/man1/ipfixcol-fastbit_compression-output.1*
