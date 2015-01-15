@@ -1363,7 +1363,7 @@ int Rijndael_blockDecrypt(const uint8_t *input, int inputLen, uint8_t *outBuffer
 
 int Rijndael_padDecrypt(const uint8_t *input, int inputOctets, uint8_t *outBuffer)
 {
-	int i, numBlocks, padLen;
+	uint16_t i, numBlocks, padLen;
 	uint8_t block[16];
 	uint32_t iv[4];
 

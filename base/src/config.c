@@ -193,7 +193,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	        config_ctxt = NULL, exporter_ctxt = NULL;
 	xmlXPathObjectPtr xpath_obj_expprocnames = NULL, xpath_obj_expproc = NULL,
 	        xpath_obj_destinations = NULL, xpath_obj_plugin_desc = NULL;
-	xmlChar *file_format, *file_format_inter, *plugin_file, *odid, *thread_name;
+	xmlChar *file_format = (xmlChar *) "", *file_format_inter, *plugin_file, *odid, *thread_name;
 	struct plugin_xml_conf_list* plugins = NULL, *aux_plugin = NULL;
 	char *odidptr;
 
@@ -297,6 +297,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 						/* now we have a <fileWriter> node with description of storage plugin */
 						/* but first we have to check that we support this storage plugin type (according to fileFormat) */
 						for (k = 0; k < xpath_obj_destinations->nodesetval->nodeNr; k++) {
+							plugin_file = NULL;
 							node_filewriter = get_children(xpath_obj_destinations->nodesetval->nodeTab[k], BAD_CAST "fileWriter");
 							if (node_filewriter == NULL) {
 								/* try next <destination> node */
@@ -332,16 +333,16 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 										strtol((char*) odid, &odidptr, 10);
 										if (*odidptr == '\0') {
 											aux_plugin->config.observation_domain_id = (char*) malloc (sizeof(char) * (xmlStrlen (odid) + 1));
-											strncpy (aux_plugin->config.observation_domain_id, (char*) odid, xmlStrlen (odid) + 1);
+											strncpy_safe(aux_plugin->config.observation_domain_id, (char*) odid, xmlStrlen (odid) + 1);
 										} else {
 											MSG_WARNING(msg_module, "observationDomainId element '%s' not valid. Ignoring...", (char*) odid);
 										}
 									}
 									aux_plugin->config.file = (char*) malloc (sizeof(char) * (xmlStrlen (plugin_file) + 1));
-									strncpy (aux_plugin->config.file, (char*) plugin_file, xmlStrlen (plugin_file) + 1);
+									strncpy_safe(aux_plugin->config.file, (char*) plugin_file, xmlStrlen (plugin_file) + 1);
 									/* copy thread name to prepared string */
 									if (thread_name != NULL) {
-										strncpy (aux_plugin->config.name, (char*) thread_name, 16);
+										strncpy_safe(aux_plugin->config.name, (char*) thread_name, 16);
 									}
 									aux_plugin->config.xmldata = xmlNewDoc (BAD_CAST "1.0");
 									xmlDocSetRootElement (aux_plugin->config.xmldata, xmlCopyNode (node_filewriter, 1));
@@ -349,6 +350,10 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 									aux_plugin->next = plugins;
 									plugins = aux_plugin;
 								}
+							}
+
+							if (plugin_file == NULL) {
+								MSG_ERROR(msg_module, "Unable to load storage plugin; configuration for fileFormat '%s' could not be found", (char *) file_format);
 							}
 						}
 						/* break while loop to get to another exportingProcess */
@@ -508,7 +513,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char 
 				/* find the processName of specified inputPlugin in internalcfg.xml */
 				while (children3) {
 					if (!xmlStrncmp (children3->name, BAD_CAST "processName", strlen ("processName") + 1)) {
-						strncpy(retval->config.name, (char*) children3->children->content, 16);
+						strncpy_safe(retval->config.name, (char*) children3->children->content, 16);
 					}
 					children3 = children3->next;
 				}
@@ -516,7 +521,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char 
 				while (children2) {
 					if (!xmlStrncmp (children2->name, BAD_CAST "file", strlen ("file") + 1)) {
 						retval->config.file = (char*) malloc (sizeof(char) * (strlen ((char*) children2->children->content) + 1));
-						strncpy (retval->config.file, (char*) children2->children->content, strlen ((char*) children2->children->content) + 1);
+						strncpy_safe(retval->config.file, (char*) children2->children->content, strlen ((char*) children2->children->content) + 1);
 						goto found_input_plugin_file;
 					}
 					children2 = children2->next;
@@ -528,7 +533,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char 
 
 found_input_plugin_file:
 	if (retval->config.file == NULL) {
-		MSG_ERROR(msg_module, "No definition for collector found.");
+		MSG_ERROR(msg_module, "Unable to load input plugin; configuration for '%s' could not be found", collector_name);
 		free (retval);
 		retval = NULL;
 	}
@@ -652,6 +657,7 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 		}
 
 		if (!plugin_file) {
+			MSG_ERROR(msg_module, "Unable to load intermediate plugin; configuration for '%s' could not be found", (char *) node->name);
 			node = node->next;
 			continue;
 		}
@@ -676,10 +682,10 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 
 		aux_plugin->config.file = (char *) plugin_file;
 		if (thread_name) {
-			strncpy(aux_plugin->config.name, (char*) thread_name, 16);
+			strncpy_safe(aux_plugin->config.name, (char*) thread_name, 16);
 			xmlFree(thread_name);
 		} else {
-			strncpy(aux_plugin->config.name, (char *) node->name, 16);
+			strncpy_safe(aux_plugin->config.name, (char *) node->name, 16);
 		}
 
 		aux_plugin->config.xmldata = xmldata;

@@ -364,6 +364,7 @@ void *input_listen(void *config)
         /* unset the address so that we do not free it incidentally */
         address = NULL;
 
+        close(new_sock);
         pthread_cleanup_pop(0);
     }
     return NULL;
@@ -444,13 +445,14 @@ int input_init(char *params, void **config)
 			/* TLS configuration options */
 	    	for (cur_node = cur_node->xmlChildrenNode; cur_node; cur_node = cur_node->next) {
         		if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
-					char *tmp_val = malloc(sizeof(char)*strlen((char *)cur_node->children->content)+1);
+					int tmp_val_len = strlen((char *) cur_node->children->content) + 1;
+					char *tmp_val = malloc(sizeof(char) * tmp_val_len);
 					if (!tmp_val) {
 						MSG_ERROR(msg_module, "Cannot allocate memory: %s", strerror(errno));
 					    retval = 1;
 					    goto out;
 					}
-					strcpy(tmp_val, (char *)cur_node->children->content);
+					strncpy_safe(tmp_val, (char *)cur_node->children->content, tmp_val_len);
 					
 					if (xmlStrEqual(cur_node->name, BAD_CAST "localCAfile")) {
 						/* location of the CA certificate */
@@ -482,14 +484,15 @@ int input_init(char *params, void **config)
 #endif
         if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
             /* copy value to memory - don't forget the terminating zero */
-            char *tmp_val = malloc(sizeof(char)*strlen((char *)cur_node->children->content)+1);
+            int tmp_val_len = strlen((char *) cur_node->children->content) + 1;
+            char *tmp_val = malloc(sizeof(char) * tmp_val_len);
             /* this is not a preferred cast, but we really want to use plain chars here */
             if (tmp_val == NULL) {
             	MSG_ERROR(msg_module, "Cannot allocate memory: %s", strerror(errno));
                 retval = 1;
                 goto out;
             }
-            strcpy(tmp_val, (char *)cur_node->children->content);
+            strncpy_safe(tmp_val, (char *)cur_node->children->content, tmp_val_len);
 
             if (xmlStrEqual(cur_node->name, BAD_CAST "localPort")) { /* set local port */
                 port = tmp_val;
@@ -505,8 +508,10 @@ int input_init(char *params, void **config)
             } else if (xmlStrEqual(cur_node->name, BAD_CAST "optionsTemplateLifePacket")) {
                 conf->info.options_template_life_packet = tmp_val;
             } else { /* unknown parameter, ignore */
-                free(tmp_val);
+                // Do nothing
             }
+
+            free(tmp_val);
         }
     }
 
