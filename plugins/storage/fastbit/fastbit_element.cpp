@@ -151,16 +151,19 @@ int element::flush(std::string path) {
 		f = fopen((path +"/"+_name).c_str(),"a+");
 		if (f == NULL) {
 			fprintf(stderr, "Error while writing data (fopen)!\n");
+			fclose(f);
 			return 1;
 		}
 		//std::cout << "FILE OPEN" << std::endl;
 		if (_buffer == NULL) {
 			fprintf(stderr, "Error while writing data! (buffer)\n");
+			fclose(f);
 			return 1;
 		}
 		check = fwrite( _buffer, size() , _filled, f);
 		if (check != (size_t) _filled ) {
 			fprintf(stderr, "Error while writing data! (fwrite)\n");
+			fclose(f);
 			return 1;
 		}
 		_filled = 0;
