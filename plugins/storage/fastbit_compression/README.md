@@ -3,6 +3,8 @@
 
 The plugin uses FastBit library to store and index data and gzip or bzip2 libraries for compression.
 
+The plugin was created by Jakub Adler as part of his [Bachelor's thesis](https://is.muni.cz/th/396111/fi_b/) at Masary University.
+
 ###FastBit library
 
  IPFIXcol framework uses it's own fork of FastBit library to keep compatibility.
