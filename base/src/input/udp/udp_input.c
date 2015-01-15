@@ -169,8 +169,14 @@ int input_init(char *params, void **config)
 			}
 
 			if (xmlStrEqual(cur_node->name, BAD_CAST "localPort")) { /* set local port */
+				if (port) {
+					free(port);
+				}
 				port = tmp_val;
 			} else if (xmlStrEqual(cur_node->name, BAD_CAST "localIPAddress")) { /* set local address */
+				if (address) {
+					free(address);
+				}
 				address = tmp_val;
 			/* save following configuration to input_info */
 			} else if (xmlStrEqual(cur_node->name, BAD_CAST "templateLifeTime")) {
