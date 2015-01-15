@@ -39,6 +39,7 @@ There are also external plugins that are installed separately
 
 ###<a name="exout"></a> External storage plugins
 * **[fastbit](plugins/storage/fastbit)** - uses FastBit library to store and index data
+* **[fastbit_compression](plugins/storage/fastbit_compression)** - uses FastBit library to store and index data with optional compression support
 * **[nfdump](plugins/storage/nfdump)** - stores data in NFDUMP file format
 * **[postgres](plugins/storage/postgres)** - stores data into PostgreSQL database
 * **[statistics](plugins/storage/statistics)** - uses RRD library to generate statistics for collected data
