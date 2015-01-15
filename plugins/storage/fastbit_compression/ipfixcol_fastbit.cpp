@@ -469,7 +469,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 		return 1;
 	}
 
-	for (int i = 0; i < 1023; i++) {
+	for (int i = 0; i < MSG_MAX_DATA_COUPLES; i++) {
 		struct ipfix_data_set *data_set = ipfix_msg->data_couple[i].data_set;
 		struct ipfix_template *data_template = ipfix_msg->data_couple[i].data_template;
 
