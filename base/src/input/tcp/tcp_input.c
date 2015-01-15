@@ -510,8 +510,6 @@ int input_init(char *params, void **config)
             } else { /* unknown parameter, ignore */
                 // Do nothing
             }
-
-            free(tmp_val);
         }
     }
 
