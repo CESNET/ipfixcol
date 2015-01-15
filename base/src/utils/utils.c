@@ -87,7 +87,7 @@ static int regexp_asterisk(char *regexp, char *string)
 		return -1;
 	}
 
-	strcpy(aux_regexp, regexp);
+	strncpy_safe(aux_regexp, regexp, strlen(regexp) + 1);
 	
 	int pos = 1; /* we assume that asterisk is in the middle of the string */
 	if (aux_regexp[0] == asterisk) {
@@ -280,4 +280,15 @@ char *utils_dir_from_path(char *path)
 	dir = dirname(dir);
 	
 	return dir;
+}
+
+/**
+ * \brief Version of strncpy that ensures null-termination.
+ */
+char *strncpy_safe (char *destination, const char *source, size_t num)
+{
+    strncpy(destination, source, num);
+
+    // Ensure null-termination
+    destination[num - 1] = '\0';
 }

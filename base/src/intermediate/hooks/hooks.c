@@ -201,7 +201,7 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 			len = strlen((char *) aux_char);
 			
 			aux_op->operation = calloc(1, len + 2);
-			strcpy(aux_op->operation, (char *) aux_char);
+			strncpy_safe(aux_op->operation, (char *) aux_char, len);
 			
 			/* add & to the end (if not present) */
 			if (aux_op->operation[len - 1] != '&') {

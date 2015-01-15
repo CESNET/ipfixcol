@@ -203,20 +203,21 @@ int storage_init(char *params, void **config)
 	/* we only support local files */
 	if (strncmp((char *) conf->xml_file, "file:", 5)) {
 		MSG_ERROR(msg_module, "Element \"file\": invalid URI - "
-		                        "only allowed scheme is \"file:\"");
+								"only allowed scheme is \"file:\"");
 		goto err_init;
 	}
 
 	/* output file path + timestamp */
-	conf->file = (char *) malloc(strlen((char *) conf->xml_file)+13);
+	uint16_t path_len = strlen((char *) conf->xml_file) + 13;
+	conf->file = (char *) malloc(path_len);
 	if (conf->file == NULL) {
 		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		goto err_init;
 	}
-	memset(conf->file, 0, strlen((char *) conf->xml_file)+13);
+	memset(conf->file, 0, path_len);
 
 	/* copy file path, skip "file:" at the beginning of the URI */
-	strcpy(conf->file, (char *) conf->xml_file + 5);
+	strncpy_safe(conf->file, (char *) conf->xml_file + 5, path_len);
 
 	/* add timestamp at the end of the file name */
 	memset(&tm, 0, sizeof(tm));

@@ -469,7 +469,7 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
 void convert_packet(char **packet, ssize_t *len, char *input_info)
 {
 	struct ipfix_header *header = (struct ipfix_header *) *packet;
-	int numOfFlowSamples = 0;
+	uint16_t numOfFlowSamples = 0;
 	info_list = (struct input_info_list *) input_info;
 	switch (htons(header->version)) {
 		/* Netflow v9 packet */

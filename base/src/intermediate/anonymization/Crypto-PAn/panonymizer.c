@@ -111,7 +111,7 @@ uint32_t len = strlen(s);
 
 	if ( strlen(s) == 32 ) {
 		// Key is a string
-		strncpy(key, s, 32);
+		strncpy_safe(key, s, 32);
 		return 1;
 	}
 
