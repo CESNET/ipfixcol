@@ -227,6 +227,9 @@ void *input_listen(void *config)
         /* ensure that address will be freed when thread is canceled */ 
         pthread_cleanup_push(input_listen_cleanup, (void *) address);
 
+        if (new_sock) {
+            close(new_sock);
+        }
         if ((new_sock = accept(conf->socket, (struct sockaddr*) address, &addr_length)) == -1) {
         	MSG_ERROR(msg_module, "Cannot accept new socket: %s", strerror(errno));
             /* exit and call cleanup */
