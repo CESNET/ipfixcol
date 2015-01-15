@@ -151,6 +151,7 @@ char **read_packets(char *input)
     char **packets = calloc(pkt_max, sizeof(char *));
     if (!packets) {
         ERR_MEM;
+        close(fd);
         return NULL;
     }
     
@@ -173,6 +174,7 @@ char **read_packets(char *input)
             packets = realloc(packets, pkt_max * sizeof(char *));
             if (!packets) {
                 ERR_MEM;
+                close(fd);
                 return NULL;
             }
             
