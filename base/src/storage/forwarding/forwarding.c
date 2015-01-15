@@ -723,7 +723,7 @@ void forwarding_remove_empty_sets(struct ipfix_message *msg)
 			/* Set correct message length */
 			msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) - len);
 			/* Shift all template sets behind this (there must not be hole) */
-			for (j = i; j < MSG_MAX_TEMPLATES && msg->templ_set[j]; ++j) {
+			for (j = i; j < MSG_MAX_TEMPLATES - 1 && msg->templ_set[j]; ++j) {
 				msg->templ_set[j] = msg->templ_set[j + 1];
 			}
 		}
