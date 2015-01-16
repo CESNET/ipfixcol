@@ -557,6 +557,7 @@ struct ipfix_template_mgr *tm_create() {
 
 	if ((tm = malloc(sizeof(struct ipfix_template_mgr))) == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		return NULL;
 	}
 
 	/* Allocate space for Template Manager's records */
