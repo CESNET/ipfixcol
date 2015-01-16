@@ -661,9 +661,6 @@ struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct fil
 	ptr = calloc(1, ntohs(msg->pkt_header->length));
 	if (!ptr) {
 		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
-		if (new_msg) {
-			free(new_msg);
-		}
 		return NULL;
 	}
 
