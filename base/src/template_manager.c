@@ -296,6 +296,7 @@ struct ipfix_template *tm_create_template(void *template, int max_len, int type,
 	/* allocate memory for new template */
 	if ((new_tmpl = malloc(tmpl_length)) == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		return NULL;
 	}
 
 	if (tm_fill_template(new_tmpl, template, tmpl_length, data_length, type, odid) == 1) {
