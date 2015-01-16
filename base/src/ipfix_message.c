@@ -282,12 +282,12 @@ uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_templat
 	uint16_t records_index = 0;
 
 	/* TODO - make it clever */
-	records = (uint8_t **) malloc(1023 * sizeof(uint8_t *));
+	records = (uint8_t **) malloc(MSG_MAX_DATA_COUPLES * sizeof(uint8_t *));
 	if (records == NULL) {
 		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
 		return (uint8_t **) NULL;
 	}
-	memset(records, 0, 1023 * sizeof(uint8_t *));
+	memset(records, 0, MSG_MAX_DATA_COUPLES * sizeof(uint8_t *));
 
 	min_record_length = tmplt->data_length;
 	offset = 0;

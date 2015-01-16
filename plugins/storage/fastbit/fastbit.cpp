@@ -406,8 +406,8 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	templates = (*dom_id).second;
 	dir = dir_hierarchy(conf,(*dom_id).first);
 
-	/* message from ipfixcol have maximum of 1023 data records */
-	for (i = 0 ; i < 1023; i++) { //TODO magic number! add constant to storage.h
+	/* message from ipfixcol have maximum of MSG_MAX_DATA_COUPLES data records */
+	for (i = 0 ; i < MSG_MAX_DATA_COUPLES; i++) {
 		if (ipfix_msg->data_couple[i].data_set == NULL) {
 			//there are no more filled data_sets	
 			break;
