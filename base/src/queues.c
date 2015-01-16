@@ -266,6 +266,11 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
 			if (rbuffer->count == 0) {
 				if (pthread_cond_signal (&(rbuffer->cond_empty)) != 0) {
 					MSG_ERROR(msg_module, "Condition signal failed (%s:%d)", __FILE__, __LINE__);
+
+					if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
+						MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
+					}
+					
 					return (EXIT_FAILURE);
 				}
 			}
