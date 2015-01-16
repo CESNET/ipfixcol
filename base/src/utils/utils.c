@@ -231,7 +231,13 @@ char **utils_files_from_path(char *path)
 			sprintf(input_files[inputf_index], "%s/%s", dirname, entry->d_name);
 
 			/* check whether input file is a directory */
-			stat(input_files[inputf_index], &st);
+			if (stat(input_files[inputf_index], &st) == -1) {
+				MSG_WARNING(msg_module, "");
+				free(input_files[inputf_index]);
+				input_files[inputf_index] = NULL;
+				MSG_WARNING(msg_module, "Could not determine stats for '%s'", entry->d_name);
+				continue;
+			}
 			if (S_ISDIR(st.st_mode)) {
 				/* well, it is... damn */
 				free(input_files[inputf_index]);
