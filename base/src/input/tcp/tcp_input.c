@@ -364,7 +364,6 @@ void *input_listen(void *config)
         /* unset the address so that we do not free it incidentally */
         address = NULL;
 
-        close(new_sock);
         pthread_cleanup_pop(0);
     }
     return NULL;
