@@ -61,6 +61,7 @@ struct ipfix_template_mgr_record *tm_record_create()
 
 	if ((tmr = calloc(1, sizeof(struct ipfix_template_mgr_record))) == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		return NULL;
 	}
 
 	/* Allocate space for templates */
