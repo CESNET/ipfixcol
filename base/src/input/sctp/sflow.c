@@ -669,7 +669,7 @@ static void decode80211MAC(SFSample *sample)
 	memcpy(sample->eth_src, srcMAC, 6);
       }
       if(dstMAC) {
-	memcpy(sample->eth_dst, srcMAC, 6);
+	memcpy(sample->eth_dst, dstMAC, 6);
       }
     }
   }
