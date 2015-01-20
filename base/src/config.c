@@ -287,11 +287,9 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 
 						/* search for <destination> nodes defining ipfixcol's storage plugins */
 						xpath_obj_destinations = xmlXPathEvalExpression (BAD_CAST "/ietf-ipfix:exportingProcess/ietf-ipfix:destination", exporter_ctxt);
-						if (xpath_obj_destinations != NULL) {
-							if (xmlXPathNodeSetIsEmpty (xpath_obj_destinations->nodesetval)) {
-								/* no fileWriter found, continue with another exportingProcess */
-								goto loop_cleanup;
-							}
+						if (xpath_obj_destinations == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_destinations->nodesetval)) {
+							/* no fileWriter found, continue with another exportingProcess */
+							goto loop_cleanup;
 						}
 
 						/* now we have a <fileWriter> node with description of storage plugin */
