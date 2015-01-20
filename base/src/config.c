@@ -204,11 +204,9 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 
 	/* get the list of supported storage plugins description (including supported file formats) */
 	xpath_obj_plugin_desc = xmlXPathEvalExpression (BAD_CAST "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:storagePlugin", internal_ctxt);
-	if (xpath_obj_plugin_desc != NULL) {
-		if (xmlXPathNodeSetIsEmpty (xpath_obj_plugin_desc->nodesetval)) {
-			MSG_ERROR(msg_module, "No list of supported Storage formats found in internal configuration!");
-			goto cleanup;
-		}
+	if (xpath_obj_plugin_desc == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_plugin_desc->nodesetval)) {
+		MSG_ERROR(msg_module, "No list of supported Storage formats found in internal configuration!");
+		goto cleanup;
 	}
 
 	/* get all <exportingProcess>s from the collector node */
