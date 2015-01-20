@@ -235,8 +235,8 @@ uint64_t statistics_total_cpu()
 		return 0;
 	}
 	
-	uint64_t user = 0, nice = 0, sys = 0, idle = 0;
-	if (fscanf(stat, "%*s %" SCNu64 "%" SCNu64 "%" SCNu64 "%" SCNu64, &user, &nice, &sys, &idle) == EOF) {
+	uint32_t user = 0, nice = 0, sys = 0, idle = 0;
+	if (fscanf(stat, "%*s %" SCNu32 "%" SCNu32 "%" SCNu32 "%" SCNu32, &user, &nice, &sys, &idle) == EOF) {
 		MSG_ERROR(stat_module, "Error while reading /proc/stat: %s", strerror(errno));
 	}
 	

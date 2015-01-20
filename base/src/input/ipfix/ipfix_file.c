@@ -114,7 +114,7 @@ static int prepare_input_file(struct ipfix_config *conf)
 	if (fd == -1) {
 		/* input file doesn't exist or we don't have read permission */
 		MSG_ERROR(msg_module, "Unable to open input file: %s", conf->input_files[conf->findex]);
-		ret = -1;
+		return -1;
 	}
 
 	/* New file == new input info */

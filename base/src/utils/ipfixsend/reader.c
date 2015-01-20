@@ -151,6 +151,7 @@ char **read_packets(char *input)
     char **packets = calloc(pkt_max, sizeof(char *));
     if (!packets) {
         ERR_MEM;
+        close(fd);
         return NULL;
     }
     
@@ -173,6 +174,7 @@ char **read_packets(char *input)
             packets = realloc(packets, pkt_max * sizeof(char *));
             if (!packets) {
                 ERR_MEM;
+                close(fd);
                 return NULL;
             }
             
@@ -219,6 +221,12 @@ char *read_file(char *input, long *fsize)
 	
 	/* Get file size and allocate space */
 	*fsize = file_size(f);
+	if (fsize < 0) {
+		fprintf(stderr, "Cannot determine file size of \"%s\"!", input);
+		fclose(f);
+		return NULL;
+	}
+
 	char *data = calloc(1, *fsize + 1);
 	if (!data) {
 		ERR_MEM;
@@ -227,8 +235,8 @@ char *read_file(char *input, long *fsize)
 	}
 	
 	/* Read file */
-	size_t readed = fread(data, *fsize, 1, f);
-	data[readed] = 0;
+	size_t read = fread(data, *fsize, 1, f);
+	data[read] = 0;
 	
 	/* Close */
 	fclose(f);

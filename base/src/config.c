@@ -353,7 +353,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 							}
 
 							if (plugin_file == NULL) {
-								MSG_ERROR(msg_module, "Unable to load storage plugin; configuration for fileFormat '%s' could not be found", (char *) file_format);
+								MSG_ERROR(msg_module, "Unable to load storage plugin; specification for fileFormat '%s' could not be found", (char *) file_format);
 							}
 						}
 						/* break while loop to get to another exportingProcess */
@@ -533,7 +533,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char 
 
 found_input_plugin_file:
 	if (retval->config.file == NULL) {
-		MSG_ERROR(msg_module, "Unable to load input plugin; configuration for '%s' could not be found", collector_name);
+		MSG_ERROR(msg_module, "Unable to load input plugin; specification for '%s' could not be found", collector_name);
 		free (retval);
 		retval = NULL;
 	}
@@ -620,11 +620,17 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 
 	node = xpath_obj_core->nodesetval->nodeTab[0]->children;
 
+	/* Loop over all nodes and skip comments */
 	while (node != NULL) {
+		/* Skip processing this node in case it's a comment */
+		if (node->type == XML_COMMENT_NODE) {
+			node = node->next;
+			continue;
+		}
+
 		plugin_file = NULL;
 		xmldata = NULL;
 		thread_name = NULL;
-
 		hit = 0;
 
 		/* find internal configuration for this Intermediate plugin */
@@ -636,6 +642,7 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 					(!xmlStrncmp(plugin_config_internal->children->content, node->name, xmlStrlen(node->name)))) {
 					hit = 1;
 				}
+
 				if (!xmlStrncmp(plugin_config_internal->name, BAD_CAST "file", strlen("file") + 1)) {
 					plugin_file = xmlNodeListGetString(plugin_config_internal->doc, plugin_config_internal->children, 1);
 				}
@@ -643,6 +650,7 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 				if (!xmlStrncmp(plugin_config_internal->name, BAD_CAST "threadName", strlen("threadName") + 1)) {
 					thread_name = xmlNodeListGetString(plugin_config_internal->doc, plugin_config_internal->children, 1);
 				}
+
 				plugin_config_internal = plugin_config_internal->next;
 			}
 
@@ -657,7 +665,7 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 		}
 
 		if (!plugin_file) {
-			MSG_ERROR(msg_module, "Unable to load intermediate plugin; configuration for '%s' could not be found", (char *) node->name);
+			MSG_ERROR(msg_module, "Unable to load intermediate plugin; specification for '%s' could not be found", (char *) node->name);
 			node = node->next;
 			continue;
 		}
@@ -699,8 +707,6 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 		last_plugin = aux_plugin;
 		node = node->next;
 	}
-
-
 
 	/* inform that everything was done but no valid plugin has been found */
 	if (plugins == NULL) {

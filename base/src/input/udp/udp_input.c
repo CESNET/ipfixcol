@@ -160,17 +160,24 @@ int input_init(char *params, void **config)
 			/* copy value to memory - don't forget the terminating zero */
 			int tmp_val_len = strlen((char *) cur_node->children->content) + 1;
 			char *tmp_val = malloc(sizeof(char) * tmp_val_len);
-			/* this is not a preferred cast, but we really want to use plain chars here */
-			strncpy_safe(tmp_val, (char *)cur_node->children->content, tmp_val_len);
 			if (tmp_val == NULL) {
 				MSG_ERROR(msg_module, "Cannot allocate memory: %s", strerror(errno));
 				retval = 1;
 				goto out;
 			}
 
+			/* this is not a preferred cast, but we really want to use plain chars here */
+			strncpy_safe(tmp_val, (char *) cur_node->children->content, tmp_val_len);
+
 			if (xmlStrEqual(cur_node->name, BAD_CAST "localPort")) { /* set local port */
+				if (port) {
+					free(port);
+				}
 				port = tmp_val;
 			} else if (xmlStrEqual(cur_node->name, BAD_CAST "localIPAddress")) { /* set local address */
+				if (address) {
+					free(address);
+				}
 				address = tmp_val;
 			/* save following configuration to input_info */
 			} else if (xmlStrEqual(cur_node->name, BAD_CAST "templateLifeTime")) {
