@@ -255,6 +255,10 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
 						}
 					}
 					
+					if (rbuffer->data[rbuffer->read_offset]->metadata) {
+						free (rbuffer->data[rbuffer->read_offset]->metadata);
+					}
+					
 					free (rbuffer->data[rbuffer->read_offset]);
 				}
 			}

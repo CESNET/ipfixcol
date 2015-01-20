@@ -385,6 +385,17 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 	return template->template_length - sizeof(struct ipfix_template) + sizeof(struct ipfix_options_template_record);
 }
 
+void fill_metadata(uint8_t *rec, int rec_len, struct ipfix_template *templ, void *data)
+{
+	struct ipfix_message *msg = (struct ipfix_message *) data;
+	
+	msg->metadata[msg->data_records_count].record.record = rec;
+	msg->metadata[msg->data_records_count].record.length = rec_len;
+	msg->metadata[msg->data_records_count].record.templ = templ;
+	
+	msg->data_records_count++;
+}
+
 /**
  * \brief Process templates
  *
@@ -449,7 +460,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 			}
 		}
 	}
-
+	
 	/* add template to message data_couples */
 	for (i = 0; i < 1023 && msg->data_couple[i].data_set; i++) {
 		key.tid = ntohs(msg->data_couple[i].data_set->header.flowset_id);
@@ -475,11 +486,37 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 			records_count += data_set_records_count(msg->data_couple[i].data_set, msg->data_couple[i].data_template);
 		}
 	}
-
-	msg->data_records_count = records_count;
-
+	
+	/*
+	 * FILL METADATA, two options:
+	 * a) fill metadata AFTER counting data records (using now)
+	 *		+ allocate whole array at once
+	 *		- data sets and data records are accesed twice (data_set_records_count and data_set_process_records)
+	 * 
+	 * b) fill metadata WHILE counting data records (replace data_set_records_count with data_set_process_records and add callback)
+	 *		+ one acces to data sets
+	 *		- needs reallocation
+	 */
+	
+	/* Allocate space for metadata */
+	msg->metadata = calloc(records_count, sizeof(struct metadata));
+	if (!msg->metadata) {
+		MSG_ERROR(msg_module, "Cannot allocate space for metadata, not enought memory (%s:%d)", __FILE__, __LINE__);
+	} else {
+		/* Fill metadata */
+		for (i = 0; i < 1023 && msg->data_couple[i].data_set; ++i) {
+			/* Skip sets without template */
+			if (!msg->data_couple[i].data_template) {
+				continue;
+			}
+		
+			data_set_process_records(msg->data_couple[i].data_set, msg->data_couple[i].data_template, fill_metadata, msg);
+		}
+	}
+	
+	
 	/* return number of data records */
-	return records_count;
+	return msg->data_records_count;
 }
 
 /**
