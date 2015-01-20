@@ -456,13 +456,11 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char 
 	 * collector information from the user configuration file
 	 */
 	xpath_obj_suppcolls = xmlXPathEvalExpression (BAD_CAST "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:supportedCollectors/cesnet-ipfixcol-int:name", internal_ctxt);
-	if (xpath_obj_suppcolls != NULL) {
-		if (xmlXPathNodeSetIsEmpty (xpath_obj_suppcolls->nodesetval)) {
-			MSG_ERROR(msg_module, "No list of supportedCollectors found in internal configuration!");
-			free (retval);
-			retval = NULL;
-			goto cleanup;
-		}
+	if (xpath_obj_suppcolls == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_suppcolls->nodesetval)) {
+		MSG_ERROR(msg_module, "No list of supportedCollectors found in internal configuration!");
+		free (retval);
+		retval = NULL;
+		goto cleanup;
 	}
 
 	/* get paths to libraries implementing plugins from internal configuration */
