@@ -62,10 +62,10 @@
 
 #define CHECK_SET(_ptr_, _name_) \
 do { \
-    if (!(_ptr_)) { \
-        fprintf(stderr, "%s must be set!\n", (_name_)); \
-        return 1; \
-    } \
+	if (!(_ptr_)) { \
+		fprintf(stderr, "%s must be set!\n", (_name_)); \
+		return 1; \
+	} \
 } while (0)
 
 static int stop = 0;
@@ -75,18 +75,18 @@ static int stop = 0;
  */
 void usage()
 {
-    printf("\n");
-    printf("Usage: ipfixsend [options]\n");
-    printf("  -h         show this text\n");
-    printf("  -i path    IPFIX input file\n");
-    printf("  -d ip      Destination IP address\n");
-    printf("  -p port    Destination port number, default is %s\n", DEFAULT_PORT);
-    printf("  -t type    Connection type (udp, tcp or sctp), default is udp\n");
+	printf("\n");
+	printf("Usage: ipfixsend [options]\n");
+	printf("  -h         show this text\n");
+	printf("  -i path    IPFIX input file\n");
+	printf("  -d ip      Destination IP address\n");
+	printf("  -p port    Destination port number, default is %s\n", DEFAULT_PORT);
+	printf("  -t type    Connection type (udp, tcp or sctp), default is udp\n");
 	printf("  -n num     How many times should file be sent, default is infinity\n");
 	printf("  -s speed   Maximum data sending speed/s\n");
 	printf("             Supported suffixes: B (default), K, M, G\n");
 	printf("  -S packets Speed limit in packets/s\n");
-    printf("\n");
+	printf("\n");
 }
 
 void handler(int signal)
@@ -101,33 +101,33 @@ void handler(int signal)
  */
 int main(int argc, char** argv) 
 {
-    char *ip = NULL, *input = NULL, *speed = NULL, *type = DEFAULT_TYPE, *port = NULL;
-    int c, loops = INFINITY_LOOPS;
+	char *ip = NULL, *input = NULL, *speed = NULL, *type = DEFAULT_TYPE, *port = NULL;
+	int c, loops = INFINITY_LOOPS;
 	int packets_s = 0;
-    
+	
 	if (argc == 1) {
 		usage();
 		return 0;
 	}
 	
-    /* Parse parameters */
-    while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
-        switch (c) {
-        case 'h':
-            usage();
-            return 0;
-        case 'i':
-            input = optarg;
-            break;
-        case 'd':
-            ip = optarg;
-            break;
-        case 'p':
+	/* Parse parameters */
+	while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
+		switch (c) {
+		case 'h':
+			usage();
+			return 0;
+		case 'i':
+			input = optarg;
+			break;
+		case 'd':
+			ip = optarg;
+			break;
+		case 'p':
 			port = optarg;
-            break;
-        case 't':
+			break;
+		case 't':
 			type = optarg;
-            break;
+			break;
 		case 'n':
 			loops = atoi(optarg);
 			break;
@@ -137,22 +137,23 @@ int main(int argc, char** argv)
 		case 'S':
 			packets_s = atoi(optarg);
 			break;
-        default:
-            fprintf(stderr, "Unknown option\n");
-            return 1;
-        }
-    }
-    
-    /* Check whether everything is set */
-    CHECK_SET(input, "Input file");
-    CHECK_SET(ip,    "IP address");
+		default:
+			fprintf(stderr, "Unknown option\n");
+			return 1;
+		}
+	}
+	
+	/* Check whether everything is set */
+	CHECK_SET(input, "Input file");
+	CHECK_SET(ip,    "IP address");
 
 	signal(SIGINT, handler);
 	
-    /* Get collector's address */
+	/* Get collector's address */
 	sisoconf *sender = siso_create();
 	if (!sender) {
 		fprintf(stderr, "Memory allocation error, cannot create sender\n");
+		return 1;
 	}
 	
 	/* Load packets from file */
@@ -160,7 +161,7 @@ int main(int argc, char** argv)
 	if (!packets) {
 		return 1;
 	}
-    
+	
 	/* Create connection */
 	int ret = siso_create_connection(sender, ip, port, type);
 	if (ret != SISO_OK) {
@@ -186,8 +187,7 @@ int main(int argc, char** argv)
 		
 	/* Free resources*/
 	free_packets(packets);
-    
+	
 	siso_destroy(sender);
-    return 0;
+	return 0;
 }
-
