@@ -587,11 +587,9 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 
 	/* get the list of supported intermediate plugins description from internal config */
 	xpath_obj_ipinter = xmlXPathEvalExpression(BAD_CAST "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:intermediatePlugin", internal_ctxt);
-	if (xpath_obj_ipinter != NULL) {
-		if (xmlXPathNodeSetIsEmpty (xpath_obj_ipinter->nodesetval)) {
-			MSG_ERROR(msg_module, "No list of supported Intermediate formats found in internal configuration!");
-			goto cleanup;
-		}
+	if (xpath_obj_ipinter == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_ipinter->nodesetval)) {
+		MSG_ERROR(msg_module, "No list of supported Intermediate formats found in internal configuration!");
+		goto cleanup;
 	}
 
 	/* create xpath evaluation context of user configuration */
