@@ -229,11 +229,9 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 
 	/* search for <exportingProcess>s nodes defining exporters (including fileWriters) */
 	xpath_obj_expprocnames = xmlXPathEvalExpression (BAD_CAST "/ietf-ipfix:collectingProcess/ietf-ipfix:exportingProcess", collector_ctxt);
-	if (xpath_obj_expprocnames != NULL) {
-		if (xmlXPathNodeSetIsEmpty (xpath_obj_expprocnames->nodesetval)) {
-			MSG_ERROR(msg_module, "No exportingProcess defined in the collectingProcess!");
-			goto cleanup;
-		}
+	if (xpath_obj_expprocnames == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_expprocnames->nodesetval)) {
+		MSG_ERROR(msg_module, "No exportingProcess defined in the collectingProcess!");
+		goto cleanup;
 	}
 
 	/* create xpath evaluation context of user configuration */
