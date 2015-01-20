@@ -13,6 +13,9 @@ params - file with ipfixcol parameters (optional), default is '-v -1 -c startup.
 preproc.sh - script that will be executed BEFORE test (optional)
 postproc.sh - script that will be executed AFTER test and BEFORE comparing results (optional)
 
+Folders named "ipfixsend *" use ipfixsend tool for testing IPFIXcol's input plugins.
+These folder must contain "ipfixsend.sh" file which starts ipfixsend instance(s).
+
 Test logs are stored in test.log file
 
 Tool uses script create_internal.sh for making internalcfg.xml with paths to build folder.
