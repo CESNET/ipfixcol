@@ -723,7 +723,7 @@ void forwarding_remove_empty_sets(struct ipfix_message *msg)
 			/* Set correct message length */
 			msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) - len);
 			/* Shift all template sets behind this (there must not be hole) */
-			for (j = i; j < MSG_MAX_TEMPLATES && msg->templ_set[j]; ++j) {
+			for (j = i; j < MSG_MAX_TEMPLATES - 1 && msg->templ_set[j]; ++j) {
 				msg->templ_set[j] = msg->templ_set[j + 1];
 			}
 		}
@@ -813,10 +813,16 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 void forwarding_add_set(struct ipfix_message *msg, struct ipfix_template_set *set)
 {
 	int i;
+
+	// Find first empty slot
 	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; ++i);
-	
-	msg->templ_set[i] = set;
-	msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) + ntohs(set->header.length));
+
+	if (i == MSG_MAX_TEMPLATES) {
+		MSG_ERROR(msg_module, "Could not add template to IPFIX message, because message already features %u templates", MSG_MAX_TEMPLATES);
+	} else {
+		msg->templ_set[i] = set;
+		msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) + ntohs(set->header.length));
+	}
 }
 
 /**

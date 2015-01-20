@@ -678,9 +678,12 @@ int input_init(char *params, void **config)
     /* print info */
     MSG_NOTICE(msg_module, "TCP input plugin listening on address %s, port %s", dst_addr, port);
 
-
     /* start listening thread */
-    pthread_create(&listen_thread, NULL, &input_listen, (void *) conf);
+    if (pthread_create(&listen_thread, NULL, &input_listen, (void *) conf) != 0) {
+        MSG_ERROR(msg_module, "Failed to create listening thread");
+        retval = 1;
+        goto out;
+    }
 
     /* pass general information to the collector */
     *config = (void*) conf;

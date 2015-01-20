@@ -292,11 +292,13 @@ int process_startup_xml(char *params, struct fastbit_config* c){
 		time ( &(c->last_flush));
 		
 		nameType=ie.node().child_value("type");
-		if(nameType == "time"){
+		if (nameType == "time") {
 			c->dump_name = TIME;
-			if(timeAligment == "yes"){
-				/* operators '/' and '*' are used for round down time to time window */
-				c->last_flush = ((c->last_flush/c->time_window) * c->time_window);
+			if (timeAligment == "yes") {
+				if (c->time_window > 0) {
+					/* operators '/' and '*' are used for round down time to time window */
+					c->last_flush = ((c->last_flush/c->time_window) * c->time_window);
+				}
 			}
 			timeinfo = localtime ( &(c->last_flush));
 			strftime(formated_time,17,"%Y%m%d%H%M%S",timeinfo);
@@ -311,7 +313,7 @@ int process_startup_xml(char *params, struct fastbit_config* c){
 			}
 			c->window_dir = c->prefix + "/";
 		}
-		if ( sem_init(&(c->sem),0,1) ){
+		if (sem_init(&(c->sem),0,1)) {
 			MSG_ERROR(MSG_MODULE,"Error semaphore init");
 			return 1;
 		}

@@ -503,15 +503,19 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		msg->source_status = source_status;
 		odid_info_remove_source(input_info->odid);
 	} else {
-		if (packet == NULL) {
-			MSG_WARNING(msg_module, "[%u] Received empty packet", input_info->odid);
+		if (input_info == NULL || storage_plugins == NULL) {
+			MSG_WARNING(msg_module, "Invalid parameters in function preprocessor_parse_msg()");
+
+			if (packet) {
+				free(packet);
+			}
+			
+			packet = NULL;
 			return;
 		}
 
-		if (input_info == NULL || storage_plugins == NULL) {
-			MSG_WARNING(msg_module, "[%u] Invalid parameters in function preprocessor_parse_msg().", input_info->odid);
-			free(packet);
-			packet = NULL;
+		if (packet == NULL) {
+			MSG_WARNING(msg_module, "[%u] Received empty packet", input_info->odid);
 			return;
 		}
 

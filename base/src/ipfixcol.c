@@ -430,7 +430,6 @@ int main (int argc, char* argv[])
 			storage_plugin_handler = NULL;
 			free (storage_list);
 			storage_list = aux_storage_list;
-			dlclose(storage_plugin_handler);
 			continue;
 		}
 

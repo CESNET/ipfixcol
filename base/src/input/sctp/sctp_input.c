@@ -675,7 +675,7 @@ int get_packet(void *config, struct input_info** info, char **packet, int *sourc
 	int socket;
 	struct sctp_sndrcvinfo sinfo;
 	int flags;
-	int msg_length;
+	ssize_t msg_length;
 	int nfds;
 	uint8_t packet_allocated_here = 0;
 	struct epoll_event events[MAX_EPOLL_EVENTS];
@@ -764,7 +764,7 @@ wait_for_data:
 
 	/* Convert packet from Netflow v5/v9/sflow to IPFIX format */
 	if (htons(((struct ipfix_header *)(*packet))->version) != IPFIX_VERSION) {
-		convert_packet(packet, (ssize_t *) &msg_length, NULL);
+		convert_packet(packet, &msg_length, NULL);
 	}
 
 	/* Check if lengths are the same */

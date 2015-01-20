@@ -13,7 +13,7 @@ extern "C" {
 #endif
 
 
-int Process_sflow(void *packet, ssize_t packet_len);
+uint16_t Process_sflow(void *packet, ssize_t packet_len);
 
 typedef struct {
     uint32_t addr;
