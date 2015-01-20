@@ -492,13 +492,11 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char 
 
 	/* first get list of inputPlugin nodes in internal configuration file */
 	xpath_obj_file = xmlXPathEvalExpression (BAD_CAST "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:inputPlugin", internal_ctxt);
-	if (xpath_obj_file != NULL) {
-		if (xmlXPathNodeSetIsEmpty (xpath_obj_file->nodesetval)) {
-			MSG_ERROR(msg_module, "No inputPlugin definition found in internal configuration!");
-			free (retval);
-			retval = NULL;
-			goto cleanup;
-		}
+	if (xpath_obj_file == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_file->nodesetval)) {
+		MSG_ERROR(msg_module, "No inputPlugin definition found in internal configuration!");
+		free (retval);
+		retval = NULL;
+		goto cleanup;
 	}
 	/* and now select the one with required name element */
 	for (i = 0; i < xpath_obj_file->nodesetval->nodeNr; i++) {
