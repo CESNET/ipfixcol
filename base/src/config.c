@@ -621,7 +621,13 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 	node = xpath_obj_core->nodesetval->nodeTab[0]->children;
 
 	/* Loop over all nodes and skip comments */
-	while (node != NULL && xmlStrncmp(node->name, BAD_CAST "comment", strlen("comment") + 1) != 0) {
+	while (node != NULL) {
+		/* Skip processing this node in case it's a comment */
+		if (node->type == XML_COMMENT_NODE) {
+			node = node->next;
+			continue;
+		}
+
 		plugin_file = NULL;
 		xmldata = NULL;
 		thread_name = NULL;
