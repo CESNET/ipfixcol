@@ -602,13 +602,10 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 
 	/* look for <ipfixmedCore> */
 	xpath_obj_core = xmlXPathEvalExpression(BAD_CAST "/ietf-ipfix:ipfix/ietf-ipfix:intermediatePlugins", config_ctxt);
-	if (xpath_obj_core != NULL) {
-		if (xmlXPathNodeSetIsEmpty(xpath_obj_core->nodesetval)) {
-			MSG_NOTICE(msg_module, "No intermediate plugin set in user configuration!");
-			goto cleanup;
-		}
+	if (xpath_obj_core == NULL || xmlXPathNodeSetIsEmpty(xpath_obj_core->nodesetval)) {
+		MSG_NOTICE(msg_module, "No intermediate plugin set in user configuration!");
+		goto cleanup;
 	}
-
 
 	node = xpath_obj_core->nodesetval->nodeTab[0]->children;
 
