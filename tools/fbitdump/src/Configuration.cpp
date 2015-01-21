@@ -122,7 +122,10 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			break;
 		case 'n':
 			/* same as -c, but -c takes precedence */
-			if (!maxCountSet && optarg != NULL && optarg != std::string("")) {
+			if (!maxCountSet) {
+				if (optarg == NULL || optarg == std::string("")) {
+					throw std::invalid_argument("-n requires a number specification");
+				}
 				this->maxRecords = atoi(optarg);
 			}
 
@@ -818,7 +821,7 @@ void Configuration::help() const
 	//<< "-B              Aggregate flow records as bidirectional flows - Guess direction." << std::endl
 //	<< "-w <file>       write output to file" << std::endl
 	<< "-f <file>       Read flow filter from file" << std::endl
-	<< "-n              Define number of top N. -c option takes precedence over -n" << std::endl
+	<< "-n <number>     Define number of top N. -c option takes precedence over -n" << std::endl
 	<< "-c <number>     Limit number of records to display" << std::endl
 	<< "-D <dns>        Use nameserver <dns> for host lookup. Does not support IPv6 addresses" << std::endl
 	<< "-N <level>      Set level of plain numbers printing. For detailed informations, please check fbitdump(1)" << std::endl
