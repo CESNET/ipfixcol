@@ -265,6 +265,19 @@ void loadDirRange(std::string &dir, std::string &firstDir, std::string &lastDir,
 	free(namelist);
 }
 
+/**
+ * \brief Version of strncpy that ensures null-termination.
+ */
+char *strncpy_safe (char *destination, const char *source, size_t num)
+{
+    strncpy(destination, source, num);
+
+    // Ensure null-termination
+    destination[num - 1] = '\0';
+
+    return destination;
+}
+
 } /* end of namespace utils */
 
 }  /* end of namespace fbitdump */

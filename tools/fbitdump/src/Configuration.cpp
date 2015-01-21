@@ -78,8 +78,6 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	bool print_formats = false;
 	bool print_modules = false;
 
-//	Configuration * Configuration::instance;
-
 	if (argc == 1) {
 		help();
 		return 1;
@@ -109,46 +107,70 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 				this->aggregateColumnsAliases.insert("%pr");
 			}
 			break;
-		case 'A': {/* aggregate on specific columns */
+		case 'A': /* aggregate on specific columns */
+			/* parseAggregateArg() handles case where optarg == NULL */
 			parseAggregateArg(optarg);
-			break;}
+			break;
 		case 'f':
-				filterFile = optarg;
+			if (optarg == NULL || optarg == std::string("")) {
+				throw std::invalid_argument("-f requires filter file specification");
+			}
+			
+			filterFile = optarg;
 			break;
 		case 'n':
 			/* same as -c, but -c takes precedence */
-			if (!maxCountSet)
+			if (!maxCountSet && optarg != NULL && optarg != std::string("")) {
 				this->maxRecords = atoi(optarg);
+			}
+
 			maxCountSet = true; /* so that statistics knows whether to change the value */
 			break;
 		case 'c': /* number of records to display */
+			if (optarg == NULL || optarg == std::string("")) {
+				throw std::invalid_argument("-c requires a number specification");
+			}
+
 			this->maxRecords = atoi(optarg);
 			maxCountSet = true; /* so that statistics knows whether to change the value */
 			break;
-		case 'D': {
-				this->resolver = new Resolver(optarg);
+		case 'D':
+			if (optarg == NULL || optarg == std::string("")) {
+				throw std::invalid_argument("-D requires a nameserver specification");
 			}
+
+			this->resolver = new Resolver(optarg);
 			break;
 		case 'N': /* print plain numbers */
+			if (optarg == NULL || optarg == std::string("")) {
+				throw std::invalid_argument("-N requires a level specification");
+			}
+
 			this->plainLevel = atoi(optarg);
 			break;
 		case 's': {
 			/* Similar to -A option*/
 			this->statistics = true;
 
+			if (optarg == NULL) {
+				throw std::invalid_argument("-s is provided with a null argument");
+			}
+
 			/* we support column/order for convenience */
 			std::string arg = optarg;
 			std::string::size_type pos;
 			char parseArg[250];
+
+			if (arg.size() >= 250) {
+				throw std::invalid_argument("Argument for option -s is too long");
+			}
+
 			if ((pos = arg.find('/')) != std::string::npos) { /* ordering column specified */
-				if (pos >= 250) { /* constant char array */
-					throw std::invalid_argument("Argument for option -s is too long");
-				}
 				/* column name is before '/' */
-				strncpy(parseArg, optarg, pos);
+				Utils::strncpy_safe(parseArg, optarg, pos);
 				parseArg[pos] = '\0';
 			} else { /* use whole optarg as column name */
-				strcpy(parseArg, optarg);
+				Utils::strncpy_safe(parseArg, optarg, arg.size());
 			}
 
 			parseAggregateArg(parseArg);
@@ -171,9 +193,10 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			/* Print extended bottom stats since we already have the values */
 			this->extendedStats = true;
 
-			break;}
+			break;
+		}
 		case 'q':
-				this->quiet = true;
+			this->quiet = true;
 			break;
 		case 'e':
 			this->extendedStats = true;
@@ -182,56 +205,73 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			NOT_SUPPORTED
 			break;
 		case 'M':
+			if (optarg == NULL || optarg == std::string("")) {
+				throw std::invalid_argument("-M requires a directory specification");
+			}
+
 			optionM = optarg;
 			/* this option will be processed later (it depends on -r or -R) */
 			break;
 		case 'r': {/* -M help argument */
-                if (optarg == std::string("")) {
-					throw std::invalid_argument("-r requires a path to open, empty string given");
-                }
+			if (optarg == NULL || optarg == std::string("")) {
+				throw std::invalid_argument("-r requires a path specification");
+			}
 
-                optionr = optarg;
-                Utils::sanitizePath(optionr);
+			optionr = optarg;
+			Utils::sanitizePath(optionr);
 			break;
 		}
 		case 'm':
 			this->optm = true;
-			if (optarg != NULL)
+			if (optarg == NULL || optarg == std::string("")) {
+				optionm = "%ts"; /* default is timestamp column */
+			} else {
 				optionm = optarg;
-			else optionm = "%ts"; /* default is timestamp column */
+			}
+
 			break;
 
 		case 'R':
-			if (optarg == std::string("")) {
-				throw std::invalid_argument("-R requires a path to open, empty string given");
+			if (optarg == NULL || optarg == std::string("")) {
+				throw std::invalid_argument("-R requires a path specification");
 			}
 
 			this->processROption(tables, optarg);
-
 			break;
 
 		case 'o': /* output format */
-				this->format = optarg;
+			if (optarg == NULL || optarg == std::string("")) {
+				throw std::invalid_argument("-o requires an output path specification");
+			}
+			
+			this->format = optarg;
 			break;
 		case 'p':
-			if (optarg == std::string("")) {
-				throw std::invalid_argument("-p requires a path to open, empty string given");
-			}
-			if (access ( optarg, F_OK ) != 0 ) {
+			if (optarg == NULL || optarg == std::string("")) {
+				throw std::invalid_argument("-p requires a path to open");
+			} else if (access ( optarg, F_OK ) != 0) {
 				throw std::invalid_argument("Cannot access pipe");
 			}
-			this->pipe_name = optarg;
 
+			this->pipe_name = optarg;
 			break;
 
 		case 'v':
+			if (optarg == NULL || optarg == std::string("")) {
+				throw std::invalid_argument("-v requires a verbosity level specification");
+			}
+			
 			verbose = atoi(optarg);
 			break;
 		case 'Z':
 			this->checkFilters = true;
 			break;
 		case 't':
-				this->timeWindow = optarg;
+			if (optarg == NULL || optarg == std::string("")) {
+				throw std::invalid_argument("-t requires a time window specification");
+			}
+			
+			this->timeWindow = optarg;
 			break;
 		case 'i': /* create indexes */
 			this->createIndexes = true;
@@ -246,9 +286,10 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			}
 			break;
 		case 'C': /* Configuration file */
-			if (optarg == std::string("")) {
-				throw std::invalid_argument("-C requires a path to configuration file, empty string given");
+			if (optarg == NULL || optarg == std::string("")) {
+				throw std::invalid_argument("-C requires a path to configuration file");
 			}
+
 			this->configFile = optarg;
 			break;
 		case 'T': /* Template information */
@@ -264,10 +305,14 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			print_modules = true;
 			break;
 		case 'P':
+			if (optarg == NULL || optarg == std::string("")) {
+				throw std::invalid_argument("-P requires a filter specification");
+			}
+			
 			this->aggregateFilter = optarg;
 			break;
 		default:
-			help ();
+			help();
 			return 1;
 			break;
 		}
@@ -278,7 +323,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	}
 
 	/* open XML configuration file */
-	Utils::printStatus( "Parsing configuration");
+	Utils::printStatus("Parsing configuration");
 	if (!this->doc.load_file(this->getXmlConfPath())) {
 		std::string err = std::string("XML '") + this->getXmlConfPath() + "' with columns configuration cannot be loaded!";
 		throw std::invalid_argument(err);
@@ -327,7 +372,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		t.seekg(0, std::ios::beg);
 
 		this->filter.assign((std::istreambuf_iterator<char>(t)),
-        std::istreambuf_iterator<char>());
+		std::istreambuf_iterator<char>());
 
 	} else {
 		/* set default filter */
@@ -751,64 +796,64 @@ void Configuration::help() const
 	/* lines with // at the beginning should be implemented sooner */
 	std::cout
 	<< "usage "<< PACKAGE <<" [options] [\"filter\"]" << std::endl
-	<< "-h              this text you see right here" << std::endl
-	<< "-v <level>      Set level of verbose." << std::endl
-	<< "-V              Print version and exit." << std::endl
-	<< "-a              Aggregate netflow data." << std::endl
-	<< "-A[<expr>]      How to aggregate: ',' sep list of tags see man fbitdump(1)" << std::endl
+	<< "-h              Print help (shown here)" << std::endl
+	<< "-v <level>      Set verbosity level" << std::endl
+	<< "-V              Print version and exit" << std::endl
+	<< "-a              Aggregate flow data" << std::endl
+	<< "-A [<expr>]     Aggregation fields, separated by ','. For a list of fields, please check fbitdump(1)" << std::endl
 //	<< "                or subnet aggregation: srcip4/24, srcip6/64." << std::endl
-	//<< "-b              Aggregate netflow records as bidirectional flows." << std::endl
-	//<< "-B              Aggregate netflow records as bidirectional flows - Guess direction." << std::endl
+	//<< "-b              Aggregate flow records as bidirectional flows." << std::endl
+	//<< "-B              Aggregate flow records as bidirectional flows - Guess direction." << std::endl
 //	<< "-w <file>       write output to file" << std::endl
-	<< "-f              read netflow filter from file" << std::endl
-	<< "-n              Define number of top N. -c option takes precedence over -n." << std::endl
-	<< "-c              Limit number of records to display" << std::endl
-	<< "-D <dns>        Use nameserver <dns> for host lookup. Does not support IPv6 addresses." << std::endl
-	<< "-N <level>      Set level of plain numbers printing. For detailed informations see man fbitdump(1)" << std::endl
-	<< "-s <column>[/<order>]     Generate statistics for <column> any valid record element." << std::endl
-	<< "                and ordered by <order>. Order can be any summarizable column, just as for -m option." << std::endl
-	<< "-q              Quiet: Do not print the header and bottom stat lines." << std::endl
-	<< "-e				Extended bottom stats. Print summary of statistics columns." << std::endl
+	<< "-f <file>       Read flow filter from file" << std::endl
+	<< "-n              Define number of top N. -c option takes precedence over -n" << std::endl
+	<< "-c <number>     Limit number of records to display" << std::endl
+	<< "-D <dns>        Use nameserver <dns> for host lookup. Does not support IPv6 addresses" << std::endl
+	<< "-N <level>      Set level of plain numbers printing. For detailed informations, please check fbitdump(1)" << std::endl
+	<< "-s <column>[/<order>]     Generate statistics for <column> any valid record element" << std::endl
+	<< "                and ordered by <order>. Order can be any summarizable column, just as for -m option" << std::endl
+	<< "-q              Quiet: Do not print the header and bottom stat lines" << std::endl
+	<< "-e				Extended bottom stats. Print summary of statistics columns" << std::endl
 	//<< "-H Add xstat histogram data to flow file.(default 'no')" << std::endl
-	<< "-i [column1[,column2,...]]	Build indexes for given columns (or all) for specified data." << std::endl
-	<< "-d [column1[,column2,...]]	Delete indexes for given columns (or all) for specified data." << std::endl
+	<< "-i [column1[,column2,...]]	Build indexes for given columns (or all) for specified data" << std::endl
+	<< "-d [column1[,column2,...]]	Delete indexes for given columns (or all) for specified data" << std::endl
 	//<< "-j <file>       Compress/Uncompress file." << std::endl
 	//<< "-z              Compress flows in output file. Used in combination with -w." << std::endl
 	//<< "-l <expr>       Set limit on packets for line and packed output format." << std::endl
 	//<< "                key: 32 character string or 64 digit hex string starting with 0x." << std::endl
 	//<< "-L <expr>       Set limit on bytes for line and packed output format." << std::endl
-//	<< "-I              Print netflow summary statistics info from file, specified by -r." << std::endl
-	<< "-M <expr>       Read input from multiple directories." << std::endl
-	<< "                /dir/dir1:dir2:dir3 Read the same files from '/dir/dir1' '/dir/dir2' and '/dir/dir3'." << std::endl
-	<< "                requests -r dir or -r firstdir:lastdir without pathnames." << std::endl
-	<< "-r <expr>       Specifies subdirectory or subdirectories for -M, usable only with -M." << std::endl
+//	<< "-I              Print flow summary statistics info from file, specified by -r." << std::endl
+	<< "-M <expr>       Read input from multiple directories" << std::endl
+	<< "                /dir/dir1:dir2:dir3 Read the same files from '/dir/dir1' '/dir/dir2' and '/dir/dir3'" << std::endl
+	<< "                requests -r dir or -r firstdir:lastdir without pathnames" << std::endl
+	<< "-r <expr>       Specifies subdirectory or subdirectories for -M, usable only with -M" << std::endl
 	<< "                expr can be dir, which loads the dir from all directories specified in -M," << std::endl
-	<< "				or dir1:dir2, which reads data from subdirectories 'dir1' to 'dir2', in directories from -M." << std::endl
-	<< "-m [column]     Print netflow data date sorted. Takes optional parameter '%column' to sort by." << std::endl
-	<< "-R <expr>       Read input from directory (and subdirectories recursively). Can be repeated." << std::endl
+	<< "				or dir1:dir2, which reads data from subdirectories 'dir1' to 'dir2', in directories from -M" << std::endl
+	<< "-m [column]     Print flow data date sorted. Takes optional parameter '%column' to sort by" << std::endl
+	<< "-R <expr>       Read input from directory (and subdirectories recursively). Can be repeated" << std::endl
 	<< "                /any/dir  Read all data from directory 'dir'." << std::endl
-	<< "                /dir/dir1:dir2: Read all data from directories 'dir1' to 'dir2'." << std::endl
-	<< "-o <mode>       Use <mode> to print out netflow records:" << std::endl
+	<< "                /dir/dir1:dir2: Read all data from directories 'dir1' to 'dir2'" << std::endl
+	<< "-o <mode>       Use <mode> to print out flow records:" << std::endl
 //	<< "                 raw      Raw record dump." << std::endl
 	<< "                 line     Standard output line format." << std::endl
-	<< "                 long     Standard output line format with additional fields." << std::endl
-	<< "                 extended Even more information." << std::endl
+	<< "                 long     Standard output line format with additional fields" << std::endl
+	<< "                 extended Even more information" << std::endl
 	<< "                 extra    More than you want to know..." << std::endl
-	<< "                 csv      ',' separated, machine parseable output format." << std::endl
-	<< "                 pipe     '|' separated legacy machine parseable output format." << std::endl
+	<< "                 csv      ',' separated, machine parseable output format" << std::endl
+	<< "                 pipe     '|' separated legacy machine parseable output format" << std::endl
 	<< "                        modes line, long, extended and extra may be extended by '4' '6' to display" << std::endl
-	<< "                        only IPv4 or IPv6 addresses. e.g.long4, extended6." << std::endl
-//	<< "-v <file>       verify netflow data file. Print version and blocks." << std::endl
-	//<< "-x <file>       verify extension records in netflow data file." << std::endl
+	<< "                        only IPv4 or IPv6 addresses. e.g.long4, extended6" << std::endl
+//	<< "-v <file>       verify flow data file. Print version and blocks." << std::endl
+	//<< "-x <file>       verify extension records in flow data file." << std::endl
 	//<< "-X              Dump Filtertable and exit (debug option)." << std::endl
-	<< "-Z              Check filters syntax and exit." << std::endl
-	<< "-t <time>       time window for filtering packets" << std::endl
+	<< "-Z              Check filters syntax and exit" << std::endl
+	<< "-t <time>       Time window for filtering packets" << std::endl
 	<< "                yyyy/MM/dd.hh:mm:ss[-yyyy/MM/dd.hh:mm:ss]" << std::endl
-	<< "-C <path>       path to configuration file. Default is " << CONFIG_XML << std::endl
-	<< "-T              print information about templates in directories specified by -R" << std::endl
-	<< "-S              print available semantics" << std::endl
-	<< "-O              print available output formats" << std::endl
-	<< "-l              print plugin list" << std::endl
+	<< "-C <path>       Path to configuration file. Default is " << CONFIG_XML << std::endl
+	<< "-T              Print information about templates in directories specified by -R" << std::endl
+	<< "-S              Print available semantics" << std::endl
+	<< "-O              Print available output formats" << std::endl
+	<< "-l              Print plugin list" << std::endl
 	<< "-P <filter>     Post-aggregate filter (only when aggregating, containing columns in aggregated table only)" << std::endl
 	;
 }
@@ -943,44 +988,44 @@ void Configuration::processMOption(stringVector &tables, const char *optarg, std
 
 void Configuration::processROption(stringVector &tables, const char *optarg)
 {
-    std::string arg = optarg;
+	std::string arg = optarg;
 
-    /* Find separator */
-    size_t pos = arg.find(':');
-    if (pos == arg.npos) {
-        /* Specified only one directory */
+	/* Find separator */
+	size_t pos = arg.find(':');
+	if (pos == arg.npos) {
+		/* Specified only one directory */
 	Utils::sanitizePath(arg);
-        tables.push_back(arg);
-        return;
-    }
+		tables.push_back(arg);
+		return;
+	}
 
-    /* Get left and right path */
-    std::string left = arg.substr(0, pos);
-    std::string right = arg.substr(pos + 1);
+	/* Get left and right path */
+	std::string left = arg.substr(0, pos);
+	std::string right = arg.substr(pos + 1);
 
-    /* Right path is ready and can be sanitized */
-    Utils::sanitizePath(right);
+	/* Right path is ready and can be sanitized */
+	Utils::sanitizePath(right);
 
-    /* Get root directory (== left - depth of right) */
-    uint16_t right_depth = std::count(right.begin(), right.end(), '/');
+	/* Get root directory (== left - depth of right) */
+	uint16_t right_depth = std::count(right.begin(), right.end(), '/');
 
-    std::string root = left;
-    while (right_depth--) {
+	std::string root = left;
+	while (right_depth--) {
 	root = root.substr(0, root.find_last_of('/'));
-    }
+	}
 
-    /* Get first firectory */
-    if (root == left) {
+	/* Get first firectory */
+	if (root == left) {
 	root = "./";
-    } else {
+	} else {
 	left = left.substr(root.length() + 1);
-    }
+	}
 
-    Utils::sanitizePath(root);
-    Utils::sanitizePath(left);
+	Utils::sanitizePath(root);
+	Utils::sanitizePath(left);
 
-    /* Load dirs */
-    Utils::loadDirsTree(root, left, right, tables);
+	/* Load dirs */
+	Utils::loadDirsTree(root, left, right, tables);
 }
 
 void Configuration::parseAggregateArg(char *arg) throw (std::invalid_argument)
