@@ -131,8 +131,10 @@ void TableManager::aggregate(columnVector aggregateColumns, columnVector summary
 	/* group parts with same intersection to one table */
 	ibis::partList pList;
 	size_t partsCount = parts.size();
-	bool used[partsCount];
 	int iterPos = 0;
+
+	bool used[partsCount];
+	memset(used, 0, partsCount * sizeof(bool));
 
 	/* initialise used array */
 	for (size_t i = 0; i < partsCount; i++) {
