@@ -88,10 +88,12 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		switch (c) {
 		case 'h': /* print help */
 			help();
+			free(indexes);
 			return 1;
 			break;
 		case 'V': /* print version */
 			std::cout << PACKAGE << ": Version: " << VERSION << std::endl;
+			free(indexes);
 			return 1;
 			break;
 		case 'a': /* aggregate */
@@ -115,7 +117,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			if (optarg == NULL || optarg == std::string("")) {
 				throw std::invalid_argument("-f requires filter file specification");
 			}
-			
+
 			filterFile = optarg;
 			break;
 		case 'n':
@@ -203,6 +205,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			break;
 		case 'I':
 			NOT_SUPPORTED
+			free(indexes);
 			break;
 		case 'M':
 			if (optarg == NULL || optarg == std::string("")) {
@@ -276,12 +279,18 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		case 'i': /* create indexes */
 			this->createIndexes = true;
 			if (optarg != NULL) {
+				if (indexes) {
+					free(indexes);
+				}
 				indexes = strdup(optarg);
 			}
 			break;
 		case 'd': /* delete indexes */
 			this->deleteIndexes = true;
 			if (optarg != NULL) {
+				if (indexes) {
+					free(indexes);
+				}
 				indexes = strdup(optarg);
 			}
 			break;
@@ -313,6 +322,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			break;
 		default:
 			help();
+			free(indexes);
 			return 1;
 			break;
 		}
@@ -331,12 +341,14 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 
 	if (print_formats) {
 		this->printOutputFormats();
+		free(indexes);
 		return 1;
 	}
 
 	if (print_modules) {
 		this->loadModules();
 		this->printModules();
+		free(indexes);
 		return 1;
 	}
 	
