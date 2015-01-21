@@ -110,6 +110,7 @@ struct ipfix_template_mgr_record *tm_record_lookup_insert(struct ipfix_template_
 	/* Template Manager's record not found - create a new one */
 	if (tmr == NULL) {
 		if ((tmr = tm_record_create()) == NULL) {
+			pthread_mutex_unlock(&tm->tmr_lock);
 			return NULL;
 		}
 		uint64_t table_key = ((uint64_t) key->odid << 32) | key->crc;

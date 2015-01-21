@@ -221,7 +221,7 @@ char *read_file(char *input, long *fsize)
 	
 	/* Get file size and allocate space */
 	*fsize = file_size(f);
-	if (fsize < 0) {
+	if (*fsize < 0) {
 		fprintf(stderr, "Cannot determine file size of \"%s\"!", input);
 		fclose(f);
 		return NULL;

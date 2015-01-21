@@ -538,6 +538,7 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 			uint64_t time_header = (unSec * 1000) + unNsec/1000000;
 
 			numOfFlowSamples = ntohs(header->length);
+			
 			/* Header modification */
 			header->export_time = header->sequence_number;
 			memmove(*packet + BYTES_8, *packet + IPFIX_HEADER_LENGTH, buff_len - IPFIX_HEADER_LENGTH);
@@ -547,7 +548,7 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 			/* Update real packet length because of memmove() */
 			*len = *len - BYTES_8;
 
-			/* We need to resize time element (first and last seen) fron 32 bit to 64 bit */
+			/* We need to resize time element (first and last seen) from 32 bit to 64 bit */
 			int i;
 			uint8_t *pkt;
 			uint16_t shifted = 0;
@@ -583,11 +584,6 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 		default:
 			/* Conversion from sflow to Netflow v5 like IPFIX packet */
 			numOfFlowSamples = Process_sflow(*packet, *len);
-			if (numOfFlowSamples < 0) {
-				/* Make header->length bigger than packet lenght so error will occur and packet will be skipped */
-				header->length = *len + 1;
-				return;
-			}
 
 			/* Observation domain ID is unknown */
 			header->observation_domain_id = 0; // ??
