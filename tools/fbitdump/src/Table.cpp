@@ -114,9 +114,6 @@ columnVector Table::getColumnsByNames(const columnVector columns, const stringSe
 				isThere = false;
 				break;
 			}
-			if (!isThere) {
-				break;
-			}
 		}
 		if (isThere) {
 			cols.push_back(col);
