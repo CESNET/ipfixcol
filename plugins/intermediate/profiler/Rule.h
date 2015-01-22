@@ -1,5 +1,5 @@
 /**
- * \file Organization.h
+ * \file Rule.h
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief Class for profiler intermediate plugin
  *
@@ -37,96 +37,94 @@
  *
  */
 
-#ifndef ORGANIZATION_H
-#define	ORGANIZATION_H
+#ifndef RULE_H
+#define	RULE_H
 
-#include "profiler.h"
+#define IPV4_LEN 4
+#define IPV6_LEN 16
 
-extern "C"
-#include "filter.h"
-
-/* shortcuts */
-using profileVec = std::vector<struct filter_profile *>;
-using ruleVec = std::vector<Rule *>;
+#include <string>
 
 /**
- * Class representing organization
+ * Class representing 1 rule identifying organization
  */
-class Organization {
+class Rule {
 public:
     void print(); /* DEBUG */
     /**
      * \brief Constructor
      * 
-     * \param[in] id Organization's ID
+     * \param[in] id Rule's ID
      */
-    Organization(uint32_t id);
+    Rule(uint32_t id);
     
     /**
-     * \brief Destructor
+     * \brief Set ODID value
+     * 
+     * \param[in] odid ODID value
      */
-    virtual ~Organization();
+    void setOdid(char *odid);
     
     /**
-     * \brief Get organization ID
-     * \return ID
+     * \brief Set packet source address
+     * 
+     * \param[in] ip packet source IP address
+     */
+    void setSource(char *ip);
+    
+    /**
+     * \brief Set data src/dst address prefix
+     * 
+     * \param[in] prefix IP prefix
+     */
+    void setPrefix(char *prefix);
+    
+    /**
+     * \brief Match IPFIX data record
+     * 
+     * \param msg IPFIX message
+     * \param data IPFIX data record
+     * \return true when rule matches given data record
+     */
+    bool matchRecord(struct ipfix_message *msg, struct ipfix_record *data) const;
+    
+    /**
+     * \brief Get rule ID
+     * 
+     * \return rule ID
      */
     uint32_t id() const { return m_id; }
     
-    /**
-     * \brief Add new rule
-     * 
-     * \param[in] doc xml document
-     * \param[in] root rule root node
-     */
-    void addRule(xmlDoc *doc, xmlNode *root);
-    
-    /**
-     * \brief Add new profile
-     * 
-     * \param[in] pdata data for scanner and parser
-     * \param[in] root profile root node
-     */
-    void addProfile(struct filter_parser_data *pdata, xmlNode *root);
-    
-    /**
-     * \brief Find matching rule for given record
-     * 
-     * \param[in] msg IPFIX message
-     * \param[in] data IPFIX data record
-     * \return matching rule (or nullptr)
-     */
-    Rule *matchingRule(struct ipfix_message *msg, struct ipfix_record *data) const;
-    
-    /**
-     * \brief Find matching profiles
-     * 
-     * \param[in] msg IPFIX message
-     * \param[in] data data IPFIX data record
-     * \return matching profiles
-     */
-    profileVec matchingProfiles(struct ipfix_message *msg, struct ipfix_record *data) const;
-    
 private:
     /**
-     * \brief Free xmlChar buffer
+     * \brief Find out IP version
+     * 
+     * \param[in] ip IP address
+     * \return AF_INET or AF_INET6
      */
-    void freeAuxChar();
+    static int ipVersion(std::string &ip);
     
     /**
-     * \brief Parse flex/bison filter
-     * 
-     * \param[in] pdata Parser's data
-     * \return 0 on success
+     * \brief Match prefix
+     * \param[in] data IPFIX data record
+     * \param[in] field field field identifier
+     * \return true when prefix matches data record
      */
-    int parseFilter(struct filter_parser_data *pdata) const;
+    bool matchPrefix(struct ipfix_record *data, int field) const;
     
-    uint32_t m_id{};        /**< Organization's ID */
-    xmlChar *m_auxChar{};   /**< xmlChar buffer */
+    uint32_t m_id;					/**< rule ID */
     
-    ruleVec m_rules{};      /**< List of rules */
-    profileVec m_profiles{};/**< list of profiles */
+    bool m_hasSource{false};		/**< true when source address is set */
+    bool m_hasOdid{false};			/**< true when ODID is set */
+    bool m_hasPrefix{false};		/**< true when prefix is set */
+
+    uint8_t m_sourceIPv{};			/**< packet source IP version */
+    uint8_t m_prefixIPv{};			/**< prefix IP version */
+    uint8_t m_source[IPV6_LEN]{};	/**< source address */
+    uint8_t m_prefix[IPV6_LEN]{};	/**< prefix */
+	uint16_t m_prefixBytes{};		/**< number of full bytes in prefix */
+	uint16_t m_prefixBits{};		/**< number of bits after full bytes */
+    uint32_t m_odid{};				/**< Observation domain ID */
 };
 
-#endif	/* ORGANIZATION_H */
-
+#endif	/* RULE_H */

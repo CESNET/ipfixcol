@@ -50,6 +50,7 @@ extern "C" {
 #include <libxml2/libxml/xmlstring.h>
 }
 
+#include "Rule.h"
 #include <stdexcept>
 #include <vector>
 

@@ -86,14 +86,14 @@ struct ipfix_record {
 struct organization {
     uint32_t id;
     uint16_t rule;
-    uint16_t *profiles[];
+    uint16_t **profiles;
 };
 
 struct __attribute__((packed)) metadata {
     struct ipfix_record record;     /**< IPFIX data record */
     uint32_t srcAS;                 /**< Source AS */
     uint32_t dstAS;                 /**< Destination AS */
-    struct organization organizations[];    /**< Array of organizations assigned to this record */
+    struct organization **organizations;    /**< Array of organizations assigned to this record */
     /* geoinfo */
 };
 
@@ -120,7 +120,8 @@ struct __attribute__((__packed__)) ipfix_message {
 	struct ipfix_options_template_set *opt_templ_set[1024];
 	/** List of Data Sets (with a link to corresponding template) in the packet */
 	struct data_template_couple       data_couple[1023];
-        struct metadata *metadata;
+	/** List of metadata structures */
+	struct metadata *metadata;
 };
 
 /**

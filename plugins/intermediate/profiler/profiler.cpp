@@ -37,6 +37,7 @@
  *
  */
 
+extern "C"
 #include <libxml2/libxml/xpath.h>
 
 #include "profiler.h"
@@ -58,7 +59,19 @@ using orgVec = std::vector<Organization *>;
 struct profiler_conf {
 	orgVec organizations;	/**< list of organizations */
 	void *ip_config;		/**< intermediate process config */
+	std::vector<uint16_t*> pTable; /**< table of profiles */
+	std::vector<std::pair<organization*,uint16_t>> oTable; /**< table of organizations */
 };
+
+
+/* DEBUG PRINT */
+void print_orgs(struct profiler_conf *conf)
+{
+	for (auto org: conf->organizations) {
+		org->print();
+		std::cout << "-------------------\n";
+	}
+}
 
 /**
  * \brief Process startup configuration
@@ -110,7 +123,7 @@ void process_startup_xml(profiler_conf *conf, char *params)
 			
 			if (!xmlStrcmp(subNode->name, (const xmlChar *) "rule")) {
 				org->addRule(doc, subNode);
-			} else if (!xmlStrcmp(node->name, (const xmlChar *) "profile")) {
+			} else if (!xmlStrcmp(subNode->name, (const xmlChar *) "profile")) {
 				org->addProfile(&pdata, subNode);
 			}
 		}
@@ -121,7 +134,6 @@ void process_startup_xml(profiler_conf *conf, char *params)
 	
 	
 	/* Free resources */
-	xmlFree(root);
 	xmlFreeDoc(doc);
 	
 	if (pdata.context) {
@@ -129,31 +141,6 @@ void process_startup_xml(profiler_conf *conf, char *params)
 	}
 	if (pdata.doc) {
 		xmlFreeDoc(pdata.doc);
-	}
-}
-
-/**
- * \brief Modify metadata
- * 
- * Add informations about organization, matching rule and 
- * profiles into the metadata structure.
- * 
- * \param[in] mdata Metadata structure
- * \param[in] org	Organization
- * \param[in] rule	Matching rule
- * \param[in] profiles Matching profiles
- * \return 0 on success
- */
-int modifyMetadata(struct metadata *mdata, Organization *org, Rule *rule, profileVec &profiles)
-{
-	return 0;
-}
-
-void print_orgs(struct profiler_conf *conf)
-{
-	for (auto org: conf->organizations) {
-		org->print();
-		std::cout << "-------------------";
 	}
 }
 
@@ -184,6 +171,9 @@ int intermediate_init(char* params, void* ip_config, uint32_t ip_id, ipfix_templ
 		/* Process params */
 		process_startup_xml(conf, params);
 		
+		conf->oTable.reserve(50);
+		conf->pTable.reserve(100);
+		
 		/* Save configuration */
 		conf->ip_config = ip_config;
 		*config = conf;
@@ -202,18 +192,21 @@ int intermediate_init(char* params, void* ip_config, uint32_t ip_id, ipfix_templ
 /**
  * \brief Process IPFIX message
  * 
- * \param[in] config plugin configuration
- * \param[in] message IPFIX message
- * \return 0 on success
+ *	Fills C++ profile table and organizations table 
+ * (with organizations and indexes into profile table)
+ * 
+ * \param[in] conf plugin configuration
+ * \param[in] msg IPFIX message
  */
-int intermediate_process_message(void* config, void* message)
+void process_records(profiler_conf *conf, struct ipfix_message *msg)
 {
-	profiler_conf *conf = static_cast<profiler_conf *>(config);
-	struct ipfix_message *msg = static_cast<struct ipfix_message *>(message);
-	struct metadata *mdata;
+	/* Clear tables */
+	conf->pTable.clear();
+	conf->oTable.clear();
 	
-	Rule *rule;
+	Rule *rule{};
 	profileVec profiles;
+	struct metadata *mdata;
 	
 	/* 
 	 * Go through all data records and all organizations to find 
@@ -231,17 +224,154 @@ int intermediate_process_message(void* config, void* message)
 				continue;
 			}
 			
-			/* Get matching profiles */
+			/* Get matching profiles and store them into vector */
 			profiles = org->matchingProfiles(msg, &(mdata->record));
+			for (auto prof: profiles) {
+				conf->pTable.push_back(&prof->id);
+			}
 			
-			/* Update metadata */
-			modifyMetadata(mdata, org, rule, profiles);
+			/* Insert bookmark */
+			if (conf->pTable.empty() || conf->pTable.back() != NULL) {
+				conf->pTable.push_back(NULL);
+			}
+			
+			/* Create organization structure */
+			organization *sorg = reinterpret_cast<organization*>(calloc(1, sizeof(organization)));
+			if (!sorg) {
+				MSG_ERROR(msg_module, "Unable to allocate memory (%s %d)", __FILE__, __LINE__);
+				goto err_cleanup;
+			}
+			
+			sorg->id = org->id();
+			sorg->rule = rule->id();
+			
+			/* Store organization and index into profile table */
+			uint16_t index = conf->pTable.size() - (profiles.size() + 1);
+			conf->oTable.push_back(std::make_pair(sorg, index));
+			
+			/* DEBUG PRINT */
+			std::cout << "[" << i << "] ";
+			std::cout << org->id() << " | " << rule->id() << " |";
+			for (auto prof: profiles) {
+				std::cout << " " << prof->id;
+			}
+			std::cout << "\n";
+		}
+		
+		/* Insert bookmark into organization table */
+		conf->oTable.push_back(std::make_pair(nullptr, 0));
+	}
+	
+	return;
+	
+err_cleanup:
+	for (auto org: conf->oTable) {
+		if (org.first) {
+			free(org.first);
+		}
+	}
+}
+
+/**
+ * \brief Process IPFIX message
+ * 
+ * \param[in] config plugin configuration
+ * \param[in] message IPFIX message
+ * \return 0 on success
+ */
+int intermediate_process_message(void* config, void* message)
+{
+	profiler_conf *conf = reinterpret_cast<profiler_conf *>(config);
+	struct ipfix_message *msg = reinterpret_cast<struct ipfix_message *>(message);
+	struct organization **oTable_c{};
+	uint16_t **pTable_c{};
+	uint16_t oIndex = 0, prevIndex = 0;
+	
+	/* Fill in organizations/profiles tables */
+	process_records(conf, msg);
+	
+	/* No organizations matched */
+	if (conf->oTable.empty()) {
+		pass_message(conf->ip_config, msg);
+		return 0;
+	}
+	
+	/* Create C style tables */
+	oTable_c = reinterpret_cast<organization**>(calloc(conf->oTable.size(), sizeof(organization*)));
+	if (!oTable_c) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s %d)", __FILE__, __LINE__);
+		goto err_cleanup;
+	}
+	
+	pTable_c = reinterpret_cast<uint16_t**>(calloc(conf->pTable.size(), sizeof(uint16_t*)));
+	if (!pTable_c) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s %d)", __FILE__, __LINE__);
+		goto err_cleanup;
+	}
+	
+	/* Copy table with profiles */
+	for (uint16_t i = 0; i < conf->pTable.size(); ++i) {
+		pTable_c[i] = conf->pTable[i];
+	}
+	
+	/* Copy organizations */
+	for (int i = 0; i < msg->data_records_count; ++i) {
+		prevIndex = oIndex;
+		while (conf->oTable[oIndex].first) {
+			oTable_c[oIndex] = conf->oTable[oIndex].first;
+			
+			/* Set pointer into profile table */
+			if (!conf->pTable.empty()) {
+				oTable_c[oIndex]->profiles = &(pTable_c[conf->oTable[oIndex].second]);
+			}
+			oIndex++;
+		}
+		
+		/* Set pointer into organization table */
+		msg->metadata[i].organizations = &(oTable_c[prevIndex]);
+		
+		/* TODO: storing multiple NULL pointers in a row */
+		oTable_c[oIndex] = NULL;
+		oIndex++;
+	}
+	
+	/* DEBUG PRINT */
+	for (int i = 0; i < msg->data_records_count; ++i) {
+		std::cout << "[[" << i << "]] ";
+		for (int ondex = 0; msg->metadata[i].organizations[ondex]; ++ondex) {
+			organization *sorg = msg->metadata[i].organizations[ondex];
+			std::cout << sorg->id << " | " << sorg->rule << " |";
+			
+			for (int p = 0; sorg->profiles[p]; ++p) {
+				std::cout << " " << *(sorg->profiles[p]);
+			}
+			
+			std::cout << " || ";
+		}
+		std::cout << "\n";
+	}
+	
+	pass_message(conf->ip_config, msg);
+	return 0;
+	
+err_cleanup:
+	if (pTable_c) {
+		free(pTable_c);
+	}
+
+	if (oTable_c) {
+		free(oTable_c);
+	}
+	
+	for (auto org: conf->oTable) {
+		if (org.first) {
+			free(org.first);
 		}
 	}
 	
 	/* Pass message to the next plugin/Output Manager */
 	pass_message(conf->ip_config, msg);
-	return 0;
+	return 1;
 }
 
 /**
@@ -264,4 +394,3 @@ int intermediate_close(void *config)
 	delete conf;
 	return 0;
 }
-

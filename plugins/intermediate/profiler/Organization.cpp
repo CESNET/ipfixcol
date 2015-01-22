@@ -37,24 +37,74 @@
  *
  */
 
-#define IPV4_SRC_FIELD 8
-#define IPV4_DST_FIELD 12
-
-#define IPV6_SRC_FIELD 27
-#define IPV6_DST_FIELD 28
-
 #include "Organization.h"
-#include "filter.h"
+
+extern "C" {
 #include "scanner.h"
 #include "parser.h"
+}
 
-#include <iostream>
+#include <algorithm>
 
 static const char *msg_module = "profiler";
 
-#define OOUT(_id_) std::cout << "[O " << _id_ << "] "
-#define ROUT(_id_) std::cout << "[R " << _id_ << "] "
-#define POUT(_id_) std::cout << "[P " << _id_ << "] "
+/*************************************************
+ *	DEBUG FUNCTIONS
+ *************************************************/
+#include <iostream>
+#include <sstream>
+
+#define OOUT(_id_) std::cout << "[" << _id_ << "] "
+#define ROUT(_id_) std::cout << "\t[" << _id_ << "] "
+#define POUT(_id_) std::cout << "\t[" << _id_ << "] "
+
+std::string print_tree(struct filter_treenode *node)
+{
+	if (!node) {
+		return "";
+	}
+
+	std::stringstream ss;
+	ss << (node->negate ? "!(" : "");
+	switch (node->type) {
+	case NODE_AND: 
+		ss << print_tree(node->left) << " AND " << print_tree(node->right);
+		break;
+	case NODE_OR:
+		ss << print_tree(node->left) << " OR " << print_tree(node->right);
+		break;
+	case NODE_EXISTS: 
+		ss << "EXISTS " << "e" << node->field->enterprise << "id" << node->field->id;
+		break;
+	case NODE_LEAF:
+		ss << "e" << node->field->enterprise << "id" << node->field->id;
+		switch (node->op) {
+		case OP_EQUAL: ss << " = "; break;
+		case OP_GREATER: ss << " > "; break;
+		case OP_GREATER_EQUAL: ss << " >= "; break;
+		case OP_LESS: ss << " < "; break;
+		case OP_LESS_EQUAL: ss << " <= "; break;
+		case OP_NOT_EQUAL: ss << " != "; break;
+		default: break;
+		}
+		
+		switch (node->value->type) {
+		case VT_STRING: ss << "[string]"; break;
+		case VT_REGEX: ss << "[regex]"; break;
+		case VT_NUMBER: ss << "[number]"; break;
+		default: break;
+		}
+		break;
+	default:
+		break;
+	}
+	
+	if (node->negate) {
+		ss << ")";
+	}
+	
+	return ss.str();
+}
 
 void Organization::print()
 {
@@ -65,7 +115,7 @@ void Organization::print()
 	
 	OOUT(id()) << "profiles:\n";
 	for (auto profile: m_profiles) {
-		POUT(profile->id) << "\n";
+		POUT(profile->id) << print_tree(profile->root) << "\n";
 	}
 }
 
@@ -78,7 +128,7 @@ void Rule::print()
 	if (m_hasPrefix) {
 		char buff[50] = {0};
 		inet_ntop(m_prefixIPv, m_prefix, buff, 50);
-		ROUT(id()) << "PREFIX " << buff << "/" << m_prefixLen << "\n";;
+		ROUT(id()) << "PREFIX " << buff << "/" << (m_prefixBytes * 8 + m_prefixBits) << "\n";;
 	}
 	
 	if (m_hasSource) {
@@ -88,19 +138,30 @@ void Rule::print()
 	}
 }
 
+/*************************************************
+ *	ORGANIZATION IMPLEMENTATION
+ *************************************************/
 
 /**
  * Constructor
  */
-Organization::Organization(uint32_t id = 0): m_id{id} 
+Organization::Organization(uint32_t id): m_id{id} 
 {
 }
 
 /**
- * Destructor - frees xmlChar buffer
+ * Destructor
  */
 Organization::~Organization()
 {
+	for (auto profile: m_profiles) {
+		filter_free_profile(profile);
+	}
+	
+	for (auto rule: m_rules) {
+		delete rule;
+	}
+	
 	freeAuxChar();
 }
 
@@ -118,7 +179,7 @@ void Organization::freeAuxChar()
 /**
  * Find matching rule
  */
-Rule* Organization::matchingRule(struct ipfix_message* msg, struct ipfix_record* data)
+Rule* Organization::matchingRule(struct ipfix_message* msg, struct ipfix_record* data) const
 {	
 	for (auto rule: m_rules) {
 		if (rule->matchRecord(msg, data)) {
@@ -133,8 +194,9 @@ Rule* Organization::matchingRule(struct ipfix_message* msg, struct ipfix_record*
 /**
  * Find matching profiles
  */
-profileVec Organization::matchingProfiles(ipfix_message* msg, ipfix_record* data)
+profileVec Organization::matchingProfiles(ipfix_message* msg, ipfix_record* data) const
 {
+	(void) msg;
 	profileVec vec{};
 	
 	for (auto profile: m_profiles) {
@@ -145,7 +207,6 @@ profileVec Organization::matchingProfiles(ipfix_message* msg, ipfix_record* data
 	
 	return vec;
 }
-
 
 /**
  * Add new rule
@@ -185,7 +246,7 @@ void Organization::addRule(xmlDoc *doc, xmlNode* root)
 /**
  * Parse flex/bison profile
  */
-int Organization::parseFilter(filter_parser_data* pdata)
+int Organization::parseFilter(filter_parser_data* pdata) const
 {
 	int ret = 0;
 	
@@ -219,11 +280,6 @@ void Organization::addProfile(struct filter_parser_data *pdata, xmlNode* root)
 	
 	/* Allocate space for profile */
 	filter_profile *profile = reinterpret_cast<filter_profile *>(calloc(1, sizeof(filter_profile)));
-	if (!profile) {
-		MSG_ERROR(msg_module, "Cannot allocate space for profile (%s:%d)!", __FILE__, __LINE__);
-		freeAuxChar();
-		return;
-	}
 	
 	/* Set profile id */
 	profile->id = std::atoi((char *) m_auxChar);
@@ -265,140 +321,4 @@ void Organization::addProfile(struct filter_parser_data *pdata, xmlNode* root)
 	
 	/* Save profile */
 	m_profiles.push_back(profile);
-}
-
-/*************************************************
- *	RULE IMPLEMENTATION
- *************************************************/
-
-/**
- * Constructor
- */
-Rule::Rule(uint32_t id = 0): m_id{id} 
-{
-}
-
-bool Rule::matchPrefix(struct ipfix_record *data, int field)
-{
-	/* Compare source IPv4 address */
-	uint8_t *addr = data_record_get_field((uint8_t *)data->record, data->templ, 0, field, NULL);
-	
-	/* Compare prefix with address (if any) */
-	if (!addr || memcmp(addr, m_prefix, m_prefixLen) != 0) {
-		return false;
-	}
-	
-	return true;
-}
-
-/**
- * Match rule with IPFIX data record
- */
-bool Rule::matchRecord(ipfix_message* msg, ipfix_record* data)
-{
-	/* Match ODID */
-	if (m_hasOdid) {
-		if (msg->pkt_header->observation_domain_id != m_odid) {
-			return false;
-		}
-	}
-	
-	/* Match source address */
-	if (m_hasSource) {
-		/* We want only data from network */
-		struct input_info_network *info = reinterpret_cast<struct input_info_network *>(msg->input_info);
-		if (info->type == SOURCE_TYPE_IPFIX_FILE) {
-			return false;
-		}
-		
-		/* Compare IP versions */
-		if (m_sourceIPv == AF_INET && info->l3_proto != 4) {
-			return false;
-		}
-		
-		/* Compare addresses */
-		if (m_sourceIPv == AF_INET) {
-			if (memcmp(m_source, (void*) &(info->src_addr.ipv4), IPV4_LEN) != 0) {
-				return false;
-			}
-		} else {
-			if (memcmp(m_source, (void*) &(info->src_addr.ipv6), IPV6_LEN) != 0) {
-				return false;
-			}
-		}
-	}
-	
-	/* Match IP prefix */
-	if (m_hasPrefix) {
-		if (m_prefixIPv == AF_INET) {
-			/* Compare IPv4 prefix */
-			if (!matchPrefix(data, IPV4_SRC_FIELD) && !matchPrefix(data, IPV4_DST_FIELD)) {
-				return false;
-			}
-		} else {
-			/* Compare IPv6 prefix */
-			if (!matchPrefix(data, IPV6_SRC_FIELD) && !matchPrefix(data, IPV6_DST_FIELD)) {
-				return false;
-			}
-		}
-	}
-	
-	return true;
-}
-
-/**
- * Set ODID
- */
-void Rule::setOdid(char *odid)
-{
-	m_odid = atoi(odid);
-	m_hasOdid = true;
-}
-
-/**
- * Set source address
- */
-void Rule::setSource(char* ip)
-{
-	std::string source = ip;
-	m_sourceIPv = ipVersion(source);
-	
-	/* Convert address to binary form */
-	inet_pton(m_sourceIPv, source.c_str(), m_source);
-	m_hasSource = true;
-}
-
-/**
- * Set prefix
- */
-void Rule::setPrefix(char* prefix)
-{
-	std::string source = prefix;
-	m_prefixIPv = ipVersion(source);
-	
-	size_t subnetPos = source.find('/');
-	if (subnetPos == std::string::npos) {
-		/* no subnet mask - exact match */
-		m_prefixLen = (m_prefixIPv == AF_INET) ? IPV4_LEN : IPV6_LEN;
-	} else {
-		/* get prefix length and subnet address */
-		m_prefixLen = std::atoi(source.substr(subnetPos + 1).c_str());
-		source = source.substr(0, subnetPos);
-	}
-	
-	/* Convert address to binary form */
-	inet_pton(m_prefixIPv, source.c_str(), m_prefix);
-	m_hasPrefix = true;
-}
-
-/**
- * Find out IP version
- */
-int Rule::ipVersion(std::string &ip)
-{
-	if (ip.find(':') != std::string::npos) {
-		return AF_INET6;
-	}
-	
-	return AF_INET;
 }
