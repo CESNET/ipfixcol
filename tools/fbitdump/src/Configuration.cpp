@@ -73,7 +73,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	std::string optionM;	/* optarg for option -M */
 	std::string optionm;	/* optarg value for option -m */
 	std::string optionr;	/* optarg value for option -r */
-	char *indexes = NULL;	/* indexes optarg to be parsed later */
+	std::string indexes;	/* indexes optarg to be parsed later */
 	bool print_semantics = false;
 	bool print_formats = false;
 	bool print_modules = false;
@@ -272,15 +272,11 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 			break;
 		case 'i': /* create indexes */
 			this->createIndexes = true;
-			if (optarg != NULL) {
-				indexes = strdup(optarg);
-			}
+			indexes = optarg;
 			break;
 		case 'd': /* delete indexes */
 			this->deleteIndexes = true;
-			if (optarg != NULL) {
-				indexes = strdup(optarg);
-			}
+			indexes = optarg;
 			break;
 		case 'C': /* Configuration file */
 			if (optarg == std::string("")) {
@@ -348,8 +344,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 	Utils::printStatus( "Parsing column indexes");
 
 	/* parse indexes line */
-	this->parseIndexColumns(indexes);
-	free(indexes);
+	this->parseIndexColumns(const_cast<char*>(indexes.c_str()));
 
 	Utils::printStatus( "Loading modules");
 
