@@ -364,7 +364,6 @@ void *input_listen(void *config)
         /* unset the address so that we do not free it incidentally */
         address = NULL;
 
-        close(new_sock);
         pthread_cleanup_pop(0);
     }
     return NULL;
@@ -478,7 +477,7 @@ int input_init(char *params, void **config)
 #else   /* user wants TLS, but collector was compiled without it */
         if (xmlStrEqual(cur_node->name, BAD_CAST "transportLayerSecurity")) {
 			/* user wants to enable TLS, but collector was compiled without it */
-        	MSG_WARNING(msg_module, "Collector was compiled without TLS support");
+			MSG_WARNING(msg_module, "Collector was compiled without TLS support");
 			continue;
 		}
 #endif
@@ -488,7 +487,7 @@ int input_init(char *params, void **config)
             char *tmp_val = malloc(sizeof(char) * tmp_val_len);
             /* this is not a preferred cast, but we really want to use plain chars here */
             if (tmp_val == NULL) {
-            	MSG_ERROR(msg_module, "Cannot allocate memory: %s", strerror(errno));
+				MSG_ERROR(msg_module, "Cannot allocate memory: %s", strerror(errno));
                 retval = 1;
                 goto out;
             }
@@ -508,10 +507,9 @@ int input_init(char *params, void **config)
             } else if (xmlStrEqual(cur_node->name, BAD_CAST "optionsTemplateLifePacket")) {
                 conf->info.options_template_life_packet = tmp_val;
             } else { /* unknown parameter, ignore */
-                // Do nothing
+				/* Free the tmp_val for unknown elements */
+				free(tmp_val);
             }
-
-            free(tmp_val);
         }
     }
 
@@ -527,11 +525,11 @@ int input_init(char *params, void **config)
 		if (conf->ca_cert_file == NULL) {
 			conf->ca_cert_file = strdup(DEFAULT_CA_FILE);
 		}
-	
+
 		if (conf->server_cert_file == NULL) {
 			conf->server_cert_file = strdup(DEFAULT_SERVER_CERT_FILE);
 		}
-	
+
 		if (conf->server_pkey_file == NULL) {
 			conf->server_pkey_file = strdup(DEFAULT_SERVER_PKEY_FILE);
 		}
@@ -680,9 +678,12 @@ int input_init(char *params, void **config)
     /* print info */
     MSG_NOTICE(msg_module, "TCP input plugin listening on address %s, port %s", dst_addr, port);
 
-
     /* start listening thread */
-    pthread_create(&listen_thread, NULL, &input_listen, (void *) conf);
+    if (pthread_create(&listen_thread, NULL, &input_listen, (void *) conf) != 0) {
+        MSG_ERROR(msg_module, "Failed to create listening thread");
+        retval = 1;
+        goto out;
+    }
 
     /* pass general information to the collector */
     *config = (void*) conf;

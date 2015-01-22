@@ -203,9 +203,6 @@ struct data_manager_config* data_manager_create (
 		}
 
 		/* allocate memory for copy of storage structure for description of storage plugin */
-		if (aux_storage) {
-			free (aux_storage);
-		}
 		aux_storage = (struct storage_list*) malloc (sizeof(struct storage_list));
 		if (aux_storage == NULL) {
 			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);

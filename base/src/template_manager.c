@@ -61,6 +61,7 @@ struct ipfix_template_mgr_record *tm_record_create()
 
 	if ((tmr = calloc(1, sizeof(struct ipfix_template_mgr_record))) == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		return NULL;
 	}
 
 	/* Allocate space for templates */
@@ -109,6 +110,7 @@ struct ipfix_template_mgr_record *tm_record_lookup_insert(struct ipfix_template_
 	/* Template Manager's record not found - create a new one */
 	if (tmr == NULL) {
 		if ((tmr = tm_record_create()) == NULL) {
+			pthread_mutex_unlock(&tm->tmr_lock);
 			return NULL;
 		}
 		uint64_t table_key = ((uint64_t) key->odid << 32) | key->crc;
@@ -295,6 +297,7 @@ struct ipfix_template *tm_create_template(void *template, int max_len, int type,
 	/* allocate memory for new template */
 	if ((new_tmpl = malloc(tmpl_length)) == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		return NULL;
 	}
 
 	if (tm_fill_template(new_tmpl, template, tmpl_length, data_length, type, odid) == 1) {
@@ -557,6 +560,7 @@ struct ipfix_template_mgr *tm_create() {
 
 	if ((tm = malloc(sizeof(struct ipfix_template_mgr))) == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		return NULL;
 	}
 
 	/* Allocate space for Template Manager's records */

@@ -60,7 +60,7 @@ extern "C" {
 #define YES 1
 #define NO 0
 
-static int numOfFlowSamples;
+static uint16_t numOfFlowSamples;
 
 /* define my own IP header struct - to ease portability */
 struct myiphdr
@@ -669,7 +669,7 @@ static void decode80211MAC(SFSample *sample)
 	memcpy(sample->eth_src, srcMAC, 6);
       }
       if(dstMAC) {
-	memcpy(sample->eth_dst, srcMAC, 6);
+	memcpy(sample->eth_dst, dstMAC, 6);
       }
     }
   }
@@ -1843,7 +1843,7 @@ static void readSFlowDatagram(SFSample *sample, char *packet)
   }
 }
 
-int Process_sflow(void *packet, ssize_t packet_len) {
+uint16_t Process_sflow(void *packet, ssize_t packet_len) {
 
 SFSample 	sample;
 int 		exceptionVal;

@@ -156,11 +156,13 @@ int element::flush(std::string path) {
 		//std::cout << "FILE OPEN" << std::endl;
 		if (_buffer == NULL) {
 			fprintf(stderr, "Error while writing data! (buffer)\n");
+			fclose(f);
 			return 1;
 		}
 		check = fwrite( _buffer, size() , _filled, f);
 		if (check != (size_t) _filled ) {
 			fprintf(stderr, "Error while writing data! (fwrite)\n");
+			fclose(f);
 			return 1;
 		}
 		_filled = 0;
@@ -354,6 +356,7 @@ el_blob::el_blob(int size, int en, int id, uint32_t buf_size):
 	_sp_buffer = (char *) realloc(_sp_buffer, _sp_buffer_size);
 	if (_sp_buffer == NULL) {
 		MSG_ERROR(MSG_MODULE, "Memory allocation failed!");
+		exit(-1);
 	}
 	/* Fill the offset of first element */
 	*(uint64_t *) _sp_buffer = 0;

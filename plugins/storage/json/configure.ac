@@ -39,19 +39,23 @@
 AC_PREREQ([2.60])
 # Process this file with autoconf to produce a configure script.
 AC_INIT([ipfixcol-json-output], [1.0.0])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability subdir-objects])
-LT_PREREQ([2.2])
-LT_INIT([dlopen disable-static])
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([json.cpp])
 AC_CONFIG_HEADERS([config.h])
 
+# Compiler check needs to come before automake init
+AC_PROG_CXX([g++])
+
+AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability subdir-objects])
+LT_PREREQ([2.2])
+LT_INIT([dlopen disable-static])
+
+
 # Initialization
 : ${CXXFLAGS=""}
 AM_CXXFLAGS="-Wall -O2"
-AC_LANG(C++)
-CXX="g++"
+AC_LANG([C++])
 
 RELEASE=1
 AC_SUBST(RELEASE)
@@ -69,12 +73,10 @@ AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
 LBR_CHECK_XSLTPROC
 
 # Check for standard programs
-AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 AC_PROG_AWK
 
-AC_LANG([C++])
 LBR_SET_CXXSTD
 AM_CXXFLAGS="$AM_CXXFLAGS $CXXSTD"
 
@@ -89,8 +91,7 @@ AC_ARG_ENABLE([debug],
 
 AC_ARG_ENABLE([doc],
         AC_HELP_STRING([--disable-doc],[disable documentation building]))
-AM_CONDITIONAL([HAVE_DOC], [test "$enable_doc" != "no"])
-
+AM_CONDITIONAL([HAVE_DOC], [test "$enable_doc" != "no"],, [$enable_doc=yes])
 ############################ Check for libraries ###############################
 libsisodir="$srcdir/../../../base/src/utils/libsiso/"
 my_save_ldflags="$LDFLAGS"
@@ -148,14 +149,7 @@ AC_SUBST([AM_CPPFLAGS])
 AC_SUBST([AM_LDFLAGS])
 
 AC_SUBST(RPMBUILD)
-if test -z "$RPMBUILD"; then
-	AC_MSG_WARN([Due to missing rpmbuild you will not able to generate RPM package.])
-fi
-
 AC_SUBST(XSLTPROC)
-if test -z "$XSLTPROC"; then
-	AC_MSG_WARN([Due to missing xsltproc you will not able to generate MAN pages.])
-fi
 
 # generate output
 AC_CONFIG_FILES([Makefile
@@ -167,9 +161,8 @@ AC_CONFIG_FILES([Makefile
 AC_OUTPUT
 
 AS_IF([test -z "$RPMBUILD"], AC_MSG_WARN([Due to missing rpmbuild you will not able to generate RPM package.]))
-
-AS_IF([test "x$PROTOCOLS" = xno], AC_MSG_WARN([Due to missing /etc/protocols you will not be able to generate protocols.cpp]))
-
+AS_IF([test -z "$XSLTPROC"], AC_MSG_WARN([Due to missing xsltproc you will not able to generate MAN pages.]))
+AS_IF([test "x$PROTOCOLS" = "xno"], AC_MSG_WARN([Due to missing /etc/protocols you will not be able to generate protocols.cpp]))
 AS_IF([test -z "$AWK"], AC_MSG_WARN([Due to missing awk you will not be able to generate protocols.cpp from /etc/protocols]))
 
 AM_COND_IF(HAVE_DOC,

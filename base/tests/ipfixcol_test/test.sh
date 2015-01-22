@@ -41,6 +41,7 @@ BASE="$PWD"
 cd ../../src/
 
 IPFIXCOL="$PWD/ipfixcol "
+IPFIXSEND="$PWD/utils/ipfixsend/ipfixsend "
 
 cd "$BASE"
 
@@ -51,6 +52,7 @@ STARTUP="startup.xml"
 PARFILE="params"
 PREPROC="preproc.sh"
 POSTPROC="postproc.sh"
+IPFIXSEND_RUN="ipfixsend.sh"
 INTERNAL=$(readlink -fe -- configs/internalcfg.xml)
 
 BASE="$PWD"
@@ -91,6 +93,7 @@ fi
 
 export IPFIX_TEST_INTERNALCFG=$INTERNAL
 export IPFIX_TEST_IPFIXCOL=$IPFIXCOL
+export IPFIX_TEST_IPFIXSEND=$IPFIXSEND
 
 echo -n "" > "$LOG_FILE" 
 echo -e "Using internal configuration file: $INTERNAL\n" | tee -a "$LOG_FILE"
@@ -101,6 +104,7 @@ for test in *; do
 	if [ "$test" = "ipfix_data" ]; then 
 		continue;
 	fi
+        echo "testing: $test"
 	cd "$TESTDIR/$test"
 	PARAMS="-v -1 -c $STARTUP";
 	if [ -f "$PREPROC" ]; then
@@ -111,7 +115,20 @@ for test in *; do
 		PARAMS=$(cat "$PARFILE")
 	fi
 	
-	$IPFIXCOL $PARAMS -i $INTERNAL > "$OUTPUT" 2>&1
+        if [[ "$test" == "ipfixsend "* ]]; then
+            $IPFIXCOL $PARAMS -i $INTERNAL > "$OUTPUT" 2>&1 &
+            echo $! > tmp_pid
+            sleep 1 # ipfixcol initialization
+            
+            sh $IPFIXSEND_RUN
+
+            sleep 1 # ipfixcol processing
+
+            kill $(cat tmp_pid)
+            rm -f tmp_pid
+        else
+            $IPFIXCOL $PARAMS -i $INTERNAL > "$OUTPUT" 2>&1
+        fi
 	
 	if [ -f "$POSTPROC" ]; then
 		sh "$POSTPROC" ];
@@ -119,6 +136,7 @@ for test in *; do
 done
 
 cd "$TESTDIR"
+echo ""
 
 # check results
 for test in *; do

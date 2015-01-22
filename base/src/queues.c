@@ -189,6 +189,11 @@ struct ipfix_message* rbuffer_read (struct ring_buffer* rbuffer, unsigned int *i
 	while (rbuffer->write_offset == *index) {
 		if (pthread_cond_wait (&(rbuffer->cond), &(rbuffer->mutex)) != 0) {
 			MSG_ERROR(msg_module, "Condition wait failed (%s:%d)", __FILE__, __LINE__);
+
+			if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
+				MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
+			}
+
 			return (NULL);
 		}
 	}
@@ -249,7 +254,7 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
 					}
 
 					/* Decrement reference on templates */
-					for (i = 0; i < 1023 && rbuffer->data[rbuffer->read_offset]->data_couple[i].data_set; ++i) {
+					for (i = 0; i < MSG_MAX_DATA_COUPLES && rbuffer->data[rbuffer->read_offset]->data_couple[i].data_set; ++i) {
 						if (rbuffer->data[rbuffer->read_offset]->data_couple[i].data_template) {
 							tm_template_reference_dec(rbuffer->data[rbuffer->read_offset]->data_couple[i].data_template);
 						}
@@ -306,6 +311,11 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
 			if (rbuffer->count == 0) {
 				if (pthread_cond_signal (&(rbuffer->cond_empty)) != 0) {
 					MSG_ERROR(msg_module, "Condition signal failed (%s:%d)", __FILE__, __LINE__);
+
+					if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
+						MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
+					}
+
 					return (EXIT_FAILURE);
 				}
 			}

@@ -432,7 +432,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 	preprocessor_udp_init((struct input_info_network *) msg->input_info, &udp_conf);
 
 	/* check for new templates */
-	for (i = 0; i < 1024 && msg->templ_set[i]; i++) {
+	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; i++) {
 		ptr = (uint8_t*) &msg->templ_set[i]->first_record;
 		while (ptr < (uint8_t*) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) {
 			max_len = ((uint8_t *) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) - ptr;
@@ -447,7 +447,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 	}
 
 	/* check for new option templates */
-	for (i = 0; i < 1024 && msg->opt_templ_set[i]; i++) {
+	for (i = 0; i < MSG_MAX_OTEMPLATES && msg->opt_templ_set[i]; i++) {
 		ptr = (uint8_t*) &msg->opt_templ_set[i]->first_record;
 		max_len = ((uint8_t *) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) - ptr;
 		while (ptr < (uint8_t*) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) {
@@ -462,7 +462,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 	}
 	
 	/* add template to message data_couples */
-	for (i = 0; i < 1023 && msg->data_couple[i].data_set; i++) {
+	for (i = 0; i < MSG_MAX_DATA_COUPLES && msg->data_couple[i].data_set; i++) {
 		key.tid = ntohs(msg->data_couple[i].data_set->header.flowset_id);
 		msg->data_couple[i].data_template = tm_get_template(template_mgr, &key);
 		if (msg->data_couple[i].data_template == NULL) {
@@ -540,15 +540,19 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		msg->source_status = source_status;
 		odid_info_remove_source(input_info->odid);
 	} else {
-		if (packet == NULL) {
-			MSG_WARNING(msg_module, "[%u] Received empty packet", input_info->odid);
+		if (input_info == NULL || storage_plugins == NULL) {
+			MSG_WARNING(msg_module, "Invalid parameters in function preprocessor_parse_msg()");
+
+			if (packet) {
+				free(packet);
+			}
+			
+			packet = NULL;
 			return;
 		}
 
-		if (input_info == NULL || storage_plugins == NULL) {
-			MSG_WARNING(msg_module, "[%u] Invalid parameters in function preprocessor_parse_msg().", input_info->odid);
-			free(packet);
-			packet = NULL;
+		if (packet == NULL) {
+			MSG_WARNING(msg_module, "[%u] Received empty packet", input_info->odid);
 			return;
 		}
 

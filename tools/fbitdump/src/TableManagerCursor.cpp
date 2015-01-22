@@ -145,7 +145,7 @@ bool TableManagerCursor::next()
 				}
 			}
 
-			this->auxList[u] == false;
+			this->auxList[u] = false;
 
 			/* read timestamp */
 			if (this->auxNoMoreRows[u]) {

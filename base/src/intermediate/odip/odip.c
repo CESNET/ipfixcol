@@ -269,7 +269,7 @@ int intermediate_process_message(void *config, void *message)
 	
 	/* process template records */
 	proc.type = TM_TEMPLATE;
-	for (i = 0; i < 1024 && msg->templ_set[i]; ++i) {
+	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; ++i) {
 		prevoffset = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->templ_set[i]->header), 4);
 		proc.offset += 4;
@@ -288,7 +288,7 @@ int intermediate_process_message(void *config, void *message)
 	
 	/* Process option templates */
 	proc.type = TM_OPTIONS_TEMPLATE;
-	for (i = 0; i < 1024 && msg->opt_templ_set[i]; ++i) {
+	for (i = 0; i < MSG_MAX_OTEMPLATES && msg->opt_templ_set[i]; ++i) {
 		prevoffset = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->opt_templ_set[i]->header), 4);
 		proc.offset += 4;
@@ -309,7 +309,7 @@ int intermediate_process_message(void *config, void *message)
 	new_msg->opt_templ_set[otsets] = NULL;
 
 	/* Process data records */
-	for (i = 0; i < 1023 && msg->data_couple[i].data_set; ++i) {
+	for (i = 0; i < MSG_MAX_DATA_COUPLES && msg->data_couple[i].data_set; ++i) {
 		struct ipfix_template *templ = msg->data_couple[i].data_template;
 		if (!templ) {
 			continue;
