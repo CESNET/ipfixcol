@@ -157,7 +157,7 @@ char **utils_files_from_path(char *path)
 	struct dirent *entry = NULL, *result = NULL;
 	struct stat st;
 	
-	int ret = 0, array_length = 0, fcounter = 0, inputf_index = 0;
+	int ret = 0, array_length = 0, inputf_index = 0;
 	
 	dirname  = utils_dir_from_path(path);
 	if (!dirname) {
@@ -213,15 +213,6 @@ char **utils_files_from_path(char *path)
 		ret = regexp_asterisk(filename, entry->d_name);
 		if (ret == 1) {
 			/* this file matches */
-			if (fcounter >= array_length - 1) {
-				input_files = realloc(input_files, array_length * 2);
-				if (input_files == NULL) {
-					MSG_ERROR(msg_module, "Not enough memory");
-					goto err_file;
-				}
-				array_length *= 2;
-			}
-
 			input_files[inputf_index] = (char *) malloc(strlen(entry->d_name) + strlen(dirname) + 2); /* 2 because of "/" and NULL*/
 			if (input_files[inputf_index] == NULL) {
 				MSG_ERROR(msg_module, "Not enough memory");
