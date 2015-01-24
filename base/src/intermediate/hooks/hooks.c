@@ -232,10 +232,6 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 	return 0;
 	
 cleanup_err:
-	if (!conf) {
-		return -1;
-	}
-
 	if (doc) {
 		xmlFreeDoc(doc);
 	}
