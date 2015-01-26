@@ -591,9 +591,9 @@ el_sint::el_sint(int size , int en, int id, uint32_t buf_size) {
 
 el_unknown::el_unknown(int size, int en, int id,  int part, uint32_t buf_size) {
 	_size = size;
-	if (size == 65535) { /* Element with variable size */
-		_var_size = true;
-        }
+
+	// Size of 65535 means variable-sized IE
+	_var_size = (size == 65535);
 }
 
 void el_unknown::allocate_buffer(int count) {}
