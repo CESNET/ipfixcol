@@ -52,6 +52,7 @@ Table::Table(ibis::part *part): queryDone(true), orderAsc(true), deleteTable(tru
 Table::Table(ibis::partList &partList): queryDone(true), orderAsc(true), deleteTable(true)
 {
 	this->table = ibis::table::create(partList);
+	this->usedFilter = NULL;
 }
 
 Table::Table(Table *table): queryDone(true), orderAsc(true), deleteTable(false)
