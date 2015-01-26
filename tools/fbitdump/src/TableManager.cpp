@@ -333,7 +333,7 @@ uint64_t TableManager::getInitRows() const
 	return ret;
 }
 
-TableManager::TableManager(Configuration &conf): conf(conf), tableSummary(NULL)
+TableManager::TableManager(Configuration &conf): conf(conf), orderAsc(false), tableSummary(NULL)
 {
 	std::string tmp;
 	ibis::part *part;
@@ -363,8 +363,6 @@ TableManager::TableManager(Configuration &conf): conf(conf), tableSummary(NULL)
 	if (conf.getOptionm()) {
 		this->orderColumns.insert(conf.getOrderByColumn()->getSelectName());
 		this->orderAsc = conf.getOrderAsc();
-	} else {
-		this->orderAsc = false;
 	}
 }
 

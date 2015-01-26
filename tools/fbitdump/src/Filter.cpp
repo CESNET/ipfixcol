@@ -1019,11 +1019,9 @@ Filter::Filter(Configuration &conf) throw (std::invalid_argument)
 	init(conf);
 }
 
-Filter::Filter()
+Filter::Filter(): scaninfo(NULL), actualConf(NULL)
 {
-	this->actualConf = NULL;
 	this->filterString = "1 = 1";
-	this->scaninfo = NULL;
 }
 
 } /* end of namespace fbitdump */
