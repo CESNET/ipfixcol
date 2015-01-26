@@ -363,6 +363,8 @@ TableManager::TableManager(Configuration &conf): conf(conf), tableSummary(NULL)
 	if (conf.getOptionm()) {
 		this->orderColumns.insert(conf.getOrderByColumn()->getSelectName());
 		this->orderAsc = conf.getOrderAsc();
+	} else {
+		this->orderAsc = false;
 	}
 }
 
