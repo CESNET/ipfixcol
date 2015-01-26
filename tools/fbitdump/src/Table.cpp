@@ -47,6 +47,7 @@ static const Filter emptyFilter;
 Table::Table(ibis::part *part): queryDone(true), orderAsc(true), deleteTable(true)
 {
 	this->table = ibis::table::create(*part);
+	this->usedFilter = NULL;
 }
 
 Table::Table(ibis::partList &partList): queryDone(true), orderAsc(true), deleteTable(true)
