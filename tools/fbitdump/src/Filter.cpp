@@ -1021,7 +1021,9 @@ Filter::Filter(Configuration &conf) throw (std::invalid_argument)
 
 Filter::Filter()
 {
+	this->actualConf = NULL;
 	this->filterString = "1 = 1";
+	this->scaninfo = NULL;
 }
 
 } /* end of namespace fbitdump */
