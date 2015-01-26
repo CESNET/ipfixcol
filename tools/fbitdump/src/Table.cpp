@@ -58,6 +58,7 @@ Table::Table(ibis::partList &partList): queryDone(true), orderAsc(true), deleteT
 Table::Table(Table *table): queryDone(true), orderAsc(true), deleteTable(false)
 {
 	this->table = table->table;
+	this->usedFilter = NULL;
 }
 
 Cursor* Table::createCursor()
