@@ -446,9 +446,9 @@ int storage_init(char *params, void **config)
 
 	doc = xmlParseDoc(BAD_CAST params);
 	if (!doc) {
-        MSG_ERROR(msg_module, "Cannot parse config xml!");
-        free(conf);
-        return -1;
+		MSG_ERROR(msg_module, "Cannot parse config xml!");
+		free(conf);
+		return -1;
 	}
 
 	root = xmlDocGetRootElement(doc);
@@ -538,7 +538,7 @@ void *msg_to_packet(const struct ipfix_message *msg, int *packet_length)
 
 	/* Copy option template sets */
 	for (i = 0; i < MSG_MAX_OTEMPLATES && msg->opt_templ_set[i]; ++i) {
-        len = ntohs(msg->opt_templ_set[i]->header.length);
+		len = ntohs(msg->opt_templ_set[i]->header.length);
 		memcpy(packet + offset, msg->opt_templ_set[i], len);
 		offset += len;
 	}
