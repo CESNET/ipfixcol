@@ -251,19 +251,16 @@ uint32_t preprocessor_compute_crc(struct input_info *input_info)
 	struct input_info_network *input = (struct input_info_network *) input_info;
 
 	char buff[INET6_ADDRSTRLEN + 5 + 1]; // 5: port; 1: null
-	uint8_t size;
 	if (input->l3_proto == 6) { /* IPv6 */
-		size = INET6_ADDRSTRLEN;
-		inet_ntop(AF_INET6, &(input->src_addr.ipv6.s6_addr), buff, size);
+		inet_ntop(AF_INET6, &(input->src_addr.ipv6.s6_addr), buff, INET6_ADDRSTRLEN);
 	} else { /* IPv4 */
-		size = INET_ADDRSTRLEN;
-		inet_ntop(AF_INET, &(input->src_addr.ipv4.s_addr), buff, size);
+		inet_ntop(AF_INET, &(input->src_addr.ipv4.s_addr), buff, INET_ADDRSTRLEN);
 	}
 
 	uint8_t ip_addr_len = strlen(buff);
 	snprintf(buff + ip_addr_len, 5 + 1, "%u", input->src_port);
 
-	return crc32(buff, size);
+	return crc32(buff, strlen(buff));
 }
 
 /**
