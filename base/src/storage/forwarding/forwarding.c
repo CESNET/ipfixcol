@@ -261,7 +261,7 @@ struct forwarding_template_record *forwarding_add_record(forwarding *conf, struc
 		conf->records_max += 32;
 		conf->records = realloc(conf->records, conf->records_max * sizeof(struct forwarding_template_record *));
 		if (conf->records == NULL) {
-			MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 			return NULL;
 		}
 		/* Initialize new pointers */
@@ -275,7 +275,7 @@ struct forwarding_template_record *forwarding_add_record(forwarding *conf, struc
 		if (conf->records[i] == NULL) {
 			conf->records[i] = calloc(1, sizeof(struct forwarding_template_record));
 			if (conf->records[i] == NULL) {
-				MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
+				MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 				return NULL;
 			}
 			conf->records[i]->record = record;
@@ -698,7 +698,7 @@ int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, 
 	/* Store new record */
 	struct ipfix_template_record *stored = calloc(1, len);
 	if (!stored) {
-		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		return 0;
 	}
 
@@ -906,7 +906,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 
 	uint8_t *new_msg = malloc(65535);
 	if (!new_msg) {
-		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		return 1;
 	}
 

@@ -93,7 +93,7 @@ struct odid_info *odid_info_add(uint32_t odid)
 
 	aux_info = calloc(1, sizeof(struct odid_info));
 	if (!aux_info) {
-		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		return NULL;
 	}
 	aux_info->odid = odid;
@@ -553,7 +553,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		*seqn += msg->data_records_count;
 	}
 
-    /* Send data to the first intermediate plugin */
+	/* Send data to the first intermediate plugin */
 	if (rbuffer_write(preprocessor_out_queue, msg, 1) != 0) {
 		MSG_WARNING(msg_module, "[%u] Unable to write into Data manager's input queue, skipping data.", input_info->odid);
 		message_free(msg);
