@@ -250,20 +250,22 @@ uint32_t preprocessor_compute_crc(struct input_info *input_info)
 	
 	struct input_info_network *input = (struct input_info_network *) input_info;
 
-	char buff[35];
+	char buff[INET6_ADDRSTRLEN + 5 + 1]; // 5: port; 1: null
 	uint8_t size;
 	if (input->l3_proto == 6) { /* IPv6 */
-		memcpy(buff, &(input->src_addr.ipv6.__in6_u.__u6_addr8), 32);
-		size = 34;
+		size = INET6_ADDRSTRLEN;
+		inet_ntop(AF_INET6, &(input->src_addr.ipv6.s6_addr), buff, size);
 	} else { /* IPv4 */
-		memcpy(buff, &(input->src_addr.ipv4.s_addr), 8);
-		size = 10;
+		size = INET_ADDRSTRLEN;
+		inet_ntop(AF_INET, &(input->src_addr.ipv4.s_addr), buff, size);
 	}
-	memcpy(buff + size - 2, &(input->src_port), 2);
-	buff[size] = '\0';
+
+	uint8_t ip_addr_len = strlen(buff);
+	snprintf(buff + ip_addr_len, 5 + 1, "%u", input->src_port);
 
 	return crc32(buff, size);
 }
+
 /**
  * \brief Fill in udp_info structure when managing UDP input
  *
