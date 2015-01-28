@@ -76,10 +76,10 @@ public:
     /**
      * \brief Add new rule
      * 
-     * \param[in] doc xml document
+     * \param[in] pdata data for scanner and parser
      * \param[in] root rule root node
      */
-    void addRule(xmlDoc *doc, xmlNode *root);
+    void addRule(struct filter_parser_data *pdata, xmlNode *root);
     
     /**
      * \brief Add new profile

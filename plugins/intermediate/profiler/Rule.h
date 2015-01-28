@@ -57,6 +57,11 @@ public:
      * \param[in] id Rule's ID
      */
     Rule(uint32_t id);
+	
+	/**
+	 * \brief Destructor
+     */
+	~Rule();
     
     /**
      * \brief Set ODID value
@@ -72,13 +77,13 @@ public:
      */
     void setSource(char *ip);
     
-    /**
-     * \brief Set data src/dst address prefix
-     * 
-     * \param[in] prefix IP prefix
+	/**
+	 * \brief Set data filter
+	 * 
+     * \param[in] filter data filter
      */
-    void setPrefix(char *prefix);
-    
+	void setDataFilter(struct filter_profile *filter);
+	
     /**
      * \brief Match IPFIX data record
      * 
@@ -94,6 +99,13 @@ public:
      * \return rule ID
      */
     uint32_t id() const { return m_id; }
+	
+	/**
+	 * \brief Check whether rule is valid
+	 * 
+     * \return true on success
+     */
+	bool isValid() const;
     
 private:
     /**
@@ -103,27 +115,16 @@ private:
      * \return AF_INET or AF_INET6
      */
     static int ipVersion(std::string &ip);
-    
-    /**
-     * \brief Match prefix
-     * \param[in] data IPFIX data record
-     * \param[in] field field field identifier
-     * \return true when prefix matches data record
-     */
-    bool matchPrefix(struct ipfix_record *data, int field) const;
-    
+	
+	struct filter_profile *m_filter{}; /**< dataFilter profile */
+	
     uint32_t m_id;					/**< rule ID */
     
     bool m_hasSource{false};		/**< true when source address is set */
     bool m_hasOdid{false};			/**< true when ODID is set */
-    bool m_hasPrefix{false};		/**< true when prefix is set */
-
+	
     uint8_t m_sourceIPv{};			/**< packet source IP version */
-    uint8_t m_prefixIPv{};			/**< prefix IP version */
     uint8_t m_source[IPV6_LEN]{};	/**< source address */
-    uint8_t m_prefix[IPV6_LEN]{};	/**< prefix */
-	uint16_t m_prefixBytes{};		/**< number of full bytes in prefix */
-	uint16_t m_prefixBits{};		/**< number of bits after full bytes */
     uint32_t m_odid{};				/**< Observation domain ID */
 };
 

@@ -122,19 +122,17 @@ void Organization::print()
 void Rule::print()
 {
 	if (m_hasOdid) {
-		ROUT(id()) << "ODID " << m_odid << "\n";;
-	}
-	
-	if (m_hasPrefix) {
-		char buff[50] = {0};
-		inet_ntop(m_prefixIPv, m_prefix, buff, 50);
-		ROUT(id()) << "PREFIX " << buff << "/" << (m_prefixBytes * 8 + m_prefixBits) << "\n";;
+		ROUT(id()) << "ODID " << ntohl(m_odid) << "\n";;
 	}
 	
 	if (m_hasSource) {
 		char buff[50] = {0};
 		inet_ntop(m_sourceIPv, m_source, buff, 50);
 		ROUT(id()) << "SOURCE " << buff << "\n";
+	}
+	
+	if (m_filter) {
+		ROUT(id()) << "FILTER " << print_tree(m_filter->root) << "\n";
 	}
 }
 
@@ -211,7 +209,7 @@ profileVec Organization::matchingProfiles(ipfix_message* msg, ipfix_record* data
 /**
  * Add new rule
  */
-void Organization::addRule(xmlDoc *doc, xmlNode* root)
+void Organization::addRule(filter_parser_data* pdata, xmlNode* root)
 {
 	/* Get rule ID */
 	m_auxChar = xmlGetProp(root, (const xmlChar *) "id");
@@ -220,23 +218,66 @@ void Organization::addRule(xmlDoc *doc, xmlNode* root)
 		return;
 	}
 	
-	/* Create new rule */
-	Rule *rule = new Rule(atoi((char *) m_auxChar));
+	/* Get rule ID and check if already used */
+	uint32_t id = atoi((char *) m_auxChar);
 	freeAuxChar();
 	
+	for (auto r: m_rules) {
+		if (r->id() == id) {
+			MSG_WARNING(msg_module, "Org %d: rule with existing ID (%d), skipping", m_id, id);
+			return;
+		}
+	}
+	
+	/* Create new rule */
+	Rule *rule = new Rule(id);
+	
+	pdata->filter = NULL;
+	pdata->profile = NULL;
+	
 	std::string name;
-	for (xmlNode *node = root->children; node; node = node->next) {
-		
-		/* Get node name and value */
-		name = (char *) node->name;
-		m_auxChar = xmlNodeListGetString(doc, node->children, 1);
-		
-		/* Set rule "sub-rules" */
-		if		(name == "odid")   rule->setOdid((char *) m_auxChar);
-		else if (name == "source") rule->setSource((char *) m_auxChar);
-		else if (name == "prefix") rule->setPrefix((char *) m_auxChar);
-		
-		freeAuxChar();
+	try {
+		for (xmlNode *node = root->children; node; node = node->next) {
+
+			/* Get node name and value */
+			name = (char *) node->name;
+			m_auxChar = xmlNodeListGetString(pdata->doc, node->children, 1);
+
+			/* Set rule "sub-rules" */
+			if		(name == "odid")   rule->setOdid((char *) m_auxChar);
+			else if (name == "source") rule->setSource((char *) m_auxChar);
+			else if (name == "dataFilter") {
+				pdata->filter  = reinterpret_cast<char*>(xmlNodeListGetString(pdata->doc, node->children, 1));
+				pdata->profile = reinterpret_cast<filter_profile *>(calloc(1, sizeof(filter_profile)));
+				
+				/* Parse filter */
+				if (parseFilter(pdata) != 0) {
+					free(pdata->filter);
+					throw ("Error while parsing data filter");
+				}
+				
+				free(pdata->filter);
+				rule->setDataFilter(pdata->profile);
+			} else {
+				MSG_WARNING(msg_module, "Org %d: Rule %d: unknown element %s", m_id, id, name.c_str());
+			}
+
+			freeAuxChar();
+		}
+	} catch (std::exception &e) {
+		if (pdata->profile) {
+			filter_free_profile(pdata->profile);
+		}
+		MSG_ERROR(msg_module, "Org %d: Rule %d: %s", m_id, id, e.what());
+		delete rule;
+		return;
+	}
+	
+	/* Check rule validity */
+	if (!rule->isValid()) {
+		MSG_ERROR(msg_module, "Org %d: invalid rule %d", m_id, id);
+		delete rule;
+		return;
 	}
 	
 	/* Store rule */
@@ -278,12 +319,22 @@ void Organization::addProfile(struct filter_parser_data *pdata, xmlNode* root)
 		return;
 	}
 	
+	/* Get rule ID and chech if already used */
+	uint32_t id = atoi((char *) m_auxChar);
+	freeAuxChar();
+	
+	for (auto p: m_profiles) {
+		if (p->id == id) {
+			MSG_WARNING(msg_module, "Org %d: profile with existing ID (%d), skipping", m_id, id);
+			return;
+		}
+	}
+	
 	/* Allocate space for profile */
 	filter_profile *profile = reinterpret_cast<filter_profile *>(calloc(1, sizeof(filter_profile)));
 	
 	/* Set profile id */
-	profile->id = std::atoi((char *) m_auxChar);
-	freeAuxChar();
+	profile->id = id;
 	
 	pdata->profile = NULL;
 	pdata->filter = NULL;

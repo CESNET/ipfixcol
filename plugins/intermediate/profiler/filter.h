@@ -82,7 +82,17 @@ enum operators {
 enum valtype {
     VT_NUMBER,  /**< numeric value */
     VT_STRING,  /**< string value  */
-    VT_REGEX    /**< regular expression */
+    VT_REGEX,   /**< regular expression */
+	VT_PREFIX	/**< IP prefix */
+};
+
+/**
+ * \brief IP prefix value
+ */
+struct filter_prefix {
+	uint16_t fullBytes;	/**< Number of full bytes */
+	uint16_t bits;		/**< Number of remaining bits after full bytes */
+	uint8_t data[16];	/**< Prefix address */
 };
 
 /**
@@ -222,6 +232,22 @@ struct filter_value *filter_parse_ipv4(char *addr);
 struct filter_value *filter_parse_ipv6(char *addr);
 
 /**
+ * \brief Parse IPv4 prefix
+ * 
+ * \param[in] addr IPv4 prefix
+ * \return pointer to parsed value
+ */
+struct filter_value *filter_parse_prefix4(char *addr);
+
+/**
+ * \brief Parse IPv6 prefix
+ * 
+ * \param[in] addr IPv6 prefix
+ * \return pointer to parsed value
+ */
+struct filter_value *filter_parse_prefix6(char *addr);
+
+/**
  * \brief Parse timestamp
  *
  * \param[in] tstamp Timestamp
@@ -309,6 +335,7 @@ void filter_error(const char *msg, YYLTYPE *loc);
  * 
  * \param[in] node filter node
  * \param[in] data IPFIX data record
+ * \return true when node fits
  */
 bool filter_fits_node(struct filter_treenode* node, struct ipfix_record *data);
 

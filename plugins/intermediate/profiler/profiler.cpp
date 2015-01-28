@@ -122,7 +122,7 @@ void process_startup_xml(profiler_conf *conf, char *params)
 			}
 			
 			if (!xmlStrcmp(subNode->name, (const xmlChar *) "rule")) {
-				org->addRule(doc, subNode);
+				org->addRule(&pdata, subNode);
 			} else if (!xmlStrcmp(subNode->name, (const xmlChar *) "profile")) {
 				org->addProfile(&pdata, subNode);
 			}

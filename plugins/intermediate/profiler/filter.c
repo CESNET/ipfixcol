@@ -40,7 +40,9 @@
 #define _XOPEN_SOURCE
 
 #include <arpa/inet.h>
+#include <errno.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -77,6 +79,7 @@ void filter_free_tree(struct filter_treenode *node)
 			if (node->value->type == VT_REGEX) {
 				regfree((regex_t *) node->value->value);
 			}
+			
 			free(node->value->value);
 		}
 		free(node->value);
@@ -233,6 +236,50 @@ bool filter_fits_string(struct filter_treenode *node, struct ipfix_record *recor
 	return result;
 }
 
+bool filter_fits_prefix(struct filter_treenode *node, struct ipfix_record *record)
+{
+	int datalen = 0;
+	uint8_t *addr = data_record_get_field((uint8_t *)record->record, record->templ, node->field->enterprise, node->field->id, &datalen);
+	
+	if (!addr) {
+		return node->op == OP_EQUAL;
+	}
+	
+	struct filter_prefix *prefix = (struct filter_prefix *) node->value->value;
+	bool match = true;
+	
+	/* Prefixes are compared in two stages:
+	 * 
+	 * 1) compare full bytes (memcmp etc.)
+	 * 2) compare remaining bits
+	 * 
+	 * this is a lot faster then comparing full address only by bits
+	 */
+	
+	/* Compare full bytes */
+	if (prefix->fullBytes > 0) {
+		if (memcmp(addr, prefix->data, prefix->fullBytes) != 0) {
+			match = false;
+		}
+	}
+	
+	if (match) {
+		/* Compare remaining bits */
+		int i, bit;
+		for (i = 0; i < prefix->bits; ++i) {
+			/* Comparing from left-most bit */
+			bit = 7 - i;
+			
+			if ((addr[prefix->fullBytes] & (1 << bit)) != (prefix->data[prefix->fullBytes] & (1 << bit))) {
+				match = false;
+				break;
+			}
+		}
+	}
+	
+	return (node->op == OP_NOT_EQUAL) ^ match;
+}
+
 /**
  * \brief Check whether string in data record fits with node's regex
  *
@@ -302,6 +349,8 @@ bool filter_fits_node(struct filter_treenode *node, struct ipfix_record *data)
 			return (node->negate) ^ filter_fits_string(node, data);
 		case VT_REGEX:
 			return (node->negate) ^ filter_fits_regex(node, data);
+		case VT_PREFIX:
+			return (node->negate) ^ filter_fits_prefix(node, data);
 		default:
 			return (node->negate) ^ filter_fits_value(node, data);
 		}
@@ -604,6 +653,73 @@ struct filter_value *filter_parse_ipv6(char *addr)
 	val->value = filter_num_to_ptr((uint8_t *) &tmp, val->length);
 
 	return val;
+}
+
+/**
+ * \brief Parse prefix
+ * 
+ * \param family IP version (AF_INET / AF_INET6)
+ * \param addr IP address
+ * \return parsed value
+ */
+struct filter_value *filter_parse_prefix(int family, char *addr)
+{
+	/* Allocate space for value */
+	struct filter_value *val = malloc(sizeof(struct filter_value));
+	if (!val) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
+	
+	/* Allocate space for prefix data */
+	struct filter_prefix *prefix = malloc(sizeof(struct filter_prefix));
+	if (!prefix) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		free(val);
+		return NULL;
+	}
+	
+	/* Find prefix length */
+	char *slash = strchr(addr, '/');
+	uint16_t prefixLen = atoi(slash + 1);
+	
+	prefix->fullBytes = prefixLen / 8;
+	prefix->bits = prefixLen % 8;
+	
+	/* Process address */
+	char onlyAddr[50];
+	memcpy(onlyAddr, addr, slash - addr);
+	onlyAddr[slash - addr] = '\0';
+	
+	if (inet_pton(family, onlyAddr, prefix->data) != 1) {
+		MSG_ERROR(msg_module, "Cannot parse IP prefix %s", addr);
+		free(val);
+		free(prefix);
+		return NULL;
+	}
+	
+	/* Create value */
+	val->type = VT_PREFIX;
+	val->length = prefixLen;
+	val->value = (uint8_t*) prefix;
+	
+	return val;
+}
+
+/**
+ * \brief Parse IPv4 prefix
+ */
+struct filter_value *filter_parse_prefix4(char* addr)
+{
+	return filter_parse_prefix(AF_INET, addr);
+}
+
+/**
+ * \brief Parse IPv4 prefix
+ */
+struct filter_value *filter_parse_prefix6(char* addr)
+{
+	return filter_parse_prefix(AF_INET6, addr);
 }
 
 /**

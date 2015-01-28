@@ -96,6 +96,8 @@ struct filter_field *f;
 %token <s> OPERATOR		"operator"
 %token <s> IPv4			"IPv4 address"
 %token <s> IPv6			"IPv6 address"
+%token <s> IPv4PR		"IPv4 prefix"
+%token <s> IPv6PR		"IPv6 prefix"
 %token <s> TIMESTAMP	"timestamp"
 %token <s> OTHER		"symbol"
 %token <s> EOL			"end of line"
@@ -140,6 +142,8 @@ value:
 	| REGEX  { $$ = filter_parse_regex($1);  free($1); if (!$$) YYABORT;}
 	| IPv4   { $$ = filter_parse_ipv4($1);   free($1); if (!$$) YYABORT;}
 	| IPv6   { $$ = filter_parse_ipv6($1);   free($1); if (!$$) YYABORT;}
+	| IPv4PR { $$ = filter_parse_prefix4($1);free($1); if (!$$) YYABORT;}
+	| IPv6PR { $$ = filter_parse_prefix6($1);free($1); if (!$$) YYABORT;}
 	| TIMESTAMP { $$ = filter_parse_timestamp($1); free($1); if (!$$) YYABORT;}
 	;
 	

@@ -40,15 +40,10 @@
 extern "C" {
 #include <arpa/inet.h>
 #include <string.h>	
+#include <errno.h>
 }
 #include "profiler.h"
 #include "Rule.h"
-
-#define IPV4_SRC_FIELD 8
-#define IPV4_DST_FIELD 12
-
-#define IPV6_SRC_FIELD 27
-#define IPV6_DST_FIELD 28
 
 static const char *msg_module = "profiler";
 
@@ -59,44 +54,24 @@ Rule::Rule(uint32_t id): m_id{id}
 {
 }
 
-bool Rule::matchPrefix(struct ipfix_record *data, int field) const
+/**
+ * Destructor
+ */
+Rule::~Rule()
 {
-	/* Get field value */
-	uint8_t *addr = data_record_get_field((uint8_t *)data->record, data->templ, 0, field, NULL);
-	
-	/* Field not found */
-	if (!addr) {
-		return false;
+	/* Free data filter */
+	if (m_filter) {
+		filter_free_profile(m_filter);
 	}
-	
-	/* Prefixes are compared in two stages:
-	 * 
-	 * 1) compare full bytes (memcmp etc.)
-	 * 2) compare remaining bits
-	 * 
-	 * this is a lot faster then comparing full address only by bits
-	 */
-	
-	/* Compare full bytes */
-	if (m_prefixBytes > 0) {
-		if (memcmp(addr, m_prefix, m_prefixBytes) != 0) {
-			return false;
-		}
-	}
-	
-	/* Compare remaining bits */
-	int bit;
-	for (int i = 0; i < m_prefixBits; ++i) {
-		/* Comparing from left-most bit */
-		bit = 7 - i;
-		
-		if ((addr[m_prefixBytes] & (1 << bit)) != (m_prefix[m_prefixBytes] & (1 << bit))) {
-			return false;
-		}
-	}
+}
 
-	/* Prefix matched */
-	return true;
+
+/**
+ * Set data filter
+ */
+void Rule::setDataFilter(filter_profile* filter)
+{
+	m_filter = filter;
 }
 
 /**
@@ -120,7 +95,8 @@ bool Rule::matchRecord(ipfix_message* msg, ipfix_record* data) const
 		}
 		
 		/* Compare IP versions */
-		if (m_sourceIPv == AF_INET && info->l3_proto != 4) {
+		if (   (m_sourceIPv == AF_INET  && info->l3_proto != 4)
+			|| (m_sourceIPv == AF_INET6 && info->l3_proto != 6)) {
 			return false;
 		}
 		
@@ -136,18 +112,10 @@ bool Rule::matchRecord(ipfix_message* msg, ipfix_record* data) const
 		}
 	}
 	
-	/* Match IP prefix */
-	if (m_hasPrefix) {
-		if (m_prefixIPv == AF_INET) {
-			/* Compare IPv4 prefix */
-			if (!matchPrefix(data, IPV4_SRC_FIELD) && !matchPrefix(data, IPV4_DST_FIELD)) {
-				return false;
-			}
-		} else {
-			/* Compare IPv6 prefix */
-			if (!matchPrefix(data, IPV6_SRC_FIELD) && !matchPrefix(data, IPV6_DST_FIELD)) {
-				return false;
-			}
+	/* Match dataFilter */
+	if (m_filter) {
+		if (!filter_fits_node(m_filter->root, data)) {
+			return false;
 		}
 	}
 	
@@ -173,54 +141,10 @@ void Rule::setSource(char* ip)
 	
 	/* Convert address to binary form */
 	if (!inet_pton(m_sourceIPv, source.c_str(), m_source)) {
-		MSG_ERROR(msg_module, "cannot parse address %s (%s)", source.c_str(), sys_errlist[errno]);
-		/* TODO: throw */
-		return;
+		throw std::invalid_argument("Cannot parse address " + source + " (" + sys_errlist[errno] + ")");
 	}
 	
 	m_hasSource = true;
-}
-
-/**
- * Set prefix
- */
-void Rule::setPrefix(char* prefix)
-{
-	std::string source = prefix;
-	uint16_t prefixLen;
-	m_prefixIPv = ipVersion(source);
-	
-	size_t subnetPos = source.find('/');
-	if (subnetPos == std::string::npos) {
-		/* no subnet mask - exact match */
-		prefixLen = (m_prefixIPv == AF_INET) ? IPV4_LEN : IPV6_LEN;
-	} else {
-		/* get prefix length and subnet address */
-		prefixLen = std::atoi(source.substr(subnetPos + 1).c_str());
-		source = source.substr(0, subnetPos);
-	}
-	
-	/* Convert address to binary form */
-	if (!inet_pton(m_prefixIPv, source.c_str(), m_prefix)) {
-		MSG_ERROR(msg_module, "cannot parse address %s (%s)", source.c_str(), sys_errlist[errno]);
-		/* TODO: throw */
-		return;
-	}
-	
-	/* 
-	 * Get number of full bytes and bits
-	 * e.g. for prefix /17 is number of full bytes 2 and number of bits 1
-	 * prefixes are then compared in two stages:
-	 * 
-	 * 1) compare full bytes (memcmp etc.)
-	 * 2) compare remaining bits
-	 * 
-	 * this is a lot faster then comparing full address only by bits
-	 */
-	m_prefixBytes = prefixLen / 8;
-	m_prefixBits  = prefixLen % 8;
-	
-	m_hasPrefix = true;
 }
 
 /**
@@ -235,4 +159,16 @@ int Rule::ipVersion(std::string &ip)
 	return AF_INET;
 }
 
+/**
+ * Check rule validity
+ */
+bool Rule::isValid() const
+{
+	if (!m_hasSource) {
+		MSG_ERROR(msg_module, "Rule %d: missing source address", m_id);
+		return false;
+	}
+	
+	return true;
+}
 
