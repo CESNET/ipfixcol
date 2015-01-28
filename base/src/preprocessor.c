@@ -93,7 +93,7 @@ struct odid_info *odid_info_add(uint32_t odid)
 
 	aux_info = calloc(1, sizeof(struct odid_info));
 	if (!aux_info) {
-		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		return NULL;
 	}
 	aux_info->odid = odid;
@@ -250,20 +250,19 @@ uint32_t preprocessor_compute_crc(struct input_info *input_info)
 	
 	struct input_info_network *input = (struct input_info_network *) input_info;
 
-	char buff[35];
-	uint8_t size;
+	char buff[INET6_ADDRSTRLEN + 5 + 1]; // 5: port; 1: null
 	if (input->l3_proto == 6) { /* IPv6 */
-		memcpy(buff, &(input->src_addr.ipv6.__in6_u.__u6_addr8), 32);
-		size = 34;
+		inet_ntop(AF_INET6, &(input->src_addr.ipv6.s6_addr), buff, INET6_ADDRSTRLEN);
 	} else { /* IPv4 */
-		memcpy(buff, &(input->src_addr.ipv4.s_addr), 8);
-		size = 10;
+		inet_ntop(AF_INET, &(input->src_addr.ipv4.s_addr), buff, INET_ADDRSTRLEN);
 	}
-	memcpy(buff + size - 2, &(input->src_port), 2);
-	buff[size] = '\0';
 
-	return crc32(buff, size);
+	uint8_t ip_addr_len = strlen(buff);
+	snprintf(buff + ip_addr_len, 5 + 1, "%u", input->src_port);
+
+	return crc32(buff, strlen(buff));
 }
+
 /**
  * \brief Fill in udp_info structure when managing UDP input
  *
@@ -551,7 +550,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		*seqn += msg->data_records_count;
 	}
 
-    /* Send data to the first intermediate plugin */
+	/* Send data to the first intermediate plugin */
 	if (rbuffer_write(preprocessor_out_queue, msg, 1) != 0) {
 		MSG_WARNING(msg_module, "[%u] Unable to write into Data manager's input queue, skipping data.", input_info->odid);
 		message_free(msg);
