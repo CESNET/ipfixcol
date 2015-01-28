@@ -446,9 +446,9 @@ int storage_init(char *params, void **config)
 
 	doc = xmlParseDoc(BAD_CAST params);
 	if (!doc) {
-        MSG_ERROR(msg_module, "Cannot parse config xml!");
-        free(conf);
-        return -1;
+		MSG_ERROR(msg_module, "Cannot parse config xml!");
+		free(conf);
+		return -1;
 	}
 
 	root = xmlDocGetRootElement(doc);
@@ -516,8 +516,7 @@ int store_now(const void *config)
  */
 void *msg_to_packet(const struct ipfix_message *msg, int *packet_length)
 {
-	struct ipfix_set_header *aux_header;
-	int i, c, len, offset = 0;
+	int i, len, offset = 0;
 
 	*packet_length = ntohs(msg->pkt_header->length);
 	void *packet = calloc(1, *packet_length);
@@ -532,31 +531,22 @@ void *msg_to_packet(const struct ipfix_message *msg, int *packet_length)
 
 	/* Copy template sets */
 	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; ++i) {
-		aux_header = &(msg->templ_set[i]->header);
-		len = ntohs(aux_header->length);
-		for (c = 0; c < len; c += 4) {
-			memcpy(packet + offset + c, aux_header, 4);
-			aux_header++;
-		}
+		len = ntohs(msg->templ_set[i]->header.length);
+		memcpy(packet + offset, msg->templ_set[i], len);
 		offset += len;
 	}
 
-	/* Copy template sets */
+	/* Copy option template sets */
 	for (i = 0; i < MSG_MAX_OTEMPLATES && msg->opt_templ_set[i]; ++i) {
-		aux_header = &(msg->opt_templ_set[i]->header);
-		len = ntohs(aux_header->length);
-		for (c = 0; c < len; c += 4) {
-			memcpy(packet + offset + c, aux_header, 4);
-			aux_header++;
-		}
+		len = ntohs(msg->opt_templ_set[i]->header.length);
+		memcpy(packet + offset, msg->opt_templ_set[i], len);
 		offset += len;
 	}
 
 	/* Copy data sets */
 	for (i = 0; i < MSG_MAX_DATA_COUPLES && msg->data_couple[i].data_set; ++i) {
 		len = ntohs(msg->data_couple[i].data_set->header.length);
-		memcpy(packet + offset,   &(msg->data_couple[i].data_set->header), 4);
-		memcpy(packet + offset + 4, msg->data_couple[i].data_set->records, len - 4);
+		memcpy(packet + offset, msg->data_couple[i].data_set, len);
 		offset += len;
 	}
 
