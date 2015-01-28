@@ -80,6 +80,7 @@ template_table::template_table(int template_id, uint32_t buff_size): _rows_count
 		buff_size = RESERVED_SPACE;
 	}
 	_buff_size = buff_size;
+	_last_transmission = 0;
 }
 
 template_table::~template_table(){

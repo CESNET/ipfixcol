@@ -1019,7 +1019,7 @@ Filter::Filter(Configuration &conf) throw (std::invalid_argument)
 	init(conf);
 }
 
-Filter::Filter()
+Filter::Filter(): scaninfo(NULL), actualConf(NULL)
 {
 	this->filterString = "1 = 1";
 }

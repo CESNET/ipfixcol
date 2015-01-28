@@ -44,17 +44,17 @@ namespace fbitdump {
 
 static const Filter emptyFilter;
 
-Table::Table(ibis::part *part): queryDone(true), orderAsc(true), deleteTable(true)
+Table::Table(ibis::part *part): usedFilter(NULL), queryDone(true), orderAsc(true), deleteTable(true)
 {
 	this->table = ibis::table::create(*part);
 }
 
-Table::Table(ibis::partList &partList): queryDone(true), orderAsc(true), deleteTable(true)
+Table::Table(ibis::partList &partList): usedFilter(NULL), queryDone(true), orderAsc(true), deleteTable(true)
 {
 	this->table = ibis::table::create(partList);
 }
 
-Table::Table(Table *table): queryDone(true), orderAsc(true), deleteTable(false)
+Table::Table(Table *table): usedFilter(NULL), queryDone(true), orderAsc(true), deleteTable(false)
 {
 	this->table = table->table;
 }
