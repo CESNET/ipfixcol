@@ -468,7 +468,7 @@ int merge_couple(const char *srcDir, const char *dstDir, const char *workDir) {
 				suffix = 'A';
 			} else if (suffix == 'Z') {
 				/* \TODO do it better */
-				std::cerr << "Not enought suffixes for folder " << (*srci).first << std::endl;
+				std::cerr << "Not enough suffixes for folder " << (*srci).first << std::endl;
 				break;
 			} else {
 				suffix++;

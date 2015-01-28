@@ -400,7 +400,6 @@ int main (int argc, char* argv[])
 			storage_plugin_handler = NULL;
 			free (storage_list);
 			storage_list = aux_storage_list;
-			dlclose(storage_plugin_handler);
 			continue;
 		}
 		storage_list->storage.store = dlsym (storage_plugin_handler, "store_packet");
@@ -410,7 +409,6 @@ int main (int argc, char* argv[])
 			storage_plugin_handler = NULL;
 			free (storage_list);
 			storage_list = aux_storage_list;
-			dlclose(storage_plugin_handler);
 			continue;
 		}
 		storage_list->storage.store_now = dlsym (storage_plugin_handler, "store_now");
@@ -420,7 +418,6 @@ int main (int argc, char* argv[])
 			storage_plugin_handler = NULL;
 			free (storage_list);
 			storage_list = aux_storage_list;
-			dlclose(storage_plugin_handler);
 			continue;
 		}
 		storage_list->storage.close = dlsym (storage_plugin_handler, "storage_close");

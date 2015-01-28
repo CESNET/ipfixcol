@@ -247,11 +247,9 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	/* now look for <exportingProcess> definition with name(s) specified in <collectingProcess> */
 	/* first, get all <exportingProcess>es */
 	xpath_obj_expproc = xmlXPathEvalExpression (BAD_CAST "/ietf-ipfix:ipfix/ietf-ipfix:exportingProcess", config_ctxt);
-	if (xpath_obj_expproc != NULL) {
-		if (xmlXPathNodeSetIsEmpty (xpath_obj_expproc->nodesetval)) {
-			MSG_ERROR(msg_module, "No exporting process defined in user configuration!");
-			goto cleanup;
-		}
+	if (xpath_obj_expproc == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_expproc->nodesetval)) {
+		MSG_ERROR(msg_module, "No exporting process defined in user configuration!");
+		goto cleanup;
 	}
 	/* and then check them for searching names */
 	for (i = 0; i < xpath_obj_expprocnames->nodesetval->nodeNr; i++) {

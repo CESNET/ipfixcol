@@ -242,7 +242,7 @@ uint64_t statistics_total_cpu()
 	
 	fclose(stat);
 	
-	return (user + nice + sys + idle);
+	return ((uint64_t) user + (uint64_t) nice + (uint64_t) sys + (uint64_t) idle);
 }
 
 /**

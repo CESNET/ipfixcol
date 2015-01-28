@@ -815,10 +815,6 @@ wait_for_data:
 			                          "occured");
 			goto wait_for_data;
 		}
-
-		/* SCTP event processed */
-		/* we can't return yet. user expects some data */
-		goto wait_for_data;
 	} else if (!(flags & MSG_EOR)) {
 		MSG_WARNING(msg_module, "SCTP input plugin: message is too "
 		                          "long");
