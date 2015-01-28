@@ -218,7 +218,7 @@ int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
 		}
 		case 'm':
 			this->optm = true;
-			if (optarg == std::string("")) {
+			if (optarg == NULL || optarg == std::string("")) {
 				optionm = "%ts"; /* default is timestamp column */
 			} else {
 				optionm = optarg;
