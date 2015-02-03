@@ -35,6 +35,17 @@ IPFIXcol stores its configuration in the **/etc/ipfixcol/** directory.
 
 * **startup.xml** describes how IPFIXcol is configured at startup, which plugins are used and where the data will be stored. The XML is self-documented, so read the elements description carefully. The collector will listen on TCP, UDP and SCTP on startup by default, so be careful to configure which plugin you want to use before starting it.
 
+Collector can be reconfigured at runtime by sending SIGUSR1 signal. When this signal is received, startup configuration is reloaded and chages are processed.
+
+Reconfiguration can:
+
+*  Add/remove intermediate plugin(s)
+*  Add/remove storage plugin(s)
+*  Add/remove collecting process
+*  Change exporting process
+*  Change plugin settings (plugin is reloaded)
+*  Reorder intermediate plugins (they're removed and loaded in the new order)
+
 ##<a name="bplugs"></a>Built-in plugins
 ###<a name="input"></a>Input plugins
 
