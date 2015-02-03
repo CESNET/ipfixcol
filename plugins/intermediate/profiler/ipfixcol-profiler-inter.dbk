@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2015</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>14 October 2015</date>
+		<authorgroup>
+			<author>
+				<personname>
+					<firstname>Michal</firstname>
+					<surname>Kozubik</surname>
+				</personname>
+				<email>kozubik@cesnet.cz</email>
+				<contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol-profiler-inter</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">profiler plugin for IPFIXcol.</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>ipfixcol-profiler-inter</refname>
+		<refpurpose>profiler plugin for IPFIXcol.</refpurpose>
+	</refnamediv>
+	
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+			The <command>ipfix-profiler-inter</command> plugin is a part of IPFIXcol (IPFIX collector). It profiles IPFIX data records and fills in metadata information according to given
+                        set of organizations and their rules and profiles.
+		</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Configuration</title>
+		<simpara>The collector must be configured to use profiler plugin in startup.xml configuration. 
+		The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves. 
+		</simpara>
+		<simpara><filename>startup.xml</filename> profiler example</simpara>
+		<programlisting>
+	<![CDATA[
+	<profiler>
+		<organization id="1">
+                    <rule id="1">
+                    </rule>
+                    <rule id="2">
+                    </rule>
+                    <profile id="1">
+                        <filter></filter>
+                    </profile>
+                    <profile id="2">
+                        <filter></filter>
+                    </profile>
+                    <profile id="2">
+                        <filter></filter>
+                    </profile>
+                </organization>
+	</profiler>
+	]]>
+		</programlisting>
+	
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term><command>organization</command></term>
+					<listitem>
+						<simpara></simpara>
+					</listitem>
+				</varlistentry>
+	
+				<varlistentry>
+					<term><command>rule</command></term>
+					<listitem>
+						<simpara></simpara>
+					</listitem>
+				</varlistentry>
+				
+				<varlistentry>
+					<term><command>profile</command></term>
+					<listitem>
+						<simpara></simpara>
+					</listitem>
+				</varlistentry>
+	
+				<varlistentry>
+					<term><command>filter</command></term>
+					<listitem>
+						<simpara></simpara>
+					</listitem>
+				</varlistentry>
+
+			</variablelist>
+		</para>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org/technologies/ipfixcol/">http://www.liberouter.org/technologies/ipfixcol/</link>
+					</term>
+					<listitem>
+						<para>IPFIXcol Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>

@@ -77,6 +77,29 @@ struct data_template_couple{
 	struct ipfix_template *data_template;
 };
 
+/**
+ * \struct ipfix_record
+ * \brief Structure for one data record with it's length and template
+ */
+struct ipfix_record {
+    void *record;       /**< Data record */
+    uint16_t length;    /**< Record's length */
+    struct ipfix_template *templ;   /**< Record's template */
+};
+
+struct organization {
+    uint32_t id;
+    uint16_t rule;
+    uint16_t **profiles;
+};
+
+struct __attribute__((packed)) metadata {
+    struct ipfix_record record;     /**< IPFIX data record */
+    uint32_t srcAS;                 /**< Source AS */
+    uint32_t dstAS;                 /**< Destination AS */
+    struct organization **organizations;    /**< Array of organizations assigned to this record */
+    /* geoinfo */
+};
 
 /**
  * \struct ipfix_message
@@ -101,6 +124,8 @@ struct __attribute__((__packed__)) ipfix_message {
 	struct ipfix_options_template_set *opt_templ_set[MSG_MAX_OTEMPLATES];
 	/** List of Data Sets (with a link to corresponding template) in the packet */
 	struct data_template_couple       data_couple[MSG_MAX_DATA_COUPLES];
+	/** List of metadata structures */
+	struct metadata *metadata;
 };
 
 /**
