@@ -11,7 +11,7 @@
 			<year>2015</year>
 			<holder>CESNET, z.s.p.o.</holder>
 		</copyright>
-		<date>14 October 2015</date>
+		<date>14 January 2015</date>
 		<authorgroup>
 			<author>
 				<personname>
@@ -47,7 +47,7 @@
 	<refsect1>
 		<title>Configuration</title>
 		<simpara>The collector must be configured to use profiler plugin in startup.xml configuration. 
-		The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves. 
+		The configuration specifies which plugins are used by the collector to process data and provides configuration for the plugins themselves. 
 		</simpara>
 		<simpara><filename>startup.xml</filename> profiler example</simpara>
 		<programlisting>
@@ -55,18 +55,23 @@
 	<profiler>
 		<organization id="1">
                     <rule id="1">
+                        <source>127.0.0.1</source>
+                        <odid>5</odid>
                     </rule>
                     <rule id="2">
+                        <source>127.0.0.1</source>
+                        <odid>3</odid>
+                        <dataFilter>ipVersion = 4 and exists tcpControlBits</dataFilter>
                     </rule>
                     <profile id="1">
-                        <filter></filter>
+                        <filter>octetDeltaCount < 0xF</filter>
                     </profile>
                     <profile id="2">
-                        <filter></filter>
+                        <filter>octetDeltaCount > 0xF or sourceTransportPort = 21</filter>
                     </profile>
-                    <profile id="2">
-                        <filter></filter>
-                    </profile>
+                </organization>
+                <organization id="2">
+                    ...
                 </organization>
 	</profiler>
 	]]>
@@ -77,28 +82,53 @@
 				<varlistentry>
 					<term><command>organization</command></term>
 					<listitem>
-						<simpara></simpara>
+						<simpara>Organization structure, ID must be unique (according to other organizations)</simpara>
 					</listitem>
 				</varlistentry>
 	
 				<varlistentry>
 					<term><command>rule</command></term>
 					<listitem>
-						<simpara></simpara>
+						<simpara>Rule specifying whether data record belongs to the organization. ID must be unique within organization</simpara>
+                                                <variablelist>
+                                                    <varlistentry>
+                                                        <term><command>source</command></term>
+                                                        <listitem>
+                                                            <simpara>IPFIX packet source address. Both IPv4 and IPv6 are supported</simpara>
+                                                        </listitem>
+                                                    </varlistentry>
+                                                    
+                                                    <varlistentry>
+                                                        <term><command>odid</command></term>
+                                                        <listitem>
+                                                            <simpara>Packet source Observation Domain ID</simpara>
+                                                        </listitem>
+                                                    </varlistentry>
+                                                    
+                                                    <varlistentry>
+                                                        <term><command>dataFilter</command></term>
+                                                        <listitem>
+                                                            <simpara>Filter applied on data records. It uses the same syntax as <citerefentry><refentrytitle>ipfixcol-filter-inter</refentrytitle><manvolnum>1</manvolnum></citerefentry></simpara>
+                                                        </listitem>
+                                                    </varlistentry>
+                                                    
+                                                </variablelist>
 					</listitem>
 				</varlistentry>
-				
+                                
 				<varlistentry>
 					<term><command>profile</command></term>
 					<listitem>
-						<simpara></simpara>
-					</listitem>
-				</varlistentry>
-	
-				<varlistentry>
-					<term><command>filter</command></term>
-					<listitem>
-						<simpara></simpara>
+						<simpara>Organization profile. ID must be unique within organization</simpara>
+                                                
+                                                <variablelist>
+                                                    <varlistentry>
+                                                            <term><command>filter</command></term>
+                                                            <listitem>
+                                                                    <simpara>Filter applied on data reocrds, specifying whether it belongs to the profile. It uses the same syntax as <citerefentry><refentrytitle>ipfixcol-filter-inter</refentrytitle><manvolnum>1</manvolnum></citerefentry></simpara>
+                                                            </listitem>
+                                                    </varlistentry>
+                                                </variablelist>
 					</listitem>
 				</varlistentry>
 
