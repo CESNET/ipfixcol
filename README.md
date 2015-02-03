@@ -38,7 +38,7 @@ There are also external plugins that are installed separately
 ###<a name="exin"></a> External input plugins
 * **[nfdump](plugins/input/nfdump)** - NFDUMP file reader
 
-###<a name="exmed"</a> External intermediate plugins
+###<a name="exmed"></a> External intermediate plugins
 * **[profiler](plugins/intermediate/profiler)** - fills metadata informations about organizations and profiles
 
 ###<a name="exout"></a> External storage plugins
