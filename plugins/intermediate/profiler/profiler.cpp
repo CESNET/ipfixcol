@@ -250,12 +250,12 @@ void process_records(profiler_conf *conf, struct ipfix_message *msg)
 			conf->oTable.push_back(std::make_pair(sorg, index));
 			
 			/* DEBUG PRINT */
-			std::cout << "[" << i << "] ";
-			std::cout << org->id() << " | " << rule->id() << " |";
-			for (auto prof: profiles) {
-				std::cout << " " << prof->id;
-			}
-			std::cout << "\n";
+//			std::cout << "[" << i << "] ";
+//			std::cout << org->id() << " | " << rule->id() << " |";
+//			for (auto prof: profiles) {
+//				std::cout << " " << prof->id;
+//			}
+//			std::cout << "\n";
 		}
 		
 		/* Insert bookmark into organization table */
@@ -336,20 +336,20 @@ int intermediate_process_message(void* config, void* message)
 	}
 	
 	/* DEBUG PRINT */
-	for (int i = 0; i < msg->data_records_count; ++i) {
-		std::cout << "[[" << i << "]] ";
-		for (int ondex = 0; msg->metadata[i].organizations[ondex]; ++ondex) {
-			organization *sorg = msg->metadata[i].organizations[ondex];
-			std::cout << sorg->id << " | " << sorg->rule << " |";
-			
-			for (int p = 0; sorg->profiles[p]; ++p) {
-				std::cout << " " << *(sorg->profiles[p]);
-			}
-			
-			std::cout << " || ";
-		}
-		std::cout << "\n";
-	}
+//	for (int i = 0; i < msg->data_records_count; ++i) {
+//		std::cout << "[[" << i << "]] ";
+//		for (int ondex = 0; msg->metadata[i].organizations[ondex]; ++ondex) {
+//			organization *sorg = msg->metadata[i].organizations[ondex];
+//			std::cout << sorg->id << " | " << sorg->rule << " |";
+//			
+//			for (int p = 0; sorg->profiles[p]; ++p) {
+//				std::cout << " " << *(sorg->profiles[p]);
+//			}
+//			
+//			std::cout << " || ";
+//		}
+//		std::cout << "\n";
+//	}
 	
 	pass_message(conf->ip_config, msg);
 	return 0;
