@@ -169,7 +169,8 @@ void TableManager::aggregate(columnVector aggregateColumns, columnVector summary
 				/* check that parts have same column types for aggregate columns and issue a warning if not */
 				/* go over aggregate columns and check the types */ /* TODO check that this is not needed for summary columns */
 				for (stringSet::const_iterator strIter = (*outerIter).begin(); strIter != (*outerIter).end(); strIter++) {
-					int pos1 = -1, pos2 = -1; /* the column with given name always exists, no need to check for -1 value */
+					int pos1 = -1, pos2 = -1;
+
 					/* find index of the column in both parts */
 					for (unsigned int i = 0; i< parts.at(iterPos)->columnTypes().size(); i++) {
 						if (*strIter == parts.at(iterPos)->columnNames()[i]) {
@@ -183,6 +184,16 @@ void TableManager::aggregate(columnVector aggregateColumns, columnVector summary
 							break;
 						}
 					}
+
+					/*
+					   The columns with given name always exist, so there is no real need to check for '-1' value.
+					   This is merely done to avoid programming errors.
+					*/
+					if (pos1 < 0 || pos2 < 0) {
+						std::cerr << "Error: an unexpected error occurred while verifying data types!" << std::endl;
+						break;
+					}
+
 					/* test that data types are same */
 					if (parts.at(iterPos)->columnTypes()[pos1] != parts.at(curPos)->columnTypes()[pos2]) {
 						std::cerr << "Warning: column '" << *strIter << "' has different data types in different parts! ("
@@ -331,7 +342,7 @@ uint64_t TableManager::getInitRows() const
 	return ret;
 }
 
-TableManager::TableManager(Configuration &conf): conf(conf), tableSummary(NULL)
+TableManager::TableManager(Configuration &conf): conf(conf), orderAsc(false), tableSummary(NULL)
 {
 	std::string tmp;
 	ibis::part *part;

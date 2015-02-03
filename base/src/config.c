@@ -193,7 +193,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	        config_ctxt = NULL, exporter_ctxt = NULL;
 	xmlXPathObjectPtr xpath_obj_expprocnames = NULL, xpath_obj_expproc = NULL,
 	        xpath_obj_destinations = NULL, xpath_obj_plugin_desc = NULL;
-	xmlChar *file_format, *file_format_inter, *plugin_file, *odid, *thread_name;
+	xmlChar *file_format = (xmlChar *) "", *file_format_inter, *plugin_file, *odid, *thread_name;
 	struct plugin_xml_conf_list* plugins = NULL, *aux_plugin = NULL;
 	char *odidptr;
 
@@ -204,11 +204,9 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 
 	/* get the list of supported storage plugins description (including supported file formats) */
 	xpath_obj_plugin_desc = xmlXPathEvalExpression (BAD_CAST "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:storagePlugin", internal_ctxt);
-	if (xpath_obj_plugin_desc != NULL) {
-		if (xmlXPathNodeSetIsEmpty (xpath_obj_plugin_desc->nodesetval)) {
-			MSG_ERROR(msg_module, "No list of supported Storage formats found in internal configuration!");
-			goto cleanup;
-		}
+	if (xpath_obj_plugin_desc == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_plugin_desc->nodesetval)) {
+		MSG_ERROR(msg_module, "No list of supported Storage formats found in internal configuration!");
+		goto cleanup;
 	}
 
 	/* get all <exportingProcess>s from the collector node */
@@ -229,11 +227,9 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 
 	/* search for <exportingProcess>s nodes defining exporters (including fileWriters) */
 	xpath_obj_expprocnames = xmlXPathEvalExpression (BAD_CAST "/ietf-ipfix:collectingProcess/ietf-ipfix:exportingProcess", collector_ctxt);
-	if (xpath_obj_expprocnames != NULL) {
-		if (xmlXPathNodeSetIsEmpty (xpath_obj_expprocnames->nodesetval)) {
-			MSG_ERROR(msg_module, "No exportingProcess defined in the collectingProcess!");
-			goto cleanup;
-		}
+	if (xpath_obj_expprocnames == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_expprocnames->nodesetval)) {
+		MSG_ERROR(msg_module, "No exportingProcess defined in the collectingProcess!");
+		goto cleanup;
 	}
 
 	/* create xpath evaluation context of user configuration */
@@ -251,11 +247,9 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	/* now look for <exportingProcess> definition with name(s) specified in <collectingProcess> */
 	/* first, get all <exportingProcess>es */
 	xpath_obj_expproc = xmlXPathEvalExpression (BAD_CAST "/ietf-ipfix:ipfix/ietf-ipfix:exportingProcess", config_ctxt);
-	if (xpath_obj_expproc != NULL) {
-		if (xmlXPathNodeSetIsEmpty (xpath_obj_expproc->nodesetval)) {
-			MSG_ERROR(msg_module, "No exporting process defined in user configuration!");
-			goto cleanup;
-		}
+	if (xpath_obj_expproc == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_expproc->nodesetval)) {
+		MSG_ERROR(msg_module, "No exporting process defined in user configuration!");
+		goto cleanup;
 	}
 	/* and then check them for searching names */
 	for (i = 0; i < xpath_obj_expprocnames->nodesetval->nodeNr; i++) {
@@ -287,16 +281,15 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 
 						/* search for <destination> nodes defining ipfixcol's storage plugins */
 						xpath_obj_destinations = xmlXPathEvalExpression (BAD_CAST "/ietf-ipfix:exportingProcess/ietf-ipfix:destination", exporter_ctxt);
-						if (xpath_obj_destinations != NULL) {
-							if (xmlXPathNodeSetIsEmpty (xpath_obj_destinations->nodesetval)) {
-								/* no fileWriter found, continue with another exportingProcess */
-								goto loop_cleanup;
-							}
+						if (xpath_obj_destinations == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_destinations->nodesetval)) {
+							/* no fileWriter found, continue with another exportingProcess */
+							goto loop_cleanup;
 						}
 
 						/* now we have a <fileWriter> node with description of storage plugin */
 						/* but first we have to check that we support this storage plugin type (according to fileFormat) */
 						for (k = 0; k < xpath_obj_destinations->nodesetval->nodeNr; k++) {
+							plugin_file = NULL;
 							node_filewriter = get_children(xpath_obj_destinations->nodesetval->nodeTab[k], BAD_CAST "fileWriter");
 							if (node_filewriter == NULL) {
 								/* try next <destination> node */
@@ -332,16 +325,16 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 										strtol((char*) odid, &odidptr, 10);
 										if (*odidptr == '\0') {
 											aux_plugin->config.observation_domain_id = (char*) malloc (sizeof(char) * (xmlStrlen (odid) + 1));
-											strncpy (aux_plugin->config.observation_domain_id, (char*) odid, xmlStrlen (odid) + 1);
+											strncpy_safe(aux_plugin->config.observation_domain_id, (char*) odid, xmlStrlen (odid) + 1);
 										} else {
 											MSG_WARNING(msg_module, "observationDomainId element '%s' not valid. Ignoring...", (char*) odid);
 										}
 									}
 									aux_plugin->config.file = (char*) malloc (sizeof(char) * (xmlStrlen (plugin_file) + 1));
-									strncpy (aux_plugin->config.file, (char*) plugin_file, xmlStrlen (plugin_file) + 1);
+									strncpy_safe(aux_plugin->config.file, (char*) plugin_file, xmlStrlen (plugin_file) + 1);
 									/* copy thread name to prepared string */
 									if (thread_name != NULL) {
-										strncpy (aux_plugin->config.name, (char*) thread_name, 16);
+										strncpy_safe(aux_plugin->config.name, (char*) thread_name, 16);
 									}
 									aux_plugin->config.xmldata = xmlNewDoc (BAD_CAST "1.0");
 									xmlDocSetRootElement (aux_plugin->config.xmldata, xmlCopyNode (node_filewriter, 1));
@@ -349,6 +342,10 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 									aux_plugin->next = plugins;
 									plugins = aux_plugin;
 								}
+							}
+
+							if (plugin_file == NULL) {
+								MSG_ERROR(msg_module, "Unable to load storage plugin; specification for fileFormat '%s' could not be found", (char *) file_format);
 							}
 						}
 						/* break while loop to get to another exportingProcess */
@@ -453,13 +450,11 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char 
 	 * collector information from the user configuration file
 	 */
 	xpath_obj_suppcolls = xmlXPathEvalExpression (BAD_CAST "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:supportedCollectors/cesnet-ipfixcol-int:name", internal_ctxt);
-	if (xpath_obj_suppcolls != NULL) {
-		if (xmlXPathNodeSetIsEmpty (xpath_obj_suppcolls->nodesetval)) {
-			MSG_ERROR(msg_module, "No list of supportedCollectors found in internal configuration!");
-			free (retval);
-			retval = NULL;
-			goto cleanup;
-		}
+	if (xpath_obj_suppcolls == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_suppcolls->nodesetval)) {
+		MSG_ERROR(msg_module, "No list of supportedCollectors found in internal configuration!");
+		free (retval);
+		retval = NULL;
+		goto cleanup;
 	}
 
 	/* get paths to libraries implementing plugins from internal configuration */
@@ -491,13 +486,11 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char 
 
 	/* first get list of inputPlugin nodes in internal configuration file */
 	xpath_obj_file = xmlXPathEvalExpression (BAD_CAST "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:inputPlugin", internal_ctxt);
-	if (xpath_obj_file != NULL) {
-		if (xmlXPathNodeSetIsEmpty (xpath_obj_file->nodesetval)) {
-			MSG_ERROR(msg_module, "No inputPlugin definition found in internal configuration!");
-			free (retval);
-			retval = NULL;
-			goto cleanup;
-		}
+	if (xpath_obj_file == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_file->nodesetval)) {
+		MSG_ERROR(msg_module, "No inputPlugin definition found in internal configuration!");
+		free (retval);
+		retval = NULL;
+		goto cleanup;
 	}
 	/* and now select the one with required name element */
 	for (i = 0; i < xpath_obj_file->nodesetval->nodeNr; i++) {
@@ -508,7 +501,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char 
 				/* find the processName of specified inputPlugin in internalcfg.xml */
 				while (children3) {
 					if (!xmlStrncmp (children3->name, BAD_CAST "processName", strlen ("processName") + 1)) {
-						strncpy(retval->config.name, (char*) children3->children->content, 16);
+						strncpy_safe(retval->config.name, (char*) children3->children->content, 16);
 					}
 					children3 = children3->next;
 				}
@@ -516,7 +509,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char 
 				while (children2) {
 					if (!xmlStrncmp (children2->name, BAD_CAST "file", strlen ("file") + 1)) {
 						retval->config.file = (char*) malloc (sizeof(char) * (strlen ((char*) children2->children->content) + 1));
-						strncpy (retval->config.file, (char*) children2->children->content, strlen ((char*) children2->children->content) + 1);
+						strncpy_safe(retval->config.file, (char*) children2->children->content, strlen ((char*) children2->children->content) + 1);
 						goto found_input_plugin_file;
 					}
 					children2 = children2->next;
@@ -528,7 +521,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char 
 
 found_input_plugin_file:
 	if (retval->config.file == NULL) {
-		MSG_ERROR(msg_module, "No definition for collector found.");
+		MSG_ERROR(msg_module, "Unable to load input plugin; specification for '%s' could not be found", collector_name);
 		free (retval);
 		retval = NULL;
 	}
@@ -584,11 +577,9 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 
 	/* get the list of supported intermediate plugins description from internal config */
 	xpath_obj_ipinter = xmlXPathEvalExpression(BAD_CAST "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:intermediatePlugin", internal_ctxt);
-	if (xpath_obj_ipinter != NULL) {
-		if (xmlXPathNodeSetIsEmpty (xpath_obj_ipinter->nodesetval)) {
-			MSG_ERROR(msg_module, "No list of supported Intermediate formats found in internal configuration!");
-			goto cleanup;
-		}
+	if (xpath_obj_ipinter == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_ipinter->nodesetval)) {
+		MSG_ERROR(msg_module, "No list of supported Intermediate formats found in internal configuration!");
+		goto cleanup;
 	}
 
 	/* create xpath evaluation context of user configuration */
@@ -605,21 +596,24 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 
 	/* look for <ipfixmedCore> */
 	xpath_obj_core = xmlXPathEvalExpression(BAD_CAST "/ietf-ipfix:ipfix/ietf-ipfix:intermediatePlugins", config_ctxt);
-	if (xpath_obj_core != NULL) {
-		if (xmlXPathNodeSetIsEmpty(xpath_obj_core->nodesetval)) {
-			MSG_NOTICE(msg_module, "No intermediate plugin set in user configuration!");
-			goto cleanup;
-		}
+	if (xpath_obj_core == NULL || xmlXPathNodeSetIsEmpty(xpath_obj_core->nodesetval)) {
+		MSG_NOTICE(msg_module, "No intermediate plugin set in user configuration!");
+		goto cleanup;
 	}
-
 
 	node = xpath_obj_core->nodesetval->nodeTab[0]->children;
 
+	/* Loop over all nodes and skip comments */
 	while (node != NULL) {
+		/* Skip processing this node in case it's a comment */
+		if (node->type == XML_COMMENT_NODE) {
+			node = node->next;
+			continue;
+		}
+
 		plugin_file = NULL;
 		xmldata = NULL;
 		thread_name = NULL;
-
 		hit = 0;
 
 		/* find internal configuration for this Intermediate plugin */
@@ -631,6 +625,7 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 					(!xmlStrncmp(plugin_config_internal->children->content, node->name, xmlStrlen(node->name)))) {
 					hit = 1;
 				}
+
 				if (!xmlStrncmp(plugin_config_internal->name, BAD_CAST "file", strlen("file") + 1)) {
 					plugin_file = xmlNodeListGetString(plugin_config_internal->doc, plugin_config_internal->children, 1);
 				}
@@ -638,6 +633,7 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 				if (!xmlStrncmp(plugin_config_internal->name, BAD_CAST "threadName", strlen("threadName") + 1)) {
 					thread_name = xmlNodeListGetString(plugin_config_internal->doc, plugin_config_internal->children, 1);
 				}
+
 				plugin_config_internal = plugin_config_internal->next;
 			}
 
@@ -652,6 +648,7 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 		}
 
 		if (!plugin_file) {
+			MSG_ERROR(msg_module, "Unable to load intermediate plugin; specification for '%s' could not be found", (char *) node->name);
 			node = node->next;
 			continue;
 		}
@@ -676,10 +673,10 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 
 		aux_plugin->config.file = (char *) plugin_file;
 		if (thread_name) {
-			strncpy(aux_plugin->config.name, (char*) thread_name, 16);
+			strncpy_safe(aux_plugin->config.name, (char*) thread_name, 16);
 			xmlFree(thread_name);
 		} else {
-			strncpy(aux_plugin->config.name, (char *) node->name, 16);
+			strncpy_safe(aux_plugin->config.name, (char *) node->name, 16);
 		}
 
 		aux_plugin->config.xmldata = xmldata;
@@ -693,8 +690,6 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 		last_plugin = aux_plugin;
 		node = node->next;
 	}
-
-
 
 	/* inform that everything was done but no valid plugin has been found */
 	if (plugins == NULL) {

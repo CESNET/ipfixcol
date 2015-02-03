@@ -90,6 +90,7 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 		free (retval->data_references);
 		free (retval->data);
 		free (retval);
+		return (NULL);
 	}
 
 	if (pthread_cond_init (&(retval->cond), NULL) != 0) {
@@ -188,6 +189,11 @@ struct ipfix_message* rbuffer_read (struct ring_buffer* rbuffer, unsigned int *i
 	while (rbuffer->write_offset == *index) {
 		if (pthread_cond_wait (&(rbuffer->cond), &(rbuffer->mutex)) != 0) {
 			MSG_ERROR(msg_module, "Condition wait failed (%s:%d)", __FILE__, __LINE__);
+
+			if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
+				MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
+			}
+
 			return (NULL);
 		}
 	}
@@ -248,10 +254,50 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
 					}
 
 					/* Decrement reference on templates */
-					for (i = 0; i < 1024 && rbuffer->data[rbuffer->read_offset]->data_couple[i].data_set != NULL; ++i) {
-						if (rbuffer->data[rbuffer->read_offset]->data_couple[i].data_template != NULL) {
+					for (i = 0; i < MSG_MAX_DATA_COUPLES && rbuffer->data[rbuffer->read_offset]->data_couple[i].data_set; ++i) {
+						if (rbuffer->data[rbuffer->read_offset]->data_couple[i].data_template) {
 							tm_template_reference_dec(rbuffer->data[rbuffer->read_offset]->data_couple[i].data_template);
 						}
+					}
+					
+					if (rbuffer->data[rbuffer->read_offset]->metadata) {
+						struct organization **orgTable = NULL;
+						uint16_t **profTable = NULL;
+						struct metadata *mdata;
+						
+						/* Free organizations */
+						for (int i = 0; i < rbuffer->data[rbuffer->read_offset]->data_records_count; ++i) {
+							mdata = &(rbuffer->data[rbuffer->read_offset]->metadata[i]);
+							
+							/* Get beginning of organizations table */
+							if (!orgTable) {
+								orgTable = mdata->organizations;
+							}
+							
+							/* Free organizations */
+							if (mdata->organizations) {
+								for (int org = 0; mdata->organizations[org]; ++org) {
+									/* Get beginning of profiles table */
+									if (!profTable) {
+										profTable = mdata->organizations[org]->profiles;
+									}
+									
+									free(mdata->organizations[org]);
+								}
+							}
+						}
+						
+						/* Free profiles table */
+						if (profTable) {
+							free(profTable);
+						}
+						
+						/* Free organizations table */
+						if (orgTable) {
+							free(orgTable);
+						}
+						
+						free (rbuffer->data[rbuffer->read_offset]->metadata);
 					}
 					
 					free (rbuffer->data[rbuffer->read_offset]);
@@ -265,6 +311,11 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
 			if (rbuffer->count == 0) {
 				if (pthread_cond_signal (&(rbuffer->cond_empty)) != 0) {
 					MSG_ERROR(msg_module, "Condition signal failed (%s:%d)", __FILE__, __LINE__);
+
+					if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
+						MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
+					}
+
 					return (EXIT_FAILURE);
 				}
 			}

@@ -225,7 +225,7 @@ const std::string Printer::printValue(const Column *col, const Cursor *cur) cons
 
 /* copy output stream and format */
 Printer::Printer(std::ostream &out, Configuration &conf):
-		out(out), conf(conf), percentageWidth(8)
+		out(out), conf(conf), tableManager(NULL), percentageWidth(8)
 {}
 
 

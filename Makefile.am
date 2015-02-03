@@ -8,6 +8,7 @@ SUBDIRS = base \
 	tools/fbitmerge \
 	tools/fbitexpire \
 	plugins/storage/fastbit \
+	plugins/storage/fastbit_compression \
 	plugins/storage/postgres \
 	plugins/storage/unirec \
 	plugins/storage/json \

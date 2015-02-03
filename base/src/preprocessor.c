@@ -46,6 +46,7 @@
 #include "data_manager.h"
 #include "queues.h"
 #include <ipfixcol.h>
+#include <ipfixcol/ipfix_message.h>
 #include "crc.h"
 
 /** Identifier to MSG_* macros */
@@ -94,7 +95,7 @@ struct odid_info *odid_info_add(uint32_t odid)
 
 	aux_info = calloc(1, sizeof(struct odid_info));
 	if (!aux_info) {
-		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		return NULL;
 	}
 	aux_info->odid = odid;
@@ -240,20 +241,19 @@ uint32_t preprocessor_compute_crc(struct input_info *input_info)
 	
 	struct input_info_network *input = (struct input_info_network *) input_info;
 
-	char buff[35];
-	uint8_t size;
+	char buff[INET6_ADDRSTRLEN + 5 + 1]; // 5: port; 1: null
 	if (input->l3_proto == 6) { /* IPv6 */
-		memcpy(buff, &(input->src_addr.ipv6.__in6_u.__u6_addr8), 32);
-		size = 34;
+		inet_ntop(AF_INET6, &(input->src_addr.ipv6.s6_addr), buff, INET6_ADDRSTRLEN);
 	} else { /* IPv4 */
-		memcpy(buff, &(input->src_addr.ipv4.s_addr), 8);
-		size = 10;
+		inet_ntop(AF_INET, &(input->src_addr.ipv4.s_addr), buff, INET_ADDRSTRLEN);
 	}
-	memcpy(buff + size - 2, &(input->src_port), 2);
-	buff[size] = '\0';
 
-	return crc32(buff, size);
+	uint8_t ip_addr_len = strlen(buff);
+	snprintf(buff + ip_addr_len, 5 + 1, "%u", input->src_port);
+
+	return crc32(buff, strlen(buff));
 }
+
 /**
  * \brief Fill in udp_info structure when managing UDP input
  *
@@ -374,6 +374,45 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 	return template->template_length - sizeof(struct ipfix_template) + sizeof(struct ipfix_options_template_record);
 }
 
+static int mdata_max = 0;
+
+void fill_metadata(uint8_t *rec, int rec_len, struct ipfix_template *templ, void *data)
+{
+	struct ipfix_message *msg = (struct ipfix_message *) data;
+	
+	/* Allocate space for metadata */
+	if (mdata_max == 0) {
+		mdata_max = 75;
+		msg->metadata = malloc(mdata_max * sizeof(struct metadata));
+		if (!msg->metadata) {
+			MSG_ERROR(msg_module, "Cannot allocate space for metadata, not enought memory (%s:%d)", __FILE__, __LINE__);
+			mdata_max = 0;
+			return;
+		}
+	}
+	
+	/* Need more space */
+	if (msg->data_records_count == mdata_max) {
+		void *new_mdata = realloc(msg->metadata, mdata_max * 2 * sizeof(struct metadata));
+		
+		if (!new_mdata) {
+			MSG_ERROR(msg_module, "Cannot allocate space for metadata, not enought memory (%s:%d)", __FILE__, __LINE__);
+			return;
+		}
+		
+		msg->metadata = new_mdata;
+		mdata_max *= 2;
+	}
+	
+	/* Fill metadata */
+	msg->metadata[msg->data_records_count].record.record = rec;
+	msg->metadata[msg->data_records_count].record.length = rec_len;
+	msg->metadata[msg->data_records_count].record.templ = templ;
+	msg->metadata[msg->data_records_count].organizations = NULL;
+	
+	msg->data_records_count++;
+}
+
 /**
  * \brief Process templates
  *
@@ -409,7 +448,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
 	preprocessor_udp_init((struct input_info_network *) msg->input_info, &udp_conf);
 
 	/* check for new templates */
-	for (i=0; msg->templ_set[i] != NULL && i<1024; i++) {
+	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; i++) {
 		ptr = (uint8_t*) &msg->templ_set[i]->first_record;
 		while (ptr < (uint8_t*) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) {
 			max_len = ((uint8_t *) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) - ptr;
@@ -424,7 +463,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
 	}
 
 	/* check for new option templates */
-	for (i=0; msg->opt_templ_set[i] != NULL && i<1024; i++) {
+	for (i = 0; i < MSG_MAX_OTEMPLATES && msg->opt_templ_set[i]; i++) {
 		ptr = (uint8_t*) &msg->opt_templ_set[i]->first_record;
 		max_len = ((uint8_t *) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) - ptr;
 		while (ptr < (uint8_t*) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) {
@@ -437,9 +476,9 @@ static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
 			}
 		}
 	}
-
+	mdata_max = 0;
 	/* add template to message data_couples */
-	for (i=0; msg->data_couple[i].data_set != NULL && i<1023; i++) {
+	for (i = 0; i < MSG_MAX_DATA_COUPLES && msg->data_couple[i].data_set; i++) {
 		key.tid = ntohs(msg->data_couple[i].data_set->header.flowset_id);
 		msg->data_couple[i].data_template = tm_get_template(template_mgr, &key);
 		if (msg->data_couple[i].data_template == NULL) {
@@ -459,15 +498,24 @@ static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
 				                                               msg->data_couple[i].data_template->template_id);
 			}
 
-			/* compute sequence number */
-			records_count += data_set_records_count(msg->data_couple[i].data_set, msg->data_couple[i].data_template);
+			/* compute sequence number and fill metadata */
+			records_count += data_set_process_records(msg->data_couple[i].data_set, msg->data_couple[i].data_template, fill_metadata, msg);
 		}
 	}
 
-	msg->data_records_count = records_count;
-
+	/*
+	 * FILL METADATA, two options:
+	 * a) fill metadata AFTER counting data records
+	 *		+ allocate whole array at once
+	 *		- data sets and data records are accesed twice (data_set_records_count and data_set_process_records)
+	 * 
+	 * b) fill metadata WHILE counting data records (using now) (replace data_set_records_count with data_set_process_records and add callback)
+	 *		+ one acces to data sets
+	 *		- needs reallocation
+	 */
+	
 	/* return number of data records */
-	return records_count;
+	return msg->data_records_count;
 }
 
 /**
@@ -490,15 +538,19 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		msg->source_status = source_status;
 		odid_info_remove_source(input_info->odid);
 	} else {
-		if (packet == NULL) {
-			MSG_WARNING(msg_module, "[%u] Received empty packet", input_info->odid);
+		if (input_info == NULL) {
+			MSG_WARNING(msg_module, "Invalid parameters in function preprocessor_parse_msg()");
+
+			if (packet) {
+				free(packet);
+			}
+			
+			packet = NULL;
 			return;
 		}
 
-		if (!input_info) {
-			MSG_WARNING(msg_module, "[%u] Invalid parameters in function preprocessor_parse_msg().", input_info->odid);
-			free(packet);
-			packet = NULL;
+		if (packet == NULL) {
+			MSG_WARNING(msg_module, "[%u] Received empty packet", input_info->odid);
 			return;
 		}
 
@@ -534,7 +586,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		*seqn += msg->data_records_count;
 	}
 
-    /* Send data to the first intermediate plugin */
+	/* Send data to the first intermediate plugin */
 	if (rbuffer_write(preprocessor_out_queue, msg, 1) != 0) {
 		MSG_WARNING(msg_module, "[%u] Unable to write into Data manager's input queue, skipping data.", input_info->odid);
 		message_free(msg);

@@ -51,15 +51,16 @@ extern "C" {
 
 static const char *msg_module = "json_storage";
 
-#define IPV6_LEN 16
-#define MAC_LEN  6
-
 #define READ_BYTE_ARR(_dst_, _src_, _len_) \
 do {\
 	for (int i = 0; i < (_len_); ++i) { \
 		(_dst_)[i] = read8((_src_) + i); \
 	} \
 } while(0)
+
+#define QUOTED(_str_) "\"" + (_str_) + "\""
+
+std::map<uint32_t, std::map<uint16_t, struct ipfix_element> > Storage::elements{};
 
 /**
  * \brief Constructor
@@ -117,20 +118,11 @@ void Storage::loadElements()
 }
 
 /**
- * \brief Send data
+ * \brief Send data record
  */
-void Storage::sendData()
+void Storage::sendData() const
 {
-	/* Serialize data */
-	std::string serialized = json::Serialize(jData) + "\n";
-	if (serialized.empty()) {
-		/* TODO: is this error or not? */
-		MSG_WARNING(msg_module, "Empty serialized data");
-		return;
-	}
-	
-	/* Send data */
-	if (siso_send(sender, serialized.c_str(), serialized.length()) != SISO_OK) {
+	if (siso_send(sender, record.c_str(), record.length()) != SISO_OK) {
 		throw std::runtime_error(std::string("Sending data: ") + siso_get_last_err(sender));
 	}
 }
@@ -170,7 +162,7 @@ void Storage::storeDataSets(const ipfix_message* ipfix_msg)
 /**
  * \brief Get real field length
  */
-uint16_t Storage::realLength(uint16_t length, uint8_t *data_record, uint16_t &offset)
+uint16_t Storage::realLength(uint16_t length, uint8_t *data_record, uint16_t &offset) const
 {
 	/* Static length */
 	if (length != 65535) {
@@ -192,7 +184,7 @@ uint16_t Storage::realLength(uint16_t length, uint8_t *data_record, uint16_t &of
 /**
  * \brief Read string field
  */
-std::string Storage::readString(uint16_t& length, uint8_t *data_record, uint16_t &offset)
+std::string Storage::readString(uint16_t& length, uint8_t *data_record, uint16_t &offset) const
 {
 	/* Get string length */
 	length = this->realLength(length, data_record, offset);
@@ -204,10 +196,10 @@ std::string Storage::readString(uint16_t& length, uint8_t *data_record, uint16_t
 /**
  * \brief Read raw data from record
  */
-std::string Storage::readRawData(uint16_t &length, uint8_t* data_record, uint16_t &offset)
+std::string Storage::readRawData(uint16_t &length, uint8_t* data_record, uint16_t &offset) const
 {
 	/* Read raw value */
-	std::stringstream ss;
+	std::ostringstream ss;
 
 	switch (length) {
 	case (1):
@@ -238,18 +230,9 @@ std::string Storage::readRawData(uint16_t &length, uint8_t* data_record, uint16_
  */
 std::string Storage::rawName(uint32_t en, uint16_t id) const
 {
-	std::stringstream ss;
+	std::ostringstream ss;
 	ss << "e" << en << "id" << id;
 	return ss.str();
-}
-
-/**
- * \brief Initialize JSON record
- */
-void Storage::initRecord()
-{
-	jData.Clear();
-	jData["@type"] = "ipfix.entry";
 }
 
 /**
@@ -257,15 +240,15 @@ void Storage::initRecord()
  */
 uint16_t Storage::storeDataRecord(uint8_t *data_record, ipfix_template *templ)
 {
-	uint16_t offset = 0;
-	json::Object jRecord;
+	offset = 0;
+	record = "{\"@type\": \"ipfix.entry\", \"ipfix\": {";
 	
 	/* get all fields */
 	for (uint16_t count = 0, index = 0; count < templ->field_count; ++count, ++index) {
 		/* Get Enterprise number and ID */
-		uint16_t id = templ->fields[index].ie.id;
-		uint16_t length = templ->fields[index].ie.length;
-		uint32_t enterprise = 0;
+		id = templ->fields[index].ie.id;
+		length = templ->fields[index].ie.length;
+		enterprise = 0;
 		
 		if (id & 0x8000) {
 			id &= 0x7fff;
@@ -274,7 +257,6 @@ uint16_t Storage::storeDataRecord(uint8_t *data_record, ipfix_template *templ)
 		
 		/* Get element informations */
 		struct ipfix_element element = this->getElement(enterprise, id);
-		std::string value{};
 		
 		switch (element.type) {
 		case PROTOCOL:
@@ -287,14 +269,12 @@ uint16_t Storage::storeDataRecord(uint8_t *data_record, ipfix_template *templ)
 			value = translator.formatIPv4(read32(data_record + offset));
 			break;
 		case IPV6:{
-			uint8_t addr[IPV6_LEN];
-			READ_BYTE_ARR(addr, data_record + offset, IPV6_LEN);
-			value = translator.formatIPv6(addr);
+			READ_BYTE_ARR(addr6, data_record + offset, IPV6_LEN);
+			value = translator.formatIPv6(addr6);
 			break;}
 		case MAC: {
-			uint8_t addr[MAC_LEN];
-			READ_BYTE_ARR(addr, data_record + offset, MAC_LEN);
-			value = translator.formatMac(addr);
+			READ_BYTE_ARR(addrMac, data_record + offset, MAC_LEN);
+			value = translator.formatMac(addrMac);
 			break;}
 		case TSTAMP_SEC:
 			value = translator.formatTimestamp(read64(data_record + offset), t_units::SEC);
@@ -321,15 +301,17 @@ uint16_t Storage::storeDataRecord(uint8_t *data_record, ipfix_template *templ)
 			break;
 		}
 		
-		offset += length;
+		if (count > 0) {
+			record += ", ";
+		}
 		
-		jRecord[element.name] = value;
+		record += QUOTED(element.name) + ": " + QUOTED(value);
+		
+		offset += length;
 	}
 	
-	initRecord();
-	jData["ipfix"] = jRecord;
+	record += "}}\n";
 	sendData();
-	
 	
 	return offset;
 }

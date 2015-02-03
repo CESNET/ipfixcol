@@ -132,6 +132,8 @@ void loadDirsTree(std::string basedir, std::string first, std::string last, stri
 void loadDirRange(std::string &basedir, std::string &firstDir, std::string &lastDir, stringVector &tables)
 	throw (std::invalid_argument);
 
+char *strncpy_safe (char *destination, const char *source, size_t num);
+
 } /* end of namespace utils */
 
 }  /* end of namespace fbitdump */

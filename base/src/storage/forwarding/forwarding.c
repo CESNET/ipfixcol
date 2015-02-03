@@ -261,7 +261,7 @@ struct forwarding_template_record *forwarding_add_record(forwarding *conf, struc
 		conf->records_max += 32;
 		conf->records = realloc(conf->records, conf->records_max * sizeof(struct forwarding_template_record *));
 		if (conf->records == NULL) {
-			MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 			return NULL;
 		}
 		/* Initialize new pointers */
@@ -275,7 +275,7 @@ struct forwarding_template_record *forwarding_add_record(forwarding *conf, struc
 		if (conf->records[i] == NULL) {
 			conf->records[i] = calloc(1, sizeof(struct forwarding_template_record));
 			if (conf->records[i] == NULL) {
-				MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
+				MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 				return NULL;
 			}
 			conf->records[i]->record = record;
@@ -446,9 +446,9 @@ int storage_init(char *params, void **config)
 
 	doc = xmlParseDoc(BAD_CAST params);
 	if (!doc) {
-        MSG_ERROR(msg_module, "Cannot parse config xml!");
-        free(conf);
-        return -1;
+		MSG_ERROR(msg_module, "Cannot parse config xml!");
+		free(conf);
+		return -1;
 	}
 
 	root = xmlDocGetRootElement(doc);
@@ -516,8 +516,7 @@ int store_now(const void *config)
  */
 void *msg_to_packet(const struct ipfix_message *msg, int *packet_length)
 {
-	struct ipfix_set_header *aux_header;
-	int i, c, len, offset = 0;
+	int i, len, offset = 0;
 
 	*packet_length = ntohs(msg->pkt_header->length);
 	void *packet = calloc(1, *packet_length);
@@ -531,32 +530,23 @@ void *msg_to_packet(const struct ipfix_message *msg, int *packet_length)
 	offset += IPFIX_HEADER_LENGTH;
 
 	/* Copy template sets */
-	for (i = 0; msg->templ_set[i] != NULL && i < 1024; ++i) {
-		aux_header = &(msg->templ_set[i]->header);
-		len = ntohs(aux_header->length);
-		for (c = 0; c < len; c += 4) {
-			memcpy(packet + offset + c, aux_header, 4);
-			aux_header++;
-		}
+	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; ++i) {
+		len = ntohs(msg->templ_set[i]->header.length);
+		memcpy(packet + offset, msg->templ_set[i], len);
 		offset += len;
 	}
 
-	/* Copy template sets */
-	for (i = 0; msg->opt_templ_set[i] != NULL && i < 1024; ++i) {
-		aux_header = &(msg->opt_templ_set[i]->header);
-		len = ntohs(aux_header->length);
-		for (c = 0; c < len; c += 4) {
-			memcpy(packet + offset + c, aux_header, 4);
-			aux_header++;
-		}
+	/* Copy option template sets */
+	for (i = 0; i < MSG_MAX_OTEMPLATES && msg->opt_templ_set[i]; ++i) {
+		len = ntohs(msg->opt_templ_set[i]->header.length);
+		memcpy(packet + offset, msg->opt_templ_set[i], len);
 		offset += len;
 	}
 
 	/* Copy data sets */
-	for (i = 0; msg->data_couple[i].data_set != NULL && i < 1024; ++i) {
+	for (i = 0; i < MSG_MAX_DATA_COUPLES && msg->data_couple[i].data_set; ++i) {
 		len = ntohs(msg->data_couple[i].data_set->header.length);
-		memcpy(packet + offset,   &(msg->data_couple[i].data_set->header), 4);
-		memcpy(packet + offset + 4, msg->data_couple[i].data_set->records, len - 4);
+		memcpy(packet + offset, msg->data_couple[i].data_set, len);
 		offset += len;
 	}
 
@@ -698,7 +688,7 @@ int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, 
 	/* Store new record */
 	struct ipfix_template_record *stored = calloc(1, len);
 	if (!stored) {
-		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		return 0;
 	}
 
@@ -717,13 +707,13 @@ int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, 
 void forwarding_remove_empty_sets(struct ipfix_message *msg)
 {
 	int i, j, len;
-	for (i = 0, j = 0; msg->templ_set[i] != NULL && i < 1024; ++i) {
+	for (i = 0, j = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; ++i) {
 		len = ntohs(msg->templ_set[i]->header.length);
 		if (len <= 4) {
 			/* Set correct message length */
 			msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) - len);
 			/* Shift all template sets behind this (there must not be hole) */
-			for (j = i; msg->templ_set[j]; ++j) {
+			for (j = i; j < MSG_MAX_TEMPLATES - 1 && msg->templ_set[j]; ++j) {
 				msg->templ_set[j] = msg->templ_set[j + 1];
 			}
 		}
@@ -768,7 +758,7 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 
 	/* Copy unsent templates to new message */
 	proc.type = TM_TEMPLATE;
-	for (i = 0; msg->templ_set[i] != NULL && i < 1024; ++i) {
+	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i] != NULL; ++i) {
 		prevo = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->templ_set[i]->header), 4);
 		proc.offset += 4;
@@ -786,7 +776,7 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 
 	/* Copy unsent option templates to new message */
 	proc.type = TM_OPTIONS_TEMPLATE;
-	for (i = 0; msg->opt_templ_set[i] != NULL && i < 1024; ++i) {
+	for (i = 0; i < MSG_MAX_OTEMPLATES && msg->opt_templ_set[i]; ++i) {
 		prevo = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->opt_templ_set[i]->header), 4);
 		proc.offset += 4;
@@ -813,10 +803,16 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 void forwarding_add_set(struct ipfix_message *msg, struct ipfix_template_set *set)
 {
 	int i;
-	for (i = 0; msg->templ_set[i] && i < 1024; ++i);
-	
-	msg->templ_set[i] = set;
-	msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) + ntohs(set->header.length));
+
+	// Find first empty slot
+	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; ++i);
+
+	if (i == MSG_MAX_TEMPLATES) {
+		MSG_ERROR(msg_module, "Could not add template to IPFIX message, because message already features %u templates", MSG_MAX_TEMPLATES);
+	} else {
+		msg->templ_set[i] = set;
+		msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) + ntohs(set->header.length));
+	}
 }
 
 /**
@@ -834,7 +830,7 @@ int forwarding_update_templates(forwarding *conf, const struct ipfix_message *ms
 	struct forwarding_template_record *rec = NULL;
 	
 	/* Check each used template */
-	for (i = 0; msg->data_couple[i].data_set != NULL && i < 1024; ++i) {
+	for (i = 0; i < MSG_MAX_DATA_COUPLES && msg->data_couple[i].data_set; ++i) {
 		if (!msg->data_couple[i].data_template) {
 			/* Data set without template, skip it */
 			continue;
@@ -900,7 +896,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 
 	uint8_t *new_msg = malloc(65535);
 	if (!new_msg) {
-		MSG_ERROR(msg_module, "Not enought memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		return 1;
 	}
 
@@ -916,7 +912,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	}
 
 	/* Copy data sets */
-	for (i = 0; i < 1024 && ipfix_msg->data_couple[i].data_set; ++i) {
+	for (i = 0; i < MSG_MAX_DATA_COUPLES && ipfix_msg->data_couple[i].data_set; ++i) {
 		setlen = ntohs(ipfix_msg->data_couple[i].data_set->header.length);
 		memcpy(new_msg + length, ipfix_msg->data_couple[i].data_set, setlen);
 		length += setlen;

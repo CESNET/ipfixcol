@@ -272,8 +272,8 @@ NfdumpFile::bufferPtk(const data_template_couple *dtcouple){
 
 	if(f_ == NULL) return 0;
 
-	/* message from ipfixcol have maximum of 1023 data records */
-	for(int i = 0 ; i < 1023; i++){ //TODO magic number! add constant to storage.h
+	/* message from ipfixcol have maximum of MSG_MAX_DATA_COUPLES data records */
+	for(int i = 0 ; i < MSG_MAX_DATA_COUPLES; i++){
 		if(dtcouple[i].data_set == NULL){
 			//there are no more filled data_sets
 			break;

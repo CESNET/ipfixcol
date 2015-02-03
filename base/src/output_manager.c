@@ -264,7 +264,7 @@ static void *output_manager_plugin_thread(void* config)
 
 	conf->running = 1;
 
-    /* loop will break upon receiving NULL from buffer */
+	/* loop will break upon receiving NULL from buffer */
 	while (1) {
 		/* get next data */
 		index = -1;
@@ -302,10 +302,10 @@ static void *output_manager_plugin_thread(void* config)
 				continue;
 			}
 
-		    /* add config to data_mngmts structure */
-	    	output_manager_insert(conf, data_config);
+			/* add config to data_mngmts structure */
+			output_manager_insert(conf, data_config);
 
-	        MSG_NOTICE(msg_module, "[%u] Created new Data manager", msg->input_info->odid);
+			MSG_NOTICE(msg_module, "[%u] Created new Data manager", msg->input_info->odid);
 		}
 
 		if (msg->source_status == SOURCE_STATUS_NEW) {
@@ -360,14 +360,14 @@ uint64_t statistics_total_cpu()
 		return 0;
 	}
 	
-	uint64_t user = 0, nice = 0, sys = 0, idle = 0;
-	if (fscanf(stat, "%*s %" SCNu64 "%" SCNu64 "%" SCNu64 "%" SCNu64, &user, &nice, &sys, &idle) == EOF) {
+	uint32_t user = 0, nice = 0, sys = 0, idle = 0;
+	if (fscanf(stat, "%*s %" SCNu32 "%" SCNu32 "%" SCNu32 "%" SCNu32, &user, &nice, &sys, &idle) == EOF) {
 		MSG_ERROR(stat_module, "Error while reading /proc/stat: %s", strerror(errno));
 	}
 	
 	fclose(stat);
 	
-	return (user + nice + sys + idle);
+	return ((uint64_t) user + (uint64_t) nice + (uint64_t) sys + (uint64_t) idle);
 }
 
 /**
@@ -450,7 +450,10 @@ static void statistics_print_cpu(struct stat_conf *conf)
 		}
 		
 		/* read thread info */
-		if (fscanf(stat, "%d (%[^)]) %c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu", &tid, thread_name, &state, &utime, &systime) == EOF) {
+		uint8_t format_str_len = 62 + sizeof(MAX_DIR_LEN) + 1; // 62 is size of the raw format string, without MAX_DIR_LEN; +1 is null-terminating char
+		char format_str[format_str_len];
+		snprintf(format_str, format_str_len, "%%d (%%%d[^)]) %%c %%*d %%*d %%*d %%*d %%*d %%*u %%*u %%*u %%*u %%*u %%lu %%lu", MAX_DIR_LEN);
+		if (fscanf(stat, format_str, &tid, thread_name, &state, &utime, &systime) == EOF) {
 			MSG_ERROR(stat_module, "Error while reading %s: %s", stat_path, strerror(errno));
 		}
 		fclose(stat);

@@ -119,8 +119,9 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		/* create the parser, Filter is its param (it will provide scaninfo to the lexer) */
 		parser::Parser parser(*this);
 
-		/* run run parser */
+		/* run parser */
 		if (parser.parse() != 0) {
+			yylex_destroy(this->scaninfo);
 			throw std::invalid_argument(std::string("Error while parsing filter!"));
 		}
 
@@ -1018,7 +1019,7 @@ Filter::Filter(Configuration &conf) throw (std::invalid_argument)
 	init(conf);
 }
 
-Filter::Filter()
+Filter::Filter(): scaninfo(NULL), actualConf(NULL)
 {
 	this->filterString = "1 = 1";
 }

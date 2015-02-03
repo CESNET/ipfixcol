@@ -282,12 +282,12 @@ uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_templat
 	uint16_t records_index = 0;
 
 	/* TODO - make it clever */
-	records = (uint8_t **) malloc(1023 * sizeof(uint8_t *));
+	records = (uint8_t **) malloc(MSG_MAX_DATA_COUPLES * sizeof(uint8_t *));
 	if (records == NULL) {
 		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
 		return (uint8_t **) NULL;
 	}
-	memset(records, 0, 1023 * sizeof(uint8_t *));
+	memset(records, 0, MSG_MAX_DATA_COUPLES * sizeof(uint8_t *));
 
 	min_record_length = tmplt->data_length;
 	offset = 0;
@@ -391,19 +391,17 @@ struct ipfix_template_row *fields_get_field(uint8_t *fields, int cnt, uint32_t e
 		uint16_t rid = (netw) ? ntohs(row->id) : row->id;
 		uint16_t len = (netw) ? ntohs(row->length) : row->length;
 		uint32_t ren = 0;
-		uint8_t has_ren = 0;
 		
 		/* Get field ID and enterprise number */
-		if (row->id >> 15) {
-			rid = row->id && 0x7FFF;
+		if (rid >> 15) {
+			rid = rid & 0x7FFF;
 			++row;
 			ren = (netw) ? ntohl(*((uint32_t *) row)) : *((uint32_t *) row);
-			has_ren = 1;
 		}
 		
 		/* Check informations */
 		if (rid == id && ren == enterprise) {
-			if (has_ren) {
+			if (ren != 0) {
 				--row;
 			}
 			return row;

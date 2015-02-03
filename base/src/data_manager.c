@@ -258,6 +258,8 @@ int data_manager_remove_plugin(struct data_manager_config* config, int id)
 
 /**
  * \brief Close Data manager specified by its configuration
+ *
+ * @param config Configuration structure of the manager
  */
 void data_manager_close (struct data_manager_config **config)
 {

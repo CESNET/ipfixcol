@@ -84,6 +84,7 @@
 #include <stdint.h>
 
 #include "panonymizer.h"
+#include <ipfixcol/utils.h> // strncpy_safe
 
 static	uint8_t m_key[16]; //128 bit secret key
 static	uint8_t m_pad[16]; //128 bit secret pad
@@ -111,7 +112,7 @@ uint32_t len = strlen(s);
 
 	if ( strlen(s) == 32 ) {
 		// Key is a string
-		strncpy(key, s, 32);
+		strncpy_safe(key, s, 32);
 		return 1;
 	}
 

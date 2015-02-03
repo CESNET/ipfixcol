@@ -87,7 +87,7 @@ static int regexp_asterisk(char *regexp, char *string)
 		return -1;
 	}
 
-	strcpy(aux_regexp, regexp);
+	strncpy_safe(aux_regexp, regexp, strlen(regexp) + 1);
 	
 	int pos = 1; /* we assume that asterisk is in the middle of the string */
 	if (aux_regexp[0] == asterisk) {
@@ -157,7 +157,7 @@ char **utils_files_from_path(char *path)
 	struct dirent *entry = NULL, *result = NULL;
 	struct stat st;
 	
-	int ret = 0, array_length = 0, fcounter = 0, inputf_index = 0;
+	int ret = 0, array_length = 0, inputf_index = 0;
 	
 	dirname  = utils_dir_from_path(path);
 	if (!dirname) {
@@ -172,6 +172,7 @@ char **utils_files_from_path(char *path)
 	dir = opendir(dirname);
 	if (dir == NULL) {
 		MSG_ERROR(msg_module, "Unable to open input file(s)\n");
+		free(dirname);
 		return NULL;
 	}
 
@@ -212,7 +213,7 @@ char **utils_files_from_path(char *path)
 		ret = regexp_asterisk(filename, entry->d_name);
 		if (ret == 1) {
 			/* this file matches */
-			if (fcounter >= array_length - 1) {
+			if (inputf_index >= array_length - 1) {
 				input_files = realloc(input_files, array_length * 2);
 				if (input_files == NULL) {
 					MSG_ERROR(msg_module, "Not enough memory");
@@ -230,7 +231,13 @@ char **utils_files_from_path(char *path)
 			sprintf(input_files[inputf_index], "%s/%s", dirname, entry->d_name);
 
 			/* check whether input file is a directory */
-			stat(input_files[inputf_index], &st);
+			if (stat(input_files[inputf_index], &st) == -1) {
+				MSG_WARNING(msg_module, "");
+				free(input_files[inputf_index]);
+				input_files[inputf_index] = NULL;
+				MSG_WARNING(msg_module, "Could not determine stats for '%s'", entry->d_name);
+				continue;
+			}
 			if (S_ISDIR(st.st_mode)) {
 				/* well, it is... damn */
 				free(input_files[inputf_index]);
@@ -280,4 +287,17 @@ char *utils_dir_from_path(char *path)
 	dir = dirname(dir);
 	
 	return dir;
+}
+
+/**
+ * \brief Version of strncpy that ensures null-termination.
+ */
+char *strncpy_safe (char *destination, const char *source, size_t num)
+{
+    strncpy(destination, source, num);
+
+    // Ensure null-termination
+    destination[num - 1] = '\0';
+
+	return destination;
 }

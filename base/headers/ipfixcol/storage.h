@@ -45,6 +45,10 @@
 #include "templates.h"
 #include "api.h"
 
+#define MSG_MAX_OTEMPLATES		1024
+#define MSG_MAX_TEMPLATES		1024
+#define MSG_MAX_DATA_COUPLES	1023
+
 /**
  * \defgroup storageAPI Storage Plugins API
  * \ingroup publicAPIs
@@ -78,6 +82,32 @@ enum PLUGIN_STATUS {
     PLUGIN_START,   /**< Start reading */
     PLUGIN_STOP     /**< Stop reading */
 };
+
+/**
+ * \struct ipfix_record
+ * \brief Structure for one data record with it's length and template
+ */
+struct ipfix_record {
+    void *record;       /**< Data record */
+    uint16_t length;    /**< Record's length */
+    struct ipfix_template *templ;   /**< Record's template */
+};
+
+
+struct organization {
+    uint32_t id;
+    uint16_t rule;
+    uint16_t **profiles;
+};
+
+struct __attribute__((packed)) metadata {
+    struct ipfix_record record;     /**< IPFIX data record */
+    uint32_t srcAS;                 /**< Source AS */
+    uint32_t dstAS;                 /**< Destination AS */
+    struct organization **organizations;    /**< Array of organizations assigned to this record */
+    /* geoinfo */
+};
+
 /**
  * \struct ipfix_message
  * \brief Structure covering main parts of the IPFIX packet by pointers into it.
@@ -98,11 +128,13 @@ struct __attribute__((__packed__)) ipfix_message {
 	/** Number of options template records in message */
 	uint16_t						  opt_templ_records_count;
 	/** List of Template Sets in the packet */
-	struct ipfix_template_set         *templ_set[1024];
+	struct ipfix_template_set         *templ_set[MSG_MAX_TEMPLATES];
 	/** List of Options Template Sets in the packet */
-	struct ipfix_options_template_set *opt_templ_set[1024];
+	struct ipfix_options_template_set *opt_templ_set[MSG_MAX_OTEMPLATES];
 	/** List of Data Sets (with a link to corresponding template) in the packet */
-	struct data_template_couple       data_couple[1023];
+	struct data_template_couple       data_couple[MSG_MAX_DATA_COUPLES];
+	/** List of metadata structures */
+	struct metadata *metadata;
 };
 
 /**

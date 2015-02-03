@@ -61,7 +61,7 @@
 
 #define PERROR_LAST strerror(errno)
 
-#define SISO_UDP_MAX 1500
+#define SISO_UDP_MAX 65000
 #define SISO_MIN(_frst_, _scnd_) ((_frst_) > (_scnd_) ? (_scnd_) : (_frst_))
 
 /**

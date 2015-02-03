@@ -444,13 +444,14 @@ int input_init(char *params, void **config)
 			/* TLS configuration options */
 	    	for (cur_node = cur_node->xmlChildrenNode; cur_node; cur_node = cur_node->next) {
         		if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
-					char *tmp_val = malloc(sizeof(char)*strlen((char *)cur_node->children->content)+1);
+					int tmp_val_len = strlen((char *) cur_node->children->content) + 1;
+					char *tmp_val = malloc(sizeof(char) * tmp_val_len);
 					if (!tmp_val) {
 						MSG_ERROR(msg_module, "Cannot allocate memory: %s", strerror(errno));
 					    retval = 1;
 					    goto out;
 					}
-					strcpy(tmp_val, (char *)cur_node->children->content);
+					strncpy_safe(tmp_val, (char *)cur_node->children->content, tmp_val_len);
 					
 					if (xmlStrEqual(cur_node->name, BAD_CAST "localCAfile")) {
 						/* location of the CA certificate */
@@ -476,20 +477,21 @@ int input_init(char *params, void **config)
 #else   /* user wants TLS, but collector was compiled without it */
         if (xmlStrEqual(cur_node->name, BAD_CAST "transportLayerSecurity")) {
 			/* user wants to enable TLS, but collector was compiled without it */
-        	MSG_WARNING(msg_module, "Collector was compiled without TLS support");
+			MSG_WARNING(msg_module, "Collector was compiled without TLS support");
 			continue;
 		}
 #endif
         if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
             /* copy value to memory - don't forget the terminating zero */
-            char *tmp_val = malloc(sizeof(char)*strlen((char *)cur_node->children->content)+1);
+            int tmp_val_len = strlen((char *) cur_node->children->content) + 1;
+            char *tmp_val = malloc(sizeof(char) * tmp_val_len);
             /* this is not a preferred cast, but we really want to use plain chars here */
             if (tmp_val == NULL) {
-            	MSG_ERROR(msg_module, "Cannot allocate memory: %s", strerror(errno));
+				MSG_ERROR(msg_module, "Cannot allocate memory: %s", strerror(errno));
                 retval = 1;
                 goto out;
             }
-            strcpy(tmp_val, (char *)cur_node->children->content);
+            strncpy_safe(tmp_val, (char *)cur_node->children->content, tmp_val_len);
 
             if (xmlStrEqual(cur_node->name, BAD_CAST "localPort")) { /* set local port */
                 port = tmp_val;
@@ -505,7 +507,8 @@ int input_init(char *params, void **config)
             } else if (xmlStrEqual(cur_node->name, BAD_CAST "optionsTemplateLifePacket")) {
                 conf->info.options_template_life_packet = tmp_val;
             } else { /* unknown parameter, ignore */
-                free(tmp_val);
+				/* Free the tmp_val for unknown elements */
+				free(tmp_val);
             }
         }
     }
@@ -522,11 +525,11 @@ int input_init(char *params, void **config)
 		if (conf->ca_cert_file == NULL) {
 			conf->ca_cert_file = strdup(DEFAULT_CA_FILE);
 		}
-	
+
 		if (conf->server_cert_file == NULL) {
 			conf->server_cert_file = strdup(DEFAULT_SERVER_CERT_FILE);
 		}
-	
+
 		if (conf->server_pkey_file == NULL) {
 			conf->server_pkey_file = strdup(DEFAULT_SERVER_PKEY_FILE);
 		}
@@ -675,9 +678,12 @@ int input_init(char *params, void **config)
     /* print info */
     MSG_NOTICE(msg_module, "TCP input plugin listening on address %s, port %s", dst_addr, port);
 
-
     /* start listening thread */
-    pthread_create(&listen_thread, NULL, &input_listen, (void *) conf);
+    if (pthread_create(&listen_thread, NULL, &input_listen, (void *) conf) != 0) {
+        MSG_ERROR(msg_module, "Failed to create listening thread");
+        retval = 1;
+        goto out;
+    }
 
     /* pass general information to the collector */
     *config = (void*) conf;

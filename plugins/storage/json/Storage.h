@@ -54,6 +54,9 @@
 #define read32(_ptr_) (*((uint32_t *) (_ptr_)))
 #define read64(_ptr_) (*((uint64_t *) (_ptr_)))
 
+#define IPV6_LEN 16
+#define MAC_LEN  6
+
 enum element_type {
     UNKNOWN,
     PROTOCOL,
@@ -112,7 +115,7 @@ private:
      * @param offset field offset
      * @return real length;
      */
-    uint16_t realLength(uint16_t length, uint8_t *data, uint16_t &offset);
+    uint16_t realLength(uint16_t length, uint8_t *data, uint16_t &offset) const;
     
     /**
      * \brief Read string field
@@ -122,7 +125,7 @@ private:
      * @param offset field offset
      * @return string
      */
-    std::string readString(uint16_t &length, uint8_t *data, uint16_t &offset);
+    std::string readString(uint16_t &length, uint8_t *data, uint16_t &offset) const;
     
     /**
      * \brief Read raw data from record on given offset
@@ -132,7 +135,7 @@ private:
      * @param offset field offset (will be changed)
      * @return field value
      */
-    std::string readRawData(uint16_t &length, uint8_t *data, uint16_t &offset);
+    std::string readRawData(uint16_t &length, uint8_t *data, uint16_t &offset) const;
     
     /**
      * \brief Store data record
@@ -163,18 +166,17 @@ private:
      */
     void loadElements();
     
-    /**
-     * \brief Initialize JSON record
-     */
-    void initRecord();
+    void sendData() const;
     
-    void sendData();
-    
+	uint8_t addr6[IPV6_LEN];
+	uint8_t addrMac[MAC_LEN];
+	uint16_t offset, id, length;
+	uint32_t enterprise;
     Translator translator;          /**< number -> string translator */
-    json::Object jData;             /**< data in JSON format */
+	std::string record, value;				/**< Data record */
     sisoconf *sender;               /**< sender "class" */
     
-    std::map<uint32_t, std::map<uint16_t, struct ipfix_element> > elements;
+	static std::map<uint32_t, std::map<uint16_t, struct ipfix_element> > elements;
 };
 
 #endif	/* STORAGE_H */

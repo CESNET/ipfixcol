@@ -1,0 +1,512 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2008-2015</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>13 December 2014</date>
+		<authorgroup>
+			<author>
+				<personname>
+					<firstname>Petr</firstname>
+					<surname>Velan</surname>
+				</personname>
+				<email>petr.velan@cesnet.cz</email>
+				<contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol-fastbit_compression-output</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">FastBit output plugin for IPFIXcol with compression support.</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>ipfixcol-fastbit_compression-output</refname>
+		<refpurpose>FastBit output plugin for IPFIXcol with compression support.</refpurpose>
+	</refnamediv>
+	
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+			The <command>ipfixcol-fastbit_compression-output.so</command> is output plugin for ipfixcol (ipfix collector). 
+			The plugin uses FastBit library to store and index data and gzip or bzip2 libraries for compression.
+		</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Configuration</title>
+		<simpara>The collector must be configured to use fastbit output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
+		The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves. 
+		</simpara>
+		<simpara><filename>startup.xml</filename> fastbit example</simpara>
+		<programlisting>
+	<![CDATA[
+	<destination>
+		<name>store data records in FastBit database</name>
+		<fileWriter>
+			<fileFormat>fastbit_compression</fileFormat>
+			<path>storagePath/%o/%Y/%m/%d/</path>
+			<dumpInterval>
+				<timeWindow>300</timeWindow>
+				<timeAlignment>yes</timeAlignment>
+				<recordLimit>no</recordLimit>
+				<bufferSize>50000</bufferSize>
+			</dumpInterval>
+			<namingStrategy>
+				<type>time</type>
+				<prefix>ic</prefix>
+			</namingStrategy>
+			<onTheFlyIndexes>yes</onTheFlyIndexes>
+			<reorder>no</reorder>
+			<indexes>
+				<element enterprise = "0" id = "12"/>
+				<element enterprise = "0" id = "8"/>
+				<element id = "4"/>
+			</indexes>
+			<globalCompression>gzip</globalCompression>
+			<compress>
+				<template id="256">gzip</template>
+				<element enterprise="0" id="27">gzip</element>
+				<element enterprise="0" id="28">gzip</element>
+			</compress>
+			<compressOptions>
+				<gzip>
+					<level>9</level>
+					<strategy>filtered</strategy>
+				</gzip>
+				<bzip2>
+					<blockSize>1</blockSize>
+					<workFactor>30</workFactor>
+				</bzip2>
+			</compressOptions>
+		</fileWriter>
+	</destination>
+	]]>
+		</programlisting>
+
+	<para>
+		<variablelist>
+			<varlistentry>
+				<term>
+					<command>path</command>
+				</term>
+				<listitem>
+					<simpara>the path element specifies storage direcotry for data
+						collected by fastbit plugin. Path can contain
+						format tokens for day, month, obervation id ect. This allows you to
+						create direcotry hierarchy basedon format tokens.
+					</simpara>
+
+					<variablelist>
+						<varlistentry>
+							<term>
+								<command>%a</command>
+							</term>
+							<listitem>
+								<simpara>Abbreviated weekday name (local-depended). Example: Thu
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%A</command>
+							</term>
+							<listitem>
+								<simpara>Full weekday name (local-depended). Example: Thursday
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%b</command>
+							</term>
+							<listitem>
+								<simpara>Abbreviated month name (local-depended). Example: Aug
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%B</command>
+							</term>
+							<listitem>
+								<simpara>Full month name (local-depended). Example: August
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%c</command>
+							</term>
+							<listitem>
+								<simpara>Date and time representation (local-depended). Example:
+									Thu Aug 23 14:55:02 2001</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%d</command>
+							</term>
+							<listitem>
+								<simpara>Day of the month (01-31). Example: 23</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%H</command>
+							</term>
+							<listitem>
+								<simpara>Hour in 24h format (00-23). Example: 14</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%I</command>
+							</term>
+							<listitem>
+								<simpara>Hour in 12h format (01-12). Example: 02</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%j</command>
+							</term>
+							<listitem>
+								<simpara>Day of the year (001-366). Example: 235</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%m</command>
+							</term>
+							<listitem>
+								<simpara>Month as a decimal number (01-12). Example: 08
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%M</command>
+							</term>
+							<listitem>
+								<simpara>Minute (00-59). Example: 55</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%o</command>
+							</term>
+							<listitem>
+								<simpara>Observation Domain Id. Example: 1</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%p</command>
+							</term>
+							<listitem>
+								<simpara>AM or PM designation. Example: PM</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%S</command>
+							</term>
+							<listitem>
+								<simpara>Second (00-61). Example: 02</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%U</command>
+							</term>
+							<listitem>
+								<simpara>Week number with the first Sunday as the first day of
+									week one (00-53). Example: 33</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%w</command>
+							</term>
+							<listitem>
+								<simpara>Weekday as a decimal number with Sunday as 0 (0-6).
+									Example: 4</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%W</command>
+							</term>
+							<listitem>
+								<simpara>Week number with the first Monday as the first day of
+									week one (00-53). Example: 34</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%x</command>
+							</term>
+							<listitem>
+								<simpara>Date representation (local-depended). Example: '08/23/01'. This creates 3 subdirectories.
+								</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%X</command>
+							</term>
+							<listitem>
+								<simpara>Time representation (local-depended). Example: 14:55:02</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%y</command>
+							</term>
+							<listitem>
+								<simpara>Year, last two digits (00-99). Example: 01</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%Y</command>
+							</term>
+							<listitem>
+								<simpara>Year. Example: 2001</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%Z</command>
+							</term>
+							<listitem>
+								<simpara>Timezone name or abbreviation. Example: CDT</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%%</command>
+							</term>
+							<listitem>
+								<simpara>A % sign. Example: %</simpara>
+							</listitem>
+						</varlistentry>
+					</variablelist>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>dumpInterval - timeWindow</command>
+				</term>
+				<listitem>
+					<simpara>timeWindow is interval for rotation of data storage
+						direcotry (seconds)</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>dumpInterval - timeAlignment</command>
+				</term>
+				<listitem>
+					<simpara>Align flush time according to timeWindow. For example when
+						is collector started at 12:43 with 5 min
+						timeWindow than next flush time is 12:48 but with alignment next flush time
+						is 12:45. (yes/no)
+					</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>dumpInterval - recordLimit</command>
+				</term>
+				<listitem>
+					<simpara>this preventing data storage direcotry to become too huge
+						when is fastbit plugin used for parsing offline data (yes/no)
+					</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>dumpInterval - bufferSize</command>
+				</term>
+				<listitem>
+					<simpara>Specifies how many elements can be stored in buffer per row.
+					</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>namingStrategy - type</command>
+				</term>
+				<listitem>
+					<simpara>Specifies how are asigned names to data dumps.
+						(time/incremental/prefix)</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>namingStrategy - prefix</command>
+				</term>
+				<listitem>
+					<simpara>Specifies prefix to data dumps names.</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>onTheFlyIndexes</command>
+				</term>
+				<listitem>
+					<simpara>This tells plugin to create indexes for stored data
+						(yes/no). Elements for indexing can be specified so indexes are build only for those elements
+						(see example startup.xml in this manpage). If there are no specified elements and
+						<command>onTheFlyIndexes</command> is set to "yes" than indexes are build for ALL elements</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>reorder</command>
+				</term>
+				<listitem>
+					<simpara>This tells plugin to reorder for stored data (yes/no).
+					Reorder is based on cardinality so queries on reordered data should
+					be faster and data indexes smaller. </simpara>
+					<simpara>Warning: The reordering does not work on string and blob columns.</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>indexes</command>
+				</term>
+				<listitem>
+					<simpara>Index creation can be defined for specific elements.</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>globalCompression</command>
+				</term>
+				<listitem>
+					<simpara>Turns on compression for all elements. Valid values are <command>gzip</command> and <command>bzip2</command>.</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>compress</command>
+				</term>
+				<listitem>
+					<simpara>Turns on compression for specific elements and/or templates. Valid values are <command>gzip</command> and <command>bzip2</command>.</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>compressOptions - gzip</command>
+				</term>
+				<listitem>
+					<simpara>Configures options for gzip compression.</simpara>
+					<variablelist>
+						<varlistentry>
+							<term>
+								<command>level</command>
+							</term>
+							<listitem>
+								<simpara>Level of compression, allowed values are 0-9.</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>strategy</command>
+							</term>
+							<listitem>
+								<simpara>Selects compression strategy. Allowed values are <command>huffman only</command>, <command>RLE</command>, <command>filtered</command> and <command>fixed</command>.</simpara>
+							</listitem>
+						</varlistentry>
+					</variablelist>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>compressOptions - bzip2</command>
+				</term>
+				<listitem>
+					<simpara>Configures options for bzip2 compression.</simpara>
+					<variablelist>
+						<varlistentry>
+							<term>
+								<command>blockSize</command>
+							</term>
+							<listitem>
+								<simpara>Compression block size in multiples of 100kB.</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>workFactor</command>
+							</term>
+							<listitem>
+								<simpara>Affects decision between standard and emergency sorting algorithm.</simpara>
+							</listitem>
+						</varlistentry>
+					</variablelist>
+				</listitem>
+			</varlistentry>
+		</variablelist>
+	</para>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+						<citerefentry><refentrytitle>ipfixcol-fastbit-output</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+						<citerefentry><refentrytitle>ipfixcol-filter-inter</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+						<citerefentry><refentrytitle>ipfixcol-joinflows-inter</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+						<citerefentry><refentrytitle>ipfixcol-forwarding-output</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org/technologies/ipfixcol/">http://www.liberouter.org/technologies/ipfixcol/</link>
+					</term>
+					<listitem>
+						<para>IPFIXcol Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>

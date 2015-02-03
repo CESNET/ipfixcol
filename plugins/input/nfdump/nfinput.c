@@ -291,7 +291,7 @@ void init_ipfix_msg(struct ipfix_message *ipfix_msg){
  */
 void add_data_set(struct ipfix_message *ipfix_msg, struct ipfix_data_set *data_set, struct ipfix_template *template){
 	int i;
-	for (i = 0; i < 1023; i++) {
+	for (i = 0; i < MSG_MAX_DATA_COUPLES; i++) {
 		if (ipfix_msg->data_couple[i].data_set == NULL) {
 			data_set->header.length = htons(data_set->header.length);
 			ipfix_msg->data_couple[i].data_set = data_set;
@@ -310,7 +310,7 @@ void add_data_set(struct ipfix_message *ipfix_msg, struct ipfix_data_set *data_s
  */
 void add_template(struct ipfix_message *ipfix_msg, struct ipfix_template * template){
 	int i;
-	for (i = 0; i < 1024; i++) {
+	for (i = 0; i < MSG_MAX_TEMPLATES; i++) {
 		if (ipfix_msg->templ_set[i] == NULL) {
 			ipfix_msg->templ_set[i] = (struct ipfix_template_set *) \
 					calloc(1, sizeof(struct ipfix_template_set) + 8+template->template_length);
@@ -555,7 +555,7 @@ void *message_to_packet(const struct ipfix_message *msg, int *packet_length)
 	offset += IPFIX_HEADER_LENGTH;
 
 	/* Copy template sets */
-	for (i = 0; msg->templ_set[i] != NULL && i < 1024; ++i) {
+	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; ++i) {
 		aux_header = &(msg->templ_set[i]->header);
 		len = ntohs(aux_header->length);
 		for (c = 0; c < len; c += 4) {
@@ -566,7 +566,7 @@ void *message_to_packet(const struct ipfix_message *msg, int *packet_length)
 	}
 
 	/* Copy template sets */
-	for (i = 0; msg->opt_templ_set[i] != NULL && i < 1024; ++i) {
+	for (i = 0; i < MSG_MAX_OTEMPLATES && msg->opt_templ_set[i]; ++i) {
 		aux_header = &(msg->opt_templ_set[i]->header);
 		len = ntohs(aux_header->length);
 		for (c = 0; c < len; c += 4) {
@@ -577,7 +577,7 @@ void *message_to_packet(const struct ipfix_message *msg, int *packet_length)
 	}
 
 	/* Copy data sets */
-	for (i = 0; msg->data_couple[i].data_set != NULL && i < 1024; ++i) {
+	for (i = 0; i < MSG_MAX_DATA_COUPLES msg->data_couple[i].data_set; ++i) {
 		len = ntohs(msg->data_couple[i].data_set->header.length);
 		memcpy(packet + offset,   &(msg->data_couple[i].data_set->header), 4);
 		memcpy(packet + offset + 4, msg->data_couple[i].data_set->records, len - 4);
