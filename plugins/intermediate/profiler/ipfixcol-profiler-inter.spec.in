@@ -1,4 +1,4 @@
-Summary: JSON storage plugin for ipfixcol.
+Summary: profiler intermediate plugin for ipfixcol.
 Name: @PACKAGE_NAME@
 Version: @PACKAGE_VERSION@
 Release: @RELEASE@
@@ -15,19 +15,19 @@ BuildRequires: ipfixcol-devel >= 0.7.1
 Requires: ipfixcol >= 0.7.1
 
 %description
-JSON storage plugin for ipfixcol.
+profiler intermediate plugin for ipfixcol.
 
 
 %prep
 %setup
 
 %post
-ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p o -n json -t json -s "%{_datadir}/ipfixcol/plugins/ipfixcol-json-output.so" -f
+ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p m -n profiler -t profiler -s "%{_datadir}/ipfixcol/plugins/ipfixcol-profiler-inter.so" -f
 
 %preun
 
 %postun
-ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p o -n json
+ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p m -n profiler
 
 %build
 %configure --with-distro=@DISTRO@
@@ -37,6 +37,6 @@ make
 make DESTDIR=%{buildroot} install
 
 %files
-#storage plugins
-%{_datadir}/ipfixcol/plugins/ipfixcol-json-output.*
-%{_mandir}/man1/ipfixcol-json-output.1*
+#intermediate plugins
+%{_datadir}/ipfixcol/plugins/ipfixcol-profiler-inter.*
+%{_mandir}/man1/ipfixcol-profiler-inter.1*
