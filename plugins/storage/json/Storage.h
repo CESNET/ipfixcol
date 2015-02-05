@@ -45,7 +45,6 @@
 #include <siso.h>
 
 #include "pugixml/pugixml.hpp"
-#include "SuperEasyJSON/sejson.h"
 #include "Translator.h"
 
 /* some auxiliary functions for extracting data of exact length */
