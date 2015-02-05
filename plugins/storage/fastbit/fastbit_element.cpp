@@ -101,6 +101,7 @@ int load_types_from_xml(struct fastbit_config *conf) {
 enum store_type get_type_from_xml(struct fastbit_config *conf, unsigned int en, unsigned int id) {
 	// Check whether a type has been determined for the specified element
 	if ((*conf->elements_types).count(en) == 0 || (*conf->elements_types)[en].count(id) == 0) {
+		MSG_WARNING(MSG_MODULE,"No specification for e%ui%u found in %s", en, id, ipfix_elements);
 		return UNKNOWN;
 	}
 
