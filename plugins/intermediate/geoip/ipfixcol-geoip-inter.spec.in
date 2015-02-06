@@ -1,0 +1,42 @@
+Summary: geoip intermediate plugin for ipfixcol.
+Name: @PACKAGE_NAME@
+Version: @PACKAGE_VERSION@
+Release: @RELEASE@
+URL: http://www.liberouter.org/
+Source: http://homeproj.cesnet.cz/rpm/liberouter/stable/SOURCES/%{name}-%{version}-%{release}.tar.gz
+Group: Liberouter
+License: BSD
+Vendor: CESNET, z.s.p.o.
+Packager: @USERNAME@ <@USERMAIL@>
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
+
+BuildRequires: gcc make doxygen
+BuildRequires: ipfixcol-devel >= 0.7.1
+Requires: ipfixcol >= 0.7.1
+
+%description
+geoip intermediate plugin for ipfixcol.
+
+
+%prep
+%setup
+
+%post
+ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p m -n geoip -t geoip -s "%{_datadir}/ipfixcol/plugins/ipfixcol-geoip-inter.so" -f
+
+%preun
+
+%postun
+ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p m -n geoip
+
+%build
+%configure --with-distro=@DISTRO@
+make
+
+%install
+make DESTDIR=%{buildroot} install
+
+%files
+#intermediate plugins
+%{_datadir}/ipfixcol/plugins/ipfixcol-geoip-inter.*
+%{_mandir}/man1/ipfixcol-geoip-inter.1*

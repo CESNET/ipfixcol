@@ -102,6 +102,8 @@ struct organization {
 
 struct __attribute__((packed)) metadata {
     struct ipfix_record record;     /**< IPFIX data record */
+	uint16_t srcCountry;			/**< Source country code */
+	uint16_t dstCountry;			/**< Destination country code */
     uint32_t srcAS;                 /**< Source AS */
     uint32_t dstAS;                 /**< Destination AS */
     struct organization **organizations;    /**< Array of organizations assigned to this record */

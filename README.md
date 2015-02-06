@@ -39,6 +39,7 @@ There are also external plugins that are installed separately
 * **[nfdump](plugins/input/nfdump)** - NFDUMP file reader
 
 ###<a name="exmed"></a> External intermediate plugins
+* **[geoip](plugins/intermediate/geoip)** - adds country codes into the metadata structure
 * **[profiler](plugins/intermediate/profiler)** - fills metadata informations about organizations and profiles
 
 ###<a name="exout"></a> External storage plugins
