@@ -64,7 +64,7 @@ namespace fbitdump {
 /* temporary macro that should be removed in full implementation */
 #define NOT_SUPPORTED std::cerr << "Not supported" << std::endl; return -2;
 
-int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
+int Configuration::init(int argc, char *argv[])
 {
 	char c;
 	bool maxCountSet = false;
@@ -1047,7 +1047,7 @@ void Configuration::parseIndexColumns(char *arg)
 	}
 }
 
-void Configuration::loadOutputFormat() throw (std::invalid_argument)
+void Configuration::loadOutputFormat()
 {
 	/* Look out for custom format */
 	if (this->format.substr(0,4) == "fmt:") {

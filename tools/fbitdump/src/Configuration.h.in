@@ -96,7 +96,7 @@ public:
 	 * @param argv array of arguments
 	 * @return 0 on success, 1 when help was printed and program should stop
 	 */
-    int init(int argc, char *argv[]) throw (std::invalid_argument);
+    int init(int argc, char *argv[]);
 
     /**
      * \brief Returns vector of table parts names
@@ -403,7 +403,7 @@ private:
      *
      * Uses and modifies this->format variable
      */
-    void loadOutputFormat() throw (std::invalid_argument);
+    void loadOutputFormat();
 
     /**
      * \brief Check that a directory exists and push it into the list if it does
