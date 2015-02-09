@@ -114,8 +114,13 @@ void list(conf_info_t *info, char *tag, char *type, char **to_print, char **to_s
 				/* Print informations */
 				centrePrint(type, COL_WIDTH[0]);
 				centrePrint((char *) children1->children->content, COL_WIDTH[1]);
-				centrePrint((char *) children3->children->content, COL_WIDTH[2]);
-				printf("    %s\n", (char *) children2->children->content);
+				
+				if (children3) {
+					centrePrint((char *) children3->children->content, COL_WIDTH[2]);
+				}
+				if (children2) {
+					printf("    %s\n", (char *) children2->children->content);
+				}
 			}
 			children1 = children1->next;
 		}
