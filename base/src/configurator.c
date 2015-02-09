@@ -55,6 +55,7 @@
 #include <dlfcn.h>
 #include <unistd.h>
 #include <libxml/xpath.h>
+#include <libxml/xmlversion.h>
 
 /* ID for MSG_ macros */
 static const char *msg_module = "configurator";
@@ -570,17 +571,42 @@ int config_compare_xml(struct plugin_xml_conf *first, struct plugin_xml_conf *se
 	fnode = xmlDocGetRootElement(first->xmldata);
 	snode = xmlDocGetRootElement(second->xmldata);
 	
-	/* Get first subtree */
-	xmlBufPtr fbuf = calloc(1, 2000);
+	const char *scontent, *fcontent;
+	
+#if LIBXML_VERSION < 20900
+	/* Old API without xmlBuf */
+	xmlBufferPtr fbuf, sbuf;
+#else
+	/* New API with xmlBuf */
+	xmlBufPtr fbuf, sbuf;
+#endif
+	
+	/* Allocate space for buffers */
+	fbuf = calloc(1, 2000);
 	CHECK_ALLOC(fbuf, 1);
-	xmlBufGetNodeContent(fbuf, fnode);
-	const char *fcontent = (const char *) xmlBufContent(fbuf);
+	
+	sbuf = calloc(1, 2000);
+	CHECK_ALLOC(sbuf, 1);
+	
+#if LIBXML_VERSION < 20900
+	/* Old API */
+	/* Get first subtree */
+	xmlNodeBufGetContent(fbuf, fnode);
+    fcontent = (const char *) xmlBufferContent(fbuf);
 	
 	/* Get second subtree */
-	xmlBufPtr sbuf = calloc(1, 2000);
-	CHECK_ALLOC(sbuf, 1);
+	xmlNodeBufGetContent(sbuf, snode);
+    scontent = (const char *) xmlBufferContent(sbuf);
+#else
+	/* New API */
+	/* Get first subtree */
+	xmlBufGetNodeContent(fbuf, fnode);
+	fcontent = (const char *) xmlBufContent(fbuf);
+	
+	/* Get second subtree */
 	xmlBufGetNodeContent(sbuf, snode);
-	const char *scontent = (const char *) xmlBufContent(sbuf);
+	scontent = (const char *) xmlBufContent(sbuf);
+#endif
 	
 	/* Compare contents of subtrees */
 	int ret = 0;
