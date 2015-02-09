@@ -44,7 +44,7 @@
 namespace fbitdump
 {
 
-void Column::init(const pugi::xml_document &doc, const std::string &alias, bool aggregate) throw(std::invalid_argument)
+void Column::init(const pugi::xml_document &doc, const std::string &alias, bool aggregate)
 {
 	this->format = NULL;
 	this->parse = NULL;
