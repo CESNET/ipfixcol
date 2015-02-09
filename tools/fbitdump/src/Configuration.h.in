@@ -403,7 +403,7 @@ private:
      *
      * Uses and modifies this->format variable
      */
-    void loadOutputFormat() throw (std::invalid_argument);
+    void loadOutputFormat();
 
     /**
      * \brief Check that a directory exists and push it into the list if it does

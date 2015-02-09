@@ -1071,7 +1071,7 @@ void Configuration::parseIndexColumns(char *arg)
 	}
 }
 
-void Configuration::loadOutputFormat() throw (std::invalid_argument)
+void Configuration::loadOutputFormat()
 {
 	/* Look out for custom format */
 	if (this->format.substr(0,4) == "fmt:") {
