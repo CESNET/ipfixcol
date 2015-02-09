@@ -64,7 +64,7 @@ namespace fbitdump {
 /* temporary macro that should be removed in full implementation */
 #define NOT_SUPPORTED std::cerr << "Not supported" << std::endl; return -2;
 
-int Configuration::init(int argc, char *argv[]) throw (std::invalid_argument)
+int Configuration::init(int argc, char *argv[])
 {
 	char c;
 	bool maxCountSet = false;
