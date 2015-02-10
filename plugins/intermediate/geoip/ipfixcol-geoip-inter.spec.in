@@ -38,5 +38,6 @@ make DESTDIR=%{buildroot} install
 
 %files
 #intermediate plugins
+%config(noreplace) %_datadir/ipfixcol-geoip-inter/GeoIPv6.dat
 %{_datadir}/ipfixcol/plugins/ipfixcol-geoip-inter.*
 %{_mandir}/man1/ipfixcol-geoip-inter.1*

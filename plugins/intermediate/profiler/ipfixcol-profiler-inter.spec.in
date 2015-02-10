@@ -38,5 +38,6 @@ make DESTDIR=%{buildroot} install
 
 %files
 #intermediate plugins
+%{_datadir}/ipfixcol-profiler-inter/ipfixcol-profiler-inter-doxy*
 %{_datadir}/ipfixcol/plugins/ipfixcol-profiler-inter.*
 %{_mandir}/man1/ipfixcol-profiler-inter.1*
