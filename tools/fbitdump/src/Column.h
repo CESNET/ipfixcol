@@ -271,7 +271,7 @@ private:
 		/**
 		 * \brief AST constructor - sets default values
 		 */
-		AST(): parts(1), left(NULL), right(NULL), cached(false) {}
+		AST(): type(valueType), operation('+'), parts(1), left(NULL), right(NULL), cached(false) {}
 
 		/**
 		 * \brief AST destructor
