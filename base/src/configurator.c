@@ -334,7 +334,7 @@ int config_add_input(configurator *config, struct plugin_config *plugin, int ind
 	snprintf(config->process_name, 16, "%s:%s", PACKAGE, plugin->conf.name);
 
 	/* set the process name to reflect the input name */
-    prctl(PR_SET_NAME, config->process_name, 0, 0, 0);
+	prctl(PR_SET_NAME, config->process_name, 0, 0, 0);
 	
 	/* initialize plugin */
 	xmlChar *plugin_params;
@@ -586,17 +586,21 @@ int config_compare_xml(struct plugin_xml_conf *first, struct plugin_xml_conf *se
 	CHECK_ALLOC(fbuf, 1);
 	
 	sbuf = calloc(1, 2000);
-	CHECK_ALLOC(sbuf, 1);
+	if (!sbuf) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+		free(fbuf);
+		return 1;
+	}
 	
 #if LIBXML_VERSION < 20900
 	/* Old API */
 	/* Get first subtree */
 	xmlNodeBufGetContent(fbuf, fnode);
-    fcontent = (const char *) xmlBufferContent(fbuf);
+	fcontent = (const char *) xmlBufferContent(fbuf);
 	
 	/* Get second subtree */
 	xmlNodeBufGetContent(sbuf, snode);
-    scontent = (const char *) xmlBufferContent(sbuf);
+	scontent = (const char *) xmlBufferContent(sbuf);
 #else
 	/* New API */
 	/* Get first subtree */
