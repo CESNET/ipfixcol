@@ -859,9 +859,16 @@ startup_config *config_create_startup(configurator *config)
 	i = 0;
 	for (aux_conf = aux_list; aux_conf; aux_conf = aux_conf->next, ++i) {
 		startup->storage[i] = calloc(1, sizeof(struct plugin_config));
-		CHECK_ALLOC(startup->storage[i], NULL);
+
+		if (!startup->storage[i]) {
+			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+			free_conf_list(aux_list);
+			return NULL;
+		}
+		
 		startup->storage[i]->conf = aux_conf->config;
 	}
+
 	startup->storage[i] = NULL;
 	free_conf_list(aux_list);
 	
