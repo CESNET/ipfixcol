@@ -378,9 +378,6 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	if (xpath_obj_expprocnames) {
 		xmlXPathFreeObject (xpath_obj_expprocnames);
 	}
-	if (xpath_obj_destinations) {
-		xmlXPathFreeObject (xpath_obj_destinations);
-	}
 	if (xpath_obj_plugin_desc) {
 		xmlXPathFreeObject (xpath_obj_plugin_desc);
 	}
