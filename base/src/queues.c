@@ -139,6 +139,11 @@ int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, un
 	while (rbuffer->count + 1 >= rbuffer->size) {
 		if (pthread_cond_wait (&(rbuffer->cond), &(rbuffer->mutex)) != 0) {
 			MSG_ERROR(msg_module, "Condition wait failed (%s:%d)", __FILE__, __LINE__);
+
+			if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
+				MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
+			}
+			
 			return (EXIT_FAILURE);
 		}
 	}

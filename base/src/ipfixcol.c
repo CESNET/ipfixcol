@@ -266,7 +266,7 @@ int main (int argc, char* argv[])
 		if (i > 0) {
 			pid = fork();
 			if (pid > 0) { /* parent process waits for collector 0 */
-                proc_count++;
+				proc_count++;
 				continue;
 			} else if (pid < 0) { /* error occured, fork failed */
 				MSG_ERROR(msg_module, "Forking collector process failed (%s), skipping collector %d.", strerror(errno), i);
@@ -275,7 +275,7 @@ int main (int argc, char* argv[])
 			/* else child - just continue to handle plugins */
 			config->proc_id = i;
 			
-            MSG_NOTICE(msg_module, "[%d] New collector process started.", config->proc_id);
+			MSG_NOTICE(msg_module, "[%d] New collector process started.", config->proc_id);
 		}
 		
 		/* DEBUG - remove this */
@@ -349,17 +349,17 @@ int main (int argc, char* argv[])
 			}
 			continue;
 		} else if (get_retval == INPUT_CLOSED) {
-            /* ensure that parser gets NULL packet => closed connection */
-            if (packet != NULL) {
-                /* free the memory allocated by xml_conf (if any) right away */
-                free(packet); 
-                packet = NULL;
-            }
-            /* if input plugin is file reader, end collector */
-            if (input_info->type == SOURCE_TYPE_IPFIX_FILE) {
-            	done = 1;
-            }
-        }
+			/* ensure that parser gets NULL packet => closed connection */
+			if (packet != NULL) {
+				/* free the memory allocated by xml_conf (if any) right away */
+				free(packet);
+				packet = NULL;
+			}
+			/* if input plugin is file reader, end collector */
+			if (input_info->type == SOURCE_TYPE_IPFIX_FILE) {
+				done = 1;
+			}
+		}
 		/* distribute data to the particular Data Manager for further processing */
 		preprocessor_parse_msg (packet, get_retval, input_info, source_status);
 		source_status = SOURCE_STATUS_OPENED;
@@ -382,34 +382,30 @@ cleanup:
 	preprocessor_close();
 	
 	/* Flush buffers in intermediate plugins */
-	config_stop_inter(config);
-	
+	if (config) {
+		config_stop_inter(config);
+	}
+
 	/* Close whole Output Manager (including Data Managers) */
 	if (output_manager_config) {
 		output_manager_close(output_manager_config);
 	}
-
-	
-    /* all storage plugins should be closed now -> free packet */
-    if (packet != NULL) {
-    	free(packet);
-    }
 
 	/* Close all plugins */
 	if (config) {
 		config_destroy(config);
 	}
 	
-    /* wait for child processes */
-    if (pid > 0) {
-        for (i=0; i<proc_count; i++) {
-            pid = wait(NULL);
-            MSG_NOTICE(msg_module, "[%d] Collector child process %d terminated", config->proc_id, pid);
-        }
-        MSG_NOTICE(msg_module, "[%d] Closing collector.", config->proc_id);
-    }
+	/* wait for child processes */
+	if (pid > 0) {
+		for (i=0; i<proc_count; i++) {
+			pid = wait(NULL);
+			MSG_NOTICE(msg_module, "[%d] Collector child process %d terminated", config->proc_id, pid);
+		}
+		MSG_NOTICE(msg_module, "[%d] Closing collector.", config->proc_id);
+	}
 
-    /* destroy template manager */
+	/* destroy template manager */
 	if (template_mgr) {
 		tm_destroy(template_mgr);
 	}

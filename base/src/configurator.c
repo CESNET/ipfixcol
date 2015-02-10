@@ -334,7 +334,7 @@ int config_add_input(configurator *config, struct plugin_config *plugin, int ind
 	snprintf(config->process_name, 16, "%s:%s", PACKAGE, plugin->conf.name);
 
 	/* set the process name to reflect the input name */
-    prctl(PR_SET_NAME, config->process_name, 0, 0, 0);
+	prctl(PR_SET_NAME, config->process_name, 0, 0, 0);
 	
 	/* initialize plugin */
 	xmlChar *plugin_params;
@@ -586,17 +586,21 @@ int config_compare_xml(struct plugin_xml_conf *first, struct plugin_xml_conf *se
 	CHECK_ALLOC(fbuf, 1);
 	
 	sbuf = calloc(1, 2000);
-	CHECK_ALLOC(sbuf, 1);
+	if (!sbuf) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+		free(fbuf);
+		return 1;
+	}
 	
 #if LIBXML_VERSION < 20900
 	/* Old API */
 	/* Get first subtree */
 	xmlNodeBufGetContent(fbuf, fnode);
-    fcontent = (const char *) xmlBufferContent(fbuf);
+	fcontent = (const char *) xmlBufferContent(fbuf);
 	
 	/* Get second subtree */
 	xmlNodeBufGetContent(sbuf, snode);
-    scontent = (const char *) xmlBufferContent(sbuf);
+	scontent = (const char *) xmlBufferContent(sbuf);
 #else
 	/* New API */
 	/* Get first subtree */
@@ -839,7 +843,14 @@ startup_config *config_create_startup(configurator *config)
 	i = 0;
 	for (aux_conf = aux_list; aux_conf; aux_conf = aux_conf->next, ++i) {
 		startup->input[i] = calloc(1, sizeof(struct plugin_config));
-		CHECK_ALLOC(startup->input[i], NULL);
+		
+		if (!startup->input[i]) {
+			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+			free_conf_list(aux_list);
+			free(startup);
+			return NULL;
+		}
+
 		startup->input[i]->conf = aux_conf->config;
 	}
 	startup->input[i] = NULL;
@@ -855,7 +866,14 @@ startup_config *config_create_startup(configurator *config)
 	i = 0;
 	for (aux_conf = aux_list; aux_conf; aux_conf = aux_conf->next, ++i) {
 		startup->storage[i] = calloc(1, sizeof(struct plugin_config));
-		CHECK_ALLOC(startup->storage[i], NULL);
+
+		if (!startup->storage[i]) {
+			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+			free_conf_list(aux_list);
+			free(startup);
+			return NULL;
+		}
+		
 		startup->storage[i]->conf = aux_conf->config;
 	}
 	startup->storage[i] = NULL;
@@ -868,7 +886,14 @@ startup_config *config_create_startup(configurator *config)
 	i = 0;
 	for (aux_conf = aux_list; aux_conf; aux_conf = aux_conf->next, ++i) {
 		startup->inter[i] = calloc(1, sizeof(struct plugin_config));
-		CHECK_ALLOC(startup->inter[i], NULL);
+
+		if (!startup->inter[i]) {
+			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+			free_conf_list(aux_list);
+			free(startup);
+			return NULL;
+		}
+
 		startup->inter[i]->conf = aux_conf->config;
 	}
 	startup->inter[i] = NULL;

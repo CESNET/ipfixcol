@@ -102,7 +102,7 @@ public:
 	 * @param aggregate Aggregate mode
 	 * @return true when initialization completed, false on error
 	 */
-	Column(const pugi::xml_document &doc, const std::string &alias, bool aggregate) throw(std::invalid_argument);
+	Column(const pugi::xml_document &doc, const std::string &alias, bool aggregate);
 
 	/**
 	 * \brief Class constructor, initialises only column name
@@ -271,7 +271,7 @@ private:
 		/**
 		 * \brief AST constructor - sets default values
 		 */
-		AST(): parts(1), left(NULL), right(NULL), cached(false) {}
+		AST(): type(valueType), operation('+'), parts(1), left(NULL), right(NULL), cached(false) {}
 
 		/**
 		 * \brief AST destructor

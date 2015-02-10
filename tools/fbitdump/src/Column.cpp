@@ -434,7 +434,7 @@ bool Column::isSummary() const
 	return this->summary;
 }
 
-Column::Column(const pugi::xml_document &doc, const std::string &alias, bool aggregate) throw(std::invalid_argument):
+Column::Column(const pugi::xml_document &doc, const std::string &alias, bool aggregate):
 		nullStr("NULL"), width(0), alignLeft(false), ast(NULL), aggregation(false), summary(false)
 {
 	this->init(doc, alias, aggregate);
