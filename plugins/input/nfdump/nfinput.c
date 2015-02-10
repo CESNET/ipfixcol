@@ -577,7 +577,7 @@ void *message_to_packet(const struct ipfix_message *msg, int *packet_length)
 	}
 
 	/* Copy data sets */
-	for (i = 0; i < MSG_MAX_DATA_COUPLES msg->data_couple[i].data_set; ++i) {
+	for (i = 0; i < MSG_MAX_DATA_COUPLES && msg->data_couple[i].data_set; ++i) {
 		len = ntohs(msg->data_couple[i].data_set->header.length);
 		memcpy(packet + offset,   &(msg->data_couple[i].data_set->header), 4);
 		memcpy(packet + offset + 4, msg->data_couple[i].data_set->records, len - 4);

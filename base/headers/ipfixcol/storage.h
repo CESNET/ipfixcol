@@ -77,6 +77,38 @@ struct data_template_couple{
 	struct ipfix_template *data_template;
 };
 
+enum PLUGIN_STATUS {
+    PLUGIN_DATA,    /**< Don't react on this message */
+    PLUGIN_START,   /**< Start reading */
+    PLUGIN_STOP     /**< Stop reading */
+};
+
+/**
+ * \struct ipfix_record
+ * \brief Structure for one data record with it's length and template
+ */
+struct ipfix_record {
+    void *record;       /**< Data record */
+    uint16_t length;    /**< Record's length */
+    struct ipfix_template *templ;   /**< Record's template */
+};
+
+
+struct organization {
+    uint32_t id;
+    uint16_t rule;
+    uint16_t **profiles;
+};
+
+struct __attribute__((packed)) metadata {
+    struct ipfix_record record;     /**< IPFIX data record */
+	uint16_t srcCountry;			/**< Source country code */
+	uint16_t dstCountry;			/**< Destination country code */
+    uint32_t srcAS;                 /**< Source AS */
+    uint32_t dstAS;                 /**< Destination AS */
+    struct organization **organizations;    /**< Array of organizations assigned to this record */
+    /* geoinfo */
+};
 
 /**
  * \struct ipfix_message
@@ -89,6 +121,8 @@ struct __attribute__((__packed__)) ipfix_message {
 	struct input_info                 *input_info;
 	/** Source status (new, opened, closed) */
 	enum SOURCE_STATUS                source_status;
+        enum PLUGIN_STATUS                plugin_status;
+        int plugin_id;
 	/** Number of data records in message */
 	uint16_t 						  data_records_count;
 	/** Number of template records in message */
@@ -101,6 +135,8 @@ struct __attribute__((__packed__)) ipfix_message {
 	struct ipfix_options_template_set *opt_templ_set[MSG_MAX_OTEMPLATES];
 	/** List of Data Sets (with a link to corresponding template) in the packet */
 	struct data_template_couple       data_couple[MSG_MAX_DATA_COUPLES];
+	/** List of metadata structures */
+	struct metadata *metadata;
 };
 
 /**

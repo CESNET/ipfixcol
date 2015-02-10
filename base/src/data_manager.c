@@ -1,6 +1,7 @@
 /**
  * \file data_manager.c
  * \author Radek Krejci <rkrejci@cesnet.cz>
+ * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief Data manager implementation.
  *
  * Copyright (C) 2011 CESNET, z.s.p.o.
@@ -43,7 +44,8 @@
 #include <libxml/tree.h>
 #include <sys/prctl.h>
 #include <ipfixcol/verbose.h>
-
+#include <ipfixcol/storage.h>
+#include "configurator.h"
 #include "data_manager.h"
 
 /** Identifier to MSG_* macros */
@@ -59,57 +61,79 @@ extern int ring_buffer_size;
  */
 static inline void data_manager_free (struct data_manager_config* config)
 {
-	struct storage_list *aux_storage;
-
-	if (config != NULL) {
-        /* free struct storage  */
-		while (config->storage_plugins) {
-			aux_storage = config->storage_plugins;
-			config->storage_plugins = config->storage_plugins->next;
-            /* close storage plugin */
-			if (aux_storage->storage.dll_handler) {
-                aux_storage->storage.close (&(aux_storage->storage.config));
-            }
-            /* free thread_config (tread should aready exited)*/
-            if (aux_storage->storage.thread_config != NULL) {
-                free(aux_storage->storage.thread_config);
-            }
-            /* pointers in storage were copied and should be closed elsewhere */
-            free (aux_storage);
-	    }
-
-		if (config->store_queue != NULL) {
+	int i;
+	
+	if (config) {
+		for (i = 0; i < config->plugins_count; ++i) {
+			if (config->storage_plugins[i]) {
+				/* Close & free plugin */
+				if (config->storage_plugins[i]->dll_handler) {
+					config->storage_plugins[i]->close(&(config->storage_plugins[i]->config));
+				}
+				
+				if (config->storage_plugins[i]->thread_config) {
+					free(config->storage_plugins[i]->thread_config);
+				}
+				
+				free(config->storage_plugins[i]);
+				config->storage_plugins[i] = NULL;
+			}
+		}
+		
+		/* Free store queue */
+		if (config->store_queue) {
 			rbuffer_free(config->store_queue);
 		}
-
-		free (config);
+		
+		/* Free DM config */
+		free(config);
 	}
 }
 
-static void* storage_plugin_thread (void* cfg)
+/**
+ * \brief Thread for storage plugin
+ */
+static void* storage_plugin_thread(void *cfg)
 {
     struct storage *config = (struct storage*) cfg; 
 	struct ipfix_message* msg;
+	int can_read = 0, stop = 0;
 	unsigned int index = config->thread_config->queue->read_offset;
 
 	/* set the thread name to reflect the configuration */
 	prctl(PR_SET_NAME, config->thread_name, 0, 0, 0);
 
     /* loop will break upon receiving NULL from buffer */
-	while (1) {
+	while (!stop) {
 		/* get next data */
 		msg = rbuffer_read (config->thread_config->queue, &index);
 		if (msg == NULL) {
 			MSG_NOTICE("storage plugin thread", "[%u] No more data from Data manager.", config->odid);
             break;
 		}
-
-		/* do the job */
-		config->store (config->config, msg, config->thread_config->template_mgr);
-
-		/* all done, mark data as processed */
-		rbuffer_remove_reference(config->thread_config->queue, index, 1);
-
+		
+		/* Decode message type */
+		switch (msg->plugin_status) {
+		case PLUGIN_STOP: /* Stop working */
+			if (msg->plugin_id == config->id) {
+				stop = 1;
+			}
+			rbuffer_remove_reference(config->thread_config->queue, index, 1);
+			break;
+		case PLUGIN_START: /* Start reading */
+			if (msg->plugin_id == config->id) {
+				can_read = 1;
+			}
+			rbuffer_remove_reference(config->thread_config->queue, index, 1);
+			break;
+		default: /* DATA */
+			if (can_read) {
+				config->store (config->config, msg, config->thread_config->template_mgr);
+				rbuffer_remove_reference(config->thread_config->queue, index, 1);
+			}
+			break;
+		}
+		
 		/* move the index */
 		index = (index + 1) % config->thread_config->queue->size;
 	}
@@ -119,50 +143,151 @@ static void* storage_plugin_thread (void* cfg)
 }
 
 /**
+ * \brief Add storage plugin instance
+ */
+int data_manager_add_plugin(struct data_manager_config *config, struct storage *plugin)
+{
+	int retval = 0, name_len;
+	xmlChar *plugin_params;
+	
+	/* Check ODID */
+	if ((plugin->xml_conf->observation_domain_id != NULL && /* OID set and does not match */
+		atol(plugin->xml_conf->observation_domain_id) != config->observation_domain_id) ||
+		(plugin->xml_conf->observation_domain_id == NULL && /* OID not set, but specific plugin(s) found*/
+		config->oid_specific_plugins > 0)) {
+			
+		/* skip storage plugin */
+		return 0;
+	}
+
+	/* Allocate space */
+	if (!config->storage_plugins[config->plugins_count]) {
+		config->storage_plugins[config->plugins_count] = calloc(1, sizeof(struct storage));
+		if (!config->storage_plugins[config->plugins_count]) {
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+			return 1;
+		}
+	}
+	
+	/* Copy plugin data */
+	memcpy(config->storage_plugins[config->plugins_count], plugin, sizeof(struct storage));
+	plugin = config->storage_plugins[config->plugins_count];
+	
+	/* Initiate storage plugin */
+	xmlDocDumpMemory (plugin->xml_conf->xmldata, &plugin_params, NULL);
+	retval = plugin->init ((char*) plugin_params, &(plugin->config));
+	xmlFree(plugin_params);
+	
+	if (retval != 0) {
+		MSG_WARNING(msg_module, "[%u] Initiating storage plugin failed.", config->observation_domain_id);
+		return 0;
+	}
+	
+	/* Create storage plugin thread */
+	struct storage_thread_conf *plugin_cfg = calloc (1, sizeof(struct storage_thread_conf));
+	if (!plugin_cfg) {
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		plugin->close (&(plugin->config));
+		return 0;
+	}
+	
+	/* Set plugin's input queue */
+	plugin_cfg->queue = config->store_queue;
+//		plugin_cfg->template_mgr = config->template_mgr;
+	plugin->thread_config = plugin_cfg;
+	plugin->odid = config->observation_domain_id;
+	
+	/* Set thread name */
+	name_len = strlen(plugin->thread_name);
+	snprintf(plugin->thread_name + name_len, 16 - name_len, " %d", config->observation_domain_id);
+	
+	/* Create thread */
+	if (pthread_create(&(plugin_cfg->thread_id), NULL, &storage_plugin_thread, (void*) plugin) != 0) {
+		MSG_ERROR(msg_module, "Unable to create storage plugin thread.");
+		plugin->close(&(plugin->config));
+		free(plugin_cfg);
+		plugin->thread_config = NULL;
+		return 0;
+	}
+	
+	/* Create START message */
+	struct ipfix_message *msg = calloc(1, sizeof(struct ipfix_message));
+	msg->plugin_status = PLUGIN_START;
+	msg->plugin_id = plugin->id;
+
+	/* Start plugin */
+	config->plugins_count++;
+	rbuffer_write(config->store_queue, msg, config->plugins_count);
+	
+	return 0;
+}
+
+/**
+ * \brief Remove plugin from data manager
+ */
+int data_manager_remove_plugin(struct data_manager_config* config, int id)
+{
+	int i;
+
+	struct storage *plugin = NULL;
+	
+	/* Find plugin */
+	for (i = 0; i < config->plugins_count; ++i) {
+		if (config->storage_plugins[i] && config->storage_plugins[i]->id == id) {
+			/* Remove from array */
+			plugin = config->storage_plugins[i];
+			config->storage_plugins[i] = NULL;
+			break;
+		}
+	}
+	
+	if (plugin) {
+		/* Create STOP message */
+		struct ipfix_message *msg = calloc(1, sizeof(struct ipfix_message));
+		msg->plugin_status = PLUGIN_STOP;
+		msg->plugin_id = plugin->id;
+		
+		/* Wait for plugin termination */
+		rbuffer_write(config->store_queue, msg, config->plugins_count);
+		pthread_join(plugin->thread_config->thread_id, NULL);
+		config->plugins_count--;
+	}
+	
+	return 0;
+}
+
+/**
  * \brief Close Data manager specified by its configuration
  *
  * @param config Configuration structure of the manager
  */
 void data_manager_close (struct data_manager_config **config)
 {
-	struct storage_list *aux_storage = (*config)->storage_plugins;
+	int i;
 
 	/* close all storage plugins */
 	rbuffer_write ((*config)->store_queue, NULL, (*config)->plugins_count);
-	while (aux_storage) {
-		pthread_join(aux_storage->storage.thread_config->thread_id, NULL);
-		aux_storage = aux_storage->next;
+	for (i = 0; i < (*config)->plugins_count; ++i) {
+		if ((*config)->storage_plugins[i]) {
+			pthread_join((*config)->storage_plugins[i]->thread_config->thread_id, NULL);
+		}
 	}
 
 	/* deallocate config structure */
     data_manager_free(*config);
     *config = NULL;
-
-    return;
 }
 
 /**
- * \brief Initiate Data manager's config structure and create a thread executing
- * Data manager's code.
- *
- * @param observation_domain_id Observation Domain ID handled by this Data
- * manager.
- * @param storage_plugins List of storage plugins for this Data manager.
- * @return Configuration structure of created Data manager.
+ * \brief Initiate Data manager's config structure and create a thread executing Data manager's code.
  */
-struct data_manager_config* data_manager_create (
-    uint32_t observation_domain_id,
-    struct storage_list* storage_plugins)
+struct data_manager_config *data_manager_create(uint32_t observation_domain_id, struct storage *storage_plugins[])
 {
-	xmlChar *plugin_params;
-	int retval, name_len, oid_specific_plugins = 0;
-	struct storage_list *aux_storage;
-	struct storage_list *aux_storage_list;
-	struct data_manager_config *config;
-	struct storage_thread_conf *plugin_cfg;
+	int i;
+	struct data_manager_config *config = NULL;
 
 	/* prepare Data manager's config structure */
-	config = (struct data_manager_config*) calloc (1, sizeof(struct data_manager_config));
+	config = (struct data_manager_config*) calloc(1, sizeof(struct data_manager_config));
 	if (config == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return (NULL);
@@ -172,103 +297,35 @@ struct data_manager_config* data_manager_create (
 	config->store_queue = rbuffer_init(ring_buffer_size);
 	if (config->store_queue == NULL) {
 		MSG_ERROR(msg_module, "Unable to initiate queue for communication with Storage plugins.");
-		data_manager_free (config);
-		return (NULL);
+		goto err;
 	}
 
 	config->observation_domain_id = observation_domain_id;
-	config->storage_plugins = NULL;
-	config->plugins_count = 0;
 
 	/* check whether there is OID specific plugin for this OID */
-	for (aux_storage = storage_plugins; aux_storage != NULL; aux_storage = aux_storage->next) {
-		if (storage_plugins->storage.xml_conf->observation_domain_id != NULL &&
-			atol(storage_plugins->storage.xml_conf->observation_domain_id) == config->observation_domain_id) {
-			oid_specific_plugins++;
+	for (i = 0; storage_plugins[i]; ++i) {
+		if (storage_plugins[i]->xml_conf->observation_domain_id &&
+			atol(storage_plugins[i]->xml_conf->observation_domain_id) == config->observation_domain_id) {
+			config->oid_specific_plugins++;
 		}
 	}
 
 	/* initiate all storage plugins */
-	aux_storage_list = storage_plugins;
-	while (aux_storage_list) {
-
-		/* check whether storage plugin is ment for this OID */
-		if ((aux_storage_list->storage.xml_conf->observation_domain_id != NULL && /* OID set and does not match */
-			atol(aux_storage_list->storage.xml_conf->observation_domain_id) != config->observation_domain_id) ||
-			(aux_storage_list->storage.xml_conf->observation_domain_id == NULL && /* OID not set, but specific plugin(s) found*/
-			oid_specific_plugins > 0)) {
-			/* skip to next storage plugin */
-			aux_storage_list = aux_storage_list->next;
-			continue;
-		}
-
-		/* allocate memory for copy of storage structure for description of storage plugin */
-		aux_storage = (struct storage_list*) malloc (sizeof(struct storage_list));
-		if (aux_storage == NULL) {
-			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
-			aux_storage_list = aux_storage_list->next;
-			continue;
-		}
-
-		/* copy the original storage_structure */
-		memcpy (aux_storage, aux_storage_list, sizeof(struct storage_list));
-
-		/* initiate storage plugin */
-		xmlDocDumpMemory (aux_storage->storage.xml_conf->xmldata, &plugin_params, NULL);
-		retval = aux_storage->storage.init ((char*) plugin_params, &(aux_storage->storage.config));
-		if (retval != 0) {
-			MSG_WARNING(msg_module, "[%u] Initiating storage plugin failed.", config->observation_domain_id);
-			xmlFree (plugin_params);
-			aux_storage_list = aux_storage_list->next;
-			continue;
-		}
-		xmlFree (plugin_params);
-
-		/* check the links in list of plugins available from data manager's config */
-		if (config->storage_plugins) {
-			aux_storage->next = config->storage_plugins;
-		} else {
-			aux_storage->next = NULL;
-		}
-
-		/* create storage plugin thread */
-		plugin_cfg = (struct storage_thread_conf*) malloc (sizeof (struct storage_thread_conf));
-		if (plugin_cfg == NULL) {
-			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
-			aux_storage->storage.close (&(aux_storage->storage.config));
-			aux_storage_list = aux_storage_list->next;
-			continue;
-		}
-		plugin_cfg->queue = config->store_queue;
-//		plugin_cfg->template_mgr = config->template_mgr;
-		aux_storage->storage.thread_config = plugin_cfg;
-		aux_storage->storage.odid = config->observation_domain_id;
-		name_len = strlen(aux_storage->storage.thread_name);
-		snprintf(aux_storage->storage.thread_name + name_len, 16 - name_len, " %d", observation_domain_id);
-		if (pthread_create(&(plugin_cfg->thread_id), NULL, &storage_plugin_thread, (void*) &aux_storage->storage) != 0) {
-			MSG_ERROR(msg_module, "Unable to create storage plugin thread.");
-			aux_storage->storage.close (&(aux_storage->storage.config));
-			free (plugin_cfg);
-			aux_storage->storage.thread_config = NULL;
-			aux_storage_list = aux_storage_list->next;
-			continue;
-		}
-
-		/* store initiated plugin record into the list of storage plugins of this data manager */
-		config->storage_plugins = aux_storage;
-		config->plugins_count++;
-
-		/* continue on the following storage plugin */
-		aux_storage_list = aux_storage_list->next;
+	for (i = 0; storage_plugins[i]; ++i) {
+		data_manager_add_plugin(config, storage_plugins[i]);
 	}
 
 	/* check if at least one storage plugin initiated */
 	if (config->plugins_count == 0) {
 		MSG_WARNING(msg_module, "[%u] No storage plugin for the Data manager initiated.", config->observation_domain_id);
-		data_manager_free (config);
-		free (aux_storage);
-		return (NULL);
+		goto err;
 	}
-
+	
 	return (config);
+	
+err:
+	if (config) {
+		data_manager_free(config);
+	}
+	return NULL;
 }

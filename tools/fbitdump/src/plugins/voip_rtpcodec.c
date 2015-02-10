@@ -128,10 +128,6 @@ void format( const plugin_arg_t * arg,
         snprintf(buffer, PLUGIN_BUFFER_SIZE, "dynamic");
         return;
     }
-
-
-
-    snprintf(buffer, PLUGIN_BUFFER_SIZE, "%u", arg->val->uint8);
 }
 
 /**

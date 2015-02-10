@@ -73,7 +73,7 @@ int Configuration::init(int argc, char *argv[])
 	std::string optionM;	/* optarg for option -M */
 	std::string optionm;	/* optarg value for option -m */
 	std::string optionr;	/* optarg value for option -r */
-	char *indexes = NULL;	/* indexes optarg to be parsed later */
+	std::string indexes;	/* indexes optarg to be parsed later */
 	bool print_semantics = false;
 	bool print_formats = false;
 	bool print_modules = false;
@@ -88,12 +88,10 @@ int Configuration::init(int argc, char *argv[])
 		switch (c) {
 		case 'h': /* print help */
 			help();
-			free(indexes);
 			return 1;
 			break;
 		case 'V': /* print version */
 			std::cout << PACKAGE << ": Version: " << VERSION << std::endl;
-			free(indexes);
 			return 1;
 			break;
 		case 'a': /* aggregate */
@@ -110,11 +108,10 @@ int Configuration::init(int argc, char *argv[])
 			}
 			break;
 		case 'A': /* aggregate on specific columns */
-			/* parseAggregateArg() handles case where optarg == NULL */
 			parseAggregateArg(optarg);
 			break;
 		case 'f':
-			if (optarg == NULL || optarg == std::string("")) {
+			if (optarg == std::string("")) {
 				throw std::invalid_argument("-f requires filter file specification");
 			}
 
@@ -123,7 +120,7 @@ int Configuration::init(int argc, char *argv[])
 		case 'n':
 			/* same as -c, but -c takes precedence */
 			if (!maxCountSet) {
-				if (optarg == NULL || optarg == std::string("")) {
+				if (optarg == std::string("")) {
 					throw std::invalid_argument("-n requires a number specification");
 				}
 				this->maxRecords = atoi(optarg);
@@ -132,7 +129,7 @@ int Configuration::init(int argc, char *argv[])
 			maxCountSet = true; /* so that statistics knows whether to change the value */
 			break;
 		case 'c': /* number of records to display */
-			if (optarg == NULL || optarg == std::string("")) {
+			if (optarg == std::string("")) {
 				throw std::invalid_argument("-c requires a number specification");
 			}
 
@@ -140,14 +137,14 @@ int Configuration::init(int argc, char *argv[])
 			maxCountSet = true; /* so that statistics knows whether to change the value */
 			break;
 		case 'D':
-			if (optarg == NULL || optarg == std::string("")) {
+			if (optarg == std::string("")) {
 				throw std::invalid_argument("-D requires a nameserver specification");
 			}
 
 			this->resolver = new Resolver(optarg);
 			break;
 		case 'N': /* print plain numbers */
-			if (optarg == NULL || optarg == std::string("")) {
+			if (optarg == std::string("")) {
 				throw std::invalid_argument("-N requires a level specification");
 			}
 
@@ -157,20 +154,14 @@ int Configuration::init(int argc, char *argv[])
 			/* Similar to -A option*/
 			this->statistics = true;
 
-			if (optarg == NULL) {
-				throw std::invalid_argument("-s is provided with a null argument");
-			}
-
 			/* we support column/order for convenience */
 			std::string arg = optarg;
 			std::string::size_type pos;
 			char parseArg[250];
-
-			if (arg.size() >= 250) {
-				throw std::invalid_argument("Argument for option -s is too long");
-			}
-
 			if ((pos = arg.find('/')) != std::string::npos) { /* ordering column specified */
+				if (pos >= 250) { /* constant char array */
+					throw std::invalid_argument("Argument for option -s is too long");
+				}
 				/* column name is before '/' */
 				Utils::strncpy_safe(parseArg, optarg, pos);
 				parseArg[pos] = '\0';
@@ -198,8 +189,7 @@ int Configuration::init(int argc, char *argv[])
 			/* Print extended bottom stats since we already have the values */
 			this->extendedStats = true;
 
-			break;
-		}
+			break;}
 		case 'q':
 			this->quiet = true;
 			break;
@@ -208,10 +198,9 @@ int Configuration::init(int argc, char *argv[])
 			break;
 		case 'I':
 			NOT_SUPPORTED
-			free(indexes);
 			break;
 		case 'M':
-			if (optarg == NULL || optarg == std::string("")) {
+			if (optarg == std::string("")) {
 				throw std::invalid_argument("-M requires a directory specification");
 			}
 
@@ -219,7 +208,7 @@ int Configuration::init(int argc, char *argv[])
 			/* this option will be processed later (it depends on -r or -R) */
 			break;
 		case 'r': {/* -M help argument */
-			if (optarg == NULL || optarg == std::string("")) {
+			if (optarg == std::string("")) {
 				throw std::invalid_argument("-r requires a path specification");
 			}
 
@@ -238,32 +227,34 @@ int Configuration::init(int argc, char *argv[])
 			break;
 
 		case 'R':
-			if (optarg == NULL || optarg == std::string("")) {
+			if (optarg == std::string("")) {
 				throw std::invalid_argument("-R requires a path specification");
 			}
 
 			this->processROption(tables, optarg);
+
 			break;
 
 		case 'o': /* output format */
-			if (optarg == NULL || optarg == std::string("")) {
+			if (optarg == std::string("")) {
 				throw std::invalid_argument("-o requires an output path specification");
 			}
 			
 			this->format = optarg;
 			break;
 		case 'p':
-			if (optarg == NULL || optarg == std::string("")) {
-				throw std::invalid_argument("-p requires a path to open");
-			} else if (access ( optarg, F_OK ) != 0) {
+			if (optarg == std::string("")) {
+				throw std::invalid_argument("-p requires a path to open, empty string given");
+			}
+			if (access ( optarg, F_OK ) != 0 ) {
 				throw std::invalid_argument("Cannot access pipe");
 			}
-
 			this->pipe_name = optarg;
+
 			break;
 
 		case 'v':
-			if (optarg == NULL || optarg == std::string("")) {
+			if (optarg == std::string("")) {
 				throw std::invalid_argument("-v requires a verbosity level specification");
 			}
 			
@@ -273,7 +264,7 @@ int Configuration::init(int argc, char *argv[])
 			this->checkFilters = true;
 			break;
 		case 't':
-			if (optarg == NULL || optarg == std::string("")) {
+			if (optarg == std::string("")) {
 				throw std::invalid_argument("-t requires a time window specification");
 			}
 			
@@ -281,27 +272,16 @@ int Configuration::init(int argc, char *argv[])
 			break;
 		case 'i': /* create indexes */
 			this->createIndexes = true;
-			if (optarg != NULL) {
-				if (indexes) {
-					free(indexes);
-				}
-				indexes = strdup(optarg);
-			}
+			indexes = optarg;
 			break;
 		case 'd': /* delete indexes */
 			this->deleteIndexes = true;
-			if (optarg != NULL) {
-				if (indexes) {
-					free(indexes);
-				}
-				indexes = strdup(optarg);
-			}
+			indexes = optarg;
 			break;
 		case 'C': /* Configuration file */
-			if (optarg == NULL || optarg == std::string("")) {
-				throw std::invalid_argument("-C requires a path to configuration file");
+			if (optarg == std::string("")) {
+				throw std::invalid_argument("-C requires a path to configuration file, empty string given");
 			}
-
 			this->configFile = optarg;
 			break;
 		case 'T': /* Template information */
@@ -317,15 +297,14 @@ int Configuration::init(int argc, char *argv[])
 			print_modules = true;
 			break;
 		case 'P':
-			if (optarg == NULL || optarg == std::string("")) {
+			if (optarg == std::string("")) {
 				throw std::invalid_argument("-P requires a filter specification");
 			}
 			
 			this->aggregateFilter = optarg;
 			break;
 		default:
-			help();
-			free(indexes);
+			help ();
 			return 1;
 			break;
 		}
@@ -344,14 +323,12 @@ int Configuration::init(int argc, char *argv[])
 
 	if (print_formats) {
 		this->printOutputFormats();
-		free(indexes);
 		return 1;
 	}
 
 	if (print_modules) {
 		this->loadModules();
 		this->printModules();
-		free(indexes);
 		return 1;
 	}
 	
@@ -367,8 +344,7 @@ int Configuration::init(int argc, char *argv[])
 	Utils::printStatus( "Parsing column indexes");
 
 	/* parse indexes line */
-	this->parseIndexColumns(indexes);
-	free(indexes);
+	this->parseIndexColumns(const_cast<char*>(indexes.c_str()));
 
 	Utils::printStatus( "Loading modules");
 
@@ -387,7 +363,7 @@ int Configuration::init(int argc, char *argv[])
 		t.seekg(0, std::ios::beg);
 
 		this->filter.assign((std::istreambuf_iterator<char>(t)),
-		std::istreambuf_iterator<char>());
+        std::istreambuf_iterator<char>());
 
 	} else {
 		/* set default filter */
@@ -1003,44 +979,44 @@ void Configuration::processMOption(stringVector &tables, const char *optarg, std
 
 void Configuration::processROption(stringVector &tables, const char *optarg)
 {
-	std::string arg = optarg;
+    std::string arg = optarg;
 
-	/* Find separator */
-	size_t pos = arg.find(':');
-	if (pos == arg.npos) {
-		/* Specified only one directory */
+    /* Find separator */
+    size_t pos = arg.find(':');
+    if (pos == arg.npos) {
+        /* Specified only one directory */
 	Utils::sanitizePath(arg);
-		tables.push_back(arg);
-		return;
-	}
+        tables.push_back(arg);
+        return;
+    }
 
-	/* Get left and right path */
-	std::string left = arg.substr(0, pos);
-	std::string right = arg.substr(pos + 1);
+    /* Get left and right path */
+    std::string left = arg.substr(0, pos);
+    std::string right = arg.substr(pos + 1);
 
-	/* Right path is ready and can be sanitized */
-	Utils::sanitizePath(right);
+    /* Right path is ready and can be sanitized */
+    Utils::sanitizePath(right);
 
-	/* Get root directory (== left - depth of right) */
-	uint16_t right_depth = std::count(right.begin(), right.end(), '/');
+    /* Get root directory (== left - depth of right) */
+    uint16_t right_depth = std::count(right.begin(), right.end(), '/');
 
-	std::string root = left;
-	while (right_depth--) {
+    std::string root = left;
+    while (right_depth--) {
 	root = root.substr(0, root.find_last_of('/'));
-	}
+    }
 
-	/* Get first firectory */
-	if (root == left) {
+    /* Get first firectory */
+    if (root == left) {
 	root = "./";
-	} else {
+    } else {
 	left = left.substr(root.length() + 1);
-	}
+    }
 
-	Utils::sanitizePath(root);
-	Utils::sanitizePath(left);
+    Utils::sanitizePath(root);
+    Utils::sanitizePath(left);
 
-	/* Load dirs */
-	Utils::loadDirsTree(root, left, right, tables);
+    /* Load dirs */
+    Utils::loadDirsTree(root, left, right, tables);
 }
 
 void Configuration::parseAggregateArg(char *arg) throw (std::invalid_argument)
