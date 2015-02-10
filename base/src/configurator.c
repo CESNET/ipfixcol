@@ -843,7 +843,14 @@ startup_config *config_create_startup(configurator *config)
 	i = 0;
 	for (aux_conf = aux_list; aux_conf; aux_conf = aux_conf->next, ++i) {
 		startup->input[i] = calloc(1, sizeof(struct plugin_config));
-		CHECK_ALLOC(startup->input[i], NULL);
+		
+		if (!startup->input[i]) {
+			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+			free_conf_list(aux_list);
+			free(startup);
+			return NULL;
+		}
+
 		startup->input[i]->conf = aux_conf->config;
 	}
 	startup->input[i] = NULL;
@@ -863,12 +870,12 @@ startup_config *config_create_startup(configurator *config)
 		if (!startup->storage[i]) {
 			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
 			free_conf_list(aux_list);
+			free(startup);
 			return NULL;
 		}
 		
 		startup->storage[i]->conf = aux_conf->config;
 	}
-
 	startup->storage[i] = NULL;
 	free_conf_list(aux_list);
 	
@@ -879,7 +886,14 @@ startup_config *config_create_startup(configurator *config)
 	i = 0;
 	for (aux_conf = aux_list; aux_conf; aux_conf = aux_conf->next, ++i) {
 		startup->inter[i] = calloc(1, sizeof(struct plugin_config));
-		CHECK_ALLOC(startup->inter[i], NULL);
+
+		if (!startup->inter[i]) {
+			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+			free_conf_list(aux_list);
+			free(startup);
+			return NULL;
+		}
+
 		startup->inter[i]->conf = aux_conf->config;
 	}
 	startup->inter[i] = NULL;
