@@ -60,6 +60,17 @@
 
 static const char *msg_module = "profiler";
 
+/* Packet header fields - must correspond with header_field enum and end with NULL */
+static const char *header_fields[] = {
+	/* HF_ODID */		"ODID", 
+	/* HF_SRCIP */		"SRCADDR", 
+	/* HF_SRCPORT */	"SRCPORT",
+	/* HF_DSTIP */		"DSTADDR",
+	/* HF_DSTPORT */	"DSTPORT",
+	NULL
+};
+	
+
 /**
  * \brief Free tree structure
  */
@@ -133,26 +144,58 @@ int filter_init_elements(struct filter_parser_data *pdata)
  * \brief Check whether value in data record fits with node expression
  *
  * \param[in] node Filter tree node
+ * \param[in] msg IPFIX message (filter may contain field from message header)
  * \param[in] record IPFIX data record
  * \return true if data record's field fits
  */
-bool filter_fits_value(struct filter_treenode *node, struct ipfix_record *record)
+bool filter_fits_value(struct filter_treenode *node, struct ipfix_message *msg, struct ipfix_record *record)
 {
-	int datalen;
+	int cmpres;
 	
-	/* Get data from record */
-	uint8_t *recdata = data_record_get_field(record->record, record->templ, node->field->enterprise, node->field->id, &datalen);
-	if (!recdata) {
-		/* Field not found - if op is '!=' it is success */
-		return node->op == OP_NOT_EQUAL;
-	}
+	if (node->field->type == FT_HEADER) {
+		/* Header field */
+		struct input_info_network *info = (struct input_info_network*) msg->input_info;
+		
+		switch (node->field->id) {
+		case HF_ODID:
+			cmpres = !(msg->pkt_header->observation_domain_id == *((uint32_t *) node->value->value));
+			break;
+		case HF_SRCIP:
+			cmpres = memcmp(&(info->src_addr), node->value->value, info->l3_proto == 4 ? sizeof(info->src_addr.ipv4) : sizeof(info->src_addr.ipv6));
+			break;
+		case HF_SRCPORT:
+			cmpres = memcmp(&(info->src_port), node->value->value, sizeof(info->src_port));
+			break;
+		case HF_DSTIP:
+			cmpres = memcmp(&(info->dst_addr), node->value->value, info->l3_proto == 4 ? sizeof(info->dst_addr.ipv4) : sizeof(info->dst_addr.ipv6));
+			break;
+		case HF_DSTPORT:
+			cmpres = memcmp(&(info->dst_port), node->value->value, sizeof(info->dst_port));
+			break;
+		default:
+			cmpres = 1;
+			break;
+		}
+			
+	} else {
+		/* Data field */
+		int datalen;
+		
+		/* Get data from record */
+		uint8_t *recdata = data_record_get_field(record->record, record->templ, node->field->enterprise, node->field->id, &datalen);
+		if (!recdata) {
+			/* Field not found - if op is '!=' it is success */
+			return node->op == OP_NOT_EQUAL;
+		}
 
-	if (datalen > node->value->length) {
-		MSG_DEBUG(msg_module, "Cannot compare %d bytes with %d bytes", datalen, node->value->length);
-		return node->op == OP_NOT_EQUAL;
-	}
+		if (datalen > node->value->length) {
+			MSG_DEBUG(msg_module, "Cannot compare %d bytes with %d bytes", datalen, node->value->length);
+			return node->op == OP_NOT_EQUAL;
+		}
 
-	int cmpres = memcmp(recdata, node->value->value, datalen);
+		cmpres = memcmp(recdata, node->value->value, datalen);
+	}
+	
 
 	/* Compare values according to op */
 	/* memcmp return 0 if operands are equal, so it must be negated for OP_EQUAL */
@@ -236,18 +279,15 @@ bool filter_fits_string(struct filter_treenode *node, struct ipfix_record *recor
 	return result;
 }
 
-bool filter_fits_prefix(struct filter_treenode *node, struct ipfix_record *record)
+/**
+ * \brief Compare prefix with given address
+ * 
+ * \param[in] prefix prefix
+ * \param[in] addr address
+ * \return true when prefix contains address
+ */
+bool filter_compare_prefix(struct filter_prefix *prefix, uint8_t *addr)
 {
-	int datalen = 0;
-	uint8_t *addr = data_record_get_field((uint8_t *)record->record, record->templ, node->field->enterprise, node->field->id, &datalen);
-	
-	if (!addr) {
-		return node->op == OP_EQUAL;
-	}
-	
-	struct filter_prefix *prefix = (struct filter_prefix *) node->value->value;
-	bool match = true;
-	
 	/* Prefixes are compared in two stages:
 	 * 
 	 * 1) compare full bytes (memcmp etc.)
@@ -259,22 +299,59 @@ bool filter_fits_prefix(struct filter_treenode *node, struct ipfix_record *recor
 	/* Compare full bytes */
 	if (prefix->fullBytes > 0) {
 		if (memcmp(addr, prefix->data, prefix->fullBytes) != 0) {
-			match = false;
+			return false;
 		}
 	}
 	
-	if (match) {
-		/* Compare remaining bits */
-		int i, bit;
-		for (i = 0; i < prefix->bits; ++i) {
-			/* Comparing from left-most bit */
-			bit = 7 - i;
+	/* Compare remaining bits */
+	int i, bit;
+	for (i = 0; i < prefix->bits; ++i) {
+		/* Comparing from left-most bit */
+		bit = 7 - i;
 			
-			if ((addr[prefix->fullBytes] & (1 << bit)) != (prefix->data[prefix->fullBytes] & (1 << bit))) {
-				match = false;
-				break;
-			}
+		if ((addr[prefix->fullBytes] & (1 << bit)) != (prefix->data[prefix->fullBytes] & (1 << bit))) {
+			return false;
 		}
+	}
+	
+	return true;
+}
+
+/**
+ * \brief Match prefix
+ * 
+ * \param[in] node Tree node
+ * \param[in] msg ipfix message
+ * \param[in] record data record
+ * \return true when node matches
+ */
+bool filter_fits_prefix(struct filter_treenode *node, struct ipfix_message *msg, struct ipfix_record *record)
+{
+	bool match;
+	struct filter_prefix *prefix = (struct filter_prefix *) node->value->value;
+	
+	/* Check header field */
+	if (node->field->type == FT_HEADER) {
+		struct input_info_network *info = (struct input_info_network*) msg->input_info;
+		
+		if (node->field->id == HF_SRCIP) {
+			return filter_compare_prefix(prefix, (void *) &(info->src_addr));
+		} else {
+			/* Invalid comparison */
+			return false;
+		}
+		
+	} else {
+		/* Check header field */
+
+		int datalen = 0;
+		uint8_t *addr = data_record_get_field((uint8_t *)record->record, record->templ, node->field->enterprise, node->field->id, &datalen);
+
+		if (!addr) {
+			return node->op == OP_EQUAL;
+		}
+
+		match = filter_compare_prefix(prefix, addr);
 	}
 	
 	return (node->op == OP_NOT_EQUAL) ^ match;
@@ -289,9 +366,9 @@ bool filter_fits_prefix(struct filter_treenode *node, struct ipfix_record *recor
  */
 bool filter_fits_regex(struct filter_treenode *node, struct ipfix_record *record)
 {
-	int datalen = 0;
 	bool result = false;
 	regex_t *regex = (regex_t *) node->value->value;
+	int datalen = 0;
 
 	/* Get data from record */
 	uint8_t *recdata = data_record_get_field(record->record, record->templ, node->field->enterprise, node->field->id, &datalen);
@@ -320,6 +397,11 @@ bool filter_fits_regex(struct filter_treenode *node, struct ipfix_record *record
  */
 bool filter_fits_exists(struct filter_treenode *node, struct ipfix_record *data)
 {
+	/* Header field always exists */
+	if (node->field->type == FT_HEADER) {
+		return true;
+	}
+	
 	return data_record_get_field(data->record, data->templ, node->field->enterprise, node->field->id, NULL);
 }
 
@@ -327,10 +409,11 @@ bool filter_fits_exists(struct filter_treenode *node, struct ipfix_record *data)
  * \brief Check whether node (and it's children) fits on data record
  *
  * \param[in] node Filter tree node
+ * \param[in] msg IPFIX message (filter may contain field from message header)
  * \param[in] data IPFIX data record
  * \return true if data record's field fits
  */
-bool filter_fits_node(struct filter_treenode *node, struct ipfix_record *data)
+bool filter_fits_node(struct filter_treenode *node, struct ipfix_message *msg, struct ipfix_record *data)
 {
 	/**
 	 * return result modified by negation flag
@@ -338,9 +421,9 @@ bool filter_fits_node(struct filter_treenode *node, struct ipfix_record *data)
 	 */
 	switch (node->type) {
 	case NODE_AND:
-		return (node->negate) ^ (filter_fits_node(node->left, data) && filter_fits_node(node->right, data));
+		return (node->negate) ^ (filter_fits_node(node->left, msg, data) && filter_fits_node(node->right, msg, data));
 	case NODE_OR:
-		return (node->negate) ^ (filter_fits_node(node->left, data) || filter_fits_node(node->right, data));
+		return (node->negate) ^ (filter_fits_node(node->left, msg, data) || filter_fits_node(node->right, msg, data));
 	case NODE_EXISTS:
 		return (node->negate) ^ (filter_fits_exists(node, data));
 	default: /* LEAF node */
@@ -350,9 +433,9 @@ bool filter_fits_node(struct filter_treenode *node, struct ipfix_record *data)
 		case VT_REGEX:
 			return (node->negate) ^ filter_fits_regex(node, data);
 		case VT_PREFIX:
-			return (node->negate) ^ filter_fits_prefix(node, data);
+			return (node->negate) ^ filter_fits_prefix(node, msg, data);
 		default:
-			return (node->negate) ^ filter_fits_value(node, data);
+			return (node->negate) ^ filter_fits_value(node, msg, data);
 		}
 	}
 }
@@ -373,6 +456,16 @@ struct filter_field *filter_parse_field(char *name, xmlDoc *doc, xmlXPathContext
 		return NULL;
 	}
 
+	/* Check whether it is header field */
+	int i;
+	for (i = 0; header_fields[i]; ++i) {
+		if (!strcasecmp(name, header_fields[i])) {
+			field->type = FT_HEADER;
+			field->id = i;
+			return field;
+		}
+	}
+	
 	/* Prepare XPath */
 	sprintf((char *) xpath, "/ipfix-elements/element[name='%s']", name);
 	result = xmlXPathEvalExpression(xpath, context);
@@ -810,6 +903,38 @@ struct filter_treenode *filter_new_leaf_node(struct filter_field *field, char *o
 	node->type = NODE_LEAF;
 	node->op = filter_decode_operator(op);
 
+	/* Convert ODID value to network byte order */
+	if (node->field->type == FT_HEADER && node->field->id == HF_ODID) {
+		*((uint32_t *) node->value->value) = ntohl(*((uint32_t *) node->value->value));
+	}
+	
+	/* Check comparison compatibility */
+	if (node->field->type == FT_HEADER) {
+		switch (node->field->id) {
+		case HF_DSTIP:
+		case HF_SRCIP:
+			if (node->value->type == VT_STRING) {
+				MSG_ERROR(msg_module, "Cannot compare address with string");
+				free(node);
+				return NULL;
+			}
+			
+			break;
+			
+		case HF_DSTPORT:
+		case HF_SRCPORT:
+		case HF_ODID:
+			if (node->value->type != VT_NUMBER) {
+				MSG_ERROR(msg_module, "Ports and ODID can only be compared with number");
+				free(node);
+				return NULL;
+			}
+		default:
+			break;
+		}
+	}
+	
+	
 	return node;
 }
 

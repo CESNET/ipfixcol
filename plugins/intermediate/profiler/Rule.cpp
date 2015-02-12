@@ -114,7 +114,7 @@ bool Rule::matchRecord(ipfix_message* msg, ipfix_record* data) const
 	
 	/* Match dataFilter */
 	if (m_filter) {
-		if (!filter_fits_node(m_filter->root, data)) {
+		if (!filter_fits_node(m_filter->root, msg, data)) {
 			return false;
 		}
 	}

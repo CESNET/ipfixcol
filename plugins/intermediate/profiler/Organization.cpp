@@ -58,6 +58,34 @@ static const char *msg_module = "profiler";
 #define ROUT(_id_) std::cout << "\t[" << _id_ << "] "
 #define POUT(_id_) std::cout << "\t[" << _id_ << "] "
 
+std::string field_name(struct filter_field *field)
+{
+	std::stringstream ss;
+	if (field->type == FT_DATA) {
+		ss << "e" << field->enterprise << "id" << field->id;
+	} else {
+		switch (field->id) {
+		case HF_DSTIP:
+			ss << "dstip ";
+			break;
+		case HF_SRCIP:
+			ss << "srcip ";
+			break;
+		case HF_DSTPORT:
+			ss << "dstport ";
+			break;
+		case HF_SRCPORT:
+			ss << "srcport ";
+			break;
+		case HF_ODID:
+			ss << "odid ";
+			break;
+		}
+	}
+	
+	return ss.str();
+}
+
 std::string print_tree(struct filter_treenode *node)
 {
 	if (!node) {
@@ -74,10 +102,10 @@ std::string print_tree(struct filter_treenode *node)
 		ss << print_tree(node->left) << " OR " << print_tree(node->right);
 		break;
 	case NODE_EXISTS: 
-		ss << "EXISTS " << "e" << node->field->enterprise << "id" << node->field->id;
+		ss << "EXISTS " << field_name(node->field);
 		break;
 	case NODE_LEAF:
-		ss << "e" << node->field->enterprise << "id" << node->field->id;
+		ss << field_name(node->field);
 		switch (node->op) {
 		case OP_EQUAL: ss << " = "; break;
 		case OP_GREATER: ss << " > "; break;
@@ -198,7 +226,7 @@ profileVec Organization::matchingProfiles(ipfix_message* msg, ipfix_record* data
 	profileVec vec{};
 	
 	for (auto profile: m_profiles) {
-		if (filter_fits_node(profile->root, data)) {
+		if (filter_fits_node(profile->root, msg, data)) {
 			vec.push_back(profile);
 		}
 	}

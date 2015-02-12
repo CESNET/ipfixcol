@@ -126,6 +126,7 @@
                                                             <term><command>filter</command></term>
                                                             <listitem>
                                                                     <simpara>Filter applied on data reocrds, specifying whether it belongs to the profile. It uses the same syntax as <citerefentry><refentrytitle>ipfixcol-filter-inter</refentrytitle><manvolnum>1</manvolnum></citerefentry></simpara>
+                                                                    <simpara>Except data fields, profile filter can contain elements from IP and IPFIX header. Supported fields are: odid, srcaddr, dstaddr, srcport, dstport</simpara>
                                                             </listitem>
                                                     </varlistentry>
                                                 </variablelist>
