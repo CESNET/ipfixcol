@@ -46,10 +46,6 @@ namespace fbitdump
 
 void Column::init(const pugi::xml_document &doc, const std::string &alias, bool aggregate)
 {
-	this->format = NULL;
-	this->parse = NULL;
-	this->pluginConf = NULL;
-
 	/* search xml for an alias */
 	pugi::xpath_node column = doc.select_single_node(("/configuration/columns/column[alias='"+alias+"']").c_str());
 	/* check what we found */
@@ -435,11 +431,11 @@ bool Column::isSummary() const
 }
 
 Column::Column(const pugi::xml_document &doc, const std::string &alias, bool aggregate):
-		nullStr("NULL"), width(0), alignLeft(false), ast(NULL), aggregation(false), summary(false)
+		format(NULL), parse(NULL), pluginConf(NULL), nullStr("NULL"), width(0), alignLeft(false), ast(NULL), aggregation(false), summary(false)
 {
 	this->init(doc, alias, aggregate);
 }
 
-Column::Column(const std::string &name): nullStr("NULL"), name(name), width(0), alignLeft(false), ast(NULL), aggregation(false), summary(false) {}
+Column::Column(const std::string &name): format(NULL), parse(NULL), pluginConf(NULL), nullStr("NULL"), name(name), width(0), alignLeft(false), ast(NULL), aggregation(false), summary(false) {}
 
 }
