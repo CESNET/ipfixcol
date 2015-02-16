@@ -194,8 +194,6 @@ static int next_file(struct ipfix_config *conf)
 			return ret;
 		}
 	}
-
-	return NO_INPUT_FILE;
 }
 
 /*
