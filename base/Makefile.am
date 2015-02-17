@@ -11,7 +11,7 @@ SUBDIRS +=  documentation/man \
 	    documentation/doxygen
 endif
 
-EXTRA_DIST = README.md
+EXTRA_DIST = README.md tests
 
 .PHONY: doc
 doc: 
@@ -23,7 +23,6 @@ rpm: dist $(rpmspec)
 	mv $(PACKAGE_TARNAME)-$(PACKAGE_VERSION).tar.gz $(RPMDIR)/SOURCES/$(PACKAGE_TARNAME)-$(PACKAGE_VERSION)-$(RELEASE).tar.gz
 	$(RPMBUILD) -ba $(rpmspec) \
 		--define "_topdir `pwd`/$(RPMDIR)";
-	$(MAKE) test
 
 clean-local: 
 	rm -rf RPMBUILD
@@ -32,3 +31,6 @@ clean-local:
 test:
 	$(MAKE) $(AM_MAKEFLAGS)
 	(cd tests/ipfixcol_test/ && ./test.sh) || exit 1 
+
+dist-hook:
+	rm -rf $(distdir)/tests/ipfixcol_test/configs/internalcfg.xml
