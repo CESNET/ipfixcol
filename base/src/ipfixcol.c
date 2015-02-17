@@ -287,6 +287,16 @@ int main (int argc, char* argv[])
 		break;
 	}
 
+	/* daemonize */
+	if (daemonize) {
+		closelog();
+		MSG_SYSLOG_INIT(PACKAGE);
+		/* and send all following messages to the syslog */
+		if (daemon (1, 0)) {
+			MSG_ERROR(msg_module, "%s", strerror(errno));
+		}
+	}
+	
 	/*
 	 * create Template Manager
 	 */
@@ -311,16 +321,6 @@ int main (int argc, char* argv[])
 	if (config_reconf(config) != 0) {
 		MSG_ERROR(msg_module, "[%d] Unable to parse plugins configuration", config->proc_id);
 		goto cleanup_err;
-	}
-	
-	/* daemonize */
-	if (daemonize) {
-		closelog();
-		MSG_SYSLOG_INIT(PACKAGE);
-		/* and send all following messages to the syslog */
-		if (daemon (1, 0)) {
-			MSG_ERROR(msg_module, "%s", strerror(errno));
-		}
 	}
 	
 	/* configure output subsystem */
