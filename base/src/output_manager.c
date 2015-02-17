@@ -648,32 +648,34 @@ void output_manager_close(void *config) {
 	struct stat_thread *aux_thread = NULL, *tmp_thread = NULL;
 
 	/* Stop Output Manager's thread and free input buffer */
-	rbuffer_write(manager->in_queue, NULL, 1);
-	pthread_join(manager->thread_id, NULL);
-	rbuffer_free(manager->in_queue);
-	
-	/* Close statistics thread */
-	if (manager->stat_interval > 0) {
-		manager->stats.done = 1;
-		pthread_kill(manager->stat_thread, SIGUSR1);
-		pthread_join(manager->stat_thread, NULL);
-	}
+	if (manager->running) {
+		rbuffer_write(manager->in_queue, NULL, 1);
+		pthread_join(manager->thread_id, NULL);
+		rbuffer_free(manager->in_queue);
 
-	aux_config = manager->data_managers;
-	/* Close all data managers */
-	while (aux_config) {
-		tmp = aux_config;
-		aux_config = aux_config->next;
-		data_manager_close(&tmp);
+		/* Close statistics thread */
+		if (manager->stat_interval > 0) {
+			manager->stats.done = 1;
+			pthread_kill(manager->stat_thread, SIGUSR1);
+			pthread_join(manager->stat_thread, NULL);
+		}
+
+		aux_config = manager->data_managers;
+		/* Close all data managers */
+		while (aux_config) {
+			tmp = aux_config;
+			aux_config = aux_config->next;
+			data_manager_close(&tmp);
+		}
+
+		/* Free all thread structures for statistics */
+		aux_thread = manager->stats.threads;
+		while (aux_thread) {
+			tmp_thread = aux_thread;
+			aux_thread = aux_thread->next;
+			free(tmp_thread);
+		}
 	}
 	
-	/* Free all thread structures for statistics */
-	aux_thread = manager->stats.threads;
-	while (aux_thread) {
-		tmp_thread = aux_thread;
-		aux_thread = aux_thread->next;
-		free(tmp_thread);
-	}
-
 	free(manager);
 }
