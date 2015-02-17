@@ -144,11 +144,18 @@ int Configuration::init(int argc, char *argv[])
 			this->resolver = new Resolver(optarg);
 			break;
 		case 'N': /* print plain numbers */
-			if (optarg == std::string("")) {
-				throw std::invalid_argument("-N requires a level specification");
+			if (optarg == NULL || optarg == std::string("")) {
+				this->plainLevel = 1;
+				//throw std::invalid_argument("-N requires a level specification");
+			} else {
+				//this->plainLevel = atoi(optarg);
+				char *endptr = NULL;
+				this->plainLevel = strtol(optarg, &endptr, 10);
+				if (endptr == optarg) {
+					throw std::invalid_argument("-N requires an integer level specification");
+				}
 			}
 
-			this->plainLevel = atoi(optarg);
 			break;
 		case 's': {
 			/* Similar to -A option*/

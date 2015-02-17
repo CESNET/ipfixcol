@@ -49,7 +49,7 @@
 namespace fbitdump {
 
 /** Acceptable command-line parameters */
-#define OPTSTRING "hVlaA::r:f:n:c:D:N:s:qeIM:m::R:o:v:Zt:i::d::C:Tp:SOP:"
+#define OPTSTRING "hVlaA::r:f:n:c:D:N::s:qeIM:m::R:o:v:Zt:i::d::C:Tp:SOP:"
 
 #define CONFIG_XML "@datadir@/fbitdump/fbitdump.xml"
 
