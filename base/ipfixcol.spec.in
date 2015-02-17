@@ -45,6 +45,9 @@ make
 %install
 make DESTDIR=$RPM_BUILD_ROOT install
 
+%check
+make test
+
 %files
 %{_bindir}/ipfixcol
 %{_libdir}/pkgconfig/ipfixcol.pc
