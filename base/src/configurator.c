@@ -81,6 +81,8 @@ do {\
  * @{
  */
 
+void free_startup(startup_config *startup);
+
 /* DEBUG */
 void print(configurator *config)
 {
@@ -154,35 +156,42 @@ void config_free_plugin(struct plugin_config *plugin)
 	/* Close plugin */
 	switch (plugin->type) {
 	case PLUGIN_INPUT:
-		if (plugin->input->dll_handler) {
-			if (plugin->input->config) {
-				plugin->input->close(&(plugin->input->config));
+		if (plugin->input) {
+			if (plugin->input->dll_handler) {
+				if (plugin->input->config) {
+					plugin->input->close(&(plugin->input->config));
+				}
+
+				dlclose(plugin->input->dll_handler);
 			}
-			
-			dlclose(plugin->input->dll_handler);
+			/* Input is pointer to configurator structure, don't free it */
+	//		free(plugin->input);
 		}
-		/* Input is pointer to configurator structure, don't free it */
-//		free(plugin->input);
 		
 		break;
 	case PLUGIN_INTER:
-		if (plugin->inter->dll_handler) {
-			plugin->inter->intermediate_close(plugin->inter->plugin_config);
-			dlclose(plugin->inter->dll_handler);
+		if (plugin->inter) {
+			if (plugin->inter->dll_handler) {
+				plugin->inter->intermediate_close(plugin->inter->plugin_config);
+				dlclose(plugin->inter->dll_handler);
+			}
+			free(plugin->inter);
 		}
-		free(plugin->inter);
 		
 		break;
 	case PLUGIN_STORAGE:
-		if (plugin->storage->dll_handler) {
-			dlclose(plugin->storage->dll_handler);
+		if (plugin->storage) {
+			if (plugin->storage->dll_handler) {
+				dlclose(plugin->storage->dll_handler);
+			}
+
+			if (plugin->conf.observation_domain_id) {
+				free(plugin->conf.observation_domain_id);
+			}
+
+			free(plugin->storage);
 		}
 		
-		if (plugin->conf.observation_domain_id) {
-			free(plugin->conf.observation_domain_id);
-		}
-		
-		free(plugin->storage);
 		break;
 	default:
 		break;
@@ -738,7 +747,10 @@ int config_process_changes(configurator *config, struct plugin_config *old_plugi
 	for (j = 0; j < plugs; ++j) {
 		if (new_plugins[j]) {
 			/* New plugin */
-			config_add(config, new_plugins[j], j, type);
+			if (config_add(config, new_plugins[j], j, type) != 0) {
+				return 1;
+			}
+			
 			new_plugins[j] = NULL;
 		}
 	}
@@ -847,7 +859,7 @@ startup_config *config_create_startup(configurator *config)
 		if (!startup->input[i]) {
 			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
 			free_conf_list(aux_list);
-			free(startup);
+			free_startup(startup);
 			return NULL;
 		}
 
@@ -870,7 +882,7 @@ startup_config *config_create_startup(configurator *config)
 		if (!startup->storage[i]) {
 			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
 			free_conf_list(aux_list);
-			free(startup);
+			free_startup(startup);
 			return NULL;
 		}
 		
@@ -890,7 +902,7 @@ startup_config *config_create_startup(configurator *config)
 		if (!startup->inter[i]) {
 			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
 			free_conf_list(aux_list);
-			free(startup);
+			free_startup(startup);
 			return NULL;
 		}
 
@@ -903,7 +915,7 @@ startup_config *config_create_startup(configurator *config)
 	
 err:
 	if (startup) {
-		free(startup);
+		free_startup(startup);
 	}
 	
 	return NULL;
@@ -927,28 +939,53 @@ int config_process_new_startup(configurator *config, startup_config *new_startup
 		
 		/* Add all input plugins */
 		for (i = 0; new_startup->input[i]; ++i) {
-			config_add(config, new_startup->input[i], i, PLUGIN_INPUT);
+			if (config_add(config, new_startup->input[i], i, PLUGIN_INPUT) != 0) {
+				goto process_err;
+			}
+			new_startup->input[i] = NULL;
 		}
 		
 		/* Add all intermediate plugins */
 		for (i = 0; new_startup->inter[i]; ++i) {
-			config_add(config, new_startup->inter[i], i, PLUGIN_INTER);
+			if (config_add(config, new_startup->inter[i], i, PLUGIN_INTER) != 0) {
+				goto process_err;
+			}
+			new_startup->inter[i] = NULL;
 		}
 		
 		/* Add all storage plugins */
 		for (i = 0; new_startup->storage[i]; ++i) {
-			config_add(config, new_startup->storage[i], i, PLUGIN_STORAGE);
+			if (config_add(config, new_startup->storage[i], i, PLUGIN_STORAGE) != 0) {
+				goto process_err;
+			}
+			new_startup->storage[i] = NULL;
 		}
 		
 		return 0;
 	}
 	
 	/* Process changes in all plugins */
-	config_process_changes(config, config->startup->input,   new_startup->input,   PLUGIN_INPUT);
-	config_process_changes(config, config->startup->inter,   new_startup->inter,   PLUGIN_INTER);
-	config_process_changes(config, config->startup->storage, new_startup->storage, PLUGIN_STORAGE);
+	if (config_process_changes(config, config->startup->input,   new_startup->input,   PLUGIN_INPUT) != 0) {
+		return 1;
+	}
+	
+	if (config_process_changes(config, config->startup->inter,   new_startup->inter,   PLUGIN_INTER) != 0) {
+		return 1;
+	}
+	
+	if (config_process_changes(config, config->startup->storage, new_startup->storage, PLUGIN_STORAGE) != 0) {
+		return 1;
+	}
 	
 	return 0;
+	
+process_err:
+	if (config->startup) {
+		free_startup(config->startup);
+		config->startup = NULL;
+	}
+	
+	return 1;
 }
 
 /**
@@ -997,21 +1034,23 @@ int config_reconf(configurator *config)
 	/* Process changes */
 	int ret = config_process_new_startup(config, new_startup);
 	
-	/* Free resources */
-	free(new_startup);
-	
-	/* Set output manager's input queue */
-	int i;
-	
-	/* Get last intermediate plugin */
-	for (i = 0; config->startup->inter[i]; ++i) {}
-	
-	if (i == 0) {
-		/* None? Set preprocessor's output */
-		output_manager_set_in_queue(get_preprocessor_output_queue());
-	} else {
-		output_manager_set_in_queue(config->startup->inter[i - 1]->inter->out_queue);
+	if (ret == 0) {
+		/* Set output manager's input queue */
+		int i;
+
+		/* Get last intermediate plugin */
+		for (i = 0; config->startup->inter[i]; ++i) {}
+
+		if (i == 0) {
+			/* None? Set preprocessor's output */
+			output_manager_set_in_queue(get_preprocessor_output_queue());
+		} else {
+			output_manager_set_in_queue(config->startup->inter[i - 1]->inter->out_queue);
+		}
 	}
+	
+	/* Free resources */
+	free_startup(new_startup);
 	
 	/* Replace startup xml */
 	xmlFreeDoc(config->act_doc);
@@ -1027,9 +1066,11 @@ int config_reconf(configurator *config)
  */
 void config_stop_inter(configurator *config)
 {
-	int i;
-	for (i = 0; config->startup->inter[i]; ++i) {
-		ip_stop(config->startup->inter[i]->inter);
+	if (config->startup) {
+		int i;
+		for (i = 0; config->startup->inter[i]; ++i) {
+			ip_stop(config->startup->inter[i]->inter);
+		}
 	}
 }
 
