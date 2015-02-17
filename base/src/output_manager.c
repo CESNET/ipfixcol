@@ -498,6 +498,32 @@ void sig_handler(int s)
 }
 
 /**
+ * \brief Print queues usage
+ * 
+ * @param conf output manager's config
+ */
+void statistics_print_buffers(struct output_manager_config *conf)
+{	
+	/* Print info about preprocessor's output queue */
+	MSG_INFO(stat_module, "queues usage:");
+	
+	struct ring_buffer *prep_buffer = get_preprocessor_output_queue();
+	MSG_INFO(stat_module, "preprocessor's output queue: %u / %u", prep_buffer->count, prep_buffer->size);
+
+	/* Print info about Output Manager's queues */
+	struct data_manager_config *dm = conf->data_managers;	
+	if (dm) {
+		MSG_INFO(stat_module, "output manager's output queues:");
+		MSG_INFO(stat_module, "%.4s | %.10s / %.10s", "ODID", "waiting" ,"total size");
+		
+		while (dm) {
+			MSG_INFO(stat_module, "[%u] %10u / %u", dm->observation_domain_id, dm->store_queue->count, dm->store_queue->size);
+			dm = dm->next;
+		}
+	}
+}
+
+/**
  * \brief Periodically prints statistics about proccessing speed
  * 
  * @param config output manager's configuration
@@ -551,6 +577,9 @@ static void *statistics_thread(void* config)
 		
 		/* print cpu usage by threads */
 		statistics_print_cpu(&(conf->stats));
+		
+		/* print buffers usage */
+		statistics_print_buffers(conf);
 	}
 	
 	return NULL;
