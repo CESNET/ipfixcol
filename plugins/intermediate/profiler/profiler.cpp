@@ -37,39 +37,180 @@
  *
  */
 
-extern "C"
+extern "C" {
 #include <libxml2/libxml/xpath.h>
+#include "parser.h"
+#include "scanner.h"
+}
 
 #include "profiler.h"
-#include "Organization.h"
+
+#include "Profile.h"
+#include "Channel.h"
 
 #include <iostream>
+
+#define profile_id(_profile_) (_profile_) ? (_profile_)->getName().c_str() : "live"
+#define throw_empty throw std::runtime_error(std::string(""));
 
 /* Identifier for verbose macros */
 static const char *msg_module = "profiler";
 
-/* shortcut */
-using orgVec = std::vector<Organization *>;
-
 /**
- * \struct profiler_conf
+ * \struct plugin_conf
  * 
  * Plugin configuration with list of organizations
  */
-struct profiler_conf {
-	orgVec organizations;	/**< list of organizations */
-	void *ip_config;		/**< intermediate process config */
-	std::vector<uint16_t*> pTable; /**< table of profiles */
-	std::vector<std::pair<organization*,uint16_t>> oTable; /**< table of organizations */
+struct plugin_conf {
+	void *ip_config;	/**< intermediate process config */
+	Profile *live;		/**< Live profile */
 };
 
-
-/* DEBUG PRINT */
-void print_orgs(struct profiler_conf *conf)
+/**
+ * \brief Parse filter string
+ * 
+ * \param[in] pdata parser data
+ * \return 0 on success
+ */
+int parse_filter(filter_parser_data* pdata)
 {
-	for (auto org: conf->organizations) {
-		org->print();
-		std::cout << "-------------------\n";
+	int ret = 0;
+	
+	/* Prepare scanner */
+	yylex_init(&(pdata->scanner));
+	YY_BUFFER_STATE bp = yy_scan_string(pdata->filter, pdata->scanner);
+	yy_switch_to_buffer(bp, pdata->scanner);
+    
+	/* Parse filter */
+	ret = yyparse(pdata);
+	
+	/* Clear scanner */
+	yy_flush_buffer(bp, pdata->scanner);
+	yy_delete_buffer(bp, pdata->scanner);
+	yylex_destroy(pdata->scanner);
+	
+	return ret;
+}
+
+/**
+ * \brief Process channel's configuration and create new Channel object
+ * 
+ * \param[in] profile Channel's profile
+ * \param[in] root channel xml configuration root
+ * \return new Channel object
+ */
+Channel *process_channel(Profile *profile, xmlNode *root, struct filter_parser_data *pdata)
+{
+	/* Get channel ID */
+	xmlChar *aux_char;
+	aux_char = xmlGetProp(root, (const xmlChar *) "name");
+	
+	if (!aux_char) {
+		MSG_ERROR(msg_module, "Profile %s: missing channel name", profile_id(profile));
+		throw_empty;
+	}
+	
+	/* Create new channel */
+	Channel *channel = new Channel((char *) aux_char);
+	xmlFree(aux_char);
+	channel->setProfile(profile);
+	
+	/* Allocate space for filter */
+	filter_profile *fp = (filter_profile *) calloc(1, sizeof(filter_profile));
+	if (!fp) {
+		MSG_ERROR(msg_module, "Profile %s: channel %s: unable to allocate memory (%s:%d)", profile_id(profile), channel->getName().c_str(), __FILE__, __LINE__);
+		delete channel;
+		throw_empty;
+	}
+	
+	/* Initialize parser data */
+	pdata->profile = fp;
+	pdata->filter = NULL;
+	
+	/* Iterate through elements */
+	for (xmlNode *node = root->children; node; node = node->next) {
+		
+		if (!xmlStrcmp(node->name, (const xmlChar *) "filter")) {
+			/* Parse filter */
+			pdata->filter = (char *) xmlNodeGetContent(node->children);
+			if (parse_filter(pdata) != 0) {
+				MSG_ERROR(msg_module, "Profile %s: channel %s: error while parsing filter", profile_id(profile), channel->getName().c_str());
+				filter_free_profile(fp);
+				free(pdata->filter);
+				delete channel;
+				throw_empty;
+			}
+			
+			free(pdata->filter);
+			
+			/* Set filter to channel */
+			channel->setFilter(pdata->profile);
+			
+		} else if (!xmlStrcmp(node->name, (const xmlChar *) "sources")) {
+			/* Channel sources */
+			aux_char = xmlNodeGetContent(node->children);
+			channel->setSources((char *) aux_char);
+			free(aux_char);
+			
+		}
+	}
+	
+	return channel;
+}
+
+/**
+ * \brief Process profile's configuration and create new Profile object
+ * 
+ * \param[in] parent Profile's parent
+ * \param[in] root profile xml configuration root
+ * \return new Profile object
+ */
+Profile *process_profile(Profile *parent, xmlNode *root, struct filter_parser_data *pdata)
+{
+	/* Get profile ID */
+	xmlChar *aux_char;
+	aux_char = xmlGetProp(root, (const xmlChar *) "name");
+	
+	if (!aux_char) {
+		throw std::runtime_error("Missing profile name");
+	}
+	
+	/* Create new profile */
+	Profile *profile = new Profile((char *) aux_char);
+	xmlFree(aux_char);
+	
+	profile->setParent(parent);
+	
+	/* Iterate through elements */
+	for (xmlNode *node = root->children; node; node = node->next) {
+		
+		if (!xmlStrcmp(node->name, (const xmlChar *) "profile")) {
+			/* add sub-profile */
+			Profile *child = process_profile(profile, node, pdata);
+			profile->addProfile(child);
+			
+		} else if (!xmlStrcmp(node->name, (const xmlChar *) "channel")) {
+			/* add channel */
+			Channel *channel = process_channel(profile, node, pdata);
+			profile->addChannel(channel);
+		}
+	}
+	
+	return profile;
+}
+
+/**
+ * \brief Free parser data (context and document)
+ * 
+ * \param[in] pdata parser data
+ */
+void free_parser_data(struct filter_parser_data *pdata)
+{
+	if (pdata->context) {
+		xmlXPathFreeContext(pdata->context);
+	}
+	if (pdata->doc) {
+		xmlFreeDoc(pdata->doc);
 	}
 }
 
@@ -79,9 +220,8 @@ void print_orgs(struct profiler_conf *conf)
  * \param[in] conf plugin configuration structure
  * \param[in] params configuration xml data
  */
-void process_startup_xml(profiler_conf *conf, char *params) 
+void process_startup_xml(plugin_conf *conf, char *params) 
 {	
-	xmlChar *aux_char;
 	struct filter_parser_data pdata;
 	
 	/* Load XML configuration */
@@ -97,51 +237,33 @@ void process_startup_xml(profiler_conf *conf, char *params)
 	
 	/* Initialize IPFIX elements */
 	filter_init_elements(&pdata);
+	conf->live = NULL;
 	
-	/* Iterate throught all organizations */
-	for (xmlNode *node = root->children; node; node = node->next) {
-		if (node->type != XML_ELEMENT_NODE) {
-			continue;
-		}
-		
-		/* Get organization's ID */
-		aux_char = xmlGetProp(node, (const xmlChar *) "id");
-		if (!aux_char) {
-			MSG_WARNING(msg_module, "Missing organization's ID, skipping");
-			continue;
-		}
-		
-		/* Process organization's configuration */
-		Organization *org = new Organization(atoi((char *) aux_char));
-		xmlFree(aux_char);
-		
-		/* Go throught rules and profiles */
-		for (xmlNode *subNode = node->children; subNode; subNode = subNode->next) {
-			if (subNode->type != XML_ELEMENT_NODE) {
+	try {
+		/* Iterate throught all profiles */
+		for (xmlNode *node = root->children; node; node = node->next) {
+			if (node->type != XML_ELEMENT_NODE) {
 				continue;
 			}
-			
-			if (!xmlStrcmp(subNode->name, (const xmlChar *) "rule")) {
-				org->addRule(&pdata, subNode);
-			} else if (!xmlStrcmp(subNode->name, (const xmlChar *) "profile")) {
-				org->addProfile(&pdata, subNode);
+
+			if (!xmlStrcmp(node->name, (const xmlChar *) "profile")) {
+				conf->live = process_profile(NULL, node, &pdata);
 			}
 		}
-		
-		/* Store organization into the list */
-		conf->organizations.push_back(org);
+	} catch (std::exception &e) {
+		xmlFreeDoc(doc);
+		free_parser_data(&pdata);
+		throw;
 	}
-	
 	
 	/* Free resources */
 	xmlFreeDoc(doc);
+	free_parser_data(&pdata);
 	
-	if (pdata.context) {
-		xmlXPathFreeContext(pdata.context);
+	if (!conf->live) {
+		throw std::invalid_argument("No profile found in plugin configuration");
 	}
-	if (pdata.doc) {
-		xmlFreeDoc(pdata.doc);
-	}
+	
 }
 
 /**
@@ -166,110 +288,26 @@ int intermediate_init(char* params, void* ip_config, uint32_t ip_id, ipfix_templ
 	
 	try {
 		/* Create configuration */
-		profiler_conf *conf = new struct profiler_conf;
+		plugin_conf *conf = new struct plugin_conf;
 		
 		/* Process params */
 		process_startup_xml(conf, params);
-		
-		conf->oTable.reserve(50);
-		conf->pTable.reserve(100);
 		
 		/* Save configuration */
 		conf->ip_config = ip_config;
 		*config = conf;
 		
-		print_orgs(conf);
 	} catch (std::exception &e) {
 		*config = NULL;
-		MSG_ERROR(msg_module, "%s", e.what());
+		if (!std::string(e.what()).empty()) {
+			MSG_ERROR(msg_module, "%s", e.what());
+		}
+		
 		return 1;
 	}
 	
 	MSG_DEBUG(msg_module, "initialized");
 	return 0;
-}
-
-/**
- * \brief Process IPFIX message
- * 
- *	Fills C++ profile table and organizations table 
- * (with organizations and indexes into profile table)
- * 
- * \param[in] conf plugin configuration
- * \param[in] msg IPFIX message
- */
-void process_records(profiler_conf *conf, struct ipfix_message *msg)
-{
-	/* Clear tables */
-	conf->pTable.clear();
-	conf->oTable.clear();
-	
-	Rule *rule{};
-	profileVec profiles;
-	struct metadata *mdata;
-	
-	/* 
-	 * Go through all data records and all organizations to find 
-	 * matching rules and profiles
-	 */
-	for (int i = 0; i < msg->data_records_count; ++i) {
-		for (auto org: conf->organizations) {
-			mdata = &(msg->metadata[i]);
-			
-			/* Find matching rule */
-			rule = org->matchingRule(msg, &(mdata->record));
-			
-			if (!rule) {
-				/* No rule was found */
-				continue;
-			}
-			
-			/* Get matching profiles and store them into vector */
-			profiles = org->matchingProfiles(msg, &(mdata->record));
-			for (auto prof: profiles) {
-				conf->pTable.push_back(&prof->id);
-			}
-			
-			/* Insert bookmark */
-			if (conf->pTable.empty() || conf->pTable.back() != NULL) {
-				conf->pTable.push_back(NULL);
-			}
-			
-			/* Create organization structure */
-			organization *sorg = reinterpret_cast<organization*>(calloc(1, sizeof(organization)));
-			if (!sorg) {
-				MSG_ERROR(msg_module, "Unable to allocate memory (%s %d)", __FILE__, __LINE__);
-				goto err_cleanup;
-			}
-			
-			sorg->id = org->id();
-			sorg->rule = rule->id();
-			
-			/* Store organization and index into profile table */
-			uint16_t index = conf->pTable.size() - (profiles.size() + 1);
-			conf->oTable.push_back(std::make_pair(sorg, index));
-			
-			/* DEBUG PRINT */
-//			std::cout << "[" << i << "] ";
-//			std::cout << org->id() << " | " << rule->id() << " |";
-//			for (auto prof: profiles) {
-//				std::cout << " " << prof->id;
-//			}
-//			std::cout << "\n";
-		}
-		
-		/* Insert bookmark into organization table */
-		conf->oTable.push_back(std::make_pair(nullptr, 0));
-	}
-	
-	return;
-	
-err_cleanup:
-	for (auto org: conf->oTable) {
-		if (org.first) {
-			free(org.first);
-		}
-	}
 }
 
 /**
@@ -281,97 +319,44 @@ err_cleanup:
  */
 int intermediate_process_message(void* config, void* message)
 {
-	profiler_conf *conf = reinterpret_cast<profiler_conf *>(config);
+	plugin_conf *conf = reinterpret_cast<plugin_conf *>(config);
 	struct ipfix_message *msg = reinterpret_cast<struct ipfix_message *>(message);
-	struct organization **oTable_c{};
-	uint16_t **pTable_c{};
-	uint16_t oIndex = 0, prevIndex = 0;
+		
+	struct metadata *mdata;
 	
-	/* Fill in organizations/profiles tables */
-	process_records(conf, msg);
-	
-	/* No organizations matched */
-	if (conf->oTable.empty()) {
-		pass_message(conf->ip_config, msg);
-		return 0;
-	}
-	
-	/* Create C style tables */
-	oTable_c = reinterpret_cast<organization**>(calloc(conf->oTable.size(), sizeof(organization*)));
-	if (!oTable_c) {
-		MSG_ERROR(msg_module, "Unable to allocate memory (%s %d)", __FILE__, __LINE__);
-		goto err_cleanup;
-	}
-	
-	pTable_c = reinterpret_cast<uint16_t**>(calloc(conf->pTable.size(), sizeof(uint16_t*)));
-	if (!pTable_c) {
-		MSG_ERROR(msg_module, "Unable to allocate memory (%s %d)", __FILE__, __LINE__);
-		goto err_cleanup;
-	}
-	
-	/* Copy table with profiles */
-	for (uint16_t i = 0; i < conf->pTable.size(); ++i) {
-		pTable_c[i] = conf->pTable[i];
-	}
-	
-	/* Copy organizations */
-	for (int i = 0; i < msg->data_records_count; ++i) {
-		prevIndex = oIndex;
-		while (conf->oTable[oIndex].first) {
-			oTable_c[oIndex] = conf->oTable[oIndex].first;
-			
-			/* Set pointer into profile table */
-			if (!conf->pTable.empty()) {
-				oTable_c[oIndex]->profiles = &(pTable_c[conf->oTable[oIndex].second]);
-			}
-			oIndex++;
+	/* Go through all data records */
+	for (uint16_t i = 0; i < msg->data_records_count; ++i) {
+		mdata = &(msg->metadata[i]);
+		
+		/* Get matching profiles and channels */
+		std::vector<couple_id_t> profiles;
+		conf->live->match(msg, mdata, profiles);
+		
+		/* Add terminating zero */
+		profiles.push_back(0);
+		
+		
+		/* Convert vector -> C array */
+		if (profiles.empty()) {
+			mdata->profiles = NULL;
+			continue;
 		}
 		
-		/* Set pointer into organization table */
-		msg->metadata[i].organizations = &(oTable_c[prevIndex]);
+		/* Allocate C space */
+		mdata->profiles = (couple_id_t *) calloc(profiles.size(), sizeof(couple_id_t));
+		if (!mdata->profiles) {
+			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+			continue;
+		}
 		
-		/* TODO: storing multiple NULL pointers in a row */
-		oTable_c[oIndex] = NULL;
-		oIndex++;
+		/* Copy data */
+		for (long unsigned int x = 0; x < profiles.size(); ++x) {
+			mdata->profiles[x] = profiles[x];
+		}
 	}
-	
-	/* DEBUG PRINT */
-//	for (int i = 0; i < msg->data_records_count; ++i) {
-//		std::cout << "[[" << i << "]] ";
-//		for (int ondex = 0; msg->metadata[i].organizations[ondex]; ++ondex) {
-//			organization *sorg = msg->metadata[i].organizations[ondex];
-//			std::cout << sorg->id << " | " << sorg->rule << " |";
-//			
-//			for (int p = 0; sorg->profiles[p]; ++p) {
-//				std::cout << " " << *(sorg->profiles[p]);
-//			}
-//			
-//			std::cout << " || ";
-//		}
-//		std::cout << "\n";
-//	}
 	
 	pass_message(conf->ip_config, msg);
 	return 0;
-	
-err_cleanup:
-	if (pTable_c) {
-		free(pTable_c);
-	}
-
-	if (oTable_c) {
-		free(oTable_c);
-	}
-	
-	for (auto org: conf->oTable) {
-		if (org.first) {
-			free(org.first);
-		}
-	}
-	
-	/* Pass message to the next plugin/Output Manager */
-	pass_message(conf->ip_config, msg);
-	return 1;
 }
 
 /**
@@ -383,14 +368,11 @@ err_cleanup:
 int intermediate_close(void *config)
 {
 	MSG_DEBUG(msg_module, "CLOSING");
-	profiler_conf *conf = static_cast<profiler_conf*>(config);
+	plugin_conf *conf = static_cast<plugin_conf*>(config);
 	
-	/* Remove all organizations from list */
-	for (auto org: conf->organizations) {
-		delete org;
-	}
 	
-	/* Destroy configuration */
+	/* Destroy profiles and configuration */
+	delete conf->live;
 	delete conf;
 	return 0;
 }

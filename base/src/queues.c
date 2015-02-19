@@ -266,43 +266,7 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
 					}
 					
 					if (rbuffer->data[rbuffer->read_offset]->metadata) {
-						struct organization **orgTable = NULL;
-						uint16_t **profTable = NULL;
-						struct metadata *mdata;
-						
-						/* Free organizations */
-						for (int i = 0; i < rbuffer->data[rbuffer->read_offset]->data_records_count; ++i) {
-							mdata = &(rbuffer->data[rbuffer->read_offset]->metadata[i]);
-							
-							/* Get beginning of organizations table */
-							if (!orgTable) {
-								orgTable = mdata->organizations;
-							}
-							
-							/* Free organizations */
-							if (mdata->organizations) {
-								for (int org = 0; mdata->organizations[org]; ++org) {
-									/* Get beginning of profiles table */
-									if (!profTable) {
-										profTable = mdata->organizations[org]->profiles;
-									}
-									
-									free(mdata->organizations[org]);
-								}
-							}
-						}
-						
-						/* Free profiles table */
-						if (profTable) {
-							free(profTable);
-						}
-						
-						/* Free organizations table */
-						if (orgTable) {
-							free(orgTable);
-						}
-						
-						free (rbuffer->data[rbuffer->read_offset]->metadata);
+						message_free_metadata(rbuffer->data[rbuffer->read_offset]);
 					}
 					
 					free (rbuffer->data[rbuffer->read_offset]);

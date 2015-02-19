@@ -1,5 +1,5 @@
 /**
- * \file profiler.h
+ * \file Profile.cpp
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief intermediate plugin for profiling data
  *
@@ -37,19 +37,58 @@
  *
  */
 
-#ifndef PROFILER_H
-#define	PROFILER_H
+#include "Profile.h"
+#include "Channel.h"
 
-extern "C" {
-#include <ipfixcol.h>
-#include "filter.h"
+/* Numer of profiles (ID for new profiles) */
+profile_id_t Profile::profiles_cnt = 1;
+
+/**
+ * Constructor
+ */
+Profile::Profile(std::string name)
+: m_id{profiles_cnt++}, m_name{name}
+{
 }
 
-/* ID types can by changed here */
-using profile_id_t = uint16_t;
-using channel_id_t = uint16_t;
-using couple_id_t  = uint32_t;
+/**
+ * Destructor
+ */
+Profile::~Profile()
+{
+	/* Remove channels */
+	for (auto ch: m_channels) {
+		delete ch;
+	}
+	
+	/* Remove children */
+	for (auto p: m_children) {
+		delete p;
+	}
+}
 
-#include <stdexcept>
+/**
+ * Add new channel
+ */
+void Profile::addChannel(Channel* channel)
+{
+	m_channels.push_back(channel);
+}
 
-#endif	/* PROFILER_H */
+/**
+ * Add child profile
+ */
+void Profile::addProfile(Profile* child)
+{
+	m_children.push_back(child);
+}
+
+/**
+ * Match profile
+ */
+void Profile::match(ipfix_message* msg, metadata* mdata, std::vector<couple_id_t>& profiles)
+{	
+	for (auto channel: m_channels) {
+		channel->match(msg, mdata, profiles);
+	}
+}
