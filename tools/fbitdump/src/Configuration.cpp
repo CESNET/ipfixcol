@@ -170,10 +170,10 @@ int Configuration::init(int argc, char *argv[])
 					throw std::invalid_argument("Argument for option -s is too long");
 				}
 				/* column name is before '/' */
-				Utils::strncpy_safe(parseArg, optarg, pos);
+				Utils::strncpy_safe(parseArg, optarg, pos+1);
 				parseArg[pos] = '\0';
 			} else { /* use whole optarg as column name */
-				Utils::strncpy_safe(parseArg, optarg, arg.size());
+				Utils::strncpy_safe(parseArg, optarg, arg.size()+1);
 			}
 
 			parseAggregateArg(parseArg);
