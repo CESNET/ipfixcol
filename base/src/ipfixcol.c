@@ -116,9 +116,9 @@ void version ()
 void help ()
 {
 	printf ("Usage: %s [-c file] [-i file] [-dhVs] [-v level]\n", PACKAGE);
-	printf ("  -c file   Path to configuration file (%s by default)\n", DEFAULT_CONFIG_FILE);
-	printf ("  -i file   Path to internal configuration file (%s by default)\n", INTERNAL_CONFIG_FILE);
-	printf ("  -e file   Path to ipfix-elements.xml file (%s by default)\n", DEFAULT_IPFIX_ELEMENTS);
+	printf ("  -c file   Path to configuration file (default: %s)\n", DEFAULT_CONFIG_FILE);
+	printf ("  -i file   Path to internal configuration file (default: %s)\n", INTERNAL_CONFIG_FILE);
+	printf ("  -e file   Path to IPFIX IE specification file (default: %s)\n", DEFAULT_IPFIX_ELEMENTS);
 	printf ("  -d        Daemonize\n");
 	printf ("  -h        Print this help\n");
 	printf ("  -v level  Print verbose messages up to specified level\n");
@@ -173,6 +173,9 @@ int main (int argc, char* argv[])
 		case 'i':
 			internal_file = optarg;
 			break;
+		case 'e':
+			ipfix_elements = optarg;
+			break;
 		case 'd':
 			daemonize = true;
 			break;
@@ -182,7 +185,13 @@ int main (int argc, char* argv[])
 			exit (EXIT_SUCCESS);
 			break;
 		case 'v':
-			verbose = atoi (optarg);
+			verbose = strtoi (optarg, 10);
+			if (verbose == INT_MAX) {
+				MSG_ERROR(msg_module, "No valid verbosity level provided (%s)", optarg);
+				help ();
+				exit (EXIT_FAILURE);
+			}
+
 			break;
 		case 'V':
 			version ();
@@ -192,13 +201,22 @@ int main (int argc, char* argv[])
 			skip_seq_err = 1;
 			break;
 		case 'r':
-			ring_buffer_size = atoi (optarg);
+			ring_buffer_size = strtoi (optarg, 10);
+			if (ring_buffer_size == INT_MAX) {
+				MSG_ERROR(msg_module, "No valid ring buffer size provided (%s)", optarg);
+				help ();
+				exit (EXIT_FAILURE);
+			}
+
 			break;
 		case 'S':
-			stat_interval = atoi(optarg);
-			break;
-		case 'e':
-			ipfix_elements = optarg;
+			stat_interval = strtoi (optarg, 10);
+			if (stat_interval == INT_MAX) {
+				MSG_ERROR(msg_module, "No valid statistics interval provided (%s)", optarg);
+				help ();
+				exit (EXIT_FAILURE);
+			}
+
 			break;
 		default:
 			MSG_ERROR(msg_module, "Unknown parameter %c", c);
@@ -225,21 +243,25 @@ int main (int argc, char* argv[])
 	 */LIBXML_TEST_VERSION
 	xmlIndentTreeOutput = 1;
 
-	/*
-	 * open and prepare XML configuration file
-	 */
 	/* check config file */
 	if (config_file == NULL) {
 		/* and use default if not specified */
 		config_file = DEFAULT_CONFIG_FILE;
-		MSG_NOTICE(msg_module, "Using default configuration file %s.", config_file);
+		MSG_NOTICE(msg_module, "Using default configuration file: %s", config_file);
 	}
 
 	/* check internal config file */
 	if (internal_file == NULL) {
 		/* and use default if not specified */
 		internal_file = INTERNAL_CONFIG_FILE;
-		MSG_NOTICE(msg_module, "Using default internal configuration file %s.", internal_file);
+		MSG_NOTICE(msg_module, "Using default internal configuration file: %s", internal_file);
+	}
+
+	/* check IPFIX elements file */
+	if (ipfix_elements == NULL) {
+		/* and use default if not specified */
+		ipfix_elements = DEFAULT_IPFIX_ELEMENTS;
+		MSG_NOTICE(msg_module, "Using default IPFIX IE specification: %s", ipfix_elements);
 	}
 	  
 	/* Initialize configurator */
@@ -300,7 +322,6 @@ int main (int argc, char* argv[])
 	/*
 	 * create Template Manager
 	 */
-
 	template_mgr = tm_create();
 	if (template_mgr == NULL) {
 		MSG_ERROR(msg_module, "[%d] Unable to create Template Manager", config->proc_id);
