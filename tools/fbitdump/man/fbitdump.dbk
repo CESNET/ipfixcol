@@ -65,7 +65,7 @@
 			<varlistentry>
 				<term>-v <replaceable class="parameter">level</replaceable></term>
 				<listitem>
-					<simpara>Set verbose level.</simpara>
+					<simpara>Set verbosity level.</simpara>
 				</listitem>
 			</varlistentry>
 			
@@ -79,14 +79,14 @@
 			<varlistentry>
 				<term>-q</term>
 				<listitem>
-					<simpara>Quiet: Do not print the header and bottom stat lines.</simpara>
+					<simpara>Quiet: do not print statistics</simpara>
 				</listitem>
 			</varlistentry>
 			
 			<varlistentry>
 				<term>-e</term>
 				<listitem>
-					<simpara>Extended bottom stats. Print summary of statistics columns. The flow that were filtered out are not included.</simpara>
+					<simpara>Extended statistics: also prints summary of statistics columns. The flows that were filtered out are not included.</simpara>
 				</listitem>
 			</varlistentry>
 			
@@ -185,7 +185,7 @@
 					<simpara>Each plugin has a "plainLevel" value. If <replaceable class="parameter">level</replaceable> in this option is greater than or equal to the plugin's plainLevel, columns formatted
 					by this plugin are printed as plain numbers. Otherwise they are formatted as without -N option.</simpara>
 					<simpara>Default plugins (for IP addresses, protocols etc.) have plainLevel set to the value of 10.</simpara>
-					<simpara>For more informations about setting plugin's plainLevel see <citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry></simpara>
+					<simpara>For more information about setting plugin's plainLevel see <citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry></simpara>
 				</listitem>
 			</varlistentry>
 			
@@ -239,34 +239,34 @@
 			<varlistentry>
 				<term>-T</term>
 				<listitem>
-					<simpara>Print information about templates in directories specified by -R</simpara>
+					<simpara>Print information about templates in directories specified by -R.</simpara>
 				</listitem>
 			</varlistentry>
                         
                         <varlistentry>
 				<term>-S</term>
 				<listitem>
-					<simpara>Print available semantics</simpara>
+					<simpara>Print available semantics.</simpara>
 				</listitem>
 			</varlistentry>
                         
                         <varlistentry>
 				<term>-O</term>
 				<listitem>
-					<simpara>Print available output formats</simpara>
+					<simpara>Print available output formats.</simpara>
 				</listitem>
 			</varlistentry>
                         
                         <varlistentry>
 				<term>-l</term>
 				<listitem>
-					<simpara>Print list of available formatting/parsing plugins</simpara>
+					<simpara>Print list of available formatting/parsing plugins.</simpara>
 				</listitem>
 			</varlistentry>
                         <varlistentry>
                             <term>-P <replaceable class="parameter">filter</replaceable></term>
                             <listitem>
-                                <simpara>Post aggregate filter. Usable only when aggregating. Must contain only columns from aggregated table.
+                                <simpara>Post-aggregation filter. Only usable when aggregating. Must contain only columns from aggregated table.
                                 Syntax is the same as for basic filter.</simpara>
                             </listitem>
                         </varlistentry>
