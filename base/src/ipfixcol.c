@@ -85,8 +85,8 @@ const char *ipfix_elements = DEFAULT_IPFIX_ELEMENTS;
 /* Template Manager */
 struct ipfix_template_mgr *template_mgr = NULL;
 
-/* main loop indicator */
-volatile int done = 0;
+/* terminating indicator */
+volatile int terminating = 0;
 
 /* reconfiguration indicator */
 volatile int reconf = 0;
@@ -139,12 +139,12 @@ void term_signal_handler(int sig)
 	}
 	
 	/* Terminating signal */
-	if (done) {
+	if (terminating) {
 		MSG_COMMON(ICMSG_ERROR, "Another termination signal (%i) detected - quiting without cleanup.", sig);
 		exit (EXIT_FAILURE);
 	} else {
 		MSG_COMMON(ICMSG_ERROR, "Signal: %i detected, will exit as soon as possible", sig);
-		done = 1;
+		terminating = 1;
 	}
 }
 
@@ -331,10 +331,10 @@ int main (int argc, char* argv[])
 	}
 	
 	/* main loop */
-	while (!done) {
+	while (!terminating) {
 		/* get data to process */
 		if ((get_retval = config->input.get (config->input.config, &input_info, &packet, &source_status)) < 0) {
-			if ((!reconf && !done) || get_retval != INPUT_INTR) { /* if interrupted and closing, it's ok */
+			if ((!reconf && !terminating) || get_retval != INPUT_INTR) { /* if interrupted and closing, it's ok */
 				MSG_WARNING(msg_module, "[%d] Getting IPFIX data failed!", config->proc_id);
 			}
 			
@@ -357,7 +357,7 @@ int main (int argc, char* argv[])
 			}
 			/* if input plugin is file reader, end collector */
 			if (input_info->type == SOURCE_TYPE_IPFIX_FILE) {
-				done = 1;
+				terminating = 1;
 			}
 		}
 		/* distribute data to the particular Data Manager for further processing */
