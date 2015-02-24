@@ -43,6 +43,8 @@
 #include <string.h>
 
 #include <dirent.h>
+#include <errno.h>
+#include <limits.h>
 #include <sys/stat.h>
 #include <libgen.h>
 #include <stdio.h>
@@ -177,7 +179,7 @@ char **utils_files_from_path(char *path)
 	}
 
 	int len = offsetof(struct dirent, d_name) + 
-	          pathconf(dirname, _PC_NAME_MAX) + 1;
+			pathconf(dirname, _PC_NAME_MAX) + 1;
 
 	entry = (struct dirent *) malloc(len);
 	if (entry == NULL) {
@@ -294,10 +296,33 @@ char *utils_dir_from_path(char *path)
  */
 char *strncpy_safe (char *destination, const char *source, size_t num)
 {
-    strncpy(destination, source, num);
+	strncpy(destination, source, num);
 
-    // Ensure null-termination
-    destination[num - 1] = '\0';
+	// Ensure null-termination
+	destination[num - 1] = '\0';
 
 	return destination;
+}
+
+/**
+ * \brief Version of strtol with proper error-handling.
+ *
+ * \return Converted integer value of the supplied String, INT_MAX otherwise.
+ */
+int strtoi (const char* str, int base)
+{
+	char *end;
+	errno = 0;
+	const long ret_long = strtol(str, &end, base);
+	int ret_int;
+
+	if (end == str) { // String does not feature a valid number
+		ret_int = INT_MAX;
+	} else if ((ret_long <= INT_MIN || ret_long >= INT_MAX) && errno == ERANGE) { // Number is out of range
+		ret_int = INT_MAX;
+	} else {
+		ret_int = (int) ret_long;
+	}
+
+	return ret_int;
 }
