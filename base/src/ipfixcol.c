@@ -256,13 +256,6 @@ int main (int argc, char* argv[])
 		internal_file = INTERNAL_CONFIG_FILE;
 		MSG_NOTICE(msg_module, "Using default internal configuration file: %s", internal_file);
 	}
-
-	/* check IPFIX elements file */
-	if (ipfix_elements == NULL) {
-		/* and use default if not specified */
-		ipfix_elements = DEFAULT_IPFIX_ELEMENTS;
-		MSG_NOTICE(msg_module, "Using default IPFIX IE specification: %s", ipfix_elements);
-	}
 	  
 	/* Initialize configurator */
 	config = config_init(internal_file, config_file);
