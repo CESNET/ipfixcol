@@ -332,15 +332,14 @@ int intermediate_process_message(void* config, void* message)
 		std::vector<couple_id_t> profiles;
 		conf->live->match(msg, mdata, profiles);
 		
-		/* Add terminating zero */
-		profiles.push_back(0);
-		
-		
 		/* Convert vector -> C array */
 		if (profiles.empty()) {
 			mdata->profiles = NULL;
 			continue;
 		}
+		
+		/* Add terminating zero */
+		profiles.push_back(0);
 		
 		/* Allocate C space */
 		mdata->profiles = (couple_id_t *) calloc(profiles.size(), sizeof(couple_id_t));

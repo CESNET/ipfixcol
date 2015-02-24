@@ -162,12 +162,12 @@ void Channel::setFilter(filter_profile* filter)
  */
 void Channel::match(ipfix_message* msg, metadata* mdata, std::vector<couple_id_t>& profiles)
 {
-	if (!m_filter || !filter_fits_node(m_filter->root, msg, &(mdata->record))) {
+	if (m_filter && !filter_fits_node(m_filter->root, msg, &(mdata->record))) {
 		return;
 	}
 	
 	/* Mark channel into metadata */
-	couple_id_t couple_id = m_profile->getId() + (((couple_id_t) m_id) >> (sizeof(profile_id_t) * 8));
+	couple_id_t couple_id = (((couple_id_t) m_profile->getId()) << (sizeof(profile_id_t) * 8)) + m_id;
 	profiles.push_back(couple_id);
 	
 	/* Process all listeners */
