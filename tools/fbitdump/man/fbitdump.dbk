@@ -47,7 +47,7 @@
 	<refsect1>
 		<title>Description</title>
 		<simpara>
-			The <command>fbitdump</command> is a part of IPFIXcol (IPFIX collector). 
+			<command>fbitdump</command> is part of IPFIXcol (IPFIX collector).
 			The tool uses FastBit library to read and index data.
 		</simpara>
 	</refsect1>
@@ -65,7 +65,7 @@
 			<varlistentry>
 				<term>-v <replaceable class="parameter">level</replaceable></term>
 				<listitem>
-					<simpara>Set verbose level.</simpara>
+					<simpara>Set verbosity level.</simpara>
 				</listitem>
 			</varlistentry>
 			
@@ -79,21 +79,21 @@
 			<varlistentry>
 				<term>-q</term>
 				<listitem>
-					<simpara>Quiet: Do not print the header and bottom stat lines.</simpara>
+					<simpara>Quiet: do not print statistics</simpara>
 				</listitem>
 			</varlistentry>
 			
 			<varlistentry>
 				<term>-e</term>
 				<listitem>
-					<simpara>Extended bottom stats. Print summary of statistics columns. The flow that were filtered out are not included.</simpara>
+					<simpara>Extended statistics: also prints summary of statistics columns. The flows that were filtered out are not included.</simpara>
 				</listitem>
 			</varlistentry>
 			
 			<varlistentry>
 				<term>-a</term>
 				<listitem>
-					<simpara>Aggregate netflow data by standard 5-tuple (source IP, destination IP, source port, destination port, protocol).</simpara>
+					<simpara>Aggregate flow data by standard 5-tuple (source IP, destination IP, source port, destination port, protocol).</simpara>
                     <simpara>Columns with aliases %srcip4, %srcip6, %dstip4, %dstip6, %srcport, %dstport and %proto are expected to be defined in <filename>fbitdump.xml.</filename></simpara>
 				</listitem>
 			</varlistentry>
@@ -101,7 +101,7 @@
 			<varlistentry>
 				<term>-A[<replaceable class="parameter">aggregation</replaceable>]</term>
 				<listitem>
-					<simpara>Aggregate netflow data by any number of given columns. Aggregation is a ',' separated list of column aliases (beginning with %).</simpara>
+					<simpara>Aggregate flow data by any number of given columns. Aggregation is a ',' separated list of column aliases (beginning with %).</simpara>
 					<simpara>Aggregation can be specified without any columns, which will cause summary columns to be computed without any grouping.</simpara>
 				</listitem>
 			</varlistentry>
@@ -139,7 +139,7 @@
 				<term>-m [<replaceable class="parameter">column [DESC|ASC]</replaceable>]</term>
 				<listitem>
 					<simpara>
-						Sort the netflow records according to the specified column. Default is %ds column - the date first seen. 
+						Sort the flow records according to the specified column. Default is %ds column, i.e., the date first seen. 
 						This requires alias %column to be configured in <filename>fbitdump.xml</filename>. 
 						Optional DESC or ASC parameter can be specified after column which controls ordering direction: DESC for descending, ASC for ascending (default). 
 					</simpara>
@@ -185,7 +185,7 @@
 					<simpara>Each plugin has a "plainLevel" value. If <replaceable class="parameter">level</replaceable> in this option is greater than or equal to the plugin's plainLevel, columns formatted
 					by this plugin are printed as plain numbers. Otherwise they are formatted as without -N option.</simpara>
 					<simpara>Default plugins (for IP addresses, protocols etc.) have plainLevel set to the value of 10.</simpara>
-					<simpara>For more informations about setting plugin's plainLevel see <citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry></simpara>
+					<simpara>For more information about setting plugin's plainLevel see <citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry></simpara>
 				</listitem>
 			</varlistentry>
 			
@@ -239,34 +239,34 @@
 			<varlistentry>
 				<term>-T</term>
 				<listitem>
-					<simpara>Print information about templates in directories specified by -R</simpara>
+					<simpara>Print information about templates in directories specified by -R.</simpara>
 				</listitem>
 			</varlistentry>
                         
                         <varlistentry>
 				<term>-S</term>
 				<listitem>
-					<simpara>Print available semantics</simpara>
+					<simpara>Print available semantics.</simpara>
 				</listitem>
 			</varlistentry>
                         
                         <varlistentry>
 				<term>-O</term>
 				<listitem>
-					<simpara>Print available output formats</simpara>
+					<simpara>Print available output formats.</simpara>
 				</listitem>
 			</varlistentry>
                         
                         <varlistentry>
 				<term>-l</term>
 				<listitem>
-					<simpara>Print list of available formatting/parsing plugins</simpara>
+					<simpara>Print list of available formatting/parsing plugins.</simpara>
 				</listitem>
 			</varlistentry>
                         <varlistentry>
                             <term>-P <replaceable class="parameter">filter</replaceable></term>
                             <listitem>
-                                <simpara>Post aggregate filter. Usable only when aggregating. Must contain only columns from aggregated table.
+                                <simpara>Post-aggregation filter. Only usable when aggregating. Must contain only columns from aggregated table.
                                 Syntax is the same as for basic filter.</simpara>
                             </listitem>
                         </varlistentry>
@@ -330,7 +330,7 @@
 			</varlistentry>
 		</variablelist>
 		
-		<simpara>All formats except pipe and csv have version ending either with '4' or '6', e.g. long4, long6. This version prints only the IPv4 or IPv6 address.
+		<simpara>All formats except pipe and csv have version ending either with '4' or '6', e.g., long4, long6. This version prints only the IPv4 or IPv6 address.
 			This makes the output shorter when only one of the protocols is required.
 		</simpara>
 		
@@ -352,7 +352,7 @@
 
 	<refsect1>
 		<title>Filter</title>
-		<simpara>The filter syntax is different from nfdump. The filter can be either specified on the command line after all options or in a separate file. It can span several lines.</simpara>
+		<simpara>The filter syntax is different from nfdump. The filter can be either specified on the command line (after all other options) or in a separate file. It can span one or more lines.</simpara>
 		<simpara>Specifying an element in the filter makes fbitdump to select only the tables with such an element.</simpara>
 		<simpara>Any filter consists of one or more expression <emphasis>expr</emphasis>. Any number of <emphasis>expr</emphasis> can be linked together with 
 			<emphasis>and</emphasis> or <emphasis>or</emphasis> keyword. This is case independent.</simpara>
@@ -364,7 +364,7 @@
 		<simpara>where <emphasis>cmp</emphasis> is not required (it will be added implicitly)</simpara>
 		<simpara><emphasis>%column</emphasis> is an element alias prefixed with %. %column element can be a computed value, that is a value that is not directly stored.
 		Alternately it is possible to specify the element name in e[x]id[y] format, where [x] means enterprise number and [y] element ID.
-		It is also possible to specifi group of columns (e.g. <emphasis>%port</emphasis> for source and destination port)</simpara>
+		It is also possible to specify a group of columns (e.g., <emphasis>%port</emphasis> for source and destination port)</simpara>
 		<simpara><emphasis>cmp</emphasis> is one of '=', '==', '&lt;', '&gt;', '&lt;=', '&gt;=', '!='.
         When filtering by string, '%' mark can be automatically inserted to the end or/and beginning of string value according to <emphasis>cmp</emphasis>:</simpara> 
         <simplelist>
@@ -413,7 +413,7 @@
 		</simplelist>
 		<simpara>Where</simpara>
 		<simplelist>
-			<member><emphasis>*input</emphasis> is string to format (e.g. http status)</member>
+			<member><emphasis>*input</emphasis> is string to format (e.g., http status)</member>
 			<member><emphasis>out</emphasis>[] is formatted output</member>
 		</simplelist>
 		<simpara>Formatting: </simpara>
@@ -449,7 +449,7 @@
 	<refsect1>
 		<title>Examples</title>
 		<literallayout>fbitdump -R /dir/dir-with-templates/template -o line4 "%dstport = 80" -c 100
-Read one template folder, corresponds to -r nfcapd.xxxx in nfdump and filtering for specific template, i.e. ICMP. Outputs first 100 flows with destination port 80 using line4 format</literallayout>
+Read one template folder, corresponds to -r nfcapd.xxxx in nfdump and filtering for specific template, i.e., ICMP. Outputs first 100 flows with destination port 80 using line4 format</literallayout>
 
 		<literallayout>fbitdump -R /dir/ -A%dstip4,%srcport "%dstip4 = 192.168.1.1"
 Reads all subdirs in dir recursively. Outputs flows with destination IPv4 192.168.1.1 aggregated by source port (and IPv4 destination address) using default format</literallayout>
