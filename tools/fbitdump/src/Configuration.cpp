@@ -279,11 +279,15 @@ int Configuration::init(int argc, char *argv[])
 			break;
 		case 'i': /* create indexes */
 			this->createIndexes = true;
-			indexes = optarg;
+			if (optarg != NULL) {
+				indexes = optarg;
+			}
 			break;
 		case 'd': /* delete indexes */
 			this->deleteIndexes = true;
-			indexes = optarg;
+			if (optarg != NULL) {
+				indexes = optarg;
+			}
 			break;
 		case 'C': /* Configuration file */
 			if (optarg == std::string("")) {
@@ -370,7 +374,8 @@ int Configuration::init(int argc, char *argv[])
 		t.seekg(0, std::ios::beg);
 
 		this->filter.assign((std::istreambuf_iterator<char>(t)),
-				std::istreambuf_iterator<char>());
+		std::istreambuf_iterator<char>());
+
 	} else {
 		/* set default filter */
 		this->filter = "1=1";
@@ -797,7 +802,7 @@ void Configuration::help() const
 	<< "-v <level>      Set verbosity level" << std::endl
 	<< "-V              Print version and exit" << std::endl
 	<< "-a              Aggregate flow data" << std::endl
-	<< "-A [<expr>]     Aggregation fields, separated by ','. Please check fbitdump(1) for a list of supported fields" << std::endl
+	<< "-A[<expr>]     Aggregation fields, separated by ','. Please check fbitdump(1) for a list of supported fields" << std::endl
 //	<< "                or subnet aggregation: srcip4/24, srcip6/64." << std::endl
 	//<< "-b              Aggregate flow records as bidirectional flows." << std::endl
 	//<< "-B              Aggregate flow records as bidirectional flows - Guess direction." << std::endl
@@ -812,8 +817,8 @@ void Configuration::help() const
 	<< "-q              Quiet: do not print statistics" << std::endl
 	<< "-e              Extended statistics: also prints summary of statistics columns" << std::endl
 	//<< "-H Add xstat histogram data to flow file.(default 'no')" << std::endl
-	<< "-i [column1[,column2,...]]	Build indexes for given columns (or all) for specified data" << std::endl
-	<< "-d [column1[,column2,...]]	Delete indexes for given columns (or all) for specified data" << std::endl
+	<< "-i[column1[,column2,...]]	Build indexes for given columns (or all) for specified data" << std::endl
+	<< "-d[column1[,column2,...]]	Delete indexes for given columns (or all) for specified data" << std::endl
 	//<< "-j <file>       Compress/Uncompress file." << std::endl
 	//<< "-z              Compress flows in output file. Used in combination with -w." << std::endl
 	//<< "-l <expr>       Set limit on packets for line and packed output format." << std::endl
@@ -825,7 +830,7 @@ void Configuration::help() const
 	<< "                requests -r dir or -r firstdir:lastdir without pathnames" << std::endl
 	<< "-r <expr>       Specifies subdirectory or subdirectories for -M, usable only with -M" << std::endl
 	<< "                expr can be dir, which loads the dir from all directories specified in -M," << std::endl
-	<< "                or dir1:dir2, which reads data from subdirectories 'dir1' to 'dir2', in directories from -M" << std::endl
+	<< "				or dir1:dir2, which reads data from subdirectories 'dir1' to 'dir2', in directories from -M" << std::endl
 	<< "-m [column]     Print flow data date sorted. Takes optional parameter '%column' to sort by" << std::endl
 	<< "-R <expr>       Recursively read input from directory and subdirectories; can be repeated" << std::endl
 	<< "                /any/dir        Reads all data from directory 'dir'" << std::endl
@@ -1007,14 +1012,14 @@ void Configuration::processROption(stringVector &tables, const char *optarg)
 
 	std::string root = left;
 	while (right_depth--) {
-	root = root.substr(0, root.find_last_of('/'));
+	   root = root.substr(0, root.find_last_of('/'));
 	}
 
 	/* Get first firectory */
 	if (root == left) {
-	root = "./";
+	   root = "./";
 	} else {
-	left = left.substr(root.length() + 1);
+	   left = left.substr(root.length() + 1);
 	}
 
 	Utils::sanitizePath(root);
@@ -1035,7 +1040,7 @@ void Configuration::parseAggregateArg(char *arg) throw (std::invalid_argument)
 	if (arg == NULL) return;
 
 	if (!Utils::splitString(arg, this->aggregateColumnsAliases)) {
-		throw std::invalid_argument(std::string("Ivalid input string ") + arg);
+		throw std::invalid_argument(std::string("Invalid input string '") + arg + std::string("'"));
 	}
 }
 
@@ -1069,7 +1074,7 @@ void Configuration::loadOutputFormat()
 	pugi::xpath_node format = this->getXMLConfiguration().select_single_node(("/configuration/output/format[formatName='"+this->format+"']").c_str());
 	/* check what we found */
 	if (format == NULL) {
-		throw std::invalid_argument(std::string("Format '") + this->format + "' is not defined");
+		throw std::invalid_argument(std::string("Format '") + this->format + "' not defined");
 	}
 
 	/* set format string */

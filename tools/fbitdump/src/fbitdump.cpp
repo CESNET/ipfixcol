@@ -60,9 +60,6 @@ int main(int argc, char *argv[])
 	/* raise limit for cache size, when there is more memory available */
 	/* default is half of available physical memory */
 	//ibis::fileManager::adjustCacheSize(2048000000);
-
-//	ibis::fileManager::instance().printStatus(std::cout);
-
 	//ibis::gVerbose = 7;
 
 
@@ -70,7 +67,6 @@ int main(int argc, char *argv[])
 
 	/* create configuration to work with */
 	Configuration conf;
-//	Configuration::instance = &conf;
 	std::ofstream pipe;
 
 	/* process configuration and check whether to end the program */
@@ -109,22 +105,22 @@ int main(int argc, char *argv[])
 
 	try {
 		/* create filters */
-		Utils::printStatus( "Creating filters");
+		Utils::printStatus("Creating filters");
 
 		Filter filter(conf);
 		AggregateFilter aggregateFilter(conf);
 		
-		Utils::printStatus( "Initializing printer");
+		Utils::printStatus("Initializing printer");
 		
 		/* initialise printer */
 		Printer print(std::cout, conf);
-		Utils::printStatus( "Initializing tables");
+		Utils::printStatus("Initializing tables");
 
 		/* initialise tables */
 		TableManager tm(conf);
 		/* check whether to delete indexes */
 		if (conf.getDeleteIndexes()) {
-			Utils::printStatus( "Deleting indexes");
+			Utils::printStatus("Deleting indexes");
 
 			IndexManager::deleteIndexes(conf, tm);
 
@@ -141,7 +137,7 @@ int main(int argc, char *argv[])
 
 		/* check whether to build indexes */
 		if (conf.getCreateIndexes()) {
-			Utils::printStatus( "Building indexes");
+			Utils::printStatus("Building indexes");
 
 			IndexManager::createIndexes(conf, tm);
 			if (access (conf.pipe_name.c_str(), F_OK ) == 0 ) {
@@ -157,7 +153,7 @@ int main(int argc, char *argv[])
 
 		/* check whether to print template information */
 		if (conf.getTemplateInfo()) {
-			Utils::printStatus( "Printing templates");
+			Utils::printStatus("Printing templates");
 
 			TemplateInfo::printTemplates(tm, conf);
 		}
@@ -166,7 +162,7 @@ int main(int argc, char *argv[])
 		if (!conf.getDeleteIndexes() && !conf.getCreateIndexes() && !conf.getTemplateInfo()) {
 			/* do the work */
 			if (conf.getAggregate()) {
-				Utils::printStatus( "Aggregating tables");
+				Utils::printStatus("Aggregating tables");
 				tm.aggregate(conf.getAggregateColumns(), conf.getSummaryColumns(), filter);
 				
 				/* Apply post aggregate filter */
@@ -179,12 +175,13 @@ int main(int argc, char *argv[])
 			}
 
 			/* clear line with spaces - removing progressbar if anny */
-			if(isatty(fileno(stdout))) {
+			if (isatty(fileno(stdout))) {
 				std::cout.width(80);
 				std::cout.fill( ' ');
 				std::cout << "\r";
 				std::cout.flush();
 			}
+			
 			/* print tables */
 			print.print(tm);
 		}
