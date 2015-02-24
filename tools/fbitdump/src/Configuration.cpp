@@ -279,11 +279,15 @@ int Configuration::init(int argc, char *argv[])
 			break;
 		case 'i': /* create indexes */
 			this->createIndexes = true;
-			indexes = optarg;
+			if (optarg != NULL) {
+				indexes = optarg;
+			}
 			break;
 		case 'd': /* delete indexes */
 			this->deleteIndexes = true;
-			indexes = optarg;
+			if (optarg != NULL) {
+				indexes = optarg;
+			}
 			break;
 		case 'C': /* Configuration file */
 			if (optarg == std::string("")) {
@@ -798,7 +802,7 @@ void Configuration::help() const
 	<< "-v <level>      Set verbosity level" << std::endl
 	<< "-V              Print version and exit" << std::endl
 	<< "-a              Aggregate flow data" << std::endl
-	<< "-A [<expr>]     Aggregation fields, separated by ','. For a list of fields, please check fbitdump(1)" << std::endl
+	<< "-A[<expr>]      Aggregation fields, separated by ','. For a list of fields, please check fbitdump(1)" << std::endl
 //	<< "                or subnet aggregation: srcip4/24, srcip6/64." << std::endl
 	//<< "-b              Aggregate flow records as bidirectional flows." << std::endl
 	//<< "-B              Aggregate flow records as bidirectional flows - Guess direction." << std::endl
@@ -813,8 +817,8 @@ void Configuration::help() const
 	<< "-q              Quiet: Do not print the header and bottom stat lines" << std::endl
 	<< "-e				Extended bottom stats. Print summary of statistics columns" << std::endl
 	//<< "-H Add xstat histogram data to flow file.(default 'no')" << std::endl
-	<< "-i [column1[,column2,...]]	Build indexes for given columns (or all) for specified data" << std::endl
-	<< "-d [column1[,column2,...]]	Delete indexes for given columns (or all) for specified data" << std::endl
+	<< "-i[column1[,column2,...]]	Build indexes for given columns (or all) for specified data" << std::endl
+	<< "-d[column1[,column2,...]]	Delete indexes for given columns (or all) for specified data" << std::endl
 	//<< "-j <file>       Compress/Uncompress file." << std::endl
 	//<< "-z              Compress flows in output file. Used in combination with -w." << std::endl
 	//<< "-l <expr>       Set limit on packets for line and packed output format." << std::endl
