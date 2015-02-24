@@ -374,7 +374,7 @@ int Configuration::init(int argc, char *argv[])
 		t.seekg(0, std::ios::beg);
 
 		this->filter.assign((std::istreambuf_iterator<char>(t)),
-        std::istreambuf_iterator<char>());
+		std::istreambuf_iterator<char>());
 
 	} else {
 		/* set default filter */
@@ -990,44 +990,44 @@ void Configuration::processMOption(stringVector &tables, const char *optarg, std
 
 void Configuration::processROption(stringVector &tables, const char *optarg)
 {
-    std::string arg = optarg;
+	std::string arg = optarg;
 
-    /* Find separator */
-    size_t pos = arg.find(':');
-    if (pos == arg.npos) {
-        /* Specified only one directory */
+	/* Find separator */
+	size_t pos = arg.find(':');
+	if (pos == arg.npos) {
+		/* Specified only one directory */
 	Utils::sanitizePath(arg);
-        tables.push_back(arg);
-        return;
-    }
+		tables.push_back(arg);
+		return;
+	}
 
-    /* Get left and right path */
-    std::string left = arg.substr(0, pos);
-    std::string right = arg.substr(pos + 1);
+	/* Get left and right path */
+	std::string left = arg.substr(0, pos);
+	std::string right = arg.substr(pos + 1);
 
-    /* Right path is ready and can be sanitized */
-    Utils::sanitizePath(right);
+	/* Right path is ready and can be sanitized */
+	Utils::sanitizePath(right);
 
-    /* Get root directory (== left - depth of right) */
-    uint16_t right_depth = std::count(right.begin(), right.end(), '/');
+	/* Get root directory (== left - depth of right) */
+	uint16_t right_depth = std::count(right.begin(), right.end(), '/');
 
-    std::string root = left;
-    while (right_depth--) {
-	root = root.substr(0, root.find_last_of('/'));
-    }
+	std::string root = left;
+	while (right_depth--) {
+	   root = root.substr(0, root.find_last_of('/'));
+	}
 
-    /* Get first firectory */
-    if (root == left) {
-	root = "./";
-    } else {
-	left = left.substr(root.length() + 1);
-    }
+	/* Get first firectory */
+	if (root == left) {
+	   root = "./";
+	} else {
+	   left = left.substr(root.length() + 1);
+	}
 
-    Utils::sanitizePath(root);
-    Utils::sanitizePath(left);
+	Utils::sanitizePath(root);
+	Utils::sanitizePath(left);
 
-    /* Load dirs */
-    Utils::loadDirsTree(root, left, right, tables);
+	/* Load dirs */
+	Utils::loadDirsTree(root, left, right, tables);
 }
 
 void Configuration::parseAggregateArg(char *arg) throw (std::invalid_argument)
@@ -1041,7 +1041,7 @@ void Configuration::parseAggregateArg(char *arg) throw (std::invalid_argument)
 	if (arg == NULL) return;
 
 	if (!Utils::splitString(arg, this->aggregateColumnsAliases)) {
-		throw std::invalid_argument(std::string("Ivalid input string ") + arg);
+		throw std::invalid_argument(std::string("Invalid input string '") + arg + std::string("'"));
 	}
 }
 
@@ -1075,7 +1075,7 @@ void Configuration::loadOutputFormat()
 	pugi::xpath_node format = this->getXMLConfiguration().select_single_node(("/configuration/output/format[formatName='"+this->format+"']").c_str());
 	/* check what we found */
 	if (format == NULL) {
-		throw std::invalid_argument(std::string("Format '") + this->format + "' is not defined");
+		throw std::invalid_argument(std::string("Format '") + this->format + "' not defined");
 	}
 
 	/* set format string */
