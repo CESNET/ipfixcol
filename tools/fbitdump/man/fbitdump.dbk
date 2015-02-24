@@ -216,14 +216,14 @@
 			</varlistentry>
 			
 			<varlistentry>
-				<term>-i [<replaceable class="parameter">%col1[,%col2,...]</replaceable>]</term>
+				<term>-i[<replaceable class="parameter">%col1[,%col2,...]</replaceable>]</term>
 				<listitem>
 					<simpara>Create indexes for specified data. If %columns are specified, (re)create indexes only for them. Create indexes for all columns otherwise.</simpara>
 				</listitem>
 			</varlistentry>
 			
 			<varlistentry>
-				<term>-d [<replaceable class="parameter">%col1[,%col2,...]</replaceable>]</term>
+				<term>-d[<replaceable class="parameter">%col1[,%col2,...]</replaceable>]</term>
 				<listitem>
 					<simpara>Delete indexes for specified data. If %columns are specified, delete indexes only for them. Delete indexes for all columns otherwise.</simpara>
 				</listitem>
