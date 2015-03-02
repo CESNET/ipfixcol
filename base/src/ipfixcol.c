@@ -40,10 +40,12 @@
 #if HAVE_CONFIG_H
 #include <pkgconfig.h>
 #endif
+
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <string.h>
 #include <sys/types.h>
@@ -57,10 +59,10 @@
 #include <sys/prctl.h>
 
 #include <libxml/parser.h>
+#include <libxml/tree.h>
 #include <libxml/xpath.h>
 
 #include <ipfixcol.h>
-#include <libxml/tree.h>
 #include "intermediate_process.h"
 #include "config.h"
 #include "preprocessor.h"
