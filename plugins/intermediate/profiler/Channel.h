@@ -104,13 +104,34 @@ public:
 	channelsSet getListeners() { return m_listeners; }
 
 	/**
+	 * \brief Get list of channel sources
+	 *
+	 * \return set of channels
+	 */
+	channelsSet getSources() { return m_sources; }
+
+	/**
 	 * \brief Add new listening channel
 	 * 
      * \param[in] listener new listener
      */
 	void addListener(Channel *listener);
 
-	/* Match channel with data record */
+
+	/**
+	 * \brief Remove listening channel
+	 *
+	 * \param[in] child pointer to child
+	 */
+	void removeListener(Channel *child);
+
+	/**
+	 * \brief Remove listening channel
+	 *
+	 * \param[in] id listening channel's id
+	 */
+	void removeListener(channel_id_t id);
+
 	/**
 	 * \brief Match channel with data record (using channel's filter)
 	 * 
@@ -128,6 +149,7 @@ private:
 	Profile *m_profile{};		/**< Profile */
 
 	channelsSet m_listeners{};	/**< Listening channels */
+	channelsSet m_sources{};	/**< List of sources */
 	
 	static channel_id_t channels_cnt;	/**< Total number of channels */
 };

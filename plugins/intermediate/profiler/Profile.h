@@ -57,79 +57,93 @@ class Profile {
 public:
 	/**
 	 * \brief Constructor
-	 * 
-     * \param[in] name profile name
-     */
+	 *
+	 * \param[in] name profile name
+	 */
 	Profile(std::string name);
 	
 	/**
 	 * \brief Destructor
-     */
+	 */
 	~Profile();
 
 	/**
 	 * \brief Add new child profile
-	 * 
-     * \param[in] child child profile
-     */
+	 *
+	 * \param[in] child child profile
+	 */
 	void addProfile(Profile *child);
 	
 	/**
+	 * \brief Remove child profile
+	 *
+	 * \param[in] id id of profile
+	 */
+	void removeProfile(profile_id_t id);
+
+	/**
+	 * \brief Remove channel
+	 *
+	 * \param[in] id channel id
+	 */
+	void removeChannel(channel_id_t id);
+
+	/**
 	 * \brief Add new channel to profile
-	 * 
-     * \param[in] channel new channel
-     */
+	 *
+	 * \param[in] channel new channel
+	 */
 	void addChannel(Channel *channel);
 
 	/**
 	 * \brief Get profile's ID
-	 * 
-     * \return profile's ID (unique within all profiles)
-     */
+	 *
+	 * \return profile's ID (unique within all profiles)
+	 */
 	profile_id_t getId() { return m_id; }
 	
 	/**
 	 * \brief Get profile's name
-	 * 
-     * \return profile's name from startup configuration
-     */
+	 *
+	 * \return profile's name from startup configuration
+	 */
 	std::string getName() { return m_name; }
 	
 	/**
 	 * \brief Get vector of all profile's channels
-	 * 
-     * \return vector of channels
-     */
+	 *
+	 * \return vector of channels
+	 */
 	channelsVec getChannels() { return m_channels; }
 	
 	/**
 	 * \brief Get vector of all profile's child profiles
-	 * 
-     * \return vector of profiles
-     */
+	 *
+	 * \return vector of profiles
+	 */
 	profilesVec getChildren() { return m_children; }
 	
 	/**
 	 * \brief Get parent profile
-	 * 
-     * \return parent profile
-     */
+	 *
+	 * \return parent profile
+	 */
 	Profile *getParent() { return m_parent; }
 
 	/**
 	 * \brief Set parent profile
-	 * 
-     * \param[in] parent parent profile
-     */
+	 *
+	 * \param[in] parent parent profile
+	 */
 	void setParent(Profile *parent) { m_parent = parent; }
 	
 	/**
 	 * \brief Match profile with data record (== with it's channels)
-	 * 
-     * \param[in] msg IPFIX message
-     * \param[in] mdata Data record's metadata
-     * \param[out] profiles	list of matching profiles and channels
-     */
+	 *
+	 * \param[in] msg IPFIX message
+	 * \param[in] mdata Data record's metadata
+	 * \param[out] profiles	list of matching profiles and channels
+	 */
 	void match(struct ipfix_message *msg, struct metadata *mdata, std::vector<couple_id_t>& profiles);
 private:
 

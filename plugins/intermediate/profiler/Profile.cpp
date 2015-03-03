@@ -37,6 +37,8 @@
  *
  */
 
+#include <algorithm>
+
 #include "Profile.h"
 #include "Channel.h"
 
@@ -82,6 +84,45 @@ void Profile::addProfile(Profile* child)
 {
 	m_children.push_back(child);
 }
+
+/**
+ * Remove child profile
+ */
+void Profile::removeProfile(profile_id_t id)
+{
+	/* Find profile */
+	profilesVec::iterator it = std::find_if(m_children.begin(), m_children.end(),
+										   [id](Profile *p) { return p->getId() == id;});
+
+	/* Remove it */
+	if (it != m_children.end()) {
+		m_children.erase(it);
+	}
+}
+
+/**
+ * Remove channel
+ */
+void Profile::removeChannel(channel_id_t id)
+{
+	/* Find channel */
+	channelsVec::iterator it = std::find_if(m_channels.begin(), m_channels.end(),
+											[id](Channel *ch) { return ch->getId() == id;});
+
+	/* Remove it */
+	if (it == m_channels.end()) {
+		return;
+	}
+
+	/* Unsubscribe channel from it's sources */
+	Channel *ch = *it;
+	for (auto src: ch->getSources()) {
+		src->removeListener(ch);
+	}
+
+	delete ch;
+}
+
 
 /**
  * Match profile

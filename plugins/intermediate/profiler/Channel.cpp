@@ -37,6 +37,7 @@
  *
  */
 
+#include <algorithm>
 #include <sstream>
 #include "Channel.h"
 
@@ -139,6 +140,29 @@ void Channel::setSources(std::string sources)
 void Channel::addListener(Channel* listener)
 {
 	m_listeners.insert(listener);
+}
+
+void Channel::removeListener(Channel *child)
+{
+	/* Find listener */
+	channelsSet::iterator it = std::find(m_listeners.begin(), m_listeners.end(), child);
+
+	/* Remove it */
+	if (it != m_listeners.end()) {
+		m_listeners.erase(it);
+	}
+}
+
+void Channel::removeListener(channel_id_t id)
+{
+	/* Find listener */
+	channelsSet::iterator it = std::find_if(m_listeners.begin(), m_listeners.end(),
+											[id](Channel *ch) { return ch->getId() == id;});
+
+	/* Remove it */
+	if (it != m_listeners.end()) {
+		m_listeners.erase(it);
+	}
 }
 
 /**
