@@ -57,6 +57,9 @@
 /* Path to ipfix-elements.xml file */
 API extern const char *ipfix_elements;
 
+/* Terminating flag */
+API extern volatile int terminating;
+
 /**
  * \struct ipfix_header
  * \brief IPFIX header structure

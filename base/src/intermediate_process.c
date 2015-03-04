@@ -83,7 +83,7 @@ void *ip_loop(void *config)
 				continue;
 			}
 			/* terminating mediator */
-			MSG_DEBUG(msg_module, "NULL message, terminating intermediate process %s.", conf->thread_name);
+			MSG_DEBUG(msg_module, "NULL message; terminating intermediate process %s...", conf->thread_name);
 			break;
 		}
 		conf->index = index;
@@ -133,7 +133,7 @@ int ip_init(struct intermediate *conf, uint32_t ip_id)
 	
 	conf->intermediate_init((char *) ip_params, conf, ip_id, template_mgr, &(conf->plugin_config));
 	if (conf->plugin_config == NULL) {
-		MSG_ERROR(msg_module, "Unable to initialize Intermediate Process");
+		MSG_ERROR(msg_module, "Unable to initialize intermediate process");
 		return -1;
 	}
 
@@ -142,7 +142,7 @@ int ip_init(struct intermediate *conf, uint32_t ip_id)
 	/* start main thread */
 	ret = pthread_create(&(conf->thread_id), NULL, ip_loop, (void *)conf);
 	if (ret != 0) {
-		MSG_ERROR(msg_module, "Unable to create thread for Intermediate Process");
+		MSG_ERROR(msg_module, "Unable to create thread for intermediate process");
 		return -1;
 	}
 
@@ -160,7 +160,7 @@ int pass_message(void *config, struct ipfix_message *message)
 	conf = (struct intermediate *) config;
 
 	if (message == NULL) {
-		MSG_WARNING(msg_module, "NULL message from intermediate plugin, skipping.");
+		MSG_WARNING(msg_module, "NULL message from intermediate plugin; skipping...");
 		return 0;
 	}
 	ret = rbuffer_write(conf->out_queue, message, 1);
