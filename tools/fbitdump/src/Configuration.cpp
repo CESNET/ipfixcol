@@ -348,7 +348,7 @@ int Configuration::init(int argc, char *argv[])
 		processMOption(tables, optionM.c_str(), optionr);
 	}
 
-	/* allways process option -m, we need to know whether aggregate or not */
+	/* always process option -m, we need to know whether aggregate or not */
 	if (this->optm) {
 		this->processmOption(optionm);
 	}
@@ -360,6 +360,7 @@ int Configuration::init(int argc, char *argv[])
 	Utils::printStatus( "Loading modules");
 
 	this->loadModules();
+
 	/* read filter */
 	if (optind < argc) {
 		this->filter = argv[optind];
@@ -375,7 +376,6 @@ int Configuration::init(int argc, char *argv[])
 
 		this->filter.assign((std::istreambuf_iterator<char>(t)),
 		std::istreambuf_iterator<char>());
-
 	} else {
 		/* set default filter */
 		this->filter = "1=1";
@@ -811,7 +811,7 @@ void Configuration::help() const
 	<< "-n <number>     Define number of top N. -c option takes precedence over -n" << std::endl
 	<< "-c <number>     Limit number of records to display" << std::endl
 	<< "-D <dns>        Use nameserver <dns> for host lookup. Does not support IPv6 addresses" << std::endl
-	<< "-N <level>      Set plain number printing level. Please check fbitdump(1) for detailed information" << std::endl
+	<< "-N[<level>]     Set plain number printing level. Please check fbitdump(1) for detailed information" << std::endl
 	<< "-s <column>[/<order>]     Generate statistics for <column> any valid record element" << std::endl
 	<< "                and ordered by <order>. Order can be any summarizable column, just as for -m option" << std::endl
 	<< "-q              Quiet: do not print statistics" << std::endl
