@@ -57,7 +57,7 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 	struct ring_buffer* retval = NULL;
 
 	if (size == 0) {
-		MSG_ERROR(msg_module, "Size of the ring buffer set to zero.");
+		MSG_ERROR(msg_module, "Size of the ring buffer set to zero");
 		return (NULL);
 	}
 
@@ -86,7 +86,7 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 	}
 
 	if (pthread_mutex_init (&(retval->mutex), NULL) != 0) {
-		MSG_ERROR(msg_module, "Condition variable init failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Initialization of condition variable failed (%s:%d)", __FILE__, __LINE__);
 		free (retval->data_references);
 		free (retval->data);
 		free (retval);
@@ -94,7 +94,7 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 	}
 
 	if (pthread_cond_init (&(retval->cond), NULL) != 0) {
-		MSG_ERROR(msg_module, "Condition variable init failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Initialization of condition variable failed (%s:%d)", __FILE__, __LINE__);
 		pthread_mutex_destroy (&(retval->mutex));
 		free (retval->data_references);
 		free (retval->data);
@@ -103,7 +103,7 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 	}
 
 	if (pthread_cond_init (&(retval->cond_empty), NULL) != 0) {
-		MSG_ERROR(msg_module, "Condition variable init failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Initialization of condition variable failed (%s:%d)", __FILE__, __LINE__);
 		pthread_mutex_destroy (&(retval->mutex));
 		free (retval->data_references);
 		free (retval->data);
@@ -125,7 +125,7 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, unsigned int refcount)
 {
 	if (rbuffer == NULL || refcount == 0) {
-		MSG_ERROR(msg_module, "Invalid ring buffer's write parameters.");
+		MSG_ERROR(msg_module, "Invalid ring buffer write parameters");
 		return (EXIT_FAILURE);
 	}
 

@@ -282,7 +282,6 @@ static void *output_manager_plugin_thread(void* config)
 			}
 			
 			/* End manager */
-			MSG_NOTICE(msg_module, "No more data from core.");
 			break;
 		}
 
@@ -296,7 +295,7 @@ static void *output_manager_plugin_thread(void* config)
 			 */
 			data_config = data_manager_create(msg->input_info->odid, conf->storage_plugins);
 			if (data_config == NULL) {
-				MSG_WARNING(msg_module, "[%u] Unable to create data manager, skipping data.",
+				MSG_WARNING(msg_module, "[%u] Unable to create Data Manager; skipping data...",
 						msg->input_info->odid);
 				rbuffer_remove_reference(conf->in_queue, index, 1);
 				continue;
@@ -305,7 +304,7 @@ static void *output_manager_plugin_thread(void* config)
 			/* add config to data_mngmts structure */
 			output_manager_insert(conf, data_config);
 
-			MSG_NOTICE(msg_module, "[%u] Created new Data manager", msg->input_info->odid);
+			MSG_NOTICE(msg_module, "[%u] Data Manager created", msg->input_info->odid);
 		}
 
 		if (msg->source_status == SOURCE_STATUS_NEW) {
@@ -319,7 +318,7 @@ static void *output_manager_plugin_thread(void* config)
 
 			if (data_config->references == 0) {
 				/* No reference for this ODID, close DM */
-				MSG_DEBUG(msg_module, "[%u] No source, releasing templates.", data_config->observation_domain_id);
+				MSG_DEBUG(msg_module, "[%u] No source; releasing templates...", data_config->observation_domain_id);
 				output_manager_remove(conf, data_config);
 			}
 			rbuffer_remove_reference(conf->in_queue, index, 1);
@@ -332,7 +331,7 @@ static void *output_manager_plugin_thread(void* config)
 		
 		/* Write data into input queue of Storage Plugins */
 		if (rbuffer_write(data_config->store_queue, msg, data_config->plugins_count) != 0) {
-			MSG_WARNING(msg_module, "[%u] Unable to write into Data manager's input queue, skipping data.", data_config->observation_domain_id);
+			MSG_WARNING(msg_module, "[%u] Unable to write into Data Manager's input queue; skipping data...", data_config->observation_domain_id);
 			rbuffer_remove_reference(conf->in_queue, index, 1);
 			free(msg);
 			continue;
@@ -342,7 +341,7 @@ static void *output_manager_plugin_thread(void* config)
 		rbuffer_remove_reference(conf->in_queue, index, 0);
 	}
 
-	MSG_NOTICE(msg_module, "Closing Output Manager's thread.");
+	MSG_NOTICE(msg_module, "Closing Output Manager thread");
 
 	return (void *) 0;
 }
@@ -622,7 +621,7 @@ int output_manager_start() {
 	/* Create Output Manager's thread */
 	retval = pthread_create(&(conf->thread_id), NULL, &output_manager_plugin_thread, (void *) conf);
 	if (retval != 0) {
-		MSG_ERROR(msg_module, "Unable to create output manager's thread.");
+		MSG_ERROR(msg_module, "Unable to create Output Manager thread");
 		free(conf);
 		return -1;
 	}
@@ -630,7 +629,7 @@ int output_manager_start() {
 	if (conf->stat_interval > 0) {
 		retval = pthread_create(&(conf->stat_thread), NULL, &statistics_thread, (void *) conf);
 		if (retval != 0) {
-			MSG_ERROR(msg_module, "Unable to create statistic's thread.");
+			MSG_ERROR(msg_module, "Unable to create statistics thread");
 			free(conf);
 			return -1;
 		}

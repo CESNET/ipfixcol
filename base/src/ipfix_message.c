@@ -81,11 +81,11 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
 	message->source_status = source_status;
 
 	odid = ntohl(message->pkt_header->observation_domain_id);
-	MSG_DEBUG(msg_module, "[%u] Processing data.", odid);
+	MSG_DEBUG(msg_module, "[%u] Processing data", odid);
 
 	/* check IPFIX version */
 	if (message->pkt_header->version != htons(IPFIX_VERSION)) {
-		MSG_WARNING(msg_module, "[%u] Unexpected IPFIX version detected (%X), skipping msg.", odid,
+		MSG_WARNING(msg_module, "[%u] Unexpected IPFIX version detected (%X); skipping message...", odid,
 				message->pkt_header->version);
 		free(message);
 		return NULL;
@@ -95,7 +95,7 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
 
 	/* check whether message is not shorter than header says */
 	if ((uint16_t) len < pktlen) {
-		MSG_WARNING(msg_module, "[%u] Malformed IPFIX message detected (bad length), skipping msg.", odid);
+		MSG_WARNING(msg_module, "[%u] Malformed IPFIX message detected (bad length); skipping message...", odid);
 		free (message);
 		return NULL;
 	}
@@ -109,7 +109,7 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
     while (p < (uint8_t*) msg + pktlen) {
         set_header = (struct ipfix_set_header*) p;
         if ((uint8_t *) p + ntohs(set_header->length) > (uint8_t *) msg + pktlen) {
-        	MSG_WARNING(msg_module, "[%u] Malformed IPFIX message detected (bad length), skipping msg.", odid);
+        	MSG_WARNING(msg_module, "[%u] Malformed IPFIX message detected (bad length); skipping message...", odid);
         	free(message);
         	return NULL;
         }
@@ -152,7 +152,7 @@ struct ipfix_message *message_create_clone(struct ipfix_message *msg)
 	uint8_t *packet;
 
 	if (!msg) {
-		MSG_DEBUG(msg_module, "Trying to make copy of the IPFIX message, but argument is NULL");
+		MSG_DEBUG(msg_module, "Trying to clone IPFIX message, but argument is NULL");
 		return NULL;
 	}
 
@@ -165,7 +165,7 @@ struct ipfix_message *message_create_clone(struct ipfix_message *msg)
 
 	message = message_create_from_mem(packet, msg->pkt_header->length, msg->input_info, msg->source_status);
 	if (!message) {
-		MSG_DEBUG(msg_module, "Unable to create copy of the IPFIX message");
+		MSG_DEBUG(msg_module, "Unable to clone IPFIX message");
 		free(packet);
 		return NULL;
 	}
