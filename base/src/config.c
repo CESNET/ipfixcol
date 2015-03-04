@@ -215,20 +215,20 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 
 	/* create xpath evaluation context of collector node */
 	if ((collector_ctxt = xmlXPathNewContext (collector_doc)) == NULL) {
-		MSG_ERROR(msg_module, "Unable to create XPath context for collector process (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Unable to create XPath context for collectingProcess (%s:%d)", __FILE__, __LINE__);
 		goto cleanup;
 	}
 
 	/* register namespace for the context of internal configuration file */
 	if (xmlXPathRegisterNs (collector_ctxt, BAD_CAST "ietf-ipfix", BAD_CAST "urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp") != 0) {
-		MSG_ERROR(msg_module, "Unable to register namespace for collector process (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Unable to register namespace for collectingProcess (%s:%d)", __FILE__, __LINE__);
 		return (NULL);
 	}
 
 	/* search for <exportingProcess>s nodes defining exporters (including fileWriters) */
 	xpath_obj_expprocnames = xmlXPathEvalExpression (BAD_CAST "/ietf-ipfix:collectingProcess/ietf-ipfix:exportingProcess", collector_ctxt);
 	if (xpath_obj_expprocnames == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_expprocnames->nodesetval)) {
-		MSG_ERROR(msg_module, "No exportingProcess defined in the collector process");
+		MSG_ERROR(msg_module, "No exportingProcess defined for collectingProcess");
 		goto cleanup;
 	}
 
@@ -248,7 +248,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	/* first, get all <exportingProcess>es */
 	xpath_obj_expproc = xmlXPathEvalExpression (BAD_CAST "/ietf-ipfix:ipfix/ietf-ipfix:exportingProcess", config_ctxt);
 	if (xpath_obj_expproc == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_expproc->nodesetval)) {
-		MSG_ERROR(msg_module, "No exporting process defined in user configuration");
+		MSG_ERROR(msg_module, "No exportingProcess defined in user configuration");
 		goto cleanup;
 	}
 	/* and then check them for searching names */
@@ -269,13 +269,13 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 						/* create xpath evaluation context of <exportingProcess> node */
 						exporter_ctxt = xmlXPathNewContext (exporter_doc);
 						if (exporter_ctxt == NULL) {
-							MSG_ERROR(msg_module, "Unable to create XPath context for exporting process (%s:%d)", __FILE__, __LINE__);
+							MSG_ERROR(msg_module, "Unable to create XPath context for exportingProcess (%s:%d)", __FILE__, __LINE__);
 							goto cleanup;
 						}
 
 						/* register namespace for the context of <exportingProcess> in user config file */
 						if (xmlXPathRegisterNs (exporter_ctxt, BAD_CAST "ietf-ipfix", BAD_CAST "urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp") != 0) {
-							MSG_ERROR(msg_module, "Unable to register namespace for exporting process (%s:%d)", __FILE__, __LINE__);
+							MSG_ERROR(msg_module, "Unable to register namespace for exportingProcess (%s:%d)", __FILE__, __LINE__);
 							goto cleanup;
 						}
 
@@ -305,7 +305,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 								file_format = get_children_content (node_filewriter, BAD_CAST "fileFormat");
 								if (file_format == NULL) {
 									/* this fileWriter has no fileFormat element - use default format */
-									MSG_WARNING(msg_module, "User configuration contains file writer without specified format; using %s", DEFAULT_STORAGE_PLUGIN);
+									MSG_WARNING(msg_module, "User configuration contains fileWriter without format specification; using %s", DEFAULT_STORAGE_PLUGIN);
 									/* do not allocate memory since we always use strings allocated at other places or static strings */
 									file_format = BAD_CAST DEFAULT_STORAGE_PLUGIN;
 								}
@@ -313,7 +313,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 									/* now we are almost done - prepare an item of the plugin list for return */
 									plugin_file = get_children_content (xpath_obj_plugin_desc->nodesetval->nodeTab[l], BAD_CAST "file");
 									if (plugin_file == NULL) {
-										MSG_WARNING(msg_module, "Unable to detect path to storage plugin file for %s format in internal configuration", file_format_inter);
+										MSG_WARNING(msg_module, "Unable to detect path to storage plugin file for format '%s' in internal configuration", file_format_inter);
 										break;
 									}
 									/* load thread name from internalcfg.xml */
@@ -345,7 +345,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 							}
 
 							if (plugin_file == NULL) {
-								MSG_ERROR(msg_module, "Unable to load storage plugin; specification for file format '%s' could not be found", (char *) file_format);
+								MSG_ERROR(msg_module, "Unable to load storage plugin; specification for fileFormat '%s' could not be found", (char *) file_format);
 							}
 						}
 						/* break while loop to get to another exportingProcess */
