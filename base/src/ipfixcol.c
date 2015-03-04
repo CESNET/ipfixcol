@@ -77,7 +77,6 @@
  *
  */
 
-
 /** Acceptable command-line parameters */
 #define OPTSTRING "c:dhv:Vsr:i:S:e:"
 
@@ -107,9 +106,9 @@ int ring_buffer_size = 8192;
  */
 void version ()
 {
-	printf ("%s: IPFIX Collector capture daemon.\n", PACKAGE);
-	printf ("Version: %s, Copyright (C) 2011 CESNET z.s.p.o.\n", VERSION);
-	printf ("See http://www.liberouter.org/technologies/ipfixcol/ for more information.\n\n");
+	printf ("%s: IPFIX Collector capture daemon\n", PACKAGE);
+	printf ("Version: %s, Copyright (C) 2015 CESNET z.s.p.o.\n", VERSION);
+	printf ("Check out http://www.liberouter.org/technologies/ipfixcol/ for more information.\n\n");
 }
 
 /**
@@ -123,11 +122,11 @@ void help ()
 	printf ("  -e file   Path to IPFIX IE specification file (default: %s)\n", DEFAULT_IPFIX_ELEMENTS);
 	printf ("  -d        Daemonize\n");
 	printf ("  -h        Print this help\n");
-	printf ("  -v level  Print verbose messages up to specified level\n");
+	printf ("  -v level  Increase logging verbosity (level: 0-3)\n");
 	printf ("  -V        Print version information\n");
-	printf ("  -s        Skip invalid sequence number error (especially when receiving Netflow v9 data format)\n");
-	printf ("  -r        Ring buffer size\n");
-	printf ("  -S num    Print proccessing statistics every \"num\" seconds\n");
+	printf ("  -s        Skip invalid sequence number error (especially useful for NetFlow v9 PDUs)\n");
+	printf ("  -r        Ring buffer size (default: 8192)\n");
+	printf ("  -S num    Print statistics every \"num\" seconds\n");
 	printf ("\n");
 }
 
@@ -142,10 +141,10 @@ void term_signal_handler(int sig)
 	
 	/* Terminating signal */
 	if (terminating) {
-		MSG_COMMON(ICMSG_ERROR, "Another termination signal (%i) detected - quiting without cleanup.", sig);
+		MSG_COMMON(ICMSG_ERROR, "Another termination signal (%i) detected - quiting without cleanup", sig);
 		exit (EXIT_FAILURE);
 	} else {
-		MSG_COMMON(ICMSG_ERROR, "Signal: %i detected, will exit as soon as possible", sig);
+		MSG_COMMON(ICMSG_ERROR, "Signal: %i detected; exiting as soon as possible...", sig);
 		terminating = 1;
 	}
 }
@@ -221,7 +220,7 @@ int main (int argc, char* argv[])
 
 			break;
 		default:
-			MSG_ERROR(msg_module, "Unknown parameter %c", c);
+			MSG_ERROR(msg_module, "Unknown parameter (%c)", c);
 			help ();
 			exit (EXIT_FAILURE);
 			break;
@@ -262,7 +261,7 @@ int main (int argc, char* argv[])
 	/* Initialize configurator */
 	config = config_init(internal_file, config_file);
 	if (!config) {
-		MSG_ERROR(msg_module, "Configurator initialization failed!");
+		MSG_ERROR(msg_module, "Configurator initialization failed");
 		goto cleanup_err;
 	}
 	
@@ -270,7 +269,7 @@ int main (int argc, char* argv[])
 	collectors = get_collectors(config->act_doc);
 	if (collectors == NULL) {
 		/* no collectingProcess configured */
-		MSG_ERROR(msg_module, "No collectingProcess configured - nothing to do.");
+		MSG_ERROR(msg_module, "No collector process configured");
 		goto cleanup_err;
 	}
 	
@@ -286,13 +285,13 @@ int main (int argc, char* argv[])
 				proc_count++;
 				continue;
 			} else if (pid < 0) { /* error occured, fork failed */
-				MSG_ERROR(msg_module, "Forking collector process failed (%s), skipping collector %d.", strerror(errno), i);
+				MSG_ERROR(msg_module, "Forking collector process failed (%s); skipping collector '%d'", strerror(errno), i);
 				continue;
 			}
 			/* else child - just continue to handle plugins */
 			config->proc_id = i;
 			
-			MSG_NOTICE(msg_module, "[%d] New collector process started.", config->proc_id);
+			MSG_NOTICE(msg_module, "[%d] New collector process started", config->proc_id);
 		}
 		
 		/* DEBUG - remove this */
@@ -335,14 +334,14 @@ int main (int argc, char* argv[])
 	
 	/* Parse plugins configuration */
 	if (config_reconf(config) != 0) {
-		MSG_ERROR(msg_module, "[%d] Unable to parse plugins configuration", config->proc_id);
+		MSG_ERROR(msg_module, "[%d] Unable to parse plugin configuration", config->proc_id);
 		goto cleanup_err;
 	}
 	
 	/* configure output subsystem */
 	retval = output_manager_start();
 	if (retval != 0) {
-		MSG_ERROR(msg_module, "[%d] Initiating Storage Manager failed.", config->proc_id);
+		MSG_ERROR(msg_module, "[%d] Storage Manager initialization failed", config->proc_id);
 		goto cleanup;
 	}
 	
@@ -351,7 +350,7 @@ int main (int argc, char* argv[])
 		/* get data to process */
 		if ((get_retval = config->input.get (config->input.config, &input_info, &packet, &source_status)) < 0) {
 			if ((!reconf && !terminating) || get_retval != INPUT_INTR) { /* if interrupted and closing, it's ok */
-				MSG_WARNING(msg_module, "[%d] Getting IPFIX data failed!", config->proc_id);
+				MSG_WARNING(msg_module, "[%d] Could not get IPFIX data", config->proc_id);
 			}
 			
 			if (reconf) {
@@ -416,9 +415,9 @@ cleanup:
 	if (pid > 0) {
 		for (i=0; i<proc_count; i++) {
 			pid = wait(NULL);
-			MSG_NOTICE(msg_module, "[%d] Collector child process %d terminated", config->proc_id, pid);
+			MSG_NOTICE(msg_module, "[%d] Collector child process '%d' terminated", config->proc_id, pid);
 		}
-		MSG_NOTICE(msg_module, "[%d] Closing collector.", config->proc_id);
+		MSG_NOTICE(msg_module, "[%d] Closing collector", config->proc_id);
 	}
 
 	/* destroy template manager */
@@ -427,7 +426,7 @@ cleanup:
 	}
 
 	xmlCleanupThreads();
-	xmlCleanupParser ();
+	xmlCleanupParser();
 
 	return (retval);
 }

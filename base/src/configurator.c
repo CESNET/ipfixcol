@@ -165,7 +165,7 @@ void config_free_plugin(struct plugin_config *plugin)
 				dlclose(plugin->input->dll_handler);
 			}
 			/* Input is pointer to configurator structure, don't free it */
-	//		free(plugin->input);
+			// free(plugin->input);
 		}
 		
 		break;
@@ -352,7 +352,7 @@ int config_add_input(configurator *config, struct plugin_config *plugin, int ind
 	xmlFree(plugin_params);
 	
 	if (retval != 0) {
-		MSG_ERROR(msg_module, "[%d] Initiating input xml_conf failed.", config->proc_id);
+		MSG_ERROR(msg_module, "[%d] Input xml_conf initialized failed", config->proc_id);
 		goto err;
 	}
 	
@@ -803,7 +803,7 @@ startup_config *config_create_startup(configurator *config)
 	xmlXPathObject *collectors = get_collectors(config->new_doc);
 	if (collectors == NULL) {
 		/* no collectingProcess configured */
-		MSG_ERROR(msg_module, "No collectingProcess configured - nothing to do.");
+		MSG_ERROR(msg_module, "No collector process found");
 		goto err;
 	}
 	
@@ -839,7 +839,7 @@ startup_config *config_create_startup(configurator *config)
 	xmlFree(collector_name);
 	
 	if (!collector_node) {
-		MSG_ERROR(msg_module, "No according collecting process found!");
+		MSG_ERROR(msg_module, "No collector process found");
 		goto err;
 	}
 	
