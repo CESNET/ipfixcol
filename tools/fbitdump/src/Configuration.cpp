@@ -145,13 +145,21 @@ int Configuration::init(int argc, char *argv[])
 			break;
 		case 'N': /* print plain numbers */
 			if (optarg == NULL || optarg == std::string("")) {
-				this->plainLevel = 1;
-				//throw std::invalid_argument("-N requires a level specification");
+				/* If the value after '-N' (separated by whitespace) is an integer,
+				 * the user has probably used a whitespace mistakenly.
+				 */
+				if (optind < argc && Utils::strtoi(argv[optind], 10) < INT_MAX) {
+					this->plainLevel = Utils::strtoi(argv[optind], 10);
+
+					// Skip to next argument; make sure integer is not parsed as query filter
+					++optind;
+				} else {
+					this->plainLevel = 1;
+				}
 			} else {
-				//this->plainLevel = atoi(optarg);
-				char *endptr = NULL;
-				this->plainLevel = strtol(optarg, &endptr, 10);
-				if (endptr == optarg) {
+				this->plainLevel = Utils::strtoi(argv[optind], 10);
+
+				if (this->plainLevel == INT_MAX) {
 					throw std::invalid_argument("-N requires an integer level specification");
 				}
 			}
