@@ -179,7 +179,7 @@
 			</varlistentry>
 			
 			<varlistentry>
-				<term>-N <replaceable class="parameter">level</replaceable></term>
+				<term>-N[<replaceable class="parameter">level</replaceable>]</term>
 				<listitem>
 					<simpara>Set plain level limit for printing plain numbers.</simpara>
 					<simpara>Each plugin has a "plainLevel" value. If <replaceable class="parameter">level</replaceable> in this option is greater than or equal to the plugin's plainLevel, columns formatted
