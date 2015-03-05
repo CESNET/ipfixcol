@@ -278,6 +278,29 @@ char *strncpy_safe (char *destination, const char *source, size_t num)
     return destination;
 }
 
+/**
+ * \brief Version of strtol with proper error-handling.
+ *
+ * \return Converted integer value of the supplied String, INT_MAX otherwise.
+ */
+int strtoi (const char* str, int base)
+{
+    char *end;
+    errno = 0;
+    const long ret_long = strtol(str, &end, base);
+    int ret_int;
+
+    if (end == str) { // String does not feature a valid number
+        ret_int = INT_MAX;
+    } else if ((ret_long <= INT_MIN || ret_long >= INT_MAX) && errno == ERANGE) { // Number is out of range
+        ret_int = INT_MAX;
+    } else {
+        ret_int = (int) ret_long;
+    }
+
+    return ret_int;
+}
+
 } /* end of namespace utils */
 
 }  /* end of namespace fbitdump */

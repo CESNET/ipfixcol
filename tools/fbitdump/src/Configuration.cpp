@@ -145,13 +145,21 @@ int Configuration::init(int argc, char *argv[])
 			break;
 		case 'N': /* print plain numbers */
 			if (optarg == NULL || optarg == std::string("")) {
-				this->plainLevel = 1;
-				//throw std::invalid_argument("-N requires a level specification");
+				/* If the value after '-N' (separated by whitespace) is an integer,
+				 * the user has probably used a whitespace mistakenly.
+				 */
+				if (optind < argc && Utils::strtoi(argv[optind], 10) < INT_MAX) {
+					this->plainLevel = Utils::strtoi(argv[optind], 10);
+
+					// Skip to next argument; make sure integer is not parsed as query filter
+					++optind;
+				} else {
+					this->plainLevel = 1;
+				}
 			} else {
-				//this->plainLevel = atoi(optarg);
-				char *endptr = NULL;
-				this->plainLevel = strtol(optarg, &endptr, 10);
-				if (endptr == optarg) {
+				this->plainLevel = Utils::strtoi(argv[optind], 10);
+
+				if (this->plainLevel == INT_MAX) {
 					throw std::invalid_argument("-N requires an integer level specification");
 				}
 			}
@@ -348,7 +356,7 @@ int Configuration::init(int argc, char *argv[])
 		processMOption(tables, optionM.c_str(), optionr);
 	}
 
-	/* allways process option -m, we need to know whether aggregate or not */
+	/* always process option -m, we need to know whether aggregate or not */
 	if (this->optm) {
 		this->processmOption(optionm);
 	}
@@ -360,6 +368,7 @@ int Configuration::init(int argc, char *argv[])
 	Utils::printStatus( "Loading modules");
 
 	this->loadModules();
+
 	/* read filter */
 	if (optind < argc) {
 		this->filter = argv[optind];
@@ -375,7 +384,6 @@ int Configuration::init(int argc, char *argv[])
 
 		this->filter.assign((std::istreambuf_iterator<char>(t)),
 		std::istreambuf_iterator<char>());
-
 	} else {
 		/* set default filter */
 		this->filter = "1=1";
@@ -811,7 +819,7 @@ void Configuration::help() const
 	<< "-n <number>     Define number of top N. -c option takes precedence over -n" << std::endl
 	<< "-c <number>     Limit number of records to display" << std::endl
 	<< "-D <dns>        Use nameserver <dns> for host lookup. Does not support IPv6 addresses" << std::endl
-	<< "-N <level>      Set plain number printing level. Please check fbitdump(1) for detailed information" << std::endl
+	<< "-N[<level>]     Set plain number printing level. Please check fbitdump(1) for detailed information" << std::endl
 	<< "-s <column>[/<order>]     Generate statistics for <column> any valid record element" << std::endl
 	<< "                and ordered by <order>. Order can be any summarizable column, just as for -m option" << std::endl
 	<< "-q              Quiet: do not print statistics" << std::endl

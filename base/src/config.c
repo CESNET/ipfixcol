@@ -156,13 +156,13 @@ static xmlXPathContextPtr ic_init (xmlChar* ns_name, char *internal_cfg)
 
 	/* create xpath evaluation context of internal configuration file */
 	if ((ctxt = xmlXPathNewContext (doc)) == NULL) {
-		MSG_ERROR(msg_module, "Unable to create XPath context for internal configuration (%s:%d).", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Unable to create XPath context for internal configuration (%s:%d)", __FILE__, __LINE__);
 		xmlFreeDoc (doc);
 		return (NULL);
 	}
 	/* register namespace for the context of internal configuration file */
 	if (xmlXPathRegisterNs (ctxt, ns_name, BAD_CAST "urn:cesnet:params:xml:ns:yang:ipfixcol-internals") != 0) {
-		MSG_ERROR(msg_module, "Unable to register namespace for internal configuration file (%s:%d).", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Unable to register namespace for internal configuration file (%s:%d)", __FILE__, __LINE__);
 		xmlXPathFreeContext (ctxt);
 		xmlFreeDoc (doc);
 		return (NULL);
@@ -205,7 +205,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	/* get the list of supported storage plugins description (including supported file formats) */
 	xpath_obj_plugin_desc = xmlXPathEvalExpression (BAD_CAST "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:storagePlugin", internal_ctxt);
 	if (xpath_obj_plugin_desc == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_plugin_desc->nodesetval)) {
-		MSG_ERROR(msg_module, "No list of supported Storage formats found in internal configuration!");
+		MSG_ERROR(msg_module, "No list of supported storage formats found in internal configuration");
 		goto cleanup;
 	}
 
@@ -215,32 +215,32 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 
 	/* create xpath evaluation context of collector node */
 	if ((collector_ctxt = xmlXPathNewContext (collector_doc)) == NULL) {
-		MSG_ERROR(msg_module, "Unable to create XPath context for collectingProcess (%s:%d).", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Unable to create XPath context for collectingProcess (%s:%d)", __FILE__, __LINE__);
 		goto cleanup;
 	}
 
 	/* register namespace for the context of internal configuration file */
 	if (xmlXPathRegisterNs (collector_ctxt, BAD_CAST "ietf-ipfix", BAD_CAST "urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp") != 0) {
-		MSG_ERROR(msg_module, "Unable to register namespace for collectingProcess (%s:%d).", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Unable to register namespace for collectingProcess (%s:%d)", __FILE__, __LINE__);
 		return (NULL);
 	}
 
 	/* search for <exportingProcess>s nodes defining exporters (including fileWriters) */
 	xpath_obj_expprocnames = xmlXPathEvalExpression (BAD_CAST "/ietf-ipfix:collectingProcess/ietf-ipfix:exportingProcess", collector_ctxt);
 	if (xpath_obj_expprocnames == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_expprocnames->nodesetval)) {
-		MSG_ERROR(msg_module, "No exportingProcess defined in the collectingProcess!");
+		MSG_ERROR(msg_module, "No exportingProcess defined for collectingProcess");
 		goto cleanup;
 	}
 
 	/* create xpath evaluation context of user configuration */
 	if ((config_ctxt = xmlXPathNewContext (config)) == NULL) {
-		MSG_ERROR(msg_module, "Unable to create XPath context for user configuration (%s:%d).", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Unable to create XPath context for user configuration (%s:%d)", __FILE__, __LINE__);
 		goto cleanup;
 	}
 
 	/* register namespace for the context of internal configuration file */
 	if (xmlXPathRegisterNs (config_ctxt, BAD_CAST "ietf-ipfix", BAD_CAST "urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp") != 0) {
-		MSG_ERROR(msg_module, "Unable to register namespace for user configuration (%s:%d).", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Unable to register namespace for user configuration (%s:%d)", __FILE__, __LINE__);
 		goto cleanup;
 	}
 
@@ -248,7 +248,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	/* first, get all <exportingProcess>es */
 	xpath_obj_expproc = xmlXPathEvalExpression (BAD_CAST "/ietf-ipfix:ipfix/ietf-ipfix:exportingProcess", config_ctxt);
 	if (xpath_obj_expproc == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_expproc->nodesetval)) {
-		MSG_ERROR(msg_module, "No exporting process defined in user configuration!");
+		MSG_ERROR(msg_module, "No exportingProcess defined in user configuration");
 		goto cleanup;
 	}
 	/* and then check them for searching names */
@@ -269,13 +269,13 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 						/* create xpath evaluation context of <exportingProcess> node */
 						exporter_ctxt = xmlXPathNewContext (exporter_doc);
 						if (exporter_ctxt == NULL) {
-							MSG_ERROR(msg_module, "Unable to create XPath context for exportingProcess (%s:%d).", __FILE__, __LINE__);
+							MSG_ERROR(msg_module, "Unable to create XPath context for exportingProcess (%s:%d)", __FILE__, __LINE__);
 							goto cleanup;
 						}
 
 						/* register namespace for the context of <exportingProcess> in user config file */
 						if (xmlXPathRegisterNs (exporter_ctxt, BAD_CAST "ietf-ipfix", BAD_CAST "urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp") != 0) {
-							MSG_ERROR(msg_module, "Unable to register namespace for exportingProcess (%s:%d).", __FILE__, __LINE__);
+							MSG_ERROR(msg_module, "Unable to register namespace for exportingProcess (%s:%d)", __FILE__, __LINE__);
 							goto cleanup;
 						}
 
@@ -299,13 +299,13 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 								file_format_inter = get_children_content (xpath_obj_plugin_desc->nodesetval->nodeTab[l], BAD_CAST "fileFormat");
 								if (file_format_inter == NULL) {
 									/* this plugin description node is invalid, there is no fileFormat element */
-									MSG_WARNING(msg_module, "storagePlugin with missing fileFormat detected!");
+									MSG_WARNING(msg_module, "Storage plugin with missing fileFormat detected");
 									continue;
 								}
 								file_format = get_children_content (node_filewriter, BAD_CAST "fileFormat");
 								if (file_format == NULL) {
 									/* this fileWriter has no fileFormat element - use default format */
-									MSG_WARNING(msg_module, "User configuration contain fileWriter without specified format - using %s.", DEFAULT_STORAGE_PLUGIN);
+									MSG_WARNING(msg_module, "User configuration contains fileWriter without format specification; using %s", DEFAULT_STORAGE_PLUGIN);
 									/* do not allocate memory since we always use strings allocated at other places or static strings */
 									file_format = BAD_CAST DEFAULT_STORAGE_PLUGIN;
 								}
@@ -313,7 +313,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 									/* now we are almost done - prepare an item of the plugin list for return */
 									plugin_file = get_children_content (xpath_obj_plugin_desc->nodesetval->nodeTab[l], BAD_CAST "file");
 									if (plugin_file == NULL) {
-										MSG_WARNING(msg_module, "Unable to detect path to storage plugin file for %s format in the internal configuration!", file_format_inter);
+										MSG_WARNING(msg_module, "Unable to detect path to storage plugin file for format '%s' in internal configuration", file_format_inter);
 										break;
 									}
 									/* load thread name from internalcfg.xml */
@@ -327,7 +327,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 											aux_plugin->config.observation_domain_id = (char*) malloc (sizeof(char) * (xmlStrlen (odid) + 1));
 											strncpy_safe(aux_plugin->config.observation_domain_id, (char*) odid, xmlStrlen (odid) + 1);
 										} else {
-											MSG_WARNING(msg_module, "observationDomainId element '%s' not valid. Ignoring...", (char*) odid);
+											MSG_WARNING(msg_module, "observationDomainId element '%s' not valid; ignoring...", (char*) odid);
 										}
 									}
 									aux_plugin->config.file = (char*) malloc (sizeof(char) * (xmlStrlen (plugin_file) + 1));
@@ -367,7 +367,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 	}
 	/* inform that everything was done but no valid plugin has been found */
 	if (plugins == NULL) {
-		MSG_WARNING(msg_module, "No valid storage plugin specification for the collector found.");
+		MSG_WARNING(msg_module, "No valid storage plugin specification for collector found");
 	}
 
 	cleanup:
@@ -448,7 +448,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char 
 	 */
 	xpath_obj_suppcolls = xmlXPathEvalExpression (BAD_CAST "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:supportedCollectors/cesnet-ipfixcol-int:name", internal_ctxt);
 	if (xpath_obj_suppcolls == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_suppcolls->nodesetval)) {
-		MSG_ERROR(msg_module, "No list of supportedCollectors found in internal configuration!");
+		MSG_ERROR(msg_module, "No list of supported collectors found in internal configuration");
 		free (retval);
 		retval = NULL;
 		goto cleanup;
@@ -465,7 +465,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char 
 	}
 	/* if we didn't found any valid collector description, we have to quit */
 	if (!auxNode) {
-		MSG_ERROR(msg_module, "No valid collectingProcess description found!;");
+		MSG_ERROR(msg_module, "No valid collecting process description found");
 		free (retval);
 		retval = NULL;
 		goto cleanup;
@@ -484,7 +484,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char 
 	/* first get list of inputPlugin nodes in internal configuration file */
 	xpath_obj_file = xmlXPathEvalExpression (BAD_CAST "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:inputPlugin", internal_ctxt);
 	if (xpath_obj_file == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_file->nodesetval)) {
-		MSG_ERROR(msg_module, "No inputPlugin definition found in internal configuration!");
+		MSG_ERROR(msg_module, "No input plugin definition found in internal configuration");
 		free (retval);
 		retval = NULL;
 		goto cleanup;
@@ -575,26 +575,26 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 	/* get the list of supported intermediate plugins description from internal config */
 	xpath_obj_ipinter = xmlXPathEvalExpression(BAD_CAST "/cesnet-ipfixcol-int:ipfixcol/cesnet-ipfixcol-int:intermediatePlugin", internal_ctxt);
 	if (xpath_obj_ipinter == NULL || xmlXPathNodeSetIsEmpty (xpath_obj_ipinter->nodesetval)) {
-		MSG_ERROR(msg_module, "No list of supported Intermediate formats found in internal configuration!");
+		MSG_ERROR(msg_module, "No list of supported intermediate formats found in internal configuration");
 		goto cleanup;
 	}
 
 	/* create xpath evaluation context of user configuration */
 	if ((config_ctxt = xmlXPathNewContext(config)) == NULL) {
-		MSG_ERROR(msg_module, "Unable to create XPath context for user configuration (%s:%d).", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Unable to create XPath context for user configuration (%s:%d)", __FILE__, __LINE__);
 		goto cleanup;
 	}
 
 	/* register namespace for the context of internal configuration file */
 	if (xmlXPathRegisterNs(config_ctxt, BAD_CAST "ietf-ipfix", BAD_CAST "urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp") != 0) {
-		MSG_ERROR(msg_module, "Unable to register namespace for user configuration (%s:%d).", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Unable to register namespace for user configuration (%s:%d)", __FILE__, __LINE__);
 		goto cleanup;
 	}
 
 	/* look for <ipfixmedCore> */
 	xpath_obj_core = xmlXPathEvalExpression(BAD_CAST "/ietf-ipfix:ipfix/ietf-ipfix:intermediatePlugins", config_ctxt);
 	if (xpath_obj_core == NULL || xmlXPathNodeSetIsEmpty(xpath_obj_core->nodesetval)) {
-		MSG_NOTICE(msg_module, "No intermediate plugin set in user configuration!");
+		MSG_NOTICE(msg_module, "No intermediate plugin configured in user configuration");
 		goto cleanup;
 	}
 
@@ -690,7 +690,7 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 
 	/* inform that everything was done but no valid plugin has been found */
 	if (plugins == NULL) {
-		MSG_WARNING(msg_module, "No valid intermediate plugin specification for the mediator found.");
+		MSG_WARNING(msg_module, "No valid intermediate plugin specification found for mediator");
 	}
 
 	cleanup:

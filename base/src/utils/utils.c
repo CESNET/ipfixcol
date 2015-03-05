@@ -244,7 +244,7 @@ char **utils_files_from_path(char *path)
 				/* well, it is... damn */
 				free(input_files[inputf_index]);
 				input_files[inputf_index] = NULL;
-				MSG_WARNING(msg_module, "Input file %s is a directory. Skipping.", entry->d_name);
+				MSG_WARNING(msg_module, "Input file %s is a directory; skipping...", entry->d_name);
 				continue;
 			}
 
