@@ -1,4 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4
+
+SUBDIRS = profile_tree
 AM_CPPFLAGS += -I$(top_srcdir)/headers
 pluginsdir = $(datadir)/ipfixcol/plugins
 
@@ -6,26 +8,16 @@ sofile = $(pluginsdir)/ipfixcol-profiler-inter.so
 internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
 
 plugins_LTLIBRARIES = ipfixcol-profiler-inter.la
+ipfixcol_profiler_inter_la_LIBADD = profile_tree/libprofiletree.la
 ipfixcol_profiler_inter_la_LDFLAGS = -module -avoid-version -shared 
-ipfixcol_profiler_inter_la_SOURCES = profiler.cpp profiler.h filter.c filter.h Organization.cpp Organization.h Rule.cpp Rule.h parser.c parser.h scanner.c scanner.h
-
-CLEANFILES = parser.h parser.c scanner.h scanner.c
-BUILT_SOURCES = parser.h parser.c scanner.h scanner.c
-
-parser.h parser.c: parser.y
-	$(BISON) --defines=parser.h -o parser.c $<
-
-scanner.h scanner.c: scanner.l
-	$(FLEX) -o scanner.c --header-file=scanner.h $<
-
-EXTRA_DIST = parser.y scanner.l
+ipfixcol_profiler_inter_la_SOURCES = profiler.cpp profiler.h
 
 if HAVE_DOC
-SUBDIRS = doxygen
+SUBDIRS += doxygen
 MANSRC = ipfixcol-profiler-inter.dbk
-EXTRA_DIST += $(MANSRC)
+EXTRA_DIST = $(MANSRC)
 man_MANS = ipfixcol-profiler-inter.1
-CLEANFILES += ipfixcol-profiler-inter.1
+CLEANFILES = ipfixcol-profiler-inter.1
 endif
 
 rpmspec = $(PACKAGE_TARNAME).spec

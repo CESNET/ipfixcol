@@ -40,7 +40,7 @@
 		<title>Description</title>
 		<simpara>
 			The <command>ipfix-profiler-inter</command> plugin is a part of IPFIXcol (IPFIX collector). It profiles IPFIX data records and fills in metadata information according to given
-                        set of organizations and their rules and profiles.
+                        set of profiles and their channels.
 		</simpara>
 	</refsect1>
 
@@ -53,86 +53,102 @@
 		<programlisting>
 	<![CDATA[
 	<profiler>
-		<organization id="1">
-                    <rule id="1">
-                        <source>127.0.0.1</source>
-                        <odid>5</odid>
-                    </rule>
-                    <rule id="2">
-                        <source>127.0.0.1</source>
-                        <odid>3</odid>
-                        <dataFilter>ipVersion = 4 and exists tcpControlBits</dataFilter>
-                    </rule>
-                    <profile id="1">
-                        <filter>octetDeltaCount < 0xF</filter>
-                    </profile>
-                    <profile id="2">
-                        <filter>octetDeltaCount > 0xF or sourceTransportPort = 21</filter>
-                    </profile>
-                </organization>
-                <organization id="2">
-                    ...
-                </organization>
+		<profiles>/path/to/profiles.xml</profiles>
 	</profiler>
 	]]>
 		</programlisting>
+
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term><command>profiles</command></term>
+					<listitem>
+						<simpara>path to the file with profiles specification</simpara>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+
+
+<simpara><filename>profile.xml</filename> profiler example</simpara>
+<programlisting>
+<![CDATA[
+	<profile name="p1">
+
+		<channel name="ch1">
+			<sources>*</sources>
+			<filter>ipVersion = 4</filter>
+		</channel>
+
+		<channel name="ch2">
+			<sources>*</sources>
+			<filter>odid != 5</filter>
+		</channel>
+
+		<channel name="ch3">
+			<sources>*</sources>
+			<filter>octetDeltaCount > 0xf</filter>
+		</channel>
+
+		<profile name="p2">
+
+			<channel name="ch21">
+				<sources>ch1, ch2</sources>
+				<filter>sourceIPv4Address = 192.168.0.0/16</filter>
+			</channel>
+
+			<channel name="ch22">
+				<sources>ch3</sources>
+				<filter>...</filter>
+			</channel>
+
+		</profile>
+
+		<profile name="p3">
+
+			<channel name="ch31">
+				<sources>*</sources>
+				<filter>...</filter>
+			</channel>
+
+		</profile>
+
+	</profile>
+]]>
+</programlisting>
 	
 		<para>
 			<variablelist>
 				<varlistentry>
-					<term><command>organization</command></term>
+					<term><command>profile</command></term>
 					<listitem>
-						<simpara>Organization structure, ID must be unique (according to other organizations)</simpara>
+						<simpara>profile definition with options, channels and subprofiles</simpara>
 					</listitem>
 				</varlistentry>
 	
 				<varlistentry>
-					<term><command>rule</command></term>
+					<term><command>channel</command></term>
 					<listitem>
-						<simpara>Rule specifying whether data record belongs to the organization. ID must be unique within organization</simpara>
-                                                <variablelist>
-                                                    <varlistentry>
-                                                        <term><command>source</command></term>
-                                                        <listitem>
-                                                            <simpara>IPFIX packet source address. Both IPv4 and IPv6 are supported</simpara>
-                                                        </listitem>
-                                                    </varlistentry>
-                                                    
-                                                    <varlistentry>
-                                                        <term><command>odid</command></term>
-                                                        <listitem>
-                                                            <simpara>Packet source Observation Domain ID</simpara>
-                                                        </listitem>
-                                                    </varlistentry>
-                                                    
-                                                    <varlistentry>
-                                                        <term><command>dataFilter</command></term>
-                                                        <listitem>
-                                                            <simpara>Filter applied on data records. It uses the same syntax as <citerefentry><refentrytitle>ipfixcol-filter-inter</refentrytitle><manvolnum>1</manvolnum></citerefentry></simpara>
-                                                        </listitem>
-                                                    </varlistentry>
-                                                    
-                                                </variablelist>
-					</listitem>
-				</varlistentry>
-                                
-				<varlistentry>
-					<term><command>profile</command></term>
-					<listitem>
-						<simpara>Organization profile. ID must be unique within organization</simpara>
-                                                
-                                                <variablelist>
-                                                    <varlistentry>
-                                                            <term><command>filter</command></term>
-                                                            <listitem>
-                                                                    <simpara>Filter applied on data reocrds, specifying whether it belongs to the profile. It uses the same syntax as <citerefentry><refentrytitle>ipfixcol-filter-inter</refentrytitle><manvolnum>1</manvolnum></citerefentry></simpara>
-                                                                    <simpara>Except data fields, profile filter can contain elements from IP and IPFIX header. Supported fields are: odid, srcaddr, dstaddr, srcport, dstport</simpara>
-                                                            </listitem>
-                                                    </varlistentry>
-                                                </variablelist>
-					</listitem>
-				</varlistentry>
+						<simpara>channel structure for profile's data filtering</simpara>
+							<variablelist>
+								<varlistentry>
+									<term><command>sources</command></term>
+									<listitem>
+										<simpara>comma separated list of sources from which channel will receive data. Sources are channels from parent profile (except top level channels)</simpara>
+									</listitem>
+								</varlistentry>
+								
+								<varlistentry>
+									<term><command>filter</command></term>
+									<listitem>
+										<simpara>Filter applied on data records, specifying whether it belongs to the profile. It uses the same syntax as <citerefentry><refentrytitle>ipfixcol-filter-inter</refentrytitle><manvolnum>1</manvolnum></citerefentry></simpara>
+										<simpara>Except data fields, profile filter can contain elements from IP and IPFIX header. Supported fields are: odid, srcaddr, dstaddr, srcport, dstport</simpara>
+									</listitem>
+								</varlistentry>
 
+							</variablelist>
+					</listitem>
+				</varlistentry>
 			</variablelist>
 		</para>
 	</refsect1>

@@ -93,21 +93,13 @@ struct ipfix_record {
     struct ipfix_template *templ;   /**< Record's template */
 };
 
-
-struct organization {
-    uint32_t id;
-    uint16_t rule;
-    uint16_t **profiles;
-};
-
 struct __attribute__((packed)) metadata {
     struct ipfix_record record;     /**< IPFIX data record */
 	uint16_t srcCountry;			/**< Source country code */
 	uint16_t dstCountry;			/**< Destination country code */
     uint32_t srcAS;                 /**< Source AS */
     uint32_t dstAS;                 /**< Destination AS */
-    struct organization **organizations;    /**< Array of organizations assigned to this record */
-    /* geoinfo */
+    uint32_t *profiles;				/**< Array of profiles and channels assigned to this record */
 };
 
 /**

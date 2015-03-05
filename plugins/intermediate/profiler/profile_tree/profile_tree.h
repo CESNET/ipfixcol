@@ -45,11 +45,16 @@ extern "C" {
 #include "filter.h"
 }
 
+#include <stdexcept>
+
 /* ID types can by changed here */
 using profile_id_t = uint16_t;
 using channel_id_t = uint16_t;
 using couple_id_t  = uint32_t;
 
-#include <stdexcept>
+#include "Profile.h"
+#include "Channel.h"
+
+Profile *process_profile_xml(const char *filename);
 
 #endif	/* PROFILER_H */

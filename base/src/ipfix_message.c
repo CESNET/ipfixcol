@@ -685,4 +685,15 @@ int data_set_records_count(struct ipfix_data_set *data_set, struct ipfix_templat
 	}
 }
 
-
+void message_free_metadata(struct ipfix_message *msg)
+{
+	for (uint16_t i = 0; i < msg->data_records_count; ++i) {
+		/* Free profiles */
+		if (msg->metadata[i].profiles) {
+			free(msg->metadata[i].profiles);
+		}
+	}
+	
+	/* Free metadata structure */
+	free(msg->metadata);
+}

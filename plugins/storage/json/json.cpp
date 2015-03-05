@@ -55,6 +55,7 @@ static const char *msg_module = "json_storage";
 #define DEFAULT_TYPE	"UDP"
 
 struct json_conf {
+	bool metadata;
 	Storage *storage;
 	sisoconf *sender;
 };
@@ -76,6 +77,7 @@ void process_startup_xml(struct json_conf *conf, char *params)
 	std::string ip   = ie.node().child_value("ip");
 	std::string port = ie.node().child_value("port");
 	std::string type = ie.node().child_value("type");
+	std::string meta = ie.node().child_value("metadata");
 	
 	/* Check IP address */
 	if (ip.empty()) {
@@ -94,6 +96,9 @@ void process_startup_xml(struct json_conf *conf, char *params)
 		MSG_WARNING(msg_module, "Connection type not set, using default: %s", DEFAULT_TYPE);
 		type = DEFAULT_TYPE;
 	}
+	
+	/* Check metadata processing */
+	conf->metadata = (meta == "yes");
 	
 	/* Create sender */
 	conf->sender = siso_create();
@@ -120,6 +125,9 @@ int storage_init (char *params, void **config)
 		
 		/* Create storage */
 		conf->storage = new Storage(conf->sender);
+		
+		/* Configure metadata processing */
+		conf->storage->setMetadataProcessing(conf->metadata);
 		
 		/* Save configuration */
 		*config = conf;

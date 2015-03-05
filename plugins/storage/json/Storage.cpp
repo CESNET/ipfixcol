@@ -132,30 +132,9 @@ void Storage::sendData() const
  */
 void Storage::storeDataSets(const ipfix_message* ipfix_msg)
 {	
-	struct ipfix_data_set *data_set;
-
-	for (int i = 0; (data_set = ipfix_msg->data_couple[i].data_set) != NULL; ++i) {
-		struct ipfix_template *templ = ipfix_msg->data_couple[i].data_template;
-		if (!templ) {
-			/* Data set without template, skip it */
-			continue;
-		}
-		
-		uint16_t min_record_length = templ->data_length;
-		
-		/* Skip header */
-		uint32_t offset = 4;
-
-		if (min_record_length & 0x8000) {
-			/* oops, record contains fields with variable length */
-			min_record_length = min_record_length & 0x7fff; /* size of the fields, variable fields excluded  */
-		}
-
-		while ((int) ntohs(data_set->header.length) - (int) offset - (int) min_record_length >= 0) {
-			uint8_t *data_record = (((uint8_t *) data_set) + offset);
-			/* store data record */
-			offset += this->storeDataRecord(data_record, templ);
-		}
+	/* Iterate through all data records */
+	for (int i = 0; i < ipfix_msg->data_records_count; ++i) {
+		this->storeDataRecord(&(ipfix_msg->metadata[i]));
 	}
 }
 
@@ -238,10 +217,13 @@ std::string Storage::rawName(uint32_t en, uint16_t id) const
 /**
  * \brief Store data record
  */
-uint16_t Storage::storeDataRecord(uint8_t *data_record, ipfix_template *templ)
+void Storage::storeDataRecord(struct metadata *mdata)
 {
 	offset = 0;
 	record = "{\"@type\": \"ipfix.entry\", \"ipfix\": {";
+	
+	struct ipfix_template *templ = mdata->record.templ;
+	uint8_t *data_record = (uint8_t*) mdata->record.record;
 	
 	/* get all fields */
 	for (uint16_t count = 0, index = 0; count < templ->field_count; ++count, ++index) {
@@ -310,8 +292,46 @@ uint16_t Storage::storeDataRecord(uint8_t *data_record, ipfix_template *templ)
 		offset += length;
 	}
 	
+	/* Store metadata */
+	if (processMetadata) {
+		record += "}, \"metadata\": {";
+		storeMetadata(mdata);
+	}
+	
 	record += "}}\n";
 	sendData();
-	
-	return offset;
 }
+
+/**
+ * \brief Store metadata information
+ */
+void Storage::storeMetadata(metadata* mdata)
+{
+	std::stringstream ss;
+	
+	/* Geolocation info */
+	ss << "\"srcAS\": \"" << mdata->srcAS << "\", ";
+	ss << "\"dstAS\": \"" << mdata->dstAS << "\", ";
+	ss << "\"srcCountry\": \"" << mdata->srcCountry << "\", ";
+	ss << "\"dstCountry\": \"" << mdata->dstCountry << "\", ";
+	
+	
+	/* Profiles */
+	if (mdata->profiles) {
+		ss << "\"profiles\": [";
+
+		for (int i = 0; mdata->profiles[i] != 0; ++i) {
+			if (i > 0) {
+				ss << ", ";
+			}
+			
+			ss << "{\"profile\": " << (mdata->profiles[i] >> 16) << ", ";
+			ss <<  "\"channel\": " << (mdata->profiles[i] & 0xFFFF) << "}";
+		}
+
+		ss << "]";
+	}
+	
+	record += ss.str();
+}
+
