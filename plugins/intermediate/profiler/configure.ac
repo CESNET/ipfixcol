@@ -150,6 +150,7 @@ fi
 # generate output
 AC_CONFIG_FILES([Makefile
 		doxygen/Makefile
+		profile_tree/Makefile
 		ipfixcol-profiler-inter.spec])
 AM_COND_IF(HAVE_DOXYGEN, AC_CONFIG_FILES([doxygen/doxyfile]))
 

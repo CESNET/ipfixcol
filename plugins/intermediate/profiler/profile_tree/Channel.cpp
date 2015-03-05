@@ -45,7 +45,7 @@
 channel_id_t Channel::channels_cnt = 1;
 
 /* Identifier for verbose macros */
-static const char *msg_module = "profiler";
+static const char *msg_module = "profiler_tree";
 
 /**
  * Trim string
