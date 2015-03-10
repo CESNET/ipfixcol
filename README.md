@@ -41,6 +41,7 @@ There are also external plugins that are installed separately
 ###<a name="exmed"></a> External intermediate plugins
 * **[geoip](plugins/intermediate/geoip)** - adds country codes into the metadata structure
 * **[profiler](plugins/intermediate/profiler)** - fills metadata informations about organizations and profiles
+* **[stats](plugins/intermediate/stats)** - counts statistics per ODID
 
 ###<a name="exout"></a> External storage plugins
 * **[fastbit](plugins/storage/fastbit)** - uses FastBit library to store and index data

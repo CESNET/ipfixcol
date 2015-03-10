@@ -289,7 +289,7 @@ struct ipfix_template *tm_create_template(void *template, int max_len, int type,
 	tmpl_length = tm_template_length(template, max_len, type, &data_length);
 	if (tmpl_length == 0) {
 		/* template->count probably points beyond current set area */
-		MSG_WARNING(msg_module, "[%u] Template %d is malformed (bad template count), skipping.", odid,
+		MSG_WARNING(msg_module, "[%u] Template %d is malformed (bad template count); skipping...", odid,
 				ntohs(((struct ipfix_template_record *) template)->template_id));
 		return NULL;
 	}
@@ -437,7 +437,7 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 	int i = tm_record_template_index(tmr, id);
 	
 	if (i < 0) {
-		MSG_WARNING(msg_module, "[%u] Template %u cannot be updated (not found), creating a new one", odid, id);
+		MSG_WARNING(msg_module, "[%u] Template %u cannot be updated (not found); creating new one...", odid, id);
 		return tm_record_add_template(tmr, template, max_len, type, odid);
 	}
 	
@@ -451,10 +451,10 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 			/* remove the old template */
 //			MSG_DEBUG(msg_module, "No references and no previous template - removing, ID %d", id);
 			if (tm_record_remove_template(tmr, id) != 0) {
-				MSG_WARNING(msg_module, "[%u] Cannot remove template %i.", odid, id);
+				MSG_WARNING(msg_module, "[%u] Cannot remove template %i", odid, id);
 			}
 			/* create a new one */
-			MSG_DEBUG(msg_module, "Creating new template %d", id);
+			MSG_DEBUG(msg_module, "Creating new template... %d", id);
 			new_tmpl = tm_record_add_template(tmr, template, max_len, type, odid);
 			if (new_tmpl) {
 				new_tmpl->template_id = templ_id;
@@ -462,13 +462,13 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 			return new_tmpl;
 		} else {
 			/* Has some previous template(s) */
-			MSG_DEBUG(msg_module, "[%u] No references, but previous template found, ID (%d)", odid, id);
+			MSG_DEBUG(msg_module, "[%u] No references, but previous template found (ID %d)", odid, id);
 			struct ipfix_template *new = tmr->templates[i]->next;
 			free(tmr->templates[i]);
 			tmr->templates[i] = new;
 		}
 	} else {
-		MSG_DEBUG(msg_module, "[%u] Template %d can't be removed (%u references), it will be marked as old.", odid, id, tmr->templates[i]->references);
+		MSG_DEBUG(msg_module, "[%u] Template %d cannot be removed (%u references), but it will be marked as 'old'", odid, id, tmr->templates[i]->references);
 	}
 
 	/* Create new template and place it on beginning of list */
@@ -519,7 +519,7 @@ struct ipfix_template *tm_record_get_template(struct ipfix_template_mgr_record *
  */
 void tm_record_remove_all_templates(struct ipfix_template_mgr *tm, struct ipfix_template_mgr_record *tmr, int type)
 {
-	MSG_DEBUG(msg_module, "Removing all %stemplates", (type == TM_TEMPLATE)?"":"option ");
+	MSG_DEBUG(msg_module, "Removing all %stemplates", (type == TM_TEMPLATE) ? "" : "option ");
 	int i;
 	for (i=0; i < tmr->max_length; i++) {
 		if ((tmr->templates[i] != NULL) && (tmr->templates[i]->template_type == type)) {

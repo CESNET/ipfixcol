@@ -104,6 +104,13 @@ public:
      */
     void storeDataSets(const struct ipfix_message *msg);
     
+	/**
+	 * \brief Set metadata processing enabled/disabled
+	 * 
+     * @param enabled
+     */
+	void setMetadataProcessing(bool enabled) { processMetadata = enabled; }
+	
 private:
     
     /**
@@ -139,13 +146,17 @@ private:
     /**
      * \brief Store data record
      * 
-     * @param record pointer to record
-     * @param templ template
-     * @return data record length
+     * @param mdata Data record's metadata
      */
-    uint16_t storeDataRecord(uint8_t *record, struct ipfix_template *templ);
+    void storeDataRecord(struct metadata *mdata);
 
-    
+    /**
+	 * \brief Store metadata
+	 * 
+     * @param mdata Data record's metadata
+     */
+	void storeMetadata(struct metadata *mdata);
+	
     /**
      * \brief Get element by enterprise and id number
      * 
@@ -165,14 +176,18 @@ private:
      */
     void loadElements();
     
+	/**
+	 * \brief Send JSON data
+     */
     void sendData() const;
     
+	bool processMetadata{false};	/**< Metadata processing enabled */
 	uint8_t addr6[IPV6_LEN];
 	uint8_t addrMac[MAC_LEN];
 	uint16_t offset, id, length;
 	uint32_t enterprise;
     Translator translator;          /**< number -> string translator */
-	std::string record, value;				/**< Data record */
+	std::string record, value;		/**< Data record */
     sisoconf *sender;               /**< sender "class" */
     
 	static std::map<uint32_t, std::map<uint16_t, struct ipfix_element> > elements;

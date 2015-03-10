@@ -83,7 +83,7 @@ enum valtype {
     VT_NUMBER,  /**< numeric value */
     VT_STRING,  /**< string value  */
     VT_REGEX,   /**< regular expression */
-	VT_PREFIX	/**< IP prefix */
+    VT_PREFIX	/**< IP prefix */
 };
 
 /**
@@ -105,11 +105,31 @@ struct filter_value {
 };
 
 /**
+ * Field types
+ */
+enum field_type {
+    FT_DATA,    /**< Data field from ipfix-elements */
+    FT_HEADER   /**< Packet header field */
+};
+
+/**
+ * Header fields
+ */
+enum header_field {
+    HF_ODID,    /**< Observation domain ID */
+    HF_SRCIP,   /**< Source IP address */
+    HF_SRCPORT, /**< Source port */
+    HF_DSTIP,   /**< Destination IP address */
+    HF_DSTPORT, /**< Destination port number */
+};
+
+/**
  * \brief Field identifier
  */
 struct filter_field {
-    uint32_t enterprise;/**< enterprise number */
-    uint16_t id;        /**< element ID */
+    enum field_type type;   /**< Field type */
+    uint32_t enterprise;    /**< enterprise number */
+    uint16_t id;            /**< element ID */
 };
 
 /**
@@ -334,10 +354,11 @@ void filter_error(const char *msg, YYLTYPE *loc);
  * \brief Match filter with IPFIX record
  * 
  * \param[in] node filter node
+ * \param[in] msg IPFIX message (filter may contain field from message header)
  * \param[in] data IPFIX data record
  * \return true when node fits
  */
-bool filter_fits_node(struct filter_treenode* node, struct ipfix_record *data);
+bool filter_fits_node(struct filter_treenode* node, struct ipfix_message *msg, struct ipfix_record *data);
 
 /**
  * \brief Free profile's data

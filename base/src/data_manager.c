@@ -108,7 +108,7 @@ static void* storage_plugin_thread(void *cfg)
 		/* get next data */
 		msg = rbuffer_read (config->thread_config->queue, &index);
 		if (msg == NULL) {
-			MSG_NOTICE("storage plugin thread", "[%u] No more data from Data manager.", config->odid);
+			MSG_NOTICE("storage plugin thread", "[%u] No more data from Data Manager", config->odid);
             break;
 		}
 		
@@ -138,7 +138,7 @@ static void* storage_plugin_thread(void *cfg)
 		index = (index + 1) % config->thread_config->queue->size;
 	}
 
-	MSG_NOTICE("storage plugin thread", "[%u] Closing storage plugin's thread.", config->odid);
+	MSG_NOTICE("storage plugin thread", "[%u] Closing storage plugin thread", config->odid);
 	return (NULL);
 }
 
@@ -179,7 +179,7 @@ int data_manager_add_plugin(struct data_manager_config *config, struct storage *
 	xmlFree(plugin_params);
 	
 	if (retval != 0) {
-		MSG_WARNING(msg_module, "[%u] Initiating storage plugin failed.", config->observation_domain_id);
+		MSG_WARNING(msg_module, "[%u] Storage plugin initialization failed", config->observation_domain_id);
 		return 0;
 	}
 	
@@ -203,7 +203,7 @@ int data_manager_add_plugin(struct data_manager_config *config, struct storage *
 	
 	/* Create thread */
 	if (pthread_create(&(plugin_cfg->thread_id), NULL, &storage_plugin_thread, (void*) plugin) != 0) {
-		MSG_ERROR(msg_module, "Unable to create storage plugin thread.");
+		MSG_ERROR(msg_module, "Unable to create storage plugin thread");
 		plugin->close(&(plugin->config));
 		free(plugin_cfg);
 		plugin->thread_config = NULL;
@@ -296,7 +296,7 @@ struct data_manager_config *data_manager_create(uint32_t observation_domain_id, 
 	/* initiate queue to communicate with storage plugins' threads */
 	config->store_queue = rbuffer_init(ring_buffer_size);
 	if (config->store_queue == NULL) {
-		MSG_ERROR(msg_module, "Unable to initiate queue for communication with Storage plugins.");
+		MSG_ERROR(msg_module, "Unable to initiate queue for communication with storage plugins");
 		goto err;
 	}
 
@@ -317,7 +317,7 @@ struct data_manager_config *data_manager_create(uint32_t observation_domain_id, 
 
 	/* check if at least one storage plugin initiated */
 	if (config->plugins_count == 0) {
-		MSG_WARNING(msg_module, "[%u] No storage plugin for the Data manager initiated.", config->observation_domain_id);
+		MSG_WARNING(msg_module, "[%u] No storage plugin for the Data Manager initiated", config->observation_domain_id);
 		goto err;
 	}
 	

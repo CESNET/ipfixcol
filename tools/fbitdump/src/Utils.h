@@ -133,6 +133,7 @@ void loadDirRange(std::string &basedir, std::string &firstDir, std::string &last
 	throw (std::invalid_argument);
 
 char *strncpy_safe (char *destination, const char *source, size_t num);
+int strtoi (const char* str, int base);
 
 } /* end of namespace utils */
 

@@ -77,12 +77,12 @@ void usage()
 {
 	printf("\n");
 	printf("Usage: ipfixsend [options]\n");
-	printf("  -h         show this text\n");
+	printf("  -h         Show this help\n");
 	printf("  -i path    IPFIX input file\n");
 	printf("  -d ip      Destination IP address\n");
-	printf("  -p port    Destination port number, default is %s\n", DEFAULT_PORT);
-	printf("  -t type    Connection type (udp, tcp or sctp), default is udp\n");
-	printf("  -n num     How many times should file be sent, default is infinity\n");
+	printf("  -p port    Destination port number (default: %s)\n", DEFAULT_PORT);
+	printf("  -t type    Connection type (UDP, TCP or SCTP) (default: UDP)\n");
+	printf("  -n num     How many times the file should be sent (default: infinity)\n");
 	printf("  -s speed   Maximum data sending speed/s\n");
 	printf("             Supported suffixes: B (default), K, M, G\n");
 	printf("  -S packets Speed limit in packets/s\n");
@@ -152,7 +152,7 @@ int main(int argc, char** argv)
 	/* Get collector's address */
 	sisoconf *sender = siso_create();
 	if (!sender) {
-		fprintf(stderr, "Memory allocation error, cannot create sender\n");
+		fprintf(stderr, "Memory allocation error\n");
 		return 1;
 	}
 	

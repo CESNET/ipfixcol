@@ -38,13 +38,13 @@
 
 AC_PREREQ([2.60])
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol-profiler-inter], [0.0.1])
+AC_INIT([ipfixcol-stats-inter], [0.0.1])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 LT_PREREQ([2.2])
 LT_INIT([dlopen disable-static])
 
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_SRCDIR([profiler.cpp])
+AC_CONFIG_SRCDIR([stats.cpp])
 AC_CONFIG_HEADERS([config.h])
 
 # Initialization
@@ -61,18 +61,6 @@ LBR_SET_CREDENTIALS
 LBR_SET_DISTRO([redhat])
 
 ############################ Check for programs ################################
-
-# Check for flex
-AC_CHECK_PROG(FLEX, flex, flex)
-AS_IF([test -z "$FLEX"], [AC_MSG_ERROR([flex not found, please install flex package])])
-
-# Check fol bison
-AC_CHECK_PROG(BISON, bison, bison)
-AS_IF([test -z "$BISON"], [AC_MSG_ERROR([bison not found, please install bison package])])
-
-# Check for doxygen
-AC_CHECK_PROG(DOXYGEN, doxygen, doxygen)
-AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
 
 # Check for rpmbuil
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
@@ -100,6 +88,15 @@ AM_CONDITIONAL([HAVE_DOC], [test "$enable_doc" != "no"])
 
 ############################ Check for libraries ###############################
 
+### LibXML2 ###
+AC_CHECK_LIB([xml2], [main],
+    [LIBS="`xml2-config --libs` $LIBS"
+    CFLAGS="`xml2-config --cflags` $CFLAGS"],
+    AC_MSG_ERROR([Libxml2 not found ]))
+
+### RRD library ###
+AC_SEARCH_LIBS([rrd_create], [rrd],, AC_MSG_ERROR([librrd not found]))
+
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar.h])
 
@@ -109,6 +106,7 @@ AS_IF([test -d $srcdir/../../../base/headers],
 )
 
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([rrd.h], , AC_MSG_ERROR([rrd.h header missing. Please install rrd-devel package]))
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 AC_HEADER_STDBOOL
@@ -149,10 +147,7 @@ fi
 
 # generate output
 AC_CONFIG_FILES([Makefile
-		doxygen/Makefile
-		profile_tree/Makefile
-		ipfixcol-profiler-inter.spec])
-AM_COND_IF(HAVE_DOXYGEN, AC_CONFIG_FILES([doxygen/doxyfile]))
+		ipfixcol-stats-inter.spec])
 
 # tools makefiles
 
@@ -161,8 +156,7 @@ AC_OUTPUT
 AS_IF([test -z "$RPMBUILD"], AC_MSG_WARN([Due to missing rpmbuild you will not able to generate RPM package.]))
 
 AM_COND_IF(HAVE_DOC,
-    [AM_COND_IF(HAVE_XSLTPROC, 
-        [AM_COND_IF(HAVE_DOXYGEN, , AC_MSG_ERROR([Missing doxygen - install it or run with --disable-doc]))],
+    [AM_COND_IF(HAVE_XSLTPROC, ,
         AC_MSG_ERROR([Missing xsltproc - install it or run with --disable-doc])
     )]
 )
@@ -175,10 +169,7 @@ echo "
   C++ Compiler..: $CXX $AM_CXXFLAGS $CXXFLAGS $AM_CPPFLAGS $CPPFLAGS
   Linker........: $AM_LDFLAGS $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
-  flex..........: ${FLEX:-NONE}
-  bison.........: ${BISON:-NONE}
   Build doc.....: ${enable_doc:-yes}
-  Doxygen.......: ${DOXYGEN:-NONE}
   xsltproc......: ${XSLTPROC:-NONE}
   xsltmanstyle..: $XSLTMANSTYLE
 "

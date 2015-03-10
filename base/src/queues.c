@@ -57,7 +57,7 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 	struct ring_buffer* retval = NULL;
 
 	if (size == 0) {
-		MSG_ERROR(msg_module, "Size of the ring buffer set to zero.");
+		MSG_ERROR(msg_module, "Size of the ring buffer set to zero");
 		return (NULL);
 	}
 
@@ -86,7 +86,7 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 	}
 
 	if (pthread_mutex_init (&(retval->mutex), NULL) != 0) {
-		MSG_ERROR(msg_module, "Condition variable init failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Initialization of condition variable failed (%s:%d)", __FILE__, __LINE__);
 		free (retval->data_references);
 		free (retval->data);
 		free (retval);
@@ -94,7 +94,7 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 	}
 
 	if (pthread_cond_init (&(retval->cond), NULL) != 0) {
-		MSG_ERROR(msg_module, "Condition variable init failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Initialization of condition variable failed (%s:%d)", __FILE__, __LINE__);
 		pthread_mutex_destroy (&(retval->mutex));
 		free (retval->data_references);
 		free (retval->data);
@@ -103,7 +103,7 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 	}
 
 	if (pthread_cond_init (&(retval->cond_empty), NULL) != 0) {
-		MSG_ERROR(msg_module, "Condition variable init failed (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Initialization of condition variable failed (%s:%d)", __FILE__, __LINE__);
 		pthread_mutex_destroy (&(retval->mutex));
 		free (retval->data_references);
 		free (retval->data);
@@ -125,7 +125,7 @@ struct ring_buffer* rbuffer_init (unsigned int size)
 int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, unsigned int refcount)
 {
 	if (rbuffer == NULL || refcount == 0) {
-		MSG_ERROR(msg_module, "Invalid ring buffer's write parameters.");
+		MSG_ERROR(msg_module, "Invalid ring buffer write parameters");
 		return (EXIT_FAILURE);
 	}
 
@@ -266,43 +266,7 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
 					}
 					
 					if (rbuffer->data[rbuffer->read_offset]->metadata) {
-						struct organization **orgTable = NULL;
-						uint16_t **profTable = NULL;
-						struct metadata *mdata;
-						
-						/* Free organizations */
-						for (int i = 0; i < rbuffer->data[rbuffer->read_offset]->data_records_count; ++i) {
-							mdata = &(rbuffer->data[rbuffer->read_offset]->metadata[i]);
-							
-							/* Get beginning of organizations table */
-							if (!orgTable) {
-								orgTable = mdata->organizations;
-							}
-							
-							/* Free organizations */
-							if (mdata->organizations) {
-								for (int org = 0; mdata->organizations[org]; ++org) {
-									/* Get beginning of profiles table */
-									if (!profTable) {
-										profTable = mdata->organizations[org]->profiles;
-									}
-									
-									free(mdata->organizations[org]);
-								}
-							}
-						}
-						
-						/* Free profiles table */
-						if (profTable) {
-							free(profTable);
-						}
-						
-						/* Free organizations table */
-						if (orgTable) {
-							free(orgTable);
-						}
-						
-						free (rbuffer->data[rbuffer->read_offset]->metadata);
+						message_free_metadata(rbuffer->data[rbuffer->read_offset]);
 					}
 					
 					free (rbuffer->data[rbuffer->read_offset]);

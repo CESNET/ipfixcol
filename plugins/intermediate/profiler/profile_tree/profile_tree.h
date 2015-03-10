@@ -1,9 +1,9 @@
 /**
- * \file utils.h
+ * \file profiler.h
  * \author Michal Kozubik <kozubik@cesnet.cz>
- * \brief Functions unrelated to IPFIX data parsing
+ * \brief intermediate plugin for profiling data
  *
- * Copyright (C) 2014 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,15 +37,24 @@
  *
  */
 
-#ifndef UTILS_H
-#define	UTILS_H
+#ifndef PROFILER_H
+#define	PROFILER_H
 
-#include "api.h"
+extern "C" {
+#include <ipfixcol.h>
+#include "filter.h"
+}
 
-API char **utils_files_from_path(char *path);
-API char  *utils_dir_from_path(char *path);
-API char  *strncpy_safe (char *destination, const char *source, size_t num);
-API int    strtoi (const char* str, int base);
+#include <stdexcept>
 
-#endif	/* UTILS_H */
+/* ID types can by changed here */
+using profile_id_t = uint16_t;
+using channel_id_t = uint16_t;
+using couple_id_t  = uint32_t;
 
+#include "Profile.h"
+#include "Channel.h"
+
+Profile *process_profile_xml(const char *filename);
+
+#endif	/* PROFILER_H */

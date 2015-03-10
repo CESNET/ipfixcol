@@ -252,6 +252,13 @@ API int data_set_records_count(struct ipfix_data_set *data_set, struct ipfix_tem
  */
 API int template_set_process_records(struct ipfix_template_set *tset, int type, tset_callback_f processor, void *proc_data);
 
+/**
+ * \brief Free metadata in IPFIX message
+ * 
+ * \param[in] IPFIX message
+ */
+void message_free_metadata(struct ipfix_message *msg);
+
 #endif /* IPFIX_MESSAGE_H_ */
 
 /**@}*/
