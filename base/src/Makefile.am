@@ -25,6 +25,9 @@ BUILT_SOURCES = config.h
 config.h: config.h.in ../config.status
 	sed 's|@sysconfdir[@]|$(sysconfdir)|g' $< > $@
 
+ipfixcol_LDADD = utils/profiles/libprofiles.a
+ipfixcol_LDFLAGS = -lstdc++
+
 ipfixcol_SOURCES = \
 	config.c \
 	config.h \

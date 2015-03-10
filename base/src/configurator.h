@@ -60,6 +60,7 @@ enum plugin_types {
 };
 
 #define PLUGIN_ID_ALL 0
+#define MAX_PROFILES_CONFIGS 32
 
 /* Plugin configuration */
 struct plugin_config {
@@ -86,6 +87,10 @@ typedef struct ipfix_config {
     xmlDoc *act_doc;                /**< Actual startup configuration */
     xmlDoc *new_doc;                /**< New startup configuration */
     xmlNode *collector_node;        /**< Collector node in startup.xml */
+	void *profiles[MAX_PROFILES_CONFIGS];/**< Profiles configurations */
+	char *profiles_file;			/**< Path to the profiles file */
+	time_t profiles_file_tstamp;	/**< Timestamp of the profiles file */
+	int current_profiles;			/**< Current profiles configuration */
     struct input input;             /**< Input plugin */
     startup_config *startup;        /**< parser startup file */
     char process_name[16];          /**< process name */
@@ -110,6 +115,14 @@ configurator *config_init(const char *internal, const char *startup);
  * \return 0 on success
  */
 int config_reconf(configurator *config);
+
+/**
+ * \brief Get current profiles configuration
+ *
+ * \param[in] config
+ * \return profiles configuration
+ */
+void *config_get_current_profiles(configurator *config);
 
 /**
  * \brief Stop all intermediate plugins and flush their buffers

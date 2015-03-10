@@ -689,8 +689,8 @@ void message_free_metadata(struct ipfix_message *msg)
 {
 	for (uint16_t i = 0; i < msg->data_records_count; ++i) {
 		/* Free profiles */
-		if (msg->metadata[i].profiles) {
-			free(msg->metadata[i].profiles);
+		if (msg->metadata[i].channels) {
+			free(msg->metadata[i].channels);
 		}
 	}
 	

@@ -60,6 +60,7 @@
 #include <libxml/xpath.h>
 
 #include <ipfixcol.h>
+#include <ipfixcol/profiles.h>
 #include <libxml/tree.h>
 #include "intermediate_process.h"
 #include "config.h"
@@ -323,6 +324,9 @@ int main (int argc, char* argv[])
 		goto cleanup_err;
 	}
 	
+	/* Pass configurator to the preprocessor */
+	preprocessor_set_configurator(config);
+
 	/* configure output subsystem */
 	retval = output_manager_start();
 	if (retval != 0) {
