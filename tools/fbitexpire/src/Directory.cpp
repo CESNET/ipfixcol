@@ -179,7 +179,7 @@ uint64_t Directory::dirSize(std::string path, bool force, bool recursive, bool w
 	
 	/* Size of "." */
 	if (lstat(path.c_str(), &st) == -1) {
-		MSG_ERROR(msg_module, "Could not determine size of '%s' (%s)", path.c_str(), strerror(errno));
+		MSG_ERROR(msg_module, "Could not determine status of '%s' (%s)", path.c_str(), strerror(errno));
 	}
 	size += st.st_size;
 	

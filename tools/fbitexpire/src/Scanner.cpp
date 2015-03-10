@@ -42,6 +42,7 @@
 #include "verbose.h"
 
 #include <dirent.h>
+#include <errno.h>
 #include <sys/stat.h>
 #include <stdexcept>
 #include <sys/prctl.h>
@@ -497,7 +498,9 @@ void Scanner::createDirTree(Directory* parent)
 		throw std::invalid_argument(std::string("Cannot open " + parent->getName()));
 	}
 	
-	lstat(parent->getName().c_str(), &st);
+	if (lstat(parent->getName().c_str(), &st) == -1) {
+		MSG_ERROR(msg_module, "Could not determine status of '%s' (%s)", parent->getName().c_str(), strerror(errno));
+	}
 	size += st.st_size;
 	
 	/* Iterate through subdirectories */
