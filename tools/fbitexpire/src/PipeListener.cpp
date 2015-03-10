@@ -163,4 +163,13 @@ void PipeListener::reopenPipe()
 	openPipe();
 }
 
+/**
+ * \brief Constructor
+ */
+PipeListener::PipeListener(std::string pipename):
+		_watcher(NULL), _scanner(NULL), _cleaner(NULL), _pipename(pipename), _cv(NULL)
+{
+
+}
+
 } /* end of namespace fbitexpire */

@@ -57,27 +57,27 @@ namespace fbitexpire {
  * \brief PipeListener - reads pipe and decodes rescan/kill commands
  */
 class PipeListener : public FbitexpireThread {
-    using FbitexpireThread::run;
+	using FbitexpireThread::run;
 public:
-    PipeListener(std::string pipename): _pipename{pipename} {}
-    ~PipeListener() { closePipe(); }
-    
-    void run(Watcher *watcher, Scanner *scanner, Cleaner *cleaner, std::condition_variable *cv);
-    void killAll();
+	PipeListener(std::string pipename);
+	~PipeListener() { closePipe(); }
+	
+	void run(Watcher *watcher, Scanner *scanner, Cleaner *cleaner, std::condition_variable *cv);
+	void killAll();
 private:
-    void loop();
-    void openPipe();
-    void closePipe();
-    void reopenPipe();
-    void stopAll();
-    
-    Watcher *_watcher;              /**< Watcher's instance */
-    Scanner *_scanner;              /**< Scanner's instance */
-    Cleaner *_cleaner;              /**< Cleaner's instance */
-    std::string   _buff;            /**< buffer for reading messages from pipe */
-    std::string   _pipename;        /**< pipe name */
-    std::ifstream _pipe;            /**< pipe file */
-    std::condition_variable *_cv;   /**< cond. var indicating end of PipeListener's thread */
+	void loop();
+	void openPipe();
+	void closePipe();
+	void reopenPipe();
+	void stopAll();
+	
+	Watcher *_watcher;              /**< Watcher's instance */
+	Scanner *_scanner;              /**< Scanner's instance */
+	Cleaner *_cleaner;              /**< Cleaner's instance */
+	std::string   _buff;            /**< buffer for reading messages from pipe */
+	std::string   _pipename;        /**< pipe name */
+	std::ifstream _pipe;            /**< pipe file */
+	std::condition_variable *_cv;   /**< cond. var indicating end of PipeListener's thread */
 };
 
 } /* end of namespace fbitexpire */
