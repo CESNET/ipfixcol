@@ -1021,17 +1021,6 @@ void config_process_profiles(configurator *config)
 	xmlNode *aux_node;
 	char *profiles_file = NULL;
 
-	/*
-	 * TODO:
-	 * 1) check path - compare with previous path
-	 *		- matching - goto 2)
-	 *		- not matching - save old config and create new one
-	 *
-	 * 2) compare timestamp with previous config
-	 *		- matching - do nothing
-	 *		- not matching - save old config and create new one
-	 */
-
 	/* Find path to the profiles xml file */
 	for (aux_node = config->collector_node->children; aux_node; aux_node = aux_node->next) {
 		if (!xmlStrcmp(aux_node->name, (xmlChar *) "profiles")) {
@@ -1047,7 +1036,7 @@ void config_process_profiles(configurator *config)
 	}
 
 	/* Compare paths */
-	if (!strcmp(config->profiles_file, profiles_file)) {
+	if (config->profiles_file && !strcmp(config->profiles_file, profiles_file)) {
 		/* Path are the same, compare timestamps */
 		struct stat st;
 		if (stat(profiles_file, &st) != 0) {

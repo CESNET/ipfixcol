@@ -418,7 +418,7 @@ void fill_metadata(uint8_t *rec, int rec_len, struct ipfix_template *templ, void
 	}
 	
 	/* Fill metadata */
-	msg->live_profile = (global_config) ? global_config->profiles : NULL;
+	msg->live_profile = (global_config) ? config_get_current_profiles(global_config) : NULL;
 	msg->metadata[msg->data_records_count].record.record = rec;
 	msg->metadata[msg->data_records_count].record.length = rec_len;
 	msg->metadata[msg->data_records_count].record.templ = templ;
