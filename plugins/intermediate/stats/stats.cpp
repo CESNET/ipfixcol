@@ -207,7 +207,7 @@ stats_data *stats_rrd_create(plugin_conf *conf, std::string file)
 
 	/* Create file */
 	argv.push_back("create");
-	argv.push_back(file);;
+	argv.push_back(file);
 
 	/*
 	 * Set start time
@@ -326,6 +326,41 @@ void stats_update(stats_data *stats, std::string templ)
 }
 
 /**
+ * \brief Create path to the rrd file on filesystem
+ *
+ * \param[in] file path with %o field
+ * \param[in] odid Observation Domain ID
+ * \return path to the file
+ */
+std::string stats_create_file(std::string path, uint32_t odid)
+{
+	std::stringstream ss;
+
+	ss << odid;
+	std::string domain_id = ss.str();
+
+	size_t o_loc = path.find("%o");
+
+	if (o_loc == std::string::npos) {
+		if (path[path.size() - 1] != '/') {
+			path += "/";
+		}
+
+		path += domain_id;
+	} else {
+		path.replace(o_loc, 2, domain_id);
+	}
+
+	/* Create directory */
+	size_t last_slash = path.find_last_of("/");
+	std::string command = "mkdir -p \"" + path.substr(0, last_slash) + "\"";
+
+	system(command.c_str());
+
+	return path;
+}
+
+/**
  * \brief Find or create RRD stats file for given ODID
  *
  * \param[in] conf plugin's configuration
@@ -342,10 +377,9 @@ stats_data *stats_get_rrd_file(plugin_conf *conf, uint32_t odid)
 	}
 
 	/* Create new RRD file */
-	std::stringstream ss;
-	ss << conf->path << "/" << odid;
+	std::string file = stats_create_file(conf->path, odid);
 
-	stats = stats_rrd_create(conf, ss.str());
+	stats = stats_rrd_create(conf, file);
 	conf->stats[odid] = stats;
 
 	return stats;
