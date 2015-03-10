@@ -141,7 +141,10 @@ void Directory::removeOldest()
 void Directory::detectAge()
 {
 	struct stat st;
-	lstat(_name.c_str(), &st);
+
+	if (lstat(_name.c_str(), &st) == -1) {
+		MSG_ERROR(msg_module, "Could not determine status of '%s' (%s)", _name.c_str(), strerror(errno));
+	}
 	
 	setAge(st.st_mtime);
 }
