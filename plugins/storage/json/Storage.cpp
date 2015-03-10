@@ -39,6 +39,7 @@
 
 extern "C" {
 #include <ipfixcol.h>
+#include <ipfixcol/profiles.h>
 }
 
 #include "Storage.h"
@@ -317,16 +318,19 @@ void Storage::storeMetadata(metadata* mdata)
 	
 	
 	/* Profiles */
-	if (mdata->profiles) {
+	if (mdata->channels) {
 		ss << "\"profiles\": [";
 
-		for (int i = 0; mdata->profiles[i] != 0; ++i) {
+		for (int i = 0; mdata->channels[i] != 0; ++i) {
 			if (i > 0) {
 				ss << ", ";
 			}
 			
-			ss << "{\"profile\": " << (mdata->profiles[i] >> 16) << ", ";
-			ss <<  "\"channel\": " << (mdata->profiles[i] & 0xFFFF) << "}";
+			std::string channel = channel_get_name(mdata->channels[i]);
+			std::string profile = profile_get_name(channel_get_profile(mdata->channels[i]));
+
+			ss << "{\"profile\": \"" << profile << "\", ";
+			ss <<  "\"channel\": \"" << channel << "\"}";
 		}
 
 		ss << "]";
