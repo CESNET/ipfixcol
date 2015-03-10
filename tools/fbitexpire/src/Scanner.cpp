@@ -536,6 +536,15 @@ void Scanner::createDirTree(Directory* parent)
 }
 
 /**
+ * \brief Constructor
+ */
+Scanner::Scanner():
+		_cleaner(NULL), _rootdir(NULL), _max_depth(0), _multiple(false), _force(false), _max_size(0), _watermark(0)
+{
+
+}
+
+/**
  * \brief Destructor - delete directory tree
  */
 Scanner::~Scanner()
