@@ -62,14 +62,6 @@ LBR_SET_DISTRO([redhat])
 
 ############################ Check for programs ################################
 
-# Check for flex
-AC_CHECK_PROG(FLEX, flex, flex)
-AS_IF([test -z "$FLEX"], [AC_MSG_ERROR([flex not found, please install flex package])])
-
-# Check fol bison
-AC_CHECK_PROG(BISON, bison, bison)
-AS_IF([test -z "$BISON"], [AC_MSG_ERROR([bison not found, please install bison package])])
-
 # Check for doxygen
 AC_CHECK_PROG(DOXYGEN, doxygen, doxygen)
 AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
@@ -150,7 +142,6 @@ fi
 # generate output
 AC_CONFIG_FILES([Makefile
 		doxygen/Makefile
-		profile_tree/Makefile
 		ipfixcol-profiler-inter.spec])
 AM_COND_IF(HAVE_DOXYGEN, AC_CONFIG_FILES([doxygen/doxyfile]))
 
@@ -175,8 +166,6 @@ echo "
   C++ Compiler..: $CXX $AM_CXXFLAGS $CXXFLAGS $AM_CPPFLAGS $CPPFLAGS
   Linker........: $AM_LDFLAGS $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
-  flex..........: ${FLEX:-NONE}
-  bison.........: ${BISON:-NONE}
   Build doc.....: ${enable_doc:-yes}
   Doxygen.......: ${DOXYGEN:-NONE}
   xsltproc......: ${XSLTPROC:-NONE}
