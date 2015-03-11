@@ -416,6 +416,7 @@ public:
   : m_path(rPath),
 	m_uMask(IN_CREATE|IN_ONLYDIR),
 	m_wd((int32_t) -1),
+	m_pInotify(NULL),
 	m_fEnabled(true)
   {
 	IN_LOCK_INIT
