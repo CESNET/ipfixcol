@@ -78,18 +78,18 @@ static PipeListener *list = nullptr;
  */
 void print_help()
 {
-	std::cout << "\nUsage: " << PACKAGE_NAME << " [-rhVDokmc] [-p pipe] [-d depth] [-s size] [-w watermark] [-v verbosity] [directory]\n\n";
+	std::cout << "\nUsage: " << PACKAGE_NAME << " [-rhVDokmc] [-p pipe] [-d depth] [-s size] [-w watermark] [-v level] [directory]\n\n";
 	std::cout << "Options:\n";
-	std::cout << "  -h             Show this help\n";
+	std::cout << "  -h             Show this help and exit\n";
 	std::cout << "  -V             Show version and exit\n";
 	std::cout << "  -r             Send daemon message to rescan folder (note: daemon has to be running)\n";
 	std::cout << "  -f             Force rescan directories when daemon starts (ignore stat files)\n";
 	std::cout << "  -p <pipe>      Pipe name (default: " << DEFAULT_PIPE << ")\n";
-	std::cout << "  -s <size>      Max size of all directories (in MB)\n";
+	std::cout << "  -s <size>      Maximum size of all directories (in MB)\n";
 	std::cout << "  -w <watermark> Lower limit when removing folders (in MB)\n";
 	std::cout << "  -d <depth>     Depth of watched directories (default: 1)\n";
 	std::cout << "  -D             Daemonize\n";
-	std::cout << "  -m             Multiple sources on top level directory. See man pages for more info\n";
+	std::cout << "  -m             Multiple sources on top level directory. Please check fbitexpire(1) for more information\n";
 	std::cout << "  -k             Stop fbitexpire daemon listening on pipe specified by -p\n";
 	std::cout << "  -o             Only scan directories and remove old, if needed, and don't wait for new folders\n";
 	std::cout << "  -v <level>     Set verbosity level\n";

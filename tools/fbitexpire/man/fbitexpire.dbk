@@ -8,18 +8,18 @@
 		version="5.0" xml:lang="en">
 	<info>
 		<copyright>
-			<year>2014</year>
+			<year>2015</year>
 			<holder>CESNET, z.s.p.o.</holder>
 		</copyright>
-		<date>24 July 2014</date>
+		<date>11 March 2015</date>
 		<authorgroup>
 			<author>
 				<personname>
-    				<firstname>Michal</firstname>
-	    			<surname>Kozubik</surname>
-                </personname>
-                <email>kozubik@cesnet.cz</email>
-                <contrib>developer</contrib>
+					<firstname>Michal</firstname>
+					<surname>Kozubik</surname>
+				</personname>
+				<email>kozubik@cesnet.cz</email>
+				<contrib>developer</contrib>
 			</author>
 		</authorgroup>
 		<orgname>The Liberouter Project</orgname>
@@ -33,27 +33,26 @@
 
 	<refnamediv>
 		<refname>fbitexpire</refname>
-		<refpurpose>Daemon for deleting old IPFIXcol Fastbit data</refpurpose>
+		<refpurpose>Daemon for expiring Fastbit data stored by IPFIXcol</refpurpose>
 	</refnamediv>
-    
-    <refsynopsisdiv>
-        <cmdsynopsis>
-            <command>fbitexpire</command>
-            <arg>-hrfVDokmc</arg>
-            <arg>-p pipe</arg>
-            <arg>-d depth</arg>
-            <arg>-s size</arg>
-            <arg>-w watermark</arg>
-            <arg>-v verbose</arg>
-            <arg>directory</arg>
-        </cmdsynopsis>
-    </refsynopsisdiv>
+	
+	<refsynopsisdiv>
+		<cmdsynopsis>
+			<command>fbitexpire</command>
+			<arg>-hrfVDokmc</arg>
+			<arg>-p pipe</arg>
+			<arg>-d depth</arg>
+			<arg>-s size</arg>
+			<arg>-w watermark</arg>
+			<arg>-v level</arg>
+			<arg>directory</arg>
+		</cmdsynopsis>
+	</refsynopsisdiv>
 
 	<refsect1>
 		<title>Description</title>
 		<simpara>
-			The <command>fbitexpire</command> is an data size check tool, part of IPFIXcol framework. 
-			The fbitexpire checks size of data in selected directory and remove old data if data size reached maximal size.
+			<command>fbitexpire</command> is a data expiration tool and part of the IPFIXcol framework. It checks the size of data selected directories and expires old data as soon as the directories reach their maximum size.
 		</simpara>
 	</refsect1>
 
@@ -63,21 +62,21 @@
 			<varlistentry>
 				<term>-h</term>
 				<listitem>
-					<simpara>Print basic usage and options.</simpara>
+					<simpara>Show help and exit.</simpara>
 				</listitem>
 			</varlistentry>
 			
 			<varlistentry>
 				<term>-V</term>
 				<listitem>
-					<simpara>Print version informations and exit.</simpara>
+					<simpara>Show version and exit.</simpara>
 				</listitem>
 			</varlistentry>
 			
 			<varlistentry>
 				<term>-p <replaceable class="parameter">pipe</replaceable></term>
 				<listitem>
-					<simpara>For communication between program and user is used named <replaceable class="parameter">pipe</replaceable>. Default is ./fbitexpire_fifo</simpara>
+					<simpara>Pipe used for communication between user program. Default pipe location is './fbitexpire_fifo'.</simpara>
 				</listitem>
 			</varlistentry>
 			
@@ -85,7 +84,7 @@
 				<term>-d <replaceable class="parameter">depth</replaceable></term>
 				<listitem>
 					<simpara>
-						<replaceable class="parameter">Depth</replaceable>	of directory where we want to watch changes.
+						Maximum <replaceable class="parameter">depth</replaceable> of watched directories.
 					</simpara>
 				</listitem>
 			</varlistentry>
@@ -94,88 +93,87 @@
 				<term>-s <replaceable class="parameter">size</replaceable></term>
 				<listitem>
 					<simpara>
-						Maximal <replaceable class="parameter">size</replaceable> of watched directories. If data size reaches maximal size, oldest data will be deleted.                                                
+						Maximum <replaceable class="parameter">size</replaceable> of watched directories. As soon as the watched directory's size reaches <replaceable class="parameter">size</replaceable>, the oldest data will be expired.                                                
 					</simpara>
-                                        <simpara>Allowed suffixes: B, k, K, m, M, g, G, where M is default </simpara>
+					<simpara>Allowed suffixes: B, k, K, m, M, g, G (default: M)</simpara>
 				</listitem>
 			</varlistentry>
 		
 			<varlistentry>
 				<term>-r</term>
 				<listitem>
-					<simpara>Send to pipe command to rescan typed directory. Daemon MUST be running.</simpara>
+					<simpara>Rescan the selected directory. Note that the daemon MUST be running.</simpara>
 				</listitem>
 			</varlistentry>
-                        
-                        <varlistentry>
-                            <term>-f</term>
-                            <listitem>
-                                <simpara>Force scanning - don't look at stats.txt files (containing folder size).</simpara>
-                            </listitem>
-                        </varlistentry>
-                        
+						
+			<varlistentry>
+				<term>-f</term>
+				<listitem>
+					<simpara>Force scanning, without considering stats.txt files (containing folder sizes).</simpara>
+				</listitem>
+			</varlistentry>
+						
 			<varlistentry>
 				<term>-v <replaceable class="parameter">level</replaceable></term>
 				<listitem>
-					<simpara>Set verbose level.</simpara>
+					<simpara>Set verbosity level.</simpara>
 				</listitem>
 			</varlistentry>
 			<varlistentry>
 				<term>-w <replaceable class="parameter">watermark</replaceable></term>
 				<listitem>
-					<simpara>Set watermark limit - it is lower size limit when removing files after reaching maximal size.</simpara>
-                                        <simpara>Allowed suffixes: B, k, K, m, M, g, G, where M is default </simpara>
+					<simpara>Set watermark limit, i.e., the lower size limit for removing files after reaching the maximum size.</simpara>
+					<simpara>Allowed suffixes: B, k, K, m, M, g, G (default: M)</simpara>
 				</listitem>
 			</varlistentry>
 			<varlistentry>
 				<term>-D</term>
 				<listitem>
-					<simpara>Start fbitexpire as daemon</simpara>
+					<simpara>Daemonize <command>fbitexpire</command>.</simpara>
 				</listitem>
 			</varlistentry>
 			
-                        <varlistentry>
-                            <term>-m</term>
-                            <listitem>
-                                <simpara>Enable multiple sources on top directory (disabled by default). When this option is set, fbitexpire looks at each top level directory (each subdirectory of given folder) as a separate 
-                                    directory tree with own data writer.
-                                </simpara>
-                            </listitem>
-                        </varlistentry>
-                        
-                        <varlistentry>
-                            <term>-k</term>
-                            <listitem>
-                                <simpara>Stop fbitexpire daemon listening on pipe specified by <command>-p</command></simpara>
-                            </listitem>
-                        </varlistentry>
-                        
-                        <varlistentry>
-                            <term>-o</term>
-                            <listitem>
-                                <simpara>By default, fbitexpire runs as daemon on foreground (or background with <command>-D</command>). With this option, it only scans directories, removes old data (if needed) and stops without waiting on new data etc.</simpara>
-                            </listitem>
-                        </varlistentry>
-                        
-                        <varlistentry>
-                            <term>-c</term>
-                            <listitem>
-                                <simpara>Change settings of running daemon listening on pipe specified by -p. Changed can be maximal size (-s) and watermark limit (-w)</simpara>
-                            </listitem>
-                        </varlistentry>
+			<varlistentry>
+				<term>-m</term>
+				<listitem>
+					<simpara>Enable multiple sources on top directory (disabled by default). When this option is set, <command>fbitexpire</command> looks at each top level directory (each subdirectory of given folder) as a separate directory tree with their own data writer.
+					</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-k</term>
+				<listitem>
+					<simpara>Stop <command>fbitexpire</command> daemon listening on pipe specified by <command>-p</command>.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-o</term>
+				<listitem>
+					<simpara>By default, <command>fbitexpire</command> runs as a daemon on foreground (or background in case it has been started with <command>-D</command>). With this option, it only scans directories, expires old data (if needed) and stops without waiting for new data.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-c</term>
+				<listitem>
+					<simpara>Change settings of running daemon listening on pipe specified by <command>-p</command>. Only the maximum size of watched directories (<command>-</command>s) and the watermark limit (<command>-w</command>) can be changed.</simpara>
+				</listitem>
+			</varlistentry>
 		</variablelist>
 	</refsect1>
 
 	<refsect1>
 		<title>Examples</title>
 		<literallayout>fbitexpire -d 4 -s 5000 /data/collector/
-		Watch subdirectories at /data/collector. Depth is set to 4 so we watch directories of maximal depth /data/collector/1/2/3/4. Watched size is 5GB</literallayout>
+		Watch subdirectories of /data/collector. The <replaceable class="parameter">depth</replaceable> is set to 4, meaning that are watched with a maximum depth of 4, as in /data/collector/1/2/3/4. The maxmimum size is 5GB.</literallayout>
 		<literallayout>fbitexpire -r /data/collector/2013/08/25
-		Send to daemon command listening on ./fbitexpire_fifo to rescan given directory.</literallayout>
+		Intruct the daemon to rescan the given directory. This command is sent over the (default) pipe './fbitexpire_fifo'.</literallayout>
 		<literallayout>fbitexpire -d 4 -s 5000 -p /tmp/expirepipe /data/collector/
-		Pipe location is set to /tmp/expirepipe.</literallayout>
-                <literallayout>fbitexpire -c -s 53G -w 250M -p /tmp/expirepipe
-          Change settings of fbitexpire listening on pipe /tmp/expirepipe. Change size to 53 GB and watermark limit to 250 MB.</literallayout>
+		The path to the pipe is set to '/tmp/expirepipe', instead of the default './fbitexpire_fifo'.</literallayout>
+		<literallayout>fbitexpire -c -s 53G -w 250M -p /tmp/expirepipe
+		Change the settings of the <command>fbitexpire</command> daemon that is listening on pipe '/tmp/expirepipe'; set the size to 53 GB and watermark limit to 250 MB.</literallayout>
 	</refsect1>
 
 
@@ -188,7 +186,7 @@
 					<term>
 						<citerefentry><refentrytitle>fbitdump</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
 						<citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
-                                                <citerefentry><refentrytitle>fbitmerge</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+						<citerefentry><refentrytitle>fbitmerge</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
 						<citerefentry><refentrytitle>ipfixcol-fastbit-output</refentrytitle><manvolnum>1</manvolnum></citerefentry>
 					</term>
 					<listitem>
