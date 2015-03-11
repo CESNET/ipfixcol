@@ -192,6 +192,13 @@ stats_data *stats_rrd_create(plugin_conf *conf, std::string file)
 	/* Create stats counters */
 	stats_data *stats = new stats_data;
 	stats->file = file;
+	stats->last = 0;
+
+	for (int group = 0; group < GROUPS; ++group) {
+		for (int field = 0; field < PROTOCOLS_PER_GROUP; ++field) {
+			stats->fields[group][field] = 0;
+		}
+	}
 
 	/* Create file */
 	struct stat sts;
