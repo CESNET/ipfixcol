@@ -808,9 +808,9 @@ void Configuration::help() const
 	<< "usage "<< PACKAGE <<" [options] [\"filter\"]" << std::endl
 	<< "-h              Show this help" << std::endl
 	<< "-v <level>      Set verbosity level" << std::endl
-	<< "-V              Print version and exit" << std::endl
+	<< "-V              Show version and exit" << std::endl
 	<< "-a              Aggregate flow data" << std::endl
-	<< "-A[<expr>]     Aggregation fields, separated by ','. Please check fbitdump(1) for a list of supported fields" << std::endl
+	<< "-A[<expr>]      Aggregation fields, separated by ','. Please check fbitdump(1) for a list of supported fields" << std::endl
 //	<< "                or subnet aggregation: srcip4/24, srcip6/64." << std::endl
 	//<< "-b              Aggregate flow records as bidirectional flows." << std::endl
 	//<< "-B              Aggregate flow records as bidirectional flows - Guess direction." << std::endl
