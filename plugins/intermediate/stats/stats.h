@@ -37,6 +37,7 @@ enum ipfix_groups {
 	IG_ICMP = 1,
 	IG_TCP = 6,
 	IG_UDP = 17,
+	IG_ICMPv6 = 58,
 };
 
 /**

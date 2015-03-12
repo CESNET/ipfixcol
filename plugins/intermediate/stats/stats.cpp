@@ -192,7 +192,7 @@ stats_data *stats_rrd_create(plugin_conf *conf, std::string file)
 	/* Create stats counters */
 	stats_data *stats = new stats_data;
 	stats->file = file;
-	stats->last = 0;
+	stats->last = time(NULL);
 
 	for (int group = 0; group < GROUPS; ++group) {
 		for (int field = 0; field < PROTOCOLS_PER_GROUP; ++field) {
@@ -231,14 +231,20 @@ stats_data *stats_rrd_create(plugin_conf *conf, std::string file)
 
 	/* Add all fields */
 	for (auto field: fields) {
-		snprintf(buffer, 64, "DS:%s:GAUGE:%u:0:U", field, conf->interval * 2); /* datasource definition, wait 2x the interval for data */
+		snprintf(buffer, 64, "DS:%s:ABSOLUTE:%u:U:U", field, conf->interval * 2); /* datasource definition, wait 2x the interval for data */
 		argv.push_back(buffer);
 	}
 
 	/* Add statistics */
-	argv.push_back("RRA:AVERAGE:0.5:1:2016"); /* store 2016 values 1:1 from input */
-	argv.push_back("RRA:AVERAGE:0.5:24:720"); /* store 720 values, each averaged from 24 input values */
-	argv.push_back("RRA:AVERAGE:0.5:288:180"); /* store 180 values, each averaged from 288 input values */
+	argv.push_back("RRA:AVERAGE:0.5:1:51840"); /* 1 x 5min =  5 min samples 6 * 30 * 288 = 51840 => 6 * 30 days */
+	argv.push_back("RRA:AVERAGE:0.5:6:8640"); /* 6 x 5min = 30 min samples 6 * 30 *  48 = 8640  => 6 * 30 day */
+	argv.push_back("RRA:AVERAGE:0.5:24:2160"); /* 24 x 5min = 2 hour samples 6 * 30 *  12 = 2160  => 6 * 30 days */
+	argv.push_back("RRA:AVERAGE:0.5:288:1825"); /* 288 x 5min = 1 day samples 5 * 365 *   1 = 1825  => 5 * 365 days */
+	argv.push_back("RRA:MAX:0.5:1:51840");
+	argv.push_back("RRA:MAX:0.5:6:8640");
+	argv.push_back("RRA:MAX:0.5:24:2160");
+	argv.push_back("RRA:MAX:0.5:288:1825");
+
 
 	/* Create C style argv */
 	const char **c_argv = new const char*[argv.size()];
@@ -408,7 +414,8 @@ enum st_protocol stats_get_proto(ipfix_record *rec)
 	switch (ipfix_proto) {
 	case IG_UDP:	return UDP;
 	case IG_TCP:	return TCP;
-	case IG_ICMP:	return ICMP;
+	case IG_ICMP:	
+	case IG_ICMPv6:	return ICMP;
 	default:		return OTHER;
 	}
 }
@@ -482,9 +489,9 @@ void stats_flush_counters(plugin_conf *conf, bool force = false)
 			continue;
 		}
 
-		if (force || (st.second->last + conf->interval < now)) {
-			st.second->last = now;
+		if (force || ((st.second->last / conf->interval + 1) * conf->interval <= now)) {
 			stats_update(st.second, conf->templ);
+			st.second->last = now;
 		}
 	}
 }
