@@ -58,75 +58,75 @@ namespace fbitexpire {
  * \brief Main scanner class for scanning directories
  */
 class Scanner : public FbitexpireThread {
-    using addPair = std::pair<Directory *, Directory *>;
-    using FbitexpireThread::run;
+	using addPair = std::pair<Directory *, Directory *>;
+	using FbitexpireThread::run;
 public:
-    Scanner() {}
-    ~Scanner();
+	Scanner();
+	~Scanner();
 
-    void createDirTree(std::string basedir, int maxdepth = 1, bool force = false);
-    void popNewestChild(Directory *parent);
-    
-    Directory *getRoot() { return _rootdir;   }
-    int getMaxDepth()    { return _max_depth; }
-    
-    void setMaxSize(uint64_t max, bool notify = false)    { _max_size = max; if (_watermark > _max_size) { _watermark = _max_size; } if (notify) { _cv.notify_one(); } }
-    void setMaxSize(std::string max, bool notify = false) { setMaxSize(strtoull(max.c_str(), nullptr, 10), notify); }
-    
-    void setWatermark(uint64_t wm)    { if (wm > _max_size) { wm = _max_size; } _watermark = wm; };
-    void setWatermark(std::string wm) { setWatermark(strtoull(wm.c_str(), nullptr, 10)); }
-    
-    void addDir(Directory *dir, Directory *parent);
-    void rescan(std::string dir);
-    
-    Directory *dirFromPath(std::string path);
-    
-    void stop();
-    void run(Cleaner *cleaner, uint64_t max_size, uint64_t waternark, bool multiple = false);
-    
-    static std::string sizeToStr(uint64_t size);
-    static uint64_t    strToSize(char *arg);
-    static uint64_t    strToSize(std::string str) { return strToSize(str.c_str()); }
+	void createDirTree(std::string basedir, int maxdepth = 1, bool force = false);
+	void popNewestChild(Directory *parent);
+	
+	Directory *getRoot() { return _rootdir;   }
+	int getMaxDepth()    { return _max_depth; }
+	
+	void setMaxSize(uint64_t max, bool notify = false)    { _max_size = max; if (_watermark > _max_size) { _watermark = _max_size; } if (notify) { _cv.notify_one(); } }
+	void setMaxSize(std::string max, bool notify = false) { setMaxSize(strtoull(max.c_str(), nullptr, 10), notify); }
+	
+	void setWatermark(uint64_t wm)    { if (wm > _max_size) { wm = _max_size; } _watermark = wm; };
+	void setWatermark(std::string wm) { setWatermark(strtoull(wm.c_str(), nullptr, 10)); }
+	
+	void addDir(Directory *dir, Directory *parent);
+	void rescan(std::string dir);
+	
+	Directory *dirFromPath(std::string path);
+	
+	void stop();
+	void run(Cleaner *cleaner, uint64_t max_size, uint64_t waternark, bool multiple = false);
+	
+	static std::string sizeToStr(uint64_t size);
+	static uint64_t    strToSize(char *arg);
+	static uint64_t    strToSize(std::string str) { return strToSize(str.c_str()); }
 private:
-    void loop();
-    
-    void createDirTree(Directory *parent);
-    int scanCount() { return _scan_count.load(); }
-    int  addCount() { return  _add_count.load(); }
-    
-    void addNewDirs();
-    void rescanDirs();
-    void removeDirs();
-    
-    void propagateSize(Directory *parent, uint64_t size);
-    
-    uint64_t totalSize()   { return _rootdir->getSize();   }
-    
-    std::string getNextScan();
-    addPair     getNextAdd();
-    
-    Directory *getOldestDir(Directory *root);
-    Directory *getDirToRemove();
-    
-    Cleaner   *_cleaner;
-    Directory *_rootdir; /** Root directory */
-    
-    std::thread _th;
-    std::mutex _scan_lock;
-    std::mutex  _add_lock;
-    
-    std::atomic<int> _scan_count{0};
-    std::atomic<int>  _add_count{0};
-    
-    std::queue<std::string> _to_scan;
-    std::queue<addPair>     _to_add;
-    
-    int _max_depth;
-    
-    std::condition_variable _cv;
-    
-    bool _multiple, _force;
-    uint64_t _max_size, _watermark;
+	void loop();
+	
+	void createDirTree(Directory *parent);
+	int scanCount() { return _scan_count.load(); }
+	int addCount() { return  _add_count.load(); }
+	
+	void addNewDirs();
+	void rescanDirs();
+	void removeDirs();
+	
+	void propagateSize(Directory *parent, uint64_t size);
+	
+	uint64_t totalSize()   { return _rootdir->getSize();   }
+	
+	std::string getNextScan();
+	addPair     getNextAdd();
+	
+	Directory *getOldestDir(Directory *root);
+	Directory *getDirToRemove();
+	
+	Cleaner   *_cleaner;
+	Directory *_rootdir; /** Root directory */
+	
+	std::thread _th;
+	std::mutex _scan_lock;
+	std::mutex  _add_lock;
+	
+	std::atomic<int> _scan_count{0};
+	std::atomic<int>  _add_count{0};
+	
+	std::queue<std::string> _to_scan;
+	std::queue<addPair>     _to_add;
+	
+	int _max_depth;
+	
+	std::condition_variable _cv;
+	
+	bool _multiple, _force;
+	uint64_t _max_size, _watermark;
 };
 
 } /* end of namespace fbitexpire */

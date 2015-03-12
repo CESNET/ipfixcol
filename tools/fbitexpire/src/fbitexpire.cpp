@@ -311,6 +311,9 @@ int main(int argc, char *argv[])
 		scanner.run(&cleaner, size, watermark, multiple);
 		cleaner.run();
 		listener.run(&watcher, &scanner, &cleaner, &cv);
+	} catch (InotifyException &e) {
+		MSG_ERROR(msg_module, e.GetMessage().c_str());
+		return 1;
 	} catch (std::exception &e) {
 		MSG_ERROR(msg_module, e.what());
 		return 1;

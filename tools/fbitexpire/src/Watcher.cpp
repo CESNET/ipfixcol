@@ -314,6 +314,15 @@ void Watcher::processNewDir(InotifyEvent& event)
 }
 
 /**
+ * \brief Constructor
+ */
+Watcher::Watcher():
+		_scanner(NULL), _max_depth(0), _root_name_len(0), _multiple(false)
+{
+	
+}
+
+/**
  * \brief Destructor - remove RootWatches
  */
 Watcher::~Watcher()

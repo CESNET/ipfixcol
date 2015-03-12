@@ -42,8 +42,10 @@
 
 #include <sys/stat.h>
 #include <dirent.h>
+#include <errno.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <stdexcept>
 #include <fstream>
@@ -73,7 +75,11 @@ void Directory::updateAge()
 		_age = _children.front()->getAge(); 
 	} else {
 		struct stat st;
-		lstat(_name.c_str(), &st);
+
+		if (lstat(_name.c_str(), &st) == -1) {
+			MSG_ERROR(msg_module, "Could not determine status of '%s' (%s)", _name.c_str(), strerror(errno));
+		}
+
 		_age = st.st_mtime;
 	} 
 }
@@ -135,7 +141,10 @@ void Directory::removeOldest()
 void Directory::detectAge()
 {
 	struct stat st;
-	lstat(_name.c_str(), &st);
+
+	if (lstat(_name.c_str(), &st) == -1) {
+		MSG_ERROR(msg_module, "Could not determine status of '%s' (%s)", _name.c_str(), strerror(errno));
+	}
 	
 	setAge(st.st_mtime);
 }
@@ -176,7 +185,9 @@ uint64_t Directory::dirSize(std::string path, bool force, bool recursive, bool w
 	}
 	
 	/* Size of "." */
-	lstat(path.c_str(), &st);
+	if (lstat(path.c_str(), &st) == -1) {
+		MSG_ERROR(msg_module, "Could not determine status of '%s' (%s)", path.c_str(), strerror(errno));
+	}
 	size += st.st_size;
 	
 	/* Iterate through files and subdirectories */
