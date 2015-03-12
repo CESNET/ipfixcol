@@ -112,13 +112,6 @@ void print_version()
  */
 void handle(int param)
 {
-	/*
-	 * Unregister signal handler so the default handler
-	 * will be called when watcher sends SIGINT to it's
-	 * main loop. This will cause inotify to exit read().
-	 */
-	signal(SIGINT, SIG_DFL);
-
 	/* Tell listener to stop */
 	if (list) {
 		list->killAll();
