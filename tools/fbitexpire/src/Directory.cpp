@@ -95,7 +95,7 @@ std::string Directory::correctDirName(std::string dir)
 	char *real = realpath(dir.c_str(), nullptr);
 	
 	if (!real) {
-		MSG_ERROR(msg_module, "wrong path %s", dir.c_str());
+		MSG_ERROR(msg_module, "invalid path: %s", dir.c_str());
 		return std::string("");
 	}
 	

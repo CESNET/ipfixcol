@@ -48,7 +48,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-
 static const char *msg_module = "PipeListener";
 
 namespace fbitexpire {
@@ -82,22 +81,26 @@ void PipeListener::loop()
 	while (!_done) {
 		reopenPipe();
 		while (std::getline(_pipe, _buff)) {
-			MSG_DEBUG(msg_module, "readed %s", _buff.c_str());
+			MSG_DEBUG(msg_module, "read '%s'", _buff.c_str());
 			if (!_buff.empty()) {
 				switch(_buff[0]) {
 				case 'r':
 					/* rescan folder */
+					MSG_NOTICE(msg_module, "triggered rescan of %s", _buff.substr(1).c_str());
 					_buff = _buff.substr(1);
 					_scanner->rescan(_buff);
 					break;
 				case 'k':
 					/* Stop daemon */
+					MSG_NOTICE(msg_module, "triggered daemon termination");
 					_done = true;
 					break;
 				case 's':
+					MSG_NOTICE(msg_module, "setting max. directory size (%s)", _buff.substr(1).c_str());
 					_scanner->setMaxSize(_buff.substr(1), true);
 					break;
 				case 'w':
+					MSG_NOTICE(msg_module, "setting lower limit (%s)", _buff.substr(1).c_str());
 					_scanner->setWatermark(_buff.substr(1));
 					break;
 				}
