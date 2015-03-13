@@ -143,6 +143,7 @@ time_t Filter::parseTimestamp(std::string str) const throw (std::invalid_argumen
 		throw std::invalid_argument(std::string("Cannot parse timestamp '") + str + "'");
 	}
 
+	ctime.tm_isdst = -1;
 	return timelocal(&ctime);
 }
 
