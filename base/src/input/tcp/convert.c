@@ -240,12 +240,14 @@ uint16_t insert_template_set(char **packet, int numOfFlowSamples, ssize_t *len)
 		uint32_t pos = IPFIX_HEADER_LENGTH + (i * (NETFLOW_V5_DATA_SET_LEN + BYTES_4));
 		memmove(*packet + pos - BYTES_4, *packet + pos, (numOfFlowSamples - i) * NETFLOW_V5_DATA_SET_LEN);
 	}
+	*len -= (numOfFlowSamples * BYTES_4);
 
 	/* Insert Data Set header */
 	if (numOfFlowSamples > 0) {
 		netflow_v5_data_header[1] = htons(NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples + SET_HEADER_LEN);
 		memmove(*packet + IPFIX_HEADER_LENGTH + BYTES_4, *packet + IPFIX_HEADER_LENGTH, buff_len - IPFIX_HEADER_LENGTH - BYTES_4);
 		memcpy(*packet + IPFIX_HEADER_LENGTH, netflow_v5_data_header, BYTES_4);
+		*len += SET_HEADER_LEN;
 	} else {
 		*len = IPFIX_HEADER_LENGTH;
 	}
@@ -258,9 +260,9 @@ uint16_t insert_template_set(char **packet, int numOfFlowSamples, ssize_t *len)
 				memmove(*packet + IPFIX_HEADER_LENGTH + NETFLOW_V5_TEMPLATE_LEN, *packet + IPFIX_HEADER_LENGTH, buff_len - NETFLOW_V5_TEMPLATE_LEN - IPFIX_HEADER_LENGTH);
 				memcpy(*packet + IPFIX_HEADER_LENGTH, netflow_v5_template, NETFLOW_V5_TEMPLATE_LEN);
 				*len += NETFLOW_V5_TEMPLATE_LEN;
-				return htons(IPFIX_HEADER_LENGTH + NETFLOW_V5_TEMPLATE_LEN + (NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
+				return htons(IPFIX_HEADER_LENGTH + NETFLOW_V5_TEMPLATE_LEN + SET_HEADER_LEN + (NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
 			} else {
-				return htons(IPFIX_HEADER_LENGTH + (NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
+				return htons(IPFIX_HEADER_LENGTH + SET_HEADER_LEN + (NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
 			}
 		}
 
@@ -287,9 +289,9 @@ uint16_t insert_template_set(char **packet, int numOfFlowSamples, ssize_t *len)
 			memcpy(*packet + IPFIX_HEADER_LENGTH, netflow_v5_template, NETFLOW_V5_TEMPLATE_LEN);
 			*len += NETFLOW_V5_TEMPLATE_LEN;
 
-			return htons(IPFIX_HEADER_LENGTH + NETFLOW_V5_TEMPLATE_LEN + (NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
+			return htons(IPFIX_HEADER_LENGTH + NETFLOW_V5_TEMPLATE_LEN + SET_HEADER_LEN +(NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
 		} else {
-			return htons(IPFIX_HEADER_LENGTH + (NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
+			return htons(IPFIX_HEADER_LENGTH + SET_HEADER_LEN + (NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
 		}
 	} else if (inserted == 0) {
 		inserted = 1;
@@ -298,9 +300,9 @@ uint16_t insert_template_set(char **packet, int numOfFlowSamples, ssize_t *len)
 		memcpy(*packet + IPFIX_HEADER_LENGTH, netflow_v5_template, NETFLOW_V5_TEMPLATE_LEN);
 		*len += NETFLOW_V5_TEMPLATE_LEN;
 
-		return htons(IPFIX_HEADER_LENGTH + NETFLOW_V5_TEMPLATE_LEN + (NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
+		return htons(IPFIX_HEADER_LENGTH + NETFLOW_V5_TEMPLATE_LEN + SET_HEADER_LEN + (NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
 	} else {
-		return htons(IPFIX_HEADER_LENGTH + (NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
+		return htons(IPFIX_HEADER_LENGTH + SET_HEADER_LEN + (NETFLOW_V5_DATA_SET_LEN * numOfFlowSamples));
 	}
 }
 

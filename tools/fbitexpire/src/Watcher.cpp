@@ -76,7 +76,15 @@ void Watcher::run(Scanner* scanner, bool multiple = false)
 void Watcher::stop()
 {
 	_done = true;
-	/* send signal to read() function in inotify */
+
+	/*
+	 * Unregister signal handler so the default handler
+	 * will be called when watcher sends SIGINT to it's
+	 * main loop. This will cause inotify to exit read().
+	 */
+	signal(SIGINT, SIG_DFL);
+
+	/* Stop waiting on inotify events */
 	pthread_kill(_th.native_handle(), SIGINT);
 	
 	if (_th.joinable()) {

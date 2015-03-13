@@ -91,7 +91,7 @@ AM_CONDITIONAL([HAVE_DOC], [test "$enable_doc" != "no"])
 ### LibXML2 ###
 AC_CHECK_LIB([xml2], [main],
     [LIBS="`xml2-config --libs` $LIBS"
-    CFLAGS="`xml2-config --cflags` $CFLAGS"],
+    AM_CXXFLAGS="`xml2-config --cflags` $AM_CXXFLAGS"],
     AC_MSG_ERROR([Libxml2 not found ]))
 
 ### RRD library ###
