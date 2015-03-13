@@ -123,8 +123,8 @@ static void* storage_plugin_thread(void *cfg)
 		case PLUGIN_START: /* Start reading */
 			if (msg->plugin_id == config->id) {
 				can_read = 1;
+				rbuffer_remove_reference(config->thread_config->queue, index, 1);
 			}
-			rbuffer_remove_reference(config->thread_config->queue, index, 1);
 			break;
 		default: /* DATA */
 			if (can_read) {
@@ -217,7 +217,7 @@ int data_manager_add_plugin(struct data_manager_config *config, struct storage *
 
 	/* Start plugin */
 	config->plugins_count++;
-	rbuffer_write(config->store_queue, msg, config->plugins_count);
+	rbuffer_write(config->store_queue, msg, 1);
 	
 	return 0;
 }
