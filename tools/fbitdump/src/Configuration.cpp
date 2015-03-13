@@ -808,9 +808,9 @@ void Configuration::help() const
 	<< "usage "<< PACKAGE <<" [options] [\"filter\"]" << std::endl
 	<< "-h              Show this help" << std::endl
 	<< "-v <level>      Set verbosity level" << std::endl
-	<< "-V              Print version and exit" << std::endl
+	<< "-V              Show version and exit" << std::endl
 	<< "-a              Aggregate flow data" << std::endl
-	<< "-A[<expr>]     Aggregation fields, separated by ','. Please check fbitdump(1) for a list of supported fields" << std::endl
+	<< "-A[<expr>]      Aggregation fields, separated by ','. Please check fbitdump(1) for a list of supported fields" << std::endl
 //	<< "                or subnet aggregation: srcip4/24, srcip6/64." << std::endl
 	//<< "-b              Aggregate flow records as bidirectional flows." << std::endl
 	//<< "-B              Aggregate flow records as bidirectional flows - Guess direction." << std::endl
@@ -845,14 +845,14 @@ void Configuration::help() const
 	<< "                /dir/dir1:dir2  Reads all data from directory 'dir1' to 'dir2'" << std::endl
 	<< "-o <mode>       Use <mode> to print out flow records:" << std::endl
 //	<< "                 raw      Raw record dump." << std::endl
-	<< "                 line     Standard output line format." << std::endl
-	<< "                 long     Standard output line format with additional fields" << std::endl
-	<< "                 extended Even more information" << std::endl
-	<< "                 extra    More than you want to know..." << std::endl
-	<< "                 csv      ',' separated, machine parseable output format" << std::endl
-	<< "                 pipe     '|' separated legacy machine parseable output format" << std::endl
-	<< "                        modes line, long, extended and extra may be extended by '4' or '6' to display" << std::endl
-	<< "                        only IPv4 or IPv6 addresses. Examples: long4, extended6" << std::endl
+	<< "                  line     Standard output line format." << std::endl
+	<< "                  long     Standard output line format with additional fields" << std::endl
+	<< "                  extended Even more information" << std::endl
+	<< "                  extra    More than you want to know..." << std::endl
+	<< "                  csv      ',' separated, machine parseable output format" << std::endl
+	<< "                  pipe     '|' separated legacy machine parseable output format" << std::endl
+	<< "                      modes line, long, extended and extra may be extended by '4' or '6' to display" << std::endl
+	<< "                      only IPv4 or IPv6 addresses. Examples: long4, extended6" << std::endl
 //	<< "-v <file>       verify flow data file. Print version and blocks." << std::endl
 	//<< "-x <file>       verify extension records in flow data file." << std::endl
 	//<< "-X              Dump Filtertable and exit (debug option)." << std::endl

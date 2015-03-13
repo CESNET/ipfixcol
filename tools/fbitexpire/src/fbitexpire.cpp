@@ -78,22 +78,22 @@ static PipeListener *list = nullptr;
  */
 void print_help()
 {
-	std::cout << "\nUse: " << PACKAGE_NAME << " [-rhVDokmc] [-p pipe] [-d depth] [-s size] [-w watermark] [-v verbose] [directory]\n\n";
+	std::cout << "\nUsage: " << PACKAGE_NAME << " [-rhVDokmc] [-p pipe] [-d depth] [-s size] [-w watermark] [-v level] [directory]\n\n";
 	std::cout << "Options:\n";
-	std::cout << "  -h           show this text\n";
-	std::cout << "  -V           show tool version\n";
-	std::cout << "  -r           Send daemon message to rescan folder. Daemon HAVE TO be running\n";
-	std::cout << "  -f           Force rescan directories when daemon starts (ignore stat files)\n";
-	std::cout << "  -p pipe      Pipe name, default is " << DEFAULT_PIPE << "\n";
-	std::cout << "  -s size      Max size of all directories (in MB)\n";
-	std::cout << "  -w watermark Lower limit when removing folders (in MB)\n";
-	std::cout << "  -d depth     Dept of watched directories, default 1\n";
-	std::cout << "  -D           Daemonize\n";
-	std::cout << "  -m           Multiple sources on top level directory. See man pages for more info\n";
-	std::cout << "  -k           Stop fbitexpire daemon listening on pipe specified by -p\n";
-	std::cout << "  -o           Only scan dirs and remove old (if needed). Don't wait for new folders\n";
-	std::cout << "  -v verbose   Verbose level\n";
-	std::cout << "  -c           Change settings of daemon listening on pipe specified by -p. Can be combined with -s and -w\n";
+	std::cout << "  -h             Show this help and exit\n";
+	std::cout << "  -V             Show version and exit\n";
+	std::cout << "  -r             Send daemon message to rescan folder (note: daemon has to be running)\n";
+	std::cout << "  -f             Force rescan directories when daemon starts (ignore stat files)\n";
+	std::cout << "  -p <pipe>      Pipe name (default: " << DEFAULT_PIPE << ")\n";
+	std::cout << "  -s <size>      Maximum size of all directories (in MB)\n";
+	std::cout << "  -w <watermark> Lower limit when removing folders (in MB)\n";
+	std::cout << "  -d <depth>     Depth of watched directories (default: 1)\n";
+	std::cout << "  -D             Daemonize\n";
+	std::cout << "  -m             Multiple sources on top level directory. Please check fbitexpire(1) for more information\n";
+	std::cout << "  -k             Stop fbitexpire daemon listening on pipe specified by -p\n";
+	std::cout << "  -o             Only scan directories and remove old, if needed, and don't wait for new folders\n";
+	std::cout << "  -v <level>     Set verbosity level\n";
+	std::cout << "  -c             Change settings of daemon listening on pipe specified by -p (can be combined with -s and -w)\n";
 	std::cout << "\n";
 }
 
@@ -246,7 +246,7 @@ int main(int argc, char *argv[])
 	}
 	if (change) {
 		if (!sizeset && !wmarkset) {
-			MSG_ERROR(msg_module, "Nothing to be changed by parameter -c");
+			MSG_ERROR(msg_module, "Nothing to be changed by -c");
 			return 1;
 		}
 		if (sizeset) {
@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (!sizeset) {
-		MSG_ERROR(msg_module, "size not specified");
+		MSG_ERROR(msg_module, "size (-s) not specified");
 		return 1;
 	}
 	
@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
 	}
 	
 	if (!depthset) {
-		MSG_WARNING(msg_module, "Depth not set, using default (%d)", DEFAULT_DEPTH);
+		MSG_WARNING(msg_module, "Depth not set; using default (%d)", DEFAULT_DEPTH);
 	}
 	
 	std::string basedir{argv[optind]};
