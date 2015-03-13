@@ -82,7 +82,7 @@ void print_help()
 	std::cout << "Options:\n";
 	std::cout << "  -h             Show this help and exit\n";
 	std::cout << "  -V             Show version and exit\n";
-	std::cout << "  -r             Send daemon message to rescan folder (note: daemon has to be running)\n";
+	std::cout << "  -r             Instruct daemon to rescan folder (note: daemon has to be running)\n";
 	std::cout << "  -f             Force rescan directories when daemon starts (ignore stat files)\n";
 	std::cout << "  -p <pipe>      Pipe name (default: " << DEFAULT_PIPE << ")\n";
 	std::cout << "  -s <size>      Maximum size of all directories (in MB)\n";
@@ -132,7 +132,7 @@ int write_to_pipe(bool pipe_exists, std::string pipe, std::string msg)
 
 	if (!pipe_exists) {
 		/* pipe does not exists */
-		MSG_ERROR(msg_module, "cannot write to pipe %s", pipe.c_str());
+		MSG_ERROR(msg_module, "pipe (%s) does not exist", pipe.c_str());
 		return 1;
 	}
 
@@ -217,7 +217,7 @@ int main(int argc, char *argv[])
 	openlog(0, LOG_CONS | LOG_PID, LOG_USER);
 	
 	if ((daemonize && rescan) || (daemonize && kill_daemon) || (daemonize && only_remove)
-		|| (rescan && only_remove) || (kill_daemon && only_remove)) {
+			|| (rescan && only_remove) || (kill_daemon && only_remove)) {
 		MSG_ERROR(msg_module, "conflicting arguments");
 		return 1;
 	}
@@ -256,6 +256,7 @@ int main(int argc, char *argv[])
 			msg << "w" << watermark << "\n";
 		}
 	}
+
 	/* Send command to rescan folder or to kill daemon */
 	if (rescan || kill_daemon || change) {
 		return write_to_pipe(pipe_exists, pipe, msg.str());
@@ -275,11 +276,10 @@ int main(int argc, char *argv[])
 	}
 	
 	if (!depthset) {
-		MSG_WARNING(msg_module, "Depth not set; using default (%d)", DEFAULT_DEPTH);
+		MSG_NOTICE(msg_module, "Depth not set; using default (%d)", DEFAULT_DEPTH);
 	}
 	
 	std::string basedir{argv[optind]};
-	
 	basedir = Directory::correctDirName(basedir);
 	
 	if (basedir.empty()) {
