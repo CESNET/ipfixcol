@@ -177,26 +177,26 @@ void loadDirsTree(std::string basedir, std::string first, std::string last, stri
         /* If first dir was given, ignore entries before it */
         if (!root_first.empty() && strverscmp(entry_name.c_str(), root_first.c_str()) < 0) {
             continue;
-	} else if (strverscmp(entry_name.c_str(), root_first.c_str()) == 0) {
-		if (root_first == first.substr(0, first.length() - 1)) {
-			/* Found first folder */
-			std::string tableDir = basedir + entry_name;
-			sanitizePath(tableDir);
-			tables.push_back(tableDir);
-		} else {
-			/* Go deeper and find first folder */
-			std::string new_basedir = basedir + entry_name;
-			std::string new_first = first.substr(root_first.length() + 1);
-			loadDirsTree(new_basedir, new_first, "", tables);
-		}
+		} else if (strverscmp(entry_name.c_str(), root_first.c_str()) == 0) {
+			if (root_first == first.substr(0, first.length() - 1)) {
+				/* Found first folder */
+				std::string tableDir = basedir + entry_name;
+				sanitizePath(tableDir);
+				tables.push_back(tableDir);
+			} else {
+				/* Go deeper and find first folder */
+				std::string new_basedir = basedir + entry_name;
+				std::string new_first = first.substr(root_first.length() + 1);
+				loadDirsTree(new_basedir, new_first, "", tables);
+			}
         } else if (root_last.empty() || strverscmp(entry_name.c_str(), root_last.c_str()) < 0) {
             /* Entry is between first and last */
             std::string tableDir = basedir + entry_name;
             sanitizePath(tableDir);
             tables.push_back(tableDir);
-        } else {
+		} else if (strverscmp(entry_name.c_str(), root_last.c_str()) == 0){
             /* Entry == root_last */
-            if (root_last == last.substr(0, last.length() - 1)) {
+			if (root_last == last.substr(0, last.length() - 1)) {
                 /* We're on last level, add last directory to vector */
                 std::string tableDir = basedir + entry_name;
                 sanitizePath(tableDir);
@@ -207,7 +207,6 @@ void loadDirsTree(std::string basedir, std::string first, std::string last, stri
                 std::string new_last = last.substr(root_last.length() + 1);
                 loadDirsTree(new_basedir, "", new_last, tables);
             }
-            break;
         }
     }
 
