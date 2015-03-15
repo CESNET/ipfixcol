@@ -289,6 +289,7 @@ int main(int argc, char *argv[])
 	if (daemonize) {
 		closelog();
 		MSG_SYSLOG_INIT(PACKAGE);
+		
 		/* and send all following messages to the syslog */
 		if (daemon (1, 0)) {
 			MSG_ERROR(msg_module, strerror(errno));
