@@ -128,35 +128,37 @@ void handle(int param)
  */
 int write_to_pipe(bool pipe_exists, std::string pipe, std::string msg)
 {
-	std::ofstream f_pipe;
-
 	if (!pipe_exists) {
-		/* pipe does not exists */
+		/* pipe does not exist */
 		MSG_ERROR(msg_module, "pipe (%s) does not exist", pipe.c_str());
 		return 1;
 	}
 
-	f_pipe.open(pipe.c_str(), std::ios::out);
-	if (!f_pipe.is_open()) {
+	/* We use fopen here instead of std::ofstream.open because of a
+	 * problem with hanging 'open' calls when trying to open pipes.
+	 * This problem has been described in 
+	 * http://stackoverflow.com/questions/12636485/non-blocking-call-to-ofstreamopen
+	 */
+	FILE *f_pipe = fopen(pipe.c_str(), "w");
+	if (!f_pipe) {
 		MSG_ERROR(msg_module, "cannot open pipe %s", pipe.c_str());
 		return 1;
 	}
 
-	/* write message */
-	MSG_DEBUG(msg_module, "writing %s", msg.c_str());
-	
-	f_pipe << msg;
+	/* write message (and remove terminating '\n') */
+	MSG_DEBUG(msg_module, "writing '%s' to pipe", msg.erase(msg.length() - 1).c_str());
+	fputs(msg.c_str(), f_pipe);
 
 	/* done */
-	f_pipe.close();
+	fclose(f_pipe);
 	return 0;
 }
 
 int main(int argc, char *argv[])
 {
 	int c, depth{DEFAULT_DEPTH};
-	bool rescan{false}, daemonize{false}, pipe_exists{false}, multiple{false}, change{false}, force{false};
-	bool wmarkset{false}, sizeset{false}, kill_daemon{false}, only_remove{false}, depthset{false};
+	bool rescan{false}, daemonize{false}, pipe_exists{false}, pipe_file_exists{false}, multiple{false}, change{false};
+	bool force{false}, wmarkset{false}, size_set{false}, kill_daemon{false}, only_remove{false}, depth_set{false};
 	uint64_t watermark{0}, size{0};
 	std::string pipe{DEFAULT_PIPE};
 	signal(SIGINT, handle);	
@@ -179,7 +181,7 @@ int main(int argc, char *argv[])
 			pipe = std::string(optarg);
 			break;
 		case 's':
-			sizeset = true;
+			size_set = true;
 			size = Scanner::strToSize(optarg);
 			break;
 		case 'w':
@@ -187,7 +189,7 @@ int main(int argc, char *argv[])
 			watermark = Scanner::strToSize(optarg);
 			break;
 		case 'd':
-			depthset = true;
+			depth_set = true;
 			depth = std::atoi(optarg);
 			break;
 		case 'D':
@@ -233,7 +235,15 @@ int main(int argc, char *argv[])
 
 	/* does pipe exist? */
 	struct stat st;
-	pipe_exists = (!lstat(pipe.c_str(), &st) && S_ISFIFO(st.st_mode));
+	pipe_file_exists = (lstat(pipe.c_str(), &st) == 0);
+	pipe_exists = (pipe_file_exists && S_ISFIFO(st.st_mode));
+
+	// Check whether an invalid pipe is present
+	if (pipe_file_exists && !pipe_exists) {
+		if (remove(pipe.c_str()) != 0) {
+			MSG_ERROR(msg_module, "could not delete pipe");
+		}
+	}
 
 	std::stringstream msg;
 	if (rescan) {
@@ -245,11 +255,11 @@ int main(int argc, char *argv[])
 		msg << "k\n";
 	}
 	if (change) {
-		if (!sizeset && !wmarkset) {
+		if (!size_set && !wmarkset) {
 			MSG_ERROR(msg_module, "Nothing to be changed by -c");
 			return 1;
 		}
-		if (sizeset) {
+		if (size_set) {
 			msg << "s" << size << "\n";
 		}
 		if (wmarkset) {
@@ -262,7 +272,7 @@ int main(int argc, char *argv[])
 		return write_to_pipe(pipe_exists, pipe, msg.str());
 	}
 
-	if (!sizeset) {
+	if (!size_set) {
 		MSG_ERROR(msg_module, "size (-s) not specified");
 		return 1;
 	}
@@ -275,7 +285,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	if (!depthset) {
+	if (!depth_set) {
 		MSG_NOTICE(msg_module, "Depth not set; using default (%d)", DEFAULT_DEPTH);
 	}
 	
