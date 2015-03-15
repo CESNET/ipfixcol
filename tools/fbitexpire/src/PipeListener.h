@@ -69,6 +69,7 @@ private:
 	void openPipe();
 	void closePipe();
 	void reopenPipe();
+	void removePipe();
 	void stopAll();
 	
 	Watcher *_watcher;              /**< Watcher's instance */
