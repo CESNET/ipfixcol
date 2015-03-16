@@ -158,7 +158,7 @@
 			<varlistentry>
 				<term>-c</term>
 				<listitem>
-					<simpara>Change settings of running daemon listening on pipe specified by <command>-p</command>. Only the maximum size of watched directories (<command>-</command>s) and the watermark limit (<command>-w</command>) can be changed.</simpara>
+					<simpara>Change settings of running daemon listening on pipe specified by <command>-p</command>. Only the maximum size of watched directories (<command>-s</command>) and the watermark limit (<command>-w</command>) can be changed.</simpara>
 				</listitem>
 			</varlistentry>
 		</variablelist>
