@@ -93,7 +93,7 @@ void print_help()
 	std::cout << "  -k             Stop fbitexpire daemon listening on pipe specified by -p\n";
 	std::cout << "  -o             Only scan directories and remove old, if needed, and don't wait for new folders\n";
 	std::cout << "  -v <level>     Set verbosity level\n";
-	std::cout << "  -c             Change settings of daemon listening on pipe specified by -p (can be combined with -s and -w)\n";
+	std::cout << "  -c             Change daemon settings; to be combined with -s and/or -w\n";
 	std::cout << "\n";
 }
 
@@ -238,9 +238,14 @@ int main(int argc, char *argv[])
 	pipe_file_exists = (lstat(pipe.c_str(), &st) == 0);
 	pipe_exists = (pipe_file_exists && S_ISFIFO(st.st_mode));
 
-	// Check whether an invalid pipe is present
-	if (pipe_file_exists && !pipe_exists) {
-		if (remove(pipe.c_str()) != 0) {
+	if (pipe_file_exists) {
+		if (pipe_exists) {
+			MSG_ERROR(msg_module, "active pipe (%s) detected", pipe.c_str());
+			MSG_ERROR(msg_module, "fbitexpire supports only a single instance per pipe");
+			MSG_NOTICE(msg_module, "please restart using different pipe (-p)");
+			return 1;
+		} else if (remove(pipe.c_str()) != 0) {
+			// Remove invalid pipe
 			MSG_ERROR(msg_module, "could not delete pipe");
 		}
 	}
@@ -256,7 +261,7 @@ int main(int argc, char *argv[])
 	}
 	if (change) {
 		if (!size_set && !wmarkset) {
-			MSG_ERROR(msg_module, "Nothing to be changed by -c");
+			MSG_WARNING(msg_module, "nothing to be changed by -c");
 			return 1;
 		}
 		if (size_set) {
@@ -286,7 +291,7 @@ int main(int argc, char *argv[])
 	}
 	
 	if (!depth_set) {
-		MSG_NOTICE(msg_module, "Depth not set; using default (%d)", DEFAULT_DEPTH);
+		MSG_NOTICE(msg_module, "depth not set; using default (%d)", DEFAULT_DEPTH);
 	}
 	
 	std::string basedir{argv[optind]};
@@ -299,6 +304,8 @@ int main(int argc, char *argv[])
 	if (daemonize) {
 		closelog();
 		MSG_SYSLOG_INIT(PACKAGE);
+
+		MSG_NOTICE(msg_module, "daemonizing...");
 		
 		/* and send all following messages to the syslog */
 		if (daemon (1, 0)) {
