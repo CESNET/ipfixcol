@@ -597,7 +597,7 @@ static void *statistics_thread(void* config)
 		if (xmlStrcmp(node->name, (const xmlChar *) "statisticsFile") == 0) {
 			char *stat_out_file_path = (char *) xmlNodeGetContent(node->xmlChildrenNode);
 			if (stat_out_file_path && strlen(stat_out_file_path) > 0) {
-				stat_out_file = fopen("ipfixcol_stat.log", "w");
+				stat_out_file = fopen(stat_out_file_path, "w");
 			} else {
 				MSG_ERROR(msg_module, "Configuration error: 'statisticsFile' node has no value");
 			}
