@@ -377,9 +377,13 @@ void sig_handler(int s)
 static void *statistics_thread(void* config)
 {
 	struct output_manager_config *conf = (struct output_manager_config *) config;
-	time_t begin = time(NULL), now, diff_time;
-	uint64_t pkts, last_pkts, records, last_records, lost_records, diff_pkts, diff_records;
-	pkts = last_pkts = records = last_records = lost_records = diff_pkts = diff_records = 0;
+	time_t begin = time(NULL), time_now, diff_time;
+
+	uint64_t pkts, last_pkts, records, last_records, diff_pkts, diff_records;
+	pkts = last_pkts = records = last_records = diff_pkts = diff_records = 0;
+
+	uint64_t lost_records, last_lost_records, diff_lost_records;
+	lost_records = last_lost_records = diff_lost_records = 0;
 	
 	/* create statistics config */
 	conf->stats.total_cpu = 0;
@@ -415,17 +419,20 @@ static void *statistics_thread(void* config)
 		diff_records = records - last_records;
 		last_records = records;
 
-        /* Collect lost data record counts from Data Managers */
-        struct data_manager_config *dm_config = NULL;
-        while (dm_config) {
-            lost_records += dm_config->lost_data_records;
-            dm_config = dm_config->next;
-        }
-		
+		/* Collect lost data record counts from Data Managers */
+		struct data_manager_config *dm_config = conf->data_managers;
+		while (dm_config) {
+			lost_records += dm_config->lost_data_records;
+			dm_config = dm_config->next;
+		}
+
+		diff_lost_records = lost_records - last_lost_records;
+		last_lost_records = lost_records;
+
 		/* print info */
 		MSG_INFO(stat_module, "Time: %lu", time_now);
-		MSG_INFO(stat_module, "%15s %15s %15s %15s %15s %15s", "total time", "total packets", "tot. data rec.", "lost data rec.", "packets/s", "data records/s");
-		MSG_INFO(stat_module, "%15lu %15lu %15lu %15lu %15lu %15lu", diff_time, pkts, records, lost_records, diff_pkts/conf->stat_interval, diff_records/conf->stat_interval);
+		MSG_INFO(stat_module, "%15s %15s %15s %15s %15s %15s %20s", "total time", "total packets", "tot. data rec.", "lost data rec.", "packets/s", "data records/s", "lost data records/s");
+		MSG_INFO(stat_module, "%15lu %15lu %15lu %15lu %15lu %15lu %15lu", diff_time, pkts, records, lost_records, diff_pkts/conf->stat_interval, diff_records/conf->stat_interval, diff_lost_records/conf->stat_interval);
 		
 		/* print cpu usage by threads */
 		statistics_print_cpu(&(conf->stats));

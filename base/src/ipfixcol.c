@@ -73,7 +73,6 @@
  *
  */
 
-
 /** Acceptable command-line parameters */
 #define OPTSTRING "c:dhv:Vsr:i:S:e:"
 
@@ -121,10 +120,10 @@ void help ()
 void term_signal_handler(int sig)
 {
 	if (done) {
-		MSG_COMMON(ICMSG_ERROR, "Another termination signal (%i) detected - quiting without cleanup.", sig);
+		MSG_COMMON(ICMSG_ERROR, "Another termination signal (%i) detected; quiting without further cleanup...", sig);
 		exit (EXIT_FAILURE);
 	} else {
-		MSG_COMMON(ICMSG_ERROR, "Signal: %i detected, will exit as soon as possible", sig);
+		MSG_COMMON(ICMSG_ERROR, "Signal: %i detected; will exit as soon as possible", sig);
 		done = 1;
 	}
 }

@@ -69,6 +69,14 @@ struct data_manager_config {
 };
 
 /**
+ * \brief Argument struct for storage plugin thread
+ */
+struct plugin_thread_arg {
+	struct data_manager_config *data_manager_config;
+	struct storage *storage_config;
+};
+
+/**
  * \brief Creates new data manager
  *
  * @param[in] observation_domain_id Observation domain id that should be
