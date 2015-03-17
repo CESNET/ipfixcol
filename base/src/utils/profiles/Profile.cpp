@@ -123,13 +123,34 @@ void Profile::removeChannel(channel_id_t id)
 	delete ch;
 }
 
+/**
+ * \brief Update path name
+ */
+void Profile::updatePathName()
+{
+	if (m_parent) {
+		m_pathName = m_parent->getPathName() + m_name + "/";
+	} else {
+		m_pathName = "";
+	}
+
+	/* Update name of channels */
+	for (auto ch: m_channels) {
+		ch->updatePathName();
+	}
+
+	/* Update name of children */
+	for (auto p: m_children) {
+		p->updatePathName();
+	}
+}
 
 /**
  * Match profile
  */
-void Profile::match(ipfix_message* msg, metadata* mdata, std::vector<couple_id_t>& profiles)
+void Profile::match(ipfix_message* msg, metadata* mdata, std::vector<Channel *>& channels)
 {	
 	for (auto channel: m_channels) {
-		channel->match(msg, mdata, profiles);
+		channel->match(msg, mdata, channels);
 	}
 }

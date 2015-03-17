@@ -262,8 +262,6 @@ static void *output_manager_plugin_thread(void* config)
 	/* set the thread name to reflect the configuration */
 	prctl(PR_SET_NAME, "ipfixcol OM", 0, 0, 0);      /* output managers' manager */
 
-	conf->running = 1;
-
 	/* loop will break upon receiving NULL from buffer */
 	while (1) {
 		/* get next data */
@@ -626,6 +624,8 @@ int output_manager_start() {
 		return -1;
 	}
 	
+	conf->running = 1;
+
 	if (conf->stat_interval > 0) {
 		retval = pthread_create(&(conf->stat_thread), NULL, &statistics_thread, (void *) conf);
 		if (retval != 0) {

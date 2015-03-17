@@ -1,6 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = profile_tree
 AM_CPPFLAGS += -I$(top_srcdir)/headers
 pluginsdir = $(datadir)/ipfixcol/plugins
 
@@ -8,12 +7,11 @@ sofile = $(pluginsdir)/ipfixcol-profiler-inter.so
 internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
 
 plugins_LTLIBRARIES = ipfixcol-profiler-inter.la
-ipfixcol_profiler_inter_la_LIBADD = profile_tree/libprofiletree.la
 ipfixcol_profiler_inter_la_LDFLAGS = -module -avoid-version -shared 
-ipfixcol_profiler_inter_la_SOURCES = profiler.cpp profiler.h
+ipfixcol_profiler_inter_la_SOURCES = profiler.cpp
 
 if HAVE_DOC
-SUBDIRS += doxygen
+SUBDIRS = doxygen
 MANSRC = ipfixcol-profiler-inter.dbk
 EXTRA_DIST = $(MANSRC)
 man_MANS = ipfixcol-profiler-inter.1

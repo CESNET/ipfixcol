@@ -40,10 +40,10 @@
 #ifndef PROFILE_H
 #define	PROFILE_H
 
-#include "profiler.h"
-
 #include <string>
 #include <vector>
+
+#include "profiles_internal.h"
 
 class Channel;
 
@@ -136,23 +136,36 @@ public:
 	 * \param[in] parent parent profile
 	 */
 	void setParent(Profile *parent) { m_parent = parent; }
+
+	/**
+	 * \brief Update path name from ancestors
+	 */
+	void updatePathName();
+
+	/**
+	 * \brief Get name in format "rootName/.../parentName/name"
+	 *
+	 * \return path name
+	 */
+	std::string getPathName() { return m_pathName; }
 	
 	/**
 	 * \brief Match profile with data record (== with it's channels)
 	 *
 	 * \param[in] msg IPFIX message
 	 * \param[in] mdata Data record's metadata
-	 * \param[out] profiles	list of matching profiles and channels
+	 * \param[out] channels	list of matching channels
 	 */
-	void match(struct ipfix_message *msg, struct metadata *mdata, std::vector<couple_id_t>& profiles);
+	void match(struct ipfix_message *msg, struct metadata *mdata, std::vector<Channel *>& channels);
 private:
 
-	Profile *m_parent;		/**< Parent profile */
+	Profile *m_parent{NULL};	/**< Parent profile */
 
-	profile_id_t m_id;		/**< Profile ID */
-	std::string m_name;		/**< Profile name */
-	profilesVec m_children;	/**< Children */
-	channelsVec m_channels;	/**< Channels */
+	profile_id_t m_id{};		/**< Profile ID */
+	std::string m_pathName{};	/**< rootName/../parentName/myName */
+	std::string m_name{};		/**< Profile name */
+	profilesVec m_children{};	/**< Children */
+	channelsVec m_channels{};	/**< Channels */
 	
 	static profile_id_t profiles_cnt;	/**< Total number of profiles */
 };

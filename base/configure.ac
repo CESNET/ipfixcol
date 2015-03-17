@@ -50,6 +50,7 @@ AC_CONFIG_HEADERS([pkgconfig.h])
 
 # Initialization
 AM_CFLAGS="-Wall -O2 -std=gnu99"
+AM_CPPFLAGS="-std=c++11"
 
 RELEASE=1
 AC_SUBST(RELEASE)
@@ -99,6 +100,7 @@ LBR_CHECK_XSLTPROC
 
 # Check for standard programs
 AC_PROG_CC
+AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
@@ -218,6 +220,7 @@ AC_CONFIG_FILES([Makefile
 				src/utils/ipfixconf/Makefile
 				src/utils/ipfixsend/Makefile
 				src/utils/libsiso/Makefile
+				src/utils/profiles/Makefile
 				config/Makefile
 				headers/Makefile
 				documentation/doxygen/Makefile
@@ -245,7 +248,8 @@ echo "
   Prefix........: $prefix
   Distribution..: $DISTRO
   Debug build...: ${enable_debug:-no}
-  C Compiler....: $CC $AM_CFLAGS $CFLAGS $CPPFLAGS
+  C Compiler....: $CC $AM_CFLAGS $CFLAGS
+  C++ Compiler..: $CXX $AM_CXXFLAGS $CXXFLAGS $AM_CPPFLAGS
   Linker........: $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
   Build doc.....: ${enable_doc:-yes}
