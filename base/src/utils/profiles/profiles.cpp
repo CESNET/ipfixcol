@@ -107,22 +107,23 @@ Channel *process_channel(Profile *profile, xmlNode *root, struct filter_parser_d
 	xmlFree(aux_char);
 	channel->setProfile(profile);
 	
-	/* Allocate space for filter */
-	filter_profile *fp = (filter_profile *) calloc(1, sizeof(filter_profile));
-	if (!fp) {
-		MSG_ERROR(msg_module, "Profile %s: channel %s: unable to allocate memory (%s:%d)", profile_id(profile), channel->getName().c_str(), __FILE__, __LINE__);
-		delete channel;
-		throw_empty;
-	}
-	
 	/* Initialize parser data */
-	pdata->profile = fp;
 	pdata->filter = NULL;
 	
 	/* Iterate through elements */
 	for (xmlNode *node = root->children; node; node = node->next) {
 		
 		if (!xmlStrcmp(node->name, (const xmlChar *) "filter")) {
+			/* Allocate space for filter */
+			filter_profile *fp = (filter_profile *) calloc(1, sizeof(filter_profile));
+			if (!fp) {
+				MSG_ERROR(msg_module, "Profile %s: channel %s: unable to allocate memory (%s:%d)", profile_id(profile), channel->getName().c_str(), __FILE__, __LINE__);
+				delete channel;
+				throw_empty;
+			}
+
+			pdata->profile = fp;
+
 			/* Parse filter */
 			pdata->filter = (char *) xmlNodeGetContent(node->children);
 			if (parse_filter(pdata) != 0) {
@@ -262,6 +263,9 @@ Profile *process_profile_xml(const char *filename)
 		MSG_ERROR(msg_module, "%s", e.what());
 		return NULL;
 	}
+
+	xmlFreeDoc(doc);
+	free_parser_data(&pdata);
 
 	if (!rootProfile) {
 		MSG_ERROR(msg_module, "No profile found in profile tree configuration");
