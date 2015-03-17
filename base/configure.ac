@@ -50,7 +50,6 @@ AC_CONFIG_HEADERS([pkgconfig.h])
 
 # Initialization
 AM_CFLAGS="-Wall -O2 -std=gnu99"
-AM_CPPFLAGS="-std=c++11"
 
 RELEASE=1
 AC_SUBST(RELEASE)
@@ -116,8 +115,7 @@ AC_CHECK_LIB([xml2], [main],
 	CFLAGS="`xml2-config --cflags` $CFLAGS"
 	CPPFLAGS="`xml2-config --cflags` $CPPFLAGS"],
     AC_MSG_ERROR([Libxml2 not found ]))
-
-
+    
 ### TLS support ###
 AS_IF([test "x$with_openssl" != xno],
   [AC_CHECK_LIB([ssl], [SSL_library_init],
