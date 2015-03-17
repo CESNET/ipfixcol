@@ -65,7 +65,7 @@ struct stat_conf {
 	long total_cpu;
 	int cpus;
 	struct stat_thread *threads;
-        int done;
+	int done;
 };
 
 /**
@@ -76,16 +76,15 @@ struct stat_conf {
 struct output_manager_config {
 	struct data_manager_config *data_managers;      /* output managers */
 	struct data_manager_config *last;
-	struct storage_list *storage_plugins;    /* list of storage structures */
-	struct ring_buffer *in_queue;     /* input queue */
-	pthread_t thread_id;              /* manager's thread ID */
-        pthread_t stat_thread;
-        int stat_interval;
-        uint64_t data_records;
-        uint64_t packets;
-        struct stat_conf stats;
+	struct storage_list *storage_plugins;    		/* list of storage structures */
+	struct ring_buffer *in_queue;     				/* input queue */
+	pthread_t thread_id;              				/* manager's thread ID */
+	pthread_t stat_thread;
+	int stat_interval;
+	uint64_t data_records;
+	uint64_t packets;
+	struct stat_conf stats;
 };
-
 
 /**
  * \brief Creates new Output Manager
@@ -97,7 +96,6 @@ struct output_manager_config {
  * @return 0 on success, negative value otherwise
  */
 int output_manager_create(struct storage_list *storages, struct ring_buffer *in_queue, int stat_interval, void **config);
-
 
 /**
  * \brief Closes output manager specified by its configuration

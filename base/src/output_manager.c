@@ -37,7 +37,6 @@
  *
  */
 
-
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
@@ -148,16 +147,14 @@ static void *output_manager_plugin_thread(void* config)
 	/* set the thread name to reflect the configuration */
 	prctl(PR_SET_NAME, "ipfixcol OM", 0, 0, 0);      /* output managers' manager */
 
-
 	/* loop will break upon receiving NULL from buffer */
 	while (1) {
 		/* get next data */
 		index = -1;
-		
 		msg = rbuffer_read(conf->in_queue, &index);
 
 		if (!msg) {
-			MSG_NOTICE(msg_module, "No more data from core.");
+			MSG_NOTICE(msg_module, "No more data from core");
 			break;
 		}
 
@@ -171,7 +168,7 @@ static void *output_manager_plugin_thread(void* config)
 			 */
 			data_config = data_manager_create(msg->input_info->odid, conf->storage_plugins);
 			if (data_config == NULL) {
-				MSG_WARNING(msg_module, "[%u] Unable to create data manager, skipping data.",
+				MSG_WARNING(msg_module, "[%u] Unable to create data manager; skipping data...",
 						msg->input_info->odid);
 				rbuffer_remove_reference(conf->in_queue, index, 1);
 				continue;
@@ -194,12 +191,12 @@ static void *output_manager_plugin_thread(void* config)
 
 			if (data_config->references == 0) {
 				/* No reference for this ODID, close DM */
-				MSG_DEBUG(msg_module, "[%u] No source, releasing templates.", data_config->observation_domain_id);
+				MSG_DEBUG(msg_module, "[%u] No source; releasing templates...", data_config->observation_domain_id);
 				output_manager_remove(conf, data_config);
 			}
+
 			rbuffer_remove_reference(conf->in_queue, index, 1);
 			continue;
-
 		}
 		
 		__sync_fetch_and_add(&(conf->packets), 1);
@@ -207,7 +204,7 @@ static void *output_manager_plugin_thread(void* config)
 		
 		/* Write data into input queue of Storage Plugins */
 		if (rbuffer_write(data_config->store_queue, msg, data_config->plugins_count) != 0) {
-			MSG_WARNING(msg_module, "[%u] Unable to write into Data manager's input queue, skipping data.", data_config->observation_domain_id);
+			MSG_WARNING(msg_module, "[%u] Unable to write into Data manager's input queue; skipping data...", data_config->observation_domain_id);
 			rbuffer_remove_reference(conf->in_queue, index, 1);
 			free(msg);
 			continue;
@@ -217,7 +214,7 @@ static void *output_manager_plugin_thread(void* config)
 		rbuffer_remove_reference(conf->in_queue, index, 0);
 	}
 
-	MSG_NOTICE(msg_module, "Closing Output Manager's thread.");
+	MSG_NOTICE(msg_module, "Closing Output Manager thread");
 
 	return (void *) 0;
 }
@@ -278,7 +275,6 @@ struct stat_thread *statistics_add_thread(struct stat_conf *conf, long tid)
 		MSG_ERROR(stat_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return NULL;
 	}
-	
 	
 	thread->tid = tid;
 	thread->next = conf->threads;
@@ -382,8 +378,8 @@ static void *statistics_thread(void* config)
 {
 	struct output_manager_config *conf = (struct output_manager_config *) config;
 	time_t begin = time(NULL), now, diff_time;
-	uint64_t pkts, last_pkts, records, last_records, diff_pkts, diff_records;
-	pkts = last_pkts = records = last_records = diff_pkts = diff_records = 0;
+	uint64_t pkts, last_pkts, records, last_records, lost_records, diff_pkts, diff_records;
+	pkts = last_pkts = records = last_records = lost_records = diff_pkts = diff_records = 0;
 	
 	/* create statistics config */
 	conf->stats.total_cpu = 0;
@@ -406,8 +402,8 @@ static void *statistics_thread(void* config)
 		}
 		
 		/* Compute time */
-		now = time(NULL);
-		diff_time = now - begin;
+		time_now = time(NULL);
+		diff_time = time_now - begin;
 		
 		/* Update and save packets counter */
 		pkts = conf->packets;
@@ -418,11 +414,18 @@ static void *statistics_thread(void* config)
 		records = conf->data_records;
 		diff_records = records - last_records;
 		last_records = records;
+
+        /* Collect lost data record counts from Data Managers */
+        struct data_manager_config *dm_config = NULL;
+        while (dm_config) {
+            lost_records += dm_config->lost_data_records;
+            dm_config = dm_config->next;
+        }
 		
 		/* print info */
-		MSG_INFO(stat_module, "now: %lu", now);
-		MSG_INFO(stat_module, "%15s %15s %15s %15s %15s", "total time", "total packets", "tot. data rec.", "packets/s", "data records/s");
-		MSG_INFO(stat_module, "%15lu %15lu %15lu %15lu %15lu", diff_time, pkts, records, diff_pkts/conf->stat_interval, diff_records/conf->stat_interval);
+		MSG_INFO(stat_module, "Time: %lu", time_now);
+		MSG_INFO(stat_module, "%15s %15s %15s %15s %15s %15s", "total time", "total packets", "tot. data rec.", "lost data rec.", "packets/s", "data records/s");
+		MSG_INFO(stat_module, "%15lu %15lu %15lu %15lu %15lu %15lu", diff_time, pkts, records, lost_records, diff_pkts/conf->stat_interval, diff_records/conf->stat_interval);
 		
 		/* print cpu usage by threads */
 		statistics_print_cpu(&(conf->stats));
@@ -441,7 +444,6 @@ static void *statistics_thread(void* config)
  * @return 0 on success, negative value otherwise
  */
 int output_manager_create(struct storage_list *storages, struct ring_buffer *in_queue, int stat_interval, void **config) {
-
 	struct output_manager_config *conf;
 	int retval;
 
@@ -456,10 +458,10 @@ int output_manager_create(struct storage_list *storages, struct ring_buffer *in_
 	conf->in_queue = in_queue;
 	conf->stat_interval = stat_interval;
 
-	/* Create Output Manager's thread */
+	/* Create Output Manager thread */
 	retval = pthread_create(&(conf->thread_id), NULL, &output_manager_plugin_thread, (void *) conf);
 	if (retval != 0) {
-		MSG_ERROR(msg_module, "Unable to create output manager's thread.");
+		MSG_ERROR(msg_module, "Unable to create output manager thread");
 		free(conf);
 		return -1;
 	}
@@ -467,7 +469,7 @@ int output_manager_create(struct storage_list *storages, struct ring_buffer *in_
 	if (conf->stat_interval > 0) {
 		retval = pthread_create(&(conf->stat_thread), NULL, &statistics_thread, (void *) conf);
 		if (retval != 0) {
-			MSG_ERROR(msg_module, "Unable to create statistic's thread.");
+			MSG_ERROR(msg_module, "Unable to create statistics thread");
 			free(conf);
 			return -1;
 		}

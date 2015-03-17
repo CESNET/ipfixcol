@@ -104,6 +104,28 @@ static void* storage_plugin_thread (void* cfg)
             break;
 		}
 
+		config->data_records += msg->data_records_count;
+
+		/* Check for lost data records */
+		uint32_t seq_number = ntohl(msg->pkt_header->sequence_number);
+
+		// Set sequence number during first iteration
+		if (config->first_seq == 0 && config->last_seq == 0) {
+			config->first_seq = seq_number;
+		} else if (seq_number < first_seq) {
+			// Sequence number resetted (module 2^32)
+			config->first_seq = seq_number;
+		} else if (seq_number > first_seq) {
+			// Check for sequence number gap
+			if (seq_number - msg->data_records_count > config->last_seq) {
+				config->lost_data_records += seq_number - msg->data_records_count - config->last_seq;
+			}
+		} else {
+			// Do nothing
+		}
+
+		config->last_seq = seq_number;
+
 		/* do the job */
 		config->store (config->config, msg, config->thread_config->template_mgr);
 
@@ -179,6 +201,11 @@ struct data_manager_config* data_manager_create (
 	config->observation_domain_id = observation_domain_id;
 	config->storage_plugins = NULL;
 	config->plugins_count = 0;
+
+	config->data_records = 0;
+	config->lost_data_records = 0;
+	config->first_seq = 0;
+	config->last_seq = 0;
 
 	/* check whether there is OID specific plugin for this OID */
 	for (aux_storage = storage_plugins; aux_storage != NULL; aux_storage = aux_storage->next) {

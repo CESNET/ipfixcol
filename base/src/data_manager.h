@@ -56,6 +56,10 @@
  * decides what data manager should get the message.
  */
 struct data_manager_config {
+	uint64_t data_records;
+	uint64_t lost_data_records;
+	uint32_t first_seq;
+	uint32_t last_seq;
 	uint32_t observation_domain_id;
 	uint32_t references;
 	unsigned int plugins_count;
@@ -75,8 +79,8 @@ struct data_manager_config {
  * otherwise
  */
 struct data_manager_config* data_manager_create (
-    uint32_t observation_domain_id,
-    struct storage_list* storage_plugins);
+	uint32_t observation_domain_id,
+	struct storage_list* storage_plugins);
 
 /**
  * \brief Closes data manager specified by its configuration
