@@ -198,9 +198,35 @@ static void *output_manager_plugin_thread(void* config)
 			rbuffer_remove_reference(conf->in_queue, index, 1);
 			continue;
 		}
-		
+
 		__sync_fetch_and_add(&(conf->packets), 1);
 		__sync_fetch_and_add(&(conf->data_records), msg->data_records_count);
+
+		/* Check for lost data records */
+		uint32_t seq_number = ntohl(msg->pkt_header->sequence_number);
+
+		// Set sequence number during first iteration
+		if (conf->first_seq == 0 && conf->last_seq == 0) {
+			conf->first_seq = seq_number;
+		} else if (seq_number < conf->first_seq) {
+			// Sequence number resetted (modulo 2^32 = 4294967296)
+			conf->first_seq = seq_number;
+			uint8_t delta_seq = 4294967296 - conf->last_seq + seq_number;
+
+			// Check for sequence number gap
+			if (delta_seq > msg->data_records_count) {
+				__sync_fetch_and_add(&(conf->lost_data_records), delta_seq - msg->data_records_count);
+			}
+		} else if (seq_number > conf->first_seq) {
+			// Check for sequence number gap
+			if (seq_number - msg->data_records_count > conf->last_seq) {
+				__sync_fetch_and_add(&(conf->lost_data_records), seq_number - msg->data_records_count - conf->last_seq);
+			}
+		} else {
+			// Do nothing
+		}
+
+		conf->last_seq = seq_number;
 		
 		/* Write data into input queue of Storage Plugins */
 		if (rbuffer_write(data_config->store_queue, msg, data_config->plugins_count) != 0) {
@@ -420,12 +446,7 @@ static void *statistics_thread(void* config)
 		last_records = records;
 
 		/* Collect lost data record counts from Data Managers */
-		struct data_manager_config *dm_config = conf->data_managers;
-		while (dm_config) {
-			lost_records += dm_config->lost_data_records;
-			dm_config = dm_config->next;
-		}
-
+		lost_records = conf->lost_data_records;
 		diff_lost_records = lost_records - last_lost_records;
 		last_lost_records = lost_records;
 

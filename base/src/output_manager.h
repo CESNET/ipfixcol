@@ -80,10 +80,13 @@ struct output_manager_config {
 	struct ring_buffer *in_queue;     				/* input queue */
 	pthread_t thread_id;              				/* manager's thread ID */
 	pthread_t stat_thread;
-	int stat_interval;
 	uint64_t data_records;
+	uint64_t lost_data_records;
+	uint32_t first_seq;
+	uint32_t last_seq;
 	uint64_t packets;
 	struct stat_conf stats;
+	int stat_interval;
 };
 
 /**

@@ -89,9 +89,7 @@ static inline void data_manager_free (struct data_manager_config* config)
 static void* storage_plugin_thread (void* cfg)
 {
 	// struct storage *config = (struct storage*) cfg;
-	struct plugin_thread_arg *arg = (struct plugin_thread_arg *) cfg;
-	struct storage *config = arg->storage_config;
-	struct data_manager_config *dm_config = arg->data_manager_config;
+	struct storage *config = (struct storage*) cfg; 
 	struct ipfix_message* msg;
 	unsigned int index = config->thread_config->queue->read_offset;
 
@@ -106,34 +104,6 @@ static void* storage_plugin_thread (void* cfg)
 			MSG_NOTICE("storage plugin thread", "[%u] No more data from Data Manager", config->odid);
 			break;
 		}
-
-		dm_config->data_records += msg->data_records_count;
-
-		/* Check for lost data records */
-		uint32_t seq_number = ntohl(msg->pkt_header->sequence_number);
-
-		// Set sequence number during first iteration
-		if (dm_config->first_seq == 0 && dm_config->last_seq == 0) {
-			dm_config->first_seq = seq_number;
-		} else if (seq_number < dm_config->first_seq) {
-			// Sequence number resetted (modulo 2^32 = 4294967296)
-			dm_config->first_seq = seq_number;
-			uint8_t delta_seq = 4294967296 - dm_config->last_seq + seq_number;
-
-			// Check for sequence number gap
-			if (delta_seq > msg->data_records_count) {
-				dm_config->lost_data_records += delta_seq - msg->data_records_count;
-			}
-		} else if (seq_number > dm_config->first_seq) {
-			// Check for sequence number gap
-			if (seq_number - msg->data_records_count > dm_config->last_seq) {
-				dm_config->lost_data_records += seq_number - msg->data_records_count - dm_config->last_seq;
-			}
-		} else {
-			// Do nothing
-		}
-
-		dm_config->last_seq = seq_number;
 
 		/* do the job */
 		config->store(config->config, msg, config->thread_config->template_mgr);
@@ -211,11 +181,6 @@ struct data_manager_config* data_manager_create (
 	config->storage_plugins = NULL;
 	config->plugins_count = 0;
 
-	config->data_records = 0;
-	config->lost_data_records = 0;
-	config->first_seq = 0;
-	config->last_seq = 0;
-
 	/* check whether there is OID specific plugin for this OID */
 	for (aux_storage = storage_plugins; aux_storage != NULL; aux_storage = aux_storage->next) {
 		if (storage_plugins->storage.xml_conf->observation_domain_id != NULL &&
@@ -282,11 +247,7 @@ struct data_manager_config* data_manager_create (
 		name_len = strlen(aux_storage->storage.thread_name);
 		snprintf(aux_storage->storage.thread_name + name_len, 16 - name_len, " %d", observation_domain_id);
 
-		struct plugin_thread_arg *arg = (struct plugin_thread_arg*) calloc (1, sizeof(struct plugin_thread_arg));;
-		arg->data_manager_config = config;
-		arg->storage_config = &aux_storage->storage;
-
-		if (pthread_create(&(plugin_cfg->thread_id), NULL, &storage_plugin_thread, (void*) arg) != 0) {
+		if (pthread_create(&(plugin_cfg->thread_id), NULL, &storage_plugin_thread, (void*) &aux_storage->storage) != 0) {
 			MSG_ERROR(msg_module, "Unable to create storage plugin thread");
 			aux_storage->storage.close (&(aux_storage->storage.config));
 			free (plugin_cfg);
