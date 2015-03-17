@@ -7,4 +7,10 @@
 *  New tool: ipfixsend
 *  New intermediate plugin: odip
 *  New intermediate plugin: hooks
-
+*  Added metadata
+*  New intermediate plugin: profiler
+*  New storage plugin: json
+*  New storage plugin: fastbit_compression
+*  Added reconfiguration at runtime
+*  New intermediate plugin: geoip
+*  Added "terminating" flag accessible from plugins

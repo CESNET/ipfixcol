@@ -45,6 +45,7 @@
 API char **utils_files_from_path(char *path);
 API char  *utils_dir_from_path(char *path);
 API char  *strncpy_safe (char *destination, const char *source, size_t num);
+API int    strtoi (const char* str, int base);
 
 #endif	/* UTILS_H */
 

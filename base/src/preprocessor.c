@@ -46,13 +46,13 @@
 #include "data_manager.h"
 #include "queues.h"
 #include <ipfixcol.h>
+#include <ipfixcol/ipfix_message.h>
 #include "crc.h"
 
 /** Identifier to MSG_* macros */
 static char *msg_module = "preprocessor";
 
 static struct ring_buffer *preprocessor_out_queue = NULL;
-struct ipfix_template_mgr *tm = NULL;
 
 /* Sequence number counter for each ODID */
 struct odid_info {
@@ -66,6 +66,7 @@ struct odid_info *odid_info = NULL;
 
 /**
  * \brief Get sequence number counter for given ODID
+ * 
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number counter
  */
@@ -83,7 +84,8 @@ struct odid_info *odid_info_get(uint32_t odid)
 }
 
 /**
- * \brief Add new SN counter
+ * \brief Add new odid info
+ * 
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number counter
  */
@@ -111,7 +113,8 @@ struct odid_info *odid_info_add(uint32_t odid)
 }
 
 /**
- * \brief Add new source for SN counter
+ * \brief Add new source for odid info
+ * 
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number counter
  */
@@ -129,7 +132,8 @@ struct odid_info *odid_info_add_source(uint32_t odid)
 }
 
 /**
- * \brief Remove source from SN counter
+ * \brief Remove source from odid info
+ * 
  * \param[in] odid Observation Domain ID
  */
 void odid_info_remove_source(uint32_t odid)
@@ -163,6 +167,7 @@ struct odid_info *odid_info_get_or_add(uint32_t odid)
 
 /**
  * \brief Get sequence number for given ODID
+ * 
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number value
  */
@@ -206,29 +211,15 @@ void odid_info_destroy()
 }
 
 /**
- * \brief This function sets the queue for preprocessor and inits crc computing.
- *
- * @param out_queue preprocessor's output queue
- * @return 0 on success, negative value otherwise
+ * \brief Set new output queue
  */
-int preprocessor_init(struct ring_buffer *out_queue, struct ipfix_template_mgr *template_mgr)
+void preprocessor_set_output_queue(struct ring_buffer *out_queue)
 {
-	if (preprocessor_out_queue) {
-		MSG_WARNING(msg_module, "Redefining preprocessor's output queue.");
-	}
-
-	/* Set output queue */
 	preprocessor_out_queue = out_queue;
-
-	tm = template_mgr;
-
-	return 0;
 }
 
 /**
  * \brief Returns pointer to preprocessors output queue.
- *
- * @return preprocessors output queue
  */
 struct ring_buffer *get_preprocessor_output_queue()
 {
@@ -298,7 +289,6 @@ static void preprocessor_udp_init (struct input_info_network *input_info, struct
 /**
  * \brief Process one template from template set
  *
- * \param[in] tm   template manager
  * \param[in] tmpl template
  * \param[in] max_len maximal length of this template
  * \param[in] type type of the template
@@ -307,7 +297,7 @@ static void preprocessor_udp_init (struct input_info_network *input_info, struct
  * \param[in] key template key with filled crc and odid
  * \return length of the template
  */
-static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void *tmpl, int max_len, int type, 
+static int preprocessor_process_one_template(void *tmpl, int max_len, int type, 
 	uint32_t msg_counter, struct input_info *input_info, struct ipfix_template_key *key)
 {
 	struct ipfix_template_record *template_record;
@@ -322,34 +312,34 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 	/* these templates are no longer used (checked in data_manager_withdraw_templates()) */
 	if (input_info->type == SOURCE_TYPE_UDP && ntohs(template_record->count) == 0) {
 		/* got withdrawal message with UDP -> this is wrong */
-		MSG_WARNING(msg_module, "[%u] Got template withdraw message on UDP. Ignoring.", input_info->odid);
+		MSG_WARNING(msg_module, "[%u] Received template withdrawal message over UDP; ignoring...", input_info->odid);
 		return TM_TEMPLATE_WITHDRAW_LEN;
 	} else if ((ntohs(template_record->template_id) == IPFIX_TEMPLATE_FLOWSET_ID ||
 				ntohs(template_record->template_id) == IPFIX_OPTION_FLOWSET_ID) &&
 			ntohs(template_record->count) == 0) {
 		/* withdraw template or option template */
-		tm_remove_all_templates(tm, type);
+		tm_remove_all_templates(template_mgr, type);
 		/* don't try to parse the withdraw template */
 		return TM_TEMPLATE_WITHDRAW_LEN;
 		/* check for withdraw template message */
 	} else if (ntohs(template_record->count) == 0) {
-		ret = tm_remove_template(tm, key);
-		MSG_NOTICE(msg_module, "[%u] Got %s withdraw message.", input_info->odid, (type==TM_TEMPLATE)?"Template":"Options template");
+		ret = tm_remove_template(template_mgr, key);
+		MSG_NOTICE(msg_module, "[%u] Received %s withdrawal message", input_info->odid, (type==TM_TEMPLATE) ? "Template" : "Options template");
 		/* Log error when removing unknown template */
 		if (ret == 1) {
-			MSG_WARNING(msg_module, "[%u] %s withdraw message received for unknown Template ID: %u", input_info->odid,
-					(type==TM_TEMPLATE)?"Template":"Options template", ntohs(template_record->template_id));
+			MSG_WARNING(msg_module, "[%u] %s withdrawal message received for unknown template ID %u", input_info->odid,
+					(type==TM_TEMPLATE) ? "Template" : "Options template", ntohs(template_record->template_id));
 		}
 		return TM_TEMPLATE_WITHDRAW_LEN;
 		/* check whether template exists */
-	} else if ((template = tm_get_template(tm, key)) == NULL) {
+	} else if ((template = tm_get_template(template_mgr, key)) == NULL) {
 		/* add template */
 		/* check that the template has valid ID ( < 256 ) */
 		if (ntohs(template_record->template_id) < 256) {
-			MSG_WARNING(msg_module, "[%u] %s ID %i is reserved and not valid for data set!", key->odid, (type==TM_TEMPLATE)?"Template":"Options template", ntohs(template_record->template_id));
+			MSG_WARNING(msg_module, "[%u] %s ID %i is reserved and not valid for data set", key->odid, (type==TM_TEMPLATE) ? "Template" : "Options template", ntohs(template_record->template_id));
 		} else {
-			MSG_NOTICE(msg_module, "[%u] New %s ID %i", key->odid, (type==TM_TEMPLATE)?"template":"options template", ntohs(template_record->template_id));
-			template = tm_add_template(tm, tmpl, max_len, type, key);
+			MSG_NOTICE(msg_module, "[%u] New %s ID %i", key->odid, (type==TM_TEMPLATE) ? "template" : "options template", ntohs(template_record->template_id));
+			template = tm_add_template(template_mgr, tmpl, max_len, type, key);
 			/* Set new template ID according to ODID */
 			if (template) {
 				template->template_id = odid_info_get_free_tid(key->odid);
@@ -357,13 +347,13 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 		}
 	} else {
 		/* template already exists */
-		MSG_WARNING(msg_module, "[%u] %s ID %i already exists. Rewriting.", key->odid,
-				(type==TM_TEMPLATE)?"Template":"Options template", template->template_id);
-		template = tm_update_template(tm, tmpl, max_len, type, key);
+		MSG_WARNING(msg_module, "[%u] %s ID %i already exists; rewriting...", key->odid,
+				(type==TM_TEMPLATE) ? "Template" : "Options template", template->template_id);
+		template = tm_update_template(template_mgr, tmpl, max_len, type, key);
 	}
 	if (template == NULL) {
-		MSG_WARNING(msg_module, "[%u] Cannot parse %s set, skipping to next set", key->odid,
-				(type==TM_TEMPLATE)?"template":"options template");
+		MSG_WARNING(msg_module, "[%u] Cannot parse %s set; skipping to next set...", key->odid,
+				(type==TM_TEMPLATE) ? "template" : "options template");
 		return 0;
 		/* update UDP timeouts */
 	} else if (input_info->type == SOURCE_TYPE_UDP) {
@@ -384,6 +374,49 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
 	return template->template_length - sizeof(struct ipfix_template) + sizeof(struct ipfix_options_template_record);
 }
 
+static int mdata_max = 0;
+
+void fill_metadata(uint8_t *rec, int rec_len, struct ipfix_template *templ, void *data)
+{
+	struct ipfix_message *msg = (struct ipfix_message *) data;
+	
+	/* Allocate space for metadata */
+	if (mdata_max == 0) {
+		mdata_max = 75;
+		msg->metadata = malloc(mdata_max * sizeof(struct metadata));
+		if (!msg->metadata) {
+			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			mdata_max = 0;
+			return;
+		}
+	}
+	
+	/* Need more space */
+	if (msg->data_records_count == mdata_max) {
+		void *new_mdata = realloc(msg->metadata, mdata_max * 2 * sizeof(struct metadata));
+		
+		if (!new_mdata) {
+			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			return;
+		}
+		
+		msg->metadata = new_mdata;
+		mdata_max *= 2;
+	}
+	
+	/* Fill metadata */
+	msg->metadata[msg->data_records_count].record.record = rec;
+	msg->metadata[msg->data_records_count].record.length = rec_len;
+	msg->metadata[msg->data_records_count].record.templ = templ;
+	msg->metadata[msg->data_records_count].profiles = NULL;
+	msg->metadata[msg->data_records_count].srcAS = 0;
+	msg->metadata[msg->data_records_count].dstAS = 0;
+	msg->metadata[msg->data_records_count].srcCountry = 0;
+	msg->metadata[msg->data_records_count].dstCountry = 0;
+	
+	msg->data_records_count++;
+}
+
 /**
  * \brief Process templates
  *
@@ -397,11 +430,10 @@ static int preprocessor_process_one_template(struct ipfix_template_mgr *tm, void
  *   rest of the template set is discarded (template length cannot be
  *   determined)
  *
- * @param[in,out] template_mgr	Template manager
  * @param[in] msg IPFIX			message
  * @return uint32_t Number of received data records
  */
-static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *template_mgr, struct ipfix_message *msg)
+static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
 {
 	uint8_t *ptr;
 	uint32_t records_count = 0;
@@ -424,7 +456,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 		ptr = (uint8_t*) &msg->templ_set[i]->first_record;
 		while (ptr < (uint8_t*) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) {
 			max_len = ((uint8_t *) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) - ptr;
-			ret = preprocessor_process_one_template(template_mgr, ptr, max_len, TM_TEMPLATE, msg_counter, msg->input_info, &key);
+			ret = preprocessor_process_one_template(ptr, max_len, TM_TEMPLATE, msg_counter, msg->input_info, &key);
 			if (ret == 0) {
 				break;
 			} else {
@@ -439,7 +471,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 		ptr = (uint8_t*) &msg->opt_templ_set[i]->first_record;
 		max_len = ((uint8_t *) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) - ptr;
 		while (ptr < (uint8_t*) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) {
-			ret = preprocessor_process_one_template(template_mgr, ptr, max_len, TM_OPTIONS_TEMPLATE, msg_counter, msg->input_info, &key);
+			ret = preprocessor_process_one_template(ptr, max_len, TM_OPTIONS_TEMPLATE, msg_counter, msg->input_info, &key);
 			if (ret == 0) {
 				break;
 			} else {
@@ -448,13 +480,13 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 			}
 		}
 	}
-
+	mdata_max = 0;
 	/* add template to message data_couples */
 	for (i = 0; i < MSG_MAX_DATA_COUPLES && msg->data_couple[i].data_set; i++) {
 		key.tid = ntohs(msg->data_couple[i].data_set->header.flowset_id);
 		msg->data_couple[i].data_template = tm_get_template(template_mgr, &key);
 		if (msg->data_couple[i].data_template == NULL) {
-			MSG_WARNING(msg_module, "[%u] Data template with ID %i not found!", key.odid, key.tid);
+			MSG_WARNING(msg_module, "[%u] Data template with ID %i not found", key.odid, key.tid);
 		} else {
 			/* Increasing number of references to template */
 			tm_template_reference_inc(msg->data_couple[i].data_template);
@@ -466,19 +498,28 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
 					((time(NULL) - msg->data_couple[i].data_template->last_transmission > udp_conf.template_life_time) || /* lifetime expired */
 					(udp_conf.template_life_packet > 0 && /* life packet should be checked */
 					(uint32_t) (msg_counter - msg->data_couple[i].data_template->last_message) > udp_conf.template_life_packet))) {
-				MSG_WARNING(msg_module, "[%u] Data template ID %i expired! Using old template.", key.odid,
+				MSG_WARNING(msg_module, "[%u] Data template with ID %i has expired; using old template...", key.odid,
 				                                               msg->data_couple[i].data_template->template_id);
 			}
 
-			/* compute sequence number */
-			records_count += data_set_records_count(msg->data_couple[i].data_set, msg->data_couple[i].data_template);
+			/* compute sequence number and fill metadata */
+			records_count += data_set_process_records(msg->data_couple[i].data_set, msg->data_couple[i].data_template, fill_metadata, msg);
 		}
 	}
 
-	msg->data_records_count = records_count;
-
+	/*
+	 * FILL METADATA, two options:
+	 * a) fill metadata AFTER counting data records
+	 *		+ allocate whole array at once
+	 *		- data sets and data records are accesed twice (data_set_records_count and data_set_process_records)
+	 * 
+	 * b) fill metadata WHILE counting data records (using now) (replace data_set_records_count with data_set_process_records and add callback)
+	 *		+ one acces to data sets
+	 *		- needs reallocation
+	 */
+	
 	/* return number of data records */
-	return records_count;
+	return msg->data_records_count;
 }
 
 /**
@@ -487,10 +528,9 @@ static uint32_t preprocessor_process_templates(struct ipfix_template_mgr *templa
  * @param packet Received data from input plugins
  * @param len Packet length
  * @param input_info Input informations about source etc.
- * @param storage_plugins List of storage plugins
  * @param source_status Status of source (new, opened, closed)
  */
-void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins, int source_status)
+void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, int source_status)
 {
 	struct ipfix_message* msg;
 	uint32_t *seqn;
@@ -502,7 +542,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		msg->source_status = source_status;
 		odid_info_remove_source(input_info->odid);
 	} else {
-		if (input_info == NULL || storage_plugins == NULL) {
+		if (input_info == NULL) {
 			MSG_WARNING(msg_module, "Invalid parameters in function preprocessor_parse_msg()");
 
 			if (packet) {
@@ -514,7 +554,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		}
 
 		if (packet == NULL) {
-			MSG_WARNING(msg_module, "[%u] Received empty packet", input_info->odid);
+			MSG_WARNING(msg_module, "[%u] Received empty IPFIX message", input_info->odid);
 			return;
 		}
 
@@ -531,13 +571,13 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		}
 
 		/* Process templates and correct sequence number */
-		preprocessor_process_templates(tm, msg);
+		preprocessor_process_templates(msg);
 
 		seqn = odid_info_get_sequence_number(ntohl(msg->pkt_header->observation_domain_id));
 
 		if (msg->input_info->sequence_number != ntohl(msg->pkt_header->sequence_number) && msg->data_records_count > 0) {
 			if (!skip_seq_err) {
-				MSG_WARNING(msg_module, "[%u] Sequence number does not match: expected %u, got %u", input_info->odid, msg->input_info->sequence_number , ntohl(msg->pkt_header->sequence_number));
+				MSG_WARNING(msg_module, "[%u] Sequence number error; expected %u, got %u", input_info->odid, msg->input_info->sequence_number , ntohl(msg->pkt_header->sequence_number));
 			}
 
 			*seqn += (ntohl(msg->pkt_header->sequence_number) - msg->input_info->sequence_number);
@@ -552,7 +592,7 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 
 	/* Send data to the first intermediate plugin */
 	if (rbuffer_write(preprocessor_out_queue, msg, 1) != 0) {
-		MSG_WARNING(msg_module, "[%u] Unable to write into Data manager's input queue, skipping data.", input_info->odid);
+		MSG_WARNING(msg_module, "[%u] Unable to write into Data Manager's input queue; skipping data...", input_info->odid);
 		message_free(msg);
 		packet = NULL;
 	}

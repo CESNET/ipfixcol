@@ -1793,7 +1793,7 @@
 	<plugin>
 		<name>multiplier</name>
 		<path>/usr/share/fbitdump/plugins/multiplier.so</path>
-		<plainLevel>1</plainLevel>
+		<plainLevel>10</plainLevel>
 	</plugin>
 </plugins>
 </configuration>

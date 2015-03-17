@@ -78,22 +78,22 @@ static PipeListener *list = nullptr;
  */
 void print_help()
 {
-	std::cout << "\nUse: " << PACKAGE_NAME << " [-rhVDokmc] [-p pipe] [-d depth] [-s size] [-w watermark] [-v verbose] [directory]\n\n";
+	std::cout << "\nUsage: " << PACKAGE_NAME << " [-rhVDokmc] [-p pipe] [-d depth] [-s size] [-w watermark] [-v level] [directory]\n\n";
 	std::cout << "Options:\n";
-	std::cout << "  -h           show this text\n";
-	std::cout << "  -V           show tool version\n";
-	std::cout << "  -r           Send daemon message to rescan folder. Daemon HAVE TO be running\n";
-	std::cout << "  -f           Force rescan directories when daemon starts (ignore stat files)\n";
-	std::cout << "  -p pipe      Pipe name, default is " << DEFAULT_PIPE << "\n";
-	std::cout << "  -s size      Max size of all directories (in MB)\n";
-	std::cout << "  -w watermark Lower limit when removing folders (in MB)\n";
-	std::cout << "  -d depth     Dept of watched directories, default 1\n";
-	std::cout << "  -D           Daemonize\n";
-	std::cout << "  -m           Multiple sources on top level directory. See man pages for more info\n";
-	std::cout << "  -k           Stop fbitexpire daemon listening on pipe specified by -p\n";
-	std::cout << "  -o           Only scan dirs and remove old (if needed). Don't wait for new folders\n";
-	std::cout << "  -v verbose   Verbose level\n";
-	std::cout << "  -c           Change settings of daemon listening on pipe specified by -p. Can be combined with -s and -w\n";
+	std::cout << "  -h             Show this help and exit\n";
+	std::cout << "  -V             Show version and exit\n";
+	std::cout << "  -r             Instruct daemon to rescan folder (note: daemon has to be running)\n";
+	std::cout << "  -f             Force rescan directories when daemon starts (ignore stat files)\n";
+	std::cout << "  -p <pipe>      Pipe name (default: " << DEFAULT_PIPE << ")\n";
+	std::cout << "  -s <size>      Maximum size of all directories (in MB)\n";
+	std::cout << "  -w <watermark> Lower limit when removing folders (in MB)\n";
+	std::cout << "  -d <depth>     Depth of watched directories (default: 1)\n";
+	std::cout << "  -D             Daemonize\n";
+	std::cout << "  -m             Multiple sources on top level directory. Please check fbitexpire(1) for more information\n";
+	std::cout << "  -k             Stop fbitexpire daemon listening on pipe specified by -p\n";
+	std::cout << "  -o             Only scan directories and remove old, if needed, and don't wait for new folders\n";
+	std::cout << "  -v <level>     Set verbosity level\n";
+	std::cout << "  -c             Change daemon settings; to be combined with -s and/or -w\n";
 	std::cout << "\n";
 }
 
@@ -128,35 +128,37 @@ void handle(int param)
  */
 int write_to_pipe(bool pipe_exists, std::string pipe, std::string msg)
 {
-	std::ofstream f_pipe;
-
 	if (!pipe_exists) {
-		/* pipe does not exists */
-		MSG_ERROR(msg_module, "cannot write to pipe %s", pipe.c_str());
+		/* pipe does not exist */
+		MSG_ERROR(msg_module, "pipe (%s) does not exist", pipe.c_str());
 		return 1;
 	}
 
-	f_pipe.open(pipe.c_str(), std::ios::out);
-	if (!f_pipe.is_open()) {
+	/* We use fopen here instead of std::ofstream.open because of a
+	 * problem with hanging 'open' calls when trying to open pipes.
+	 * This problem has been described in 
+	 * http://stackoverflow.com/questions/12636485/non-blocking-call-to-ofstreamopen
+	 */
+	FILE *f_pipe = fopen(pipe.c_str(), "w");
+	if (!f_pipe) {
 		MSG_ERROR(msg_module, "cannot open pipe %s", pipe.c_str());
 		return 1;
 	}
 
-	/* write message */
-	MSG_DEBUG(msg_module, "writing %s", msg.c_str());
-	
-	f_pipe << msg;
+	/* write message (and remove terminating '\n') */
+	MSG_DEBUG(msg_module, "writing '%s' to pipe", msg.erase(msg.length() - 1).c_str());
+	fputs(msg.c_str(), f_pipe);
 
 	/* done */
-	f_pipe.close();
+	fclose(f_pipe);
 	return 0;
 }
 
 int main(int argc, char *argv[])
 {
 	int c, depth{DEFAULT_DEPTH};
-	bool rescan{false}, daemonize{false}, pipe_exists{false}, multiple{false}, change{false}, force{false};
-	bool wmarkset{false}, sizeset{false}, kill_daemon{false}, only_remove{false}, depthset{false};
+	bool rescan{false}, daemonize{false}, pipe_exists{false}, pipe_file_exists{false}, multiple{false}, change{false};
+	bool force{false}, wmarkset{false}, size_set{false}, kill_daemon{false}, only_remove{false}, depth_set{false};
 	uint64_t watermark{0}, size{0};
 	std::string pipe{DEFAULT_PIPE};
 	signal(SIGINT, handle);	
@@ -179,7 +181,7 @@ int main(int argc, char *argv[])
 			pipe = std::string(optarg);
 			break;
 		case 's':
-			sizeset = true;
+			size_set = true;
 			size = Scanner::strToSize(optarg);
 			break;
 		case 'w':
@@ -187,7 +189,7 @@ int main(int argc, char *argv[])
 			watermark = Scanner::strToSize(optarg);
 			break;
 		case 'd':
-			depthset = true;
+			depth_set = true;
 			depth = std::atoi(optarg);
 			break;
 		case 'D':
@@ -217,7 +219,7 @@ int main(int argc, char *argv[])
 	openlog(0, LOG_CONS | LOG_PID, LOG_USER);
 	
 	if ((daemonize && rescan) || (daemonize && kill_daemon) || (daemonize && only_remove)
-		|| (rescan && only_remove) || (kill_daemon && only_remove)) {
+			|| (rescan && only_remove) || (kill_daemon && only_remove)) {
 		MSG_ERROR(msg_module, "conflicting arguments");
 		return 1;
 	}
@@ -233,7 +235,20 @@ int main(int argc, char *argv[])
 
 	/* does pipe exist? */
 	struct stat st;
-	pipe_exists = (!lstat(pipe.c_str(), &st) && S_ISFIFO(st.st_mode));
+	pipe_file_exists = (lstat(pipe.c_str(), &st) == 0);
+	pipe_exists = (pipe_file_exists && S_ISFIFO(st.st_mode));
+
+	if (pipe_file_exists) {
+		if (pipe_exists) {
+			MSG_ERROR(msg_module, "active pipe (%s) detected", pipe.c_str());
+			MSG_ERROR(msg_module, "fbitexpire supports only a single instance per pipe");
+			MSG_NOTICE(msg_module, "please restart using different pipe (-p)");
+			return 1;
+		} else if (remove(pipe.c_str()) != 0) {
+			// Remove invalid pipe
+			MSG_ERROR(msg_module, "could not delete pipe");
+		}
+	}
 
 	std::stringstream msg;
 	if (rescan) {
@@ -245,24 +260,25 @@ int main(int argc, char *argv[])
 		msg << "k\n";
 	}
 	if (change) {
-		if (!sizeset && !wmarkset) {
-			MSG_ERROR(msg_module, "Nothing to be changed by parameter -c");
+		if (!size_set && !wmarkset) {
+			MSG_WARNING(msg_module, "nothing to be changed by -c");
 			return 1;
 		}
-		if (sizeset) {
+		if (size_set) {
 			msg << "s" << size << "\n";
 		}
 		if (wmarkset) {
 			msg << "w" << watermark << "\n";
 		}
 	}
+
 	/* Send command to rescan folder or to kill daemon */
 	if (rescan || kill_daemon || change) {
 		return write_to_pipe(pipe_exists, pipe, msg.str());
 	}
 
-	if (!sizeset) {
-		MSG_ERROR(msg_module, "size not specified");
+	if (!size_set) {
+		MSG_ERROR(msg_module, "size (-s) not specified");
 		return 1;
 	}
 	
@@ -274,12 +290,11 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	if (!depthset) {
-		MSG_WARNING(msg_module, "Depth not set, using default (%d)", DEFAULT_DEPTH);
+	if (!depth_set) {
+		MSG_NOTICE(msg_module, "depth not set; using default (%d)", DEFAULT_DEPTH);
 	}
 	
 	std::string basedir{argv[optind]};
-	
 	basedir = Directory::correctDirName(basedir);
 	
 	if (basedir.empty()) {
@@ -289,6 +304,9 @@ int main(int argc, char *argv[])
 	if (daemonize) {
 		closelog();
 		MSG_SYSLOG_INIT(PACKAGE);
+
+		MSG_NOTICE(msg_module, "daemonizing...");
+		
 		/* and send all following messages to the syslog */
 		if (daemon (1, 0)) {
 			MSG_ERROR(msg_module, strerror(errno));
@@ -311,6 +329,9 @@ int main(int argc, char *argv[])
 		scanner.run(&cleaner, size, watermark, multiple);
 		cleaner.run();
 		listener.run(&watcher, &scanner, &cleaner, &cv);
+	} catch (InotifyException &e) {
+		MSG_ERROR(msg_module, e.GetMessage().c_str());
+		return 1;
 	} catch (std::exception &e) {
 		MSG_ERROR(msg_module, e.what());
 		return 1;

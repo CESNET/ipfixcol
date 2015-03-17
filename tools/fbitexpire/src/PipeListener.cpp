@@ -48,7 +48,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-
 static const char *msg_module = "PipeListener";
 
 namespace fbitexpire {
@@ -82,22 +81,26 @@ void PipeListener::loop()
 	while (!_done) {
 		reopenPipe();
 		while (std::getline(_pipe, _buff)) {
-			MSG_DEBUG(msg_module, "readed %s", _buff.c_str());
+			MSG_DEBUG(msg_module, "read '%s'", _buff.c_str());
 			if (!_buff.empty()) {
 				switch(_buff[0]) {
 				case 'r':
 					/* rescan folder */
+					MSG_NOTICE(msg_module, "triggered rescan of %s", _buff.substr(1).c_str());
 					_buff = _buff.substr(1);
 					_scanner->rescan(_buff);
 					break;
 				case 'k':
 					/* Stop daemon */
+					MSG_NOTICE(msg_module, "triggered daemon termination");
 					_done = true;
 					break;
 				case 's':
+					MSG_NOTICE(msg_module, "setting max. directory size (%s)", _buff.substr(1).c_str());
 					_scanner->setMaxSize(_buff.substr(1), true);
 					break;
 				case 'w':
+					MSG_NOTICE(msg_module, "setting lower limit (%s)", _buff.substr(1).c_str());
 					_scanner->setWatermark(_buff.substr(1));
 					break;
 				}
@@ -123,6 +126,7 @@ void PipeListener::killAll()
 	std::ofstream fpipe(_pipename, std::ios::out);
 	fpipe << "k\n";
 	fpipe.close();
+	removePipe();
 }
 
 /**
@@ -130,6 +134,7 @@ void PipeListener::killAll()
  */
 void PipeListener::stopAll()
 {
+	removePipe();
 	_watcher->stop();
 	_scanner->stop();
 	_cleaner->stop();
@@ -161,6 +166,27 @@ void PipeListener::reopenPipe()
 {
 	closePipe();
 	openPipe();
+}
+
+/**
+ * \brief Remove the pipe from the file system
+ */
+void PipeListener::removePipe()
+{
+	// We don't have to check for file existance here, since
+	// existance is implicit from the use of the pipe before.
+	if (access(_pipename.c_str(), F_OK) != -1 && remove(_pipename.c_str()) != 0) {
+		MSG_ERROR(msg_module, "could not delete pipe");
+	}
+}
+
+/**
+ * \brief Constructor
+ */
+PipeListener::PipeListener(std::string pipename):
+		_watcher(NULL), _scanner(NULL), _cleaner(NULL), _pipename(pipename), _cv(NULL)
+{
+
 }
 
 } /* end of namespace fbitexpire */

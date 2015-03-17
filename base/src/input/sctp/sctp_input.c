@@ -298,14 +298,12 @@ int input_init(char *params, void **config)
 	/* array for IPv4 listen addresses. this array will later be used with 
 	 * sctp_bindx() (e.i. multi-homing support) */
 	sockaddr_listen = (struct sockaddr_in **) 
-	       malloc(DEFAULT_NUMBER_OF_ADDRESSES * sizeof(*(sockaddr_listen)));
+	       calloc(DEFAULT_NUMBER_OF_ADDRESSES, sizeof(*(sockaddr_listen)));
 	if (sockaddr_listen == NULL) {
 		MSG_ERROR(msg_module, "Not enough memory (%s:%d)",
 		                        __FILE__, __LINE__);
 		goto err_sockaddr;
 	}
-	memset(sockaddr_listen, 0, 
-	      sizeof(DEFAULT_NUMBER_OF_ADDRESSES * sizeof(*(sockaddr_listen))));
 	sockaddr_listen_max = DEFAULT_NUMBER_OF_ADDRESSES;
 
 	/* try to parse XML configuration */

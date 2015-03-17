@@ -14,7 +14,7 @@ internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
 plugins_LTLIBRARIES = ipfixcol-json-output.la
 #ipfixcol_json_output_la_LDFLAGS = $(AM_LDFLAGS) -module -avoid-version -shared 
 #-L$(top_srcdir)/../../../base/src/utils/libsiso/.libs/
-ipfixcol_json_output_la_SOURCES = json.cpp Storage.cpp Storage.h Translator.cpp Translator.h protocols.h protocols.cpp SuperEasyJSON/sejson.cpp SuperEasyJSON/sejson.h
+ipfixcol_json_output_la_SOURCES = json.cpp Storage.cpp Storage.h Translator.cpp Translator.h protocols.h protocols.cpp
 ipfixcol_json_output_la_LIBADD = pugixml/libpugixml.la
 
 BUILT_SOURCES = protocols.cpp

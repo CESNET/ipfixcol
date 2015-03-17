@@ -122,7 +122,7 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		/* run parser */
 		if (parser.parse() != 0) {
 			yylex_destroy(this->scaninfo);
-			throw std::invalid_argument(std::string("Error while parsing filter!"));
+			throw std::invalid_argument(std::string("Error while parsing filter (" + input + ")"));
 		}
 
 		yy_flush_buffer(bp, this->scaninfo);
@@ -143,6 +143,7 @@ time_t Filter::parseTimestamp(std::string str) const throw (std::invalid_argumen
 		throw std::invalid_argument(std::string("Cannot parse timestamp '") + str + "'");
 	}
 
+	ctime.tm_isdst = -1;
 	return timelocal(&ctime);
 }
 

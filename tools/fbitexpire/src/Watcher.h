@@ -57,41 +57,41 @@ namespace fbitexpire {
  * \brief Subtree root - used when there are multiple data writers
  */
 struct RootWatch {
-    RootWatch() {}
-    RootWatch(Directory *r): root(r) {}
-    Directory *root = nullptr;          /* root of watched subtree */
-    std::vector<Directory *> watching;   /* vector of watched directories in this subtree */
+	RootWatch() {}
+	RootWatch(Directory *r): root(r) {}
+	Directory *root = nullptr;          /* root of watched subtree */
+	std::vector<Directory *> watching;   /* vector of watched directories in this subtree */
 };
 
 /**
  * \brief Main watcher class for processing inotify events
  */
 class Watcher : public FbitexpireThread {
-    using FbitexpireThread::run;
+	using FbitexpireThread::run;
 public:
-    Watcher() {};
-    ~Watcher();
+	Watcher();
+	~Watcher();
 
-    void run(Scanner *scanner, bool multiple);
-    void stop();
+	void run(Scanner *scanner, bool multiple);
+	void stop();
 private:
-    void loop();
-    void setup();
-    void processNewDir(InotifyEvent& event);
-    void watch(RootWatch *rw, Directory *dir);
-    void watchRootWatch(RootWatch *rw);
-    void unWatch(Directory *dir);
-    void unWatchLast(RootWatch *rw);
-    RootWatch *getRoot(Directory *dir);
-    
-    Inotify  _inotify;          /**< inotify instance */
-    Scanner *_scanner;          /**< scanner's instance */
-    
-    int  _max_depth;            /**< maximal depth */
-    int  _root_name_len;        /**< length of root's name */
-    bool _multiple;             /**< multiple data writers flag */
-    
-    std::vector<RootWatch *> _roots;  /**< subRoots */
+	void loop();
+	void setup();
+	void processNewDir(InotifyEvent& event);
+	void watch(RootWatch *rw, Directory *dir);
+	void watchRootWatch(RootWatch *rw);
+	void unWatch(Directory *dir);
+	void unWatchLast(RootWatch *rw);
+	RootWatch *getRoot(Directory *dir);
+	
+	Inotify  _inotify;          /**< inotify instance */
+	Scanner *_scanner;          /**< scanner's instance */
+	
+	int  _max_depth;            /**< maximal depth */
+	int  _root_name_len;        /**< length of root's name */
+	bool _multiple;             /**< multiple data writers flag */
+	
+	std::vector<RootWatch *> _roots;  /**< subRoots */
 
 };
 

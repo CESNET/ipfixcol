@@ -28,6 +28,8 @@ config.h: config.h.in ../config.status
 ipfixcol_SOURCES = \
 	config.c \
 	config.h \
+	configurator.c \
+	configurator.h \
 	crc.c \
 	crc.h \
 	data_manager.c \

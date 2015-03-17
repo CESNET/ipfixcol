@@ -481,7 +481,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 
 			time ( &(conf->last_flush));
 			update_window_name(conf);
-			dir = dir_hierarchy(conf,(*dom_id).first);
+			dir = dir_hierarchy(conf, oid);
 			rcnt = 0;
 			conf->new_dir = true;
 		}
@@ -500,7 +500,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 					conf->last_flush = conf->last_flush + conf->time_window;
 				}
 				update_window_name(conf);
-				dir = dir_hierarchy(conf,(*dom_id).first);
+				dir = dir_hierarchy(conf, oid);
 				rcnt = 0;
 				conf->new_dir = true;
 			}

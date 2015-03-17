@@ -69,21 +69,10 @@ struct udp_conf {
  * @param[in] packet Raw packet from input plugin
  * @param[in] len Length of the packet
  * @param[in] input_info Input information from input plugin
- * @param[in] storage_plugins List of storage plugins that should be passed to data manager
  * @param[in] source_status Status of source (new, opened, closed)
  * @return void
  */
-void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, struct storage_list* storage_plugins, int source_state);
-
-/**
- * \brief This function sets the queue for preprocessor and inits crc computing.
- *
- * @param out_queue preprocessor's output queue
- * @param template_mgr collector's Template Manager
- * @return 0 on success, negative value otherwise
- */
-int preprocessor_init(struct ring_buffer *out_queue, struct ipfix_template_mgr *template_mgr);
-
+void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, int source_state);
 
 /**
  * \brief Returns pointer to preprocessors output queue.
@@ -92,11 +81,16 @@ int preprocessor_init(struct ring_buffer *out_queue, struct ipfix_template_mgr *
  */
 struct ring_buffer *get_preprocessor_output_queue();
 
+/**
+ * \brief Set new preprocessor output queue
+ * 
+ * @param out_queue
+ */
+void preprocessor_set_output_queue(struct ring_buffer *out_queue);
+
 
 /**
  * \brief Close all data managers and their storage plugins
- *
- * @return void
  */
 void preprocessor_close ();
 

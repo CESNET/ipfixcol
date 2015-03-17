@@ -179,7 +179,7 @@ void input_listen_tls_cleanup(void *config, struct cleanup *maid)
 				/* TLS shutdown */
 				ret = SSL_shutdown(maid->ssl);
 				if (ret == -1) {
-					MSG_WARNING(msg_module, "Error during TLS connection shutdown");
+					MSG_WARNING(msg_module, "Error during TLS connection teardown");
 				}
 			}
 			SSL_free(maid->ssl);
@@ -264,7 +264,7 @@ void *input_listen(void *config)
 			ret = SSL_accept(ssl);
 			if (ret != 1) {
 				/* handshake wasn't successful */
-				MSG_ERROR(msg_module, "TLS handshake wasn't successful");
+				MSG_ERROR(msg_module, "TLS handshake was not successful");
 				ERR_print_errors_fp(stderr);
             	/* cleanup */
 				input_listen_tls_cleanup(conf, &maid);
@@ -283,7 +283,7 @@ void *input_listen(void *config)
 
 			/* verify peer's certificate */
 			if (SSL_get_verify_result(ssl) != X509_V_OK) {
-				MSG_ERROR(msg_module, "Client sent bad certificate. Verification failed");
+				MSG_ERROR(msg_module, "Client sent bad certificate; verification failed");
             	/* cleanup */
 				input_listen_tls_cleanup(conf, &maid);
 				continue;
@@ -298,7 +298,7 @@ void *input_listen(void *config)
 
 			if (conf->ssl_list[i] != ssl) {
 				/* limit reached. no space for new SSL structure */
-				MSG_WARNING(msg_module, "Limit on TLS connections reached. Shutting down this connection.");
+				MSG_WARNING(msg_module, "Limit on the number of TLS connections reached; tearing down this connection...");
             	/* cleanup */
 				input_listen_tls_cleanup(conf, &maid);
 				continue;
