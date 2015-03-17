@@ -38,6 +38,7 @@
  */
 
 #include <ipfixcol.h>
+#include <ipfixcol/profiles.h>
 
 #include "configurator.h"
 #include "config.h"
@@ -1016,6 +1017,100 @@ void free_startup(startup_config *startup)
 }
 
 /**
+ * \brief Replace current profiles with the new configuration
+ *
+ * \param[in] config configurator
+ * \param[in] profiles new profiles
+ */
+void config_replace_profiles(configurator *config, void *profiles)
+{
+	if (config->profiles[config->current_profiles]) {
+		config->current_profiles++;
+	}
+
+	if (config->current_profiles == MAX_PROFILES_CONFIGS) {
+		config->current_profiles = 0;
+	}
+
+	/* Free old profiles */
+	if (config->profiles[config->current_profiles] != NULL) {
+		profiles_free(config->profiles[config->current_profiles]);
+	}
+
+	config->profiles[config->current_profiles] = profiles;
+}
+
+/**
+ * Get current profiles
+ */
+void *config_get_current_profiles(configurator *config)
+{
+	return config->profiles[config->current_profiles];
+}
+
+/**
+ * \brief Process profiles configuration
+ *
+ * \param[in] config configurator
+ */
+void config_process_profiles(configurator *config)
+{
+	xmlNode *aux_node;
+	char *profiles_file = NULL;
+
+	/* Find path to the profiles xml file */
+	for (aux_node = config->collector_node->children; aux_node; aux_node = aux_node->next) {
+		if (!xmlStrcmp(aux_node->name, (xmlChar *) "profiles")) {
+			profiles_file = (char *) xmlNodeGetContent(aux_node);
+			break;
+		}
+	}
+
+	if (!profiles_file) {
+		MSG_NOTICE(msg_module, "No profiles configuration");
+		config_replace_profiles(config, NULL);
+		return;
+	}
+
+	/* Compare paths */
+	if (config->profiles_file && !strcmp(config->profiles_file, profiles_file)) {
+		/* Path are the same, compare timestamps */
+		struct stat st;
+		if (stat(profiles_file, &st) != 0) {
+			MSG_ERROR(msg_module, "Canno process profiles file %s: %s", profiles_file, sys_errlist[errno]);
+			free(profiles_file);
+			return;
+		}
+
+		if (config->profiles_file_tstamp == st.st_mtim.tv_sec) {
+			/* Files are the same */
+			free(profiles_file);
+			return;
+		}
+
+		/* Save modification time */
+		config->profiles_file_tstamp = st.st_mtim.tv_sec;
+	}
+
+	/* Process XML file */
+	void *profiles = profiles_process_xml(profiles_file);
+	if (!profiles) {
+		free(profiles_file);
+		MSG_ERROR(msg_module, "Cannot parse new profiles configuration, keeping the old one");
+		return;
+	}
+
+	/* Replace profiles */
+	config_replace_profiles(config, profiles);
+	if (config->profiles_file) {
+		free(config->profiles_file);
+	}
+
+	/* Save filename */
+	config->profiles_file = profiles_file;
+}
+
+/**
  * \brief Reload IPFIXcol startup configuration
  */
 int config_reconf(configurator *config)
@@ -1033,6 +1128,9 @@ int config_reconf(configurator *config)
 	
 	/* Process changes */
 	int ret = config_process_new_startup(config, new_startup);
+
+	/* Process profiles configuration */
+	config_process_profiles(config);
 	
 	if (ret == 0) {
 		/* Set output manager's input queue */
@@ -1089,6 +1187,18 @@ void config_destroy(configurator *config)
 		free_startup(config->startup);
 	}
 	
+	/* Free all profile trees */
+	for (int i = 0; i < MAX_PROFILES_CONFIGS; ++i) {
+		if (config->profiles[i]) {
+			profiles_free(config->profiles[i]);
+		}
+	}
+
+	/* Free path to the profiles configuration */
+	if (config->profiles_file) {
+		free(config->profiles_file);
+	}
+
 	/* Free configurator */
 	free(config);
 }

@@ -55,6 +55,4 @@ using couple_id_t  = uint32_t;
 #include "Profile.h"
 #include "Channel.h"
 
-Profile *process_profile_xml(const char *filename);
-
 #endif	/* PROFILER_H */

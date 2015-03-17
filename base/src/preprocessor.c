@@ -42,6 +42,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 
+#include "configurator.h"
 #include "preprocessor.h"
 #include "data_manager.h"
 #include "queues.h"
@@ -53,6 +54,8 @@
 static char *msg_module = "preprocessor";
 
 static struct ring_buffer *preprocessor_out_queue = NULL;
+
+static configurator *global_config = NULL;
 
 /* Sequence number counter for each ODID */
 struct odid_info {
@@ -216,6 +219,16 @@ void odid_info_destroy()
 void preprocessor_set_output_queue(struct ring_buffer *out_queue)
 {
 	preprocessor_out_queue = out_queue;
+}
+
+/**
+ * \brief Set new configurator
+ *
+ * \param[in] conf configurator
+ */
+void preprocessor_set_configurator(configurator *conf)
+{
+	global_config = conf;
 }
 
 /**
@@ -405,10 +418,11 @@ void fill_metadata(uint8_t *rec, int rec_len, struct ipfix_template *templ, void
 	}
 	
 	/* Fill metadata */
+	msg->live_profile = (global_config) ? config_get_current_profiles(global_config) : NULL;
 	msg->metadata[msg->data_records_count].record.record = rec;
 	msg->metadata[msg->data_records_count].record.length = rec_len;
 	msg->metadata[msg->data_records_count].record.templ = templ;
-	msg->metadata[msg->data_records_count].profiles = NULL;
+	msg->metadata[msg->data_records_count].channels = NULL;
 	msg->metadata[msg->data_records_count].srcAS = 0;
 	msg->metadata[msg->data_records_count].dstAS = 0;
 	msg->metadata[msg->data_records_count].srcCountry = 0;

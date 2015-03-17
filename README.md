@@ -40,7 +40,8 @@ There are also external plugins that are installed separately
 
 ###<a name="exmed"></a> External intermediate plugins
 * **[geoip](plugins/intermediate/geoip)** - adds country codes into the metadata structure
-* **[profiler](plugins/intermediate/profiler)** - fills metadata informations about organizations and profiles
+* **[profiler](plugins/intermediate/profiler)** - fills metadata informations about profiles and channels
+* **[profile_stats](plugins/intermediate/profile_stats)** - counts statistic per profile and channel
 * **[stats](plugins/intermediate/stats)** - counts statistics per ODID
 
 ###<a name="exout"></a> External storage plugins

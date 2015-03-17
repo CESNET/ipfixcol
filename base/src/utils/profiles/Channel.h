@@ -40,8 +40,8 @@
 #ifndef CHANNEL_H
 #define	CHANNEL_H
 
-#include "Profile.h"
-#include "profiler.h"
+#include "profiles_internal.h"
+class Profile;
 
 #include <set>
 
@@ -90,6 +90,13 @@ public:
 	channel_id_t getId() { return m_id; }
 	
 	/**
+	 * \brief Get channel profile
+	 *
+	 * \return profile
+	 */
+	Profile *getProfile() { return m_profile; }
+
+	/**
 	 * \brief Get channel's name
 	 * 
      * \return channel's name from startup configuration
@@ -133,17 +140,30 @@ public:
 	void removeListener(channel_id_t id);
 
 	/**
+	 * \brief Update path name
+	 */
+	void updatePathName();
+
+	/**
+	 * \brief Get path name
+	 *
+	 * \return path name
+	 */
+	std::string getPathName() { return m_pathName; }
+
+	/**
 	 * \brief Match channel with data record (using channel's filter)
 	 * 
      * \param[in] msg IPFIX message
      * \param[in] mdata Data record's metadata
-     * \param[out] profiles	list of matching profiles and channels
+	 * \param[out] channels	list of matching channels
      */
-	void match(struct ipfix_message *msg, struct metadata *mdata, std::vector<couple_id_t>& profiles);
+	void match(struct ipfix_message *msg, struct metadata *mdata, std::vector<Channel *>& channels);
 private:
 
 	channel_id_t m_id;			/**< Channel ID */
 	std::string m_name;			/**< Channel name */
+	std::string m_pathName;		/**< path name */
 
 	filter_profile *m_filter{};	/**< Filter */
 	Profile *m_profile{};		/**< Profile */

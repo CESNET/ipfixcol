@@ -52,9 +52,16 @@
 		<simpara><filename>startup.xml</filename> profiler example</simpara>
 		<programlisting>
 	<![CDATA[
-	<profiler>
+	<collectingProcess>
+		...
 		<profiles>/path/to/profiles.xml</profiles>
-	</profiler>
+	</collectingProcess>
+	...
+	<intermediatePlugins>
+		<profiler>
+		</profiler>
+		...
+	</intermediatePlugins>
 	]]>
 		</programlisting>
 

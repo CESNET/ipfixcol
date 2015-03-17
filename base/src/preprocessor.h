@@ -45,6 +45,7 @@
 
 #include "ipfixcol.h"
 #include "config.h"
+#include "configurator.h"
 #include "queues.h"
 
 /**
@@ -87,6 +88,13 @@ struct ring_buffer *get_preprocessor_output_queue();
  * @param out_queue
  */
 void preprocessor_set_output_queue(struct ring_buffer *out_queue);
+
+/**
+ * \brief Set new preprocessor configurator
+ *
+ * @param conf configurator
+ */
+void preprocessor_set_configurator(configurator *config);
 
 
 /**

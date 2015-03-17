@@ -44,9 +44,13 @@ extern "C" {
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <ipfixcol/profiles.h>
 }
 
-#include "profile_tree.h"
+#include "Profile.h"
+#include "Channel.h"
+
+#include "profiles_internal.h"
 #include <iostream>
 
 #define profile_id(_profile_) (_profile_) ? (_profile_)->getName().c_str() : "live"
@@ -264,5 +268,158 @@ Profile *process_profile_xml(const char *filename)
 		return NULL;
 	}	
 
+	rootProfile->updatePathName();
+
 	return rootProfile;
+}
+
+
+/* API FUNCTIONS */
+
+/**
+ * Process XML configuration
+ */
+void *profiles_process_xml(const char *path)
+{
+	return (void*) process_profile_xml(path);
+}
+
+/* ==== PROFILE ==== */
+/**
+ * Get profile name
+ */
+const char *profile_get_name(void *profile)
+{
+	return ((Profile *) profile)->getName().c_str();
+}
+
+/**
+ * Get profile path
+ */
+const char *profile_get_path(void *profile)
+{
+	return ((Profile *) profile)->getPathName().c_str();
+}
+
+/**
+ * Get number of children
+ */
+uint16_t profile_get_children(void *profile)
+{
+	return ((Profile *) profile)->getChildren().size();
+}
+
+/**
+ * Get number of channels
+ */
+uint16_t profile_get_channels(void *profile)
+{
+	return ((Profile *) profile)->getChannels().size();
+}
+
+/**
+ * Get parent profile
+ */
+void *profile_get_parent(void *profile)
+{
+	return (void *) ((Profile *) profile)->getParent();
+}
+
+/**
+ * Get child on given index
+ */
+void *profile_get_child(void *profile, uint16_t index)
+{
+	Profile *p = (Profile *) profile;
+	return p->getChildren().size() > index ? p->getChildren()[index] : NULL;
+}
+
+/**
+ * Get channel on given index
+ */
+void *profile_get_channel(void *profile, uint16_t index)
+{
+	Profile *p = (Profile *) profile;
+	return p->getChannels().size() > index ? p->getChannels()[index] : NULL;
+}
+
+/**
+ * Match profile with data record
+ */
+void **profile_match_data(void *profile, struct ipfix_message *msg, struct metadata *mdata)
+{
+	Profile *p = (Profile *) profile;
+
+	/* Find matching channels */
+	std::vector<Channel *> channels{};
+	p->match(msg, mdata, channels);
+
+	/* No matching channels found */
+	if (channels.empty()) {
+		return NULL;
+	}
+
+	/* Add terminating NULL */
+	channels.push_back(NULL);
+
+	/* Copy them to the C array */
+	void **c_channels = (void **) calloc(sizeof(void *), channels.size());
+
+	if (!c_channels) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
+
+	for (uint16_t i = 0; i < channels.size(); ++i) {
+		c_channels[i] = (void *) channels[i];
+	}
+
+	/* Done */
+	return c_channels;
+}
+
+/**
+ * Free profile with all it's channels and subprofiles
+ */
+void profiles_free(void *profile)
+{
+	delete ((Profile *) profile);
+}
+
+/* ==== CHANNEL ==== */
+/**
+ * Get channel name
+ */
+const char *channel_get_name(void *channel)
+{
+	return ((Channel *) channel)->getName().c_str();
+}
+
+/**
+ * Get channel path
+ */
+const char *channel_get_path(void *channel)
+{
+	return ((Channel *) channel)->getPathName().c_str();
+}
+
+/**
+ * Get channel profile
+ */
+void *channel_get_profile(void *channel)
+{
+	return ((Channel *) channel)->getProfile();
+}
+
+uint16_t channel_get_listeners(void *channel)
+{
+	return ((Channel *) channel)->getListeners().size();
+}
+
+/**
+ * Get number of data sources
+ */
+uint16_t channel_get_sources(void *channel)
+{
+	return ((Channel *) channel)->getSources().size();
 }

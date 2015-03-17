@@ -1,11 +1,11 @@
 AM_CPPFLAGS += -I$(top_srcdir)/headers
 
-noinst_LTLIBRARIES = libprofiletree.la
+noinst_LIBRARIES = libprofiles.a
 
-libprofiletree_la_CFLAGS = -fPIC
-libprofiletree_la_SOURCES = \
+libprofiles_a_CFLAGS = -fPIC
+libprofiles_a_SOURCES = \
 	Channel.cpp Channel.h \
-	profile_tree.cpp profile_tree.h \
+	profiles.cpp profiles_internal.h \
 	Profile.cpp Profile.h \
 	filter.c filter.h \
 	parser.c parser.h \

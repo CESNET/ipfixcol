@@ -12,4 +12,8 @@ SUBDIRS = base \
 	plugins/storage/postgres \
 	plugins/storage/unirec \
 	plugins/storage/json \
-	plugins/input/nfdump
+	plugins/input/nfdump \
+	plugins/intermediate/geoip \
+	plugins/intermediate/profiler \
+	plugins/intermediate/profile_stats \
+	plugins/intermediate/stats

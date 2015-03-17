@@ -3,19 +3,18 @@ ACLOCAL_AMFLAGS = -I m4
 AM_CPPFLAGS += -I$(top_srcdir)/headers
 pluginsdir = $(datadir)/ipfixcol/plugins
 
-sofile = $(pluginsdir)/ipfixcol-profiler-inter.so
+sofile = $(pluginsdir)/ipfixcol-profilestats-inter.so
 internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
 
-plugins_LTLIBRARIES = ipfixcol-profiler-inter.la
-ipfixcol_profiler_inter_la_LDFLAGS = -module -avoid-version -shared 
-ipfixcol_profiler_inter_la_SOURCES = profiler.cpp
+plugins_LTLIBRARIES = ipfixcol-profilestats-inter.la
+ipfixcol_profilestats_inter_la_LDFLAGS = -module -avoid-version -shared
+ipfixcol_profilestats_inter_la_SOURCES = profilestats.cpp stats.h
 
 if HAVE_DOC
-SUBDIRS = doxygen
-MANSRC = ipfixcol-profiler-inter.dbk
+MANSRC = ipfixcol-profilestats-inter.dbk
 EXTRA_DIST = $(MANSRC)
-man_MANS = ipfixcol-profiler-inter.1
-CLEANFILES = ipfixcol-profiler-inter.1
+man_MANS = ipfixcol-profilestats-inter.1
+CLEANFILES = ipfixcol-profilestats-inter.1
 endif
 
 rpmspec = $(PACKAGE_TARNAME).spec
@@ -34,10 +33,6 @@ RPMDIR = RPMBUILD
 		echo "Missing xsltproc"; \
 	fi
 
-.PHONY: doc
-doc:
-	(cd doxygen && $(MAKE) $(AM_MAKEFLAGS) $@) || exit 1
-
 .PHONY: rpm
 rpm: dist $(rpmspec)
 	@mkdir -p $(RPMDIR)/BUILD $(RPMDIR)/RPMS $(RPMDIR)/SOURCES $(RPMDIR)/SPECS $(RPMDIR)/SRPMS;
@@ -50,5 +45,5 @@ clean-local:
 
 install-data-hook:
 	@if [ -f "$(internalcfg)" ]; then \
-	    ipfixconf add -c "$(internalcfg)" -p m -n profiler -t profiler -s "$(sofile)" -f; \
+		ipfixconf add -c "$(internalcfg)" -p m -n profilestats -t profilestats -s "$(sofile)" -f; \
 	fi
