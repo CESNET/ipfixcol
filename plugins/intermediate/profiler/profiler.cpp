@@ -116,7 +116,7 @@ int intermediate_process_message(void* config, void* message)
 		return 0;
 	}
 
-	if (msg->live_profile) {
+	if (!msg->live_profile) {
 		MSG_WARNING(msg_module, "Missing profiles configuration");
 		pass_message(conf->ip_config, msg);
 		return 0;
