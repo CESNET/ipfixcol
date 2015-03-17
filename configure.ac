@@ -15,6 +15,10 @@ AC_CONFIG_SUBDIRS([ base
     plugins/storage/postgres
     plugins/storage/unirec
     plugins/input/nfdump
+	plugins/intermediate/geoip
+	plugins/intermediate/profiler
+	plugins/intermediate/profile_stats
+	plugins/intermediate/stats
     plugins/storage/json])
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

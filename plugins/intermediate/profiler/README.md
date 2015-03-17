@@ -26,9 +26,16 @@ Or as `ipfixconf` output:
 Example **startup.xml** configuration:
 
 ```xml
-<profiler>
+<collectingProcess>
+	...
 	<profiles>/path/to/profiles.xml</profiles>
-</profiler>
+</collectingProcess>
+...
+<intermediatePlugins>
+	<profiler>
+	</profiler>
+	...
+</intermediatePlugins>
 ```
 
 *  **profiles** is path to the file containing profiles specification.
