@@ -123,6 +123,11 @@ void Storage::loadElements()
  */
 void Storage::sendData() const
 {
+	if (printOnly) {
+		std::cout << record;
+		return;
+	}
+
 	if (siso_send(sender, record.c_str(), record.length()) != SISO_OK) {
 		throw std::runtime_error(std::string("Sending data: ") + siso_get_last_err(sender));
 	}
@@ -315,7 +320,8 @@ void Storage::storeMetadata(metadata* mdata)
 	ss << "\"dstAS\": \"" << mdata->dstAS << "\", ";
 	ss << "\"srcCountry\": \"" << mdata->srcCountry << "\", ";
 	ss << "\"dstCountry\": \"" << mdata->dstCountry << "\", ";
-	
+	ss << "\"srcName\": \"" << mdata->srcName << "\", ";
+	ss << "\"dstName\": \"" << mdata->dstName << "\", ";
 	
 	/* Profiles */
 	if (mdata->channels) {

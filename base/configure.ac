@@ -113,7 +113,8 @@ AS_IF([test "$VISIBILITY" = "no"], [AC_MSG_ERROR([compiler does not support -fvi
 ### LibXML2 ###
 AC_CHECK_LIB([xml2], [main],
     [LIBS="`xml2-config --libs` $LIBS"
-    CFLAGS="`xml2-config --cflags` $CFLAGS"],
+	CFLAGS="`xml2-config --cflags` $CFLAGS"
+	CPPFLAGS="`xml2-config --cflags` $CPPFLAGS"],
     AC_MSG_ERROR([Libxml2 not found ]))
 
 
@@ -249,7 +250,7 @@ echo "
   Distribution..: $DISTRO
   Debug build...: ${enable_debug:-no}
   C Compiler....: $CC $AM_CFLAGS $CFLAGS
-  C++ Compiler..: $CXX $AM_CXXFLAGS $CXXFLAGS $AM_CPPFLAGS
+  C++ Compiler..: $CXX $AM_CXXFLAGS $CXXFLAGS $AM_CPPFLAGS $CPPFLAGS
   Linker........: $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
   Build doc.....: ${enable_doc:-yes}

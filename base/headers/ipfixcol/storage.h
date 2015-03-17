@@ -100,6 +100,8 @@ struct __attribute__((packed)) metadata {
     uint32_t srcAS;                 /**< Source AS */
     uint32_t dstAS;                 /**< Destination AS */
 	void **channels;				/**< Array of channels assigned to this record */
+	char srcName[32];
+	char dstName[32];
 };
 
 /**
