@@ -304,6 +304,9 @@ int main (int argc, char* argv[])
 		break;
 	}
 
+	/* XML cleanup */
+	xmlXPathFreeObject(collectors);
+
 	/* daemonize */
 	if (daemonize) {
 		closelog();
@@ -392,11 +395,6 @@ cleanup_err:
 	retval = EXIT_FAILURE;
 
 cleanup:
-	/* xml cleanup */
-	if (collectors) {
-		xmlXPathFreeObject (collectors);
-	}
-	
 	/* Close preprocessor */
 	preprocessor_close();
 	
