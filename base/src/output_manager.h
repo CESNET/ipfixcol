@@ -79,21 +79,21 @@ struct output_manager_config {
 	struct data_manager_config *last;           /**< last Output Manager in list */
 	struct storage *storage_plugins[32];        /**< Storage plugins */
 	struct ring_buffer *in_queue;               /**< input queue */
-    struct ring_buffer *new_in;
-    int running;
+	struct ring_buffer *new_in;
+	int running;
 	pthread_t thread_id;                        /**< Manager's thread ID */
-    pthread_t stat_thread;                      /**< Stat's thread ID */
-    int stat_interval;                          /**< Stat's interval */
-    uint64_t data_records;                      /**< Number of processed data records */
-    uint64_t lost_data_records;                 /**< Number of lost data records */
-    uint32_t first_seq;                         /**< Stream's first sequence number */
-    uint32_t last_seq;                          /**< Sequence number of last packet in stream */
-    uint64_t packets;                           /**< Number of processed packets */
-    struct stat_conf stats;                     /**< Statistics */
-    configurator *plugins_config;               /**< Plugins configurator */
-    
-    pthread_mutex_t in_q_mutex;
-    pthread_cond_t  in_q_cond;
+	pthread_t stat_thread;                      /**< Stat's thread ID */
+	int stat_interval;                          /**< Stat's interval */
+	uint64_t data_records;                      /**< Number of processed data records */
+	uint64_t lost_data_records;                 /**< Number of lost data records */
+	uint32_t first_seq;                         /**< Stream's first sequence number */
+	uint32_t last_seq;                          /**< Sequence number of last packet in stream */
+	uint64_t packets;                           /**< Number of processed packets */
+	struct stat_conf stats;                     /**< Statistics */
+	configurator *plugins_config;               /**< Plugins configurator */
+	
+	pthread_mutex_t in_q_mutex;
+	pthread_cond_t  in_q_cond;
 };
 
 /**

@@ -61,6 +61,14 @@ static const char *stat_module = "stat";
 struct output_manager_config *conf = NULL;
 
 /**
+ * \brief Dummy SIGUSR1 signal handler
+ */
+void sig_handler(int s) 
+{
+	(void) s;
+}
+
+/**
  * \brief Search for Data manager handling specified Observation Domain ID
  *
  * \todo: improve search e.g. by some kind of sorting data_managers
@@ -259,7 +267,7 @@ static void *output_manager_plugin_thread(void* config)
 	index = conf->in_queue->read_offset;
 
 	/* set the thread name to reflect the configuration */
-	prctl(PR_SET_NAME, "ipfixcol OM", 0, 0, 0);      /* output managers' manager */
+	prctl(PR_SET_NAME, "ipfixcol OM", 0, 0, 0);
 
 	conf->running = 1;
 
@@ -439,7 +447,7 @@ struct stat_thread *statistics_add_thread(struct stat_conf *conf, long tid)
  * 
  * @param conf statistics conf
  */
-static void statistics_print_cpu(struct stat_conf *conf)
+static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
 {
 	DIR *dir = opendir(conf->tasks_dir);
 	if (!dir) {
@@ -504,44 +512,47 @@ static void statistics_print_cpu(struct stat_conf *conf)
 		/* update stats */
 		thread->proc_time = proc_time;
 	}
+
 	MSG_INFO(stat_module, "");
 	closedir(dir);
+
+	// Print to file
+	if (stat_out_file) {
+		// Add contents here
+	}
 	
 	/* update stats */
 	conf->total_cpu = total_cpu;
 }
 
 /**
- * \brief Dummy SIGUSR1 signal handler
- */
-void sig_handler(int s) 
-{
-	(void) s;
-}
-
-/**
- * \brief Print queues usage
+ * \brief Print queue usage
  * 
  * @param conf output manager's config
  */
-void statistics_print_buffers(struct output_manager_config *conf)
+void statistics_print_buffers(struct output_manager_config *conf, FILE *stat_out_file)
 {	
 	/* Print info about preprocessor's output queue */
-	MSG_INFO(stat_module, "queues usage:");
+	MSG_INFO(stat_module, "Queue utilization:");
 	
 	struct ring_buffer *prep_buffer = get_preprocessor_output_queue();
-	MSG_INFO(stat_module, "preprocessor's output queue: %u / %u", prep_buffer->count, prep_buffer->size);
+	MSG_INFO(stat_module, "     preprocessor output queue: %u / %u", prep_buffer->count, prep_buffer->size);
 
 	/* Print info about Output Manager's queues */
 	struct data_manager_config *dm = conf->data_managers;	
 	if (dm) {
-		MSG_INFO(stat_module, "output manager's output queues:");
-		MSG_INFO(stat_module, "%.4s | %.10s / %.10s", "ODID", "waiting" ,"total size");
+		MSG_INFO(stat_module, "     output manager output queues:");
+		MSG_INFO(stat_module, "         %.4s | %.10s / %.10s", "ODID", "waiting" ,"total size");
 		
 		while (dm) {
-			MSG_INFO(stat_module, "[%u] %10u / %u", dm->observation_domain_id, dm->store_queue->count, dm->store_queue->size);
+			MSG_INFO(stat_module, "         [%u] %10u / %u", dm->observation_domain_id, dm->store_queue->count, dm->store_queue->size);
 			dm = dm->next;
 		}
+	}
+
+	// Print to file
+	if (stat_out_file) {
+		// Add contents here
 	}
 }
 
@@ -567,6 +578,38 @@ static void *statistics_thread(void* config)
 	conf->stats.threads = NULL;
 	conf->stats.cpus = sysconf(_SC_NPROCESSORS_ONLN);
 	snprintf(conf->stats.tasks_dir, MAX_DIR_LEN, "/proc/%d/task/", getpid());
+
+	// Create file handle in case statistics file has been specified in config
+	FILE *stat_out_file = NULL;
+	xmlNode *node = conf->plugins_config->collector_node;
+	while (node != NULL) {
+		// Skip processing this node in case it's a comment
+		if (node->type == XML_COMMENT_NODE) {
+			node = node->next;
+			continue;
+		}
+
+		// Jump to collectingProcess tree, since 'statisticsFile' belongs to it (if present)
+		if (xmlStrcmp(node->name, (const xmlChar *) "collectingProcess") == 0) {
+			node = node->xmlChildrenNode;
+		}
+
+		if (xmlStrcmp(node->name, (const xmlChar *) "statisticsFile") == 0) {
+			char *stat_out_file_path = (char *) xmlNodeGetContent(node->xmlChildrenNode);
+			if (stat_out_file_path && strlen(stat_out_file_path) > 0) {
+				stat_out_file = fopen("ipfixcol_stat.log", "w");
+			} else {
+				MSG_ERROR(msg_module, "Configuration error: 'statisticsFile' node has no value");
+			}
+
+			xmlFree(stat_out_file_path);
+
+			// No need to continue tree traversal, because 'statisticsFile' is only node to look for
+			break;
+		}
+
+		node = node->next;
+	}
 	
 	/* Catch SIGUSR1 */
 	signal(SIGUSR1, sig_handler);
@@ -605,12 +648,29 @@ static void *statistics_thread(void* config)
 		MSG_INFO(stat_module, "Time: %lu", time_now);
 		MSG_INFO(stat_module, "%15s %15s %15s %15s %15s %15s %20s", "total time", "total packets", "tot. data rec.", "lost data rec.", "packets/s", "data records/s", "lost data records/s");
 		MSG_INFO(stat_module, "%15lu %15lu %15lu %15lu %15lu %15lu %15lu", diff_time, pkts, records, lost_records, diff_pkts/conf->stat_interval, diff_records/conf->stat_interval, diff_lost_records/conf->stat_interval);
+
+		if (stat_out_file) {
+			rewind(stat_out_file); // Move to beginning of file
+			fprintf(stat_out_file, "%s=%lu\n", "TIME", time_now);
+			fprintf(stat_out_file, "%s=%lu\n", "RUN_TIME", diff_time);
+			fprintf(stat_out_file, "%s=%lu\n", "PACKETS", pkts);
+			fprintf(stat_out_file, "%s=%lu\n", "DATA_REC", records);
+			fprintf(stat_out_file, "%s=%lu\n", "LOST_DATA_REC", lost_records);
+			fprintf(stat_out_file, "%s=%lu\n", "PACKETS_SEC", diff_pkts/conf->stat_interval);
+			fprintf(stat_out_file, "%s=%lu\n", "DATA_REC_SEC", diff_records/conf->stat_interval);
+			fprintf(stat_out_file, "%s=%lu\n", "LOST_DATA_REC_SEC", diff_lost_records/conf->stat_interval);
+			fflush(stat_out_file);
+		}
 		
 		/* print cpu usage by threads */
-		statistics_print_cpu(&(conf->stats));
+		statistics_print_cpu(&(conf->stats), stat_out_file);
 		
 		/* print buffers usage */
-		statistics_print_buffers(conf);
+		statistics_print_buffers(conf, stat_out_file);
+	}
+
+	if (stat_out_file) {
+		fclose(stat_out_file);
 	}
 	
 	return NULL;
