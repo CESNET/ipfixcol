@@ -95,7 +95,6 @@ static inline void data_manager_free (struct data_manager_config* config)
  */
 static void* storage_plugin_thread(void *cfg)
 {
-	// struct storage *config = (struct storage*) cfg;
 	struct storage *config = (struct storage*) cfg; 
 	struct ipfix_message* msg;
 	int can_read = 0, stop = 0;
