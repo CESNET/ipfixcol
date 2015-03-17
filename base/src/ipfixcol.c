@@ -413,7 +413,7 @@ cleanup:
 	
 	/* wait for child processes */
 	if (pid > 0) {
-		for (i=0; i<proc_count; i++) {
+		for (i = 0; i < proc_count; i++) {
 			pid = wait(NULL);
 			MSG_NOTICE(msg_module, "[%d] Collector child process '%d' terminated", config->proc_id, pid);
 		}
