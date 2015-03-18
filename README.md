@@ -43,6 +43,7 @@ There are also external plugins that are installed separately
 * **[profiler](plugins/intermediate/profiler)** - fills metadata informations about profiles and channels
 * **[profile_stats](plugins/intermediate/profile_stats)** - counts statistic per profile and channel
 * **[stats](plugins/intermediate/stats)** - counts statistics per ODID
+* **[uid](plugins/intermediate/uid)** - fills user identity information
 
 ###<a name="exout"></a> External storage plugins
 * **[fastbit](plugins/storage/fastbit)** - uses FastBit library to store and index data

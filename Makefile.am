@@ -16,4 +16,5 @@ SUBDIRS = base \
 	plugins/intermediate/geoip \
 	plugins/intermediate/profiler \
 	plugins/intermediate/profile_stats \
-	plugins/intermediate/stats
+	plugins/intermediate/stats \
+	plugins/intermediate/uid

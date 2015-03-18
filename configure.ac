@@ -19,6 +19,7 @@ AC_CONFIG_SUBDIRS([ base
 	plugins/intermediate/profiler
 	plugins/intermediate/profile_stats
 	plugins/intermediate/stats
+	plugins/intermediate/uid
     plugins/storage/json])
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
