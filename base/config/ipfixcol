@@ -1,83 +1,90 @@
-#! /bin/bash
+#!/bin/bash
 #
-# ipfixcol	IPFIX collector
+# ipfixcol IPFIX collector
 #
 # chkconfig: - 90 60
-# description: ipfixcol is an IPFIX collector
+# description: IPFIX flow collector
 # processname: ipfixcol
 # pidfile: /var/run/ipfixcol.pid
-# Source function library.
-. /etc/init.d/functions
-
-RETVAL=0
-
-# See how we were called.
   
-ipfixcol="ipfixcol"
 prog="ipfixcol"
-#params=" -v 2 -d -c /etc/ipfixcol/startup-udp-4739.xml"
-params=" -v 2 -d"
-pidfile="/var/run/ipfixcol.pid"
-
+params="-v 2 -d"
 
 start() {
-	echo -n $"Starting $prog: "
-
-	# Check that ipfixcol is not running
-	status -p $pidfile $ipfixcol > /dev/null
-	if [ $? -eq 0 ]; then
-		echo -n "already running..."
-		echo_failure
-		echo
+	# Check whether ipfixcol is running
+	if status; then
+		echo "$prog is already running"
 		return 1
 	fi
 
 	# Start ipfixcol
-	daemon --pidfile=${pidfile} $ipfixcol "$params"
-	RETVAL=$?
-	echo
+	echo "Starting $prog..."
+	$prog $params -d > /dev/null
+	retval=$?
 
-	# Create pid file when the start was successful
-	if [ $RETVAL -eq 0 ]; then
-		echo -n `ps ax | grep -E "$prog$params$" | sed 's/^ *//g' | cut --delimiter=' ' -f 1` > $pidfile
-	fi
-	return $RETVAL
+	return $retval
 }
 
 stop() {
-	echo -n $"Stopping $prog: "
+	if ! status; then
+		echo "$prog is NOT running"
+		return 1
+	fi
 
-	killproc -p $pidfile $ipfixcol
-	RETVAL=$?
-	echo
-	return $RETVAL
-}	
+	echo "Stopping $prog..."
 
-rhstatus() {
-	status -p $pidfile $ipfixcol
-}	
+	# Stop ipfixcol; identify all involved PIDs and kill each of them
+	pids=( $(pgrep $prog) )
+	for pid in "${pids[@]}"; do
+		if [[ $pid != $$ ]]; then
+			kill "$pid"
+		fi
+	done
+
+	retval=$?
+
+	return $retval
+}
+
+# Prints output when first argument is '1'
+status() {
+	ps ax | grep "$prog $params" | grep -v grep > /dev/null
+	retval=$?
+	if [ "$#" -eq 1 ] && [ "$1" -eq 1 ]; then
+		if [ "$retval" -eq 0 ]; then
+			echo "$prog is running"
+		else
+			echo "$prog is NOT running"
+		fi
+	fi
+
+	return $retval
+}
 
 restart() {
-  	stop
+	stop
 	start
 }	
 
 case "$1" in
-  start)
-  	start
+	start)
+		start
 	;;
-  stop)
-  	stop
+	stop)
+		stop
 	;;
-  restart)
-  	restart
+	restart)
+		restart
 	;;
-  status)
-  	rhstatus
+	reload)
+		restart
 	;;
-  *)
-	echo $"Usage: $0 {start|stop|status|restart}"
-	exit 1
+	status)
+		status 1
+	;;
+	*)
+		echo "Usage: $0 {start|stop|status|restart}"
+		exit 1
 esac
 
 exit $?
