@@ -112,7 +112,11 @@ uint32_t len = strlen(s);
 
 	if ( strlen(s) == 32 ) {
 		// Key is a string
-		strncpy_safe(key, s, 32);
+		/*
+		 * Note: strncpy_safe should NOT be used here, since it always sets the key's last byte to 0,
+		 * resulting in decreased entropy.
+		 */
+		strncpy(key, s, 32);
 		return 1;
 	}
 
