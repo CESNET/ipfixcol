@@ -147,6 +147,8 @@ struct joinflows_processor {
  */
 int records_compare(struct ipfix_template_record *first, int lenf, struct ipfix_template_record *second, int lens, uint32_t odid)
 {
+	(void) odid;
+
 	if (first == NULL || second == NULL) {
 		return 1;
 	}
@@ -672,6 +674,7 @@ void templates_processor(uint8_t *rec, int rec_len, void *data)
 void data_processor(uint8_t *rec, int rec_len, struct ipfix_template *templ, void *data)
 {
 	struct joinflows_processor *proc = (struct joinflows_processor *) data;
+	(void) templ;
 
 	memcpy(proc->msg + proc->offset, rec, rec_len);
 	proc->offset += rec_len;
