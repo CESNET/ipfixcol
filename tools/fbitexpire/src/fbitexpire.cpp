@@ -112,6 +112,8 @@ void print_version()
  */
 void handle(int param)
 {
+	(void) param;
+
 	/* Tell listener to stop */
 	if (list) {
 		list->killAll();
