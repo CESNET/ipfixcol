@@ -179,7 +179,7 @@ int convert_init(int in_plugin, int len) {
 	}
 
 	/* Initialize allocated memory */
-	int i;
+	unsigned int i;
 	for (i = 0; i < (templates.max * templates.cols); i++) {
 		templates.templ[i] = 0;
 	}
@@ -205,7 +205,7 @@ int templates_realloc() {
 	}
 
 	/* Initialize allocated memory */
-	int i;
+	unsigned int i;
 	for (i = (templates.max - 20) * templates.cols; i < templates.max * templates.cols; i++) {
 			templates.templ[i] = 0;
 	}
@@ -337,7 +337,7 @@ int insert_timestamp_template(struct ipfix_set_header *templSet)
 	    	if (templates.templ == NULL) {
 	    		return 1;
 	    	}
-	    	int i;
+	    	unsigned int i;
 	    	for (i = (templates.max - 20) * templates.cols; i < templates.max * templates.cols; i++) {
 	    			templates.templ[i] = 0;
 	    	}

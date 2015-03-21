@@ -174,10 +174,11 @@ int pass_message(void *config, struct ipfix_message *message)
 int drop_message(void *config, struct ipfix_message *message)
 {
 	struct intermediate *conf = (struct intermediate *) config;
+	(void) message;
 
 	rbuffer_remove_reference(conf->in_queue, conf->index, 1);
-	
 	conf->dropped = true;
+	
 	return 0;
 }
 

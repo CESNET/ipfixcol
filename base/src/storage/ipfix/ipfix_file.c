@@ -257,11 +257,11 @@ err_init:
 int store_packet(void *config, const struct ipfix_message *ipfix_msg,
                  const struct ipfix_template_mgr *template_mgr)
 {
+	(void) template_mgr;
 	ssize_t count = 0;
 	uint16_t wbytes = 0;
 	struct ipfix_config *conf;
 	conf = (struct ipfix_config *) config;
-
 
 	/* write IPFIX message into an output file */
 	while (wbytes < ntohs(ipfix_msg->pkt_header->length)) {
