@@ -95,6 +95,7 @@ struct odip_processor {
  */
 int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config)
 {
+	(void) params;
 	struct odip_ip_config *conf;
 	conf = (struct odip_ip_config *) calloc(1, sizeof(*conf));
 	if (!conf) {
@@ -183,6 +184,7 @@ void templates_processor(uint8_t *rec, int rec_len, void *data)
 void data_processor(uint8_t *rec, int rec_len, struct ipfix_template *templ, void *data)
 {
 	struct odip_processor *proc = (struct odip_processor *) data;
+	(void) templ;
 
 	/* copy whole data record */
 	memcpy(proc->msg + proc->offset, rec, rec_len);
