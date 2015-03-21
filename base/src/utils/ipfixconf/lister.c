@@ -85,6 +85,7 @@ void centrePrint(char *s, int width)
  */
 void list(conf_info_t *info, char *tag, char *type, char **to_print, char **to_search)
 {
+	(void) to_print;
 	int i;
 	xmlNodePtr children1 = NULL, children2 = NULL, children3 = NULL;
 	xmlXPathObjectPtr xpath_obj_file = eval_xpath(info, tag);
