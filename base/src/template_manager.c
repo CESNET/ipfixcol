@@ -519,6 +519,7 @@ struct ipfix_template *tm_record_get_template(struct ipfix_template_mgr_record *
  */
 void tm_record_remove_all_templates(struct ipfix_template_mgr *tm, struct ipfix_template_mgr_record *tmr, int type)
 {
+	(void) tm;
 	MSG_DEBUG(msg_module, "Removing all %stemplates", (type == TM_TEMPLATE) ? "" : "option ");
 	int i;
 	for (i=0; i < tmr->max_length; i++) {
