@@ -61,7 +61,7 @@ extern int ring_buffer_size;
  */
 static inline void data_manager_free (struct data_manager_config* config)
 {
-	int i;
+	unsigned int i;
 	
 	if (config) {
 		for (i = 0; i < config->plugins_count; ++i) {
@@ -227,7 +227,7 @@ int data_manager_add_plugin(struct data_manager_config *config, struct storage *
  */
 int data_manager_remove_plugin(struct data_manager_config* config, int id)
 {
-	int i;
+	unsigned int i;
 
 	struct storage *plugin = NULL;
 	
@@ -263,7 +263,7 @@ int data_manager_remove_plugin(struct data_manager_config* config, int id)
  */
 void data_manager_close (struct data_manager_config **config)
 {
-	int i;
+	unsigned int i;
 
 	/* close all storage plugins */
 	rbuffer_write ((*config)->store_queue, NULL, (*config)->plugins_count);
