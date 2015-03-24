@@ -63,7 +63,7 @@ struct data_manager_config {
 	struct ring_buffer *store_queue;    /**< Input queue for storage plugins */
 	struct storage *storage_plugins[8]; /**< Storage plugins */
 	struct data_manager_config *next;   /**< Next DM */
-        int oid_specific_plugins;           /**< Number of ODID specific plugins */
+	int oid_specific_plugins;           /**< Number of ODID specific plugins */
 };
 
 /**

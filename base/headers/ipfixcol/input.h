@@ -105,10 +105,10 @@ enum SOURCE_STATUS{
  * input information type.
  */
 struct __attribute__((__packed__)) input_info {
-	enum SOURCE_TYPE type;    /**< type of source defined by enum #SOURCE_TYPE */
-	int sequence_number;      /**< sequence number for current source */
-	enum SOURCE_STATUS status;  /**< source status defined by enum #SOURCE_STATUS */
-	uint32_t odid;                 /**< Observation Domain ID of source */
+	enum SOURCE_TYPE type;		/**< type of source defined by enum #SOURCE_TYPE */
+	uint32_t sequence_number;	/**< sequence number for current source */
+	enum SOURCE_STATUS status;	/**< source status defined by enum #SOURCE_STATUS */
+	uint32_t odid;				/**< Observation Domain ID of source */
 };
 
 /**

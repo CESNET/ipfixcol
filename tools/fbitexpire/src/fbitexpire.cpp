@@ -112,6 +112,8 @@ void print_version()
  */
 void handle(int param)
 {
+	(void) param;
+
 	/* Tell listener to stop */
 	if (list) {
 		list->killAll();
@@ -157,11 +159,11 @@ int write_to_pipe(bool pipe_exists, std::string pipe, std::string msg)
 int main(int argc, char *argv[])
 {
 	int c, depth{DEFAULT_DEPTH};
-	bool rescan{false}, daemonize{false}, pipe_exists{false}, pipe_file_exists{false}, multiple{false}, change{false};
-	bool force{false}, wmarkset{false}, size_set{false}, kill_daemon{false}, only_remove{false}, depth_set{false};
+	bool rescan{false}, daemonize{false}, pipe_exists{false}, pipe_file_exists{false}, pipe_created{false}, multiple{false};
+	bool change{false}, force{false}, wmarkset{false}, size_set{false}, kill_daemon{false}, only_remove{false}, depth_set{false};
 	uint64_t watermark{0}, size{0};
 	std::string pipe{DEFAULT_PIPE};
-	signal(SIGINT, handle);	
+	signal(SIGINT, handle);
 	
 	while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
 		switch (c) {
@@ -288,6 +290,8 @@ int main(int argc, char *argv[])
 			MSG_ERROR(msg_module, "%s", strerror(errno));
 			return 1;
 		}
+
+		pipe_created = true;
 	}
 	
 	if (!depth_set) {
@@ -296,15 +300,17 @@ int main(int argc, char *argv[])
 	
 	std::string basedir{argv[optind]};
 	basedir = Directory::correctDirName(basedir);
-	
 	if (basedir.empty()) {
+		if (pipe_created) {
+			remove(pipe.c_str());
+		}
+
 		return 1;
 	}
 	
 	if (daemonize) {
 		closelog();
 		MSG_SYSLOG_INIT(PACKAGE);
-
 		MSG_NOTICE(msg_module, "daemonizing...");
 		
 		/* and send all following messages to the syslog */

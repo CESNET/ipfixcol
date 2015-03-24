@@ -141,6 +141,8 @@ void hooks_add_hook(struct hooks_ip_config *conf, int type, struct operation_s *
  */
 int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config)
 {
+	(void) ip_id;
+	(void) template_mgr;
 	struct hooks_ip_config *conf;
 	conf = (struct hooks_ip_config *) calloc(1, sizeof(*conf));
 	if (!conf) {
