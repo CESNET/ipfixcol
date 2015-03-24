@@ -12,8 +12,8 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 
 BuildRequires: gcc make doxygen
 Requires: libxml2
-BuildRequires: rrdtool-devel ipfixcol-devel >= 0.7.1
-Requires: ipfixcol >= 0.7.1 rrdtool
+BuildRequires: rrdtool-devel ipfixcol-devel >= 0.8.0
+Requires: ipfixcol >= 0.8.0 rrdtool
 
 %description
 profilestats intermediate plugin for ipfixcol.

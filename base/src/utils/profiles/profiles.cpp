@@ -58,6 +58,8 @@ extern "C" {
 
 static const char *msg_module = "profile_tree";
 
+extern "C" int yyparse (struct filter_parser_data *data);
+
 /**
  * \brief Parse filter string
  * 
