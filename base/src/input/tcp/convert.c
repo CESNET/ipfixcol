@@ -94,6 +94,12 @@
 #define BYTES_8 8
 #define BYTES_12 12
 
+/** Defines for enterprise numbers unpacking in Netflow v9 */
+#define ENTERPRISE_BIT 0x8000
+#define TEMPLATE_ROW_SIZE 4
+#define DEFAULT_ENTERPRISE_NUMBER (~((uint32_t) 0))
+
+
 /* Static creation of Netflow v5 Template Set */
 
 static uint16_t netflow_v5_template[NETFLOW_V5_TEMPLATE_LEN/2]={\
@@ -382,7 +388,64 @@ int insert_timestamp_template(struct ipfix_set_header *templSet)
 	return 0;
 }
 
-/* \brief Inserts 64b timestamps into netflow v9 Data Set
+/**
+ * \brief Unpack enteprise numbers in Netflow v9
+ *
+ *	Searches all fields in Netflow v9 template that have
+ *	ID bigger than 32767 (== enterprise bit is set to 1)
+ *  and converts them into IPFIX enterprise element.
+ *
+ * \param templateSet Template Set
+ * \param remaining Number of bytes to the end of packet (indluding template set)
+ * \return number of inserted bytes
+ */
+int unpack_enterprise_elements(struct ipfix_set_header *templateSet, uint32_t remaining)
+{
+	struct ipfix_set_header *templateRow = templateSet;
+
+	/* Get template set total length without set header length */
+	uint16_t setLength = ntohs(templateRow->length) - SET_HEADER_LEN;
+	uint16_t addedEnterpriseNumbers = 0;
+
+	/* Iterate through all templates */
+	while ((uint8_t *) templateRow < (uint8_t *) templateSet + setLength) {
+		templateRow++;
+		remaining -= TEMPLATE_ROW_SIZE;
+
+		uint16_t numberOfElements = ntohs(templateRow->length);
+
+		/* Iterate through all elements */
+		for (uint16_t i = 0; i < numberOfElements; ++i) {
+			templateRow++;
+			remaining -= TEMPLATE_ROW_SIZE;
+
+			uint16_t fieldId = ntohs(templateRow->flowset_id);
+
+			/* We are only looking for elements with enterprise bit set to 1 */
+			if (!(fieldId & ENTERPRISE_BIT)) {
+				continue;
+			}
+
+			/* Move to the enterprise number and create space for it */
+			templateRow++;
+			memmove(((uint8_t*) templateRow) + TEMPLATE_ROW_SIZE, templateRow, remaining);
+
+			setLength += TEMPLATE_ROW_SIZE;
+
+			/* Add enterprise number */
+			*((uint32_t *) templateRow) = DEFAULT_ENTERPRISE_NUMBER;
+
+			addedEnterpriseNumbers++;
+		}
+	}
+
+	templateSet->length = htons(ntohs(templateSet->length) + addedEnterpriseNumbers * TEMPLATE_ROW_SIZE);
+
+	return addedEnterpriseNumbers * TEMPLATE_ROW_SIZE;
+}
+
+/**
+ * \brief Inserts 64b timestamps into netflow v9 Data Set
  *
  * Finds original timestamps and replaces them by 64b ipfix timestamps
  *
@@ -502,6 +565,9 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 							if (insert_timestamp_template(set_header) != 0) {
 								return;
 							}
+
+							/* Check for enterprise elements */
+							*len += unpack_enterprise_elements(set_header, *len - ntohs(header->length));
 						}
 						break;
 					case NETFLOW_V9_OPT_TEMPLATE_SET_ID:
