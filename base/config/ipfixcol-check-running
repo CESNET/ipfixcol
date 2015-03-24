@@ -1,0 +1,29 @@
+#!/bin/bash
+###############################################################################
+# \file ipfixcol-check-running
+#
+# \author Petr Velan <petr.velan@cesnet.cz>
+# \date 24.3.2015
+#
+# This file should be run by cron every once in a while to check that all
+# ipfixcol processes are running. It can be used to watch other processes
+# as well.
+#
+###############################################################################
+
+# Define all processes that need to be watched
+declare -a processes
+processes[0]="ipfixcol -d"
+#processes[1]=""
+
+# Check that each process is running
+for i in "${!processes[@]}"; do
+	ps -eo command | grep "^${processes[$i]}" > /dev/null
+	if [ $? -ne 0 ]; then
+		# When the process is not running, log it and start it
+		logger "Process not running: ${processes[$i]}"
+		${processes[$i]} 2> /dev/null
+	fi
+done
+
+exit 0
