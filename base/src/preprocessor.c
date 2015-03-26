@@ -412,10 +412,10 @@ void fill_metadata(uint8_t *rec, int rec_len, struct ipfix_template *templ, void
 			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 			return;
 		}
-		
+	
+		msg->metadata = new_mdata;
 		memset(&(msg->metadata[mdata_max]), 0, mdata_max * sizeof(struct metadata));
 
-		msg->metadata = new_mdata;
 		mdata_max *= 2;
 	}
 	
