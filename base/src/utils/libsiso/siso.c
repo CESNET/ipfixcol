@@ -130,6 +130,11 @@ void siso_destroy(sisoconf *conf)
 {
 	/* Close socket and free resources */
 	siso_close_connection(conf);
+
+	if (conf->servinfo != NULL) {
+		freeaddrinfo(conf->servinfo);
+	}
+
 	free(conf);
 }
 
