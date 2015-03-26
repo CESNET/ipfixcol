@@ -96,7 +96,7 @@ static inline void data_manager_free (struct data_manager_config* config)
 static void* storage_plugin_thread(void *cfg)
 {
     struct storage *config = (struct storage*) cfg; 
-	struct ipfix_message* msg;
+	struct ipfix_message *msg, *starting_msg = NULL;
 	int can_read = 0, stop = 0;
 	unsigned int index = config->thread_config->queue->read_offset;
 
@@ -123,7 +123,12 @@ static void* storage_plugin_thread(void *cfg)
 		case PLUGIN_START: /* Start reading */
 			if (msg->plugin_id == config->id) {
 				can_read = 1;
-				rbuffer_remove_reference(config->thread_config->queue, index, 1);
+				if (starting_msg) {
+					free(starting_msg);
+				}
+
+				starting_msg = msg;
+				rbuffer_remove_reference(config->thread_config->queue, index, 0);
 			}
 			break;
 		default: /* DATA */
@@ -136,6 +141,10 @@ static void* storage_plugin_thread(void *cfg)
 		
 		/* move the index */
 		index = (index + 1) % config->thread_config->queue->size;
+	}
+
+	if (starting_msg) {
+		free(starting_msg);
 	}
 
 	MSG_NOTICE("storage plugin thread", "[%u] Closing storage plugin thread", config->odid);
