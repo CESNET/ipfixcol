@@ -95,6 +95,8 @@ struct ipfix_template {
 
 	uint8_t template_type;       /**Type of Template - TM_TEMPLATE = Template,
 	                              * TM_OPTIONS_TEMPLATE = Options Template */
+	time_t first_transmission;	 /** Time of first transmission of Template,
+								   UDP only */
 	time_t last_transmission;    /**Time of last transmission of Template,
 	                              * UDP only */
 	uint32_t last_message;		 /** Message number of last update,

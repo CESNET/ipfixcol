@@ -360,7 +360,7 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 		}
 	} else {
 		/* template already exists */
-		MSG_WARNING(msg_module, "[%u] %s ID %i already exists; rewriting...", key->odid,
+		MSG_DEBUG(msg_module, "[%u] %s ID %i already exists; rewriting...", key->odid,
 				(type==TM_TEMPLATE) ? "Template" : "Options template", template->template_id);
 		template = tm_update_template(template_mgr, tmpl, max_len, type, key);
 	}
