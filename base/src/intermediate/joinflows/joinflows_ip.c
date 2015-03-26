@@ -130,6 +130,8 @@ struct joinflows_processor {
 	int type;
 	bool add_orig_odid;
 	struct source *src;
+	struct metadata *metadata;
+	uint16_t metadata_index;
 };
 
 /* TODO!!!!!!!!*/
@@ -677,6 +679,9 @@ void data_processor(uint8_t *rec, int rec_len, struct ipfix_template *templ, voi
 	(void) templ;
 
 	memcpy(proc->msg + proc->offset, rec, rec_len);
+	proc->metadata[proc->metadata_index].record.record = proc->msg + proc->offset;
+	proc->metadata[proc->metadata_index].record.length = rec_len;
+
 	proc->offset += rec_len;
 	proc->length += rec_len;
 
@@ -684,7 +689,10 @@ void data_processor(uint8_t *rec, int rec_len, struct ipfix_template *templ, voi
 		memcpy(proc->msg + proc->offset, &(proc->orig_odid), 4);
 		proc->offset += 4;
 		proc->length += 4;
+		proc->metadata[proc->metadata_index].record.length += 4;
 	}
+
+	proc->metadata_index++;
 }
 
 /**
@@ -839,6 +847,9 @@ int intermediate_process_message(void *config, void *message)
 	proc.src = src;
 	proc.trecords = 0;
 	new_msg->pkt_header = (struct ipfix_header *) proc.msg;
+	new_msg->live_profile = msg->live_profile;
+	new_msg->metadata = msg->metadata;
+	msg->metadata = NULL;
 
 	/* Process templates */
 	proc.type = TM_TEMPLATE;
@@ -886,6 +897,10 @@ int intermediate_process_message(void *config, void *message)
 	new_msg->opt_templ_set[otsets] = NULL;
 
 	proc.orig_odid = htonl(orig_odid);
+	proc.metadata = new_msg->metadata;
+	proc.metadata_index = 0;
+	uint16_t metadata_index = 0;
+
 	for (i = 0; i < MSG_MAX_DATA_COUPLES && msg->data_couple[i].data_set; ++i) {
 		templ = msg->data_couple[i].data_template;
 		if (!templ) {
@@ -915,6 +930,14 @@ int intermediate_process_message(void *config, void *message)
 		new_msg->data_couple[new_i].data_set->header.length = htons(proc.length);
 		new_msg->data_couple[new_i].data_set->header.flowset_id = htons(new_msg->data_couple[new_i].data_template->template_id);
 		
+		/* Update templates in metadata */
+		while (metadata_index < msg->data_records_count &&
+			   metadata_index < proc.metadata_index &&
+			   new_msg->metadata[metadata_index].record.templ == templ) {
+			new_msg->metadata[metadata_index].record.templ = map->new_templ->templ;
+			metadata_index++;
+		}
+
 		/* Move to the next data_couple in new message */
 		new_i++;
 	}

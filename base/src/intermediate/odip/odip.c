@@ -360,7 +360,9 @@ int intermediate_process_message(void *config, void *message)
 		new_msg->data_couple[new_i].data_set->header.flowset_id = htons(new_msg->data_couple[new_i].data_template->template_id);
 
 		/* Update templates in metadata */
-		while (metadata_index < msg->data_records_count && new_msg->metadata[metadata_index].record.templ == templ) {
+		while (metadata_index < msg->data_records_count &&
+			   metadata_index < proc.metadata_index &&
+			   new_msg->metadata[metadata_index].record.templ == templ) {
 			new_msg->metadata[metadata_index].record.templ = new_templ;
 			metadata_index++;
 		}
