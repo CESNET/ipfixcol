@@ -697,3 +697,70 @@ void message_free_metadata(struct ipfix_message *msg)
 	/* Free metadata structure */
 	free(msg->metadata);
 }
+
+struct metadata *message_copy_metadata(struct ipfix_message *src)
+{
+	struct metadata *metadata = calloc(src->data_records_count, sizeof(struct metadata));
+	if (!metadata) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
+
+	for (uint16_t i = 0; i < src->data_records_count; ++i) {
+		metadata[i].srcAS = src->metadata[i].srcAS;
+		metadata[i].dstAS = src->metadata[i].dstAS;
+		memcpy(metadata[i].srcName, src->metadata[i].srcName, 32);
+		memcpy(metadata[i].dstName, src->metadata[i].dstName, 32);
+		metadata[i].srcCountry = src->metadata[i].srcCountry;
+		metadata[i].dstCountry = src->metadata[i].dstCountry;
+		metadata[i].record = src->metadata[i].record;
+
+		if (src->metadata[i].channels == NULL) {
+			continue;
+		}
+
+		uint16_t channels = 0;
+		while (src->metadata[i].channels[channels]) {
+			channels++;
+		}
+
+		metadata[i].channels = calloc(channels + 1, sizeof(void*));
+		if (!metadata) {
+			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			free(metadata);
+			return NULL;
+		}
+
+		for (uint16_t index = 0; index < channels; ++index) {
+			metadata[i].channels[index] = src->metadata[i].channels[index];
+		}
+	}
+
+	return metadata;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
