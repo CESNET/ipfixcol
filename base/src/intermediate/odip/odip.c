@@ -75,6 +75,8 @@ struct odip_ip_config {
 /* structure for processing message */
 struct odip_processor {
 	uint8_t *msg;
+	struct metadata *metadata;
+	uint16_t metadata_index;
 	uint16_t offset, length;
 	struct input_info_network *info;
 	int type;
@@ -95,6 +97,7 @@ struct odip_processor {
  */
 int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfix_template_mgr *template_mgr, void **config)
 {
+	(void) params;
 	struct odip_ip_config *conf;
 	conf = (struct odip_ip_config *) calloc(1, sizeof(*conf));
 	if (!conf) {
@@ -183,9 +186,13 @@ void templates_processor(uint8_t *rec, int rec_len, void *data)
 void data_processor(uint8_t *rec, int rec_len, struct ipfix_template *templ, void *data)
 {
 	struct odip_processor *proc = (struct odip_processor *) data;
+	(void) templ;
 
 	/* copy whole data record */
 	memcpy(proc->msg + proc->offset, rec, rec_len);
+	proc->metadata[proc->metadata_index].record.record = (proc->msg + proc->offset);
+	proc->metadata[proc->metadata_index].record.length = rec_len;
+
 	proc->offset += rec_len;
 	proc->length += rec_len;
 
@@ -201,7 +208,10 @@ void data_processor(uint8_t *rec, int rec_len, struct ipfix_template *templ, voi
 		memcpy(proc->msg + proc->offset, &(proc->info->src_addr), size);
 		proc->offset += size;
 		proc->length += size;
+		proc->metadata[proc->metadata_index].record.length += size;
 	}
+
+	proc->metadata_index++;
 }
 
 /**
@@ -261,11 +271,16 @@ int intermediate_process_message(void *config, void *message)
 	/* copy header, initialize processing structure */
 	memcpy(proc.msg, msg->pkt_header, IPFIX_HEADER_LENGTH);
 	new_msg->pkt_header = (struct ipfix_header *) proc.msg;
+	new_msg->metadata = msg->metadata;
+	msg->metadata = NULL;
+
 	proc.tm = conf->tm;
 	proc.key.crc = conf->ip_id;
 	proc.key.odid = info->odid;
 	proc.offset = IPFIX_HEADER_LENGTH;
 	proc.info = info;
+	proc.metadata = new_msg->metadata;
+	proc.metadata_index = 0;
 	
 	/* process template records */
 	proc.type = TM_TEMPLATE;
@@ -309,6 +324,8 @@ int intermediate_process_message(void *config, void *message)
 	new_msg->opt_templ_set[otsets] = NULL;
 
 	/* Process data records */
+	uint16_t metadata_index = 0;
+
 	for (i = 0; i < MSG_MAX_DATA_COUPLES && msg->data_couple[i].data_set; ++i) {
 		struct ipfix_template *templ = msg->data_couple[i].data_template;
 		if (!templ) {
@@ -341,11 +358,19 @@ int intermediate_process_message(void *config, void *message)
 
 		new_msg->data_couple[new_i].data_set->header.length = htons(proc.length);
 		new_msg->data_couple[new_i].data_set->header.flowset_id = htons(new_msg->data_couple[new_i].data_template->template_id);
-		
+
+		/* Update templates in metadata */
+		while (metadata_index < msg->data_records_count &&
+			   metadata_index < proc.metadata_index &&
+			   new_msg->metadata[metadata_index].record.templ == templ) {
+			new_msg->metadata[metadata_index].record.templ = new_templ;
+			metadata_index++;
+		}
+
 		/* Move to the next data_couple in new message */
 		new_i++;
 	}
-	
+
 	new_msg->data_couple[new_i].data_set = NULL;
 
 	new_msg->pkt_header->length = htons(proc.offset);
@@ -354,6 +379,9 @@ int intermediate_process_message(void *config, void *message)
 	new_msg->opt_templ_records_count = msg->opt_templ_records_count;
 	new_msg->data_records_count = msg->data_records_count;
 	new_msg->source_status = msg->source_status;
+	new_msg->live_profile = msg->live_profile;
+	new_msg->plugin_id = msg->plugin_id;
+	new_msg->plugin_status = msg->plugin_status;
 
 	drop_message(conf->ip_config, message);
 	pass_message(conf->ip_config, (void *) new_msg);

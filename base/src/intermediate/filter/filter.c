@@ -77,6 +77,7 @@ struct filter_process {
 	int *offset;		/**< offset in message */
 	struct filter_profile *profile; /**< used filter profile */
 	int records;		/**< number of filtered records */
+	struct metadata *metadata;
 };
 
 /**
@@ -589,8 +590,14 @@ void filter_process_data_record(uint8_t *rec, int rec_len, struct ipfix_template
 	/* Apply filter */
 	if (filter_fits_node(conf->profile->root, rec, templ)) {
 		memcpy(conf->ptr + *(conf->offset), rec, rec_len);
-		*(conf->offset) += rec_len;
 
+		if (conf->metadata) {
+			conf->metadata[conf->records].record.record = conf->ptr + *(conf->offset);
+			conf->metadata[conf->records].record.length = rec_len;
+			conf->metadata[conf->records].record.templ = templ;
+		}
+
+		*(conf->offset) += rec_len;
 		conf->records++;
 	}
 }
@@ -627,6 +634,16 @@ uint32_t filter_profile_update_input_info(struct filter_profile *profile, struct
 	profile->input_info->sequence_number += records;
 
 	return sn;
+}
+
+void filter_copy_metainfo(struct ipfix_message *src, struct ipfix_message *dst)
+{
+	dst->live_profile = src->live_profile;
+	dst->plugin_id = src->plugin_id;
+	dst->plugin_status = src->plugin_status;
+	dst->source_status = dst->source_status;
+	dst->templ_records_count = src->templ_records_count;
+	dst->opt_templ_records_count = src->opt_templ_records_count;
 }
 
 /**
@@ -668,6 +685,7 @@ struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct fil
 	conf.ptr = ptr;
 	conf.profile = profile;
 	conf.records = 0;
+	conf.metadata = message_copy_metadata(msg);
 
 	/* Copy header */
 	memcpy(ptr, msg->pkt_header, IPFIX_HEADER_LENGTH);
@@ -730,9 +748,10 @@ struct ipfix_message *filter_apply_profile(struct ipfix_message *msg, struct fil
 	}
 
 	/* Set counters */
+	new_msg->metadata = conf.metadata;
 	new_msg->data_records_count = conf.records;
-	new_msg->templ_records_count = msg->templ_records_count;
-	new_msg->opt_templ_records_count = msg->opt_templ_records_count;
+
+	filter_copy_metainfo(msg, new_msg);
 
 	return new_msg;
 }

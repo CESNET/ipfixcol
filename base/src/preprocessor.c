@@ -360,7 +360,7 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 		}
 	} else {
 		/* template already exists */
-		MSG_WARNING(msg_module, "[%u] %s ID %i already exists; rewriting...", key->odid,
+		MSG_DEBUG(msg_module, "[%u] %s ID %i already exists; rewriting...", key->odid,
 				(type==TM_TEMPLATE) ? "Template" : "Options template", template->template_id);
 		template = tm_update_template(template_mgr, tmpl, max_len, type, key);
 	}
@@ -396,7 +396,7 @@ void fill_metadata(uint8_t *rec, int rec_len, struct ipfix_template *templ, void
 	/* Allocate space for metadata */
 	if (mdata_max == 0) {
 		mdata_max = 75;
-		msg->metadata = malloc(mdata_max * sizeof(struct metadata));
+		msg->metadata = calloc(mdata_max, sizeof(struct metadata));
 		if (!msg->metadata) {
 			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 			mdata_max = 0;
@@ -412,8 +412,10 @@ void fill_metadata(uint8_t *rec, int rec_len, struct ipfix_template *templ, void
 			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 			return;
 		}
-		
+	
 		msg->metadata = new_mdata;
+		memset(&(msg->metadata[mdata_max]), 0, mdata_max * sizeof(struct metadata));
+
 		mdata_max *= 2;
 	}
 	

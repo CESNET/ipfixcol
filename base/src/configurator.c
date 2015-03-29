@@ -172,6 +172,9 @@ void config_free_plugin(struct plugin_config *plugin)
 		break;
 	case PLUGIN_INTER:
 		if (plugin->inter) {
+			if (plugin->inter->in_queue) {
+				rbuffer_free(plugin->inter->in_queue);
+			}
 			if (plugin->inter->dll_handler) {
 				plugin->inter->intermediate_close(plugin->inter->plugin_config);
 				dlclose(plugin->inter->dll_handler);

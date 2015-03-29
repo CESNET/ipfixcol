@@ -61,7 +61,7 @@ extern int ring_buffer_size;
  */
 static inline void data_manager_free (struct data_manager_config* config)
 {
-	int i;
+	unsigned int i;
 	
 	if (config) {
 		for (i = 0; i < config->plugins_count; ++i) {
@@ -95,8 +95,8 @@ static inline void data_manager_free (struct data_manager_config* config)
  */
 static void* storage_plugin_thread(void *cfg)
 {
-	struct storage *config = (struct storage*) cfg; 
-	struct ipfix_message* msg;
+    struct storage *config = (struct storage*) cfg; 
+	struct ipfix_message *msg, *starting_msg = NULL;
 	int can_read = 0, stop = 0;
 	unsigned int index = config->thread_config->queue->read_offset;
 
@@ -123,7 +123,12 @@ static void* storage_plugin_thread(void *cfg)
 		case PLUGIN_START: /* Start reading */
 			if (msg->plugin_id == config->id) {
 				can_read = 1;
-				rbuffer_remove_reference(config->thread_config->queue, index, 1);
+				if (starting_msg) {
+					free(starting_msg);
+				}
+
+				starting_msg = msg;
+				rbuffer_remove_reference(config->thread_config->queue, index, 0);
 			}
 			break;
 		default: /* DATA */
@@ -138,7 +143,11 @@ static void* storage_plugin_thread(void *cfg)
 		index = (index + 1) % config->thread_config->queue->size;
 	}
 
-	MSG_NOTICE("storage plugin thread", "[%u] Stopping storage plugin thread", config->odid);
+	if (starting_msg) {
+		free(starting_msg);
+	}
+
+	MSG_NOTICE("storage plugin thread", "[%u] Closing storage plugin thread", config->odid);
 	return (NULL);
 }
 
@@ -193,7 +202,6 @@ int data_manager_add_plugin(struct data_manager_config *config, struct storage *
 	
 	/* Set plugin's input queue */
 	plugin_cfg->queue = config->store_queue;
-//		plugin_cfg->template_mgr = config->template_mgr;
 	plugin->thread_config = plugin_cfg;
 	plugin->odid = config->observation_domain_id;
 	
@@ -227,7 +235,7 @@ int data_manager_add_plugin(struct data_manager_config *config, struct storage *
  */
 int data_manager_remove_plugin(struct data_manager_config* config, int id)
 {
-	int i;
+	unsigned int i;
 
 	struct storage *plugin = NULL;
 	
@@ -263,7 +271,7 @@ int data_manager_remove_plugin(struct data_manager_config* config, int id)
  */
 void data_manager_close (struct data_manager_config **config)
 {
-	int i;
+	unsigned int i;
 
 	/* close all storage plugins */
 	rbuffer_write ((*config)->store_queue, NULL, (*config)->plugins_count);

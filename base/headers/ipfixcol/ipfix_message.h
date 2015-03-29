@@ -257,7 +257,16 @@ API int template_set_process_records(struct ipfix_template_set *tset, int type, 
  * 
  * \param[in] IPFIX message
  */
-void message_free_metadata(struct ipfix_message *msg);
+API void message_free_metadata(struct ipfix_message *msg);
+
+/**
+ * \brief Create copy of metadata structure
+ *
+ * \param[in] src Source IPFIX message
+ * \return metadata
+ */
+API struct metadata *message_copy_metadata(struct ipfix_message *src);
+
 
 #endif /* IPFIX_MESSAGE_H_ */
 

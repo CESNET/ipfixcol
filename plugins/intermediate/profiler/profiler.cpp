@@ -38,7 +38,6 @@
  */
 
 extern "C" {
-#include <libxml2/libxml/xpath.h>
 #include <ipfixcol.h>
 #include <ipfixcol/profiles.h>
 }

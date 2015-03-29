@@ -110,6 +110,13 @@ public:
      * @param enabled
      */
 	void setMetadataProcessing(bool enabled) { processMetadata = enabled; }
+
+	/**
+	 * \brief Enable/disable data printing instead of sending them
+	 *
+	 * \param enabled
+	 */
+	void setPrintOnly(bool enabled) { printOnly = enabled; }
 	
 private:
     
@@ -182,6 +189,7 @@ private:
     void sendData() const;
     
 	bool processMetadata{false};	/**< Metadata processing enabled */
+	bool printOnly{false};
 	uint8_t addr6[IPV6_LEN];
 	uint8_t addrMac[MAC_LEN];
 	uint16_t offset, id, length;
