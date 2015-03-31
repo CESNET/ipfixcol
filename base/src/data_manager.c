@@ -138,7 +138,7 @@ static void* storage_plugin_thread(void *cfg)
 			}
 			break;
 		}
-		
+
 		/* move the index */
 		index = (index + 1) % config->thread_config->queue->size;
 	}
@@ -202,7 +202,6 @@ int data_manager_add_plugin(struct data_manager_config *config, struct storage *
 	
 	/* Set plugin's input queue */
 	plugin_cfg->queue = config->store_queue;
-//		plugin_cfg->template_mgr = config->template_mgr;
 	plugin->thread_config = plugin_cfg;
 	plugin->odid = config->observation_domain_id;
 	
