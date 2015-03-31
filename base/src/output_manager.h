@@ -85,6 +85,9 @@ struct output_manager_config {
 	pthread_t stat_thread;                      /**< Stat's thread ID */
 	int stat_interval;                          /**< Stat's interval */
 	uint64_t data_records;                      /**< Number of processed data records */
+	uint64_t lost_data_records;                 /**< Number of lost data records */
+	uint32_t first_seq;                         /**< Stream's first sequence number */
+	uint32_t last_seq;                          /**< Sequence number of last packet in stream */
 	uint64_t packets;                           /**< Number of processed packets */
 	struct stat_conf stats;                     /**< Statistics */
 	configurator *plugins_config;               /**< Plugins configurator */
@@ -125,7 +128,6 @@ int output_manager_add_plugin(struct storage *plugin);
  * @return 0 on success
  */
 int output_manager_remove_plugin(int id);
-
 
 /**
  * \brief Closes output manager specified by its configuration

@@ -131,21 +131,21 @@ void help ()
 	printf ("\n");
 }
 
-void term_signal_handler(int sig)
+void term_signal_handler (int sig)
 {
 	/* Reconfiguration signal */
 	if (sig == SIGUSR1) {
-		MSG_COMMON(ICMSG_ERROR, "Signal: %i detected, reloading configuration", sig);
+		MSG_COMMON(ICMSG_ERROR, "Signal detected (%i); reloading configuration...", sig);
 		reconf = 1;
 		return;
 	}
 	
 	/* Terminating signal */
 	if (terminating) {
-		MSG_COMMON(ICMSG_ERROR, "Another termination signal (%i) detected - quiting without cleanup", sig);
+		MSG_COMMON(ICMSG_ERROR, "Another termination signal detected (%i); quiting without cleanup...", sig);
 		exit (EXIT_FAILURE);
 	} else {
-		MSG_COMMON(ICMSG_ERROR, "Signal: %i detected; exiting as soon as possible...", sig);
+		MSG_COMMON(ICMSG_ERROR, "Signal detected (%i); exiting as soon as possible...", sig);
 		terminating = 1;
 	}
 }
@@ -415,7 +415,7 @@ cleanup:
 	
 	/* wait for child processes */
 	if (pid > 0) {
-		for (i=0; i<proc_count; i++) {
+		for (i = 0; i < proc_count; i++) {
 			pid = wait(NULL);
 			MSG_NOTICE(msg_module, "[%d] Collector child process '%d' terminated", config->proc_id, pid);
 		}

@@ -37,7 +37,6 @@
  *
  */
 
-
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
@@ -60,6 +59,14 @@ static const char *stat_module = "stat";
 
 /* Output Manager's configuration - singleton */
 struct output_manager_config *conf = NULL;
+
+/**
+ * \brief Dummy SIGUSR1 signal handler
+ */
+void sig_handler(int s) 
+{
+	(void) s;
+}
 
 /**
  * \brief Search for Data manager handling specified Observation Domain ID
@@ -260,13 +267,12 @@ static void *output_manager_plugin_thread(void* config)
 	index = conf->in_queue->read_offset;
 
 	/* set the thread name to reflect the configuration */
-	prctl(PR_SET_NAME, "ipfixcol OM", 0, 0, 0);      /* output managers' manager */
+	prctl(PR_SET_NAME, "ipfixcol OM", 0, 0, 0);
 
 	/* loop will break upon receiving NULL from buffer */
 	while (1) {
 		/* get next data */
 		index = -1;
-		
 		msg = rbuffer_read(conf->in_queue, &index);
 
 		if (!msg) {
@@ -319,13 +325,39 @@ static void *output_manager_plugin_thread(void* config)
 				MSG_DEBUG(msg_module, "[%u] No source; releasing templates...", data_config->observation_domain_id);
 				output_manager_remove(conf, data_config);
 			}
+
 			rbuffer_remove_reference(conf->in_queue, index, 1);
 			continue;
-
 		}
-		
+
 		__sync_fetch_and_add(&(conf->packets), 1);
 		__sync_fetch_and_add(&(conf->data_records), msg->data_records_count);
+
+		/* Check for lost data records */
+		uint32_t seq_number = ntohl(msg->pkt_header->sequence_number);
+
+		// Set sequence number during first iteration
+		if (conf->first_seq == 0 && conf->last_seq == 0) {
+			conf->first_seq = seq_number;
+		} else if (seq_number < conf->first_seq) {
+			// Sequence number resetted (modulo 2^32 = 4294967296)
+			conf->first_seq = seq_number;
+			uint8_t delta_seq = 4294967296 - conf->last_seq + seq_number;
+
+			// Check for sequence number gap
+			if (delta_seq > msg->data_records_count) {
+				__sync_fetch_and_add(&(conf->lost_data_records), delta_seq - msg->data_records_count);
+			}
+		} else if (seq_number > conf->first_seq) {
+			// Check for sequence number gap
+			if (seq_number - msg->data_records_count > conf->last_seq) {
+				__sync_fetch_and_add(&(conf->lost_data_records), seq_number - msg->data_records_count - conf->last_seq);
+			}
+		} else {
+			// Do nothing
+		}
+
+		conf->last_seq = seq_number;
 		
 		/* Write data into input queue of Storage Plugins */
 		if (rbuffer_write(data_config->store_queue, msg, data_config->plugins_count) != 0) {
@@ -401,7 +433,6 @@ struct stat_thread *statistics_add_thread(struct stat_conf *conf, long tid)
 		return NULL;
 	}
 	
-	
 	thread->tid = tid;
 	thread->next = conf->threads;
 	conf->threads = thread;
@@ -414,7 +445,7 @@ struct stat_thread *statistics_add_thread(struct stat_conf *conf, long tid)
  * 
  * @param conf statistics conf
  */
-static void statistics_print_cpu(struct stat_conf *conf)
+static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
 {
 	DIR *dir = opendir(conf->tasks_dir);
 	if (!dir) {
@@ -479,44 +510,47 @@ static void statistics_print_cpu(struct stat_conf *conf)
 		/* update stats */
 		thread->proc_time = proc_time;
 	}
+
 	MSG_INFO(stat_module, "");
 	closedir(dir);
+
+	// Print to file
+	if (stat_out_file) {
+		// Add contents here
+	}
 	
 	/* update stats */
 	conf->total_cpu = total_cpu;
 }
 
 /**
- * \brief Dummy SIGUSR1 signal handler
- */
-void sig_handler(int s) 
-{
-	(void) s;
-}
-
-/**
- * \brief Print queues usage
+ * \brief Print queue usage
  * 
  * @param conf output manager's config
  */
-void statistics_print_buffers(struct output_manager_config *conf)
+void statistics_print_buffers(struct output_manager_config *conf, FILE *stat_out_file)
 {	
 	/* Print info about preprocessor's output queue */
-	MSG_INFO(stat_module, "queues usage:");
+	MSG_INFO(stat_module, "Queue utilization:");
 	
 	struct ring_buffer *prep_buffer = get_preprocessor_output_queue();
-	MSG_INFO(stat_module, "preprocessor's output queue: %u / %u", prep_buffer->count, prep_buffer->size);
+	MSG_INFO(stat_module, "     preprocessor output queue: %u / %u", prep_buffer->count, prep_buffer->size);
 
 	/* Print info about Output Manager's queues */
 	struct data_manager_config *dm = conf->data_managers;	
 	if (dm) {
-		MSG_INFO(stat_module, "output manager's output queues:");
-		MSG_INFO(stat_module, "%.4s | %.10s / %.10s", "ODID", "waiting" ,"total size");
+		MSG_INFO(stat_module, "     output manager output queues:");
+		MSG_INFO(stat_module, "         %.4s | %.10s / %.10s", "ODID", "waiting" ,"total size");
 		
 		while (dm) {
-			MSG_INFO(stat_module, "[%u] %10u / %u", dm->observation_domain_id, dm->store_queue->count, dm->store_queue->size);
+			MSG_INFO(stat_module, "         [%u] %10u / %u", dm->observation_domain_id, dm->store_queue->count, dm->store_queue->size);
 			dm = dm->next;
 		}
+	}
+
+	// Print to file
+	if (stat_out_file) {
+		// Add contents here
 	}
 }
 
@@ -529,15 +563,51 @@ void statistics_print_buffers(struct output_manager_config *conf)
 static void *statistics_thread(void* config)
 {
 	struct output_manager_config *conf = (struct output_manager_config *) config;
-	time_t begin = time(NULL), now, diff_time;
+	time_t begin = time(NULL), time_now, diff_time;
+
 	uint64_t pkts, last_pkts, records, last_records, diff_pkts, diff_records;
 	pkts = last_pkts = records = last_records = diff_pkts = diff_records = 0;
+
+	uint64_t lost_records, last_lost_records, diff_lost_records;
+	lost_records = last_lost_records = diff_lost_records = 0;
 	
 	/* create statistics config */
 	conf->stats.total_cpu = 0;
 	conf->stats.threads = NULL;
 	conf->stats.cpus = sysconf(_SC_NPROCESSORS_ONLN);
 	snprintf(conf->stats.tasks_dir, MAX_DIR_LEN, "/proc/%d/task/", getpid());
+
+	// Create file handle in case statistics file has been specified in config
+	FILE *stat_out_file = NULL;
+	xmlNode *node = conf->plugins_config->collector_node;
+	while (node != NULL) {
+		// Skip processing this node in case it's a comment
+		if (node->type == XML_COMMENT_NODE) {
+			node = node->next;
+			continue;
+		}
+
+		// Jump to collectingProcess tree, since 'statisticsFile' belongs to it (if present)
+		if (xmlStrcmp(node->name, (const xmlChar *) "collectingProcess") == 0) {
+			node = node->xmlChildrenNode;
+		}
+
+		if (xmlStrcmp(node->name, (const xmlChar *) "statisticsFile") == 0) {
+			char *stat_out_file_path = (char *) xmlNodeGetContent(node->xmlChildrenNode);
+			if (stat_out_file_path && strlen(stat_out_file_path) > 0) {
+				stat_out_file = fopen(stat_out_file_path, "w");
+			} else {
+				MSG_ERROR(msg_module, "Configuration error: 'statisticsFile' node has no value");
+			}
+
+			xmlFree(stat_out_file_path);
+
+			// No need to continue tree traversal, because 'statisticsFile' is only node to look for
+			break;
+		}
+
+		node = node->next;
+	}
 	
 	/* Catch SIGUSR1 */
 	signal(SIGUSR1, sig_handler);
@@ -554,8 +624,8 @@ static void *statistics_thread(void* config)
 		}
 		
 		/* Compute time */
-		now = time(NULL);
-		diff_time = now - begin;
+		time_now = time(NULL);
+		diff_time = time_now - begin;
 		
 		/* Update and save packets counter */
 		pkts = conf->packets;
@@ -566,17 +636,39 @@ static void *statistics_thread(void* config)
 		records = conf->data_records;
 		diff_records = records - last_records;
 		last_records = records;
-		
+
+		/* Collect lost data record counts from Data Managers */
+		lost_records = conf->lost_data_records;
+		diff_lost_records = lost_records - last_lost_records;
+		last_lost_records = lost_records;
+
 		/* print info */
-		MSG_INFO(stat_module, "now: %lu", now);
-		MSG_INFO(stat_module, "%15s %15s %15s %15s %15s", "total time", "total packets", "tot. data rec.", "packets/s", "data records/s");
-		MSG_INFO(stat_module, "%15lu %15lu %15lu %15lu %15lu", diff_time, pkts, records, diff_pkts/conf->stat_interval, diff_records/conf->stat_interval);
+		MSG_INFO(stat_module, "Time: %lu", time_now);
+		MSG_INFO(stat_module, "%15s %15s %15s %15s %15s %15s %20s", "total time", "total packets", "tot. data rec.", "lost data rec.", "packets/s", "data records/s", "lost data records/s");
+		MSG_INFO(stat_module, "%15lu %15lu %15lu %15lu %15lu %15lu %15lu", diff_time, pkts, records, lost_records, diff_pkts/conf->stat_interval, diff_records/conf->stat_interval, diff_lost_records/conf->stat_interval);
+
+		if (stat_out_file) {
+			rewind(stat_out_file); // Move to beginning of file
+			fprintf(stat_out_file, "%s=%lu\n", "TIME", time_now);
+			fprintf(stat_out_file, "%s=%lu\n", "RUN_TIME", diff_time);
+			fprintf(stat_out_file, "%s=%lu\n", "PACKETS", pkts);
+			fprintf(stat_out_file, "%s=%lu\n", "DATA_REC", records);
+			fprintf(stat_out_file, "%s=%lu\n", "LOST_DATA_REC", lost_records);
+			fprintf(stat_out_file, "%s=%lu\n", "PACKETS_SEC", diff_pkts/conf->stat_interval);
+			fprintf(stat_out_file, "%s=%lu\n", "DATA_REC_SEC", diff_records/conf->stat_interval);
+			fprintf(stat_out_file, "%s=%lu\n", "LOST_DATA_REC_SEC", diff_lost_records/conf->stat_interval);
+			fflush(stat_out_file);
+		}
 		
 		/* print cpu usage by threads */
-		statistics_print_cpu(&(conf->stats));
+		statistics_print_cpu(&(conf->stats), stat_out_file);
 		
 		/* print buffers usage */
-		statistics_print_buffers(conf);
+		statistics_print_buffers(conf, stat_out_file);
+	}
+
+	if (stat_out_file) {
+		fclose(stat_out_file);
 	}
 	
 	return NULL;
@@ -611,11 +703,11 @@ int output_manager_create(configurator *plugins_config, int stat_interval, void 
  * 
  * @return 0 on success
  */
-int output_manager_start() {
-
+int output_manager_start()
+{
 	int retval;
 
-	/* Create Output Manager's thread */
+	/* Create Output Manager thread */
 	retval = pthread_create(&(conf->thread_id), NULL, &output_manager_plugin_thread, (void *) conf);
 	if (retval != 0) {
 		MSG_ERROR(msg_module, "Unable to create Output Manager thread");
@@ -640,7 +732,8 @@ int output_manager_start() {
 /**
  * \brief Close Ouput Manager and all Data Managers
  */
-void output_manager_close(void *config) {
+void output_manager_close(void *config)
+{
 	struct output_manager_config *manager = (struct output_manager_config *) config;
 	struct data_manager_config *aux_config = NULL, *tmp = NULL;
 	struct stat_thread *aux_thread = NULL, *tmp_thread = NULL;
