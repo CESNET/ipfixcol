@@ -78,7 +78,7 @@ static PipeListener *list = nullptr;
  */
 void print_help()
 {
-	std::cout << "\nUsage: " << PACKAGE_NAME << " [-rhVDokmc] [-p pipe] [-d depth] [-s size] [-w watermark] [-v level] [directory]\n\n";
+	std::cout << "Usage: " << PACKAGE_NAME << " [-rhVDokmc] [-p pipe] [-d depth] [-w watermark] [-v level] -s size directory\n\n";
 	std::cout << "Options:\n";
 	std::cout << "  -h             Show this help and exit\n";
 	std::cout << "  -V             Show version and exit\n";
@@ -227,7 +227,9 @@ int main(int argc, char *argv[])
 	}
 
 	if (optind >= argc && !kill_daemon && !change) {
-		MSG_ERROR(msg_module, "directory not specified");
+		MSG_ERROR(msg_module, "no directory specified");
+		std::cout << "\n";
+		print_help();
 		return 1;
 	}
 	
@@ -281,6 +283,8 @@ int main(int argc, char *argv[])
 
 	if (!size_set) {
 		MSG_ERROR(msg_module, "size (-s) not specified");
+		std::cout << "\n";
+		print_help();
 		return 1;
 	}
 	
