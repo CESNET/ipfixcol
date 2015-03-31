@@ -45,6 +45,7 @@ extern "C" {
 #include "fastbit_element.h"
 #include "fastbit_table.h"
 
+#define NFv9_CONVERSION_ENTERPRISE_NUMBER (~((uint32_t) 0))
 
 int load_types_from_xml(struct fastbit_config *conf) {
 	pugi::xml_document doc;
@@ -74,8 +75,8 @@ int load_types_from_xml(struct fastbit_config *conf) {
 		str_value = it->node().child_value("dataType");
 
 		if (str_value =="unsigned8" or  str_value =="unsigned16" or str_value =="unsigned32" or str_value =="unsigned64" or \
-		   str_value =="dateTimeSeconds" or str_value =="dateTimeMilliseconds" or str_value =="dateTimeMicroseconds" or \
-	           str_value =="dateTimeNanoseconds" or str_value =="ipv4Address" or str_value =="macAddress" or str_value == "boolean") {
+				str_value =="dateTimeSeconds" or str_value =="dateTimeMilliseconds" or str_value =="dateTimeMicroseconds" or \
+				str_value =="dateTimeNanoseconds" or str_value =="ipv4Address" or str_value =="macAddress" or str_value == "boolean") {
 			type =UINT;
 		} else if (str_value =="signed8" or str_value =="signed16" or str_value =="signed32" or str_value =="signed64" ) {
 			type = INT;
@@ -101,7 +102,12 @@ int load_types_from_xml(struct fastbit_config *conf) {
 enum store_type get_type_from_xml(struct fastbit_config *conf, unsigned int en, unsigned int id) {
 	// Check whether a type has been determined for the specified element
 	if ((*conf->elements_types).count(en) == 0 || (*conf->elements_types)[en].count(id) == 0) {
-		MSG_WARNING(MSG_MODULE,"No specification for e%ui%u found in %s", en, id, ipfix_elements);
+		if (en == NFv9_CONVERSION_ENTERPRISE_NUMBER) {
+			MSG_WARNING(MSG_MODULE,"No specification for e%ui%u found in %s (enterprise number converted from NFv9)", en, id, ipfix_elements);
+		} else {
+			MSG_WARNING(MSG_MODULE,"No specification for e%ui%u found in %s", en, id, ipfix_elements);
+		}
+
 		return UNKNOWN;
 	}
 
