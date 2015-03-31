@@ -1070,7 +1070,7 @@ void config_process_profiles(configurator *config)
 	}
 
 	if (!profiles_file) {
-		MSG_NOTICE(msg_module, "No profiles configuration");
+		MSG_NOTICE(msg_module, "No profile configuration");
 		config_replace_profiles(config, NULL);
 		return;
 	}
@@ -1080,7 +1080,7 @@ void config_process_profiles(configurator *config)
 		/* Path are the same, compare timestamps */
 		struct stat st;
 		if (stat(profiles_file, &st) != 0) {
-			MSG_ERROR(msg_module, "Canno process profiles file %s: %s", profiles_file, sys_errlist[errno]);
+			MSG_ERROR(msg_module, "Cannot process profiles file %s: %s", profiles_file, sys_errlist[errno]);
 			free(profiles_file);
 			return;
 		}
@@ -1099,7 +1099,7 @@ void config_process_profiles(configurator *config)
 	void *profiles = profiles_process_xml(profiles_file);
 	if (!profiles) {
 		free(profiles_file);
-		MSG_ERROR(msg_module, "Cannot parse new profiles configuration, keeping the old one");
+		MSG_ERROR(msg_module, "Cannot parse new profiles configuration; keeping old configuration...");
 		return;
 	}
 
