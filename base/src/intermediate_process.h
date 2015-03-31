@@ -39,8 +39,8 @@
  */
 
 /**
- * \defgroup Intermediate_API
- * \ingroup ipfixmedCore
+ * \defgroup intermediateProcess Intermediate_API
+ * \ingroup internalAPIs
  *
  * In ipfixmed, Intermediate Process is a thread that picks up data from its
  * input queue and calls function process_message() on it.
