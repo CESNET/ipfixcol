@@ -45,12 +45,12 @@
 #include <unistd.h>
 #include <libxml/xpathInternals.h>
 
-
 /**
  * \brief Remove plugin from configuration file
  * 
  * \param info tool configuration
  * \param tag plugin type tag
+ * \param nametag
  * \return 0 on success
  */
 int remove_pl(conf_info_t *info, char *tag, char *nametag)

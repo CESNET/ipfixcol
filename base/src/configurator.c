@@ -123,7 +123,7 @@ xmlDoc *config_open_xml(const char *filename)
 }
 
 /**
- * \breif Initialize configurator
+ * \brief Initialize configurator
  */
 configurator *config_init(const char *internal, const char *startup)
 {

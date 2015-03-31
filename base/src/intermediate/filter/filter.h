@@ -1,5 +1,5 @@
 /**
- * \file filter.h
+ * \file filter/filter.h
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief Intermediate plugin for IPFIX data filtering
  *
@@ -220,7 +220,7 @@ struct filter_value *filter_parse_regex(char *regexstr);
 /**
  * \brief Parse IPv4 address
  *
- * \param[in] string IPv4 address
+ * \param[in] addr IPv4 address
  * \return pointer to parsed value
  */
 struct filter_value *filter_parse_ipv4(char *addr);
@@ -228,7 +228,7 @@ struct filter_value *filter_parse_ipv4(char *addr);
 /**
  * \brief Parse IPv6 address
  *
- * \param[in] string IPv6 address
+ * \param[in] addr IPv6 address
  * \return pointer to parsed value
  */
 struct filter_value *filter_parse_ipv6(char *addr);
@@ -245,7 +245,7 @@ struct filter_value *filter_parse_timestamp(char *tstamp);
  * \brief Create new leaf treenode
  *
  * \param[in] field Field ID
- * \param[in] operator Operator type
+ * \param[in] op Operator type
  * \param[in] value Pointer to value
  * \return Pointer to new leaf treenode
  */
@@ -312,6 +312,7 @@ void filter_free_tree(struct filter_treenode *node);
  * \brief Print error message from filter parser
  *
  * \param[in] msg Error message
+ * \param[in] loc
  */
 void filter_error(const char *msg, YYLTYPE *loc);
 

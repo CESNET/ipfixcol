@@ -1,5 +1,5 @@
 /**
- * \file convert.h
+ * \file udp/convert.h
  * \author Michal Kozubik <kozubik.michal@gmail.com>
  * \brief Packet conversion from Netflow v5/v9 or sFlow to IPFIX format.
  *
@@ -60,9 +60,9 @@ int convert_init(int in_plugin, int len);
 /**
   * \brief Main function for packet conversion
   *
-  * \param[in] packet Received packet
-  * \param[in] len Packet length from function recvfrom etc.
-  * \param[in] info_list info_list structure (used only in UDP_PLUGIN)
+  * \param[out] packet Flow information data in the form of IPFIX packet
+  * \param[in] len Length of packet
+  * \param[in] input_info Information structure storing data needed for refreshing templates
   */
 void convert_packet(char **packet, ssize_t *len, char *input_info);
 

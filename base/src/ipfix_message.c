@@ -195,7 +195,6 @@ int message_get_data(uint8_t **dest, uint8_t *source, int len)
 	return 0;
 }
 
-
 /**
  * \brief Set data to IPFIX message.
  *
@@ -211,12 +210,11 @@ int message_set_data(uint8_t *dest, uint8_t *source, int len)
 	return 0;
 }
 
-
 /**
  * \brief Get offset where next data record starts
  *
  * \param[in] data_record data record
- * \param[in] template template for data record
+ * \param[in] tmplt template for data record
  * \return offset of next data record in data set
  */
 uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template *tmplt)
@@ -270,7 +268,7 @@ uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template
  * \brief Get pointers to start of the Data Records in specific Data Set
  *
  * \param[in] data_set data set to work with
- * \param[in] template template for data set
+ * \param[in] tmplt template for data set
  * \return array of pointers to start of the Data Records in Data Set
  */
 uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_template *tmplt)

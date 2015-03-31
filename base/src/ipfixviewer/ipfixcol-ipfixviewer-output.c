@@ -1,5 +1,5 @@
 /**
- * \file ipfixviewer.c
+ * \file ipfixcol-ipfixviewer-output.c
  * \author Michal Srb <michal.srb@cesnet.cz>
  * \brief Plugin for displaying IPFIX data stored in IPFIX file format.
  *
@@ -67,13 +67,11 @@ struct viewer_config {
 	int empty;
 };
 
-
 /* some auxiliary functions for extracting data of exact length */
 #define read8(ptr) (*((uint8_t *) (ptr)))
 #define read16(ptr) (*((uint16_t *) (ptr)))
 #define read32(ptr) (*((uint32_t *) (ptr)))
 #define read64(ptr) (*((uint64_t *) (ptr)))
-
 
 /**
  * \brief Print IPFIX message header
@@ -129,7 +127,6 @@ static void print_set_header(struct ipfix_template_set *template_set)
 
 	printf("\tLength: %u\n", ntohs(set_header->length));
 }
-
 
 /**
  * \brief Print template record
@@ -228,7 +225,6 @@ static uint16_t print_options_template_record(struct ipfix_options_template_reco
 
 	return offset;
 }
-
 
 /**
  * \brief Print all template sets in IPFIX message
@@ -483,7 +479,6 @@ static int print_data_sets(const struct ipfix_message *ipfix_msg)
 	return 0;
 }
 
-
 /**
  * \brief Storage plugin initialization.
  *
@@ -496,8 +491,8 @@ static int print_data_sets(const struct ipfix_message *ipfix_msg)
  */
 int storage_init(char *params, void **config)
 {
+	(void) params;
 	struct viewer_config *conf;
-
 
 	conf = (struct viewer_config *) malloc(sizeof(*conf));
 	if (!conf) {
@@ -506,12 +501,9 @@ int storage_init(char *params, void **config)
 	}
 	memset(conf, 0, sizeof(*conf));
 
-
 	*config = conf;
-
 	return 0;
 }
-
 
 /**
  * \brief Show IPFIX data
@@ -521,14 +513,14 @@ int storage_init(char *params, void **config)
  *
  * \param[in] config the plugin specific configuration structure
  * \param[in] ipfix_msg IPFIX message
- * \param[in] templates All currently known templates, not just templates
- * in the message
+ * \param[in] template_mgr Template manager
  * \return 0 on success, negative value otherwise
  */
 int store_packet(void *config, const struct ipfix_message *ipfix_msg,
                            const struct ipfix_template_mgr *template_mgr)
 {
 	struct viewer_config *conf;
+	(void) template_mgr;
 
 	if (config == NULL || ipfix_msg == NULL) {
 		return -1;
@@ -550,7 +542,6 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	return 0;
 }
 
-
 /**
  * \brief This function does nothing in ipfixviewer plugin
  *
@@ -562,9 +553,9 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 int store_now(const void *config)
 {
 	/* nothing to do */
+	(void) config;
 	return 0;
 }
-
 
 /**
  * \brief Remove storage plugin.
@@ -585,6 +576,5 @@ int storage_close(void **config)
 
 	return 0;
 }
-
 
 /**@}*/

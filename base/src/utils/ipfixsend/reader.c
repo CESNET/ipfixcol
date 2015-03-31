@@ -69,7 +69,7 @@ void free_packets(char **packets)
  * \brief Read packet header from file
  * 
  * @param buff read buffer
- * @param f input file
+ * @param fd input file
  * @return packet length
  */
 int read_header(char *buff, int fd)

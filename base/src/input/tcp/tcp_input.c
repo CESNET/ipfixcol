@@ -217,7 +217,6 @@ void *input_listen(void *config)
 	struct cleanup maid;       /* auxiliary struct for TLS error handling */
 #endif
 
-
     /* loop ends when thread is cancelled by pthread_cancel() function */
     while (1) {
         /* allocate space for the address */
