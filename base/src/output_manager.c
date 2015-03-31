@@ -527,6 +527,7 @@ static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
  * \brief Print queue usage
  * 
  * @param conf output manager's config
+ * @param stat_out_file Output file for statistics
  */
 void statistics_print_buffers(struct output_manager_config *conf, FILE *stat_out_file)
 {	

@@ -38,7 +38,7 @@
  */
 
 /**
- * \defgroup inputAPI Intermediate Plugins API
+ * \defgroup intermediateAPI Intermediate Plugins API
  * \ingroup publicAPIs
  *
  * These functions specify a communication interface between ipfixcol core and
