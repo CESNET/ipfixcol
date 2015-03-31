@@ -1,5 +1,5 @@
 /**
- * \file convert.c
+ * \file tcp/convert.c
  * \author Michal Kozubik <kozubik.michal@gmail.com>
  * \brief Packet conversion from Netflow v5/v9 or sFlow to IPFIX format.
  *
@@ -229,9 +229,9 @@ void convert_close() {
  *
  * Also sets total length of packet
  *
- * \param[out] packet Flow information data in the form of IPFIX packet.
- * \param[in] input_info Structure with informations needed for inserting Template Set
+ * \param[out] packet Flow information data in the form of IPFIX packet
  * \param[in] numOfFlowSamples Number of flow samples in sFlow datagram
+ * \param[out] len
  * \return Total length of packet
  */
 uint16_t insert_template_set(char **packet, int numOfFlowSamples, ssize_t *len)

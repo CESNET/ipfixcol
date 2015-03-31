@@ -1,5 +1,5 @@
 /**
- * \file ipfix_format.c
+ * \file storage/ipfix/ipfix_file.c
  * \author Michal Srb <michal.srb@cesnet.cz>
  * \brief Storage plugin for IPFIX file format.
  *
@@ -250,8 +250,7 @@ err_init:
  *
  * \param[in] config the plugin specific configuration structure
  * \param[in] ipfix_msg IPFIX message
- * \param[in] templates All currently known templates, not just templates
- * in the message
+ * \param[in] template_mgr Template manager
  * \return 0 on success, negative value otherwise
  */
 int store_packet(void *config, const struct ipfix_message *ipfix_msg,

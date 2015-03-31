@@ -139,9 +139,9 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 
 int store_now(const void *config)
 {
+	(void) config;
 	return 0;
 }
-
 
 /**
  * \brief Remove storage plugin.

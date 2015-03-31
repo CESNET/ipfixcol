@@ -543,6 +543,7 @@ struct ipfix_template *tm_record_get_template(struct ipfix_template_mgr_record *
 /**
  * \brief Remove all templates from Template Manager's record
  *
+ * \param[in] tm Template Manager
  * \param[in] tmr Template Manager's record
  * \param[in] type Type of templates to remove
  */
@@ -569,6 +570,7 @@ void tm_record_remove_all_templates(struct ipfix_template_mgr *tm, struct ipfix_
 /**
  * \brief Destroy Template Manager's record
  *
+ * \param[in] tm Template Manager
  * \param[in] tmr Template Manager's record
  */
 void tm_record_destroy(struct ipfix_template_mgr *tm, struct ipfix_template_mgr_record *tmr)
@@ -606,7 +608,7 @@ struct ipfix_template_mgr *tm_create() {
 /**
  * \brief Destroy global template manager
  *
- * \para[in] tm Template Manager
+ * \param[in] tm Template Manager
  */
 void tm_destroy(struct ipfix_template_mgr *tm)
 {
