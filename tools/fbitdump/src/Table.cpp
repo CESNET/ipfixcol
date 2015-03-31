@@ -141,8 +141,8 @@ void Table::aggregateWithFunctions(const columnVector& aggregateColumns, const c
 	}
 	
 	/* Create select clause */
-	std::string select;
 	bool flows = false;
+	std::string select;
 	for (auto name: cols) {
 		int begin = name.find_first_of('(') + 1;
 		int end = name.find_first_of(')');
@@ -151,9 +151,12 @@ void Table::aggregateWithFunctions(const columnVector& aggregateColumns, const c
 			select += name + " as " + tmp + ", ";
 		} else {
 			flows = true;
-			select += "count(*) as flows, ";
 		}
 	}
+
+	/* Add aggregation */
+	select += "count(*) as flows, ";
+
 	select = select.substr(0, select.length() - 1);
 	
 	/* Create table */
