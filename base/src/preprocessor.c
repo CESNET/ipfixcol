@@ -424,11 +424,6 @@ void fill_metadata(uint8_t *rec, int rec_len, struct ipfix_template *templ, void
 	msg->metadata[msg->data_records_count].record.record = rec;
 	msg->metadata[msg->data_records_count].record.length = rec_len;
 	msg->metadata[msg->data_records_count].record.templ = templ;
-	msg->metadata[msg->data_records_count].channels = NULL;
-	msg->metadata[msg->data_records_count].srcAS = 0;
-	msg->metadata[msg->data_records_count].dstAS = 0;
-	msg->metadata[msg->data_records_count].srcCountry = 0;
-	msg->metadata[msg->data_records_count].dstCountry = 0;
 	
 	msg->data_records_count++;
 }
