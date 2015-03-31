@@ -37,7 +37,6 @@
  *
  */
 
-
 extern "C" {
 #include <ipfixcol/storage.h>
 #include <ipfixcol/verbose.h>
@@ -59,12 +58,10 @@ extern "C" {
 #include <fastbit/ibis.h>
 
 #include "pugixml.hpp"
-
 #include "fastbit.h"
 #include "fastbit_table.h"
 #include "fastbit_element.h"
 #include "FlowWatch.h"
-
 
 void * reorder_index(void * config){
 	struct fastbit_config *conf = static_cast<struct fastbit_config*>(config);
@@ -109,7 +106,6 @@ void * reorder_index(void * config){
 	sem_post(&(conf->sem));
 	return NULL;
 }
-
 
 std::string dir_hierarchy(struct fastbit_config *config, uint32_t oid){
 	struct tm * timeinfo;
@@ -375,10 +371,10 @@ int storage_init (char *params, void **config){
 	return 0;
 }
 
-
 extern "C"
 int store_packet (void *config, const struct ipfix_message *ipfix_msg,
-	const struct ipfix_template_mgr *template_mgr){
+	   const struct ipfix_template_mgr *template_mgr){
+	(void) template_mgr;
 	std::map<uint16_t,template_table*>::iterator table;
 	struct fastbit_config *conf = (struct fastbit_config *) config;
 	std::map<uint16_t,template_table*> *templates = NULL;
@@ -525,6 +521,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 
 extern "C"
 int store_now (const void *config){
+	(void) config;
 	MSG_DEBUG(MSG_MODULE,"STORE_NOW");
 	return 0;
 }

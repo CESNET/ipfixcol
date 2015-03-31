@@ -109,6 +109,7 @@ enum store_type get_type_from_xml(struct fastbit_config *conf, unsigned int en, 
 }
 
 void element::byte_reorder(uint8_t *dst,uint8_t *src, int srcSize, int dstSize) {
+	(void) dstSize;
 	int i;
 	for(i=0;i<srcSize;i++) {
 		dst[i] = src[srcSize-i-1];
@@ -182,6 +183,7 @@ std::string element::get_part_info() {
 }
 
 el_var_size::el_var_size(int size, int en, int id, uint32_t buf_size) {
+	(void) buf_size;
 	data = NULL;
 	_size = size;
 	_filled = 0;
@@ -595,21 +597,30 @@ el_sint::el_sint(int size , int en, int id, uint32_t buf_size) {
 	allocate_buffer(buf_size);
 }
 
-el_unknown::el_unknown(int size, int en, int id,  int part, uint32_t buf_size) {
+el_unknown::el_unknown(int size, int en, int id, int part, uint32_t buf_size) {
+	(void) en;
+	(void) id;
+	(void) part;
+	(void) buf_size;
+
 	_size = size;
 
 	// Size of 65535 means variable-sized IE
 	_var_size = (size == 65535);
 }
 
-void el_unknown::allocate_buffer(int count) {}
+void el_unknown::allocate_buffer(int count) {
+	(void) count;
+}
 void el_unknown::free_buffer() {}
 
 int el_unknown::append(void *data) {
+	(void) data;
 	return 0;
 }
 
 int el_unknown::flush(std::string path) {
+	(void) path;
 	return 0;
 }
 
