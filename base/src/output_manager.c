@@ -585,8 +585,7 @@ static void *statistics_thread(void* config)
 /**
  * \brief Creates new Output Manager
  *
- * @param[in] storages list of storage plugin
- * @param[in] in_queue manager's input queue
+ * @param[in] plugins_config plugins configurator
  * @param[in] stat_interval statistics printing interval
  * @param[out] config configuration structure
  * @return 0 on success, negative value otherwise

@@ -54,35 +54,35 @@
 /**
  * \brief Initialize Intermediate Process.
  *
- * \param[in] intermediate intermediate plugin structure
+ * \param[in] conf intermediate plugin structure
  * \param[in] ip_id source ID for creating templates
  * \return 0 on success, negative value otherwise
  */
-int ip_init(struct intermediate *intermediate, uint32_t ip_id);
+int ip_init(struct intermediate *conf, uint32_t ip_id);
 
 /**
  * \brief Set new input queue
  * 
- * \param intermediate intermediate process
+ * \param conf intermediate process
  * \param in_queue new input queue
  * \return 0 on success
  */
-int ip_change_in_queue(struct intermediate *intermediate, struct ring_buffer *in_queue);
+int ip_change_in_queue(struct intermediate *conf, struct ring_buffer *in_queue);
 
 /**
  * \brief Destroy Intermediate Process
  *
- * \param[in] config configuration structure
+ * \param[in] conf configuration structure
  * \return 0 on success, negative value otherwise
  */
-int ip_destroy(struct intermediate *config);
+int ip_destroy(struct intermediate *conf);
 
 /**
  * \brief Stop Intermediate Process
  *
- * \param[in] config configuration structure
+ * \param[in] conf configuration structure
  * \return 0 on success, negative value otherwise
  */
-int ip_stop(struct intermediate *config);
+int ip_stop(struct intermediate *conf);
 
 /**@}*/

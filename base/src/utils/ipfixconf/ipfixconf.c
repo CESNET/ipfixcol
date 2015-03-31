@@ -1,5 +1,5 @@
 /**
- * \file ipficonf.c
+ * \file ipfixconf.c
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief Tool for editing IPFIXcol internalcfg.xml
  *

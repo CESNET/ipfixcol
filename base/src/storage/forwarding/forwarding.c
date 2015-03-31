@@ -309,6 +309,7 @@ int forwarding_init_records(forwarding *conf)
 /**
  * \brief Initialize configuration by xml file
  * \param[in] conf Plugin configuration
+ * \param[in] doc XML document file
  * \param[in] root XML root element
  * \return Destination address
  */
@@ -418,7 +419,7 @@ char *forwarding_init_conf(forwarding *conf, xmlDoc *doc, xmlNodePtr root)
 
 /**
  * \brief Initialize plugin
- * \param[in] param Parameters
+ * \param[in] params Parameters
  * \param[out] config Plugin configuration
  * \return 0 on success
  */

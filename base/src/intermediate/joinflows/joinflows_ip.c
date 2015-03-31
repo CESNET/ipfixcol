@@ -760,7 +760,8 @@ struct source *joinflows_get_source(struct joinflows_ip_config *conf, uint32_t o
  * \brief Update input_info structure
  *
  * \param[in] src Source structure
- * \param[in] inpu_info Original input_info structure
+ * \param[in] input_info Original input_info structure
+ * \param[in] records Number of flow records
  * \return Sequence number of new message
  */
 uint32_t joinflows_update_input_info(struct source *src, struct input_info *input_info, int records)
