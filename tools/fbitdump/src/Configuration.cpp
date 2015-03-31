@@ -805,65 +805,66 @@ void Configuration::help() const
 {
 	/* lines with // at the beginning should be implemented sooner */
 	std::cout
-	<< "usage "<< PACKAGE <<" [options] [\"filter\"]" << std::endl
-	<< "-h              Show this help" << std::endl
-	<< "-v <level>      Set verbosity level" << std::endl
-	<< "-V              Show version and exit" << std::endl
-	<< "-a              Aggregate flow data" << std::endl
-	<< "-A[<expr>]      Aggregation fields, separated by ','. Please check fbitdump(1) for a list of supported fields" << std::endl
-//	<< "                or subnet aggregation: srcip4/24, srcip6/64." << std::endl
+	<< "Usage: "<< PACKAGE <<" [options] [\"filter\"]\n" << std::endl
+	<< "Options:" << std::endl
+	<< "  -h              Show this help" << std::endl
+	<< "  -v <level>      Set verbosity level" << std::endl
+	<< "  -V              Show version and exit" << std::endl
+	<< "  -a              Aggregate flow data" << std::endl
+	<< "  -A[<expr>]      Aggregation fields, separated by ','. Please check fbitdump(1) for a list of supported fields" << std::endl
+	//<< "                or subnet aggregation: srcip4/24, srcip6/64." << std::endl
 	//<< "-b              Aggregate flow records as bidirectional flows." << std::endl
 	//<< "-B              Aggregate flow records as bidirectional flows - Guess direction." << std::endl
-//	<< "-w <file>       write output to file" << std::endl
-	<< "-f <file>       Read flow filter from file" << std::endl
-	<< "-n <number>     Define number of top N. -c option takes precedence over -n" << std::endl
-	<< "-c <number>     Limit number of records to display" << std::endl
-	<< "-D <dns>        Use nameserver <dns> for host lookup. Does not support IPv6 addresses" << std::endl
-	<< "-N[<level>]     Set plain number printing level. Please check fbitdump(1) for detailed information" << std::endl
-	<< "-s <column>[/<order>]     Generate statistics for <column> any valid record element" << std::endl
-	<< "                and ordered by <order>. Order can be any summarizable column, just as for -m option" << std::endl
-	<< "-q              Quiet: do not print statistics" << std::endl
-	<< "-e              Extended statistics: also prints summary of statistics columns" << std::endl
+	//<< "-w <file>       write output to file" << std::endl
+	<< "  -f <file>       Read flow filter from file" << std::endl
+	<< "  -n <number>     Define number of top N. -c option takes precedence over -n" << std::endl
+	<< "  -c <number>     Limit number of records to display" << std::endl
+	<< "  -D <dns>        Use nameserver <dns> for host lookup. Does not support IPv6 addresses" << std::endl
+	<< "  -N[<level>]     Set plain number printing level. Please check fbitdump(1) for detailed information" << std::endl
+	<< "  -s <column>[/<order>]     Generate statistics for <column> any valid record element" << std::endl
+	<< "                  and ordered by <order>. Order can be any summarizable column, just as for -m option" << std::endl
+	<< "  -q              Quiet: do not print statistics" << std::endl
+	<< "  -e              Extended statistics: also prints summary of statistics columns" << std::endl
 	//<< "-H Add xstat histogram data to flow file.(default 'no')" << std::endl
-	<< "-i[column1[,column2,...]]	Build indexes for given columns (or all) for specified data" << std::endl
-	<< "-d[column1[,column2,...]]	Delete indexes for given columns (or all) for specified data" << std::endl
+	<< "  -i[column1[,column2,...]]	Build indexes for given columns (or all) for specified data" << std::endl
+	<< "  -d[column1[,column2,...]]	Delete indexes for given columns (or all) for specified data" << std::endl
 	//<< "-j <file>       Compress/Uncompress file." << std::endl
 	//<< "-z              Compress flows in output file. Used in combination with -w." << std::endl
 	//<< "-l <expr>       Set limit on packets for line and packed output format." << std::endl
 	//<< "                key: 32 character string or 64 digit hex string starting with 0x." << std::endl
 	//<< "-L <expr>       Set limit on bytes for line and packed output format." << std::endl
-//	<< "-I              Print flow summary statistics info from file, specified by -r." << std::endl
-	<< "-M <expr>       Read input from multiple directories" << std::endl
-	<< "                /dir/dir1:dir2:dir3 Read the same files from '/dir/dir1' '/dir/dir2' and '/dir/dir3'" << std::endl
-	<< "                requests -r dir or -r firstdir:lastdir without pathnames" << std::endl
-	<< "-r <expr>       Specifies subdirectory or subdirectories for -M, usable only with -M" << std::endl
-	<< "                expr can be dir, which loads the dir from all directories specified in -M," << std::endl
-	<< "				or dir1:dir2, which reads data from subdirectories 'dir1' to 'dir2', in directories from -M" << std::endl
-	<< "-m [column]     Print flow data date sorted. Takes optional parameter '%column' to sort by" << std::endl
-	<< "-R <expr>       Recursively read input from directory and subdirectories; can be repeated" << std::endl
-	<< "                /any/dir        Reads all data from directory 'dir'" << std::endl
-	<< "                /dir/dir1:dir2  Reads all data from directory 'dir1' to 'dir2'" << std::endl
-	<< "-o <mode>       Use <mode> to print out flow records:" << std::endl
-//	<< "                 raw      Raw record dump." << std::endl
-	<< "                  line     Standard output line format." << std::endl
-	<< "                  long     Standard output line format with additional fields" << std::endl
-	<< "                  extended Even more information" << std::endl
-	<< "                  extra    More than you want to know..." << std::endl
-	<< "                  csv      ',' separated, machine parseable output format" << std::endl
-	<< "                  pipe     '|' separated legacy machine parseable output format" << std::endl
-	<< "                      modes line, long, extended and extra may be extended by '4' or '6' to display" << std::endl
-	<< "                      only IPv4 or IPv6 addresses. Examples: long4, extended6" << std::endl
-//	<< "-v <file>       verify flow data file. Print version and blocks." << std::endl
+	//<< "-I              Print flow summary statistics info from file, specified by -r." << std::endl
+	<< "  -M <expr>       Read input from multiple directories" << std::endl
+	<< "                  /dir/dir1:dir2:dir3    Reads the same files from '/dir/dir1', '/dir/dir2' and '/dir/dir3'" << std::endl
+	<< "                  Requests -r dir or -r firstdir:lastdir without pathnames" << std::endl
+	<< "  -r <expr>       Specifies subdirectory or subdirectories for -M, usable only with -M" << std::endl
+	<< "                  expr can be dir, which loads the dir from all directories specified in -M," << std::endl
+	<< "                  or dir1:dir2, which reads data from subdirectories 'dir1' to 'dir2', in directories from -M" << std::endl
+	<< "  -m [column]     Print flow data date sorted. Takes optional parameter '%column' to sort by" << std::endl
+	<< "  -R <expr>       Recursively read input from directory and subdirectories; can be repeated" << std::endl
+	<< "                  /any/dir        Reads all data from directory 'dir'" << std::endl
+	<< "                  /dir/dir1:dir2  Reads all data from directory 'dir1' to 'dir2'" << std::endl
+	<< "  -o <mode>       Use <mode> to print out flow records:" << std::endl
+	//<< "                 raw      Raw record dump." << std::endl
+	<< "                    line     Standard output line format." << std::endl
+	<< "                    long     Standard output line format with additional fields" << std::endl
+	<< "                    extended Even more information" << std::endl
+	<< "                    extra    More than you want to know..." << std::endl
+	<< "                    csv      ',' separated, machine parseable output format" << std::endl
+	<< "                    pipe     '|' separated legacy machine parseable output format" << std::endl
+	<< "                        modes line, long, extended and extra may be extended by '4' or '6' to display" << std::endl
+	<< "                        only IPv4 or IPv6 addresses. Examples: long4, extended6" << std::endl
+	//<< "-v <file>       verify flow data file. Print version and blocks." << std::endl
 	//<< "-x <file>       verify extension records in flow data file." << std::endl
 	//<< "-X              Dump Filtertable and exit (debug option)." << std::endl
-	<< "-Z              Check filter syntax and exit" << std::endl
-	<< "-t <time>       Time window for filtering packets: yyyy/MM/dd.hh:mm:ss[-yyyy/MM/dd.hh:mm:ss]" << std::endl
-	<< "-C <path>       Path to configuration file. Default is " << CONFIG_XML << std::endl
-	<< "-T              Print information about templates in directories specified by -R" << std::endl
-	<< "-S              Print available semantics" << std::endl
-	<< "-O              Print available output formats" << std::endl
-	<< "-l              Print plugin list" << std::endl
-	<< "-P <filter>     Post-aggregation filter (only supported with -A, containing columns in aggregated table only)" << std::endl
+	<< "  -Z              Check filter syntax and exit" << std::endl
+	<< "  -t <time>       Time window for filtering packets: yyyy/MM/dd.hh:mm:ss[-yyyy/MM/dd.hh:mm:ss]" << std::endl
+	<< "  -C <path>       Path to configuration file. Default is " << CONFIG_XML << std::endl
+	<< "  -T              Print information about templates in directories specified by -R" << std::endl
+	<< "  -S              Print available semantics" << std::endl
+	<< "  -O              Print available output formats" << std::endl
+	<< "  -l              Print plugin list" << std::endl
+	<< "  -P <filter>     Post-aggregation filter (only supported with -A, containing columns in aggregated table only)" << std::endl
 	;
 }
 

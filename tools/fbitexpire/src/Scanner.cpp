@@ -186,7 +186,7 @@ void Scanner::removeDirs()
 		dir = getDirToRemove();
 		
 		if (!dir) {
-			MSG_WARNING(msg_module, "cannot remove any folder (only active directories)");
+			MSG_WARNING(msg_module, "cannot remove data (only active directories)");
 			return;
 		}
 		
