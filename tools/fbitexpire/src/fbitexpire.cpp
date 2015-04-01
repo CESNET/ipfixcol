@@ -83,7 +83,7 @@ void print_help()
 	std::cout << "  -h             Show this help and exit\n";
 	std::cout << "  -V             Show version and exit\n";
 	std::cout << "  -r             Instruct daemon to rescan folder (note: daemon has to be running)\n";
-	std::cout << "  -f             Force rescan directories when daemon starts (ignore stat files)\n";
+	std::cout << "  -f             Force rescan directories when daemon starts (ignores stat files)\n";
 	std::cout << "  -p <pipe>      Pipe name (default: " << DEFAULT_PIPE << ")\n";
 	std::cout << "  -s <size>      Maximum size of all directories (in MB)\n";
 	std::cout << "  -w <watermark> Lower limit when removing folders (in MB)\n";
@@ -91,7 +91,7 @@ void print_help()
 	std::cout << "  -D             Daemonize\n";
 	std::cout << "  -m             Multiple sources on top level directory. Please check fbitexpire(1) for more information\n";
 	std::cout << "  -k             Stop fbitexpire daemon listening on pipe specified by -p\n";
-	std::cout << "  -o             Only scan directories and remove old, if needed, and don't wait for new folders\n";
+	std::cout << "  -o             Only scan and remove old directories, if needed, and don't wait for new folders\n";
 	std::cout << "  -v <level>     Set verbosity level\n";
 	std::cout << "  -c             Change daemon settings; to be combined with -s and/or -w\n";
 	std::cout << "\n";
@@ -242,7 +242,17 @@ int main(int argc, char *argv[])
 	pipe_file_exists = (lstat(pipe.c_str(), &st) == 0);
 	pipe_exists = (pipe_file_exists && S_ISFIFO(st.st_mode));
 
-	if (pipe_file_exists) {
+	/* When starting fbitexpire, we can identify two situations:
+	 *      1. Entirely new instance > pipe should not exist
+	 *      2. Second or more instance, used to change parameters
+	 *         of or send command to first instance > pipe should exist
+	 */
+	if (rescan || kill_daemon || change) {
+		if (!pipe_exists) {
+			MSG_ERROR(msg_module, "no existing pipe/daemon found (%s) for changing parameters", pipe.c_str());
+			return 1;
+		}
+	} else if (pipe_file_exists) {
 		if (pipe_exists) {
 			MSG_ERROR(msg_module, "active pipe (%s) detected", pipe.c_str());
 			MSG_ERROR(msg_module, "fbitexpire supports only a single instance per pipe");
