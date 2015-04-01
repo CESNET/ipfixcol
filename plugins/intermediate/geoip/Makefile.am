@@ -4,7 +4,7 @@ AM_CFLAGS += -I$(top_srcdir)/headers
 pluginsdir = $(datadir)/ipfixcol/plugins
 
 sofile = $(pluginsdir)/ipfixcol-geoip-inter.so
-internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
+internalcfg = $(DESTDIR)$(sysconfdir)/ipfixcol/internalcfg.xml
 
 plugins_LTLIBRARIES = ipfixcol-geoip-inter.la
 ipfixcol_geoip_inter_la_LDFLAGS = -module -avoid-version -shared -lGeoIP

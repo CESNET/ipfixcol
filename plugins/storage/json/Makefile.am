@@ -5,11 +5,10 @@ AM_CPPFLAGS += -I$(top_srcdir)/pugixml $(SISO_CPPFLAGS)
 #-I$(top_srcdir)/../../../base/src/utils/libsiso/
 AM_LDFLAGS += $(SISO_LDFLAGS) -module -avoid-version -shared 
  
-
 pluginsdir = $(datadir)/ipfixcol/plugins
 
 sofile = $(pluginsdir)/ipfixcol-json-output.so
-internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
+internalcfg = $(DESTDIR)$(sysconfdir)/ipfixcol/internalcfg.xml
 
 plugins_LTLIBRARIES = ipfixcol-json-output.la
 #ipfixcol_json_output_la_LDFLAGS = $(AM_LDFLAGS) -module -avoid-version -shared 

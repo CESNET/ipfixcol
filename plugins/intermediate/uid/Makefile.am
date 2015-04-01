@@ -4,7 +4,7 @@ AM_CFLAGS += -I$(top_srcdir)/headers
 pluginsdir = $(datadir)/ipfixcol/plugins
 
 sofile = $(pluginsdir)/ipfixcol-uid-inter.so
-internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
+internalcfg = $(DESTDIR)$(sysconfdir)/ipfixcol/internalcfg.xml
 
 plugins_LTLIBRARIES = ipfixcol-uid-inter.la
 ipfixcol_uid_inter_la_LDFLAGS = -module -avoid-version -shared

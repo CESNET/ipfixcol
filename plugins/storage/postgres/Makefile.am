@@ -3,7 +3,7 @@ ACLOCAL_AMFLAGS = -I m4
 pluginsdir = $(datadir)/ipfixcol/plugins
 
 sofile = $(pluginsdir)/ipfixcol-postgres-output.so
-internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
+internalcfg = $(DESTDIR)$(sysconfdir)/ipfixcol/internalcfg.xml
 
 plugins_LTLIBRARIES = ipfixcol-postgres-output.la
 ipfixcol_postgres_output_la_LDFLAGS = -module -avoid-version -shared

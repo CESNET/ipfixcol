@@ -3,7 +3,7 @@ ACLOCAL_AMFLAGS = -I m4
 pluginsdir = $(datadir)/ipfixcol/plugins
 
 sofile = $(pluginsdir)/ipfixcol-nfdump-input.so
-internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
+internalcfg = $(DESTDIR)$(sysconfdir)/ipfixcol/internalcfg.xml
 
 plugins_LTLIBRARIES = ipfixcol-nfdump-input.la
 ipfixcol_nfdump_input_la_LDFLAGS = -module -avoid-version -shared
