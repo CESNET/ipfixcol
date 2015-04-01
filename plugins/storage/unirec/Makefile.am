@@ -4,7 +4,7 @@ ipfixcoldir = $(datadir)/ipfixcol
 pluginsdir = $(datadir)/ipfixcol/plugins
 
 sofile = $(pluginsdir)/ipfixcol-unirec-output.so
-internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
+internalcfg = $(DESTDIR)$(sysconfdir)/ipfixcol/internalcfg.xml
 
 plugins_LTLIBRARIES = ipfixcol-unirec-output.la
 ipfixcol_unirec_output_la_LDFLAGS = -module -avoid-version -shared -ltrap

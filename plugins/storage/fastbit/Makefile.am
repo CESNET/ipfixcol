@@ -6,7 +6,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/pugixml
 pluginsdir = $(datadir)/ipfixcol/plugins
 
 sofile = $(pluginsdir)/ipfixcol-fastbit-output.so
-internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
+internalcfg = $(DESTDIR)$(sysconfdir)/ipfixcol/internalcfg.xml
 
 plugins_LTLIBRARIES = ipfixcol-fastbit-output.la
 ipfixcol_fastbit_output_la_LDFLAGS = -module -avoid-version -shared
