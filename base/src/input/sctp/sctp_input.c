@@ -46,7 +46,6 @@
  * @{
  */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -93,7 +92,6 @@ static char *msg_module = "sctp input";
 
 /** SCTP input plugin identification for packet conversion from netflow to ipfix format */
 #define SCTP_INPUT_PLUGIN
-
 
 /**
  * \struct input_info_node
@@ -661,9 +659,9 @@ err_sockaddr6:
 /**
  * \brief Receive data from opened associations
  *
- * \param[in] config  plugin config structure
- * \param[out] input_info  information about input
- * \param[out] packet  IPFIX message
+ * \param[in] config plugin config structure
+ * \param[out] info information about input
+ * \param[out] packet IPFIX message
  * \param[out] source_status Status of source (new, opened, closed)
  * \return message length on success, error code otherwise
  */
@@ -683,9 +681,7 @@ int get_packet(void *config, struct input_info** info, char **packet, int *sourc
 	int ret;
 	conf = config;
 
-
 	memset(&events, 0, MAX_EPOLL_EVENTS * sizeof(events));
-
 
 wait_for_data:
 	/* wait for IPFIX messages (note, level triggered epoll) */

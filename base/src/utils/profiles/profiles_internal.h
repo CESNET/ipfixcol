@@ -1,5 +1,5 @@
 /**
- * \file profiler.h
+ * \file profiles_internal.h
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief intermediate plugin for profiling data
  *

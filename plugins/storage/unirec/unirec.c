@@ -53,6 +53,7 @@
 #include <unistd.h>
 #include <libtrap/trap.h>
 
+
 #include "unirec.h"
 
 // Global variables
@@ -65,7 +66,6 @@ uint8_t INIT_COUNT = 0;  // Number of running instances of plugin
 #include <sys/time.h>
 
 
-
 uint32_t DEBUG_PRINT = 0;
 uint32_t DEBUG_PRINT2 = 0;
 
@@ -74,13 +74,6 @@ time_t prev_time;
 time_t step_time = 3;
 uint32_t DEBUG_TIME_RECORD = 0;
 
-
-uint64_t get_usec_timestamp()
-{
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	return tv.tv_sec*(uint64_t)1000000+tv.tv_usec;
-}
 
 
 /* some auxiliary functions for extracting data of exact length */
@@ -219,43 +212,34 @@ static int init_trap_ifc(unirec_config *conf)
  * \brief Return an UniRec field that matches given IPFIX element
  *
  * @param element Element to match
- * @param fields List of UniRec fields to search
+ * @param ht Hash table containing UniRec fields to search
+ * @param ipfix_id Ipfix element id to fill.
  * @param en_id Enterprise id to fill.
  * @return return matching UniRec filed or NULL
  */
-static unirecField *match_field(template_ie *element, unirecField *fields, uint32_t *en_id)
+static unirecField *match_field(template_ie *element, fht_table_t *ht, uint16_t *ipfix_id, uint32_t *en_id)
 {
-	unirecField *tmp = NULL;
 	uint16_t id;
 	uint32_t en;
-	int i;
+	uint64_t ht_key;
+	unirecField **tmp;
 
 	id = element->ie.id;
-	/* Go over all records to fill */
-	for (tmp = fields; tmp != NULL ; tmp = tmp->next) {
 
-		/* Handle enterprise element */
-		if (id >> 15) { /* EN is set */
-			/* Enterprise number is in the next element */
-			en = (element+1)->enterprise_number;
-                        *en_id = en;
-			for (i = 0; i < tmp->ipfixCount; i++) {
-				/* We need to mask first bit of id before the comparison */
-				if ((id & 0x7FFF) == tmp->ipfix[i].id && en == tmp->ipfix[i].en) {
-					return tmp;
-				}
-			}
-		} else { /* EN == 0 */
-			en = 0;
-                        *en_id = 0;
-			for (i = 0; i < tmp->ipfixCount; i++) {
-				if (id == tmp->ipfix[i].id && en == tmp->ipfix[i].en) {
-					return tmp;
-				}
-			}
-		}
+	if (id >> 15) {
+		en = (element+1)->enterprise_number;
+		id = id & 0x7FFF;
+	} else {
+		en = 0;
 	}
-	return NULL;
+
+	*ipfix_id = id;
+	*en_id = en;
+
+	ht_key = (((uint64_t)en) << 32) | ((uint32_t)id);
+	tmp = fht_get_data(ht, &ht_key);
+
+	return tmp == NULL ? NULL : *tmp;
 }
 
 /**
@@ -265,7 +249,7 @@ static unirecField *match_field(template_ie *element, unirecField *fields, uint3
  *
  * \param[in] data_record IPFIX data record
  * \param[in] template corresponding template
- * \param[out] data statistics data to get
+ * \param[out] conf structure containing necessary information for converting ipfix to unirec
  * \return length of the data record
  */
 static uint16_t process_record(char *data_record, struct ipfix_template *template, unirec_config *conf)
@@ -289,11 +273,13 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 	uint16_t length, size_length;
 	unirecField *matchField;
 
+	uint16_t ipfix_id;
         uint32_t en_id;
+	uint64_t sec, msec, frac;
 
 	/* Go over all fields */
 	for (count = index = 0; count < template->field_count; count++, index++) {
-		matchField = match_field(&template->fields[index], conf->fields, &en_id);
+		matchField = match_field(&template->fields[index], conf->ht_fields, &ipfix_id, &en_id);
 
 		length = template->fields[index].ie.length;
 		size_length = 0;
@@ -325,61 +311,60 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 					if (matchField->included_ar[i]) {
 						// If element is present in current interface
 						// Copy special elements in special way
-						if (template->fields[index].ie.id == 8 || template->fields[index].ie.id == 12 ||
-                                                    (en_id == 39499 && (template->fields[index].ie.id & 0x7FFF) == 40)) {
-							// IPv4 or INVEA_SIP_RTP_IP4
-							// Put IPv4 into 128 bits in a special way (see ipaddr.h in Nemea-UniRec for details)
-							*(uint64_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) = 0;
-							*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i] + 8) = *(uint32_t*)(data_record + offset + size_length);
-							*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i] + 12) = 0xffffffff;
+						switch (matchField->type) {
+							case UNIREC_FIELD_IP:
+								if ((en_id == 0 && (ipfix_id == 8 || ipfix_id == 12)) ||
+								    (en_id == 39499 && ipfix_id == 40)) {
+									// IPv4 or INVEA_SIP_RTP_IPV4
+									// Put IPv4 into 128 bits in a special way (see ipaddr.h in Nemea-UniRec for details)
+									*(uint64_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) = 0;
+									*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i] + 8) = *(uint32_t*)(data_record + offset + size_length);
+									*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i] + 12) = 0xffffffff;
+								} else {		
+									// IPv6 or INVEA_SIP_RTP_IPV6
+									memcpy(conf->ifc[i].buffer + matchField->offset_ar[i], data_record + offset + size_length, length);
+								}
+								break;
+							case UNIREC_FIELD_PACKET:
+								// PACKET SIZE IS DIFFERENT FOR DIFFERENT EXPORTER!!!
+								if (template->fields[index].ie.length == 4) {
+									*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) =  ntohl(*(uint32_t*)(data_record + offset + size_length));
+								}
+								else if (template->fields[index].ie.length == 8) {
+									*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) =  ntohl(*(uint32_t*)(data_record + offset + size_length + 4));
+                                                        	} else {
+									*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) =  0xFFFFFFFF;
+								}
+								break;
+							case UNIREC_FIELD_TS:
+								// Handle Time variables
+								msec = be64toh(*(uint64_t*)(data_record + offset + size_length));
+								sec = msec / 1000;
+								frac = ((msec % 1000) * 0x4189374BC6A7EFULL) >> 32;
+								*(uint64_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) =  (sec<<32) | frac;
+								break;
+							case UNIREC_FIELD_DBF:
+								// Handle DIR_BIT_FIELD
+								*(uint8_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) = (*(uint16_t*)(data_record + offset + size_length)) ? 1 : 0;
+								break;
+							case UNIREC_FIELD_LBF:
+								// Handle LINK_BIT_FIELD, is BIG ENDIAN but we are using only LSB
+								*(uint64_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) = 1LLU << ((*(uint8_t*)(data_record + offset + size_length + 3)) - 1);
+								break;
+							default:
+								// Check length of ipfix element and if it is larger than unirec element, then saturate unirec element
+								if (matchField->size >= length) {
+									data_copy( (conf->ifc[i].buffer) + matchField->offset_ar[i],	// Offset to Unirec buffer for current ifc
+										   (data_record + offset + size_length),		// Offset to data in Ipfix message
+									   	length);						// Size of element
+								} else {
+									// set maximum value to unirec element
+									memset( (conf->ifc[i].buffer) + matchField->offset_ar[i],
+										0xFF,
+										matchField->size);
+								}
 						}
-						else if (template->fields[index].ie.id == 27 || template->fields[index].ie.id == 28) {// ||
-                                                        // (en_id == 39499 && (template->fields[index].ie.id & 0x7FFF) == 41)) {
-							// IPv6 or INVEA_SIP_RTP_IP6
-							// Just copy 128b
-							memcpy(conf->ifc[i].buffer + matchField->offset_ar[i], data_record + offset + size_length, length);
-						} // PACKET SIZE IS DIFFERENT FOR DIFFERENT EXPORTER!!!
-						else if (template->fields[index].ie.id == 2) {
-							// Packets
-							if (template->fields[index].ie.length == 4) {
-								*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) =  ntohl(*(uint32_t*)(data_record + offset + size_length));
-							}
-							else if (template->fields[index].ie.length == 8) {
-								*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) =  ntohl(*(uint32_t*)(data_record + offset + size_length + 4));
-                                                        } else {
-								*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) =  0xFFFFFFFF;
-							}
-						}  // 152 = TIME_FIRST, 153 = TIME_LAST
-						else if (template->fields[index].ie.id == 152 || template->fields[index].ie.id == 153) {
-							// Handle Time variables
-							uint64_t msec = be64toh(*(uint64_t*)(data_record + offset + size_length));
-							uint64_t sec = msec / 1000;
-							uint64_t frac = (msec % 1000) * (0x0000000100000000L/1000);
-							*(uint64_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) =  (sec<<32) | frac;
-						} // 10 = ingress interface, 14 = egress interface
-						else if (template->fields[index].ie.id == 10) {// || template->fields[index].ie.id == 14) {
-							// Handle DIR_BIT_FIELD
-							*(uint8_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) = (*(uint16_t*)(data_record + offset + size_length)) ? 1 : 0;
-						} // 405 = original observation domain id
-						else if (template->fields[index].ie.id == 405) {
-							// Handle LINK_BIT_FIELD (!!! Is BIG ENDIAN but we need only less significant byte !!!)
-							*(uint64_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) = 1LLU << ((*(uint8_t*)(data_record + offset + size_length + 3)) - 1);
-						} else {
-							// Check length of ipfix element and if it is larger than unirec element, then saturate unirec element
-							if (matchField->size >= length) {
-								data_copy( (conf->ifc[i].buffer) + matchField->offset_ar[i],	// Offset to Unirec buffer for current ifc
-									   (data_record + offset + size_length),		// Offset to data in Ipfix message
-									   length);						// Size of element
-							} else {
-								// set maximum value to unirec element
-								memset( (conf->ifc[i].buffer) + matchField->offset_ar[i],
-									0xFF,
-									matchField->size);
 
-
-							}
-
-						}
 						// if required, add required-filled count
 						conf->ifc[i].requiredFilled += matchField->required_ar[i];
 					}
@@ -445,15 +430,11 @@ static void process_dynamic(ifc_config *conf)
 
 
 
-
-
-
-
 /**
  * \brief Process all data sets in IPFIX message
  *
  * \param[in] ipfix_msg IPFIX message
- * \param[out] data statistics data to get
+ * \param[in] conf Pointer to interface config structure
  * \return 0 on success, -1 otherwise
  */
 static int process_data_sets(const struct ipfix_message *ipfix_msg, unirec_config *conf)
@@ -606,6 +587,44 @@ static ipfixElement ipfix_from_string(char *ipfixToken)
 	return element;
 }
 
+
+
+/**
+ * \brief Convert ipfix element id to unirec type for faster processing ipfix messages
+ * \param ipfix_el Ipfix element structure.
+ * \return One value from enum `unirecFieldEnum`.
+ */
+static int8_t getUnirecFieldTypeFromIpfixId(ipfixElement ipfix_el)
+{
+	uint16_t id = ipfix_el.id;
+	uint32_t en = ipfix_el.en;
+
+ 	if ((en == 0 && (id == 8 || id == 12)) ||
+            (en == 39499 && id== 40) ||
+	    (en == 0 && (id == 27 || id == 28)) ||
+            (en == 39499 && id == 41)) {
+		// IP or INVEA_SIP_RTP_IP
+		return UNIREC_FIELD_IP;
+	} else if (en == 0 && id == 2) {
+		// Packets
+		return UNIREC_FIELD_PACKET;
+	} else if (en == 0 && (id == 152 || id == 153)) {
+		// Timestamps
+		return UNIREC_FIELD_TS;
+	} else if (en == 0 && id == 10) {
+		// DIR_BIT_FIELD
+		return UNIREC_FIELD_DBF;		
+	} else if (en == 0 && id == 405) {
+		// LINK_BIT_FIELD
+		return UNIREC_FIELD_LBF;
+	} else {
+		// Other
+		return UNIREC_FIELD_OTHER;
+	}
+}
+
+
+
 /**
  * \brief Loads all available elements from configuration file
  * @return List of UniRec elements on success, NULL otherwise
@@ -664,7 +683,8 @@ static unirecField *load_elements()
 				int ipfixPosition = 0;
 				currentField->ipfixCount = 0;
 				for (ipfixToken = strtok_r(token, ",", &ipfixState);
-						ipfixToken != NULL; ipfixToken = strtok_r(NULL, ",", &ipfixState), ipfixPosition++) {
+						ipfixToken != NULL;
+						ipfixToken = strtok_r(NULL, ",", &ipfixState), ipfixPosition++) {
 					/* Enlarge the element if necessary */
 					if (ipfixPosition > 0) {
 						currentField = realloc(currentField, sizeof(unirecField) + (ipfixPosition) * sizeof(uint64_t));
@@ -672,6 +692,8 @@ static unirecField *load_elements()
 					/* Store the ipfix element id */
 					currentField->ipfix[ipfixPosition] = ipfix_from_string(ipfixToken);
 					currentField->ipfixCount++;
+					/* Fill in Unirec field type based on ipfix element id */
+					currentField->type = getUnirecFieldTypeFromIpfixId(currentField->ipfix[ipfixPosition]);
 				}
 				break;
 			} // case 2 end
@@ -705,6 +727,7 @@ static unirecField *load_elements()
  *
  * @param currentField Field to update
  * @param confFields Field list loaded from configuration
+ * @param dynamic Flag is set to 1 if current element is dynamic, 0 otherwise
  * @return Returns 0 on success
  */
 static int update_field(unirecField **currentField, unirecField *confFields, int *dynamic)
@@ -718,6 +741,7 @@ static int update_field(unirecField **currentField, unirecField *confFields, int
 		if (strcmp((*currentField)->name, tmp->name) == 0) {
 			(*currentField)->size = tmp->size;
 			(*currentField)->ipfixCount = 0;
+			(*currentField)->type = tmp->type;
 
 			if (tmp->size == -1) {
 				// If it is dynamic field, set dynamic to 1
@@ -746,8 +770,11 @@ static int update_field(unirecField **currentField, unirecField *confFields, int
 }
 
 
-
-
+/**
+ * \brief Parse format of unirec template for every interface specified in startup.xml.
+ * \param[in] conf Pointer to interface config structure
+ * @return Returns 0 on success
+ */
 static int parse_format(unirec_config *conf_plugin)
 {
 	char *token, *state; /* Variables for strtok  */
@@ -756,6 +783,7 @@ static int parse_format(unirec_config *conf_plugin)
 	ifc_config *conf;
 	int dynamic;
 	uint16_t field_offset;
+	uint32_t fields_count = 0;
 
 	/* Load elements from configuration file */
 	confFields = load_elements();
@@ -940,7 +968,7 @@ static int parse_format(unirec_config *conf_plugin)
 					} else {
 						lastField->next = currentField;
 					}
-
+					fields_count++;
 					break;
 				} // End of create new field condition
 				lastField = lastField->next;
@@ -964,6 +992,50 @@ static int parse_format(unirec_config *conf_plugin)
 		currentField = currentField->next;
 	}
 	*/
+
+
+
+	// ***** Create fash hash table from fields list *****
+	uint8_t round = 4;
+	int dbg_i;
+	fht_table_t *ht;
+	while (1) {
+		uint8_t insert_flag = 1;
+		round++;
+		if (round > 10) {
+			MSG_ERROR(msg_module, "Could not insert all Unirec fields in hash table!");
+			return 1;
+		}
+		ht = fht_init(1 << round,
+		              FIELDS_HT_KEYSIZE,
+		              sizeof(unirecField*),
+		              FIELDS_HT_STASH_SIZE);
+		
+		for (dbg_i = 0, currentField = conf_plugin->fields; currentField != NULL ; dbg_i++, currentField = currentField->next) {
+			for (int i = 0; i < currentField->ipfixCount; i++) {
+				uint64_t ht_key = (((uint64_t)(currentField->ipfix[i].en)) << 32) | ((uint32_t)(currentField->ipfix[i].id));
+				if (fht_insert(ht, &ht_key, &currentField, NULL, NULL) == FHT_INSERT_LOST) {
+					insert_flag = 0;
+					break;
+				}
+			}
+			if (insert_flag == 0) {
+				break;
+			}
+		}
+
+		// Did we successfully inserted all fields in hash table?
+		if (insert_flag) {
+			// Success, break and continue
+			break;
+		} else {
+			// Destroy current hash table and try again with larger size
+			fht_destroy(ht);
+		}
+	}
+	conf_plugin->ht_fields = ht;
+
+
 
 	return 0;
 }
@@ -994,9 +1066,10 @@ int storage_init (char *params, void **config)
 	xmlDocPtr doc;
 	xmlNodePtr cur;
         xmlNodePtr cur_sub;
+        int service_ifc_flag = 0;
 	int ifc_count_read = 0;
-	int ifc_count_space = 8;
-	int ifc_count_step = 8;
+	int ifc_count_space = 16;
+	int ifc_count_step = 16;
 	char **ifc_params = malloc(sizeof(char *) * ifc_count_space);
 	char *ifc_types = malloc(sizeof(char) * ifc_count_space);
 	int *ifc_timeout = malloc(sizeof(int) * ifc_count_space);
@@ -1056,6 +1129,9 @@ int storage_init (char *params, void **config)
 			while (cur_sub != NULL) {
 				if ((!xmlStrcmp(cur_sub->name, (const xmlChar *) "type"))) {
 					ifc_types[ifc_count_read-1] = *((char *) xmlNodeListGetString(doc, cur_sub->xmlChildrenNode, 1));
+					if (ifc_types[ifc_count_read-1] == 's') {
+						service_ifc_flag = 1;
+					}
 				} else
 				if ((!xmlStrcmp(cur_sub->name, (const xmlChar *) "params"))) {
 					ifc_params[ifc_count_read-1] = (char *) xmlNodeListGetString(doc, cur_sub->xmlChildrenNode, 1);
@@ -1110,7 +1186,7 @@ int storage_init (char *params, void **config)
 	conf->ifc_buff_timeout = ifc_buff_timeout;
 
 	// Allocate array of pointers to interface config structures
-	conf->ifc_count = ifc_count_read;
+	conf->ifc_count = ifc_count_read - service_ifc_flag;
 	conf->ifc = (ifc_config *) malloc(sizeof(ifc_config) * conf->ifc_count);
 	if (!conf->ifc) {
 		MSG_ERROR(msg_module, "Out of memory (%s:%d)", __FILE__, __LINE__);
@@ -1234,11 +1310,6 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
         const struct ipfix_template_mgr *template_mgr)
 {
 	if (config == NULL || ipfix_msg == NULL) {
-		return -1;
-	}
-
-	/* Unnecessary? */
-	if (template_mgr == NULL) {
 		return -1;
 	}
 

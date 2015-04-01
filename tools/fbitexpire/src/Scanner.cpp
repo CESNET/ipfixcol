@@ -186,7 +186,7 @@ void Scanner::removeDirs()
 		dir = getDirToRemove();
 		
 		if (!dir) {
-			MSG_WARNING(msg_module, "cannot remove any folder (only active directories)");
+			MSG_WARNING(msg_module, "cannot remove data (only active directories)");
 			return;
 		}
 		
@@ -460,11 +460,13 @@ void Scanner::createDirTree(std::string basedir, int maxdepth, bool force)
 	if (!lstat(basedir.c_str(), &st) && S_ISDIR(st.st_mode)) {
 		/* Create root directory */
 		_rootdir = new Directory(basedir, st.st_mtime, Directory::dirDepth(basedir));
-		
+
 		/* set right max depth */
 		_max_depth = maxdepth + _rootdir->getDepth();
 		_force = force;
-		
+
+		MSG_DEBUG(msg_module, "Real max. depth is %d", _max_depth);
+		MSG_DEBUG(msg_module, "%s with depth %d added to scanner tree", basedir.c_str(), _rootdir->getDepth());
 		/* Add subdirectories (recursively) */
 		createDirTree(_rootdir);
 	} else {
@@ -480,7 +482,7 @@ void Scanner::createDirTree(std::string basedir, int maxdepth, bool force)
 void Scanner::createDirTree(Directory* parent)
 {
 	int depth = parent->getDepth() + 1;
-	if (depth >= _max_depth) {
+	if (depth > _max_depth) {
 		parent->setSize(Directory::dirSize(parent->getName(), _force));
 		parent->detectAge();
 		return;
@@ -513,6 +515,7 @@ void Scanner::createDirTree(Directory* parent)
 			continue;
 		} else if (S_ISDIR(st.st_mode)) {
 			aux_dir = new Directory(entry_path, st.st_mtime, depth, parent);
+			MSG_DEBUG(msg_module, "%s with depth %d added to scanner tree", entry_path.c_str(), aux_dir->getDepth());
 			parent->addChild(aux_dir);
 		} else {
 			size += st.st_size;

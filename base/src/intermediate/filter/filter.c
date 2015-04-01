@@ -1,5 +1,5 @@
 /**
- * \file filter.c
+ * \file filter/filter.c
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief Intermediate plugin for IPFIX data filtering
  *

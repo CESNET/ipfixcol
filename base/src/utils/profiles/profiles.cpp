@@ -1,5 +1,5 @@
 /**
- * \file profile_tree.cpp
+ * \file profiles.cpp
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief Code for loading profile tree from XML file
  *
@@ -91,6 +91,7 @@ int parse_filter(filter_parser_data* pdata)
  * 
  * \param[in] profile Channel's profile
  * \param[in] root channel xml configuration root
+ * \param[in] pdata Filter parser data
  * \return new Channel object
  */
 Channel *process_channel(Profile *profile, xmlNode *root, struct filter_parser_data *pdata)
@@ -158,6 +159,7 @@ Channel *process_channel(Profile *profile, xmlNode *root, struct filter_parser_d
  * 
  * \param[in] parent Profile's parent
  * \param[in] root profile xml configuration root
+ * \param[in] pdata Filter parser data
  * \return new Profile object
  */
 Profile *process_profile(Profile *parent, xmlNode *root, struct filter_parser_data *pdata)
@@ -212,7 +214,7 @@ void free_parser_data(struct filter_parser_data *pdata)
 /**
  * \brief Process profile tree xml configuration
  * 
- * \param[in] file configuration xml file
+ * \param[in] filename XML configuration file
  * \return Pointer to root profile
  */
 Profile *process_profile_xml(const char *filename)

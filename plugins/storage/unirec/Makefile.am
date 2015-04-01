@@ -8,8 +8,8 @@ internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
 
 plugins_LTLIBRARIES = ipfixcol-unirec-output.la
 ipfixcol_unirec_output_la_LDFLAGS = -module -avoid-version -shared -ltrap
-ipfixcol_unirec_output_la_SOURCES = unirec.c unirec.h
-ipfixcol_unirec_output_la_CFLAGS  = -std=gnu99
+ipfixcol_unirec_output_la_SOURCES = unirec.c unirec.h fast_hash_table.c fast_hash_table.h hashes.h
+ipfixcol_unirec_output_la_CFLAGS  = -std=gnu99 -O2
 
 EXTRA_DIST = unirec-elements.txt
 

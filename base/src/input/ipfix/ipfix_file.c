@@ -1,5 +1,5 @@
 /**
- * \file ipfix_format.c
+ * \file input/ipfix/ipfix_file.c
  * \author Michal Srb <michal.srb@cesnet.cz>
  * \brief Input plugin for IPFIX file format.
  *
@@ -163,7 +163,6 @@ static int close_input_file(struct ipfix_config *conf)
 	return 0;
 }
 
-
 /**
  * \brief Prepare new input file
  *
@@ -189,11 +188,15 @@ static int next_file(struct ipfix_config *conf)
 		if (conf->fd == NO_INPUT_FILE) {
 			/* no more input files */
 			return NO_INPUT_FILE;
-		} else if (!ret) {
+		} else if (ret == 0) {
 			/* ok, new input file ready */
-			return ret;
+			break;
+		} else {
+			// Do nothing
 		}
 	}
+
+	return ret;
 }
 
 /*
@@ -216,7 +219,6 @@ int input_init(char *params, void **config)
 	int ret;
 	int i;
 
-
 	/* allocate memory for config structure */
 	conf = (struct ipfix_config *) calloc(1, sizeof(*conf));
 	if (!conf) {
@@ -224,7 +226,6 @@ int input_init(char *params, void **config)
 		return -1;
 	}
 	memset(conf, '\0', sizeof(*conf));
-
 
 	/* try to parse configuration file */
 	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);

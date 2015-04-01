@@ -1,6 +1,7 @@
 /**
  * \file unirec.h
  * \author Petr Velan <petr.velan@cesnet.cz>
+ * \author Erik Sabik <xsabik02@stud.fit.vutbr.cz>
  * \brief Header file of plugin for converting IPFIX data to UniRec format
  *
  * Copyright (C) 2012 CESNET, z.s.p.o.
@@ -40,13 +41,29 @@
 #ifndef IPFIX2UNIREC_H_
 #define IPFIX2UNIREC_H_
 
+#include "fast_hash_table.h"
+
+
 
 #define INIT_DYNAMIC_ARR_SIZE 8
 #define INIT_OUTPUT_BUFFER_SIZE 1024
 #define MAX_DYNAMIC_FIELD_SIZE 512
+#define FIELDS_HT_ROW_FIELDSCOUNT_MULTIPLAYER 8
+#define FIELDS_HT_KEYSIZE 8 // ipfix id + en + padding in bytes (2 + 4 + 2)
+#define FIELDS_HT_STASH_SIZE 4
+
 
 #define DEFAULT_TIMEOUT 0 /**< No waiting */
 #define UNIREC_ELEMENTS_FILE "/usr/share/ipfixcol/unirec-elements.txt"
+
+enum unirecFieldEnum {
+	UNIREC_FIELD_OTHER,
+	UNIREC_FIELD_IP,
+	UNIREC_FIELD_PACKET,
+	UNIREC_FIELD_TS,
+	UNIREC_FIELD_DBF,
+	UNIREC_FIELD_LBF
+};
 
 typedef struct ipfixElement {
 	uint16_t id;
@@ -56,6 +73,7 @@ typedef struct ipfixElement {
 typedef struct unirecField {
 	char *name;
 	int ur_id;
+	int8_t type;			/**< Used for faster processing, possible value are in `unirefFieldEnum` */
 	int8_t size;
 	int8_t required;
 	int8_t *required_ar;		/**< Array of interfaces numbers where this element is required */
@@ -124,6 +142,7 @@ typedef struct unirec_config {
 	uint64_t *ifc_buff_timeout;
 	uint16_t odid;
 	uint8_t SF_DATA;
+	fht_table_t *ht_fields;
 } unirec_config;
 
 
