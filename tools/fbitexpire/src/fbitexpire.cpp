@@ -242,7 +242,17 @@ int main(int argc, char *argv[])
 	pipe_file_exists = (lstat(pipe.c_str(), &st) == 0);
 	pipe_exists = (pipe_file_exists && S_ISFIFO(st.st_mode));
 
-	if (pipe_file_exists) {
+	/* When starting fbitexpire, we can identify two situations:
+	 *      1. Entirely new instance > pipe should not exist
+	 *      2. Second or more instance, used to change parameters
+	 *         of or send command to first instance > pipe should exist
+	 */
+	if (rescan || kill_daemon || change) {
+		if (!pipe_exists) {
+			MSG_ERROR(msg_module, "no existing pipe/daemon found (%s) for changing parameters", pipe.c_str());
+			return 1;
+		}
+	} else if (pipe_file_exists) {
 		if (pipe_exists) {
 			MSG_ERROR(msg_module, "active pipe (%s) detected", pipe.c_str());
 			MSG_ERROR(msg_module, "fbitexpire supports only a single instance per pipe");
