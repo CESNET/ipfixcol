@@ -179,7 +179,7 @@ bool filter_fits_value(struct filter_treenode *node, struct ipfix_message *msg, 
 			
 	} else {
 		/* Data field */
-		int datalen, i;
+		int datalen;
 		
 		/* Get data from record */
 		uint8_t *recdata = data_record_get_field(record->record, record->templ, node->field->enterprise, node->field->id, &datalen);

@@ -360,6 +360,7 @@ void **profile_match_data(void *profile, struct ipfix_message *msg, struct metad
 
 	/* Find matching channels */
 	std::vector<Channel *> channels{};
+	channels.reserve(5);
 	p->match(msg, mdata, channels);
 
 	/* No matching channels found */

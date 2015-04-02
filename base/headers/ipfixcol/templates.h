@@ -82,6 +82,19 @@
  */
 #define TM_TEMPLATE_WITHDRAW_LEN 4
 
+enum offset_fields {
+	OF_SRCPORT,
+	OF_DSTPORT,
+	OF_SRCIPV4,
+	OF_DSTIPV4,
+	OF_SRCIPV6,
+	OF_DSTIPV6,
+	OF_PROTOCOL,
+	OF_OCTETS,
+	OF_PACKETS,
+	OF_COUNT
+};
+
 /**
  * \struct ipfix_template
  * \brief Structure for storing Template Record/Options Template Record
@@ -117,6 +130,7 @@ struct ipfix_template {
 	                              * length of the Data Record has to be
 	                              * calculated somehow else. For more information,
 	                              * see section 7 in RFC 5101. */
+	int offsets[OF_COUNT];
 	template_ie fields[1];       /**Template fields */
 };
 

@@ -47,6 +47,26 @@
 /** Identifier to MSG_* macros */
 static char *msg_module = "ipfix_message";
 
+/* Field offsets */
+struct offset_field {
+	uint16_t offset_index;
+	uint16_t id;
+	uint16_t length;
+};
+
+/* IPFIX ID <-> OFFSET ID mapping */
+static struct offset_field offsets[] = {
+	/* OFFSET ID, IPFIX_ID, LENGTH */
+	{ OF_OCTETS,	1,	8  },
+	{ OF_PACKETS,	2,	8  },
+	{ OF_PROTOCOL,	4,	1  },
+	{ OF_SRCPORT,	7,	2  },
+	{ OF_DSTPORT,	11,	2  },
+	{ OF_SRCIPV4,	8,	4  },
+	{ OF_DSTIPV4,	12,	4  },
+	{ OF_SRCIPV6,	27,	16 },
+	{ OF_DSTIPV6,	28,	16 }
+};
 
 /* some auxiliary functions for extracting data of exact length */
 #define read8(ptr) (*((uint8_t *) (ptr)))
@@ -517,10 +537,35 @@ int data_record_field_offset(uint8_t *data_record, struct ipfix_template *templa
  */
 uint8_t *data_record_get_field(uint8_t *record, struct ipfix_template *templ, uint32_t enterprise, uint16_t id, int *data_length)
 {
+	int offset_id = OF_COUNT;
+
+	if (enterprise == 0) {
+		/* Check whether we have offset field for this ID */
+		for (offset_id = 0; offset_id < OF_COUNT; ++offset_id) {
+			if (id == offsets[offset_id].id) {
+				break;
+			}
+		}
+
+		/* If offset is already known, use it */
+		if (offset_id != OF_COUNT && templ->offsets[offset_id] > 0) {
+			if (data_length) {
+				*data_length = offsets[offset_id].length;
+			}
+
+			return (uint8_t *) record + templ->offsets[offset_id];
+		}
+	}
+
 	int offset = data_record_field_offset(record, templ, enterprise, id, data_length);
 
 	if (offset < 0) {
 		return NULL;
+	}
+
+	/* Store offset for future lookup */
+	if (offset_id != OF_COUNT) {
+		templ->offsets[offset_id] = offset;
 	}
 
 	return (uint8_t *) record + offset;
