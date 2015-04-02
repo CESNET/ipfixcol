@@ -179,7 +179,7 @@ bool filter_fits_value(struct filter_treenode *node, struct ipfix_message *msg, 
 			
 	} else {
 		/* Data field */
-		int datalen;
+		int datalen, i;
 		
 		/* Get data from record */
 		uint8_t *recdata = data_record_get_field(record->record, record->templ, node->field->enterprise, node->field->id, &datalen);
@@ -193,7 +193,19 @@ bool filter_fits_value(struct filter_treenode *node, struct ipfix_message *msg, 
 			return node->op == OP_NOT_EQUAL;
 		}
 
-		cmpres = memcmp(recdata, node->value->value, datalen);
+		/*
+		 * Compare values
+		 * values are in network byte order
+		 * node value can be on more bytes than value in data
+		 * e.g:
+		 * value in data is 4 bytes long: 0 0 0 5
+		 * value in node is 8 bytes long: 0 0 0 0 0 0 0 8
+		 *										  ^
+		 * => node value must be offsetted by length difference
+		 * => &(nodeValue[nodeValueLength - dataValueLength]) => &(nodeValue[8 - 4])
+		 */
+
+		cmpres = memcmp(recdata, &(node->value->value[node->value->length - datalen]), datalen);
 	}
 	
 
@@ -542,7 +554,12 @@ uint8_t *filter_num_to_ptr(uint8_t *data, int length)
 		return NULL;
 	}
 
-	memcpy(value, data, length);
+	/* Convert value to network byte order */
+	uint16_t i;
+	for (i = 0; i < length; ++i) {
+		value[length - i - 1] = data[i];
+	}
+
 	return value;
 }
 
@@ -933,7 +950,6 @@ struct filter_treenode *filter_new_leaf_node(struct filter_field *field, char *o
 			break;
 		}
 	}
-	
 	
 	return node;
 }
