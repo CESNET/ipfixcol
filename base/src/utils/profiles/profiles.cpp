@@ -74,7 +74,7 @@ int parse_filter(filter_parser_data* pdata)
 	yylex_init(&(pdata->scanner));
 	YY_BUFFER_STATE bp = yy_scan_string(pdata->filter, pdata->scanner);
 	yy_switch_to_buffer(bp, pdata->scanner);
-    
+	
 	/* Parse filter */
 	ret = yyparse(pdata);
 	
@@ -250,7 +250,7 @@ Profile *process_profile_xml(const char *filename)
 	Profile *rootProfile{NULL};
 
 	try {
-		/* Iterate throught all profiles */
+		/* Iterate through all profiles */
 		for (xmlNode *node = root; node; node = node->next) {
 			if (node->type != XML_ELEMENT_NODE) {
 				continue;
@@ -268,6 +268,7 @@ Profile *process_profile_xml(const char *filename)
 		return NULL;
 	}
 
+	close(fd);
 	xmlFreeDoc(doc);
 	free_parser_data(&pdata);
 
