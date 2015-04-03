@@ -51,6 +51,7 @@ using namespace fbitdump;
 
 void parseFlags(char *strFlags, char out[PLUGIN_BUFFER_SIZE], void *conf)
 {
+	(void) conf;
 	uint16_t i, intFlags;
 	std::stringstream ss;
 
@@ -96,6 +97,7 @@ void parseFlags(char *strFlags, char out[PLUGIN_BUFFER_SIZE], void *conf)
 
 void parseProto(char *strProto, char out[PLUGIN_BUFFER_SIZE], void *conf)
 {
+	(void) conf;
 	int i;
 	std::stringstream ss;
 
@@ -110,10 +112,12 @@ void parseProto(char *strProto, char out[PLUGIN_BUFFER_SIZE], void *conf)
 
 void parseDuration(char *duration, char out[PLUGIN_BUFFER_SIZE], void *conf)
 {	
+	(void) conf;
 	snprintf(out, PLUGIN_BUFFER_SIZE, "%f", std::atof(duration) * 1000.0);
 }
 
 void printProtocol(const plugin_arg_t * val, int plain_numbers, char ret[PLUGIN_BUFFER_SIZE], void *conf) {
+	(void) conf;
 	if (!plain_numbers) {
 		snprintf( ret, PLUGIN_BUFFER_SIZE, "%s", protocols[val->val[0].uint8] );
 	} else {
@@ -123,6 +127,7 @@ void printProtocol(const plugin_arg_t * val, int plain_numbers, char ret[PLUGIN_
 
 void printIPv4(const plugin_arg_t * val, int plain_numbers, char buf[PLUGIN_BUFFER_SIZE], void *conf)
 {
+	(void) conf; (void) plain_numbers;
 	int ret;
 	Resolver *resolver;
 
@@ -153,6 +158,7 @@ void printIPv4(const plugin_arg_t * val, int plain_numbers, char buf[PLUGIN_BUFF
 
 void printIPv6(const plugin_arg_t * val, int plain_numbers, char buf[PLUGIN_BUFFER_SIZE], void *conf)
 {
+	(void) conf; (void) plain_numbers;
 	int ret;
 	Resolver *resolver;
 
@@ -183,6 +189,7 @@ void printIPv6(const plugin_arg_t * val, int plain_numbers, char buf[PLUGIN_BUFF
 
 void printTimestamp32(const plugin_arg_t * val, int plain_numbers, char buf[PLUGIN_BUFFER_SIZE], void *conf)
 {
+	(void) conf; (void) plain_numbers;
 	time_t timesec = val->val[0].uint32;
 	struct tm *tm = localtime(&timesec);
 
@@ -191,6 +198,7 @@ void printTimestamp32(const plugin_arg_t * val, int plain_numbers, char buf[PLUG
 
 void printTimestamp64(const plugin_arg_t * val, int plain_numbers, char buf[PLUGIN_BUFFER_SIZE], void *conf)
 {
+	(void) conf; (void) plain_numbers;
 	time_t timesec = val->val[0].uint64/1000;
 	uint64_t msec = val->val[0].uint64 % 1000;
 	struct tm *tm = localtime(&timesec);
@@ -200,7 +208,6 @@ void printTimestamp64(const plugin_arg_t * val, int plain_numbers, char buf[PLUG
 
 void printTimestamp(struct tm *tm, uint64_t msec, char buff[PLUGIN_BUFFER_SIZE])
 {
-
 	strftime(buff, 20, "%Y-%m-%d %H:%M:%S", tm);
 	/* append miliseconds */
 	sprintf(&buff[19], ".%03u", (const unsigned int) msec);
@@ -208,6 +215,7 @@ void printTimestamp(struct tm *tm, uint64_t msec, char buff[PLUGIN_BUFFER_SIZE])
 
 void printTCPFlags(const plugin_arg_t * val, int plain_numbers, char result[PLUGIN_BUFFER_SIZE], void *conf)
 {
+	(void) conf; (void) plain_numbers;
 	sprintf( result, "%s", "......" );
 
 	if (val->val[0].uint8 & 0x20) {
@@ -232,6 +240,7 @@ void printTCPFlags(const plugin_arg_t * val, int plain_numbers, char result[PLUG
 
 void printDuration(const plugin_arg_t * val, int plain_numbers, char buff[PLUGIN_BUFFER_SIZE], void *conf)
 {
+	(void) conf; (void) plain_numbers;
 	static std::ostringstream ss;
 	static std::string str;
 	ss << std::fixed;
