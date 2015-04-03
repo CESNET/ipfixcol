@@ -106,12 +106,12 @@ struct input_info_node {
  * \brief plugin configuration structure
  */
 struct sctp_config {
-	uint16_t listen_port;						/**< listen port (host byte order) */
-	int listen_socket;							/**< listen socket */
-	int epollfd;								/**< epoll file descriptor */
-	struct input_info_node *input_info_list;	/**< linked list of input_info structures */
-	pthread_mutex_t input_info_list_mutex;		/**< mutex for 'input_info_list' list */
-	pthread_t listen_thread;					/**< id of the thread that listens for new associations */
+	uint16_t listen_port;                       /**< listen port (host byte order) */
+	int listen_socket;                          /**< listen socket */
+	int epollfd;                                /**< epoll file descriptor */
+	struct input_info_node *input_info_list;    /**< linked list of input_info structures */
+	pthread_mutex_t input_info_list_mutex;      /**< mutex for 'input_info_list' list */
+	pthread_t listen_thread;                    /**< id of the thread that listens for new associations */
 };
 
 
