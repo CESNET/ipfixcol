@@ -958,7 +958,7 @@ uint8_t *filter_num_to_ptr(uint8_t *data, int length)
  */
 struct filter_value *filter_parse_number(char *number)
 {
-	struct filter_value *val = malloc(sizeof(struct filter_value));
+	struct filter_value *val = calloc(1, sizeof(struct filter_value));
 	if (!val) {
 		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		return NULL;
