@@ -221,7 +221,7 @@ void *input_listen(void *config)
 		/* allocate space for the address */
 		addr_length = sizeof(struct sockaddr_in6);
 		address = malloc(addr_length);
-		if (address == NULL)
+		if (!address) {
 			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			break;
 		}
