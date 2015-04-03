@@ -58,8 +58,8 @@ static char *msg_module = "template manager";
 struct ipfix_template_mgr_record *tm_record_create()
 {
 	struct ipfix_template_mgr_record *tmr = NULL;
-
-	if ((tmr = calloc(1, sizeof(struct ipfix_template_mgr_record))) == NULL) {
+	tmr = calloc(1, sizeof(struct ipfix_template_mgr_record));
+	if (!tmr) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return NULL;
 	}
@@ -68,10 +68,13 @@ struct ipfix_template_mgr_record *tm_record_create()
 	tmr->counter = 0;
 	tmr->max_length = 32;
 	tmr->templates = calloc(tmr->max_length, sizeof(struct ipfix_template *));
+	if (!tmr->templates) {
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
 
 	return tmr;
 }
-
 
 /**
  * \brief Find template managers record in template manager
@@ -93,7 +96,6 @@ struct ipfix_template_mgr_record *tm_record_lookup(struct ipfix_template_mgr *tm
 	
 	return NULL;
 }
-
 
 /**
  * \brief Find (or insert if not found) template managers record in template manager
@@ -194,6 +196,7 @@ static int tm_fill_template(struct ipfix_template *template, void *template_reco
 							(uint8_t*)((struct ipfix_options_template_record*) template_record)->fields,
 							template_length - sizeof(struct ipfix_template) + sizeof(template_ie));
 	}
+	
 	template->references = 0;
 	template->next = NULL;
 	template->first_transmission = time(NULL);
@@ -229,14 +232,16 @@ static uint16_t tm_template_length(struct ipfix_template_record *template, int m
 
 		if (tmp_data_length == 0xffff) {
 			/* this Information Element has variable length */
-			data_record_length |= 0x80000000;  /* taint this variable. we can't count on it anymore,
-			                                    * but it can tell us what is the smallest length
-			                                    * of the Data Record possible */
+			/* taint this variable. we can't count on it anymore,
+			 * but it can tell us what is the smallest length
+			 * of the Data Record possible */
+			data_record_length |= 0x80000000;
 			data_record_length += 1;           /* every field is at least 1 byte long */
 		} else {
 			/* actual length is stored in the template */
 			data_record_length += tmp_data_length;
 		}
+
 		/* enterprise element has first bit set to 1 */
 		if (ntohs((*((uint16_t *) (fields+fields_length)))) & 0x8000) {
 			fields_length += TEMPLATE_ENT_NUM_LEN;
