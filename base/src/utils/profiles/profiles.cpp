@@ -271,6 +271,7 @@ Profile *process_profile_xml(const char *filename)
 		return NULL;
 	}
 
+	close(fd);
 	xmlFreeDoc(doc);
 	free_parser_data(&pdata);
 

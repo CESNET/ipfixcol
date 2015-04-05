@@ -430,6 +430,11 @@ bool filter_fits_string(struct filter_treenode *node, uint8_t *rec, struct ipfix
 
 	/* recdata is string without terminating '\0' - append it */
 	char *data = malloc(datalen + 1);
+	if (!data) {
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		return result; // result == false
+	}
+
 	memcpy(data, recdata, datalen);
 	data[datalen] = '\0';
 
@@ -493,6 +498,11 @@ bool filter_fits_regex(struct filter_treenode *node, uint8_t *rec, struct ipfix_
 
 	/* recdata is string without terminating '\0' - append it */
 	char *data = malloc(datalen + 1);
+	if (!data) {
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		return result; // result == false
+	}
+
 	memcpy(data, recdata, datalen);
 	data[datalen] = '\0';
 
@@ -618,9 +628,19 @@ uint32_t filter_profile_update_input_info(struct filter_profile *profile, struct
 	if (profile->input_info == NULL) {
 		if (input_info->type == SOURCE_TYPE_IPFIX_FILE) {
 			profile->input_info = calloc(1, sizeof(struct input_info_file));
+			if (!profile->input_info) {
+				MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+				return 0;
+			}
+
 			memcpy(profile->input_info, input_info, sizeof(struct input_info_file));
 		} else {
 			profile->input_info = calloc(1, sizeof(struct input_info_network));
+			if (!profile->input_info) {
+				MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+				return 0;
+			}
+			
 			memcpy(profile->input_info, input_info, sizeof(struct input_info_network));
 		}
 		
@@ -938,7 +958,7 @@ uint8_t *filter_num_to_ptr(uint8_t *data, int length)
  */
 struct filter_value *filter_parse_number(char *number)
 {
-	struct filter_value *val = malloc(sizeof(struct filter_value));
+	struct filter_value *val = calloc(1, sizeof(struct filter_value));
 	if (!val) {
 		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		return NULL;

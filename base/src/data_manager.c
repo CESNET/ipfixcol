@@ -193,7 +193,7 @@ int data_manager_add_plugin(struct data_manager_config *config, struct storage *
 	}
 	
 	/* Create storage plugin thread */
-	struct storage_thread_conf *plugin_cfg = calloc (1, sizeof(struct storage_thread_conf));
+	struct storage_thread_conf *plugin_cfg = calloc(1, sizeof(struct storage_thread_conf));
 	if (!plugin_cfg) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		plugin->close (&(plugin->config));
@@ -236,7 +236,6 @@ int data_manager_add_plugin(struct data_manager_config *config, struct storage *
 int data_manager_remove_plugin(struct data_manager_config* config, int id)
 {
 	unsigned int i;
-
 	struct storage *plugin = NULL;
 	
 	/* Find plugin */

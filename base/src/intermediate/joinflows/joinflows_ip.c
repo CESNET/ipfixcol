@@ -189,13 +189,19 @@ struct mapped_template *updated_templ(struct ipfix_template_record *orig_rec, in
 
 	/* Allocate memory for updated template */
 	new_mapped = malloc(sizeof(struct mapped_template));
-	if (new_mapped == NULL) {
+	if (!new_mapped) {
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return NULL;
 	}
 
 	new_rec = calloc(1, rec_len + 4);
-	memcpy(new_rec, orig_rec, rec_len);
+	if (!new_rec) {
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		free(new_mapped);
+		return NULL;
+	}
 
+	memcpy(new_rec, orig_rec, rec_len);
 	new_mapped->reclen = rec_len;
 
 	/**
@@ -311,7 +317,8 @@ struct mapping *mapping_create(struct mapping_header *map, uint32_t orig_odid, u
 	struct mapping *new_map;
 
 	new_map = malloc(sizeof(struct mapping));
-	if (new_map == NULL) {
+	if (!new_map) {
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return NULL;
 	}
 
@@ -349,7 +356,8 @@ struct mapping *mapping_create(struct mapping_header *map, uint32_t orig_odid, u
 struct mapping *mapping_copy(struct mapping *orig_map, uint32_t orig_odid, uint16_t orig_tid)
 {
 	struct mapping *new_map = calloc(1, sizeof(struct mapping));
-	if (new_map == NULL) {
+	if (!new_map) {
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return NULL;
 	}
 
@@ -589,6 +597,13 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 		for (join = curr->children; join != NULL; join = join->next) {
 			to = (char *) xmlGetProp(curr, (const xmlChar *) "to");
 			new_map = calloc(1, sizeof(struct mapping_header));
+			if (!new_map) {
+				MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+				xmlFree(to);
+				free(conf);
+				return -1;
+			}
+
 			new_map->free_tid = 256;
 			new_map->new_odid = atoi(to);
 			new_map->next = conf->mappings;
@@ -598,10 +613,25 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 				if (!xmlStrcmp(from->content, (const xmlChar *) "*")) {
 					if (!conf->default_source) {
 						conf->default_source = calloc(1, sizeof(struct source));
+						if (!conf->default_source) {
+							MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+							xmlFree(to);
+							free(new_map);
+							free(conf);
+							return -1;
+						}
 					}
 					src = conf->default_source;
 				} else {
 					src = calloc(1, sizeof(struct source));
+					if (!src) {
+						MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+						xmlFree(to);
+						free(new_map);
+						free(conf);
+						return -1;
+					}
+
 					src->next = conf->sources;
 					conf->sources = src;
 				}
@@ -715,6 +745,7 @@ struct source *joinflows_get_source_by_mapping(struct joinflows_ip_config *conf,
 				MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
 				return NULL;
 			}
+
 			/* Fill in structure */
 			new_src->mapping = aux_map;
 			new_src->new_odid = aux_map->new_odid;
@@ -770,9 +801,19 @@ uint32_t joinflows_update_input_info(struct source *src, struct input_info *inpu
 	if (src->mapping->input_info == NULL) {
 		if (input_info->type == SOURCE_TYPE_IPFIX_FILE) {
 			src->mapping->input_info = calloc(1, sizeof(struct input_info_file));
+			if (!src->mapping->input_info) {
+				MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+				return 0;
+			}
+
 			memcpy(src->mapping->input_info, input_info, sizeof(struct input_info_file));
 		} else {
 			src->mapping->input_info = calloc(1, sizeof(struct input_info_network));
+			if (!src->mapping->input_info) {
+				MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+				return 0;
+			}
+
 			memcpy(src->mapping->input_info, input_info, sizeof(struct input_info_network));
 		}
 		src->mapping->input_info->odid = src->new_odid;
@@ -909,7 +950,7 @@ int intermediate_process_message(void *config, void *message)
 		}
 
 		map = mapping_lookup(src->mapping, orig_odid, templ->template_id, templ->template_type);
-		if (map == NULL) {
+		if (!map) {
 			MSG_WARNING(msg_module, "[%u] %d not found, something is wrong!", orig_odid, templ->template_id);
 			continue;
 		}
