@@ -376,7 +376,6 @@ void *input_listen(void *config)
 	return NULL;
 }
 
-
 /**
  * \brief Input plugin initializtion function
  *
@@ -903,12 +902,9 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		} else if (length >  htons(((struct ipfix_header *)*packet)->length)) {
 			length = htons(((struct ipfix_header*)*packet)->length);
 		}
-
-//        /* set length to correct value */
-//        length += IPFIX_HEADER_LENGTH;
 	} else if (length != 0) {
-		MSG_ERROR(msg_module, "Failed to receive IPFIX packet: packet too short: %zi. Closing connection...",
-					length);
+		MSG_ERROR(msg_module, "Packet header is incomplete; closing connection...");
+
 		/* this will close the connection */
 		length = 0;
 	}

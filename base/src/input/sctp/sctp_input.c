@@ -114,7 +114,6 @@ struct sctp_config {
 	pthread_t listen_thread;                    /**< id of the thread that listens for new associations */
 };
 
-
 /**
  * \brief Listen for incoming associations
  *
@@ -214,7 +213,6 @@ err_assoc:
 	}
 }
 
-
 /**
  * \brief Plugin initialization
  *
@@ -296,7 +294,7 @@ int input_init(char *params, void **config)
 	}
 
 	if (xmlStrcmp(cur->name, (const xmlChar *) "sctpCollector")) {
-		MSG_ERROR(msg_module, "SCTP input plugin: Bad configuration (root node != sctpCollector)");
+		MSG_ERROR(msg_module, "SCTP input plugin: bad configuration (root node != sctpCollector)");
 		goto err_xml;
 	}
 
@@ -339,7 +337,7 @@ int input_init(char *params, void **config)
 				ret = inet_pton(AF_INET, ip_str, &(sockaddr->sin_addr));
 				if (ret != 1) {
 					/* invalid address */
-					MSG_ERROR(msg_module, "SCTP init: %s is not valid IP address", ip_str);
+					MSG_ERROR(msg_module, "SCTP init: %s is not a valid IP address", ip_str);
 					goto err_sockaddr_case;
 				}
 				/* note we don't know yet what the desired port
@@ -366,8 +364,6 @@ int input_init(char *params, void **config)
 				/* everything is ok, add this new address */
 				sockaddr_listen[sockaddr_listen_counter] = sockaddr;
 				sockaddr_listen_counter += 1;
-				
-				MSG_NOTICE(msg_module, "SCTP listen address: %s", ip_str);
 
 				break;
 
@@ -411,7 +407,7 @@ err_sockaddr_case:
 						/* realloc fails, discard this 
 						 * address and continue */
 						sockaddr6_listen = (struct sockaddr_in6 **) sockaddr_listen_old;
-						MSG_ERROR(msg_module, "Realloc fails (%s:%d)", __FILE__, __LINE__);
+						MSG_ERROR(msg_module, "Realloc failed (%s:%d)", __FILE__, __LINE__);
 						MSG_ERROR(msg_module, "Address %s cannot be added - system error", ip_str);
 						goto err_sockaddr6_case;
 					}
@@ -422,8 +418,6 @@ err_sockaddr_case:
 				/* everything is ok, add this new address */
 				sockaddr6_listen[sockaddr6_listen_counter] = sockaddr6;
 				sockaddr6_listen_counter += 1;
-				
-				MSG_NOTICE(msg_module, "SCTP listen address: %s", ip_str);
 
 				break;
 
@@ -457,7 +451,6 @@ err_sockaddr6_case:
 			listen_port_str = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
 
 			conf->listen_port = atoi((char *) listen_port_str);
-			MSG_NOTICE(msg_module, "SCTP listen port: %s", (char *) listen_port_str);
 			port_set = 1;
 
 			xmlFree(listen_port_str);
@@ -565,8 +558,6 @@ err_sockaddr6_case:
 		MSG_ERROR(msg_module, "epoll_create() - %s", strerror(errno));
 		goto err_listen;
 	}
-
-	MSG_NOTICE(msg_module, "SCTP input plugin listening for incoming  associations");
 
 	conf->epollfd = epollfd;
 
@@ -711,7 +702,7 @@ wait_for_data:
 	}
 
 	if (msg_length < IPFIX_HEADER_LENGTH) {
-		MSG_ERROR(msg_module, "Packet header is incomplete, skipping");
+		MSG_ERROR(msg_module, "Packet header is incomplete; skipping message...", msg_length);
 		return INPUT_INTR;
 	}
 
@@ -722,7 +713,7 @@ wait_for_data:
 
 	/* Check if lengths are the same */
 	if (msg_length < htons(((struct ipfix_header *)*packet)->length)) {
-		MSG_ERROR(msg_module, "Packet is incomplete, skipping");
+		MSG_ERROR(msg_module, "Packet is incomplete; skipping message...");
 		return INPUT_INTR;
 	} else if (msg_length > htons(((struct ipfix_header *)*packet)->length)) {
 		msg_length = htons(((struct ipfix_header *)*packet)->length);
