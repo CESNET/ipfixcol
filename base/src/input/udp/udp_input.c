@@ -65,6 +65,7 @@
 
 /* input buffer length */
 #define BUFF_LEN 10000
+
 /* default port for udp collector */
 #define DEFAULT_PORT "4739"
 
@@ -89,8 +90,7 @@ struct input_info_list {
  * \struct plugin_conf
  * \brief  Plugin configuration structure passed by the collector
  */
-struct plugin_conf
-{
+struct plugin_conf {
 	int socket; /**< listening socket */
 	struct input_info_network info; /**< infromation structure passed to collector */
 	struct input_info_list *info_list; /**< list of infromation structures passed to collector */
@@ -112,6 +112,7 @@ int input_init(char *params, void **config)
 	int ai_family = AF_INET6; /* IPv6 is default */
 	char dst_addr[INET6_ADDRSTRLEN];
 	int ret, ipv6_only = 0, retval = 0;
+
 	/* 1 when using default port - don't free memory */
 	int def_port = 0;
 
@@ -132,10 +133,11 @@ int input_init(char *params, void **config)
 	doc = xmlParseDoc(BAD_CAST params);
 	if (doc == NULL) {
 		printf("%s", params);
-		MSG_ERROR(msg_module, "Cannot parse config xml");
+		MSG_ERROR(msg_module, "Cannot parse configuration");
 		retval = 1;
 		goto out;
 	}
+
 	/* get the root element node */
 	root_element = xmlDocGetRootElement(doc);
 	if (root_element == NULL) {
@@ -198,7 +200,7 @@ int input_init(char *params, void **config)
 	}
 
 	/* specify parameters of the connection */
-	memset (&hints, 0, sizeof(struct addrinfo));
+	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_socktype = SOCK_DGRAM; /* UDP */
 	hints.ai_family = ai_family; /* both IPv4 and IPv6*/
 	hints.ai_flags = AI_V4MAPPED; /* we want to accept mapped addresses */
@@ -215,7 +217,8 @@ int input_init(char *params, void **config)
 
 	/* create socket */
 	conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
-	/* Retry with IPv4 when the implementation does not support the specified address family. */
+
+	/* Retry with IPv4 when the implementation does not support the specified address family */
 	if (conf->socket == -1 && errno == EAFNOSUPPORT && addrinfo->ai_family == AF_INET6) {
 		addrinfo->ai_family = AF_INET;
 		conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
@@ -228,8 +231,8 @@ int input_init(char *params, void **config)
 
 	/* allow IPv4 connections on IPv6 */
 	if ((addrinfo->ai_family == AF_INET6) &&
-		(setsockopt(conf->socket, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_only, sizeof(ipv6_only)) == -1)) {
-		MSG_WARNING(msg_module, "Cannot turn off socket option IPV6_V6ONLY. Plugin might not accept IPv4 connections");
+			(setsockopt(conf->socket, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_only, sizeof(ipv6_only)) == -1)) {
+		MSG_WARNING(msg_module, "Cannot turn off socket option IPV6_V6ONLY; plugin may not accept IPv4 connections...");
 	}
 
 	/* bind socket to address */
@@ -253,9 +256,9 @@ int input_init(char *params, void **config)
 	} else { /* IPv6 */
 		conf->info.l3_proto = 6;
 
-		/* copy dst IPv6 address */
+		/* copy destination IPv6 address */
 		int i;
-		for (i=0; i<4;i++) {
+		for (i = 0; i < 4; i++) {
 			conf->info.dst_addr.ipv6.s6_addr32[i] =
 				((struct sockaddr_in6*) addrinfo->ai_addr)->sin6_addr.s6_addr32[i];
 		}
@@ -264,13 +267,13 @@ int input_init(char *params, void **config)
 	}
 
 	if (convert_init(UDP_PLUGIN, BUFF_LEN) != 0) {
-		MSG_ERROR(msg_module, "Error when initializing templates!");
+		MSG_ERROR(msg_module, "Failed to initialize templates");
 		retval = 1;
 		goto out;
 	}
 
 	/* print info */
-	MSG_NOTICE(msg_module, "UDP input plugin listening on address %s, port %s", dst_addr, port);
+	MSG_NOTICE(msg_module, "Input plugin listening on %s, port %s", dst_addr, port);
 
 	/* and pass it to the collector */
 	*config = (void*) conf;
