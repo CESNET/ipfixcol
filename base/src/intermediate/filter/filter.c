@@ -386,7 +386,18 @@ bool filter_fits_value(struct filter_treenode *node, uint8_t *rec, struct ipfix_
 		return node->op == OP_NOT_EQUAL;
 	}
 
-	int cmpres = memcmp(recdata, node->value->value, datalen);
+	/*
+	 * Compare values
+	 * values are in network byte order
+	 * node value can be on more bytes than value in data
+	 * e.g:
+	 * value in data is 4 bytes long: 0 0 0 5
+	 * value in node is 8 bytes long: 0 0 0 0 0 0 0 8
+	 *										  ^
+	 * => node value must be offsetted by length difference
+	 * => &(nodeValue[nodeValueLength - dataValueLength]) => &(nodeValue[8 - 4])
+	 */
+	int cmpres = memcmp(recdata, &(node->value->value[node->value->length - datalen]), datalen);
 
 	/* Compare values according to op */
 	/* memcmp return 0 if operands are equal, so it must be negated for OP_EQUAL */
@@ -946,7 +957,12 @@ uint8_t *filter_num_to_ptr(uint8_t *data, int length)
 		return NULL;
 	}
 
-	memcpy(value, data, length);
+	/* Convert value to network byte order */
+	uint16_t i;
+	for (i = 0; i < length; ++i) {
+		value[length - i - 1] = data[i];
+	}
+
 	return value;
 }
 
