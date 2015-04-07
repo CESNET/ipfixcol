@@ -154,3 +154,13 @@ void Profile::match(ipfix_message* msg, metadata* mdata, std::vector<Channel *>&
 		channel->match(msg, mdata, channels);
 	}
 }
+
+void Profile::match(struct match_data *data)
+{
+	for (auto& channel: m_channels) {
+		channel->match(data);
+		if (data->channels == NULL) {
+			return;
+		}
+	}
+}

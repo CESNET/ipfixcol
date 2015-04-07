@@ -359,33 +359,32 @@ void **profile_match_data(void *profile, struct ipfix_message *msg, struct metad
 {
 	Profile *p = (Profile *) profile;
 
+	/* Fill data structure */
+	struct match_data data;
+	data.msg = msg;
+	data.mdata = mdata;
+	data.channels = NULL;
+	data.channelsCounter = 0;
+	data.channelsMax = 0;
+
 	/* Find matching channels */
-	std::vector<Channel *> channels{};
-	channels.reserve(5);
-	p->match(msg, mdata, channels);
-
-	/* No matching channels found */
-	if (channels.empty()) {
+	p->match(&data);
+	if (data.channels == NULL || data.channelsCounter == 0) {
 		return NULL;
 	}
 
-	/* Add terminating NULL */
-	channels.push_back(NULL);
-
-	/* Copy them to the C array */
-	void **c_channels = (void **) calloc(sizeof(void *), channels.size());
-
-	if (!c_channels) {
-		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
-		return NULL;
+	/* Add terminating NULL pointer */
+	if (data.channelsCounter == data.channelsMax) {
+		data.channels = (void**) realloc(data.channels, sizeof(void*) * (data.channelsCounter + 1));
+		if (data.channels == NULL) {
+			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+			return NULL;
+		}
 	}
 
-	for (uint16_t i = 0; i < channels.size(); ++i) {
-		c_channels[i] = (void *) channels[i];
-	}
+	data.channels[data.channelsCounter] = NULL;
 
-	/* Done */
-	return c_channels;
+	return data.channels;
 }
 
 /**

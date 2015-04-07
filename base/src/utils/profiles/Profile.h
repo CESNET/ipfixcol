@@ -157,6 +157,8 @@ public:
 	 * \param[out] channels	list of matching channels
 	 */
 	void match(struct ipfix_message *msg, struct metadata *mdata, std::vector<Channel *>& channels);
+
+	void match(struct match_data *data);
 private:
 
 	Profile *m_parent{NULL};	/**< Parent profile */
