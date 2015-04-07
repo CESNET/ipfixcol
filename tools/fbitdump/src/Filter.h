@@ -240,7 +240,7 @@ public:
 	 * @bool aggregate Aggregation option
 	 * @return True when succesful
 	 */
-	bool parseColumnGroup(parserStruct *ps, std::string alias, bool aggeregate) const;
+	bool parseColumnGroup(parserStruct *ps, std::string alias, bool aggregate) const;
 	/**
 	 * \brief Only fills parser structure with column name
 	 *

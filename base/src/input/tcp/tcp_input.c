@@ -73,7 +73,6 @@
 #	define DEFAULT_SERVER_CERT_FILE "/etc/ssl/certs/collector.crt"
 #	define DEFAULT_SERVER_PKEY_FILE "/etc/ssl/private/collector.key"
 #	define DEFAULT_CA_FILE          "/etc/ssl/private/ca.crt"
-
 #	define DEFAULT_SIZE_SSL_LIST 100
 #endif
 
@@ -108,13 +107,13 @@ struct input_info_list {
  */
 struct plugin_conf
 {
-    int socket; /**< listening socket */
-    struct input_info_network info; /**< basic infromation structure */
-    fd_set master; /**< set of all active sockets */
-    int fd_max; /**< max file descriptor number */
-    struct sockaddr_in6 *sock_addresses[ADDR_ARRAY_SIZE]; /*< array of addresses indexed by sockets */
-    struct input_info_list *info_list; /**< list of infromation structures
-     	 	 	 	 	 	 	 	 	* passed to collector */
+	int socket; /**< listening socket */
+	struct input_info_network info; /**< basic infromation structure */
+	fd_set master; /**< set of all active sockets */
+	int fd_max; /**< max file descriptor number */
+	struct sockaddr_in6 *sock_addresses[ADDR_ARRAY_SIZE]; /*< array of addresses indexed by sockets */
+	struct input_info_list *info_list; /**< list of infromation structures
+										* passed to collector */
 #ifdef TLS_SUPPORT
 	uint8_t tls;                  /**< TLS enabled? 0 = no, 1 = yes */
 	SSL_CTX *ctx;                 /**< CTX structure */
@@ -146,9 +145,9 @@ pthread_t listen_thread;
  */
 void input_listen_cleanup(void *address)
 {
-    if (address != NULL) {
-        free(address);
-    }
+	if (address != NULL) {
+		free(address);
+	}
 }
 
 #ifdef TLS_SUPPORT
@@ -161,7 +160,7 @@ void input_listen_cleanup(void *address)
  */
 void input_listen_tls_cleanup(void *config, struct cleanup *maid)
 {
-    struct plugin_conf *conf;
+	struct plugin_conf *conf;
 	int fd;
 	int ret;
 	
@@ -202,13 +201,13 @@ void input_listen_tls_cleanup(void *config, struct cleanup *maid)
  */
 void *input_listen(void *config)
 {
-    struct plugin_conf *conf = (struct plugin_conf *) config;
-    int new_sock;
-    /* use IPv6 sockaddr structure to store address information (IPv4 fits easily) */
-    struct sockaddr_in6 *address = NULL;
-    socklen_t addr_length;
-    char src_addr[INET6_ADDRSTRLEN];
-    struct input_info_list *input_info;
+	struct plugin_conf *conf = (struct plugin_conf *) config;
+	int new_sock;
+	/* use IPv6 sockaddr structure to store address information (IPv4 fits easily) */
+	struct sockaddr_in6 *address = NULL;
+	socklen_t addr_length;
+	char src_addr[INET6_ADDRSTRLEN];
+	struct input_info_list *input_info;
 #ifdef TLS_SUPPORT
 	int ret;
 	int i;
@@ -217,20 +216,24 @@ void *input_listen(void *config)
 	struct cleanup maid;       /* auxiliary struct for TLS error handling */
 #endif
 
-    /* loop ends when thread is cancelled by pthread_cancel() function */
-    while (1) {
-        /* allocate space for the address */
-        addr_length = sizeof(struct sockaddr_in6);
-        address = malloc(addr_length);
+	/* loop ends when thread is cancelled by pthread_cancel() function */
+	while (1) {
+		/* allocate space for the address */
+		addr_length = sizeof(struct sockaddr_in6);
+		address = malloc(addr_length);
+		if (!address) {
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+			break;
+		}
 
-        /* ensure that address will be freed when thread is canceled */ 
-        pthread_cleanup_push(input_listen_cleanup, (void *) address);
+		/* ensure that address will be freed when thread is canceled */ 
+		pthread_cleanup_push(input_listen_cleanup, (void *) address);
 
-        if ((new_sock = accept(conf->socket, (struct sockaddr*) address, &addr_length)) == -1) {
-        	MSG_ERROR(msg_module, "Cannot accept new socket: %s", strerror(errno));
-            /* exit and call cleanup */
-            pthread_exit(0);
-        }
+		if ((new_sock = accept(conf->socket, (struct sockaddr*) address, &addr_length)) == -1) {
+			MSG_ERROR(msg_module, "Cannot accept new socket: %s", strerror(errno));
+			/* exit and call cleanup */
+			pthread_exit(0);
+		}
 #ifdef TLS_SUPPORT
 		/* preparation for TLS error handling */
 		maid.address = address;
@@ -243,7 +246,7 @@ void *input_listen(void *config)
 			if (!ssl) {
 				MSG_ERROR(msg_module, "Unable to create SSL structure");
 				ERR_print_errors_fp(stderr);
-            	/* cleanup */
+				/* cleanup */
 				input_listen_tls_cleanup(conf, &maid);
 				continue;
 			}
@@ -254,7 +257,7 @@ void *input_listen(void *config)
 			if (ret != 1) {
 				MSG_ERROR(msg_module, "Unable to connect the SSL object with the socket");
 				ERR_print_errors_fp(stderr);
-            	/* cleanup */
+				/* cleanup */
 				input_listen_tls_cleanup(conf, &maid);
 				continue;
 			}
@@ -265,7 +268,7 @@ void *input_listen(void *config)
 				/* handshake wasn't successful */
 				MSG_ERROR(msg_module, "TLS handshake was not successful");
 				ERR_print_errors_fp(stderr);
-            	/* cleanup */
+				/* cleanup */
 				input_listen_tls_cleanup(conf, &maid);
 				continue;
 			}
@@ -274,7 +277,7 @@ void *input_listen(void *config)
 			peer_cert = SSL_get_peer_certificate(ssl);
 			if (!peer_cert) {
 				MSG_ERROR(msg_module, "No certificate was presented by the peer");
-            	/* cleanup */
+				/* cleanup */
 				input_listen_tls_cleanup(conf, &maid);
 				continue;
 			}
@@ -283,7 +286,7 @@ void *input_listen(void *config)
 			/* verify peer's certificate */
 			if (SSL_get_verify_result(ssl) != X509_V_OK) {
 				MSG_ERROR(msg_module, "Client sent bad certificate; verification failed");
-            	/* cleanup */
+				/* cleanup */
 				input_listen_tls_cleanup(conf, &maid);
 				continue;
 			}
@@ -298,57 +301,62 @@ void *input_listen(void *config)
 			if (conf->ssl_list[i] != ssl) {
 				/* limit reached. no space for new SSL structure */
 				MSG_WARNING(msg_module, "Limit on the number of TLS connections reached; tearing down this connection...");
-            	/* cleanup */
+				/* cleanup */
 				input_listen_tls_cleanup(conf, &maid);
 				continue;
 			}
 		}
 #endif
-        pthread_mutex_lock(&mutex);
-        FD_SET(new_sock, &conf->master);
+		pthread_mutex_lock(&mutex);
+		FD_SET(new_sock, &conf->master);
 
-        if (conf->fd_max < new_sock) {
-            conf->fd_max = new_sock;
-        }
+		if (conf->fd_max < new_sock) {
+			conf->fd_max = new_sock;
+		}
 
-        /* copy socket address to config structure */
-        conf->sock_addresses[new_sock] = address;
+		/* copy socket address to config structure */
+		conf->sock_addresses[new_sock] = address;
 
-        /* print info */
-        if (conf->info.l3_proto == 4) {
-            inet_ntop(AF_INET, (void *)&((struct sockaddr_in*) address)->sin_addr, src_addr, INET6_ADDRSTRLEN);
-        } else {
-            inet_ntop(AF_INET6, &address->sin6_addr, src_addr, INET6_ADDRSTRLEN);
-        }
-        MSG_NOTICE(msg_module, "Exporter connected from address %s", src_addr);
+		/* print info */
+		if (conf->info.l3_proto == 4) {
+			inet_ntop(AF_INET, (void *)&((struct sockaddr_in*) address)->sin_addr, src_addr, INET6_ADDRSTRLEN);
+		} else {
+			inet_ntop(AF_INET6, &address->sin6_addr, src_addr, INET6_ADDRSTRLEN);
+		}
+		MSG_NOTICE(msg_module, "Exporter connected from address %s", src_addr);
 
-        pthread_mutex_unlock(&mutex);
+		pthread_mutex_unlock(&mutex);
 
-        /* create new input_info for this connection */
-        input_info = calloc(1, sizeof(struct input_info_list));
-        memcpy(&input_info->info, &conf->info, sizeof(struct input_info_list));
+		/* create new input_info for this connection */
+		input_info = calloc(1, sizeof(struct input_info_list));
+		if (input_info == NULL) {
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+			break;
+		}
 
-        /* set status to new connection */
-        input_info->info.status = SOURCE_STATUS_NEW;
+		memcpy(&input_info->info, &conf->info, sizeof(struct input_info_list));
 
-        /* copy address and port */
-        if (address->sin6_family == AF_INET) {
-        	/* copy src IPv4 address */
-        	input_info->info.src_addr.ipv4.s_addr =
-        			((struct sockaddr_in*) address)->sin_addr.s_addr;
+		/* set status to new connection */
+		input_info->info.status = SOURCE_STATUS_NEW;
 
-        	/* copy port */
-        	input_info->info.src_port = ntohs(((struct sockaddr_in*)  address)->sin_port);
-        } else {
-        	/* copy src IPv6 address */
-        	int i;
-        	for (i=0; i<4; i++) {
-        		input_info->info.src_addr.ipv6.s6_addr32[i] = address->sin6_addr.s6_addr32[i];
-        	}
+		/* copy address and port */
+		if (address->sin6_family == AF_INET) {
+			/* copy src IPv4 address */
+			input_info->info.src_addr.ipv4.s_addr =
+					((struct sockaddr_in*) address)->sin_addr.s_addr;
 
-        	/* copy port */
-        	input_info->info.src_port = ntohs(address->sin6_port);
-        }
+			/* copy port */
+			input_info->info.src_port = ntohs(((struct sockaddr_in*)  address)->sin_port);
+		} else {
+			/* copy src IPv6 address */
+			int i;
+			for (i=0; i<4; i++) {
+				input_info->info.src_addr.ipv6.s6_addr32[i] = address->sin6_addr.s6_addr32[i];
+			}
+
+			/* copy port */
+			input_info->info.src_port = ntohs(address->sin6_port);
+		}
 
 #ifdef TLS_SUPPORT
 		/* fill in certificates */
@@ -356,16 +364,16 @@ void *input_listen(void *config)
 		input_info->exporter_cert = peer_cert;
 #endif
 
-        /* add to list */
-        input_info->next = conf->info_list;
-        conf->info_list = input_info;
+		/* add to list */
+		input_info->next = conf->info_list;
+		conf->info_list = input_info;
 
-        /* unset the address so that we do not free it incidentally */
-        address = NULL;
+		/* unset the address so that we do not free it incidentally */
+		address = NULL;
 
-        pthread_cleanup_pop(0);
-    }
-    return NULL;
+		pthread_cleanup_pop(0);
+	}
+	return NULL;
 }
 
 
@@ -378,89 +386,89 @@ void *input_listen(void *config)
  */
 int input_init(char *params, void **config)
 {
-    /* necessary structures */
-    struct addrinfo *addrinfo=NULL, hints;
-    struct plugin_conf *conf=NULL;
-    char *port = NULL, *address = NULL;
-    int ai_family = AF_INET6; /* IPv6 is default */
-    char dst_addr[INET6_ADDRSTRLEN];
-    int ret, ipv6_only = 0, retval = 0, yes = 1; /* yes is for setsockopt */
-    /* 1 when using default port - don't free memory */
-    int def_port = 0;
+	/* necessary structures */
+	struct addrinfo *addrinfo=NULL, hints;
+	struct plugin_conf *conf=NULL;
+	char *port = NULL, *address = NULL;
+	int ai_family = AF_INET6; /* IPv6 is default */
+	char dst_addr[INET6_ADDRSTRLEN];
+	int ret, ipv6_only = 0, retval = 0, yes = 1; /* yes is for setsockopt */
+	/* 1 when using default port - don't free memory */
+	int def_port = 0;
 #ifdef TLS_SUPPORT
 	SSL_CTX *ctx = NULL;       /* SSL context structure */
 	SSL **ssl_list = NULL;     /* list of SSL connection structures */
-    xmlNode *cur_node_parent;
+	xmlNode *cur_node_parent;
 #endif
 
-    /* parse params */
-    xmlDoc *doc = NULL;
-    xmlNode *root_element = NULL;
-    xmlNode *cur_node = NULL;
+	/* parse params */
+	xmlDoc *doc = NULL;
+	xmlNode *root_element = NULL;
+	xmlNode *cur_node = NULL;
 
-    /* allocate plugin_conf structure */
-    conf = calloc(1, sizeof(struct plugin_conf));
-    if (conf == NULL) {
-    	MSG_ERROR(msg_module, "Cannot allocate memory for config structure: %s", strerror(errno));
-        retval = 1;
-        goto out;
-    }
+	/* allocate plugin_conf structure */
+	conf = calloc(1, sizeof(struct plugin_conf));
+	if (conf == NULL) {
+		MSG_ERROR(msg_module, "Cannot allocate memory for config structure: %s", strerror(errno));
+		retval = 1;
+		goto out;
+	}
 
-    /* empty the master set */
-    FD_ZERO(&conf->master);
+	/* empty the master set */
+	FD_ZERO(&conf->master);
 
-    /* parse xml string */
-    doc = xmlParseDoc(BAD_CAST params);
-    if (doc == NULL) {
-    	MSG_ERROR(msg_module, "Cannot parse config xml");
-        retval = 1;
-        goto out;
-    }
-    /* get the root element node */
-    root_element = xmlDocGetRootElement(doc);
-    if (root_element == NULL) {
-    	MSG_ERROR(msg_module, "Cannot get document root element");
-        retval = 1;
-        goto out;
-    }
+	/* parse xml string */
+	doc = xmlParseDoc(BAD_CAST params);
+	if (doc == NULL) {
+		MSG_ERROR(msg_module, "Cannot parse config xml");
+		retval = 1;
+		goto out;
+	}
+	/* get the root element node */
+	root_element = xmlDocGetRootElement(doc);
+	if (root_element == NULL) {
+		MSG_ERROR(msg_module, "Cannot get document root element");
+		retval = 1;
+		goto out;
+	}
 
-    /* check that we have the right config xml, BAD_CAST is (xmlChar *) cast defined by libxml */
-    if (!xmlStrEqual(root_element->name, BAD_CAST "tcpCollector")) {
-    	MSG_ERROR(msg_module, "Expecting tcpCollector root element, got %s", root_element->name);
-        retval = 1;
-        goto out;
-    }
+	/* check that we have the right config xml, BAD_CAST is (xmlChar *) cast defined by libxml */
+	if (!xmlStrEqual(root_element->name, BAD_CAST "tcpCollector")) {
+		MSG_ERROR(msg_module, "Expecting tcpCollector root element, got %s", root_element->name);
+		retval = 1;
+		goto out;
+	}
 
-    /* go over all elements */
-    for (cur_node = root_element->children; cur_node; cur_node = cur_node->next) {
+	/* go over all elements */
+	for (cur_node = root_element->children; cur_node; cur_node = cur_node->next) {
 #ifdef TLS_SUPPORT
-        /* check whether we want to enable transport layer security */
-        if (xmlStrEqual(cur_node->name, BAD_CAST "transportLayerSecurity")) {
-        	MSG_NOTICE(msg_module, "TLS enabled");
-            conf->tls = 1;   /* TLS enabled */
+		/* check whether we want to enable transport layer security */
+		if (xmlStrEqual(cur_node->name, BAD_CAST "transportLayerSecurity")) {
+			MSG_NOTICE(msg_module, "TLS enabled");
+			conf->tls = 1;   /* TLS enabled */
 			cur_node_parent = cur_node;	
 
 			/* TLS configuration options */
-	    	for (cur_node = cur_node->xmlChildrenNode; cur_node; cur_node = cur_node->next) {
-        		if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
+			for (cur_node = cur_node->xmlChildrenNode; cur_node; cur_node = cur_node->next) {
+				if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
 					int tmp_val_len = strlen((char *) cur_node->children->content) + 1;
 					char *tmp_val = malloc(sizeof(char) * tmp_val_len);
 					if (!tmp_val) {
 						MSG_ERROR(msg_module, "Cannot allocate memory: %s", strerror(errno));
-					    retval = 1;
-					    goto out;
+						retval = 1;
+						goto out;
 					}
 					strncpy_safe(tmp_val, (char *)cur_node->children->content, tmp_val_len);
 					
 					if (xmlStrEqual(cur_node->name, BAD_CAST "localCAfile")) {
 						/* location of the CA certificate */
-					    conf->ca_cert_file = tmp_val;
+						conf->ca_cert_file = tmp_val;
 					} else if (xmlStrEqual(cur_node->name, BAD_CAST "localServerCert")) {
 						/* server's certificate */
-		    			conf->server_cert_file = tmp_val;
+						conf->server_cert_file = tmp_val;
 					} else if (xmlStrEqual(cur_node->name, BAD_CAST "localServerCertKey")) {
 						/* server's private key */
-		    			conf->server_pkey_file = tmp_val;
+						conf->server_pkey_file = tmp_val;
 					} else {
 						/* unknown option */
 						MSG_WARNING(msg_module, "Unknown configuration option: %s", cur_node->name);
@@ -474,49 +482,49 @@ int input_init(char *params, void **config)
 			continue;
 		}
 #else   /* user wants TLS, but collector was compiled without it */
-        if (xmlStrEqual(cur_node->name, BAD_CAST "transportLayerSecurity")) {
+		if (xmlStrEqual(cur_node->name, BAD_CAST "transportLayerSecurity")) {
 			/* user wants to enable TLS, but collector was compiled without it */
 			MSG_WARNING(msg_module, "Collector was compiled without TLS support");
 			continue;
 		}
 #endif
-        if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
-            /* copy value to memory - don't forget the terminating zero */
-            int tmp_val_len = strlen((char *) cur_node->children->content) + 1;
-            char *tmp_val = malloc(sizeof(char) * tmp_val_len);
-            /* this is not a preferred cast, but we really want to use plain chars here */
-            if (tmp_val == NULL) {
+		if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
+			/* copy value to memory - don't forget the terminating zero */
+			int tmp_val_len = strlen((char *) cur_node->children->content) + 1;
+			char *tmp_val = malloc(sizeof(char) * tmp_val_len);
+			/* this is not a preferred cast, but we really want to use plain chars here */
+			if (tmp_val == NULL) {
 				MSG_ERROR(msg_module, "Cannot allocate memory: %s", strerror(errno));
-                retval = 1;
-                goto out;
-            }
-            strncpy_safe(tmp_val, (char *)cur_node->children->content, tmp_val_len);
+				retval = 1;
+				goto out;
+			}
+			strncpy_safe(tmp_val, (char *)cur_node->children->content, tmp_val_len);
 
-            if (xmlStrEqual(cur_node->name, BAD_CAST "localPort")) { /* set local port */
-                port = tmp_val;
-            } else if (xmlStrEqual(cur_node->name, BAD_CAST "localIPAddress")) { /* set local address */
-                address = tmp_val;
-            /* save following configuration to input_info */
-            } else if (xmlStrEqual(cur_node->name, BAD_CAST "templateLifeTime")) {
-                conf->info.template_life_time = tmp_val;
-            } else if (xmlStrEqual(cur_node->name, BAD_CAST "optionsTemplateLifeTime")) {
-                conf->info.options_template_life_time = tmp_val;
-            } else if (xmlStrEqual(cur_node->name, BAD_CAST "templateLifePacket")) {
-                conf->info.template_life_packet = tmp_val;
-            } else if (xmlStrEqual(cur_node->name, BAD_CAST "optionsTemplateLifePacket")) {
-                conf->info.options_template_life_packet = tmp_val;
-            } else { /* unknown parameter, ignore */
+			if (xmlStrEqual(cur_node->name, BAD_CAST "localPort")) { /* set local port */
+				port = tmp_val;
+			} else if (xmlStrEqual(cur_node->name, BAD_CAST "localIPAddress")) { /* set local address */
+				address = tmp_val;
+			/* save following configuration to input_info */
+			} else if (xmlStrEqual(cur_node->name, BAD_CAST "templateLifeTime")) {
+				conf->info.template_life_time = tmp_val;
+			} else if (xmlStrEqual(cur_node->name, BAD_CAST "optionsTemplateLifeTime")) {
+				conf->info.options_template_life_time = tmp_val;
+			} else if (xmlStrEqual(cur_node->name, BAD_CAST "templateLifePacket")) {
+				conf->info.template_life_packet = tmp_val;
+			} else if (xmlStrEqual(cur_node->name, BAD_CAST "optionsTemplateLifePacket")) {
+				conf->info.options_template_life_packet = tmp_val;
+			} else { /* unknown parameter, ignore */
 				/* Free the tmp_val for unknown elements */
 				free(tmp_val);
-            }
-        }
-    }
+			}
+		}
+	}
 
-    /* set default port if none given */
-    if (port == NULL) {
-        port = DEFAULT_PORT;
-        def_port = 1;
-    }
+	/* set default port if none given */
+	if (port == NULL) {
+		port = DEFAULT_PORT;
+		def_port = 1;
+	}
 
 #ifdef TLS_SUPPORT
 	if (conf->tls) {
@@ -535,21 +543,21 @@ int input_init(char *params, void **config)
 	}
 #endif
 
-    /* specify parameters of the connection */
-    memset (&hints, 0, sizeof(struct addrinfo));
-    hints.ai_socktype = SOCK_STREAM; /* TCP */
-    hints.ai_family = ai_family; /* select IPv4 or IPv6*/
-    hints.ai_flags = AI_V4MAPPED; /* we want to accept mapped addresses */
-    if (address == NULL) {
-        hints.ai_flags |= AI_PASSIVE; /* no address given, listen on all local addresses */
-    }
+	/* specify parameters of the connection */
+	memset (&hints, 0, sizeof(struct addrinfo));
+	hints.ai_socktype = SOCK_STREAM; /* TCP */
+	hints.ai_family = ai_family; /* select IPv4 or IPv6*/
+	hints.ai_flags = AI_V4MAPPED; /* we want to accept mapped addresses */
+	if (address == NULL) {
+		hints.ai_flags |= AI_PASSIVE; /* no address given, listen on all local addresses */
+	}
 
-    /* get server address */
-    if ((ret = getaddrinfo(address, port, &hints, &addrinfo)) != 0) {
-    	MSG_ERROR(msg_module, "getaddrinfo failed: %s", gai_strerror(ret));
-        retval = 1;
-        goto out;
-    }
+	/* get server address */
+	if ((ret = getaddrinfo(address, port, &hints, &addrinfo)) != 0) {
+		MSG_ERROR(msg_module, "getaddrinfo failed: %s", gai_strerror(ret));
+		retval = 1;
+		goto out;
+	}
 
 	/* create socket */
 	conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
@@ -565,38 +573,38 @@ int input_init(char *params, void **config)
 		goto out;
 	}
 
-    /* allow IPv4 connections on IPv6 */
-    if ((addrinfo->ai_family == AF_INET6) &&
-        (setsockopt(conf->socket, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_only, sizeof(ipv6_only)) == -1)) {
-    	MSG_WARNING(msg_module, "Cannot turn off socket option IPV6_V6ONLY. Plugin might not accept IPv4 connections");
-    }
+	/* allow IPv4 connections on IPv6 */
+	if ((addrinfo->ai_family == AF_INET6) &&
+		(setsockopt(conf->socket, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_only, sizeof(ipv6_only)) == -1)) {
+		MSG_WARNING(msg_module, "Cannot turn off socket option IPV6_V6ONLY. Plugin might not accept IPv4 connections");
+	}
 
-    /* allow to reuse the address immediately */
-    if (setsockopt(conf->socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1)
-    {
-        MSG_WARNING(msg_module, "Cannot turn on socket reuse option. It may take a while before collector can be restarted");
-    }
+	/* allow to reuse the address immediately */
+	if (setsockopt(conf->socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1)
+	{
+		MSG_WARNING(msg_module, "Cannot turn on socket reuse option. It may take a while before collector can be restarted");
+	}
 
-    /* bind socket to address */
-    if (bind(conf->socket, addrinfo->ai_addr, addrinfo->ai_addrlen) != 0) {
-    	MSG_ERROR(msg_module, "Cannot bind socket: %s", strerror(errno));
-        retval = 1;
-        goto out;
-    }
+	/* bind socket to address */
+	if (bind(conf->socket, addrinfo->ai_addr, addrinfo->ai_addrlen) != 0) {
+		MSG_ERROR(msg_module, "Cannot bind socket: %s", strerror(errno));
+		retval = 1;
+		goto out;
+	}
 
-    /* this is a listening socket */
-    if (listen(conf->socket, BACKLOG) == -1) {
-    	MSG_ERROR(msg_module, "Cannot listen on socket: %s", strerror(errno));
-        retval = 1;
-        goto out;
-    }
+	/* this is a listening socket */
+	if (listen(conf->socket, BACKLOG) == -1) {
+		MSG_ERROR(msg_module, "Cannot listen on socket: %s", strerror(errno));
+		retval = 1;
+		goto out;
+	}
 
 #ifdef TLS_SUPPORT
 	if (conf->tls) {
 		/* configure TLS */
 	
 		/* initialize library */
-	 	SSL_load_error_strings();
+		SSL_load_error_strings();
 		SSL_library_init();
 	
 		/* create CTX structure for TLS */
@@ -643,95 +651,95 @@ int input_init(char *params, void **config)
 	}
 #endif  /* TLS */
 
-    /* fill in general information */
-    conf->info.type = SOURCE_TYPE_TCP;
-    conf->info.dst_port = atoi(port);
-    if (addrinfo->ai_family == AF_INET) { /* IPv4 */
-        conf->info.l3_proto = 4;
+	/* fill in general information */
+	conf->info.type = SOURCE_TYPE_TCP;
+	conf->info.dst_port = atoi(port);
+	if (addrinfo->ai_family == AF_INET) { /* IPv4 */
+		conf->info.l3_proto = 4;
 
-        /* copy dst IPv4 address */
-        conf->info.dst_addr.ipv4.s_addr =
-            ((struct sockaddr_in*) addrinfo->ai_addr)->sin_addr.s_addr;
+		/* copy dst IPv4 address */
+		conf->info.dst_addr.ipv4.s_addr =
+			((struct sockaddr_in*) addrinfo->ai_addr)->sin_addr.s_addr;
 
-        inet_ntop(AF_INET, &conf->info.dst_addr.ipv4, dst_addr, INET6_ADDRSTRLEN);
-    } else { /* IPv6 */
-        conf->info.l3_proto = 6;
+		inet_ntop(AF_INET, &conf->info.dst_addr.ipv4, dst_addr, INET6_ADDRSTRLEN);
+	} else { /* IPv6 */
+		conf->info.l3_proto = 6;
 
-        /* copy dst IPv6 address */
-        int i;
-        for (i=0; i<4;i++) {
-            conf->info.dst_addr.ipv6.s6_addr32[i] =
-                ((struct sockaddr_in6*) addrinfo->ai_addr)->sin6_addr.s6_addr32[i];
-        }
+		/* copy dst IPv6 address */
+		int i;
+		for (i=0; i<4;i++) {
+			conf->info.dst_addr.ipv6.s6_addr32[i] =
+				((struct sockaddr_in6*) addrinfo->ai_addr)->sin6_addr.s6_addr32[i];
+		}
 
-        inet_ntop(AF_INET6, &conf->info.dst_addr.ipv6, dst_addr, INET6_ADDRSTRLEN);
-    }
+		inet_ntop(AF_INET6, &conf->info.dst_addr.ipv6, dst_addr, INET6_ADDRSTRLEN);
+	}
 
-    /* allocate memory for templates */
-    if (convert_init(TCP_PLUGIN, BUFF_LEN) != 0) {
-        MSG_ERROR(msg_module, "Malloc() for templates failed!");
-        retval = 1;
-        goto out;
-    }
+	/* allocate memory for templates */
+	if (convert_init(TCP_PLUGIN, BUFF_LEN) != 0) {
+		MSG_ERROR(msg_module, "malloc() for templates failed!");
+		retval = 1;
+		goto out;
+	}
 
-    /* print info */
-    MSG_NOTICE(msg_module, "TCP input plugin listening on address %s, port %s", dst_addr, port);
+	/* print info */
+	MSG_NOTICE(msg_module, "TCP input plugin listening on address %s, port %s", dst_addr, port);
 
-    /* start listening thread */
-    if (pthread_create(&listen_thread, NULL, &input_listen, (void *) conf) != 0) {
-        MSG_ERROR(msg_module, "Failed to create listening thread");
-        retval = 1;
-        goto out;
-    }
+	/* start listening thread */
+	if (pthread_create(&listen_thread, NULL, &input_listen, (void *) conf) != 0) {
+		MSG_ERROR(msg_module, "Failed to create listening thread");
+		retval = 1;
+		goto out;
+	}
 
-    /* pass general information to the collector */
-    *config = (void*) conf;
+	/* pass general information to the collector */
+	*config = (void*) conf;
 
-    /* normal exit, all OK */
-    MSG_NOTICE(msg_module, "Plugin initialization completed successfully");
+	/* normal exit, all OK */
+	MSG_NOTICE(msg_module, "Plugin initialization completed successfully");
 
 out:
-    if (def_port == 0 && port != NULL) { /* free when memory was actually allocated*/
-        free(port);
-    }
+	if (def_port == 0 && port != NULL) { /* free when memory was actually allocated*/
+		free(port);
+	}
 
-    if (address != NULL) {
-        free(address);
-    }
+	if (address != NULL) {
+		free(address);
+	}
 
-    if (addrinfo != NULL) {
-        freeaddrinfo(addrinfo);
-    }
+	if (addrinfo != NULL) {
+		freeaddrinfo(addrinfo);
+	}
 
-    /* free the xml document */
-    if (doc != NULL) {
-        xmlFreeDoc(doc);
-    }
+	/* free the xml document */
+	if (doc != NULL) {
+		xmlFreeDoc(doc);
+	}
 
-    /* free the global variables that may have been allocated by the xml parser */
-    xmlCleanupParser();
+	/* free the global variables that may have been allocated by the xml parser */
+	xmlCleanupParser();
 
-    /* free input_info when error occured */
-    if (retval != 0 && conf != NULL) {
-    	if (conf->info.template_life_time != NULL) {
-    		free (conf->info.template_life_time);
-    	}
-    	if (conf->info.options_template_life_time != NULL) {
-    		free (conf->info.options_template_life_time);
-    	}
-    	if (conf->info.template_life_packet != NULL) {
-    		free (conf->info.template_life_packet);
-    	}
-    	if (conf->info.options_template_life_packet != NULL) {
-    		free (conf->info.options_template_life_packet);
-        }
-        free(conf);
+	/* free input_info when error occured */
+	if (retval != 0 && conf != NULL) {
+		if (conf->info.template_life_time != NULL) {
+			free (conf->info.template_life_time);
+		}
+		if (conf->info.options_template_life_time != NULL) {
+			free (conf->info.options_template_life_time);
+		}
+		if (conf->info.template_life_packet != NULL) {
+			free (conf->info.template_life_packet);
+		}
+		if (conf->info.options_template_life_packet != NULL) {
+			free (conf->info.options_template_life_packet);
+		}
+		free(conf);
 
-    }
+	}
 
 #ifdef TLS_SUPPORT
 	/* error occurs, clean up */
-    if ((retval != 0) && (conf != NULL)) {
+	if ((retval != 0) && (conf != NULL)) {
 		if (ssl_list) {
 			free(ssl_list);
 		}
@@ -742,7 +750,7 @@ out:
 	}
 #endif
 
-    return retval;
+	return retval;
 }
 
 /**
@@ -760,60 +768,60 @@ out:
  */
 int get_packet(void *config, struct input_info **info, char **packet, int *source_status)
 {
-    /* temporary socket set */
-    fd_set tmp_set;
-    ssize_t length = 0, packet_length;
-    struct timeval tv;
-    char src_addr[INET6_ADDRSTRLEN];
-    struct sockaddr_in6 *address;
-    struct plugin_conf *conf = config;
-    int retval = 0, sock;
-    struct input_info_list *info_list;
+	/* temporary socket set */
+	fd_set tmp_set;
+	ssize_t length = 0, packet_length;
+	struct timeval tv;
+	char src_addr[INET6_ADDRSTRLEN];
+	struct sockaddr_in6 *address;
+	struct plugin_conf *conf = config;
+	int retval = 0, sock;
+	struct input_info_list *info_list;
 #ifdef TLS_SUPPORT
 	int i;
 	SSL *ssl = NULL;        /* SSL structure for active socket */
 #endif
 
-    /* allocate memory for packet, if needed */
-    if (*packet == NULL) {
-        *packet = malloc(BUFF_LEN * sizeof(char));
-        if (*packet == NULL) {
-        	MSG_ERROR(msg_module, "Cannot allocate memory for the packet, malloc failed: %s", strerror(errno));
-        }
-    }
+	/* allocate memory for packet, if needed */
+	if (*packet == NULL) {
+		*packet = malloc(BUFF_LEN * sizeof(char));
+		if (*packet == NULL) {
+			MSG_ERROR(msg_module, "Cannot allocate memory for the packet, malloc failed: %s", strerror(errno));
+		}
+	}
    
-    /* wait until some socket is ready */
-    while (retval <= 0) {
-        /* copy all sockets from master to tmp_set */
-        FD_ZERO(&tmp_set);
-        pthread_mutex_lock(&mutex);
-        tmp_set = conf->master;
-        pthread_mutex_unlock(&mutex);
+	/* wait until some socket is ready */
+	while (retval <= 0) {
+		/* copy all sockets from master to tmp_set */
+		FD_ZERO(&tmp_set);
+		pthread_mutex_lock(&mutex);
+		tmp_set = conf->master;
+		pthread_mutex_unlock(&mutex);
 
-        /* wait at most one second - give time to check for new sockets */
-        tv.tv_sec = 1;
-        tv.tv_usec = 0;
+		/* wait at most one second - give time to check for new sockets */
+		tv.tv_sec = 1;
+		tv.tv_usec = 0;
 
-        /* select active connections */
-        retval = select(conf->fd_max + 1, &tmp_set, NULL, NULL, &tv);
-        if (retval == -1) {
-        	if (errno == EINTR) {
-        		return INPUT_INTR;
-        	}
-        	MSG_WARNING(msg_module, "Failed to select active connection: %s", strerror(errno));
-            return INPUT_ERROR;
-        }
-    }
+		/* select active connections */
+		retval = select(conf->fd_max + 1, &tmp_set, NULL, NULL, &tv);
+		if (retval == -1) {
+			if (errno == EINTR) {
+				return INPUT_INTR;
+			}
+			MSG_WARNING(msg_module, "Failed to select active connection: %s", strerror(errno));
+			return INPUT_ERROR;
+		}
+	}
 
-    /* find first socket that is ready */
-    for (sock=0; sock <= conf->fd_max; sock++) {
-        /* fetch first active connection */
-        if (FD_ISSET(sock, &tmp_set)) {
-            break;
-        }
-    }
+	/* find first socket that is ready */
+	for (sock=0; sock <= conf->fd_max; sock++) {
+		/* fetch first active connection */
+		if (FD_ISSET(sock, &tmp_set)) {
+			break;
+		}
+	}
 
-    /* receive ipfix packet header */
+	/* receive ipfix packet header */
 #ifdef TLS_SUPPORT
 	if (conf->tls) {
 		/* TLS enabled */
@@ -833,118 +841,118 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 					return INPUT_INTR;
 				}
 				MSG_ERROR(msg_module, "Failed to receive IPFIX packet header: %s", strerror(errno));
-	        	return INPUT_ERROR;
+				return INPUT_ERROR;
 			}
 		}
 	} else {
 #endif
 		/* receive without TLS */
-	    length = recv(sock, *packet, IPFIX_HEADER_LENGTH, MSG_WAITALL);
-	    if (length == -1) {
-	    	if (errno == EINTR) {
-	    		return INPUT_INTR;
-	    	}
-	    	MSG_ERROR(msg_module, "Failed to receive IPFIX packet header: %s", strerror(errno));
-	        return INPUT_ERROR;
-	    }
+		length = recv(sock, *packet, IPFIX_HEADER_LENGTH, MSG_WAITALL);
+		if (length == -1) {
+			if (errno == EINTR) {
+				return INPUT_INTR;
+			}
+			MSG_ERROR(msg_module, "Failed to receive IPFIX packet header: %s", strerror(errno));
+			return INPUT_ERROR;
+		}
 #ifdef TLS_SUPPORT
-    }
+	}
 #endif
 	
 	if (length >= IPFIX_HEADER_LENGTH) { /* header received */
-        /* get packet total length */
-        packet_length = ntohs(((struct ipfix_header *) *packet)->length);
+		/* get packet total length */
+		packet_length = ntohs(((struct ipfix_header *) *packet)->length);
 
-        /* check whether buffer is big enough */
-        if (packet_length > BUFF_LEN) {
-            *packet = realloc(*packet, packet_length);
-            if (*packet == NULL) {
-            	MSG_ERROR(msg_module, "Packet too big and realloc failed: %s", strerror(errno));
-                return INPUT_ERROR;
-            }
-        }
-
-        /* receive the rest of the ipfix packet */
-        if (ntohs(((struct ipfix_header *) *packet)->version) == IPFIX_VERSION) {
-        	length = recv(sock, (*packet) + IPFIX_HEADER_LENGTH, packet_length - IPFIX_HEADER_LENGTH, MSG_WAITALL);
-        } else {
-        	length = recv(sock, (*packet) + IPFIX_HEADER_LENGTH, BUFF_LEN - IPFIX_HEADER_LENGTH, 0);
-        }
-        if (length == -1) {
-        	if (errno == EINTR) {
-        		return INPUT_INTR;
-        	}
-        	MSG_WARNING(msg_module, "Failed to receive IPFIX packet: %s", strerror(errno));
-            return INPUT_ERROR;
-
-        } else if (length < packet_length - IPFIX_HEADER_LENGTH) {
-	    	MSG_ERROR(msg_module, "Read IPFIX data is too short (%i): %s", length, strerror(errno));
+		/* check whether buffer is big enough */
+		if (packet_length > BUFF_LEN) {
+			*packet = realloc(*packet, packet_length);
+			if (*packet == NULL) {
+				MSG_ERROR(msg_module, "Packet too big and realloc failed: %s", strerror(errno));
+				return INPUT_ERROR;
+			}
 		}
 
-        length += IPFIX_HEADER_LENGTH;
+		/* receive the rest of the ipfix packet */
+		if (ntohs(((struct ipfix_header *) *packet)->version) == IPFIX_VERSION) {
+			length = recv(sock, (*packet) + IPFIX_HEADER_LENGTH, packet_length - IPFIX_HEADER_LENGTH, MSG_WAITALL);
+		} else {
+			length = recv(sock, (*packet) + IPFIX_HEADER_LENGTH, BUFF_LEN - IPFIX_HEADER_LENGTH, 0);
+		}
+		if (length == -1) {
+			if (errno == EINTR) {
+				return INPUT_INTR;
+			}
+			MSG_WARNING(msg_module, "Failed to receive IPFIX packet: %s", strerror(errno));
+			return INPUT_ERROR;
 
-    	/* Convert packet from Netflow v5/v9/sflow to IPFIX format */
-    	if (htons(((struct ipfix_header *)(*packet))->version) != IPFIX_VERSION) {
-    		convert_packet(packet, &length, NULL);
-    	}
+		} else if (length < packet_length - IPFIX_HEADER_LENGTH) {
+			MSG_ERROR(msg_module, "Read IPFIX data is too short (%i): %s", length, strerror(errno));
+		}
 
-    	/* Check if lengths are the same */
-    	if (length < htons(((struct ipfix_header *)*packet)->length)) {
-    		MSG_DEBUG(msg_module, "length = %d, header->length = %d", length, htons(((struct ipfix_header *)*packet)->length));
-    		return INPUT_INTR;
-    	} else if (length >  htons(((struct ipfix_header *)*packet)->length)) {
-    		length = htons(((struct ipfix_header*)*packet)->length);
-    	}
+		length += IPFIX_HEADER_LENGTH;
+
+		/* Convert packet from Netflow v5/v9/sflow to IPFIX format */
+		if (htons(((struct ipfix_header *)(*packet))->version) != IPFIX_VERSION) {
+			convert_packet(packet, &length, NULL);
+		}
+
+		/* Check if lengths are the same */
+		if (length < htons(((struct ipfix_header *)*packet)->length)) {
+			MSG_DEBUG(msg_module, "length = %d, header->length = %d", length, htons(((struct ipfix_header *)*packet)->length));
+			return INPUT_INTR;
+		} else if (length >  htons(((struct ipfix_header *)*packet)->length)) {
+			length = htons(((struct ipfix_header*)*packet)->length);
+		}
 
 //        /* set length to correct value */
 //        length += IPFIX_HEADER_LENGTH;
-    } else if (length != 0) {
-    	MSG_ERROR(msg_module, "Failed to receive IPFIX packet: packet too short: %zi. Closing connection...",
-    				length);
-    	/* this will close the connection */
-    	length = 0;
-    }
+	} else if (length != 0) {
+		MSG_ERROR(msg_module, "Failed to receive IPFIX packet: packet too short: %zi. Closing connection...",
+					length);
+		/* this will close the connection */
+		length = 0;
+	}
 
-    /* get peer address from configuration */
-    address = conf->sock_addresses[sock];
+	/* get peer address from configuration */
+	address = conf->sock_addresses[sock];
 
-    /* go through input_info_list */
-    for (info_list = conf->info_list; info_list != NULL; info_list = info_list->next) {
-    	/* ports must match */
-    	if (info_list->info.src_port == ntohs(((struct sockaddr_in*) address)->sin_port)) {
-    		/* compare addresses, dependent on IP protocol version*/
-    		if (info_list->info.l3_proto == 4) {
-    			if (info_list->info.src_addr.ipv4.s_addr == ((struct sockaddr_in*) address)->sin_addr.s_addr) {
-    				break;
-    			}
-    		} else {
-    			if (info_list->info.src_addr.ipv6.s6_addr32[0] == address->sin6_addr.s6_addr32[0] &&
-    					info_list->info.src_addr.ipv6.s6_addr32[1] == address->sin6_addr.s6_addr32[1] &&
-    					info_list->info.src_addr.ipv6.s6_addr32[2] == address->sin6_addr.s6_addr32[2] &&
-    					info_list->info.src_addr.ipv6.s6_addr32[3] == address->sin6_addr.s6_addr32[3]) {
-    				break;
-    			}
-    		}
-    	}
-    }
+	/* go through input_info_list */
+	for (info_list = conf->info_list; info_list != NULL; info_list = info_list->next) {
+		/* ports must match */
+		if (info_list->info.src_port == ntohs(((struct sockaddr_in*) address)->sin_port)) {
+			/* compare addresses, dependent on IP protocol version*/
+			if (info_list->info.l3_proto == 4) {
+				if (info_list->info.src_addr.ipv4.s_addr == ((struct sockaddr_in*) address)->sin_addr.s_addr) {
+					break;
+				}
+			} else {
+				if (info_list->info.src_addr.ipv6.s6_addr32[0] == address->sin6_addr.s6_addr32[0] &&
+						info_list->info.src_addr.ipv6.s6_addr32[1] == address->sin6_addr.s6_addr32[1] &&
+						info_list->info.src_addr.ipv6.s6_addr32[2] == address->sin6_addr.s6_addr32[2] &&
+						info_list->info.src_addr.ipv6.s6_addr32[3] == address->sin6_addr.s6_addr32[3]) {
+					break;
+				}
+			}
+		}
+	}
 
-    /* check whether we found the input_info */
-    if (info_list == NULL) {
-    	MSG_WARNING(msg_module, "input_info not found, passing packet with NULL input info");
-    } else {
-    	/* Set source status */
-    	*source_status = info_list->info.status;
-    	if (info_list->info.status == SOURCE_STATUS_NEW) {
-    		info_list->info.status = SOURCE_STATUS_OPENED;
-    		info_list->info.odid = ntohl(((struct ipfix_header *) *packet)->observation_domain_id);
-    	}
-    }
+	/* check whether we found the input_info */
+	if (info_list == NULL) {
+		MSG_WARNING(msg_module, "input_info not found, passing packet with NULL input info");
+	} else {
+		/* Set source status */
+		*source_status = info_list->info.status;
+		if (info_list->info.status == SOURCE_STATUS_NEW) {
+			info_list->info.status = SOURCE_STATUS_OPENED;
+			info_list->info.odid = ntohl(((struct ipfix_header *) *packet)->observation_domain_id);
+		}
+	}
 
-    /* pass info to the collector */
-    *info = (struct input_info*) &info_list->info;
+	/* pass info to the collector */
+	*info = (struct input_info*) &info_list->info;
 
-    /* check whether socket closed */
-    if (length == 0) {
+	/* check whether socket closed */
+	if (length == 0) {
 #ifdef TLS_SUPPORT
 		if (conf->tls) {
 			if (SSL_get_shutdown(ssl) != SSL_RECEIVED_SHUTDOWN) {
@@ -958,28 +966,28 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 			}
 		}
 #endif
-        /* print info */
-        if (conf->info.l3_proto == 4) {
-            inet_ntop(AF_INET, (void *)&((struct sockaddr_in*) conf->sock_addresses[sock])->sin_addr, src_addr, INET6_ADDRSTRLEN);
-        } else {
-            inet_ntop(AF_INET6, &conf->sock_addresses[sock]->sin6_addr, src_addr, INET6_ADDRSTRLEN);
-        }
-        (*info)->status = SOURCE_STATUS_CLOSED;
-        *source_status = SOURCE_STATUS_CLOSED;
+		/* print info */
+		if (conf->info.l3_proto == 4) {
+			inet_ntop(AF_INET, (void *)&((struct sockaddr_in*) conf->sock_addresses[sock])->sin_addr, src_addr, INET6_ADDRSTRLEN);
+		} else {
+			inet_ntop(AF_INET6, &conf->sock_addresses[sock]->sin6_addr, src_addr, INET6_ADDRSTRLEN);
+		}
+		(*info)->status = SOURCE_STATUS_CLOSED;
+		*source_status = SOURCE_STATUS_CLOSED;
 
-        MSG_NOTICE(msg_module, "Exporter on address %s closed connection", src_addr);
-           
-        /* use mutex so that listening thread does not reuse the socket too quickly */
-        pthread_mutex_lock(&mutex);
-        close(sock);
-        FD_CLR(sock, &conf->master);
-        free(conf->sock_addresses[sock]);
-        pthread_mutex_unlock(&mutex);
+		MSG_NOTICE(msg_module, "Exporter on address %s closed connection", src_addr);
 
-        return INPUT_CLOSED;
-    }
+		/* use mutex so that listening thread does not reuse the socket too quickly */
+		pthread_mutex_lock(&mutex);
+		close(sock);
+		FD_CLR(sock, &conf->master);
+		free(conf->sock_addresses[sock]);
+		pthread_mutex_unlock(&mutex);
 
-    return length;
+		return INPUT_CLOSED;
+	}
+
+	return length;
 }
 
 /**
@@ -990,16 +998,16 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
  */
 int input_close(void **config)
 {
-    int ret, error = 0, sock=0;
-    struct plugin_conf *conf = (struct plugin_conf*) *config;
-    struct input_info_list *info_list;
+	int ret, error = 0, sock=0;
+	struct plugin_conf *conf = (struct plugin_conf*) *config;
+	struct input_info_list *info_list;
 
-    /* kill the listening thread */
-    if(pthread_cancel(listen_thread) != 0) {
-    	MSG_WARNING(msg_module, "Cannot cancel listening thread");
-    } else {
-        pthread_join(listen_thread, NULL);
-    }
+	/* kill the listening thread */
+	if(pthread_cancel(listen_thread) != 0) {
+		MSG_WARNING(msg_module, "Cannot cancel listening thread");
+	} else {
+		pthread_join(listen_thread, NULL);
+	}
 
 #ifdef TLS_SUPPORT
 	if (conf->tls) {
@@ -1024,37 +1032,37 @@ int input_close(void **config)
 		SSL_CTX_free(conf->ctx);
 	}
 #endif
-    
-    /* close listening socket */
-    if ((ret = close(conf->socket)) == -1) {
-        error++;
-        MSG_ERROR(msg_module, "Cannot close listening socket: %s", strerror(errno));
-    }
+	
+	/* close listening socket */
+	if ((ret = close(conf->socket)) == -1) {
+		error++;
+		MSG_ERROR(msg_module, "Cannot close listening socket: %s", strerror(errno));
+	}
 
-    /* close open sockets */
-    for (sock = 0; sock <= conf->fd_max; sock++) {
-        if (FD_ISSET(sock, &conf->master)) {
-            if ((ret = close(sock)) == -1) {
-                error++;
-                MSG_ERROR(msg_module, "Cannot close socket: %s", strerror(errno));
-            }
-            if (conf->sock_addresses[sock] != NULL) {
-                free(conf->sock_addresses[sock]);
-            }
-        }
-    }
+	/* close open sockets */
+	for (sock = 0; sock <= conf->fd_max; sock++) {
+		if (FD_ISSET(sock, &conf->master)) {
+			if ((ret = close(sock)) == -1) {
+				error++;
+				MSG_ERROR(msg_module, "Cannot close socket: %s", strerror(errno));
+			}
+			if (conf->sock_addresses[sock] != NULL) {
+				free(conf->sock_addresses[sock]);
+			}
+		}
+	}
 
-    /* free input_info list */
-    while (conf->info_list) {
-    	info_list = conf->info_list->next;
+	/* free input_info list */
+	while (conf->info_list) {
+		info_list = conf->info_list->next;
 #ifdef TLS_SUPPORT
 		X509_free(conf->info_list->exporter_cert);
 #endif
-    	free(conf->info_list);
-    	conf->info_list = info_list;
-    }
+		free(conf->info_list);
+		conf->info_list = info_list;
+	}
 
-    /* free configuration strings */
+	/* free configuration strings */
 	if (conf->info.template_life_time != NULL) {
 		free(conf->info.template_life_time);
 	}
@@ -1080,14 +1088,14 @@ int input_close(void **config)
 	}
 #endif
 
-    /* free allocated structures */
-    FD_ZERO(&conf->master);
-    free(*config);
-    convert_close();
-    *config = NULL;
+	/* free allocated structures */
+	FD_ZERO(&conf->master);
+	free(*config);
+	convert_close();
+	*config = NULL;
 
-    MSG_NOTICE(msg_module, "All allocated resources have been freed");
+	MSG_NOTICE(msg_module, "All allocated resources have been freed");
 
-    return error;
+	return error;
 }
 /**@}*/
