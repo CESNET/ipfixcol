@@ -108,7 +108,7 @@ void Channel::setSources(std::string sources)
 		
 		/* Process data from all channels */
 		if (channel == "*") {
-			for (auto ch: m_profile->getParent()->getChannels()) {
+			for (auto& ch: m_profile->getParent()->getChannels()) {
 				ch->addListener(this);
 			}
 			continue;
@@ -116,7 +116,7 @@ void Channel::setSources(std::string sources)
 		
 		/* Find channel in parent profile */
 		Channel *src{};
-		for (auto ch: m_profile->getParent()->getChannels()) {
+		for (auto& ch: m_profile->getParent()->getChannels()) {
 			if (ch->getName() == channel) {
 				src = ch;
 				break;
@@ -206,7 +206,7 @@ void Channel::match(ipfix_message* msg, metadata* mdata, std::vector<Channel *>&
 	channels.push_back(this);
 	
 	/* Process all listeners */
-	for (auto child: m_listeners) {
+	for (auto& child: m_listeners) {
 		child->match(msg, mdata, channels);
 	}
 }
