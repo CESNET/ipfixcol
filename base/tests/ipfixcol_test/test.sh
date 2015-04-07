@@ -104,9 +104,11 @@ for test in *; do
 	if [ "$test" = "ipfix_data" ]; then 
 		continue;
 	fi
-        echo "testing: $test"
+
+	echo "Testing '$test'"
 	cd "$TESTDIR/$test"
 	PARAMS="-v -1 -c $STARTUP";
+
 	if [ -f "$PREPROC" ]; then
 		sh "$PREPROC";
 	fi
@@ -115,20 +117,20 @@ for test in *; do
 		PARAMS=$(cat "$PARFILE")
 	fi
 	
-        if [[ "$test" == "ipfixsend "* ]]; then
-            $IPFIXCOL $PARAMS -i $INTERNAL > "$OUTPUT" 2>&1 &
-            echo $! > tmp_pid
-            sleep 1 # ipfixcol initialization
-            
-            sh $IPFIXSEND_RUN
+	if [[ "$test" == "ipfixsend "* ]]; then
+		$IPFIXCOL $PARAMS -i $INTERNAL > "$OUTPUT" 2>&1 &
+		echo $! > tmp_pid
+		sleep 1 # ipfixcol initialization
+		
+		sh $IPFIXSEND_RUN
 
-            sleep 1 # ipfixcol processing
+		sleep 1 # ipfixcol processing
 
-            kill $(cat tmp_pid)
-            rm -f tmp_pid
-        else
-            $IPFIXCOL $PARAMS -i $INTERNAL > "$OUTPUT" 2>&1
-        fi
+		kill $(cat tmp_pid)
+		rm -f tmp_pid
+	else
+		$IPFIXCOL $PARAMS -i $INTERNAL > "$OUTPUT" 2>&1
+	fi
 	
 	if [ -f "$POSTPROC" ]; then
 		sh "$POSTPROC" ];
@@ -143,9 +145,11 @@ for test in *; do
 	if [ "$test" = "ipfix_data" ]; then
 		 continue;
 	fi
+
 	cd "$TESTDIR/$test"
-	echo -n "Test ${test}: " | tee -a "$LOG_FILE"
+	echo -n "Test '${test}': " | tee -a "$LOG_FILE"
 	diff "$OUTPUT" "$EXPECTED" >> "$LOG_FILE" 2>&1
+
 	if [ $? = 0 ]; then
 		echo "OK" | tee -a "$LOG_FILE"
 		oks=$(( oks + 1 ))
@@ -153,12 +157,12 @@ for test in *; do
 		echo "FAIL" | tee -a "$LOG_FILE"
 		fails=$(( fails + 1 ))
 	fi
+
 	total=$(( total + 1 ))
 	rm -f "$OUTPUT"
 done
 
 cd "$BASE"
 
-echo -e "\nTesting done, $oks/$total passed" | tee -a "$LOG_FILE"
-echo "Results saved into file $LF"
-
+echo -e "\nTesting done; $oks/$total tests passed" | tee -a "$LOG_FILE"
+echo "Results saved to $LOG_FILE"
