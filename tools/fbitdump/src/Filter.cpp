@@ -74,6 +74,7 @@ const std::string Filter::getFilter() const
 bool Filter::isValid(Cursor &cur) const
 {
 	// TODO add this functiononality
+	(void) cur;
 	return true;
 }
 
@@ -492,8 +493,10 @@ void Filter::parseFloat(parserStruct* ps, std::string number) const
 	ps->parts.push_back(ss.str());
 }
 
-bool Filter::parseColumnGroup(parserStruct *ps, std::string alias, bool aggeregate) const
+bool Filter::parseColumnGroup(parserStruct *ps, std::string alias, bool aggregate) const
 {
+	(void) aggregate;
+
 	if (ps == NULL) {
 		return false;
 	}

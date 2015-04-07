@@ -203,6 +203,11 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 			len = strlen((char *) aux_char);
 			
 			aux_op->operation = calloc(1, len + 2);
+			if (!aux_op->operation) {
+				MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+				goto cleanup_err;
+			}
+
 			strncpy_safe(aux_op->operation, (char *) aux_char, len + 1);
 			
 			/* add & to the end (if not present) */

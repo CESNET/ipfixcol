@@ -74,7 +74,6 @@ static char *msg_module = "UDP input";
 /** UDP input plugin identification for packet conversion from netflow to ipfix format */
 #define UDP_INPUT_PLUGIN
 
-
 /**
  * \struct input_info_list
  * \brief  List structure for input info
@@ -93,10 +92,8 @@ struct input_info_list {
 struct plugin_conf
 {
 	int socket; /**< listening socket */
-	struct input_info_network info; /**< infromation structure passed
-									  * to collector */
-	struct input_info_list *info_list; /**< list of infromation structures
-		 	 	 	 	 	 	 	 	 	* passed to collector */
+	struct input_info_network info; /**< infromation structure passed to collector */
+	struct input_info_list *info_list; /**< list of infromation structures passed to collector */
 };
 
 /**
@@ -347,9 +344,13 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 	struct input_info_list *info_list;
 
 	/* allocate memory for packet, if needed */
-	if (*packet == NULL) {
-		*packet = malloc(BUFF_LEN*sizeof(char));
+	if (!*packet) {
+		*packet = malloc(BUFF_LEN * sizeof(char));
+		if (!*packet) {
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		}
 	}
+
 	/* receive packet */
 	length = recvfrom(sock, *packet, BUFF_LEN, 0, (struct sockaddr*) &address, &addr_length);
 	if (length == -1) {

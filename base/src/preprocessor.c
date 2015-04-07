@@ -549,6 +549,11 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 	if (source_status == SOURCE_STATUS_CLOSED) {
 		/* Inform intermediate plugins and output manager about closed input */
 		msg = calloc(1, sizeof(struct ipfix_message));
+		if (!msg) {
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+			return;
+		}
+
 		msg->input_info = input_info;
 		msg->source_status = source_status;
 		odid_info_remove_source(input_info->odid);
