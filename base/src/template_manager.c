@@ -197,6 +197,12 @@ static int tm_fill_template(struct ipfix_template *template, void *template_reco
 	template->references = 0;
 	template->next = NULL;
 	template->first_transmission = time(NULL);
+
+	int i;
+	for (i = 0; i < OF_COUNT; ++i) {
+		template->offsets[i] = -1;
+	}
+
 	return 0;
 }
 
