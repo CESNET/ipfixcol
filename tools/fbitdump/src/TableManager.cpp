@@ -237,7 +237,7 @@ void TableManager::aggregate(columnVector aggregateColumns, columnVector summary
 					aggCols.push_back(col);
 				}
 			}
-			
+
 			/* aggregate the table, use only present aggregation columns */
 			table->aggregateWithFunctions(aggCols, summaryColumns, filter);
 			table->orderBy(this->orderColumns, this->orderAsc);
