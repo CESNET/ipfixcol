@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
-
-    <collectingProcess>
+	<collectingProcess>
 		<name>File collector</name>
 		<fileReader>
 			<file>file:../ipfix_data/02-odid0.ipfix</file>
@@ -24,10 +23,9 @@
 		<destination>
 		  <name>File writer</name>
 		  <fileWriter>
-		    <fileFormat>ipfix</fileFormat>
-		    <file>file:./out-first.ipfix</file>
+			<fileFormat>ipfix</fileFormat>
+			<file>file:./out-first.ipfix</file>
 		  </fileWriter>
 		</destination>
 	</exportingProcess>
-
 </ipfix>

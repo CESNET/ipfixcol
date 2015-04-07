@@ -362,7 +362,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 	}
 
 	if (length < IPFIX_HEADER_LENGTH) {
-		MSG_ERROR(msg_module, "Packet header is incomplete, skipping");
+		MSG_ERROR(msg_module, "Packet header is incomplete; skipping message...");
 		return INPUT_INTR;
 	}
 

@@ -74,7 +74,6 @@ enum siso_conn_type {
    SC_UNKNOWN,
 };
 
-
 /**
  * \brief Message indexes
  */
@@ -96,15 +95,14 @@ static const char *siso_sc_types[] = {
  * \brief Main sisolib structure
  */
 struct sisoconf_s {
-	const char *last_error;		/**< last error message */
-	enum siso_conn_type type;	/**< UDP/TCP/SCTP */
+	const char *last_error;     /**< last error message */
+	enum siso_conn_type type;   /**< UDP/TCP/SCTP */
 	struct addrinfo *servinfo;  /**< server information */
-	int sockfd;					/**< socket descriptor */
-	uint64_t max_speed;			/**< max sending speed */
-	uint64_t act_speed;			/**< actual speed */
-	struct timeval begin, end; /**< start/end time for limited transfers */
+	int sockfd;                 /**< socket descriptor */
+	uint64_t max_speed;         /**< max sending speed */
+	uint64_t act_speed;         /**< actual speed */
+	struct timeval begin, end;  /**< start/end time for limited transfers */
 };
-
 
 /**
  * \brief Constructor
@@ -222,19 +220,35 @@ void siso_set_speed_str(sisoconf* conf, const char* limit)
  */
 int siso_getaddrinfo(sisoconf *conf, const char *ip, const char *port)
 {
-    struct addrinfo hints;
+	struct addrinfo hints;
 	
-    /* Get server address */
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = (conf->type == SC_UDP) ? SOCK_DGRAM : SOCK_STREAM;
+	/* Get server address */
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_UNSPEC;
 
-    if (getaddrinfo(ip, port, &hints, &(conf->servinfo)) != 0) {
+	switch (conf->type) {
+	case SC_UDP:
+		hints.ai_socktype = SOCK_DGRAM;
+		hints.ai_protocol = IPPROTO_UDP;
+		break;
+	case SC_TCP:
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_protocol = IPPROTO_TCP;
+		break;
+	case SC_SCTP:
+		hints.ai_socktype = SOCK_STREAM; // SOCK_SEQPACKET;
+		hints.ai_protocol = IPPROTO_SCTP;
+		break;
+	default:
+		break;
+	}
+
+	if (getaddrinfo(ip, port, &hints, &(conf->servinfo)) != 0) {
 		conf->last_error = PERROR_LAST;
-        return SISO_ERR;
-    }
+		return SISO_ERR;
+	}
 	
-    return SISO_OK;
+	return SISO_OK;
 }
 
 /**
@@ -284,7 +298,7 @@ int siso_create_connection(sisoconf* conf, const char* ip, const char *port, con
 	ret = siso_getaddrinfo(conf, ip, port);
 	CHECK_RETVAL(ret);
 
-    /* Create socket */
+	/* Create socket */
 	ret = siso_create_socket(conf);
 	CHECK_RETVAL(ret);
 	
@@ -334,10 +348,10 @@ int siso_send(sisoconf *conf, const char *data, ssize_t length)
 	ssize_t sent_now = 0;
 	
 	/* Size of remaining data */
-    ssize_t todo = length;
+	ssize_t todo = length;
 	
-    while (todo > 0) {
-        /* Send data */
+	while (todo > 0) {
+		/* Send data */
 		switch (conf->type) {
 		case SC_UDP:
 			sent_now = sendto(conf->sockfd, ptr, SISO_MIN(todo, SISO_UDP_MAX), 0, conf->servinfo->ai_addr, conf->servinfo->ai_addrlen);
@@ -350,11 +364,11 @@ int siso_send(sisoconf *conf, const char *data, ssize_t length)
 			break;
 		}
 
-        /* Check for errors */
-        if (sent_now == -1) {
+		/* Check for errors */
+		if (sent_now == -1) {
 			conf->last_error = PERROR_LAST;
-            return SISO_ERR;
-        }
+			return SISO_ERR;
+		}
 		
 		/* Skip sent data */
 		ptr  += sent_now;
@@ -377,7 +391,7 @@ int siso_send(sisoconf *conf, const char *data, ssize_t length)
 			conf->act_speed = 0;
 		}
 		
-    }
+	}
 
 	return SISO_OK;
 }

@@ -2,9 +2,11 @@
 <ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
 	<collectingProcess>
 		<name>TCP collector</name>
-		<fileReader>
-			<file>file:../ipfix_data/01-odid*.ipfix</file>
-		</fileReader>
+		<tcpCollector>
+			<name>Listening port 4739</name>
+			<localPort>4739</localPort>
+			<localIPAddress>127.0.0.1</localIPAddress>
+		</tcpCollector>
 		<exportingProcess>File writer ipfix</exportingProcess>
 	</collectingProcess>
 
