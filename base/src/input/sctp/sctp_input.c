@@ -86,7 +86,7 @@
 #define DEFAULT_NUMBER_OF_ADDRESSES 20
 
 /** Identifier to MSG_* macros */
-static char *msg_module = "sctp input";
+static char *msg_module = "SCTP input";
 
 /** SCTP input plugin identification for packet conversion from netflow to ipfix format */
 #define SCTP_INPUT_PLUGIN
@@ -135,7 +135,6 @@ void *listen_worker(void *data) {
 	int on = 1;                 /* ioctl() "turn on" flag */
 	
 	conf = data;
-
 	addrlen = sizeof(addr);
 	addr_ptr = (struct sockaddr *) &addr;
 
@@ -226,6 +225,7 @@ int input_init(char *params, void **config)
 	xmlDocPtr doc;
 	xmlNodePtr cur;
 	xmlChar *listen_port_str = NULL;
+	char dst_addr[INET6_ADDRSTRLEN];
 	struct sctp_initmsg initmsg;
 	struct sctp_event_subscribe sctp_events;
 	int epollfd;
@@ -248,7 +248,7 @@ int input_init(char *params, void **config)
 	uint8_t sockaddr_listen_max;             /* maximum sockaddr structures in array */
 
 	if (params == NULL) {
-		MSG_ERROR(msg_module, "SCTP input plugin: No configuration data");
+		MSG_ERROR(msg_module, "No configuration data");
 		return -1;
 	}
 
@@ -261,7 +261,7 @@ int input_init(char *params, void **config)
 	memset(conf, 0, sizeof(*conf));
 
 	/* array for IPv6 listen addresses. this array will later be used with 
-	 * sctp_bindx() (e.i. multi-homing support) */
+	 * sctp_bindx() for multi-homing support */
 	sockaddr6_listen = (struct sockaddr_in6 **) 
 	malloc(DEFAULT_NUMBER_OF_ADDRESSES * sizeof(*(sockaddr6_listen)));
 	if (sockaddr6_listen == NULL) {
@@ -272,7 +272,7 @@ int input_init(char *params, void **config)
 	sockaddr6_listen_max = DEFAULT_NUMBER_OF_ADDRESSES;
 
 	/* array for IPv4 listen addresses. this array will later be used with 
-	 * sctp_bindx() (e.i. multi-homing support) */
+	 * sctp_bindx() for multi-homing support */
 	sockaddr_listen = (struct sockaddr_in **) calloc(DEFAULT_NUMBER_OF_ADDRESSES, sizeof(*(sockaddr_listen)));
 	if (sockaddr_listen == NULL) {
 		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
@@ -283,7 +283,7 @@ int input_init(char *params, void **config)
 	/* try to parse XML configuration */
 	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
 	if (doc == NULL) {
-		MSG_ERROR(msg_module, "SCTP input plugin configuration not parsed successfully");
+		MSG_ERROR(msg_module, "Configuration not parsed successfully");
 		goto err_xml;
 	}
 
@@ -294,7 +294,7 @@ int input_init(char *params, void **config)
 	}
 
 	if (xmlStrcmp(cur->name, (const xmlChar *) "sctpCollector")) {
-		MSG_ERROR(msg_module, "SCTP input plugin: bad configuration (root node != sctpCollector)");
+		MSG_ERROR(msg_module, "Bad configuration (root node != sctpCollector)");
 		goto err_xml;
 	}
 
@@ -303,7 +303,6 @@ int input_init(char *params, void **config)
 	cur = cur->xmlChildrenNode;
 	while (cur != NULL) {
 		if ((!xmlStrcmp(cur->name, (const xmlChar *) "localIPAddress"))) {
-
 			/* user wants to listen on this IP address */
 			ip_str = (char *) xmlNodeListGetString(doc, cur->children, 1);
 
@@ -318,11 +317,10 @@ int input_init(char *params, void **config)
 
 			sockaddr = NULL;
 			sockaddr6 = NULL;
+
 			/* prepare new sockaddr structure for further processing
 			 * with sctp_bindx() */
 			switch (ip_family) {
-
-			/* given address is IPv6 address */
 			case (AF_INET):
 				/* add new IPv4 address */
 				sockaddr = (struct sockaddr_in *) malloc(sizeof(*sockaddr));
@@ -337,12 +335,12 @@ int input_init(char *params, void **config)
 				ret = inet_pton(AF_INET, ip_str, &(sockaddr->sin_addr));
 				if (ret != 1) {
 					/* invalid address */
-					MSG_ERROR(msg_module, "SCTP init: %s is not a valid IP address", ip_str);
+					MSG_ERROR(msg_module, "Init: %s is not a valid IP address", ip_str);
 					goto err_sockaddr_case;
 				}
+
 				/* note we don't know yet what the desired port
 				 * is, so we will fill it later */
-
 				if (sockaddr_listen_counter >= sockaddr_listen_max) {
 					/* oops, we need to realloc array that 
 					 * holds these addresses */
@@ -353,7 +351,7 @@ int input_init(char *params, void **config)
 						/* realloc fails, discard this 
 						 * address and continue */
 						sockaddr_listen = sockaddr_listen_old;
-						MSG_ERROR(msg_module, "Realloc fails (%s:%d)", __FILE__, __LINE__);
+						MSG_ERROR(msg_module, "Realloc failed (%s:%d)", __FILE__, __LINE__);
 						MSG_ERROR(msg_module, "Address %s cannot be added - system error", ip_str);
 						goto err_sockaddr_case;
 					}
@@ -372,11 +370,11 @@ err_sockaddr_case:
 				if (sockaddr != NULL) {
 					free(sockaddr);
 				}
+
 				xmlFree(ip_str);
 				break;
 			/* end of case(AF_INET) */
 
-			/* given address is IPv6 address */
 			case (AF_INET6):
 				/* add new IPv6 address */
 				sockaddr6 = (struct sockaddr_in6 *) malloc(sizeof(*sockaddr6));
@@ -391,21 +389,19 @@ err_sockaddr_case:
 				ret = inet_pton(AF_INET6, ip_str, &(sockaddr6->sin6_addr));
 				if (ret != 1) {
 					/* invalid address */
-					MSG_ERROR(msg_module, "SCTP init: %s is not valid IP address", ip_str);
+					MSG_ERROR(msg_module, "Init: %s is not valid IP address", ip_str);
 					goto err_sockaddr6_case;
 				}
+
 				/* note we don't know yet what the desired port
 				 * is, so we will fill it later */
-
 				if (sockaddr6_listen_counter >= sockaddr6_listen_max) {
-					/* oops, we need to realloc array that 
-					 * holds these addresses */
+					/* oops, we need to realloc array that holds these addresses */
 					sockaddr_listen_old = (struct sockaddr_in **) sockaddr6_listen;
 					sockaddr6_listen = realloc(sockaddr6_listen, sockaddr6_listen_max * 2);
 					
 					if (sockaddr6_listen == NULL) {
-						/* realloc fails, discard this 
-						 * address and continue */
+						/* realloc fails; discard this address and continue */
 						sockaddr6_listen = (struct sockaddr_in6 **) sockaddr_listen_old;
 						MSG_ERROR(msg_module, "Realloc failed (%s:%d)", __FILE__, __LINE__);
 						MSG_ERROR(msg_module, "Address %s cannot be added - system error", ip_str);
@@ -415,7 +411,7 @@ err_sockaddr_case:
 					sockaddr6_listen_max *= 2;
 				}
 
-				/* everything is ok, add this new address */
+				/* everything is ok; add this new address */
 				sockaddr6_listen[sockaddr6_listen_counter] = sockaddr6;
 				sockaddr6_listen_counter += 1;
 
@@ -426,27 +422,26 @@ err_sockaddr6_case:
 				if (sockaddr6 != NULL) {
 					free(sockaddr6);
 				}
+
 				xmlFree(ip_str);
 				break;
 			/* end of case(AF_INET6) */
 			
 			default:
-				/* unknown address family, we should never 
-				 * reach this point */
-				MSG_ERROR(msg_module, "Unknown address family, this should never happen (%s, %d)", __FILE__, __LINE__);
+				/* unknown address family; this point should never be reached */
+				MSG_ERROR(msg_module, "Unknown address family; this should never happen (%s, %d)", __FILE__, __LINE__);
 				break;
 			} /* switch */
 
 			xmlFree(ip_str);
 		}
 
-
 		if ((!xmlStrcmp(cur->name, (const xmlChar *) "localPort"))) {
 			/* user specified (another) listen port */
 			if (port_set != 0) {
 				/* damn, port is specified multiple times. this 
 				 * might be a bug in configuration */
-				MSG_WARNING(msg_module, "SCTP input plugin: Warning, listen port is specified multiple times in configuration file");
+				MSG_WARNING(msg_module, "Listen port is specified multiple times in configuration file");
 			}
 			listen_port_str = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
 
@@ -459,7 +454,6 @@ err_sockaddr6_case:
 		cur = cur->next;
 	}
 
-
 	/* use default address if user doesn't specified any */
 	if ((sockaddr6_listen_counter == 0) && (sockaddr_listen_counter == 0)) {
 		sockaddr6 = (struct sockaddr_in6 *) calloc(1, sizeof(*sockaddr6));
@@ -469,6 +463,7 @@ err_sockaddr6_case:
 		}
 
 		sockaddr6->sin6_family = AF_INET6;
+
 		/* listen on any IPv6 address */
 		memcpy(&(sockaddr6->sin6_addr), &(DEFAULT_IPV6_LISTEN_ADDRESS), sizeof(DEFAULT_IPV6_LISTEN_ADDRESS));
 		sockaddr6_listen[0] = sockaddr6;
@@ -490,15 +485,16 @@ err_sockaddr6_case:
 		sockaddr6_listen[i]->sin6_port = htons(conf->listen_port);
 	}
 
-
 	/* get socket. SOCK_STREAM creates one-to-one style socket. in opposite
-	 * SOCK_SEQPACKET would create one-to-many style socket. for our 
+	 * SOCK_SEQPACKET would create one-to-many style socket. For our 
 	 * purpose, one-to-one is just fine */
 	conf->listen_socket = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP);
-	/* Retry with IPv4 when the implementation does not support the specified address family. */
+
+	/* Retry with IPv4 when the implementation does not support the specified address family */
 	if (conf->listen_socket == (uint16_t) -1 && errno == EAFNOSUPPORT) {
 		conf->listen_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
 	}
+
 	/* Check result */
 	if (conf->listen_socket == -1) {
 		MSG_ERROR(msg_module, "socket() - %s", strerror(errno));
@@ -534,10 +530,12 @@ err_sockaddr6_case:
 
 	/* subscribe to some SCTP events */
 	memset(&sctp_events, 0, sizeof(sctp_events));
+
 	/* this allows us to determine the stream number on which message arrived */
-	sctp_events.sctp_data_io_event = 1; 
+	sctp_events.sctp_data_io_event = 1;
+
 	/* now we know, that specific association was closed */
-	sctp_events.sctp_shutdown_event = 1; 
+	sctp_events.sctp_shutdown_event = 1;
 
 	ret = setsockopt(conf->listen_socket, IPPROTO_SCTP, SCTP_EVENTS, &sctp_events, sizeof(sctp_events));
 	if (ret == -1) {
@@ -574,9 +572,22 @@ err_sockaddr6_case:
 		goto err_listen;
 	}
 
-	/* do some cleanup */
+	/* print info */
+	if (sockaddr6_listen_counter > 0) {
+		inet_ntop(AF_INET6, &(sockaddr6[0].sin6_addr), dst_addr, INET6_ADDRSTRLEN);
+	} else {
+		inet_ntop(AF_INET, &(sockaddr[0].sin_addr), dst_addr, INET6_ADDRSTRLEN);
+	}
+	
+	MSG_NOTICE(msg_module, "Input plugin listening on %s, port %u", dst_addr, conf->listen_port);
 
-	/* we don't need this xml anymore */
+	/* pass general information to the collector */
+	*config = (void*) conf;
+
+	/* normal exit, all OK */
+	MSG_NOTICE(msg_module, "Plugin initialization completed successfully");
+
+	/* do some cleanup */
 	xmlFreeDoc(doc);
 	xmlCleanupParser();
 
@@ -590,11 +601,7 @@ err_sockaddr6_case:
 	}
 	free(sockaddr6_listen);
 
-
-	*config = conf;
-
 	return 0;
-
 
 /* error handling */
 err_listen:
@@ -675,7 +682,7 @@ wait_for_data:
 	}
 	if (info_node == NULL) {
 		/* no such input_info (!?) */
-		MSG_ERROR(msg_module, "Something is horribly wrong. Missing input_info for SCTP association. This should never happen");
+		MSG_ERROR(msg_module, "Something is horribly wrong; missing input_info for SCTP association");
 		ret = INPUT_ERROR;
 		goto out;
 	}
@@ -779,7 +786,6 @@ out:
 	return ret;
 }
 
-
 /**
  * \brief Plugin destructor
  *
@@ -828,7 +834,6 @@ int input_close(void **config)
 }
 
 /**@}*/
-
 
 #ifdef SCTP_INPUT_PLUGIN_SELF_DEBUG
 /* self-DEBUG section. everything here can be safely ignored or deleted */
