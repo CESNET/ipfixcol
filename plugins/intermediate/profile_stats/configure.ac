@@ -91,7 +91,7 @@ AM_CONDITIONAL([HAVE_DOC], [test "$enable_doc" != "no"])
 ### LibXML2 ###
 AC_CHECK_LIB([xml2], [main],
     [LIBS="`xml2-config --libs` $LIBS"
-    CFLAGS="`xml2-config --cflags` $CFLAGS"],
+    CPPFLAGS="`xml2-config --cflags` $CPPFLAGS"],
     AC_MSG_ERROR([Libxml2 not found ]))
 
 ### RRD library ###
@@ -102,7 +102,7 @@ AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar
 
 # Check whether we can find headers dir in relative path (git repository)
 AS_IF([test -d $srcdir/../../../base/headers], 
-	[CPPFLAGS+="-I$srcdir/../../../base/headers"]
+	[CPPFLAGS+=" -I$srcdir/../../../base/headers"]
 )
 
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
