@@ -87,7 +87,7 @@ private:
 	char _orig_name[10]; /**< saves the _name when renamed due to template collision*/
 	bool _new_dir; /**< Remember that the directory is supposed to be new */
 	char _index;
-	time_t _last_transmission; /**< Last transmission of the template. Used to detect changes. */
+	time_t _first_transmission; /**< First transmission of the template. Used to detect changes. */
 
 public:
 	/* vector of elements stored in data record (based on template)
@@ -144,8 +144,8 @@ public:
 	 */
 	void flush(std::string path);
 
-	time_t get_last_transmission() {
-		return _last_transmission;
+	time_t get_first_transmission() {
+		return _first_transmission;
 	}
 
 	~template_table();

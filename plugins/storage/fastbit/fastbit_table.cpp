@@ -80,7 +80,7 @@ template_table::template_table(int template_id, uint32_t buff_size): _rows_count
 		buff_size = RESERVED_SPACE;
 	}
 	_buff_size = buff_size;
-	_last_transmission = 0;
+	_first_transmission = 0;
 }
 
 template_table::~template_table(){
@@ -305,7 +305,7 @@ int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_co
 	//_record_size = tmp->data_length;
 
 	/* Save the time of the template transmission */
-	_last_transmission = tmp->last_transmission;
+	_first_transmission = tmp->first_transmission;
 
 	//Find elements
 	for(i=0;i<tmp->field_count + en_offset;i++){
