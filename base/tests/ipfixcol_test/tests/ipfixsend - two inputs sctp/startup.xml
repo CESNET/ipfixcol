@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
-
 	<collectingProcess>
 		<name>SCTP collector</name>
 		<sctpCollector>
@@ -17,16 +16,16 @@
 			<observationDomainId>0</observationDomainId>
 			<name>File writer</name>
 			<fileWriter>
-					<fileFormat>ipfix</fileFormat>
-					<file>file:./out0.ipfix</file>
+				<fileFormat>ipfix</fileFormat>
+				<file>file:./out0.ipfix</file>
 			</fileWriter>
 		</destination>
 		<destination>
 			<observationDomainId>4</observationDomainId>
 			<name>File writer</name>
 			<fileWriter>
-					<fileFormat>ipfix</fileFormat>
-					<file>file:./out4.ipfix</file>
+				<fileFormat>ipfix</fileFormat>
+				<file>file:./out4.ipfix</file>
 			</fileWriter>
 		</destination>
 	</exportingProcess>

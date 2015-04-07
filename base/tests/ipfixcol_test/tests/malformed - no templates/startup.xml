@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
-
-    <collectingProcess>
+	<collectingProcess>
 		<name>IPFIX collector</name>
 		<fileReader>
 			<file>file:../ipfix_data/only-data-no-templates.ipfix</file>
 		</fileReader>
 		<exportingProcess>File writer</exportingProcess>
 	</collectingProcess>
-
 
 	<exportingProcess>
 		<name>File writer</name>
@@ -20,5 +18,4 @@
 			</fileWriter>
 		</destination>
 	</exportingProcess>
-
 </ipfix>
