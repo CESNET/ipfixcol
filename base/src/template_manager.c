@@ -445,7 +445,12 @@ int tm_compare_templates(struct ipfix_template *first, struct ipfix_template *se
 		}
 
 		if (first->fields[i].ie.id >> 15) {
+			i++;
 			count++;
+
+			if (first->fields[i].enterprise_number != second->fields[i].enterprise_number) {
+				return 1;
+			}
 		}
 	}
 
