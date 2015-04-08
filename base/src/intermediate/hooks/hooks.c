@@ -243,6 +243,14 @@ cleanup_err:
 		xmlFreeDoc(doc);
 	}
 
+	if (aux_op) {
+		if (aux_op->operation) {
+			free(aux_op->operation);
+		}
+
+		free(aux_op);
+	}
+
 	free(conf);
 	return -1;
 }
