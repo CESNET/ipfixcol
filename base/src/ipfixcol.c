@@ -377,11 +377,13 @@ int main (int argc, char* argv[])
 				free(packet);
 				packet = NULL;
 			}
+
 			/* if input plugin is file reader, end collector */
 			if (input_info->type == SOURCE_TYPE_IPFIX_FILE) {
 				terminating = 1;
 			}
 		}
+
 		/* distribute data to the particular Data Manager for further processing */
 		preprocessor_parse_msg (packet, get_retval, input_info, source_status);
 		source_status = SOURCE_STATUS_OPENED;

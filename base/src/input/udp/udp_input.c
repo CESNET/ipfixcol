@@ -106,15 +106,15 @@ struct plugin_conf {
 int input_init(char *params, void **config)
 {
 	/* necessary structures */
-	struct addrinfo *addrinfo=NULL, hints;
-	struct plugin_conf *conf=NULL;
+	struct addrinfo *addrinfo = NULL, hints;
+	struct plugin_conf *conf = NULL;
 	char *port = NULL, *address = NULL;
 	int ai_family = AF_INET6; /* IPv6 is default */
 	char dst_addr[INET6_ADDRSTRLEN];
 	int ret, ipv6_only = 0, retval = 0;
 
 	/* 1 when using default port - don't free memory */
-	int def_port = 0;
+	int default_port = 0;
 
 	/* parse params */
 	xmlDoc *doc = NULL;
@@ -178,14 +178,27 @@ int input_init(char *params, void **config)
 					free(address);
 				}
 				address = tmp_val;
+
 			/* save following configuration to input_info */
 			} else if (xmlStrEqual(cur_node->name, BAD_CAST "templateLifeTime")) {
+				if (conf->info.template_life_time) {
+					free(conf->info.template_life_time);
+				}
 				conf->info.template_life_time = tmp_val;
 			} else if (xmlStrEqual(cur_node->name, BAD_CAST "optionsTemplateLifeTime")) {
+				if (conf->info.options_template_life_time) {
+					free(conf->info.options_template_life_time);
+				}
 				conf->info.options_template_life_time = tmp_val;
 			} else if (xmlStrEqual(cur_node->name, BAD_CAST "templateLifePacket")) {
+				if (conf->info.template_life_packet) {
+					free(conf->info.template_life_packet);
+				}
 				conf->info.template_life_packet = tmp_val;
 			} else if (xmlStrEqual(cur_node->name, BAD_CAST "optionsTemplateLifePacket")) {
+				if (conf->info.options_template_life_packet) {
+					free(conf->info.options_template_life_packet);
+				}
 				conf->info.options_template_life_packet = tmp_val;
 			} else { /* unknown parameter, ignore */
 				free(tmp_val);
@@ -196,7 +209,7 @@ int input_init(char *params, void **config)
 	/* set default port if none given */
 	if (port == NULL) {
 		port = DEFAULT_PORT;
-		def_port = 1;
+		default_port = 1;
 	}
 
 	/* specify parameters of the connection */
@@ -282,7 +295,7 @@ int input_init(char *params, void **config)
 	MSG_NOTICE(msg_module, "Plugin initialization completed successfully");
 
 out:
-	if (def_port == 0 && port != NULL) { /* free when memory was actually allocated*/
+	if (default_port == 0 && port != NULL) { /* free when memory was actually allocated */
 		free(port);
 	}
 
@@ -317,7 +330,6 @@ out:
 			free (conf->info.options_template_life_packet);
 		}
 		free(conf);
-
 	}
 
 	return retval;
@@ -406,6 +418,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 	/* check whether we found the input_info */
 	if (info_list == NULL) {
 		MSG_NOTICE(msg_module, "New UDP exporter connected (unique port and address)");
+
 		/* create new input_info */
 		info_list = calloc(1, sizeof(struct input_info_list));
 		memcpy(&info_list->info, &conf->info, sizeof(struct input_info_network));
@@ -424,7 +437,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		} else {
 			/* copy src IPv6 address */
 			int i;
-			for (i=0; i<4; i++) {
+			for (i = 0; i < 4; i++) {
 				info_list->info.src_addr.ipv6.s6_addr32[i] = address.sin6_addr.s6_addr32[i];
 			}
 
