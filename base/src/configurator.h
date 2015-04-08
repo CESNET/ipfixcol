@@ -54,9 +54,9 @@
 
 /* Plugin type */
 enum plugin_types {
-    PLUGIN_INPUT,
-    PLUGIN_INTER,
-    PLUGIN_STORAGE
+	PLUGIN_INPUT,
+	PLUGIN_INTER,
+	PLUGIN_STORAGE
 };
 
 #define PLUGIN_ID_ALL 0
@@ -64,39 +64,39 @@ enum plugin_types {
 
 /* Plugin configuration */
 struct plugin_config {
-    union {
-        struct input *input;        /**< Input plugin config */
-        struct intermediate *inter; /**< Intermediate plugin config */
-        struct storage *storage;    /**< Storage plugin config */
-    };
-    
-    int type;                       /**< Plugin type */
-    struct plugin_xml_conf conf;    /**< XML configuration */
+	union {
+		struct input *input;        /**< Input plugin config */
+		struct intermediate *inter; /**< Intermediate plugin config */
+		struct storage *storage;    /**< Storage plugin config */
+	};
+	
+	int type;                       /**< Plugin type */
+	struct plugin_xml_conf conf;    /**< XML configuration */
 };
 
 /* parsed startup config */
 typedef struct startup_config_s {
-    struct plugin_config *input[8];     /**< Input plugins */
-    struct plugin_config *inter[8];     /**< Intermediate plugins */
-    struct plugin_config *storage[8];   /**< Storage plugins */
+	struct plugin_config *input[8];     /**< Input plugins */
+	struct plugin_config *inter[8];     /**< Intermediate plugins */
+	struct plugin_config *storage[8];   /**< Storage plugins */
 } startup_config;
 
 typedef struct ipfix_config {
-    const char *internal_file;      /**< path to internal configuration file */
-    const char *startup_file;       /**< path to startup configuration file */
-    xmlDoc *act_doc;                /**< Actual startup configuration */
-    xmlDoc *new_doc;                /**< New startup configuration */
-    xmlNode *collector_node;        /**< Collector node in startup.xml */
+	const char *internal_file;      /**< path to internal configuration file */
+	const char *startup_file;       /**< path to startup configuration file */
+	xmlDoc *act_doc;                /**< Actual startup configuration */
+	xmlDoc *new_doc;                /**< New startup configuration */
+	xmlNode *collector_node;        /**< Collector node in startup.xml */
 	void *profiles[MAX_PROFILES_CONFIGS];/**< Profiles configurations */
 	char *profiles_file;			/**< Path to the profiles file */
 	time_t profiles_file_tstamp;	/**< Timestamp of the profiles file */
 	int current_profiles;			/**< Current profiles configuration */
-    struct input input;             /**< Input plugin */
-    startup_config *startup;        /**< parser startup file */
-    char process_name[16];          /**< process name */
-    int proc_id;                    /**< process ID */
-    int ip_id;                      /**< Internal process ID */
-    int sp_id;                      /**< Storage plugin ID */
+	struct input input;             /**< Input plugin */
+	startup_config *startup;        /**< parser startup file */
+	char process_name[16];          /**< process name */
+	int proc_id;                    /**< process ID */
+	int ip_id;                      /**< Internal process ID */
+	int sp_id;                      /**< Storage plugin ID */
 } configurator;
 
 /**
