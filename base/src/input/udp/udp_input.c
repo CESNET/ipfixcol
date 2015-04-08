@@ -351,6 +351,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		*packet = malloc(BUFF_LEN * sizeof(char));
 		if (!*packet) {
 			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+			return INPUT_ERROR;
 		}
 	}
 
@@ -360,6 +361,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		if (errno == EINTR) {
 			return INPUT_INTR;
 		}
+
 		MSG_ERROR(msg_module, "Failed to receive packet: %s", strerror(errno));
 		return INPUT_ERROR;
 	}
