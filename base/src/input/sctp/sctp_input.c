@@ -574,9 +574,9 @@ err_sockaddr6_case:
 
 	/* print info */
 	if (sockaddr6_listen_counter > 0) {
-		inet_ntop(AF_INET6, &(sockaddr6[0].sin6_addr), dst_addr, INET6_ADDRSTRLEN);
+		inet_ntop(AF_INET6, &(sockaddr6_listen[0]->sin6_addr), dst_addr, INET6_ADDRSTRLEN);
 	} else {
-		inet_ntop(AF_INET, &(sockaddr[0].sin_addr), dst_addr, INET6_ADDRSTRLEN);
+		inet_ntop(AF_INET, &(sockaddr_listen[0]->sin_addr), dst_addr, INET6_ADDRSTRLEN);
 	}
 	
 	MSG_NOTICE(msg_module, "Input plugin listening on %s, port %u", dst_addr, conf->listen_port);
