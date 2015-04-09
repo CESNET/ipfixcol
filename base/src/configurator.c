@@ -165,6 +165,7 @@ void config_free_plugin(struct plugin_config *plugin)
 
 				dlclose(plugin->input->dll_handler);
 			}
+
 			/* Input is pointer to configurator structure, don't free it */
 			// free(plugin->input);
 		}
@@ -1000,6 +1001,7 @@ process_err:
 void free_startup(startup_config *startup)
 {
 	int i;
+
 	/* Close and free input plugins */
 	for (i = 0; startup->input[i]; ++i) {
 		config_free_plugin(startup->input[i]);

@@ -84,6 +84,13 @@ AM_CONDITIONAL([HAVE_DOC], [test "$enable_doc" != "no"])
 
 ############################ Check for libraries ###############################
 
+### LibXML2 ###
+AC_CHECK_LIB([xml2], [main],
+    [LIBS="`xml2-config --libs` $LIBS"
+    CPPFLAGS="`xml2-config --cflags` $CPPFLAGS"],
+    AC_MSG_ERROR([Libxml2 not found ]))
+
+
 AC_SEARCH_LIBS([sqlite3_open], [sqlite3],,
 		AC_MSG_ERROR([Required library sqlite3 missing]))
 

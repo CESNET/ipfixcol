@@ -2907,4 +2907,11 @@
                 <dataType>string</dataType>
                 <semantic></semantic>
         </element> 
+        <element>
+                <enterprise>39499</enterprise>
+                <id>53</id>
+                <name>sipCSeq</name>
+                <dataType>string</dataType>
+                <semantic></semantic>
+        </element> 
 </ipfix-elements>

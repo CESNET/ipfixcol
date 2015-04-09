@@ -105,10 +105,9 @@ struct input_info_list {
  * \struct plugin_conf
  * \brief  Plugin configuration structure passed by the collector
  */
-struct plugin_conf
-{
+struct plugin_conf {
 	int socket; /**< listening socket */
-	struct input_info_network info; /**< basic infromation structure */
+	struct input_info_network info; /**< basic information structure */
 	fd_set master; /**< set of all active sockets */
 	int fd_max; /**< max file descriptor number */
 	struct sockaddr_in6 *sock_addresses[ADDR_ARRAY_SIZE]; /*< array of addresses indexed by sockets */
@@ -386,8 +385,8 @@ void *input_listen(void *config)
 int input_init(char *params, void **config)
 {
 	/* necessary structures */
-	struct addrinfo *addrinfo=NULL, hints;
-	struct plugin_conf *conf=NULL;
+	struct addrinfo *addrinfo = NULL, hints;
+	struct plugin_conf *conf = NULL;
 	char *port = NULL, *address = NULL;
 	int ai_family = AF_INET6; /* IPv6 is default */
 	char dst_addr[INET6_ADDRSTRLEN];
@@ -419,7 +418,7 @@ int input_init(char *params, void **config)
 	/* parse xml string */
 	doc = xmlParseDoc(BAD_CAST params);
 	if (doc == NULL) {
-		MSG_ERROR(msg_module, "Cannot parse config xml");
+		MSG_ERROR(msg_module, "Cannot parse configuration file");
 		retval = 1;
 		goto out;
 	}
@@ -433,7 +432,7 @@ int input_init(char *params, void **config)
 
 	/* check that we have the right config xml, BAD_CAST is (xmlChar *) cast defined by libxml */
 	if (!xmlStrEqual(root_element->name, BAD_CAST "tcpCollector")) {
-		MSG_ERROR(msg_module, "Expecting tcpCollector root element, got %s", root_element->name);
+		MSG_ERROR(msg_module, "Expecting tcpCollector root element; got %s", root_element->name);
 		retval = 1;
 		goto out;
 	}
@@ -560,7 +559,7 @@ int input_init(char *params, void **config)
 
 	/* create socket */
 	conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
-	/* Retry with IPv4 when the implementation does not support the specified address family. */
+	/* Retry with IPv4 when the implementation does not support the specified address family */
 	if (conf->socket == -1 && errno == EAFNOSUPPORT && addrinfo->ai_family == AF_INET6) {
 		addrinfo->ai_family = AF_INET;
 		conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
@@ -575,13 +574,13 @@ int input_init(char *params, void **config)
 	/* allow IPv4 connections on IPv6 */
 	if ((addrinfo->ai_family == AF_INET6) &&
 		(setsockopt(conf->socket, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_only, sizeof(ipv6_only)) == -1)) {
-		MSG_WARNING(msg_module, "Cannot turn off socket option IPV6_V6ONLY. Plugin might not accept IPv4 connections");
+		MSG_WARNING(msg_module, "Cannot turn off socket option IPV6_V6ONLY; plugin may not accept IPv4 connections...");
 	}
 
 	/* allow to reuse the address immediately */
 	if (setsockopt(conf->socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1)
 	{
-		MSG_WARNING(msg_module, "Cannot turn on socket reuse option. It may take a while before collector can be restarted");
+		MSG_WARNING(msg_module, "Cannot turn on socket reuse option; it may take a while before collector can be restarted");
 	}
 
 	/* bind socket to address */
@@ -682,7 +681,7 @@ int input_init(char *params, void **config)
 	}
 
 	/* print info */
-	MSG_NOTICE(msg_module, "TCP input plugin listening on address %s, port %s", dst_addr, port);
+	MSG_NOTICE(msg_module, "Input plugin listening on %s, port %s", dst_addr, port);
 
 	/* start listening thread */
 	if (pthread_create(&listen_thread, NULL, &input_listen, (void *) conf) != 0) {
