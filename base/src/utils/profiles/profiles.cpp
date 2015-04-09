@@ -74,7 +74,7 @@ int parse_filter(filter_parser_data* pdata)
 	yylex_init(&(pdata->scanner));
 	YY_BUFFER_STATE bp = yy_scan_string(pdata->filter, pdata->scanner);
 	yy_switch_to_buffer(bp, pdata->scanner);
-	
+
 	/* Parse filter */
 	ret = yyparse(pdata);
 	
@@ -250,8 +250,11 @@ Profile *process_profile_xml(const char *filename)
 	Profile *rootProfile{NULL};
 
 	try {
-		/* Iterate through all profiles */
-		for (xmlNode *node = root; node; node = node->next) {
+		/* Iterate throught all profiles */
+		/* rootProfile must be considered as loop condition, since storage allocated
+		   by process_profile will be leaked otherwise
+		 */
+		for (xmlNode *node = root; node && !rootProfile; node = node->next) {
 			if (node->type != XML_ELEMENT_NODE) {
 				continue;
 			}

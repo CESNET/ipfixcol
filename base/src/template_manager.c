@@ -70,6 +70,7 @@ struct ipfix_template_mgr_record *tm_record_create()
 	tmr->templates = calloc(tmr->max_length, sizeof(struct ipfix_template *));
 	if (!tmr->templates) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		free(tmr);
 		return NULL;
 	}
 

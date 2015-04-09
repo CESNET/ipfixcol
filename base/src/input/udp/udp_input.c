@@ -65,6 +65,7 @@
 
 /* input buffer length */
 #define BUFF_LEN 10000
+
 /* default port for udp collector */
 #define DEFAULT_PORT "4739"
 
@@ -89,8 +90,7 @@ struct input_info_list {
  * \struct plugin_conf
  * \brief  Plugin configuration structure passed by the collector
  */
-struct plugin_conf
-{
+struct plugin_conf {
 	int socket; /**< listening socket */
 	struct input_info_network info; /**< infromation structure passed to collector */
 	struct input_info_list *info_list; /**< list of infromation structures passed to collector */
@@ -106,14 +106,15 @@ struct plugin_conf
 int input_init(char *params, void **config)
 {
 	/* necessary structures */
-	struct addrinfo *addrinfo=NULL, hints;
-	struct plugin_conf *conf=NULL;
+	struct addrinfo *addrinfo = NULL, hints;
+	struct plugin_conf *conf = NULL;
 	char *port = NULL, *address = NULL;
 	int ai_family = AF_INET6; /* IPv6 is default */
 	char dst_addr[INET6_ADDRSTRLEN];
 	int ret, ipv6_only = 0, retval = 0;
+
 	/* 1 when using default port - don't free memory */
-	int def_port = 0;
+	int default_port = 0;
 
 	/* parse params */
 	xmlDoc *doc = NULL;
@@ -132,10 +133,11 @@ int input_init(char *params, void **config)
 	doc = xmlParseDoc(BAD_CAST params);
 	if (doc == NULL) {
 		printf("%s", params);
-		MSG_ERROR(msg_module, "Cannot parse config xml");
+		MSG_ERROR(msg_module, "Cannot parse configuration");
 		retval = 1;
 		goto out;
 	}
+
 	/* get the root element node */
 	root_element = xmlDocGetRootElement(doc);
 	if (root_element == NULL) {
@@ -176,14 +178,27 @@ int input_init(char *params, void **config)
 					free(address);
 				}
 				address = tmp_val;
+
 			/* save following configuration to input_info */
 			} else if (xmlStrEqual(cur_node->name, BAD_CAST "templateLifeTime")) {
+				if (conf->info.template_life_time) {
+					free(conf->info.template_life_time);
+				}
 				conf->info.template_life_time = tmp_val;
 			} else if (xmlStrEqual(cur_node->name, BAD_CAST "optionsTemplateLifeTime")) {
+				if (conf->info.options_template_life_time) {
+					free(conf->info.options_template_life_time);
+				}
 				conf->info.options_template_life_time = tmp_val;
 			} else if (xmlStrEqual(cur_node->name, BAD_CAST "templateLifePacket")) {
+				if (conf->info.template_life_packet) {
+					free(conf->info.template_life_packet);
+				}
 				conf->info.template_life_packet = tmp_val;
 			} else if (xmlStrEqual(cur_node->name, BAD_CAST "optionsTemplateLifePacket")) {
+				if (conf->info.options_template_life_packet) {
+					free(conf->info.options_template_life_packet);
+				}
 				conf->info.options_template_life_packet = tmp_val;
 			} else { /* unknown parameter, ignore */
 				free(tmp_val);
@@ -194,11 +209,11 @@ int input_init(char *params, void **config)
 	/* set default port if none given */
 	if (port == NULL) {
 		port = DEFAULT_PORT;
-		def_port = 1;
+		default_port = 1;
 	}
 
 	/* specify parameters of the connection */
-	memset (&hints, 0, sizeof(struct addrinfo));
+	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_socktype = SOCK_DGRAM; /* UDP */
 	hints.ai_family = ai_family; /* both IPv4 and IPv6*/
 	hints.ai_flags = AI_V4MAPPED; /* we want to accept mapped addresses */
@@ -215,7 +230,8 @@ int input_init(char *params, void **config)
 
 	/* create socket */
 	conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
-	/* Retry with IPv4 when the implementation does not support the specified address family. */
+
+	/* Retry with IPv4 when the implementation does not support the specified address family */
 	if (conf->socket == -1 && errno == EAFNOSUPPORT && addrinfo->ai_family == AF_INET6) {
 		addrinfo->ai_family = AF_INET;
 		conf->socket = socket(addrinfo->ai_family, addrinfo->ai_socktype, addrinfo->ai_protocol);
@@ -228,8 +244,8 @@ int input_init(char *params, void **config)
 
 	/* allow IPv4 connections on IPv6 */
 	if ((addrinfo->ai_family == AF_INET6) &&
-		(setsockopt(conf->socket, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_only, sizeof(ipv6_only)) == -1)) {
-		MSG_WARNING(msg_module, "Cannot turn off socket option IPV6_V6ONLY. Plugin might not accept IPv4 connections");
+			(setsockopt(conf->socket, IPPROTO_IPV6, IPV6_V6ONLY, &ipv6_only, sizeof(ipv6_only)) == -1)) {
+		MSG_WARNING(msg_module, "Cannot turn off socket option IPV6_V6ONLY; plugin may not accept IPv4 connections...");
 	}
 
 	/* bind socket to address */
@@ -253,9 +269,9 @@ int input_init(char *params, void **config)
 	} else { /* IPv6 */
 		conf->info.l3_proto = 6;
 
-		/* copy dst IPv6 address */
+		/* copy destination IPv6 address */
 		int i;
-		for (i=0; i<4;i++) {
+		for (i = 0; i < 4; i++) {
 			conf->info.dst_addr.ipv6.s6_addr32[i] =
 				((struct sockaddr_in6*) addrinfo->ai_addr)->sin6_addr.s6_addr32[i];
 		}
@@ -264,13 +280,13 @@ int input_init(char *params, void **config)
 	}
 
 	if (convert_init(UDP_PLUGIN, BUFF_LEN) != 0) {
-		MSG_ERROR(msg_module, "Error when initializing templates!");
+		MSG_ERROR(msg_module, "Failed to initialize templates");
 		retval = 1;
 		goto out;
 	}
 
 	/* print info */
-	MSG_NOTICE(msg_module, "UDP input plugin listening on address %s, port %s", dst_addr, port);
+	MSG_NOTICE(msg_module, "Input plugin listening on %s, port %s", dst_addr, port);
 
 	/* and pass it to the collector */
 	*config = (void*) conf;
@@ -279,7 +295,7 @@ int input_init(char *params, void **config)
 	MSG_NOTICE(msg_module, "Plugin initialization completed successfully");
 
 out:
-	if (def_port == 0 && port != NULL) { /* free when memory was actually allocated*/
+	if (default_port == 0 && port != NULL) { /* free when memory was actually allocated */
 		free(port);
 	}
 
@@ -314,7 +330,6 @@ out:
 			free (conf->info.options_template_life_packet);
 		}
 		free(conf);
-
 	}
 
 	return retval;
@@ -348,6 +363,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		*packet = malloc(BUFF_LEN * sizeof(char));
 		if (!*packet) {
 			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+			return INPUT_ERROR;
 		}
 	}
 
@@ -357,6 +373,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		if (errno == EINTR) {
 			return INPUT_INTR;
 		}
+
 		MSG_ERROR(msg_module, "Failed to receive packet: %s", strerror(errno));
 		return INPUT_ERROR;
 	}
@@ -401,6 +418,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 	/* check whether we found the input_info */
 	if (info_list == NULL) {
 		MSG_NOTICE(msg_module, "New UDP exporter connected (unique port and address)");
+
 		/* create new input_info */
 		info_list = calloc(1, sizeof(struct input_info_list));
 		memcpy(&info_list->info, &conf->info, sizeof(struct input_info_network));
@@ -419,7 +437,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		} else {
 			/* copy src IPv6 address */
 			int i;
-			for (i=0; i<4; i++) {
+			for (i = 0; i < 4; i++) {
 				info_list->info.src_addr.ipv6.s6_addr32[i] = address.sin6_addr.s6_addr32[i];
 			}
 
