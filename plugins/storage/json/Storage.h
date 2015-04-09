@@ -73,7 +73,7 @@ enum element_type {
 
 struct ipfix_element {
     enum element_type type;
-    std::string name;
+	std::string name;
 };
 
 class Storage {
@@ -102,7 +102,7 @@ public:
      * 
      * @param msg IPFIX message
      */
-    void storeDataSets(const struct ipfix_message *msg);
+	void storeDataSets(const struct ipfix_message *msg);
     
 	/**
 	 * \brief Set metadata processing enabled/disabled
@@ -136,9 +136,8 @@ private:
      * @param length length from template
      * @param data data record
      * @param offset field offset
-     * @return string
      */
-    std::string readString(uint16_t &length, uint8_t *data, uint16_t &offset) const;
+	void readString(uint16_t &length, uint8_t *data, uint16_t &offset);
     
     /**
      * \brief Read raw data from record on given offset
@@ -146,16 +145,15 @@ private:
      * @param field_len length from template
      * @param data data record
      * @param offset field offset (will be changed)
-     * @return field value
      */
-    std::string readRawData(uint16_t &length, uint8_t *data, uint16_t &offset) const;
+	void readRawData(uint16_t &length, uint8_t *data, uint16_t &offset);
     
     /**
      * \brief Store data record
      * 
      * @param mdata Data record's metadata
      */
-    void storeDataRecord(struct metadata *mdata);
+	void storeDataRecord(struct metadata *mdata);
 
     /**
 	 * \brief Store metadata
@@ -169,9 +167,8 @@ private:
      * 
      * @param enterprise Enterprise number
      * @param id element ID
-     * @return element
      */
-    struct ipfix_element getElement(uint32_t enterprise, uint16_t id) { return elements[enterprise][id]; }
+	void getElement(uint32_t enterprise, uint16_t id, struct ipfix_element& element);
     
     /**
      * \brief Create raw name for unknown elements
@@ -195,9 +192,9 @@ private:
 	uint16_t offset, id, length;
 	uint32_t enterprise;
     Translator translator;          /**< number -> string translator */
-	std::string record, value;		/**< Data record */
     sisoconf *sender;               /**< sender "class" */
-    
+
+	std::string record;
 	static std::map<uint32_t, std::map<uint16_t, struct ipfix_element> > elements;
 };
 

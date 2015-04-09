@@ -43,6 +43,8 @@
 #include <string>
 #include <vector>
 
+#define BUFF_SIZE 128
+
 enum class t_units {
     SEC,
     MILLISEC,
@@ -52,15 +54,6 @@ enum class t_units {
 
 class Translator {
 public:
-    /**
-     * \brief Constructor
-     */
-    Translator();
-    
-    /**
-     * \brief Destructor
-     */
-    ~Translator();
     
     /**
      * \brief Format IPv4 address into dotted format
@@ -68,7 +61,7 @@ public:
      * @param addr address
      * @return formatted address
      */
-    std::string formatIPv4(uint32_t addr);
+	const char *formatIPv4(uint32_t addr);
     
     /**
      * \brief Format IPv6 address
@@ -76,7 +69,7 @@ public:
      * @param addr address
      * @return formatted address
      */
-    std::string formatIPv6(uint8_t *addr);
+	const char *formatIPv6(uint8_t *addr);
     
     /**
      * \brief Format MAC address
@@ -84,7 +77,7 @@ public:
      * @param addr address
      * @return formatted address
      */
-    std::string formatMac(uint8_t *addr);
+	const char *formatMac(uint8_t *addr);
     
     /**
      * \brief Format timestamp
@@ -93,7 +86,7 @@ public:
      * @param units time units
      * @return  formatted timestamp
      */
-    std::string formatTimestamp(uint64_t tstamp, t_units units);
+	const char *formatTimestamp(uint64_t tstamp, t_units units);
     
     /**
      * \brief Format protocol
@@ -101,7 +94,7 @@ public:
      * @param proto protocol
      * @return formatted protocol
      */
-    std::string formatProtocol(uint8_t proto) const;
+	const char *formatProtocol(uint8_t proto) const;
     
     /**
      * \brief Format TCP flags
@@ -109,12 +102,16 @@ public:
      * @param flags
      * @return formatted flags
      */
-    std::string formatFlags(uint16_t flags) const;
+	const char *formatFlags(uint16_t flags);
     
 
 private:
-    
-    std::vector<char> buffer{};
+
+	char buffer[BUFF_SIZE];
+
+	struct tm *tm{};
+	time_t timesec;
+	uint64_t msec;
 };
 
 #endif	/* TRANSLATOR_H */

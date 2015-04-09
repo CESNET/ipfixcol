@@ -40,6 +40,7 @@
 extern "C" {
 #include <ipfixcol.h>
 #include <ipfixcol/profiles.h>
+#include <string.h>
 }
 
 #include "Storage.h"
@@ -71,6 +72,18 @@ Storage::Storage(sisoconf *new_sender): sender{new_sender}
 	/* Load only once for all plugins */
 	if (elements.empty()) {
 		this->loadElements();
+	}
+
+	/* Allocate space for buffers */
+	record.reserve(4096);
+}
+
+void Storage::getElement(uint32_t enterprise, uint16_t id, struct ipfix_element& element)
+{
+	element = elements[enterprise][id];
+	if (element.type == UNKNOWN && element.name.empty()) {
+		element.name = rawName(enterprise, id);
+		elements[enterprise][id] = element;
 	}
 }
 
@@ -129,7 +142,7 @@ void Storage::sendData() const
 	}
 
 	if (siso_send(sender, record.c_str(), record.length()) != SISO_OK) {
-		throw std::runtime_error(std::string("Sending data: ") + siso_get_last_err(sender));
+		MSG_ERROR(msg_module, "Sending data: %s", siso_get_last_err(sender));
 	}
 }
 
@@ -140,7 +153,7 @@ void Storage::storeDataSets(const ipfix_message* ipfix_msg)
 {	
 	/* Iterate through all data records */
 	for (int i = 0; i < ipfix_msg->data_records_count; ++i) {
-		this->storeDataRecord(&(ipfix_msg->metadata[i]));
+		storeDataRecord(&(ipfix_msg->metadata[i]));
 	}
 }
 
@@ -169,19 +182,19 @@ uint16_t Storage::realLength(uint16_t length, uint8_t *data_record, uint16_t &of
 /**
  * \brief Read string field
  */
-std::string Storage::readString(uint16_t& length, uint8_t *data_record, uint16_t &offset) const
+void Storage::readString(uint16_t& length, uint8_t *data_record, uint16_t &offset)
 {
 	/* Get string length */
-	length = this->realLength(length, data_record, offset);
+	length = realLength(length, data_record, offset);
 	
 	/* Read string */
-	return std::string((const char *)(data_record + offset), length);
+	record.append((const char *)(data_record + offset), length);
 }
 
 /**
  * \brief Read raw data from record
  */
-std::string Storage::readRawData(uint16_t &length, uint8_t* data_record, uint16_t &offset) const
+void Storage::readRawData(uint16_t &length, uint8_t* data_record, uint16_t &offset)
 {
 	/* Read raw value */
 	std::ostringstream ss;
@@ -206,8 +219,8 @@ std::string Storage::readRawData(uint16_t &length, uint8_t* data_record, uint16_
 			ss << std::setw(2) << std::setfill('0') << static_cast<int>((data_record + offset)[i]);
 		}
 	}
-	
-	return ss.str();
+
+	record += ss.str();
 }
 
 /**
@@ -228,6 +241,7 @@ void Storage::storeDataRecord(struct metadata *mdata)
 	offset = 0;
 	record = "{\"@type\": \"ipfix.entry\", \"ipfix\": {";
 	
+//	struct ipfix_element& element;
 	struct ipfix_template *templ = mdata->record.templ;
 	uint8_t *data_record = (uint8_t*) mdata->record.record;
 	
@@ -244,57 +258,64 @@ void Storage::storeDataRecord(struct metadata *mdata)
 		}
 		
 		/* Get element informations */
-		struct ipfix_element element = this->getElement(enterprise, id);
-		
-		switch (element.type) {
-		case PROTOCOL:
-			value = translator.formatProtocol(read8(data_record + offset));
-			break;
-		case FLAGS:
-			value = translator.formatFlags(read16(data_record + offset));
-			break;
-		case IPV4:
-			value = translator.formatIPv4(read32(data_record + offset));
-			break;
-		case IPV6:{
-			READ_BYTE_ARR(addr6, data_record + offset, IPV6_LEN);
-			value = translator.formatIPv6(addr6);
-			break;}
-		case MAC: {
-			READ_BYTE_ARR(addrMac, data_record + offset, MAC_LEN);
-			value = translator.formatMac(addrMac);
-			break;}
-		case TSTAMP_SEC:
-			value = translator.formatTimestamp(read64(data_record + offset), t_units::SEC);
-			break;
-		case TSTAMP_MILLI:
-			value = translator.formatTimestamp(read64(data_record + offset), t_units::MILLISEC);
-			break;
-		case TSTAMP_MICRO:
-			value = translator.formatTimestamp(read64(data_record + offset), t_units::MICROSEC);
-			break;
-		case TSTAMP_NANO:
-			value = translator.formatTimestamp(read64(data_record + offset), t_units::NANOSEC);
-			break;
-		case STRING:
-			value = this->readString(length, data_record, offset);
-			break;
-		case RAW:
-			value = this->readRawData(length, data_record, offset);
-			break;
-		default:
-			MSG_DEBUG(msg_module, "Unknown element (enterprise %u, id %u)", enterprise, id);
+		struct ipfix_element& element = elements[enterprise][id];
+		if (element.type == UNKNOWN && element.name.empty()) {
 			element.name = rawName(enterprise, id);
-			value = this->readRawData(length, data_record, offset);
-			break;
+			elements[enterprise][id] = element;
+			MSG_DEBUG(msg_module, "Unknown element (%s)", element.name.c_str());
 		}
-		
+
 		if (count > 0) {
 			record += ", ";
 		}
-		
-		record += QUOTED(element.name) + ": " + QUOTED(value);
-		
+
+		record += "\"";
+		record += element.name;
+		record += "\": \"";
+
+		switch (element.type) {
+		case PROTOCOL:
+			record += translator.formatProtocol(read8(data_record + offset));
+			break;
+		case FLAGS:
+			record += translator.formatFlags(read16(data_record + offset));
+			break;
+		case IPV4:
+			record += translator.formatIPv4(read32(data_record + offset));
+			break;
+		case IPV6:{
+			READ_BYTE_ARR(addr6, data_record + offset, IPV6_LEN);
+			record += translator.formatIPv6(addr6);
+			break;}
+		case MAC: {
+			READ_BYTE_ARR(addrMac, data_record + offset, MAC_LEN);
+			record += translator.formatMac(addrMac);
+			break;}
+		case TSTAMP_SEC:
+			record += translator.formatTimestamp(read64(data_record + offset), t_units::SEC);
+			break;
+		case TSTAMP_MILLI:
+			record += translator.formatTimestamp(read64(data_record + offset), t_units::MILLISEC);
+			break;
+		case TSTAMP_MICRO:
+			record += translator.formatTimestamp(read64(data_record + offset), t_units::MICROSEC);
+			break;
+		case TSTAMP_NANO:
+			record += translator.formatTimestamp(read64(data_record + offset), t_units::NANOSEC);
+			break;
+		case STRING:
+			readString(length, data_record, offset);
+			break;
+		case RAW:
+			readRawData(length, data_record, offset);
+			break;
+		default:
+			readRawData(length, data_record, offset);
+			break;
+		}
+
+		record += "\"";
+
 		offset += length;
 	}
 	
@@ -322,26 +343,27 @@ void Storage::storeMetadata(metadata* mdata)
 	ss << "\"dstCountry\": \"" << mdata->dstCountry << "\", ";
 	ss << "\"srcName\": \"" << mdata->srcName << "\", ";
 	ss << "\"dstName\": \"" << mdata->dstName << "\", ";
+
+	record += ss.str();
+
 	
 	/* Profiles */
 	if (mdata->channels) {
-		ss << "\"profiles\": [";
+		record += "\"profiles\": [";
 
 		for (int i = 0; mdata->channels[i] != 0; ++i) {
 			if (i > 0) {
-				ss << ", ";
+				record += ", ";
 			}
-			
-			std::string channel = channel_get_name(mdata->channels[i]);
-			std::string profile = profile_get_name(channel_get_profile(mdata->channels[i]));
 
-			ss << "{\"profile\": \"" << profile << "\", ";
-			ss <<  "\"channel\": \"" << channel << "\"}";
+			record += "{\"profile\": \"";
+			record += channel_get_name(mdata->channels[i]);
+			record += "\", \"channel\": \"";
+			record += profile_get_name(channel_get_profile(mdata->channels[i]));
+			record += "\"}";
 		}
 
-		ss << "]";
+		record += "]";
 	}
-	
-	record += ss.str();
 }
 
