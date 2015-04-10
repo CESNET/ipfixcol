@@ -24,6 +24,8 @@
 		</udpCollector>
 		<!--## Name of the exporting process. Must match exporting process name -->
 		<exportingProcess>File writer UDP</exportingProcess>
+		<!--## File for exporting status information to (combined with -S) -->
+		<statisticsFile>/tmp/ipfixcol_stat.log</statisticsFile>
 	</collectingProcess>
 
 	<collectingProcess>
