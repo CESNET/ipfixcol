@@ -672,7 +672,7 @@ void filter_copy_metainfo(struct ipfix_message *src, struct ipfix_message *dst)
 	dst->live_profile = src->live_profile;
 	dst->plugin_id = src->plugin_id;
 	dst->plugin_status = src->plugin_status;
-	dst->source_status = dst->source_status;
+	dst->source_status = src->source_status;
 	dst->templ_records_count = src->templ_records_count;
 	dst->opt_templ_records_count = src->opt_templ_records_count;
 }
