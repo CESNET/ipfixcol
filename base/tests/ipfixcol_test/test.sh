@@ -3,7 +3,7 @@
 # ipfixcol Test Tool
 # author Michal Kozubik <kozubik@cesnet.cz>
 # 
-# Copyright (C) 2014 CESNET, z.s.p.o.
+# Copyright (C) 2015 CESNET, z.s.p.o.
 # 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -76,16 +76,16 @@ if [ $# -ge 1 ]; then
 	fi
 	INTERNAL=$(readlink -fe -- "$1");
 	if [ -z $INTERNAL ]; then
-		echo "Internal configuration file $1 not found!"
+		echo "Internal configuration file ($1) not found!"
 		exit 1
 	fi
 else 
-	# if configs/internalcfg.xml does not exists, create it
+	# if configs/internalcfg.xml does not exist; create it
 	if [ -z $INTERNAL ]; then
 		./create_internal.sh
 		INTERNAL=$(readlink -fe -- configs/internalcfg.xml)
 		if [ -z $INTERNAL ]; then
-			echo "Cannot create config/internalcfg.xml!"
+			echo "Cannot create configs/internalcfg.xml"
 			exit 1
 		fi
 	fi
