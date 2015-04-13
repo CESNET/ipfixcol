@@ -310,7 +310,7 @@ int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_co
 	//Find elements
 	for(i=0;i<tmp->field_count + en_offset;i++){
 		field = &(tmp->fields[i]);
-		if(field->ie.length == 65535){
+		if(field->ie.length == VAR_IE_LENGTH){
 			_min_record_size += 1;
 		} else {
 			_min_record_size += field->ie.length;
@@ -365,7 +365,7 @@ int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_co
 				MSG_DEBUG(MSG_MODULE,"Received UNKNOWN element (size: %u)",field->ie.length);
 				if(field->ie.length < 9){
 					new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
-				} else if(field->ie.length == 65535){ //variable size element
+				} else if(field->ie.length == VAR_IE_LENGTH){ //variable size element
 					new_element = new el_var_size(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 				} else { //TODO blob ect
 					new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);

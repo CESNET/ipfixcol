@@ -156,7 +156,7 @@ static uint16_t get_data_from_set(uint8_t *data_record, struct ipfix_template *t
 		}
 
 		/* skip the length of the value */
-		if (length != 65535) {
+		if (length != VAR_IE_LENGTH) {
 			offset += length;
 		} else {
 			/* variable length */

@@ -40,7 +40,6 @@
 #include <stdlib.h>
 #include <iostream>
 
-
 extern "C" {
 #include <ipfixcol/verbose.h>
 }
@@ -424,7 +423,7 @@ int RecordMap::init(struct ipfix_template *data_template,uint16_t map_id){
 	//Find elements
 	for(int i=0;i<data_template->field_count + en_offset;i++){
 		field = &(data_template->fields[i]);
-		if(field->ie.length == 65535){
+		if(field->ie.length == VAR_IE_LENGTH){
 			minRecordSize_ += 1;
 		} else {
 			minRecordSize_ += field->ie.length;

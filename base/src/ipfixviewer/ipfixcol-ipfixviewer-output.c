@@ -152,8 +152,8 @@ static uint16_t print_template_record(struct ipfix_template_record *rec)
 	/* print fields */
 	while (count != ntohs(rec->count)) {
 		printf("\tIE ID: %u\t", ntohs(rec->fields[index].ie.id) & 0x7fff);
-		if (ntohs(rec->fields[index].ie.length) != 65535) {
-		printf("\tField Length: %u", ntohs(rec->fields[index].ie.length));
+		if (ntohs(rec->fields[index].ie.length) != VAR_IE_LENGTH) {
+			printf("\tField Length: %u", ntohs(rec->fields[index].ie.length));
 		} else {
 			printf("\tField Length: variable");
 		}
@@ -198,10 +198,9 @@ static uint16_t print_options_template_record(struct ipfix_options_template_reco
 
 	index = count;
 
-
 	while (count != ntohs(rec->count)) {
 		printf("\tIE ID: %u\t", ntohs(rec->fields[index].ie.id) & 0x7fff);
-		if (ntohs(rec->fields[index].ie.length) != 65535) {
+		if (ntohs(rec->fields[index].ie.length) != VAR_IE_LENGTH) {
 			printf("\tField Length: %u", ntohs(rec->fields[index].ie.length));
 		} else {
 			/* field has variable length */
@@ -379,7 +378,7 @@ static uint16_t print_data_record(uint8_t *data_record, struct ipfix_template *t
 			offset += 8;
 			break;
 		default:
-			if (length != 65535) {
+			if (length != VAR_IE_LENGTH) {
 				printf("Value: 0x");
 
 				for (i = 0; i < length; i++) {
