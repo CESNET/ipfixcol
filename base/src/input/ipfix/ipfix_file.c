@@ -76,16 +76,13 @@ struct input_info_file_list {
  */
 struct ipfix_config {
 	int fd;                  /**< file descriptor */
-	xmlChar *xml_file;       /**< input file URI from XML configuration 
-	                          * file. (e.g.: "file://tmp/ipfix.dump") */
-	char *file;              /**< path where to look for IPFIX files. same as
-	                          * xml_file, but without 'file:' */
+	xmlChar *xml_file;       /**< input file URI from XML configuration file. (e.g.: "file://tmp/ipfix.dump") */
+	char *file;              /**< path where to look for IPFIX files. Same as xml_file, but without 'file:' */
 	char **input_files;      /**< list of all input files */
 	int findex;              /**< index to the current file in the list of files */
 	struct input_info_file_list	*in_info_list;
 	struct input_info_file *in_info; /**< info structure about current input file */
 };
-
 
 /**
  * \brief Open input file
@@ -138,7 +135,6 @@ static int prepare_input_file(struct ipfix_config *conf)
 	
 	return ret;
 }
-
 
 /**
  * \brief Close input file
@@ -233,6 +229,7 @@ int input_init(char *params, void **config)
 		MSG_ERROR(msg_module, "Plugin configuration not parsed successfully");
 		goto err_init;
 	}
+
 	cur = xmlDocGetRootElement(doc);
 	if (cur == NULL) {
 		MSG_ERROR(msg_module, "Empty configuration");
@@ -242,26 +239,27 @@ int input_init(char *params, void **config)
 		MSG_ERROR(msg_module, "root node != fileReader");
 		goto err_init;
 	}
+
 	cur = cur->xmlChildrenNode;
 	while (cur != NULL) {
 		/* find out where to look for input file */
 		if ((!xmlStrcmp(cur->name, (const xmlChar *) "file"))) {
 			conf->xml_file = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+			break;
 		}
-		break;
+
+		cur = cur->next;
 	}
 
 	/* check whether we have found "file" element in configuration file */
 	if (conf->xml_file == NULL) {
-		MSG_ERROR(msg_module, "\"file\" element is missing. No input, "
-		                        "nothing to do");
+		MSG_ERROR(msg_module, "\"file\" element is missing. No input files; nothing to do");
 		goto err_xml;
 	}
 
 	/* we only support local files */
 	if (strncmp((char *) conf->xml_file, "file:", 5)) {
-		MSG_ERROR(msg_module, "element \"file\": invalid URI - "
-		                        "only allowed scheme is \"file:\"");
+		MSG_ERROR(msg_module, "element \"file\": invalid URI - only allowed scheme is \"file:\"");
 		goto err_xml;
 	}
 
@@ -290,7 +288,7 @@ int input_init(char *params, void **config)
 	ret = next_file(conf);
 	if (ret < 0) {
 		/* no input files */
-		MSG_ERROR(msg_module, "No input files, nothing to do");
+		MSG_ERROR(msg_module, "No input files; nothing to do");
 		goto err_init;
 	}
 
@@ -350,7 +348,7 @@ read_header:
 			goto err_header;
 		}
 		MSG_ERROR(msg_module, "Failed to read IPFIX packet header: %s", strerror(errno));
-	    ret = INPUT_ERROR;
+		ret = INPUT_ERROR;
 		goto err_header;
 	}
 	if (ret == 0) {
@@ -414,7 +412,7 @@ read_header:
 			goto err_info;
 		}
 		MSG_ERROR(msg_module, "Error while reading from input file: %s", strerror(errno));
-	    ret = INPUT_ERROR;
+		ret = INPUT_ERROR;
 		goto err_info;
 	}
 	if (ret == 0 && packet_len-counter > 0) {
@@ -496,4 +494,3 @@ int input_close(void **config)
 }
 
 /**@}*/
-
