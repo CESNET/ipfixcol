@@ -58,8 +58,8 @@
 #include <siso.h>
 
 /* Ethernet MTU */
-/* Should be 65535 (- some bytes) */
-#define UDP_MTU 65000
+/* Should be MSG_MAX_LENGTH (- some bytes) */
+#define UDP_MTU MSG_MAX_LENGTH - 535
 #define MIN(_first_, _second_) ((_first_) < (_second_)) ? (_first_) : (_second_)
 
 static int stop_sending = 0;

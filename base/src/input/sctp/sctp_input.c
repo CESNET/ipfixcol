@@ -73,12 +73,8 @@
 #define OSTREAMS_PER_SOCKET          20
 
 #define DEFAULT_IPV6_LISTEN_ADDRESS  in6addr_any
-
 #define MAX_EPOLL_EVENTS             1
-
 #define LISTEN_BACKLOG               50
-
-#define IPFIX_MESSAGE_TOTAL_LENGTH   65535
 
 /* just guess, user will want to bind at most 20 addresses (per address family)
  * to listen socket. if this number is not enough the corresponding array 
@@ -567,7 +563,7 @@ err_sockaddr6_case:
 	}
 
 	/* allocate memory for templates */
-	if (convert_init(SCTP_PLUGIN, IPFIX_MESSAGE_TOTAL_LENGTH) != 0) {
+	if (convert_init(SCTP_PLUGIN, MSG_MAX_LENGTH) != 0) {
 		MSG_ERROR(msg_module, "malloc() for templates failed!");
 		goto err_listen;
 	}
@@ -690,7 +686,7 @@ wait_for_data:
 	/* allocate memory for message, if needed */
 	if (*packet == NULL) {
 		/* TODO - we can check how big the message is from its header */
-		*packet = (char *) malloc(IPFIX_MESSAGE_TOTAL_LENGTH);
+		*packet = (char *) malloc(MSG_MAX_LENGTH);
 		if (*packet == NULL) {
 			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 			ret = INPUT_ERROR;
@@ -701,7 +697,7 @@ wait_for_data:
 
 	/* new message */
 	flags = 0;
-	msg_length = sctp_recvmsg(socket, *packet, IPFIX_MESSAGE_TOTAL_LENGTH, NULL, NULL, &sinfo, &flags);
+	msg_length = sctp_recvmsg(socket, *packet, MSG_MAX_LENGTH, NULL, NULL, &sinfo, &flags);
 	if (msg_length == -1) {
 		MSG_ERROR(msg_module, "sctp_recvmsg()");
 		ret = INPUT_ERROR;
