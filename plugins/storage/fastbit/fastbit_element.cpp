@@ -269,7 +269,7 @@ el_text::el_text(int size, int en, int id, uint32_t buf_size) {
 	_offset = 0;
 	_filled = 0;
 	_buffer = NULL;
-	if (size == 65535) { //its element with variable size
+	if (size == VAR_IE_LENGTH) { //its element with variable size
 		_var_size = true;
 	}
 	setName(en, id);
@@ -351,7 +351,7 @@ el_blob::el_blob(int size, int en, int id, uint32_t buf_size):
 	
 	uint_value = 0;
 
-	if (size == 65535) { /* Element with variable size */
+	if (size == VAR_IE_LENGTH) { /* Element with variable size */
 		_var_size = true;
 	}
 
@@ -611,8 +611,8 @@ el_unknown::el_unknown(int size, int en, int id, int part, uint32_t buf_size) {
 
 	_size = size;
 
-	// Size of 65535 means variable-sized IE
-	_var_size = (size == 65535);
+	// Size of VAR_IE_LENGTH means variable-sized IE
+	_var_size = (size == VAR_IE_LENGTH);
 }
 
 void el_unknown::allocate_buffer(int count) {

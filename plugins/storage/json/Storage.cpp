@@ -150,7 +150,7 @@ void Storage::storeDataSets(const ipfix_message* ipfix_msg)
 uint16_t Storage::realLength(uint16_t length, uint8_t *data_record, uint16_t &offset) const
 {
 	/* Static length */
-	if (length != 65535) {
+	if (length != VAR_IE_LENGTH) {
 		return length;
 	}
 	
