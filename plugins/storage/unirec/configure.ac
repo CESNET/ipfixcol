@@ -80,8 +80,7 @@ AC_CHECK_LIB([xml2], [main],
 
 ### libtrap ###
 AC_SEARCH_LIBS([trap_init],[trap],,
-    AC_MSG_ERROR([libtrap not found ]))
-
+    AC_MSG_ERROR([libtrap not found; can be retrieved from https://www.liberouter.org/technologies/nemea/]))
 
 ###################### Check for configure parameters ##########################
 AC_ARG_ENABLE([debug], 
