@@ -21,11 +21,11 @@
 			</fileWriter>
 		</destination>
 		<destination>
-		  <name>File writer</name>
-		  <fileWriter>
-			<fileFormat>ipfix</fileFormat>
-			<file>file:./out-first.ipfix</file>
-		  </fileWriter>
+			<name>File writer</name>
+			<fileWriter>
+				<fileFormat>ipfix</fileFormat>
+				<file>file:./out-first.ipfix</file>
+			</fileWriter>
 		</destination>
 	</exportingProcess>
 </ipfix>
