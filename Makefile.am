@@ -10,7 +10,6 @@ SUBDIRS = base \
 	plugins/storage/fastbit \
 	plugins/storage/fastbit_compression \
 	plugins/storage/postgres \
-	plugins/storage/unirec \
 	plugins/storage/json \
 	plugins/input/nfdump \
 	plugins/intermediate/geoip \
@@ -18,3 +17,5 @@ SUBDIRS = base \
 	plugins/intermediate/profile_stats \
 	plugins/intermediate/stats \
 	plugins/intermediate/uid
+
+# plugins/storage/unirec is not added to SUBDIRS due to its dependency on libtrap

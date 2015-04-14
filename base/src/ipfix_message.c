@@ -262,7 +262,7 @@ uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template
 			++index;
 		}
 
-		if (length != 65535) {
+		if (length != VAR_IE_LENGTH) {
 			offset += length;
 		} else {
 			/* variable length */
@@ -500,7 +500,7 @@ int data_record_field_offset(uint8_t *data_record, struct ipfix_template *templa
 			offset += length;
 			break;
 		default:
-			if (length != 65535) {
+			if (length != VAR_IE_LENGTH) {
 				offset += length;
 			} else {
 				/* variable length */
@@ -611,7 +611,7 @@ uint16_t data_record_length(uint8_t *data_record, struct ipfix_template *templat
 			offset += length;
 			break;
 		default:
-			if (length != 65535) {
+			if (length != VAR_IE_LENGTH) {
 				offset += length;
 			} else {
 				/* variable length */

@@ -245,6 +245,17 @@ int main (int argc, char* argv[])
 	 */LIBXML_TEST_VERSION
 	xmlIndentTreeOutput = 1;
 
+	/* we daemonize early to get syslog redirection for all messages */
+	if (daemonize) {
+		closelog();
+		MSG_SYSLOG_INIT(PACKAGE);
+		
+		/* and send all following messages to the syslog */
+		if (daemon (1, 0)) {
+			MSG_ERROR(msg_module, "%s", strerror(errno));
+		}
+	}
+
 	/* check config file */
 	if (config_file == NULL) {
 		/* and use default if not specified */
@@ -306,16 +317,6 @@ int main (int argc, char* argv[])
 
 	/* XML cleanup */
 	xmlXPathFreeObject(collectors);
-
-	/* daemonize */
-	if (daemonize) {
-		closelog();
-		MSG_SYSLOG_INIT(PACKAGE);
-		/* and send all following messages to the syslog */
-		if (daemon (1, 0)) {
-			MSG_ERROR(msg_module, "%s", strerror(errno));
-		}
-	}
 	
 	/*
 	 * create Template Manager

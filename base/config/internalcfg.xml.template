@@ -12,7 +12,7 @@
 		<name>fileReader</name>
 	</supportedCollectors>
 
-	<!--## Input plugin internal configuration -->
+	<!--## Input plugins -->
 	<inputPlugin>
 		<!--## Name must match one of the <supportedCollectors> -->
 		<name>udpCollector</name>
@@ -37,11 +37,11 @@
 		<processName>SCTP</processName>
 	</inputPlugin>
 
-	<!--## Storage plugin internal configuration -->
+	<!--## Storage plugins -->
 	<storagePlugin>
 		<!--## Definition of file format
-		    ## The element <fileFormat> in startup.xml must
-		    ##   match this element -->
+			## The element <fileFormat> in startup.xml must
+			##   match this element -->
 		<fileFormat>ipfix</fileFormat>
 		<!--## Path of the storage module  -->
 		<file>@pkgdatadir@/plugins/ipfixcol-ipfix-output.so</file>
@@ -53,7 +53,6 @@
 		<file>@pkgdatadir@/plugins/ipfixcol-dummy-output.so</file>
 		<threadName>dummy</threadName>
 	</storagePlugin>
-        <!--## ipfixviewer storage plugin -->
 	<storagePlugin>
 		<fileFormat>view</fileFormat>
 		<file>@pkgdatadir@/plugins/ipfixcol-ipfixviewer-output.so</file>
@@ -70,39 +69,36 @@
 		<threadName>forwarding</threadName>
 	</storagePlugin>
 	
-	<!-- Intermediate Plugins -->
+	<!-- Intermediate plugins -->
 	<intermediatePlugin>
 		<name>dummy_ip</name>
 		<file>@pkgdatadir@/plugins/ipfixcol-dummy-inter.so</file>
 		<threadName>dummy_inter</threadName>
 	</intermediatePlugin>
-	
 	<intermediatePlugin>
 		<name>anonymization_ip</name>
 		<file>@pkgdatadir@/plugins/ipfixcol-anonymization-inter.so</file>
 		<threadName>anon_inter</threadName>
 	</intermediatePlugin>
-
 	<intermediatePlugin>
 		<name>joinflows_ip</name>
 		<file>@pkgdatadir@/plugins/ipfixcol-joinflows-inter.so</file>
 		<threadName>join_inter</threadName>
 	</intermediatePlugin>
-	
 	<intermediatePlugin>
 		<name>filter</name>
 		<file>@pkgdatadir@/plugins/ipfixcol-filter-inter.so</file>
 		<threadName>filter_inter</threadName>
 	</intermediatePlugin>
-        
-        <intermediatePlugin>
+	<intermediatePlugin>
 		<name>odip</name>
 		<file>@pkgdatadir@/plugins/ipfixcol-odip-inter.so</file>
 		<threadName>odip_inter</threadName>
 	</intermediatePlugin>
-        <intermediatePlugin>
+	<intermediatePlugin>
 		<name>hooks</name>
 		<file>@pkgdatadir@/plugins/ipfixcol-hooks-inter.so</file>
 		<threadName>hooks_inter</threadName>
 	</intermediatePlugin>
+
 </ipfixcol>

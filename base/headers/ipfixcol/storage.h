@@ -45,9 +45,10 @@
 #include "templates.h"
 #include "api.h"
 
-#define MSG_MAX_OTEMPLATES		1024
-#define MSG_MAX_TEMPLATES		1024
-#define MSG_MAX_DATA_COUPLES	1023
+#define MSG_MAX_LENGTH          65535
+#define MSG_MAX_OTEMPLATES      1024
+#define MSG_MAX_TEMPLATES       1024
+#define MSG_MAX_DATA_COUPLES    1023
 
 /**
  * \defgroup storageAPI Storage Plugins API
@@ -78,9 +79,9 @@ struct data_template_couple{
 };
 
 enum PLUGIN_STATUS {
-    PLUGIN_DATA,    /**< Don't react on this message */
-    PLUGIN_START,   /**< Start reading */
-    PLUGIN_STOP     /**< Stop reading */
+	PLUGIN_DATA,    /**< Don't react on this message */
+	PLUGIN_START,   /**< Start reading */
+	PLUGIN_STOP     /**< Stop reading */
 };
 
 /**
@@ -88,17 +89,17 @@ enum PLUGIN_STATUS {
  * \brief Structure for one data record with it's length and template
  */
 struct ipfix_record {
-    void *record;       /**< Data record */
-    uint16_t length;    /**< Record's length */
-    struct ipfix_template *templ;   /**< Record's template */
+	void *record;       /**< Data record */
+	uint16_t length;    /**< Record's length */
+	struct ipfix_template *templ;   /**< Record's template */
 };
 
 struct __attribute__((packed)) metadata {
-    struct ipfix_record record;     /**< IPFIX data record */
+	struct ipfix_record record;     /**< IPFIX data record */
 	uint16_t srcCountry;			/**< Source country code */
 	uint16_t dstCountry;			/**< Destination country code */
-    uint32_t srcAS;                 /**< Source AS */
-    uint32_t dstAS;                 /**< Destination AS */
+	uint32_t srcAS;                 /**< Source AS */
+	uint32_t dstAS;                 /**< Destination AS */
 	void **channels;				/**< Array of channels assigned to this record */
 	char srcName[32];
 	char dstName[32];
@@ -115,8 +116,8 @@ struct __attribute__((__packed__)) ipfix_message {
 	struct input_info                 *input_info;
 	/** Source status (new, opened, closed) */
 	enum SOURCE_STATUS                source_status;
-        enum PLUGIN_STATUS                plugin_status;
-        int plugin_id;
+	enum PLUGIN_STATUS                plugin_status;
+	int plugin_id;
 	/** Number of data records in message */
 	uint16_t 						  data_records_count;
 	/** Number of template records in message */
@@ -166,7 +167,7 @@ API int storage_init (char *params, void **config);
  * \return 0 on success, nonzero else.
  */
 API int store_packet (void *config, const struct ipfix_message *ipfix_msg,
-        const struct ipfix_template_mgr *template_mgr);
+		const struct ipfix_template_mgr *template_mgr);
 
 /**
  * \brief Announce willing to store currently processing data.

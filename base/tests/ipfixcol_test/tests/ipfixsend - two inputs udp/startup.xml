@@ -1,32 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
-    <collectingProcess>
-        <name>TCP collector</name>
-        <udpCollector>
-            <name>Listening port 4739</name>
-            <localPort>4739</localPort>
-            <localIPAddress>127.0.0.1</localIPAddress>
-        </udpCollector>
-        <exportingProcess>File writer ipfix</exportingProcess>
-    </collectingProcess>
+	<collectingProcess>
+		<name>TCP collector</name>
+		<udpCollector>
+			<name>Listening port 4739</name>
+			<localPort>4739</localPort>
+			<localIPAddress>127.0.0.1</localIPAddress>
+		</udpCollector>
+		<exportingProcess>File writer ipfix</exportingProcess>
+	</collectingProcess>
 
-    <exportingProcess>
-        <name>File writer ipfix</name>
-        <destination>
-            <observationDomainId>0</observationDomainId>
-            <name>File writer</name>
-            <fileWriter>
-                <fileFormat>ipfix</fileFormat>
-                <file>file:./out0.ipfix</file>
-            </fileWriter>
-        </destination>
-        <destination>
-            <observationDomainId>4</observationDomainId>
-            <name>File writer</name>
-            <fileWriter>
-                <fileFormat>ipfix</fileFormat>
-                <file>file:./out4.ipfix</file>
-            </fileWriter>
-        </destination>
-    </exportingProcess>
+	<exportingProcess>
+		<name>File writer ipfix</name>
+		<destination>
+			<observationDomainId>0</observationDomainId>
+			<name>File writer</name>
+			<fileWriter>
+				<fileFormat>ipfix</fileFormat>
+				<file>file:./out0.ipfix</file>
+			</fileWriter>
+		</destination>
+		<destination>
+			<observationDomainId>4</observationDomainId>
+			<name>File writer</name>
+			<fileWriter>
+				<fileFormat>ipfix</fileFormat>
+				<file>file:./out4.ipfix</file>
+			</fileWriter>
+		</destination>
+	</exportingProcess>
 </ipfix>

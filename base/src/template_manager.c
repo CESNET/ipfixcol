@@ -816,7 +816,7 @@ int template_contains_field(struct ipfix_template *templ, uint16_t field)
 		}
 
 		/* count total length, if we don't find element with variable length */
-		if (field_length == 65535) {
+		if (field_length == VAR_IE_LENGTH) {
 			variable_length = 1;
 		} else {
 			total_length += field_length;

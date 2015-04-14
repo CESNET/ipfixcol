@@ -38,7 +38,6 @@
  *
  */
 
-
 #include <ipfixcol.h>
 #include <stdio.h>
 #include <string.h>
@@ -53,13 +52,10 @@
 #include <unistd.h>
 #include <libtrap/trap.h>
 
-
 #include "unirec.h"
 
 // Global variables
 uint8_t INIT_COUNT = 0;  // Number of running instances of plugin
-
-
 
 /* NEEDED FOR DEBUG CODE */
 #include <arpa/inet.h>
@@ -74,20 +70,14 @@ time_t prev_time;
 time_t step_time = 3;
 uint32_t DEBUG_TIME_RECORD = 0;
 
-
-
 /* some auxiliary functions for extracting data of exact length */
 #define read8(ptr) (*((uint8_t *) (ptr)))
 #define read16(ptr) (*((uint16_t *) (ptr)))
 #define read32(ptr) (*((uint32_t *) (ptr)))
 #define read64(ptr) (*((uint64_t *) (ptr)))
 
-
 /** Identifier to MSG_* macros */
 static char *msg_module = "unirec";
-
-
-
 
 // Struct with information about module
 trap_module_info_t module_info = {
@@ -101,7 +91,6 @@ trap_module_info_t module_info = {
 	0, // Number of input interfaces
 	1, // Number of output interfaces
 };
-
 
 /**
  * \brief Works as memcpy but converts common data sizes to host byteorder
@@ -135,8 +124,6 @@ static void data_copy(char *dst, char *src, uint16_t length)
 				break;
 			}
 }
-
-
 
 /**
  * \brief Add `ODID` to every port in Trap interface specification 
@@ -204,9 +191,6 @@ static int init_trap_ifc(unirec_config *conf)
 	}
 	return 1;
 }
-
-
-
 
 /**
  * \brief Return an UniRec field that matches given IPFIX element
@@ -285,7 +269,7 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 		size_length = 0;
 
 		/* Handle variable length */
-		if (length == 65535) {
+		if (length == VAR_IE_LENGTH) {
 			/* Variable length */
 			length = read8(data_record+offset);
 			size_length = 1;
@@ -294,9 +278,6 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 				length = ntohs(read16(data_record+offset+size_length));
 				size_length = 3;
 			}
-			
-			
-
 		}
 
 		/* Copy the element value on match */
@@ -383,7 +364,6 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 					}
 				}
 			}
-
 		}
 
 		/* Skip enterprise element number if necessary*/
@@ -427,9 +407,6 @@ static void process_dynamic(ifc_config *conf)
 	}
 }
 
-
-
-
 /**
  * \brief Process all data sets in IPFIX message
  *
@@ -452,7 +429,6 @@ static int process_data_sets(const struct ipfix_message *ipfix_msg, unirec_confi
 	// Fill ODID
 	conf->odid = (uint16_t) ODID;
 	// ***********************************
-
 
 	data_set = ipfix_msg->data_couple[data_index].data_set;
 
@@ -545,7 +521,6 @@ static void destroy_field(unirecField *field)
 		free(field->value);
 	}
 
-
 	/* Free field */
 	free(field);
 }
@@ -587,8 +562,6 @@ static ipfixElement ipfix_from_string(char *ipfixToken)
 	return element;
 }
 
-
-
 /**
  * \brief Convert ipfix element id to unirec type for faster processing ipfix messages
  * \param ipfix_el Ipfix element structure.
@@ -622,8 +595,6 @@ static int8_t getUnirecFieldTypeFromIpfixId(ipfixElement ipfix_el)
 		return UNIREC_FIELD_OTHER;
 	}
 }
-
-
 
 /**
  * \brief Loads all available elements from configuration file
@@ -719,9 +690,6 @@ static unirecField *load_elements()
 	return fields;
 }
 
-
-
-
 /**
  * \brief Update field's length and ipfix elements from configuration fields list
  *
@@ -769,7 +737,6 @@ static int update_field(unirecField **currentField, unirecField *confFields, int
 	return 1 - updated;
 }
 
-
 /**
  * \brief Parse format of unirec template for every interface specified in startup.xml.
  * \param[in] conf Pointer to interface config structure
@@ -816,8 +783,6 @@ static int parse_format(unirec_config *conf_plugin)
 
 		// Used for static size overflow check
 		conf->bufferSize = conf->bufferAllocSize;
-
-
 
 		// ****** Split string to tokens ******
 		for (token = strtok_r(conf->format, ",", &state); token != NULL; token = strtok_r(NULL, ",", &state)) {
@@ -869,7 +834,6 @@ static int parse_format(unirec_config *conf_plugin)
 							conf->bufferSize += INIT_OUTPUT_BUFFER_SIZE;
 						}
 					}
-
 
 					break;
 				}
@@ -979,7 +943,6 @@ static int parse_format(unirec_config *conf_plugin)
 	/* Elements from UniRec configuration file are not needed anymore */
 	destroy_fields(confFields);
 
-
 	// DEBUG PRINT
 	/*
 	currentField = conf_plugin->fields;
@@ -992,8 +955,6 @@ static int parse_format(unirec_config *conf_plugin)
 		currentField = currentField->next;
 	}
 	*/
-
-
 
 	// ***** Create fash hash table from fields list *****
 	uint8_t round = 4;
@@ -1034,8 +995,6 @@ static int parse_format(unirec_config *conf_plugin)
 		}
 	}
 	conf_plugin->ht_fields = ht;
-
-
 
 	return 0;
 }
@@ -1078,9 +1037,6 @@ int storage_init (char *params, void **config)
 	uint64_t *ifc_buff_timeout = malloc(sizeof(uint64_t) * ifc_count_space);
 	trap_ifc_spec_t ifc_spec;
 
-
-
-
 	// Allocate memory for main config structure
 	conf = (unirec_config *) malloc(sizeof(unirec_config));
 	if (!conf) {
@@ -1088,9 +1044,7 @@ int storage_init (char *params, void **config)
 		return -1;
 	}
 	memset(conf, 0, sizeof(unirec_config));
-	
 
-	
 	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
 	if (doc == NULL) {
 		MSG_ERROR(msg_module, "Cannot parse plugin configuration");
@@ -1107,7 +1061,6 @@ int storage_init (char *params, void **config)
 		MSG_ERROR(msg_module, "root node != fileWriter");
 		goto err_xml;
 	}
-
 
 	/* Process the configuration elements */
 	cur = cur->xmlChildrenNode;
@@ -1340,7 +1293,6 @@ int store_now (const void *config)
 	if (config == NULL) {
 		return -1;
 	}
-
 
 	return 0;
 }

@@ -54,6 +54,9 @@
 /** IPFIX identification (NetFlow version 10) */
 #define IPFIX_VERSION 0x000a
 
+/** Length value signaling variable-length IE */
+#define VAR_IE_LENGTH 65535
+
 /* Path to ipfix-elements.xml file */
 API extern const char *ipfix_elements;
 

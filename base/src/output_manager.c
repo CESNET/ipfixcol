@@ -596,7 +596,18 @@ static void *statistics_thread(void* config)
 		if (xmlStrcmp(node->name, (const xmlChar *) "statisticsFile") == 0) {
 			char *stat_out_file_path = (char *) xmlNodeGetContent(node->xmlChildrenNode);
 			if (stat_out_file_path && strlen(stat_out_file_path) > 0) {
-				stat_out_file = fopen(stat_out_file_path, "w");
+				/* Consists of the following elements:
+				 *      strlen(stat_out_file_path) - length of supplied path
+				 *      1 - dot (.)
+				 *      5 - we assume that a PID has a maximum length of 5 digits
+				 *      1 - null-terminating character
+				 */
+				int max_len = strlen(stat_out_file_path) + 1 + 5 + 1;
+				char buf[max_len];
+
+				// snprintf ensures null-termination if (max_len != 0), which is always true
+				snprintf(buf, max_len, "%s.%d", stat_out_file_path, getpid());
+				stat_out_file = fopen(buf, "w");
 			} else {
 				MSG_ERROR(msg_module, "Configuration error: 'statisticsFile' node has no value");
 			}

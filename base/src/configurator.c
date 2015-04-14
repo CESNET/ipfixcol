@@ -1082,7 +1082,7 @@ void config_process_profiles(configurator *config)
 		/* Path are the same, compare timestamps */
 		struct stat st;
 		if (stat(profiles_file, &st) != 0) {
-			MSG_ERROR(msg_module, "Cannot process profiles file %s: %s", profiles_file, sys_errlist[errno]);
+			MSG_ERROR(msg_module, "Cannot process profiles file %s: %s", profiles_file, strerror(errno));
 			free(profiles_file);
 			return;
 		}
