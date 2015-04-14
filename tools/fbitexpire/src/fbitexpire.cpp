@@ -163,7 +163,6 @@ int main(int argc, char *argv[])
 	bool change{false}, force{false}, wmarkset{false}, size_set{false}, kill_daemon{false}, only_remove{false}, depth_set{false};
 	uint64_t watermark{0}, size{0};
 	std::string pipe{DEFAULT_PIPE};
-	signal(SIGINT, handle);
 	
 	while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
 		switch (c) {
@@ -349,6 +348,7 @@ int main(int argc, char *argv[])
 		scanner.run(&cleaner, size, watermark, multiple);
 		cleaner.run();
 		listener.run(&watcher, &scanner, &cleaner, &cv);
+		signal(SIGINT, handle);
 	} catch (InotifyException &e) {
 		MSG_ERROR(msg_module, e.GetMessage().c_str());
 		return 1;
