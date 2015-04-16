@@ -2605,7 +2605,7 @@
 	</element>
 	<element>
 		<enterprise>8057</enterprise>
-		<id>820</id>
+		<id>821</id>
 		<name>HTTPRequestRange</name>
 		<dataType>string</dataType>
 		<semantic></semantic>
