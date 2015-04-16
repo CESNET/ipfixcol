@@ -3,7 +3,7 @@
  * \author Michal Kozubik <kozubik.michal@gmail.com>
  * \brief Output Manger's functions
  *
- * Copyright (C) 2014 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

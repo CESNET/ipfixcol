@@ -6,7 +6,7 @@
  * Description: This file contains fbitdump plugin for displaying RTP payload
  *              (VOIP_RTP_CODEC) field in text format
  *
- * (C) CESNET 2014
+ * Copyright (C) 2015 CESNET
  */
 
 /**** INCLUDES and DEFINES *****/

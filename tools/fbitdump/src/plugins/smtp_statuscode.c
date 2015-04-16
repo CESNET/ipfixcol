@@ -6,7 +6,7 @@
  * Description: This file contains fbitdump plugin for displaying SMTP status
  *              code field in text format
  *
- * (C) CESNET 2014
+ * Copyright (C) 2015 CESNET
  */
 
 

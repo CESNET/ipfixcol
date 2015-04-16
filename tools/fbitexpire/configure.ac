@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011 CESNET
+# Copyright (c) 2015 CESNET
 #
 # LICENSE TERMS
 #

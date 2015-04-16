@@ -4,7 +4,7 @@
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief Intermediate Process
  *
- * Copyright (C) 2012 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions

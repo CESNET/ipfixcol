@@ -6,7 +6,7 @@
  * \date 2014
  */
 /*
- * Copyright (C) 2014 CESNET
+ * Copyright (C) 2015 CESNET
  *
  * LICENSE TERMS
  *

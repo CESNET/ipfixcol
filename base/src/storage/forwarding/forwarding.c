@@ -3,7 +3,7 @@
  * \author Michal Kozubik <michal.kozubik@cesnet.cz>
  * \brief Storage plugin that forwards data to network
  *
- * Copyright (C) 2014 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
