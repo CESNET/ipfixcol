@@ -2603,6 +2603,14 @@
 		<dataType>unsigned64</dataType>
 		<semantic></semantic>
 	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>820</id>
+		<name>HTTPRequestRange</name>
+		<dataType>string</dataType>
+		<semantic></semantic>
+	</element>
+
 
 	<element>
 		<enterprise>8057</enterprise>
