@@ -63,7 +63,7 @@ uint32_t dbslot::store_set(const struct ipfix_template *tmpl, const struct ipfix
 			}
 
 			/* variable length element */
-			if (length == 65535) {
+			if (length == VAR_IE_LENGTH) {
 				length = data_set->records[pos];
 				MSG_DEBUG(MSG_MODULE, "variable length element: length %d", length);
 				pos += 1;
@@ -236,7 +236,7 @@ void fb_table::set_template(const struct ipfix_template *tmpl, struct fastbit_pl
 			ie.enterprise = 0;
 		}
 
-		if (ie.length == 65535) {
+		if (ie.length == VAR_IE_LENGTH) {
 			ie.length = 0;
 		}
 

@@ -74,7 +74,7 @@ int parse_filter(filter_parser_data* pdata)
 	yylex_init(&(pdata->scanner));
 	YY_BUFFER_STATE bp = yy_scan_string(pdata->filter, pdata->scanner);
 	yy_switch_to_buffer(bp, pdata->scanner);
-    
+
 	/* Parse filter */
 	ret = yyparse(pdata);
 	
@@ -251,7 +251,10 @@ Profile *process_profile_xml(const char *filename)
 
 	try {
 		/* Iterate throught all profiles */
-		for (xmlNode *node = root; node; node = node->next) {
+		/* rootProfile must be considered as loop condition, since storage allocated
+		   by process_profile will be leaked otherwise
+		 */
+		for (xmlNode *node = root; node && !rootProfile; node = node->next) {
 			if (node->type != XML_ELEMENT_NODE) {
 				continue;
 			}
@@ -268,6 +271,7 @@ Profile *process_profile_xml(const char *filename)
 		return NULL;
 	}
 
+	close(fd);
 	xmlFreeDoc(doc);
 	free_parser_data(&pdata);
 
@@ -358,32 +362,32 @@ void **profile_match_data(void *profile, struct ipfix_message *msg, struct metad
 {
 	Profile *p = (Profile *) profile;
 
+	/* Fill data structure */
+	struct match_data data;
+	data.msg = msg;
+	data.mdata = mdata;
+	data.channels = NULL;
+	data.channelsCounter = 0;
+	data.channelsMax = 0;
+
 	/* Find matching channels */
-	std::vector<Channel *> channels{};
-	p->match(msg, mdata, channels);
-
-	/* No matching channels found */
-	if (channels.empty()) {
+	p->match(&data);
+	if (data.channels == NULL || data.channelsCounter == 0) {
 		return NULL;
 	}
 
-	/* Add terminating NULL */
-	channels.push_back(NULL);
-
-	/* Copy them to the C array */
-	void **c_channels = (void **) calloc(sizeof(void *), channels.size());
-
-	if (!c_channels) {
-		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
-		return NULL;
+	/* Add terminating NULL pointer */
+	if (data.channelsCounter == data.channelsMax) {
+		data.channels = (void**) realloc(data.channels, sizeof(void*) * (data.channelsCounter + 1));
+		if (data.channels == NULL) {
+			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+			return NULL;
+		}
 	}
 
-	for (uint16_t i = 0; i < channels.size(); ++i) {
-		c_channels[i] = (void *) channels[i];
-	}
+	data.channels[data.channelsCounter] = NULL;
 
-	/* Done */
-	return c_channels;
+	return data.channels;
 }
 
 /**

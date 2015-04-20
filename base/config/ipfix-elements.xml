@@ -2603,6 +2603,14 @@
 		<dataType>unsigned64</dataType>
 		<semantic></semantic>
 	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>821</id>
+		<name>HTTPRequestRange</name>
+		<dataType>string</dataType>
+		<semantic></semantic>
+	</element>
+
 
 	<element>
 		<enterprise>8057</enterprise>
@@ -2904,6 +2912,13 @@
                 <enterprise>39499</enterprise>
                 <id>52</id>
                 <name>sipRequestUri</name>
+                <dataType>string</dataType>
+                <semantic></semantic>
+        </element> 
+        <element>
+                <enterprise>39499</enterprise>
+                <id>53</id>
+                <name>sipCSeq</name>
                 <dataType>string</dataType>
                 <semantic></semantic>
         </element> 

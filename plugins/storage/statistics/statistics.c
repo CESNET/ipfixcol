@@ -3,7 +3,7 @@
  * \author Petr Velan <petr.velan@cesnet.cz>
  * \brief Plugin for calculating statistics from IPFIX data.
  *
- * Copyright (C) 2011 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -156,7 +156,7 @@ static uint16_t get_data_from_set(uint8_t *data_record, struct ipfix_template *t
 		}
 
 		/* skip the length of the value */
-		if (length != 65535) {
+		if (length != VAR_IE_LENGTH) {
 			offset += length;
 		} else {
 			/* variable length */

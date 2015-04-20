@@ -3,7 +3,7 @@ ACLOCAL_AMFLAGS = -I m4
 pluginsdir = $(datadir)/ipfixcol/plugins
 
 sofile = $(pluginsdir)/ipfixcol-statistics-output.so
-internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
+internalcfg = $(DESTDIR)$(sysconfdir)/ipfixcol/internalcfg.xml
 
 plugins_LTLIBRARIES = ipfixcol-statistics-output.la
 ipfixcol_statistics_output_la_LDFLAGS = -module -avoid-version -shared

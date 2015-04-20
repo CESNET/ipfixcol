@@ -43,9 +43,18 @@
 extern "C" {
 #include <ipfixcol.h>
 #include "filter.h"
+#include <string.h>
 }
 
 #include <stdexcept>
+
+struct match_data {
+	struct ipfix_message *msg;
+	struct metadata *mdata;
+	void **channels;
+	uint16_t channelsCounter;
+	uint16_t channelsMax;
+};
 
 /* ID types can by changed here */
 using profile_id_t = uint16_t;

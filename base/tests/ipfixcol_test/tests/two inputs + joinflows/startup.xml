@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
-
-    <collectingProcess>
+	<collectingProcess>
 		<name>TCP collector</name>
 		<fileReader>
 			<file>file:../ipfix_data/02-odid*.ipfix</file>
 		</fileReader>
 		<exportingProcess>File viewer</exportingProcess>
 	</collectingProcess>
-
 
 	<exportingProcess>
 		<name>File viewer</name>
@@ -21,11 +19,10 @@
 	</exportingProcess>
 	
 	<intermediatePlugins>
-	    <joinflows_ip>
-	      <join to="123">
-		<from>*</from>
-	      </join>
-	    </joinflows_ip>
+		<joinflows_ip>
+			<join to="123">
+				<from>*</from>
+			</join>
+		</joinflows_ip>
 	</intermediatePlugins>
-
 </ipfix>

@@ -3,7 +3,7 @@
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief fbitdump plugin for parsing/formating MAC address
  * 
- * Copyright (C) 2014 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  */
 
 #include <stdio.h>

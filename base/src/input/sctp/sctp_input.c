@@ -3,7 +3,7 @@
  * \author Michal Srb <michal.srb@cesnet.cz>
  * \brief SCTP input plugin for ipfixcol.
  *
- * Copyright (C) 2011 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,20 +66,15 @@
 #include "convert.h"
 
 #define DEFAULT_LISTEN_PORT_UNSECURE 4739
-#define DEFAULT_LISTEN_PORT_SECURE   4740   /* listen port when used with DTLS
-                                               (so never :)) */
+#define DEFAULT_LISTEN_PORT_SECURE   4740   /* listen port when used with DTLS */
 
 /* maximum input/output streams per association */
 #define INSTREAMS_PER_SOCKET         20
 #define OSTREAMS_PER_SOCKET          20
 
 #define DEFAULT_IPV6_LISTEN_ADDRESS  in6addr_any
-
 #define MAX_EPOLL_EVENTS             1
-
 #define LISTEN_BACKLOG               50
-
-#define IPFIX_MESSAGE_TOTAL_LENGTH   65535
 
 /* just guess, user will want to bind at most 20 addresses (per address family)
  * to listen socket. if this number is not enough the corresponding array 
@@ -87,8 +82,7 @@
 #define DEFAULT_NUMBER_OF_ADDRESSES 20
 
 /** Identifier to MSG_* macros */
-static char *msg_module = "sctp input";
-
+static char *msg_module = "SCTP input";
 
 /** SCTP input plugin identification for packet conversion from netflow to ipfix format */
 #define SCTP_INPUT_PLUGIN
@@ -108,18 +102,13 @@ struct input_info_node {
  * \brief plugin configuration structure
  */
 struct sctp_config {
-	uint16_t listen_port;                    /**< listen port (host byte 
-	                                          * order) */
-	int listen_socket;                  /**< listen socket */
-	int epollfd;                             /**< epoll file descriptor */
-	struct input_info_node *input_info_list; /**< linked list of input_info
-	                                          * structures */
-	pthread_mutex_t input_info_list_mutex;   /**< mutex for 
-	                                          * 'input_info_list' list */
-	pthread_t listen_thread;                 /**< id of the thread that 
-	                                          * listens for new associations */
+	uint16_t listen_port;                       /**< listen port (host byte order) */
+	int listen_socket;                          /**< listen socket */
+	int epollfd;                                /**< epoll file descriptor */
+	struct input_info_node *input_info_list;    /**< linked list of input_info structures */
+	pthread_mutex_t input_info_list_mutex;      /**< mutex for 'input_info_list' list */
+	pthread_t listen_thread;                    /**< id of the thread that listens for new associations */
 };
-
 
 /**
  * \brief Listen for incoming associations
@@ -142,7 +131,6 @@ void *listen_worker(void *data) {
 	int on = 1;                 /* ioctl() "turn on" flag */
 	
 	conf = data;
-
 	addrlen = sizeof(addr);
 	addr_ptr = (struct sockaddr *) &addr;
 
@@ -151,7 +139,7 @@ void *listen_worker(void *data) {
 		conn_socket = accept(conf->listen_socket, addr_ptr, &addrlen);
 		if (conn_socket == -1) {
 			if ((errno == ECONNABORTED) || (errno == EINTR) 
-			    || (errno == EINVAL)) {
+					|| (errno == EINVAL)) {
 				/* listen socket probably closed, user wants 
 				 * to quit ipfixcol */
 				pthread_testcancel();
@@ -167,8 +155,7 @@ void *listen_worker(void *data) {
 		/* input_info - fill out information about input */
 		node = (struct input_info_node *) calloc(1, sizeof(*node));
 		if (!node) {
-			MSG_ERROR(msg_module, "Not enough memory (%s:%d)",
-			                 __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 			goto err_assoc;
 		}
 
@@ -177,8 +164,7 @@ void *listen_worker(void *data) {
 		node->info.type = SOURCE_TYPE_SCTP;
 		node->info.l3_proto = AF_INET6;
 		/* source address */
-		memcpy(&(node->info.src_addr.ipv6), src_addr6, 
-		                        sizeof(node->info.src_addr.ipv6));
+		memcpy(&(node->info.src_addr.ipv6), src_addr6, sizeof(node->info.src_addr.ipv6));
 		node->info.src_port = ntohs(src_addr6->sin6_port);
 		node->info.dst_port = ntohs(((struct sockaddr_in6*) addr_ptr)->sin6_port);
 		node->socket = conn_socket;
@@ -200,10 +186,8 @@ void *listen_worker(void *data) {
 			goto err_assoc;
 		}
 
-		inet_ntop(AF_INET6, &(src_addr6->sin6_addr), printable_ip, 
-		                             INET6_ADDRSTRLEN);
-		MSG_NOTICE(msg_module, "New SCTP association from %s",
-		                             printable_ip);
+		inet_ntop(AF_INET6, &(src_addr6->sin6_addr), printable_ip, INET6_ADDRSTRLEN);
+		MSG_NOTICE(msg_module, "New SCTP association from %s", printable_ip);
 
 		continue;
 
@@ -224,7 +208,6 @@ err_assoc:
 	}
 }
 
-
 /**
  * \brief Plugin initialization
  *
@@ -238,6 +221,7 @@ int input_init(char *params, void **config)
 	xmlDocPtr doc;
 	xmlNodePtr cur;
 	xmlChar *listen_port_str = NULL;
+	char dst_addr[INET6_ADDRSTRLEN];
 	struct sctp_initmsg initmsg;
 	struct sctp_event_subscribe sctp_events;
 	int epollfd;
@@ -251,55 +235,43 @@ int input_init(char *params, void **config)
 	uint8_t port_set = 0;
 	int i;
 
-	struct sockaddr_in6 **sockaddr6_listen;  /* list of sockaddr6 structures
-	                                          * for use with sctp_bindx() */
-	uint8_t sockaddr6_listen_counter = 0;    /* counter of the sockaddr6 
-	                                          * structures */
-	uint8_t sockaddr6_listen_max;            /* maximum sockaddr6 structures
-	                                          * in array */
+	struct sockaddr_in6 **sockaddr6_listen;  /* list of sockaddr6 structures for use with sctp_bindx() */
+	uint8_t sockaddr6_listen_counter = 0;    /* counter of the sockaddr6 structures */
+	uint8_t sockaddr6_listen_max;            /* maximum sockaddr6 structures in array */
 
-	struct sockaddr_in **sockaddr_listen;    /* list of sockaddr structures
-	                                          * for use with sctp_bindx() */
-	uint8_t sockaddr_listen_counter = 0;     /* counter of the sockaddr 
-	                                          * structures */
-	uint8_t sockaddr_listen_max;             /* maximum sockaddr structures 
-	                                          * in array */
-
+	struct sockaddr_in **sockaddr_listen;    /* list of sockaddr structures for use with sctp_bindx() */
+	uint8_t sockaddr_listen_counter = 0;     /* counter of the sockaddr structures */
+	uint8_t sockaddr_listen_max;             /* maximum sockaddr structures in array */
 
 	if (params == NULL) {
-		MSG_ERROR(msg_module, "SCTP input plugin: No configuration data");
+		MSG_ERROR(msg_module, "No configuration data");
 		return -1;
 	}
 
 	/* allocate memory for config structure */
 	conf = (struct sctp_config *) malloc(sizeof(*conf));
 	if (!conf) {
-		MSG_ERROR(msg_module, "Not enough memory (%s:%d)",
-		                         __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
 	memset(conf, 0, sizeof(*conf));
 
 	/* array for IPv6 listen addresses. this array will later be used with 
-	 * sctp_bindx() (e.i. multi-homing support) */
+	 * sctp_bindx() for multi-homing support */
 	sockaddr6_listen = (struct sockaddr_in6 **) 
-	      malloc(DEFAULT_NUMBER_OF_ADDRESSES * sizeof(*(sockaddr6_listen)));
+	malloc(DEFAULT_NUMBER_OF_ADDRESSES * sizeof(*(sockaddr6_listen)));
 	if (sockaddr6_listen == NULL) {
-		MSG_ERROR(msg_module, "Not enough memory (%s:%d)",
-		                        __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		goto err_sockaddr6;
 	}
-	memset(sockaddr6_listen, 0, 
-	     sizeof(DEFAULT_NUMBER_OF_ADDRESSES * sizeof(*(sockaddr6_listen))));
+	memset(sockaddr6_listen, 0, sizeof(DEFAULT_NUMBER_OF_ADDRESSES * sizeof(*(sockaddr6_listen))));
 	sockaddr6_listen_max = DEFAULT_NUMBER_OF_ADDRESSES;
 
 	/* array for IPv4 listen addresses. this array will later be used with 
-	 * sctp_bindx() (e.i. multi-homing support) */
-	sockaddr_listen = (struct sockaddr_in **) 
-	       calloc(DEFAULT_NUMBER_OF_ADDRESSES, sizeof(*(sockaddr_listen)));
+	 * sctp_bindx() for multi-homing support */
+	sockaddr_listen = (struct sockaddr_in **) calloc(DEFAULT_NUMBER_OF_ADDRESSES, sizeof(*(sockaddr_listen)));
 	if (sockaddr_listen == NULL) {
-		MSG_ERROR(msg_module, "Not enough memory (%s:%d)",
-		                        __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		goto err_sockaddr;
 	}
 	sockaddr_listen_max = DEFAULT_NUMBER_OF_ADDRESSES;
@@ -307,8 +279,7 @@ int input_init(char *params, void **config)
 	/* try to parse XML configuration */
 	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
 	if (doc == NULL) {
-		MSG_ERROR(msg_module, "SCTP input plugin configuration not "
-		                        "parsed successfully");
+		MSG_ERROR(msg_module, "Configuration not parsed successfully");
 		goto err_xml;
 	}
 
@@ -319,18 +290,15 @@ int input_init(char *params, void **config)
 	}
 
 	if (xmlStrcmp(cur->name, (const xmlChar *) "sctpCollector")) {
-		MSG_ERROR(msg_module, "SCTP input plugin: Bad configuration "
-		                        "(root node != sctpCollector)");
+		MSG_ERROR(msg_module, "Bad configuration (root node != sctpCollector)");
 		goto err_xml;
 	}
 
 	/* here we are, this is the place where actual plugin configuration 
 	 * starts */
 	cur = cur->xmlChildrenNode;
-
 	while (cur != NULL) {
 		if ((!xmlStrcmp(cur->name, (const xmlChar *) "localIPAddress"))) {
-
 			/* user wants to listen on this IP address */
 			ip_str = (char *) xmlNodeListGetString(doc, cur->children, 1);
 
@@ -345,17 +313,15 @@ int input_init(char *params, void **config)
 
 			sockaddr = NULL;
 			sockaddr6 = NULL;
+
 			/* prepare new sockaddr structure for further processing
 			 * with sctp_bindx() */
 			switch (ip_family) {
-
-			/* given address is IPv6 address */
 			case (AF_INET):
 				/* add new IPv4 address */
 				sockaddr = (struct sockaddr_in *) malloc(sizeof(*sockaddr));
 				if (!sockaddr) {
-					MSG_ERROR(msg_module, "Not enough "
-					   "memory (%s:%d)", __FILE__, __LINE__);
+					MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 					goto err_sockaddr_case;
 				}
 				memset(sockaddr, 0, sizeof(*sockaddr));
@@ -365,13 +331,12 @@ int input_init(char *params, void **config)
 				ret = inet_pton(AF_INET, ip_str, &(sockaddr->sin_addr));
 				if (ret != 1) {
 					/* invalid address */
-					MSG_ERROR(msg_module, "SCTP init: "
-					  "%s is not valid IP address", ip_str);
+					MSG_ERROR(msg_module, "Init: %s is not a valid IP address", ip_str);
 					goto err_sockaddr_case;
 				}
+
 				/* note we don't know yet what the desired port
 				 * is, so we will fill it later */
-
 				if (sockaddr_listen_counter >= sockaddr_listen_max) {
 					/* oops, we need to realloc array that 
 					 * holds these addresses */
@@ -382,9 +347,8 @@ int input_init(char *params, void **config)
 						/* realloc fails, discard this 
 						 * address and continue */
 						sockaddr_listen = sockaddr_listen_old;
-						MSG_ERROR(msg_module, "Realloc fails (%s:%d)", __FILE__, __LINE__);
-						MSG_ERROR(msg_module, "Address %s cannot be added "
-						                          "- system error", ip_str);
+						MSG_ERROR(msg_module, "Realloc failed (%s:%d)", __FILE__, __LINE__);
+						MSG_ERROR(msg_module, "Address %s cannot be added - system error", ip_str);
 						goto err_sockaddr_case;
 					}
 
@@ -394,8 +358,6 @@ int input_init(char *params, void **config)
 				/* everything is ok, add this new address */
 				sockaddr_listen[sockaddr_listen_counter] = sockaddr;
 				sockaddr_listen_counter += 1;
-				
-				MSG_NOTICE(msg_module, "SCTP listen address: %s", ip_str);
 
 				break;
 
@@ -404,11 +366,11 @@ err_sockaddr_case:
 				if (sockaddr != NULL) {
 					free(sockaddr);
 				}
+
 				xmlFree(ip_str);
 				break;
 			/* end of case(AF_INET) */
 
-			/* given address is IPv6 address */
 			case (AF_INET6):
 				/* add new IPv6 address */
 				sockaddr6 = (struct sockaddr_in6 *) malloc(sizeof(*sockaddr6));
@@ -423,37 +385,31 @@ err_sockaddr_case:
 				ret = inet_pton(AF_INET6, ip_str, &(sockaddr6->sin6_addr));
 				if (ret != 1) {
 					/* invalid address */
-					MSG_ERROR(msg_module, "SCTP init: %s is not valid IP "
-					                          "address", ip_str);
+					MSG_ERROR(msg_module, "Init: %s is not valid IP address", ip_str);
 					goto err_sockaddr6_case;
 				}
+
 				/* note we don't know yet what the desired port
 				 * is, so we will fill it later */
-
 				if (sockaddr6_listen_counter >= sockaddr6_listen_max) {
-					/* oops, we need to realloc array that 
-					 * holds these addresses */
+					/* oops, we need to realloc array that holds these addresses */
 					sockaddr_listen_old = (struct sockaddr_in **) sockaddr6_listen;
 					sockaddr6_listen = realloc(sockaddr6_listen, sockaddr6_listen_max * 2);
 					
 					if (sockaddr6_listen == NULL) {
-						/* realloc fails, discard this 
-						 * address and continue */
+						/* realloc fails; discard this address and continue */
 						sockaddr6_listen = (struct sockaddr_in6 **) sockaddr_listen_old;
-						MSG_ERROR(msg_module, "Realloc fails (%s:%d)", __FILE__, __LINE__);
-						MSG_ERROR(msg_module, "Address %s cannot be added "
-						                          "- system error", ip_str);
+						MSG_ERROR(msg_module, "Realloc failed (%s:%d)", __FILE__, __LINE__);
+						MSG_ERROR(msg_module, "Address %s cannot be added - system error", ip_str);
 						goto err_sockaddr6_case;
 					}
 					
 					sockaddr6_listen_max *= 2;
 				}
 
-				/* everything is ok, add this new address */
+				/* everything is ok; add this new address */
 				sockaddr6_listen[sockaddr6_listen_counter] = sockaddr6;
 				sockaddr6_listen_counter += 1;
-				
-				MSG_NOTICE(msg_module, "SCTP listen address: %s", ip_str);
 
 				break;
 
@@ -462,33 +418,30 @@ err_sockaddr6_case:
 				if (sockaddr6 != NULL) {
 					free(sockaddr6);
 				}
+
 				xmlFree(ip_str);
 				break;
 			/* end of case(AF_INET6) */
 			
 			default:
-				/* unknown address family, we should never 
-				 * reach this point */
-				MSG_ERROR(msg_module, "Unknown address family, this should never happen (%s, %d)", __FILE__, __LINE__);
+				/* unknown address family; this point should never be reached */
+				MSG_ERROR(msg_module, "Unknown address family; this should never happen (%s, %d)", __FILE__, __LINE__);
 				break;
 			} /* switch */
 
-
 			xmlFree(ip_str);
 		}
-
 
 		if ((!xmlStrcmp(cur->name, (const xmlChar *) "localPort"))) {
 			/* user specified (another) listen port */
 			if (port_set != 0) {
 				/* damn, port is specified multiple times. this 
 				 * might be a bug in configuration */
-				MSG_WARNING(msg_module, "SCTP input plugin: Warning, listen port is specified multiple times in configuration file");
+				MSG_WARNING(msg_module, "Listen port is specified multiple times in configuration file");
 			}
 			listen_port_str = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
 
 			conf->listen_port = atoi((char *) listen_port_str);
-			MSG_NOTICE(msg_module, "SCTP listen port: %s", (char *) listen_port_str);
 			port_set = 1;
 
 			xmlFree(listen_port_str);
@@ -497,20 +450,18 @@ err_sockaddr6_case:
 		cur = cur->next;
 	}
 
-
 	/* use default address if user doesn't specified any */
 	if ((sockaddr6_listen_counter == 0) && (sockaddr_listen_counter == 0)) {
 		sockaddr6 = (struct sockaddr_in6 *) calloc(1, sizeof(*sockaddr6));
 		if (!sockaddr6) {
-			MSG_ERROR(msg_module, "Not enough memory (%s:%d)",
-			                        __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 			goto err;
 		}
 
 		sockaddr6->sin6_family = AF_INET6;
+
 		/* listen on any IPv6 address */
-		memcpy(&(sockaddr6->sin6_addr), &(DEFAULT_IPV6_LISTEN_ADDRESS), 
-		                           sizeof(DEFAULT_IPV6_LISTEN_ADDRESS));
+		memcpy(&(sockaddr6->sin6_addr), &(DEFAULT_IPV6_LISTEN_ADDRESS), sizeof(DEFAULT_IPV6_LISTEN_ADDRESS));
 		sockaddr6_listen[0] = sockaddr6;
 		sockaddr6_listen_counter += 1;
 	}
@@ -530,15 +481,16 @@ err_sockaddr6_case:
 		sockaddr6_listen[i]->sin6_port = htons(conf->listen_port);
 	}
 
-
 	/* get socket. SOCK_STREAM creates one-to-one style socket. in opposite
-	 * SOCK_SEQPACKET would create one-to-many style socket. for our 
+	 * SOCK_SEQPACKET would create one-to-many style socket. For our 
 	 * purpose, one-to-one is just fine */
 	conf->listen_socket = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP);
-	/* Retry with IPv4 when the implementation does not support the specified address family. */
+
+	/* Retry with IPv4 when the implementation does not support the specified address family */
 	if (conf->listen_socket == (uint16_t) -1 && errno == EAFNOSUPPORT) {
 		conf->listen_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
 	}
+
 	/* Check result */
 	if (conf->listen_socket == -1) {
 		MSG_ERROR(msg_module, "socket() - %s", strerror(errno));
@@ -547,8 +499,7 @@ err_sockaddr6_case:
 
 	/* bind IPv6 listen addresses */
 	for (i = 0; i < sockaddr6_listen_counter; i++) {
-		ret = sctp_bindx(conf->listen_socket, 
-		                 (struct sockaddr *) sockaddr6_listen[i], 1, SCTP_BINDX_ADD_ADDR);
+		ret = sctp_bindx(conf->listen_socket, (struct sockaddr *) sockaddr6_listen[i], 1, SCTP_BINDX_ADD_ADDR);
 		if (ret == -1) {
 			MSG_ERROR(msg_module, "sctp_bindx() - %s", strerror(errno));
 		}
@@ -575,10 +526,12 @@ err_sockaddr6_case:
 
 	/* subscribe to some SCTP events */
 	memset(&sctp_events, 0, sizeof(sctp_events));
+
 	/* this allows us to determine the stream number on which message arrived */
-	sctp_events.sctp_data_io_event = 1; 
+	sctp_events.sctp_data_io_event = 1;
+
 	/* now we know, that specific association was closed */
-	sctp_events.sctp_shutdown_event = 1; 
+	sctp_events.sctp_shutdown_event = 1;
 
 	ret = setsockopt(conf->listen_socket, IPPROTO_SCTP, SCTP_EVENTS, &sctp_events, sizeof(sctp_events));
 	if (ret == -1) {
@@ -600,9 +553,6 @@ err_sockaddr6_case:
 		goto err_listen;
 	}
 
-	MSG_NOTICE(msg_module, "SCTP input plugin listening for incoming "
-	                          "associations");
-
 	conf->epollfd = epollfd;
 
 	/* create listen worker */
@@ -613,14 +563,27 @@ err_sockaddr6_case:
 	}
 
 	/* allocate memory for templates */
-	if (convert_init(SCTP_PLUGIN, IPFIX_MESSAGE_TOTAL_LENGTH) != 0) {
-		MSG_ERROR(msg_module, "Malloc() for templates failed!");
+	if (convert_init(SCTP_PLUGIN, MSG_MAX_LENGTH) != 0) {
+		MSG_ERROR(msg_module, "malloc() for templates failed!");
 		goto err_listen;
 	}
 
-	/* do some cleanup */
+	/* print info */
+	if (sockaddr6_listen_counter > 0) {
+		inet_ntop(AF_INET6, &(sockaddr6_listen[0]->sin6_addr), dst_addr, INET6_ADDRSTRLEN);
+	} else {
+		inet_ntop(AF_INET, &(sockaddr_listen[0]->sin_addr), dst_addr, INET6_ADDRSTRLEN);
+	}
+	
+	MSG_NOTICE(msg_module, "Input plugin listening on %s, port %u", dst_addr, conf->listen_port);
 
-	/* we don't need this xml anymore */
+	/* pass general information to the collector */
+	*config = (void*) conf;
+
+	/* normal exit, all OK */
+	MSG_NOTICE(msg_module, "Plugin initialization completed successfully");
+
+	/* do some cleanup */
 	xmlFreeDoc(doc);
 	xmlCleanupParser();
 
@@ -634,11 +597,7 @@ err_sockaddr6_case:
 	}
 	free(sockaddr6_listen);
 
-
-	*config = conf;
-
 	return 0;
-
 
 /* error handling */
 err_listen:
@@ -699,8 +658,7 @@ wait_for_data:
 			goto out;
 		}
 	} else if (nfds == 0) {
-		MSG_ERROR(msg_module, "epoll_wait() wakes up, but no "
-		                  "descriptors are ready- %s", strerror(errno));
+		MSG_ERROR(msg_module, "epoll_wait() wakes up, but no descriptors are ready - %s", strerror(errno));
 		goto wait_for_data;
 	}
 
@@ -720,10 +678,7 @@ wait_for_data:
 	}
 	if (info_node == NULL) {
 		/* no such input_info (!?) */
-		MSG_ERROR(msg_module, "Something is horribly wrong. "
-		                          "Missing input_info for SCTP "
-		                          "association. This should never "
-		                          "happen");
+		MSG_ERROR(msg_module, "Something is horribly wrong; missing input_info for SCTP association");
 		ret = INPUT_ERROR;
 		goto out;
 	}
@@ -731,10 +686,9 @@ wait_for_data:
 	/* allocate memory for message, if needed */
 	if (*packet == NULL) {
 		/* TODO - we can check how big the message is from its header */
-		*packet = (char *) malloc(IPFIX_MESSAGE_TOTAL_LENGTH);
+		*packet = (char *) malloc(MSG_MAX_LENGTH);
 		if (*packet == NULL) {
-			MSG_ERROR(msg_module, "Not enough memory (%s:%d)",
-			                          __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 			ret = INPUT_ERROR;
 			goto out;
 		}
@@ -743,8 +697,7 @@ wait_for_data:
 
 	/* new message */
 	flags = 0;
-	msg_length = sctp_recvmsg(socket, *packet, IPFIX_MESSAGE_TOTAL_LENGTH, 
-	                                            NULL, NULL, &sinfo, &flags);
+	msg_length = sctp_recvmsg(socket, *packet, MSG_MAX_LENGTH, NULL, NULL, &sinfo, &flags);
 	if (msg_length == -1) {
 		MSG_ERROR(msg_module, "sctp_recvmsg()");
 		ret = INPUT_ERROR;
@@ -752,7 +705,7 @@ wait_for_data:
 	}
 
 	if (msg_length < IPFIX_HEADER_LENGTH) {
-		MSG_ERROR(msg_module, "Packet header is incomplete, skipping");
+		MSG_ERROR(msg_module, "Packet header is incomplete; skipping message...", msg_length);
 		return INPUT_INTR;
 	}
 
@@ -763,7 +716,7 @@ wait_for_data:
 
 	/* Check if lengths are the same */
 	if (msg_length < htons(((struct ipfix_header *)*packet)->length)) {
-		MSG_ERROR(msg_module, "Packet is incomplete, skipping");
+		MSG_ERROR(msg_module, "Packet is incomplete; skipping message...");
 		return INPUT_INTR;
 	} else if (msg_length > htons(((struct ipfix_header *)*packet)->length)) {
 		msg_length = htons(((struct ipfix_header *)*packet)->length);
@@ -795,9 +748,7 @@ wait_for_data:
 			ret = epoll_ctl(conf->epollfd, EPOLL_CTL_DEL, socket, NULL);
 			if (ret == -1) {
 				/* damn... what can i do */
-				MSG_ERROR(msg_module, "epoll_ctl(...,"
-				"EPOLL_CTL_DEL,...) error (%s:%d)", __FILE__,
-				__LINE__);
+				MSG_ERROR(msg_module, "epoll_ctl(...,EPOLL_CTL_DEL,...) error (%s:%d)", __FILE__, __LINE__);
 			}
 
 			/* no more data from this exporter */
@@ -805,13 +756,11 @@ wait_for_data:
 			*source_status = SOURCE_STATUS_CLOSED;
 			return INPUT_CLOSED;
 		} else {
-			MSG_WARNING(msg_module, "Unsupported SCTP event "
-			                          "occured");
+			MSG_WARNING(msg_module, "Unsupported SCTP event occured");
 			goto wait_for_data;
 		}
 	} else if (!(flags & MSG_EOR)) {
-		MSG_WARNING(msg_module, "SCTP input plugin: message is too "
-		                          "long");
+		MSG_WARNING(msg_module, "SCTP input plugin: message is too long");
 	}
 
 	/* Set source status */
@@ -832,7 +781,6 @@ out:
 
 	return ret;
 }
-
 
 /**
  * \brief Plugin destructor
@@ -866,8 +814,7 @@ int input_close(void **config)
 		/* graceful association shutdown */
 		ret = close(node->socket);
 		if (ret == -1) {
-			MSG_ERROR(msg_module, "Error while closing "
-			                          "association");
+			MSG_ERROR(msg_module, "Error while closing association");
 		}
 		
 		/* free input_info structure for this association */
@@ -884,19 +831,18 @@ int input_close(void **config)
 
 /**@}*/
 
-
 #ifdef SCTP_INPUT_PLUGIN_SELF_DEBUG
 /* self-DEBUG section. everything here can be safely ignored or deleted */
 /* it's here mainly because of valgrind */
 
 static char
 *xml_configuration1 = "<sctpCollector>\n"
-                         "<name>Listening port 4739</name>\n"
-                         "<localPort>100</localPort>\n"
-                         "<localPort>4739</localPort>\n"
-                         "<localIPAddress>127.0.0.1</localIPAddress>\n"
-                         "<localIPAddress>::1</localIPAddress>\n"
-                      "</sctpCollector>";
+		"<name>Listening port 4739</name>\n"
+		"<localPort>100</localPort>\n"
+		"<localPort>4739</localPort>\n"
+		"<localIPAddress>127.0.0.1</localIPAddress>\n"
+		"<localIPAddress>::1</localIPAddress>\n"
+	"</sctpCollector>";
 
 #define P(msg) fprintf(stderr, "DEBUG: %s\n", (msg));
 

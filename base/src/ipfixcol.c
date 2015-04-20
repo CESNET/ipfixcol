@@ -3,7 +3,7 @@
  * \author Radek Krejci <rkrejci@cesnet.cz>
  * \brief Main body of the ipfixcol
  *
- * Copyright (C) 2011 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -245,6 +245,17 @@ int main (int argc, char* argv[])
 	 */LIBXML_TEST_VERSION
 	xmlIndentTreeOutput = 1;
 
+	/* we daemonize early to get syslog redirection for all messages */
+	if (daemonize) {
+		closelog();
+		MSG_SYSLOG_INIT(PACKAGE);
+		
+		/* and send all following messages to the syslog */
+		if (daemon (1, 0)) {
+			MSG_ERROR(msg_module, "%s", strerror(errno));
+		}
+	}
+
 	/* check config file */
 	if (config_file == NULL) {
 		/* and use default if not specified */
@@ -306,16 +317,6 @@ int main (int argc, char* argv[])
 
 	/* XML cleanup */
 	xmlXPathFreeObject(collectors);
-
-	/* daemonize */
-	if (daemonize) {
-		closelog();
-		MSG_SYSLOG_INIT(PACKAGE);
-		/* and send all following messages to the syslog */
-		if (daemon (1, 0)) {
-			MSG_ERROR(msg_module, "%s", strerror(errno));
-		}
-	}
 	
 	/*
 	 * create Template Manager
@@ -377,11 +378,13 @@ int main (int argc, char* argv[])
 				free(packet);
 				packet = NULL;
 			}
+
 			/* if input plugin is file reader, end collector */
 			if (input_info->type == SOURCE_TYPE_IPFIX_FILE) {
 				terminating = 1;
 			}
 		}
+
 		/* distribute data to the particular Data Manager for further processing */
 		preprocessor_parse_msg (packet, get_retval, input_info, source_status);
 		source_status = SOURCE_STATUS_OPENED;

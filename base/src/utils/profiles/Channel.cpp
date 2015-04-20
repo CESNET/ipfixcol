@@ -108,7 +108,7 @@ void Channel::setSources(std::string sources)
 		
 		/* Process data from all channels */
 		if (channel == "*") {
-			for (auto ch: m_profile->getParent()->getChannels()) {
+			for (auto& ch: m_profile->getParent()->getChannels()) {
 				ch->addListener(this);
 			}
 			continue;
@@ -116,7 +116,7 @@ void Channel::setSources(std::string sources)
 		
 		/* Find channel in parent profile */
 		Channel *src{};
-		for (auto ch: m_profile->getParent()->getChannels()) {
+		for (auto& ch: m_profile->getParent()->getChannels()) {
 			if (ch->getName() == channel) {
 				src = ch;
 				break;
@@ -206,7 +206,43 @@ void Channel::match(ipfix_message* msg, metadata* mdata, std::vector<Channel *>&
 	channels.push_back(this);
 	
 	/* Process all listeners */
-	for (auto child: m_listeners) {
+	for (auto& child: m_listeners) {
 		child->match(msg, mdata, channels);
+	}
+}
+
+void Channel::match(struct match_data *data)
+{
+	if (m_filter && !filter_fits_node(m_filter->root, data->msg, &(data->mdata->record))) {
+		return;
+	}
+
+	if (data->channelsMax == 0) {
+		data->channelsMax = 5;
+		data->channels = (void**) calloc(data->channelsMax, sizeof(void*));
+		if (data->channels == NULL) {
+			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+			return;
+		}
+	} else if (data->channelsCounter == data->channelsMax) {
+		data->channels = (void**) realloc(data->channels, sizeof(void*) * data->channelsMax * 2);
+		if (data->channels == NULL) {
+			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+			return;
+		}
+
+		memset(&(data->channels[data->channelsMax]), 0, sizeof(void*) * data->channelsMax);
+
+		data->channelsMax *= 2;
+	}
+
+	data->channels[data->channelsCounter++] = (void*) this;
+
+
+	for (auto& child: m_listeners) {
+		child->match(data);
+		if (data->channels == NULL) {
+			return;
+		}
 	}
 }

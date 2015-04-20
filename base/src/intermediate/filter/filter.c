@@ -3,7 +3,7 @@
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief Intermediate plugin for IPFIX data filtering
  *
- * Copyright (C) 2014 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -386,7 +386,18 @@ bool filter_fits_value(struct filter_treenode *node, uint8_t *rec, struct ipfix_
 		return node->op == OP_NOT_EQUAL;
 	}
 
-	int cmpres = memcmp(recdata, node->value->value, datalen);
+	/*
+	 * Compare values
+	 * values are in network byte order
+	 * node value can be on more bytes than value in data
+	 * e.g:
+	 * value in data is 4 bytes long: 0 0 0 5
+	 * value in node is 8 bytes long: 0 0 0 0 0 0 0 8
+	 *										  ^
+	 * => node value must be offsetted by length difference
+	 * => &(nodeValue[nodeValueLength - dataValueLength]) => &(nodeValue[8 - 4])
+	 */
+	int cmpres = memcmp(recdata, &(node->value->value[node->value->length - datalen]), datalen);
 
 	/* Compare values according to op */
 	/* memcmp return 0 if operands are equal, so it must be negated for OP_EQUAL */
@@ -430,6 +441,11 @@ bool filter_fits_string(struct filter_treenode *node, uint8_t *rec, struct ipfix
 
 	/* recdata is string without terminating '\0' - append it */
 	char *data = malloc(datalen + 1);
+	if (!data) {
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		return result; // result == false
+	}
+
 	memcpy(data, recdata, datalen);
 	data[datalen] = '\0';
 
@@ -493,6 +509,11 @@ bool filter_fits_regex(struct filter_treenode *node, uint8_t *rec, struct ipfix_
 
 	/* recdata is string without terminating '\0' - append it */
 	char *data = malloc(datalen + 1);
+	if (!data) {
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		return result; // result == false
+	}
+
 	memcpy(data, recdata, datalen);
 	data[datalen] = '\0';
 
@@ -618,9 +639,19 @@ uint32_t filter_profile_update_input_info(struct filter_profile *profile, struct
 	if (profile->input_info == NULL) {
 		if (input_info->type == SOURCE_TYPE_IPFIX_FILE) {
 			profile->input_info = calloc(1, sizeof(struct input_info_file));
+			if (!profile->input_info) {
+				MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+				return 0;
+			}
+
 			memcpy(profile->input_info, input_info, sizeof(struct input_info_file));
 		} else {
 			profile->input_info = calloc(1, sizeof(struct input_info_network));
+			if (!profile->input_info) {
+				MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+				return 0;
+			}
+			
 			memcpy(profile->input_info, input_info, sizeof(struct input_info_network));
 		}
 		
@@ -641,7 +672,7 @@ void filter_copy_metainfo(struct ipfix_message *src, struct ipfix_message *dst)
 	dst->live_profile = src->live_profile;
 	dst->plugin_id = src->plugin_id;
 	dst->plugin_status = src->plugin_status;
-	dst->source_status = dst->source_status;
+	dst->source_status = src->source_status;
 	dst->templ_records_count = src->templ_records_count;
 	dst->opt_templ_records_count = src->opt_templ_records_count;
 }
@@ -926,7 +957,12 @@ uint8_t *filter_num_to_ptr(uint8_t *data, int length)
 		return NULL;
 	}
 
-	memcpy(value, data, length);
+	/* Convert value to network byte order */
+	uint16_t i;
+	for (i = 0; i < length; ++i) {
+		value[length - i - 1] = data[i];
+	}
+
 	return value;
 }
 
@@ -938,7 +974,7 @@ uint8_t *filter_num_to_ptr(uint8_t *data, int length)
  */
 struct filter_value *filter_parse_number(char *number)
 {
-	struct filter_value *val = malloc(sizeof(struct filter_value));
+	struct filter_value *val = calloc(1, sizeof(struct filter_value));
 	if (!val) {
 		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		return NULL;

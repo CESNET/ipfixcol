@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
-
-    <collectingProcess>
+	<collectingProcess>
 		<name>TCP collector</name>
 		<fileReader>
 			<file>file:../ipfix_data/03-odid0-*.ipfix</file>
 		</fileReader>
 		<exportingProcess>File writer ipfix</exportingProcess>
 	</collectingProcess>
-
 
 	<exportingProcess>
 		<name>File writer ipfix</name>
@@ -21,29 +19,26 @@
 			</fileWriter>
 		</destination>
 		<destination>
-                        <observationDomainId>6</observationDomainId>
-                        <name>File writer6</name>
-                        <fileWriter>
-                                <fileFormat>ipfix</fileFormat>
-                                <file>file:./out6.ipfix</file>
-                        </fileWriter>
-                </destination>
-
+			<observationDomainId>6</observationDomainId>
+			<name>File writer6</name>
+			<fileWriter>
+					<fileFormat>ipfix</fileFormat>
+					<file>file:./out6.ipfix</file>
+			</fileWriter>
+		</destination>
 	</exportingProcess>
-
 	
 	<intermediatePlugins>
-	  <filter>
-	    <profile to="4">
-	      <from>0</from>
-	      <filterString>ipVersion = 4</filterString>
-	    </profile>
-	    <profile to="6">
-	      <from>0</from>
-	      <filterString>ipVersion != 4</filterString>
-	    </profile>
-	    <removeOriginal>true</removeOriginal>
-	  </filter>
+		<filter>
+			<profile to="4">
+				<from>0</from>
+				<filterString>ipVersion = 4</filterString>
+			</profile>
+			<profile to="6">
+				<from>0</from>
+				<filterString>ipVersion != 4</filterString>
+			</profile>
+		<removeOriginal>true</removeOriginal>
+		</filter>
 	</intermediatePlugins>
-
 </ipfix>

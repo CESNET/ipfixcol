@@ -3,7 +3,7 @@
  * \author Michal Kozubik <michal.kozubik@cesnet.cz>
  * \brief Storage plugin that forwards data to network
  *
- * Copyright (C) 2014 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -895,7 +895,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	forwarding *conf = (forwarding *) config;
 	uint16_t length = 0, i, setlen;
 
-	uint8_t *new_msg = malloc(65535);
+	uint8_t *new_msg = malloc(MSG_MAX_LENGTH);
 	if (!new_msg) {
 		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		return 1;

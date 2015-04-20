@@ -3,7 +3,7 @@
 # ipfixcol Test Tool
 # author Michal Kozubik <kozubik@cesnet.cz>
 # 
-# Copyright (C) 2014 CESNET, z.s.p.o.
+# Copyright (C) 2015 CESNET, z.s.p.o.
 # 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -37,12 +37,17 @@
 #
 
 CREATE_BASE="$PWD"
+CONFIGS_DIR="configs"
 INTERNAL_ORIG="../../config/internalcfg.xml"
-INTERNAL="configs/internalcfg.xml"
+INTERNAL="$CONFIGS_DIR/internalcfg.xml"
 
 if [ ! -f $INTERNAL_ORIG ]; then
 	echo "Missing $INTERNAL_ORIG"
 	exit 1
+fi
+
+if [ ! -d $CONFIGS_DIR ]; then
+	mkdir $CONFIGS_DIR
 fi
 
 cp $INTERNAL_ORIG $INTERNAL

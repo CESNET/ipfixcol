@@ -3,7 +3,7 @@
  * \author Petr Kramolis <kramolis@cesnet.cz>
  * \brief ipficol storage plugin based on fastbit
  *
- * Copyright (C) 2011 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -432,7 +432,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 			table = templates->find(template_id);
 		} else {
 			/* Check template time. On reception of a new template it is crucial to rewrite the old one. */
-			if (ipfix_msg->data_couple[i].data_template->first_transmission > table->second->get_last_transmission()) {
+			if (ipfix_msg->data_couple[i].data_template->first_transmission > table->second->get_first_transmission()) {
 				MSG_DEBUG(MSG_MODULE,"Received new template with already used Template ID: %hu", template_id);
 				//std::cout << "Template " << template_id << " time: " << ctime(&ipfix_msg->data_couple[i].data_template->last_transmission) << std::endl;
 

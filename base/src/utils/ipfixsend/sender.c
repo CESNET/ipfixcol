@@ -3,7 +3,7 @@
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief Functions for parsing IP, connecting to collector and sending packets
  *
- * Copyright (C) 2014 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -58,8 +58,8 @@
 #include <siso.h>
 
 /* Ethernet MTU */
-/* Should be 65535 (- some bytes) */
-#define UDP_MTU 65000
+/* Should be MSG_MAX_LENGTH (- some bytes) */
+#define UDP_MTU MSG_MAX_LENGTH - 535
 #define MIN(_first_, _second_) ((_first_) < (_second_)) ? (_first_) : (_second_)
 
 static int stop_sending = 0;

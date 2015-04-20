@@ -3,7 +3,7 @@
  * \author Radek Krejci <rkrejci@cesnet.cz>
  * \brief Simple parsing of IPFIX packets for Storage plugins.
  *
- * Copyright (C) 2011 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -549,6 +549,11 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 	if (source_status == SOURCE_STATUS_CLOSED) {
 		/* Inform intermediate plugins and output manager about closed input */
 		msg = calloc(1, sizeof(struct ipfix_message));
+		if (!msg) {
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+			return;
+		}
+
 		msg->input_info = input_info;
 		msg->source_status = source_status;
 		odid_info_remove_source(input_info->odid);

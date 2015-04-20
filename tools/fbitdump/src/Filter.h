@@ -3,7 +3,7 @@
  * \author Petr Velan <petr.velan@cesnet.cz>
  * \brief Header of class for filtering
  *
- * Copyright (C) 2011 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -240,7 +240,7 @@ public:
 	 * @bool aggregate Aggregation option
 	 * @return True when succesful
 	 */
-	bool parseColumnGroup(parserStruct *ps, std::string alias, bool aggeregate) const;
+	bool parseColumnGroup(parserStruct *ps, std::string alias, bool aggregate) const;
 	/**
 	 * \brief Only fills parser structure with column name
 	 *

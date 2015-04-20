@@ -3,7 +3,7 @@
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief Configurator implementation.
  *
- * Copyright (C) 2014 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -165,6 +165,7 @@ void config_free_plugin(struct plugin_config *plugin)
 
 				dlclose(plugin->input->dll_handler);
 			}
+
 			/* Input is pointer to configurator structure, don't free it */
 			// free(plugin->input);
 		}
@@ -1000,6 +1001,7 @@ process_err:
 void free_startup(startup_config *startup)
 {
 	int i;
+
 	/* Close and free input plugins */
 	for (i = 0; startup->input[i]; ++i) {
 		config_free_plugin(startup->input[i]);
@@ -1080,7 +1082,7 @@ void config_process_profiles(configurator *config)
 		/* Path are the same, compare timestamps */
 		struct stat st;
 		if (stat(profiles_file, &st) != 0) {
-			MSG_ERROR(msg_module, "Cannot process profiles file %s: %s", profiles_file, sys_errlist[errno]);
+			MSG_ERROR(msg_module, "Cannot process profiles file %s: %s", profiles_file, strerror(errno));
 			free(profiles_file);
 			return;
 		}

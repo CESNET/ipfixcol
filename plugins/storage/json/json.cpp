@@ -3,7 +3,7 @@
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief ipficol storage plugin based on json
  *
- * Copyright (C) 2014 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -157,14 +157,10 @@ extern "C"
 int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	const struct ipfix_template_mgr *template_mgr)
 {
+	(void) template_mgr;
 	struct json_conf *conf = (struct json_conf *) config;
 	
-	try {
-		conf->storage->storeDataSets(ipfix_msg);
-	} catch (std::exception &e) {
-		MSG_WARNING(msg_module, "%s", e.what());
-		return 1;
-	}
+	conf->storage->storeDataSets(ipfix_msg);
 	
 	return 0;
 }

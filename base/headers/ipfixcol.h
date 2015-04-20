@@ -2,7 +2,7 @@
  * Author: Radek Krejci <rkrejci@cesnet.cz>
  * The main devel header for IPFIX Collector.
  *
- * Copyright (C) 2011 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * LICENSE TERMS
  *

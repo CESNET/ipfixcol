@@ -3,7 +3,7 @@
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief Intermediate Process that is able to exec hooks for events
  *
- * Copyright (C) 2014 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -203,6 +203,11 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 			len = strlen((char *) aux_char);
 			
 			aux_op->operation = calloc(1, len + 2);
+			if (!aux_op->operation) {
+				MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+				goto cleanup_err;
+			}
+
 			strncpy_safe(aux_op->operation, (char *) aux_char, len + 1);
 			
 			/* add & to the end (if not present) */
@@ -236,6 +241,14 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 cleanup_err:
 	if (doc) {
 		xmlFreeDoc(doc);
+	}
+
+	if (aux_op) {
+		if (aux_op->operation) {
+			free(aux_op->operation);
+		}
+
+		free(aux_op);
 	}
 
 	free(conf);

@@ -3,7 +3,7 @@
  * \author Michal Srb <michal.srb@cesnet.cz>
  * \brief Plugin for storing IPFIX data in PostgreSQL database.
  *
- * Copyright (C) 2011 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -432,7 +432,7 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 			length = *((uint16_t *) (fields+template_index+2));
 
 			/* check whether this element has variable length */
-			if (length == 65535) {
+			if (length == VAR_IE_LENGTH) {
 				/* this element's length is in data, not in template */
 				length = *((uint8_t *) (data_set->records+data_index));
 				data_index += 1;

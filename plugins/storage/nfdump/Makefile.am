@@ -6,7 +6,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/pugixml
 pluginsdir = $(datadir)/ipfixcol/plugins
 
 sofile = $(pluginsdir)/ipfixcol-nfdump-output.so
-internalcfg = $(DESTIDR)$(sysconfdir)/ipfixcol/internalcfg.xml
+internalcfg = $(DESTDIR)$(sysconfdir)/ipfixcol/internalcfg.xml
 
 LICENSE = ipfixcol-nfdump-output.txt
 plugins_DATA = ipfixcol-nfdump-output.txt

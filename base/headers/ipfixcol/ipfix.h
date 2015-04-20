@@ -3,7 +3,7 @@
  * \author Radek Krejci <rkrejci@cesnet.cz>
  * \brief Structures and macros definition for IPFIX processing
  *
- * Copyright (C) 2009-2011 CESNET, z.s.p.o.
+ * Copyright (C) 2009-2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,6 +53,9 @@
 
 /** IPFIX identification (NetFlow version 10) */
 #define IPFIX_VERSION 0x000a
+
+/** Length value signaling variable-length IE */
+#define VAR_IE_LENGTH 65535
 
 /* Path to ipfix-elements.xml file */
 API extern const char *ipfix_elements;

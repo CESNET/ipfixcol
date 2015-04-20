@@ -3,7 +3,7 @@
  * \author Petr Velan <petr.velan@cesnet.cz>
  * \brief Class for management of result filtering
  *
- * Copyright (C) 2011 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -74,6 +74,7 @@ const std::string Filter::getFilter() const
 bool Filter::isValid(Cursor &cur) const
 {
 	// TODO add this functiononality
+	(void) cur;
 	return true;
 }
 
@@ -492,8 +493,10 @@ void Filter::parseFloat(parserStruct* ps, std::string number) const
 	ps->parts.push_back(ss.str());
 }
 
-bool Filter::parseColumnGroup(parserStruct *ps, std::string alias, bool aggeregate) const
+bool Filter::parseColumnGroup(parserStruct *ps, std::string alias, bool aggregate) const
 {
+	(void) aggregate;
+
 	if (ps == NULL) {
 		return false;
 	}

@@ -6,20 +6,21 @@ LT_INIT([dlopen])
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SUBDIRS([ base
-    tools/fbitdump
-    tools/fbitconvert
-    tools/fbitmerge
-    tools/fbitexpire
-    plugins/storage/fastbit
-    plugins/storage/fastbit_compression
-    plugins/storage/postgres
-    plugins/storage/unirec
-    plugins/input/nfdump
+	tools/fbitdump
+	tools/fbitconvert
+	tools/fbitmerge
+	tools/fbitexpire
+	plugins/storage/fastbit
+	plugins/storage/fastbit_compression
+	plugins/storage/postgres
+	plugins/input/nfdump
 	plugins/intermediate/geoip
 	plugins/intermediate/profiler
 	plugins/intermediate/profile_stats
 	plugins/intermediate/stats
 	plugins/intermediate/uid
-    plugins/storage/json])
+	plugins/storage/json])
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
+
+# plugins/storage/unirec is not added to SUBDIRS due to its dependency on libtrap

@@ -59,12 +59,12 @@ Profile::Profile(std::string name)
 Profile::~Profile()
 {
 	/* Remove channels */
-	for (auto ch: m_channels) {
+	for (auto& ch: m_channels) {
 		delete ch;
 	}
 	
 	/* Remove children */
-	for (auto p: m_children) {
+	for (auto& p: m_children) {
 		delete p;
 	}
 }
@@ -116,7 +116,7 @@ void Profile::removeChannel(channel_id_t id)
 
 	/* Unsubscribe channel from it's sources */
 	Channel *ch = *it;
-	for (auto src: ch->getSources()) {
+	for (auto& src: ch->getSources()) {
 		src->removeListener(ch);
 	}
 
@@ -135,12 +135,12 @@ void Profile::updatePathName()
 	}
 
 	/* Update name of channels */
-	for (auto ch: m_channels) {
+	for (auto& ch: m_channels) {
 		ch->updatePathName();
 	}
 
 	/* Update name of children */
-	for (auto p: m_children) {
+	for (auto& p: m_children) {
 		p->updatePathName();
 	}
 }
@@ -150,7 +150,17 @@ void Profile::updatePathName()
  */
 void Profile::match(ipfix_message* msg, metadata* mdata, std::vector<Channel *>& channels)
 {	
-	for (auto channel: m_channels) {
+	for (auto& channel: m_channels) {
 		channel->match(msg, mdata, channels);
+	}
+}
+
+void Profile::match(struct match_data *data)
+{
+	for (auto& channel: m_channels) {
+		channel->match(data);
+		if (data->channels == NULL) {
+			return;
+		}
 	}
 }

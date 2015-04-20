@@ -3,7 +3,7 @@
  * \author Michal Kozubik <kozubik.michal@gmail.com>
  * \brief Distribution of IPFIX message to Data Managers
  *
- * Copyright (C) 2014 CESNET, z.s.p.o.
+ * Copyright (C) 2015 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -530,7 +530,7 @@ static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
  * @param stat_out_file Output file for statistics
  */
 void statistics_print_buffers(struct output_manager_config *conf, FILE *stat_out_file)
-{	
+{
 	/* Print info about preprocessor's output queue */
 	MSG_INFO(stat_module, "Queue utilization:");
 	
@@ -596,7 +596,18 @@ static void *statistics_thread(void* config)
 		if (xmlStrcmp(node->name, (const xmlChar *) "statisticsFile") == 0) {
 			char *stat_out_file_path = (char *) xmlNodeGetContent(node->xmlChildrenNode);
 			if (stat_out_file_path && strlen(stat_out_file_path) > 0) {
-				stat_out_file = fopen(stat_out_file_path, "w");
+				/* Consists of the following elements:
+				 *      strlen(stat_out_file_path) - length of supplied path
+				 *      1 - dot (.)
+				 *      5 - we assume that a PID has a maximum length of 5 digits
+				 *      1 - null-terminating character
+				 */
+				int max_len = strlen(stat_out_file_path) + 1 + 5 + 1;
+				char buf[max_len];
+
+				// snprintf ensures null-termination if (max_len != 0), which is always true
+				snprintf(buf, max_len, "%s.%d", stat_out_file_path, getpid());
+				stat_out_file = fopen(buf, "w");
 			} else {
 				MSG_ERROR(msg_module, "Configuration error: 'statisticsFile' node has no value");
 			}
@@ -646,7 +657,7 @@ static void *statistics_thread(void* config)
 		/* print info */
 		MSG_INFO(stat_module, "Time: %lu", time_now);
 		MSG_INFO(stat_module, "%15s %15s %15s %15s %15s %15s %20s", "total time", "total packets", "tot. data rec.", "lost data rec.", "packets/s", "data records/s", "lost data records/s");
-		MSG_INFO(stat_module, "%15lu %15lu %15lu %15lu %15lu %15lu %15lu", diff_time, pkts, records, lost_records, diff_pkts/conf->stat_interval, diff_records/conf->stat_interval, diff_lost_records/conf->stat_interval);
+		MSG_INFO(stat_module, "%15lu %15lu %15lu %15lu %15lu %15lu %20lu", diff_time, pkts, records, lost_records, diff_pkts/conf->stat_interval, diff_records/conf->stat_interval, diff_lost_records/conf->stat_interval);
 
 		if (stat_out_file) {
 			rewind(stat_out_file); // Move to beginning of file
@@ -666,6 +677,8 @@ static void *statistics_thread(void* config)
 		
 		/* print buffers usage */
 		statistics_print_buffers(conf, stat_out_file);
+
+		MSG_INFO(stat_module, "");
 	}
 
 	if (stat_out_file) {

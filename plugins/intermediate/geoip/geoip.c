@@ -40,7 +40,7 @@
 #include <ipfixcol.h>
 #include <ipfixcol/intermediate.h>
 #include <libxml/parser.h>
-#include <libxml2/libxml/tree.h>
+#include <libxml/tree.h>
 
 #include <GeoIP.h>
 #include <geoip.h>
