@@ -409,18 +409,20 @@ static void process_dynamic(ifc_config *conf)
 
 	// Cycle throu all fields
 	for (int i = 0; i < conf->dynCount; i++) {
-		
+		// Saturate dynamic field size
+		size_t size = conf->dynAr[i]->valueSize > MAX_DYNAMIC_FIELD_SIZE ? MAX_DYNAMIC_FIELD_SIZE : conf->dynAr[i]->valueSize;
+
 		// Store end offset of dynamic value to Unirec buffer
-		*(uint16_t*)(conf->buffer + conf->dynAr[i]->offset_ar[conf->number]) = conf->bufferDynSize + conf->dynAr[i]->valueSize; 
+		*(uint16_t*)(conf->buffer + conf->dynAr[i]->offset_ar[conf->number]) = conf->bufferDynSize + size; 
 		
 		// If dynamic field was filled, copy it to Unirec buffer
 		if (conf->dynAr[i]->valueFilled) {
 			memcpy(	conf->buffer + conf->bufferOffset,
 				conf->dynAr[i]->value,
-				conf->dynAr[i]->valueSize > MAX_DYNAMIC_FIELD_SIZE ? MAX_DYNAMIC_FIELD_SIZE : conf->dynAr[i]->valueSize);
+				size);
 
-			conf->bufferOffset  += conf->dynAr[i]->valueSize;
-			conf->bufferDynSize += conf->dynAr[i]->valueSize;
+			conf->bufferOffset  += size;
+			conf->bufferDynSize += size;
 			conf->dynAr[i]->valueFilled = 0;
 			conf->dynAr[i]->valueSize = 0;
 		}
