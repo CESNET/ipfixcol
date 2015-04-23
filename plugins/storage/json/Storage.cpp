@@ -76,6 +76,7 @@ Storage::Storage(sisoconf *new_sender): sender{new_sender}
 
 	/* Allocate space for buffers */
 	record.reserve(4096);
+	buffer.reserve(BUFF_SIZE);
 }
 
 void Storage::getElement(uint32_t enterprise, uint16_t id, struct ipfix_element& element)
@@ -197,30 +198,32 @@ void Storage::readString(uint16_t& length, uint8_t *data_record, uint16_t &offse
 void Storage::readRawData(uint16_t &length, uint8_t* data_record, uint16_t &offset)
 {
 	/* Read raw value */
-	std::ostringstream ss;
-
 	switch (length) {
-	case (1):
-		ss << static_cast<int>(read8(data_record + offset));
+	case 1:
+		sprintf(buffer.data(), "%" PRIu16, static_cast<int>(read8(data_record + offset)));
 		break;
-	case (2):
-		ss << ntohs(read16(data_record + offset));
+	case 2:
+		sprintf(buffer.data(), "%" PRIu16, ntohs(read16(data_record + offset)));
 		break;
-	case (4):
-		ss << ntohl(read32(data_record + offset));
+	case 4:
+		sprintf(buffer.data(), "%" PRIu32, ntohl(read32(data_record + offset)));
 		break;
-	case (8):
-		ss << be64toh(read64(data_record + offset));
+	case 8:
+		sprintf(buffer.data(), "%" PRIu64, be64toh(read64(data_record + offset)));
 		break;
 	default:
 		length = this->realLength(length, data_record, offset);
-		ss << "0x" << std::hex;
-		for (int i = 0; i < length; i++) {
-			ss << std::setw(2) << std::setfill('0') << static_cast<int>((data_record + offset)[i]);
+		if (length * 2 > buffer.capacity()) {
+			buffer.reserve(length * 2 + 1);
 		}
+
+		for (int i = 0; i < length; i++) {
+			sprintf(buffer.data() + i * 2, "%02x", (data_record + offset)[i]);
+		}
+		record += "0x";
 	}
 
-	record += ss.str();
+	record += buffer.data();
 }
 
 /**
@@ -239,9 +242,10 @@ std::string Storage::rawName(uint32_t en, uint16_t id) const
 void Storage::storeDataRecord(struct metadata *mdata)
 {
 	offset = 0;
-	record = "{\"@type\": \"ipfix.entry\", \"ipfix\": {";
-	
-//	struct ipfix_element& element;
+
+	record.clear();
+	record += "{\"@type\": \"ipfix.entry\", \"ipfix\": {";
+
 	struct ipfix_template *templ = mdata->record.templ;
 	uint8_t *data_record = (uint8_t*) mdata->record.record;
 	

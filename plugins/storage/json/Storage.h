@@ -194,6 +194,8 @@ private:
     Translator translator;          /**< number -> string translator */
     sisoconf *sender;               /**< sender "class" */
 
+	std::vector<char> buffer;
+
 	std::string record;
 	static std::map<uint32_t, std::map<uint16_t, struct ipfix_element> > elements;
 };
