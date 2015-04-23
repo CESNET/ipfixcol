@@ -39,7 +39,7 @@
 	<refsect1>
 		<title>Description</title>
 		<simpara>
-			The <command>ipfix-json-output</command> plugin is a part of IPFIXcol (IPFIX collector). It converts IPFIX data into JSON format (each data set is an array of data records) and sends them over the network.
+			The <command>ipfix-json-output</command> plugin is a part of IPFIXcol (IPFIX collector). It converts IPFIX data into JSON format (each data set is an array of data records).
 			Some elements (timestamp, IP, MAC, tcp flags...) are converted into human readable format. Others are represented as plain numbers.
 		</simpara>
 	</refsect1>
@@ -56,9 +56,16 @@
 		<name>JSON storage plugin</name>
 		<fileWriter>
 			<fileFormat>json</fileFormat>
-			<ip>127.0.0.1</ip>
-			<port>4739</port>
-			<type>udp</type>
+			<output>
+				<type>print</type>
+			</output>
+
+			<output>
+				<type>send</type>
+				<ip>127.0.0.1</ip>
+				<port>4444</port>
+				<protocol>udp</protocol>
+			</output>
 		</fileWriter>
 	</destination>
 	]]>
@@ -74,23 +81,49 @@
 				</varlistentry>
 	
 				<varlistentry>
-					<term><command>ip</command></term>
+					<term><command>output</command></term>
 					<listitem>
-						<simpara>IPv4/IPv6 address of remote host (default 127.0.0.1)</simpara>
+						<simpara>JSON data processor. Multiple outputs are supported.</simpara>
+						<varlistentry>
+							<term><command>type</command></term>
+							<listitem>
+								<simpara>Output type. Actually only <command>print</command> and <command>send</command> are supported.</simpara>
+							</listitem>
+						</varlistentry>
 					</listitem>
 				</varlistentry>
-				
+
 				<varlistentry>
-					<term><command>port</command></term>
+					<term><command>output - print</command></term>
 					<listitem>
-						<simpara>Port number (default 4739)</simpara>
+						<simpara>Writes data to the standard output</simpara>
 					</listitem>
 				</varlistentry>
-	
+
 				<varlistentry>
-					<term><command>type</command></term>
+					<term><command>output - send</command></term>
 					<listitem>
-						<simpara>Connection type, one of UDP/TCP/SCTP (default UDP). This field is case insensitive</simpara>
+						<simpara>Sends data over the network</simpara>
+						<varlistentry>
+							<term><command>ip</command></term>
+							<listitem>
+								<simpara>IPv4/IPv6 address of remote host (default 127.0.0.1)</simpara>
+							</listitem>
+						</varlistentry>
+
+						<varlistentry>
+							<term><command>port</command></term>
+							<listitem>
+								<simpara>Port number (default 4739)</simpara>
+							</listitem>
+						</varlistentry>
+
+						<varlistentry>
+							<term><command>protocol</command></term>
+							<listitem>
+								<simpara>Connection protocol, one of UDP/TCP/SCTP (default UDP). This field is case insensitive</simpara>
+							</listitem>
+						</varlistentry>
 					</listitem>
 				</varlistentry>
 

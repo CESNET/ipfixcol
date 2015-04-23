@@ -44,6 +44,7 @@
 #include <map>
 #include <siso.h>
 
+#include "json.h"
 #include "pugixml/pugixml.hpp"
 #include "Translator.h"
 
@@ -81,21 +82,16 @@ public:
     /**
      * \brief Constructor
      */
-    Storage(sisoconf *new_sender = NULL);
+	Storage();
+	~Storage();
     
-    /**
-     * \brief Set new sender
-     * 
-     * @param new_sender
-     */
-    void setSender(sisoconf *new_sender) { this->sender = new_sender; }
-    
-    /**
-     * \brief Get current sender
-     * 
-     * @return sender
-     */
-    sisoconf *getSender() { return this->sender; }
+	/**
+	 * \brief Add new output processor
+	 * \param[in] output
+	 */
+	void addOutput(Output *output) { outputs.push_back(output); }
+
+	bool hasSomeOutput() { return !outputs.empty(); }
     
     /**
      * \brief Store IPFIX message
@@ -181,9 +177,9 @@ private:
     void loadElements();
     
 	/**
-	 * \brief Send JSON data
+	 * \brief Send JSON data to output processors
      */
-    void sendData() const;
+	void sendData() const;
     
 	bool processMetadata{false};	/**< Metadata processing enabled */
 	bool printOnly{false};
@@ -192,8 +188,8 @@ private:
 	uint16_t offset, id, length;
 	uint32_t enterprise;
     Translator translator;          /**< number -> string translator */
-    sisoconf *sender;               /**< sender "class" */
 
+	std::vector<Output*> outputs{};
 	std::vector<char> buffer;
 
 	std::string record;
@@ -201,4 +197,3 @@ private:
 };
 
 #endif	/* STORAGE_H */
-

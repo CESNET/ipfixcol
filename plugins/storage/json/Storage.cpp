@@ -67,7 +67,7 @@ std::map<uint32_t, std::map<uint16_t, struct ipfix_element> > Storage::elements{
 /**
  * \brief Constructor
  */
-Storage::Storage(sisoconf *new_sender): sender{new_sender}
+Storage::Storage()
 {
 	/* Load only once for all plugins */
 	if (elements.empty()) {
@@ -77,6 +77,13 @@ Storage::Storage(sisoconf *new_sender): sender{new_sender}
 	/* Allocate space for buffers */
 	record.reserve(4096);
 	buffer.reserve(BUFF_SIZE);
+}
+
+Storage::~Storage()
+{
+	for (Output *output: outputs) {
+		delete output;
+	}
 }
 
 void Storage::getElement(uint32_t enterprise, uint16_t id, struct ipfix_element& element)
@@ -137,13 +144,8 @@ void Storage::loadElements()
  */
 void Storage::sendData() const
 {
-	if (printOnly) {
-		std::cout << record;
-		return;
-	}
-
-	if (siso_send(sender, record.c_str(), record.length()) != SISO_OK) {
-		MSG_ERROR(msg_module, "Sending data: %s", siso_get_last_err(sender));
+	for (Output *output: outputs) {
+		output->ProcessDataRecord(record);
 	}
 }
 

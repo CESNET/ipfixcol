@@ -1,7 +1,7 @@
 ##<a name="top"></a>JSON storage plugin
 
 ###Plugin description
-Plugin converts IPFIX data into JSON format and sends them over the network.
+Plugin converts IPFIX data into JSON format.
 
 
 ###Format
@@ -77,13 +77,28 @@ Here is an example of configuration in **startup.xml**:
 ```xml
 <destination>
     <name>JSON storage plugin</name>
-      <fileWriter>
-        <fileFormat>json</fileFormat>
-	<ip>127.0.0.1</ip>
-	<port>4739</port>
-	<type>udp</type>
-    </fileWriter>
+	<fileWriter>
+		<fileFormat>json</fileFormat>
+		<output>
+			<type>print</type>
+		</output>
+
+		<output>
+			<type>send</type>
+			<ip>127.0.0.1</ip>
+			<port>4444</port>
+			<protocol>udp</protocol>
+		</output>
+	</fileWriter>
 </destination>
 ```
+
+* **output** - specifies JSON data processor. Multiple outputs are supported.
+* **output - type** - processor type. Actually only **print** and **send** are supported.
+* **output:print** - writes data to the standard output.
+* **output:send** - sends data over the network.
+* **send - ip** - IPv4/IPv6 address of remote host (default 127.0.0.1).
+* **send - port** - port number (default 4739)
+* **send - protocol** - connection protocol, one of UDP/TCP/SCTP (default UDP). This field is case insensitive.
 
 [Back to Top](#top)

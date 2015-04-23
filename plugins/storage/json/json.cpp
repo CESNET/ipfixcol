@@ -46,78 +46,56 @@ extern "C" {
 #include <stdexcept>
 
 #include "pugixml.hpp"
+
+#include "json.h"
 #include "Storage.h"
+#include "Printer.h"
+#include "Sender.h"
 
 static const char *msg_module = "json_storage";
 
-#define DEFAULT_IP		"127.0.0.1"
-#define DEFAULT_PORT	"4739"
-#define DEFAULT_TYPE	"UDP"
-
 struct json_conf {
 	bool metadata;
-	bool printOnly;
 	Storage *storage;
-	sisoconf *sender;
 };
 
 void process_startup_xml(struct json_conf *conf, char *params) 
 {
 	pugi::xml_document doc;
-	
-	/* parse params */
 	pugi::xml_parse_result result = doc.load(params);
 	
 	if (!result) {
 		throw std::invalid_argument(std::string("Error when parsing parameters: ") + result.description());
 	}
 
-	/* get values */
+	/* Get configuration */
 	pugi::xpath_node ie = doc.select_single_node("fileWriter");
 	
-	std::string ip   = ie.node().child_value("ip");
-	std::string port = ie.node().child_value("port");
-	std::string type = ie.node().child_value("type");
-	std::string meta = ie.node().child_value("metadata");
-	std::string print= ie.node().child_value("printOnly");
-	
 	/* Check metadata processing */
+	std::string meta = ie.node().child_value("metadata");
 	conf->metadata = (meta == "yes");
 
-	/* Print or send data? */
-	conf->printOnly = (print == "yes");
+	/* Process all outputs */
+	pugi::xpath_node_set outputs = doc.select_nodes("/fileWriter/output");
 
-	if (conf->printOnly) {
-		return;
+	for (auto& node: outputs) {
+		std::string type = node.node().child_value("type");
+
+		Output *output{NULL};
+
+		if (type == "print") {
+			output = new Printer(node);
+		} else if (type == "send") {
+			output = new Sender(node);
+		} else {
+			throw std::invalid_argument("Unknown output type \"" + type + "\"");
+		}
+
+		conf->storage->addOutput(output);
 	}
 
-	/* Check IP address */
-	if (ip.empty()) {
-		MSG_WARNING(msg_module, "IP address not set, using default: %s", DEFAULT_IP);
-		ip = DEFAULT_IP;
-	}
-	
-	/* Check port number */
-	if (port.empty()) {
-		MSG_WARNING(msg_module, "Port number not set, using default: %s", DEFAULT_PORT);
-		port = DEFAULT_PORT;
-	}
-	
-	/* Check connection type */
-	if (type.empty()) {
-		MSG_WARNING(msg_module, "Connection type not set, using default: %s", DEFAULT_TYPE);
-		type = DEFAULT_TYPE;
-	}
-	
-	/* Create sender */
-	conf->sender = siso_create();
-	if (!conf->sender) {
-		throw std::runtime_error("Memory error - cannot create sender object");
-	}
-	
-	/* Connect it */
-	if (siso_create_connection(conf->sender, ip.c_str(), port.c_str(), type.c_str()) != SISO_OK) {
-		throw std::runtime_error(siso_get_last_err(conf->sender));
+	if (!conf->storage->hasSomeOutput()) {
+		throw std::invalid_argument("No valid output specified!");
 	}
 }
 
@@ -129,13 +107,11 @@ int storage_init (char *params, void **config)
 		/* Create configuration */
 		struct json_conf *conf = new struct json_conf;
 		
+		/* Create storage */
+		conf->storage = new Storage();
+
 		/* Process params */
 		process_startup_xml(conf, params);
-		
-		/* Create storage */
-		conf->storage = new Storage(conf->sender);
-
-		conf->storage->setPrintOnly(conf->printOnly);
 		
 		/* Configure metadata processing */
 		conf->storage->setMetadataProcessing(conf->metadata);
@@ -177,11 +153,6 @@ int storage_close (void **config)
 {
 	MSG_DEBUG(msg_module, "CLOSING");
 	struct json_conf *conf = (struct json_conf *) *config;
-	
-	/* Destroy sender */
-	if (!conf->printOnly) {
-		siso_destroy(conf->sender);
-	}
 	
 	/* Destroy storage */
 	delete conf->storage;
