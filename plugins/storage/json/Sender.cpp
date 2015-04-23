@@ -51,11 +51,6 @@ Sender::~Sender()
 
 void Sender::ProcessDataRecord(const std::string &record)
 {
-	static int count = 0;
-	if (count++ < 10) {
-		MSG_ERROR(msg_module, "processing data");
-	}
-
 	if (siso_send(sender, record.c_str(), record.length()) != SISO_OK) {
 		MSG_ERROR(msg_module, "Sending data: %s", siso_get_last_err(sender));
 	}
