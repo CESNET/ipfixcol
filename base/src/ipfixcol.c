@@ -50,12 +50,13 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 #include <dlfcn.h>
+#include <fcntl.h>
+#include <getopt.h>
+#include <pthread.h>
 #include <signal.h>
 #include <syslog.h>
 #include <sys/wait.h>
-#include <pthread.h>
 #include <sys/prctl.h>
 
 #include <libxml/parser.h>
@@ -78,8 +79,15 @@
  *
  */
 
-/** Acceptable command-line parameters */
+/** Acceptable command-line parameters (normal) */
 #define OPTSTRING "c:dhv:Vsr:i:S:e:"
+
+/** Acceptable command-line parameters (long) */
+struct option long_opts[] = {
+   { "help",    no_argument, NULL, 'h' },
+   { "version", no_argument, NULL, 'V' },
+   { 0, 0, 0, 0 }
+};
 
 /* Path to ipfix-elements.xml file */
 const char *ipfix_elements = DEFAULT_IPFIX_ELEMENTS;
@@ -161,13 +169,11 @@ int main (int argc, char* argv[])
 	char *packet = NULL;
 	struct input_info* input_info;
 	void *output_manager_config = NULL;
-
 	xmlXPathObjectPtr collectors = NULL;
-
 	int ring_buffer_size = 8192;
 
 	/* parse command line parameters */
-	while ((c = getopt (argc, argv, OPTSTRING)) != -1) {
+	while ((c = getopt_long(argc, argv, OPTSTRING, long_opts, NULL)) != -1) {
 		switch (c) {
 		case 'c':
 			config_file = optarg;
@@ -182,48 +188,46 @@ int main (int argc, char* argv[])
 			daemonize = true;
 			break;
 		case 'h':
-			version ();
-			help ();
-			exit (EXIT_SUCCESS);
+			help();
+			exit(EXIT_SUCCESS);
 			break;
 		case 'v':
-			verbose = strtoi (optarg, 10);
+			verbose = strtoi(optarg, 10);
 			if (verbose == INT_MAX) {
 				MSG_ERROR(msg_module, "No valid verbosity level provided (%s)", optarg);
-				help ();
-				exit (EXIT_FAILURE);
+				help();
+				exit(EXIT_FAILURE);
 			}
 
 			break;
 		case 'V':
-			version ();
-			exit (EXIT_SUCCESS);
+			version();
+			exit(EXIT_SUCCESS);
 			break;
 		case 's':
 			skip_seq_err = 1;
 			break;
 		case 'r':
-			ring_buffer_size = strtoi (optarg, 10);
+			ring_buffer_size = strtoi(optarg, 10);
 			if (ring_buffer_size == INT_MAX) {
 				MSG_ERROR(msg_module, "No valid ring buffer size provided (%s)", optarg);
-				help ();
-				exit (EXIT_FAILURE);
+				help();
+				exit(EXIT_FAILURE);
 			}
 
 			break;
 		case 'S':
-			stat_interval = strtoi (optarg, 10);
+			stat_interval = strtoi(optarg, 10);
 			if (stat_interval == INT_MAX) {
 				MSG_ERROR(msg_module, "No valid statistics interval provided (%s)", optarg);
-				help ();
-				exit (EXIT_FAILURE);
+				help();
+				exit(EXIT_FAILURE);
 			}
 
 			break;
 		default:
-			MSG_ERROR(msg_module, "Unknown parameter (%c)", c);
-			help ();
-			exit (EXIT_FAILURE);
+			help();
+			exit(EXIT_FAILURE);
 			break;
 		}
 	}
