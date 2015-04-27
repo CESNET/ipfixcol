@@ -111,7 +111,7 @@ void parse(char *input, char out[PLUGIN_BUFFER_SIZE], void *conf)
 	}
 	
 	// Return empty string if HTTP status description was not found
-	if (code == size) {
+	if (i == size) {
 		snprintf(out, PLUGIN_BUFFER_SIZE, "%s", "");
 		return;
 	}
