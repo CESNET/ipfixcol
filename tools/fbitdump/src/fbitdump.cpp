@@ -61,8 +61,6 @@ int main(int argc, char *argv[])
 	/* default is half of available physical memory */
 	//ibis::fileManager::adjustCacheSize(2048000000);
 	//ibis::gVerbose = 7;
-
-
 	ibis::gParameters().add("fileManager.minMapSize", "50");
 
 	/* create configuration to work with */
@@ -118,6 +116,7 @@ int main(int argc, char *argv[])
 
 		/* initialise tables */
 		TableManager tm(conf);
+
 		/* check whether to delete indexes */
 		if (conf.getDeleteIndexes()) {
 			Utils::printStatus("Deleting indexes");
