@@ -47,6 +47,7 @@
 #include <sstream>
 
 #include <errno.h>
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -63,9 +64,18 @@
 #include "verbose.h"
 #include "Watcher.h"
 
-#define OPTSTRING "rfmhVDkocp:d:s:v:w:"
 #define DEFAULT_PIPE "./fbitexpire_fifo"
 #define DEFAULT_DEPTH 1
+
+/** Acceptable command-line parameters (normal) */
+#define OPTSTRING "rfmhVDkocp:d:s:v:w:"
+
+/** Acceptable command-line parameters (long) */
+struct option long_opts[] = {
+	{ "help",    no_argument, NULL, 'h' },
+	{ "version", no_argument, NULL, 'V' },
+	{ 0, 0, 0, 0 }
+};
 
 static const char *msg_module = "fbitexpire";
 
@@ -164,7 +174,7 @@ int main(int argc, char *argv[])
 	uint64_t watermark{0}, size{0};
 	std::string pipe{DEFAULT_PIPE};
 	
-	while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
+	while ((c = getopt_long(argc, argv, OPTSTRING, long_opts, NULL)) != -1) {
 		switch (c) {
 		case 'h':
 			print_help();

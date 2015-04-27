@@ -45,19 +45,30 @@
 #include <regex.h>
 #include <dirent.h>
 #include <cstring>
+#include <dlfcn.h>
 #include <fstream>
+#include <getopt.h>
 #include <libgen.h>
 #include <resolv.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
-#include <dlfcn.h>
 #include "Utils.h"
 #include "DefaultPlugin.h"
 #include "Verbose.h"
 
 /* Module identifier for MSG_* */
 static const char *msg_module = "configuration";
+
+/** Acceptable command-line parameters (normal) */
+#define OPTSTRING "hVlaA::r:f:n:c:D:N::s:qeIM:m::R:o:v:Zt:i::d::C:Tp:SOP:"
+
+/** Acceptable command-line parameters (long) */
+struct option long_opts[] = {
+	{ "help",    no_argument, NULL, 'h' },
+	{ "version", no_argument, NULL, 'V' },
+	{ 0, 0, 0, 0 }
+};
 
 namespace fbitdump {
 
@@ -84,15 +95,15 @@ int Configuration::init(int argc, char *argv[])
 	}
 
 	/* parse command line parameters */
-	while ((c = getopt (argc, argv, OPTSTRING)) != -1) {
+	while ((c = getopt_long(argc, argv, OPTSTRING, long_opts, NULL)) != -1) {
 		switch (c) {
 		case 'h': /* print help */
 			help();
-			return 1;
+			return 0;
 			break;
 		case 'V': /* print version */
 			std::cout << PACKAGE << ": Version: " << VERSION << std::endl;
-			return 1;
+			return 0;
 			break;
 		case 'a': /* aggregate */
 			this->aggregate = true;
@@ -323,7 +334,7 @@ int Configuration::init(int argc, char *argv[])
 			this->aggregateFilter = optarg;
 			break;
 		default:
-			help ();
+			help();
 			return 1;
 			break;
 		}
