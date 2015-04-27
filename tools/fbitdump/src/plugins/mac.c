@@ -23,18 +23,18 @@ return 0;
 
 void format(const plugin_arg_t *arg, int plain_numbers, char buff[PLUGIN_BUFFER_SIZE], void *conf)
 {
-        if (plain_numbers) {
+	if (plain_numbers) {
 		snprintf(buff, PLUGIN_BUFFER_SIZE, "%lu", arg->val->uint64);
-                return;
-        }
+		return;
+	}
 	
-        snprintf(buff, PLUGIN_BUFFER_SIZE, "%02x:%02x:%02x:%02x:%02x:%02x",
-                ((unsigned char *) &(arg->val->uint64))[5],
-                ((unsigned char *) &(arg->val->uint64))[4],
-                ((unsigned char *) &(arg->val->uint64))[3],
-                ((unsigned char *) &(arg->val->uint64))[2],
-                ((unsigned char *) &(arg->val->uint64))[1],
-                ((unsigned char *) &(arg->val->uint64))[0]);
+	snprintf(buff, PLUGIN_BUFFER_SIZE, "%02x:%02x:%02x:%02x:%02x:%02x",
+			((unsigned char *) &(arg->val->uint64))[5],
+			((unsigned char *) &(arg->val->uint64))[4],
+			((unsigned char *) &(arg->val->uint64))[3],
+			((unsigned char *) &(arg->val->uint64))[2],
+			((unsigned char *) &(arg->val->uint64))[1],
+			((unsigned char *) &(arg->val->uint64))[0]);
 }
 
 
@@ -49,6 +49,6 @@ void parse(char *input, char out[PLUGIN_BUFFER_SIZE], void *conf)
 		&((unsigned char *) &addr)[1],
 		&((unsigned char *) &addr)[0]);
 	
-	snprintf(out, PLUGIN_BUFFER_SIZE, "%llu", addr);
+	snprintf(out, PLUGIN_BUFFER_SIZE, "%" PRIu64, addr);
 }
 

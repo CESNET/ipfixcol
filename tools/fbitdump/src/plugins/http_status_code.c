@@ -74,11 +74,12 @@ static const status_t status[] = {
 char *info()
 {
 	return \
-"Converts HTTP Status description to code and vice versa.\n \
+"Converts HTTP status description to code and vice versa.\n \
 e.g. \"Gateway Timeout\" -> 504";
 }
 
-void format( const plugin_arg_t * arg, int plain_numbers, char out[PLUGIN_BUFFER_SIZE], void *conf) {
+void format(const plugin_arg_t * arg, int plain_numbers, char out[PLUGIN_BUFFER_SIZE], void *conf)
+{
 	char *str = NULL;
 	char num[15];
 	int i, size = MSG_CNT;
@@ -109,8 +110,9 @@ void parse(char *input, char out[PLUGIN_BUFFER_SIZE], void *conf)
 		}
 	}
 	
-	if (i == size) {
-		snprintf(out, PLUGIN_BUFFER_SIZE, "");
+	// Return empty string if HTTP status description was not found
+	if (code == size) {
+		snprintf(out, PLUGIN_BUFFER_SIZE, "%s", "");
 		return;
 	}
 	

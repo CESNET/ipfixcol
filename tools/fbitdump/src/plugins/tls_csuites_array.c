@@ -44,12 +44,14 @@
 
 char *info()
 {
-	return "Converts TLS Cipher suites bitmap to human readable string list.\n"
-		"Parsing is not implemented.";
+	return \
+"Converts TLS cipher suites bitmap to human readable string list.\n \
+Parsing is not implemented.";
 }
 
 /** Funcion to assign given values to strings */
-void format(const plugin_arg_t *arg, int plain_numbers, char out[PLUGIN_BUFFER_SIZE], void *conf) {
+void format(const plugin_arg_t *arg, int plain_numbers, char out[PLUGIN_BUFFER_SIZE], void *conf)
+{
 	char *str = NULL;
 	char num[PLUGIN_BUFFER_SIZE];
 	int counter;
@@ -80,5 +82,5 @@ void format(const plugin_arg_t *arg, int plain_numbers, char out[PLUGIN_BUFFER_S
 void parse(char *input, char out[PLUGIN_BUFFER_SIZE], void *conf)
 {
 	/** Not implemented yet */
-	snprintf(out, PLUGIN_BUFFER_SIZE, "");
+	snprintf(out, PLUGIN_BUFFER_SIZE, "%s", "");
 }
