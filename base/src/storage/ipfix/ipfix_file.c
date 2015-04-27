@@ -64,6 +64,8 @@
 
 #include "ipfixcol.h"
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
 
 /** Identifier to MSG_* macros */
 static char *msg_module = "ipfix storage";

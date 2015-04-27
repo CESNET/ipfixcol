@@ -63,6 +63,9 @@
 #include "ext_parse.h"
 #include "ext_fill.h"
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
+
 static const char *msg_module = "nfdump input";
 
 #define NO_INPUT_FILE (-2)

@@ -41,6 +41,8 @@
 #define	API_H
 
 #define API __attribute__((visibility("default")))
+#define IPFIXCOL_API_VERSION_NUMBER 1
+#define IPFIXCOL_API_VERSION unsigned int ipfixcol_api_version API __attribute__((used)) = IPFIXCOL_API_VERSION_NUMBER;
 
 #endif	/* API_H */
 

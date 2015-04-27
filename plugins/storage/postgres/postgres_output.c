@@ -59,6 +59,9 @@
 #include "ipfix_entities.h"
 #include "ipfix_postgres_types.h"
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
+
 /* default database name, used if not specified otherwise */
 #define DEFAULT_CONFIG_DBNAME "ipfix_data"
 /* prefix for every table that will be created in database */

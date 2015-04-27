@@ -63,6 +63,9 @@
 #include <ipfixcol.h>
 #include "convert.h"
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
+
 /* input buffer length */
 #define BUFF_LEN 10000
 

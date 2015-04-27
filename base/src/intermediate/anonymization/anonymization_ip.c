@@ -62,6 +62,9 @@
 #include "Crypto-PAn/panonymizer.h"
 #include <ipfixcol.h>
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
+
 static char *msg_module = "Anon IP";
 
 

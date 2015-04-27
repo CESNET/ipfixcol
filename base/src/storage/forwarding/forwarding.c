@@ -61,6 +61,9 @@
 
 #endif
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
+
 /* Identifier for MSG_* */
 static const char *msg_module = "forwarding storage";
 

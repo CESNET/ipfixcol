@@ -57,6 +57,9 @@
 #define FLOW_START_SECONDS 150
 #define FLOW_START_MILLISECONDS 152
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
+
 /* Identifier for verbose macros */
 static const char *msg_module = "uid";
 

@@ -40,6 +40,9 @@
 extern "C" {
 #include <ipfixcol.h>
 #include <ipfixcol/profiles.h>
+
+/* API version constant */
+IPFIXCOL_API_VERSION;
 }
 
 #include <stdexcept>

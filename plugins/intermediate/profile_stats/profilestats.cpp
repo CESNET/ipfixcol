@@ -45,6 +45,9 @@ extern "C" {
 #include <ipfixcol/profiles.h>
 #include <rrd.h>
 #include <sys/stat.h>
+
+/* API version constant */
+IPFIXCOL_API_VERSION;
 }
 
 #include "stats.h"

@@ -41,6 +41,9 @@
 extern "C" {
 #include <ipfixcol.h>
 #include <siso.h>
+
+/* API version constant */
+IPFIXCOL_API_VERSION;
 }
 
 #include <stdexcept>

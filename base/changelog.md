@@ -19,3 +19,4 @@
 *  New intermediate plugin: stats
 *  New intermediate plugin: profile_stats
 *  New intermediate plugin: uid
+*  Added API version for plugins

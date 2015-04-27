@@ -67,6 +67,9 @@
 #include "scanner.h"
 #include "parser.h"
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
+
 static const char *msg_module = "filter";
 
 /**

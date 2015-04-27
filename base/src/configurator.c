@@ -325,6 +325,18 @@ int config_add_input(configurator *config, struct plugin_config *plugin, int ind
 		goto err;
 	}
 	
+	/* check api version */
+	unsigned int *plugin_api_version = (unsigned int *) dlsym(config->input.dll_handler, "ipfixcol_api_version");
+	if (!plugin_api_version) { /* no api version symbol */
+		MSG_ERROR(msg_module, "[%d] Unable to load plugin %s (%s). API version number is missing",
+			config->proc_id, plugin->conf.name, plugin->conf.file);
+		goto err;
+	} else if (*plugin_api_version != IPFIXCOL_API_VERSION_NUMBER) { /* wrong api version */
+		MSG_ERROR(msg_module, "[%d] Unable to load plugin %s (%s) with version %ui. Version %ui is required",
+				config->proc_id, plugin->conf.name, plugin->conf.file, *plugin_api_version, IPFIXCOL_API_VERSION_NUMBER);
+		goto err;
+	}
+
 	/* prepare Input API routines */
 	config->input.init = dlsym(config->input.dll_handler, "input_init");
 	if (!config->input.init) {
@@ -353,7 +365,7 @@ int config_add_input(configurator *config, struct plugin_config *plugin, int ind
 	/* initialize plugin */
 	xmlChar *plugin_params;
 	xmlDocDumpMemory(plugin->conf.xmldata, &plugin_params, NULL);
-	int retval = config->input.init((char*) plugin_params, &(config->input.config));
+	int retval = config->input.init((char *) plugin_params, &(config->input.config));
 	xmlFree(plugin_params);
 	
 	if (retval != 0) {
@@ -402,6 +414,18 @@ int config_add_inter(configurator *config, struct plugin_config *plugin, int ind
 	/* set intermediate thread name */
 	snprintf(im_plugin->thread_name, 16, "med:%s", plugin->conf.name);
 	
+	/* check api version */
+	unsigned int *plugin_api_version = (unsigned int *) dlsym(im_plugin->dll_handler, "ipfixcol_api_version");
+	if (!plugin_api_version) { /* no api version symbol */
+		MSG_ERROR(msg_module, "[%d] Unable to load plugin %s (%s). API version number is missing",
+			config->proc_id, plugin->conf.name, plugin->conf.file);
+		goto err;
+	} else if (*plugin_api_version != IPFIXCOL_API_VERSION_NUMBER) { /* wrong api version */
+		MSG_ERROR(msg_module, "[%d] Unable to load plugin %s (%s) with version %ui. Version %ui is required",
+				config->proc_id, plugin->conf.name, plugin->conf.file, *plugin_api_version, IPFIXCOL_API_VERSION_NUMBER);
+		goto err;
+	}
+
 	/* prepare Input API routines */
 	im_plugin->intermediate_process_message = dlsym(im_plugin->dll_handler, "intermediate_process_message");
 	if (!im_plugin->intermediate_process_message) {
@@ -508,6 +532,18 @@ int config_add_storage(configurator *config, struct plugin_config *plugin, int i
 	/* set storage thread name */
 	snprintf(st_plugin->thread_name, 16, "out:%s", plugin->conf.name);
 	
+	/* check api version */
+	unsigned int *plugin_api_version = (unsigned int *) dlsym(st_plugin->dll_handler, "ipfixcol_api_version");
+	if (!plugin_api_version) { /* no api version symbol */
+		MSG_ERROR(msg_module, "[%d] Unable to load plugin %s (%s). API version number is missing",
+			config->proc_id, plugin->conf.name, plugin->conf.file);
+		goto err;
+	} else if (*plugin_api_version != IPFIXCOL_API_VERSION_NUMBER) { /* wrong api version */
+		MSG_ERROR(msg_module, "[%d] Unable to load plugin %s (%s) with version %ui. Version %ui is required",
+				config->proc_id, plugin->conf.name, plugin->conf.file, *plugin_api_version, IPFIXCOL_API_VERSION_NUMBER);
+		goto err;
+	}
+
 	/* prepare Input API routines */
 	st_plugin->init = dlsym(st_plugin->dll_handler, "storage_init");
 	if (!st_plugin->init) {

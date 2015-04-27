@@ -56,6 +56,9 @@
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
+
 #define ORIGINAL_ODID_FIELD 405
 
 /* module name for MSG_* */

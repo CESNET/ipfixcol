@@ -60,6 +60,9 @@
 
 #include "ipfixcol.h"
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
+
 #define NO_INPUT_FILE         (-2)
 
 /** Identifier to MSG_* macros */

@@ -76,6 +76,9 @@
 #	define DEFAULT_SIZE_SSL_LIST 100
 #endif
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
+
 /* input buffer length */
 #define BUFF_LEN 10000
 /* default port for tcp collector */

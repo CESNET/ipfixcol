@@ -52,6 +52,9 @@
 
 #include <ipfixcol.h>
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
+
 static char *msg_module = "dummy Intermediate Process";
 
 

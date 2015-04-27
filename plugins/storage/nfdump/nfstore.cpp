@@ -49,6 +49,9 @@ extern "C" {
 #include <time.h>
 #include <sys/stat.h>
 #include <errno.h>
+
+/* API version constant */
+IPFIXCOL_API_VERSION;
 }
 
 #include <map>

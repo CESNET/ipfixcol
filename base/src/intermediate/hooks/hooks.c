@@ -63,6 +63,9 @@
  * 3) in process_message, call "hook_do_operations(conf->hooks[NEW_HOOK_TYPE])" when your hook is triggered
  */
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
+
 /* module name for MSG_* */
 static const char *msg_module = "hooks";
 

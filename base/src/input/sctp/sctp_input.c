@@ -65,6 +65,9 @@
 #include "ipfixcol.h"
 #include "convert.h"
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
+
 #define DEFAULT_LISTEN_PORT_UNSECURE 4739
 #define DEFAULT_LISTEN_PORT_SECURE   4740   /* listen port when used with DTLS */
 

@@ -55,6 +55,9 @@
 #define FIELD_IPV6_SRC 27
 #define FIELD_IPV6_DST 28
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
+
 /* Identifier for verbose macros */
 static const char *msg_module = "geoip";
 

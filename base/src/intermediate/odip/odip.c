@@ -55,6 +55,9 @@
 
 #include <ipfixcol.h>
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
+
 #define ODIP4_FIELD  403
 #define ODIP6_FIELD  404
 #define ODIP4_LENGTH 4

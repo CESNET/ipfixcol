@@ -55,6 +55,9 @@
 #include <rrd.h>
 #include <libxml/parser.h>
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
+
 /** Default interval for statistics*/
 #define DEFAULT_INTERVAL 300
 

@@ -54,6 +54,9 @@
 
 #include "unirec.h"
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
+
 // Global variables
 uint8_t INIT_COUNT = 0;  // Number of running instances of plugin
 
