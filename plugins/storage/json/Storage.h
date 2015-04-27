@@ -40,6 +40,7 @@
 #ifndef STORAGE_H
 #define	STORAGE_H
 
+#define __STDC_FORMAT_MACROS
 #include <ipfixcol/storage.h>
 #include <map>
 #include <siso.h>
