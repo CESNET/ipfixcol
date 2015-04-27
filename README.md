@@ -123,6 +123,10 @@ IPFIXcol's FastBit library can be found [here](https://github.com/CESNET/libfast
 
 If you find any bug you can report it into [issue tracker](https://github.com/CESNET/ipfixcol/issues) here on GitHub.
 
+###<a name="contribution"></a> Contributing to IPFIXcol
+
+We are open to contributions to IPFIXcol which improve the stability and functionality of the collector. To keep the code readable and consistent, please adhere to the [coding style](coding_style.md) document. 
+
 ###<a name="mailing"></a> Forum
 
 if you have some questions or if you just want to share your ideas about useful features etc., please use [this forum](https://groups.google.com/forum/#!forum/ipfixcol).
