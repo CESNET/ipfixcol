@@ -39,7 +39,6 @@ char *info()
 e.g. \"BADKEY\" -> 17";
 }
 
-
 void format( const plugin_arg_t * arg, int plain_numbers, char out[PLUGIN_BUFFER_SIZE], void *conf)
 {
 	char *str = NULL;
@@ -75,12 +74,13 @@ void parse(char *input, char out[PLUGIN_BUFFER_SIZE], void *conf)
 		}
 	}
 	
+	// Return empty string if DNS RCODE name was not found
 	if (code == size) {
 		/* BADSIG and BADVERS have the same code */
 		if (!strcasecmp(input, "BADSIG") || !strcasecmp(input, "BADVERS")) {
 			code = 16;
 		} else {
-			snprintf(out, PLUGIN_BUFFER_SIZE, "");
+			snprintf(out, PLUGIN_BUFFER_SIZE, "%s", "");
 			return;
 		}
 	}

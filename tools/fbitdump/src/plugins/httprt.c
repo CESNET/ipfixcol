@@ -21,15 +21,16 @@ static const char *methods[] = {
 char *info()
 {
 	return \
-"Converts HTTP Method name to value and vice versa.\n \
+"Converts HTTP method name to value and vice versa.\n \
 Supported methods: GET, POST, HTTP, HEAD, PUT, OPTIONS, DELETE, TRACE, CONNECT, PATCH";
 }
 
-void format(const plugin_arg_t * arg, int plain_numbers, char buff[PLUGIN_BUFFER_SIZE], void *conf) {
+void format(const plugin_arg_t * arg, int plain_numbers, char buff[PLUGIN_BUFFER_SIZE], void *conf)
+{
 	if (arg->val[0].uint32 > MSG_CNT || arg->val[0].uint32 == 0 || plain_numbers) {
-		snprintf( buff, PLUGIN_BUFFER_SIZE,  "%u", arg->val[0].uint32 );
+		snprintf(buff, PLUGIN_BUFFER_SIZE, "%u", arg->val[0].uint32);
 	} else {
-		snprintf( buff, PLUGIN_BUFFER_SIZE, "%s", methods[(arg->val[0].uint32) - 1] );
+		snprintf(buff, PLUGIN_BUFFER_SIZE, "%s", methods[(arg->val[0].uint32) - 1]);
 	}
 }
 
@@ -43,8 +44,9 @@ void parse(char *input, char out[PLUGIN_BUFFER_SIZE], void *conf)
 		}
 	}
 	
+	// Return empty string if HTTP method name was not found
 	if (code == size) {
-		snprintf(out, PLUGIN_BUFFER_SIZE, "");
+		snprintf(out, PLUGIN_BUFFER_SIZE, "%s", "");
 		return;
 	}
 	

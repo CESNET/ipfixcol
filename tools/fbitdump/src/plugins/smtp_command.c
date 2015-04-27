@@ -9,7 +9,6 @@
  * Copyright (C) 2015 CESNET
  */
 
-
 /**** INCLUDES and DEFINES *****/
 #define _GNU_SOURCE
 
@@ -17,9 +16,6 @@
 #include <string.h>
 
 #include "plugin_header.h"
-
-//#define DBG(str) do { fprintf(stderr, "DEBUG: %s() in %s: %s\n", __func__, __FILE__, str); } while(0)
-#define DBG(str)
 
 #define SEP_CHAR '|'
 #define DEFAULT_CHAR '-'
@@ -30,25 +26,18 @@
 typedef char item_t[4];
 
 static const item_t values[] = {
-    { "EH"  },  // EHLO
-    { "HE"  },  // HELO
-    { "ML"  },  // MAIL TO
-    { "RC"  },  // RCPT FROM
-    { "D"   },  // DATA
-    { "RST" },  // RSET
-    { "VF"  },  // VRFY
-    { "EX"  },  // EXPN
-    { "HLP" },  // HELP
-    { "N"   },  // NOOP
-    { "Q"   },  // QUIT
+	{ "EH"  },  // EHLO
+	{ "HE"  },  // HELO
+	{ "ML"  },  // MAIL TO
+	{ "RC"  },  // RCPT FROM
+	{ "D"   },  // DATA
+	{ "RST" },  // RSET
+	{ "VF"  },  // VRFY
+	{ "EX"  },  // EXPN
+	{ "HLP" },  // HELP
+	{ "N"   },  // NOOP
+	{ "Q"   },  // QUIT
 };
-
-const char INFO_MSG[] =
-"Converts 'SMTP command flags' field into text representation\n"
-"SMTP commands present in the flow are printed in comma-separated list, using\n"
-"abbreviated codes\n"
-"\te.g. EHLO -> EH, QUIT -> Q, RSET -> RST\n"
-"Unknown commands use the 'U' code\n";
 
 #define NAMES_SIZE sizeof(values)
 
@@ -64,58 +53,53 @@ const char INFO_MSG[] =
 int init(const char *params, void **conf)
 {
 	*conf = NULL;
-    if(PLUGIN_BUFFER_SIZE < FLAGSIZE)
-    {
-        return 1;
-    }
-    else return 0;
+	if (PLUGIN_BUFFER_SIZE < FLAGSIZE) {
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 char *info()
 {
-	return INFO_MSG;
+	return \
+"Converts 'SMTP command flags' field into text representation\n \
+SMTP commands present in the flow are printed in comma-separated list, using\n \
+abbreviated codes\n \
+\te.g. EHLO -> EH, QUIT -> Q, RSET -> RST\n \
+Unknown commands use the 'U' code\n";
 }
 
 /**
  * Fill the buffer with text representation of field's content
  */
-void format( const plugin_arg_t * arg,
-                int plain_numbers,
-                char buffer[PLUGIN_BUFFER_SIZE],
-				void *conf)
+void format(const plugin_arg_t * arg, int plain_numbers,
+		char buffer[PLUGIN_BUFFER_SIZE], void *conf)
 {
-    DBG("called");
+	// get rid of the warning
+	if (plain_numbers) {;}
 
-    // get rid of the warning
-    if(plain_numbers) {;}
+	int offset = 0;
+	int i;
 
-    int offset = 0;
-    int i;
+	// Filling in flag values
+	for (i = 0; i < NAMES_SIZE; i++) {
+		if (arg->val->uint32 & (((uint32_t)1) << i)) {
+			snprintf(buffer + offset, PLUGIN_BUFFER_SIZE - offset, "%s,", values[i]);
+			// there is extra comma
+			offset += (strlen(values[i]) + 1);
+		}
+	}
 
-    // Filling in flag values
-    for(i = 0; i < NAMES_SIZE; i++)
-    {
-        if(arg->val->uint32 & (((uint32_t)1) << i))
-        {
-            snprintf(buffer + offset, PLUGIN_BUFFER_SIZE - offset, "%s,", values[i]);
-            // there is extra comma
-            offset += (strlen(values[i]) + 1);
-        }
-    }
-
-    if(arg->val->uint32 & CMD_UNKNOWN)
-    {
-        buffer[offset] = 'U';
-        buffer[offset + 1] = '\0';
-    }
-    else
-    {
-        if(offset)
-        {
-            // remove trailing comma
-            buffer[offset - 1] = '\0';
-        }
-    }
+	if (arg->val->uint32 & CMD_UNKNOWN) {
+		buffer[offset] = 'U';
+		buffer[offset + 1] = '\0';
+	} else {
+		if (offset) {
+			// remove trailing comma
+			buffer[offset - 1] = '\0';
+		}
+	}
 }
 
 /**
@@ -123,21 +107,18 @@ void format( const plugin_arg_t * arg,
  */
 void parse(char *input, char out[PLUGIN_BUFFER_SIZE], void *conf)
 {
-    int i;
-    uint32_t result = 0;
+	int i;
+	uint32_t result = 0;
 
-    for(i = 0; i < NAMES_SIZE; i++)
-    {
-        if(strcasestr(input, values[i]))
-        {
-            result |= ((uint32_t)1) << i;
-        }
-    }
+	for (i = 0; i < NAMES_SIZE; i++) {
+		if (strcasestr(input, values[i])) {
+			result |= ((uint32_t)1) << i;
+		}
+	}
 
-    if(strcasestr(input,"U"))
-    {
-        result |= CMD_UNKNOWN;
-    }
+	if (strcasestr(input, "U")) {
+		result |= CMD_UNKNOWN;
+	}
 
-    snprintf(out, PLUGIN_BUFFER_SIZE, "%u", result);
+	snprintf(out, PLUGIN_BUFFER_SIZE, "%u", result);
 }

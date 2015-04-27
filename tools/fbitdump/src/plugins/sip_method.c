@@ -8,7 +8,8 @@ char *info()
 	return "";
 }
 
-void format( const plugin_arg_t * arg, int plain_numbers, char buff[PLUGIN_BUFFER_SIZE], void *conf) {
+void format(const plugin_arg_t * arg, int plain_numbers, char buff[PLUGIN_BUFFER_SIZE], void *conf)
+{
 	char *methods[]={"INVITE", "ACK", "BYE", "CANCEL", "OPTIONS", "REGISTER", "PRACK", "SUBSCRIBE",
 		"NOTIFY", "PUBLISH", "INFO", "REFER", "MESSAGE", "UPDATE"};
 
@@ -51,8 +52,9 @@ void parse(char *input, char out[PLUGIN_BUFFER_SIZE], void *conf)
 	} else if (!strcasecmp(input, "UPDATE")) {
 		code = 14;
 	} else {
-		snprintf(out, PLUGIN_BUFFER_SIZE, "");
+		snprintf(out, PLUGIN_BUFFER_SIZE, "%s", "");
 		return;
 	}
+
 	snprintf(out, PLUGIN_BUFFER_SIZE, "%d", code);
 }

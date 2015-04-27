@@ -49,7 +49,8 @@ char *info()
 }
 
 /** Funcion to assign given values to strings */
-void format(const plugin_arg_t *arg, int plain_numbers, char out[PLUGIN_BUFFER_SIZE], void *conf) {
+void format(const plugin_arg_t *arg, int plain_numbers, char out[PLUGIN_BUFFER_SIZE], void *conf)
+{
 	char *str = NULL;
 	char num[PLUGIN_BUFFER_SIZE];
 	int counter = 0;
@@ -58,8 +59,8 @@ void format(const plugin_arg_t *arg, int plain_numbers, char out[PLUGIN_BUFFER_S
 		if (version[counter].value == arg->val[0].uint16) {
 			str = version[counter].strptr;
 		}
-        counter++;
-    }
+		counter++;
+	}
 	
 	if (str != NULL) {
 		snprintf(out, PLUGIN_BUFFER_SIZE, "%s", str);
@@ -94,8 +95,9 @@ void parse(char *input, char out[PLUGIN_BUFFER_SIZE], void *conf)
 	} else if (!strcasecmp(input, "SKYPE")) {
 		code = 0x0005;
 	} else {
-		snprintf(out, PLUGIN_BUFFER_SIZE, "");
+		snprintf(out, PLUGIN_BUFFER_SIZE, "%s", "");
 		return;
 	}
+
 	snprintf(out, PLUGIN_BUFFER_SIZE, "0x%x", code);
 }
