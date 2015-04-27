@@ -328,11 +328,11 @@ int config_add_input(configurator *config, struct plugin_config *plugin, int ind
 	/* check api version */
 	unsigned int *plugin_api_version = (unsigned int *) dlsym(config->input.dll_handler, "ipfixcol_api_version");
 	if (!plugin_api_version) { /* no api version symbol */
-		MSG_ERROR(msg_module, "[%d] Unable to load plugin %s (%s). API version number is missing",
-			config->proc_id, plugin->conf.name, plugin->conf.file);
+		MSG_ERROR(msg_module, "[%d] Unable to load plugin '%s'; API version number is missing...",
+				config->proc_id, plugin->conf.name, plugin->conf.file);
 		goto err;
 	} else if (*plugin_api_version != IPFIXCOL_API_VERSION_NUMBER) { /* wrong api version */
-		MSG_ERROR(msg_module, "[%d] Unable to load plugin %s (%s) with version %ui. Version %ui is required",
+		MSG_ERROR(msg_module, "[%d] Unable to load plugin '%s' with version %ui; at least version %ui is required...",
 				config->proc_id, plugin->conf.name, plugin->conf.file, *plugin_api_version, IPFIXCOL_API_VERSION_NUMBER);
 		goto err;
 	}
@@ -417,11 +417,11 @@ int config_add_inter(configurator *config, struct plugin_config *plugin, int ind
 	/* check api version */
 	unsigned int *plugin_api_version = (unsigned int *) dlsym(im_plugin->dll_handler, "ipfixcol_api_version");
 	if (!plugin_api_version) { /* no api version symbol */
-		MSG_ERROR(msg_module, "[%d] Unable to load plugin %s (%s). API version number is missing",
-			config->proc_id, plugin->conf.name, plugin->conf.file);
+		MSG_ERROR(msg_module, "[%d] Unable to load plugin '%s'; API version number is missing...",
+				config->proc_id, plugin->conf.name, plugin->conf.file);
 		goto err;
 	} else if (*plugin_api_version != IPFIXCOL_API_VERSION_NUMBER) { /* wrong api version */
-		MSG_ERROR(msg_module, "[%d] Unable to load plugin %s (%s) with version %ui. Version %ui is required",
+		MSG_ERROR(msg_module, "[%d] Unable to load plugin '%s' with version %ui; at least version %ui is required...",
 				config->proc_id, plugin->conf.name, plugin->conf.file, *plugin_api_version, IPFIXCOL_API_VERSION_NUMBER);
 		goto err;
 	}
@@ -535,11 +535,11 @@ int config_add_storage(configurator *config, struct plugin_config *plugin, int i
 	/* check api version */
 	unsigned int *plugin_api_version = (unsigned int *) dlsym(st_plugin->dll_handler, "ipfixcol_api_version");
 	if (!plugin_api_version) { /* no api version symbol */
-		MSG_ERROR(msg_module, "[%d] Unable to load plugin %s (%s). API version number is missing",
-			config->proc_id, plugin->conf.name, plugin->conf.file);
+		MSG_ERROR(msg_module, "[%d] Unable to load plugin '%s'; API version number is missing...",
+				config->proc_id, plugin->conf.name, plugin->conf.file);
 		goto err;
 	} else if (*plugin_api_version != IPFIXCOL_API_VERSION_NUMBER) { /* wrong api version */
-		MSG_ERROR(msg_module, "[%d] Unable to load plugin %s (%s) with version %ui. Version %ui is required",
+		MSG_ERROR(msg_module, "[%d] Unable to load plugin '%s' with version %ui; at least version %ui is required...",
 				config->proc_id, plugin->conf.name, plugin->conf.file, *plugin_api_version, IPFIXCOL_API_VERSION_NUMBER);
 		goto err;
 	}
