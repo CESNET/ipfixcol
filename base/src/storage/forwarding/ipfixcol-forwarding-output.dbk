@@ -70,9 +70,22 @@
 		<name>send data</name>
 		<fileWriter>
 			<fileFormat>forwarding</fileFormat>
-			<type>tcp</type>
-			<ipv4>127.0.0.1</ipv4>
-			<port>4739</port>
+
+			<distribution>RoundRobin</distribution>
+
+			<defaultPort>4739</defaultPort>
+			<protocol>tcp</protocol>
+
+			<destination>
+				<ip>192.168.0.1</ip>
+			</destination>
+			<destination>
+				<ip>192.168.0.2</ip>
+			</destination>
+			<destination>
+				<ip>192.168.0.3</ip>
+				<port>4740</port>
+			</destination>
 		</fileWriter>
 	</destination>
 	]]>
@@ -82,31 +95,56 @@
 		<variablelist>
 			<varlistentry>
 				<term>
-					<command>type</command>
+					<command>distribution</command>
 				</term>
 				<listitem>
-					<simpara>TCP, SCTP or UDP. For UDP, same parameters as for collecting process can be specified (templateLifeTime...).
+					<simpara>Distribution type when more than 1 destination specified. Supported types are <command>RoundRobin</command> and <command>all</command>. Default type is <command>all</command>.
 					</simpara>
 				</listitem>
 			</varlistentry>
 			<varlistentry>
 				<term>
-					<command>ipv4</command>
+					<command>defaultPort</command>
 				</term>
 				<listitem>
-					<simpara>IPv4 address. Alternative is <command>ipv6</command>.
+					<simpara>Default port number. It can be overriden by <command>port</command> tag in <command>destination</command>.
 					</simpara>
 				</listitem>
 			</varlistentry>
 			<varlistentry>
 				<term>
-					<command>port</command>
+					<command>protocol</command>
 				</term>
 				<listitem>
-					<simpara>destination port
+					<simpara>Connection type for all destinations
 					</simpara>
 				</listitem>
 			</varlistentry>
+
+			<varlistentry>
+				<term>
+					<command>destination</command>
+				</term>
+				<listitem>
+					<simpara>Destination address
+					</simpara>
+					<varlistentry>
+						<term>
+							<command>ip</command>
+						</term>
+						<simpara>IPv4 or IPv6 address</simpara>
+					</varlistentry>
+
+					<varlistentry>
+						<term>
+							<command>port</command>
+						</term>
+						<simpara>Destination port number</simpara>
+					</varlistentry>
+
+				</listitem>
+			</varlistentry>
+
 		</variablelist>
 	</para>
 	</refsect1>

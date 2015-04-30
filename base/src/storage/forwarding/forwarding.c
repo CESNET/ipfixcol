@@ -1,5 +1,5 @@
 /**
- * \file forwarding.c
+ * \file proxy.c
  * \author Michal Kozubik <michal.kozubik@cesnet.cz>
  * \brief Storage plugin that forwards data to network
  *
@@ -37,162 +37,25 @@
  *
  */
 
-/* TODO: SCTP - use sctp wrappers (sctp_bindx, sctp_sendmsg ...) */
-
 #include <ipfixcol.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 #include <stdbool.h>
 
 #include <string.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <netinet/in.h>
 
-#include <netdb.h>
 #include <unistd.h>
 #include <errno.h>
-#include "../../preprocessor.h"
 #include <ipfixcol/ipfix_message.h>
 
-#ifdef HAVE_SCTP
-
-#include <netinet/sctp.h>
-
-#endif
+#include "forwarding.h"
 
 /* API version constant */
 IPFIXCOL_API_VERSION;
 
+
 /* Identifier for MSG_* */
 static const char *msg_module = "forwarding storage";
-
-/* Target address */
-union addr_t {
-	struct sockaddr_in  addr4;
-	struct sockaddr_in6 addr6;
-};
-
-/* Forwarded template record */
-struct forwarding_template_record {
-	uint32_t last_sent;
-	uint32_t packets;
-	int type, length;
-	struct ipfix_template_record *record;
-};
-
-/* Plugin configuration */
-typedef struct forwarding_config {
-	enum SOURCE_TYPE type;
-	int version, port, sockfd;
-	union addr_t addr;
-	struct udp_conf udp;
-	int records_cnt, records_max;
-	struct forwarding_template_record **records;
-} forwarding;
-
-struct forwarding_process {
-	uint8_t *msg;
-	int offset;
-	forwarding *conf;
-	int type;
-	int length;
-};
-
-/**
- * \brief Connect to IPv4 destination address
- * \param[in] conf Plugin configuration
- * \param[in] destination IPv4 address
- * \return 0 on success
- */
-int forwarding_connect4(forwarding *conf, char *destination)
-{
-	struct hostent *server = gethostbyname(destination);
-	if (!server) {
-		MSG_ERROR(msg_module, "No such host \"%s\"", destination);
-		return 1;
-	}
-
-	memmove((char *) &(conf->addr.addr4.sin_addr), (char *) server->h_addr, server->h_length);
-	conf->addr.addr4.sin_family = AF_INET;
-	conf->addr.addr4.sin_port = htons(conf->port);
-
-	if (conf->type == SOURCE_TYPE_UDP) {
-		conf->sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-		if (conf->sockfd < 0) {
-			MSG_ERROR(msg_module, "Cannot open socket");
-			return 1;
-		}
-	} else {
-		int proto = 0;
-		
-#ifdef HAVE_SCTP
-		if (conf->type == SOURCE_TYPE_SCTP) {
-			proto = IPPROTO_SCTP;
-		}
-#endif
-		conf->sockfd = socket(AF_INET, SOCK_STREAM, proto);
-		if (conf->sockfd < 0) {
-			MSG_ERROR(msg_module, "Cannot open socket");
-			return 1;
-		}
-		if (connect(conf->sockfd, (struct sockaddr *) &(conf->addr.addr4), sizeof(conf->addr.addr4)) < 0) {
-			MSG_ERROR(msg_module, "Cannot connect to \"%s:%d\" - %s", destination, conf->port, strerror(errno));
-			return 1;
-		}
-		MSG_NOTICE(msg_module, "Connected to %s:%d", destination, conf->port);
-	}
-	return 0;
-}
-
-/**
- * \brief Connect to IPv6 destination address
- * \param[in] conf Plugin configuration
- * \param[in] destination destination IPv6 address
- * \return 0 on success
- */
-int forwarding_connect6(forwarding *conf, char *destination)
-{
-	struct hostent *server = gethostbyname2(destination, AF_INET6);
-	if (!server) {
-		MSG_ERROR(msg_module, "No such host \"%s\"", destination);
-		return 1;
-	}
-
-	memmove((char *) &(conf->addr.addr6.sin6_addr), (char *) server->h_addr, server->h_length);
-	conf->addr.addr6.sin6_flowinfo = 0;
-	conf->addr.addr6.sin6_family = AF_INET6;
-	conf->addr.addr6.sin6_port = htons(conf->port);
-
-	if (conf->type == SOURCE_TYPE_UDP) {
-		conf->sockfd = socket(AF_INET6, SOCK_DGRAM, 0);
-		if (conf->sockfd < 0) {
-			MSG_ERROR(msg_module, "Cannot open socket");
-			return 1;
-		}
-	} else {
-		int proto = 0;
-		
-#ifdef HAVE_SCTP
-		if (conf->type == SOURCE_TYPE_SCTP) {
-			proto = IPPROTO_SCTP;
-		}
-#endif
-		conf->sockfd = socket(AF_INET6, SOCK_STREAM, proto);
-		
-		if (conf->sockfd < 0) {
-			MSG_ERROR(msg_module, "Cannot open socket");
-			return 1;
-		}
-		if (connect(conf->sockfd, (struct sockaddr *) &(conf->addr.addr6), sizeof(conf->addr.addr6)) < 0) {
-			MSG_ERROR(msg_module, "Cannot connect to \"%s:%d\" - %s", destination, conf->port, strerror(errno));
-			return 1;
-		}
-		MSG_NOTICE(msg_module, "Connected to %s:%d", destination, conf->port);
-	}
-
-	return 0;
-}
 
 /**
  * \brief Get index to array of template record for given Template ID
@@ -309,80 +172,138 @@ int forwarding_init_records(forwarding *conf)
 	return 0;
 }
 
+const char *get_default_port(forwarding *conf)
+{
+	return (conf->default_port != NULL) ? conf->default_port : DEFAULT_PORT;
+}
+
+const char *get_default_protocol(forwarding *conf)
+{
+	return (conf->default_protocol != NULL) ? conf->default_protocol : DEFAULT_PROTOCOL;
+}
+
+sisoconf *create_sender(forwarding *conf, const char *ip, const char *port)
+{
+	if (ip == NULL) {
+		MSG_ERROR(msg_module, "IP address not specified");
+		return NULL;
+	}
+
+	if (port == NULL) {
+		port = get_default_port(conf);
+	}
+
+	const char *proto = get_default_protocol(conf);
+
+	sisoconf *sender = siso_create();
+	if (sender == NULL) {
+		MSG_ERROR(msg_module, "Memory error - cannot create sender object");
+		return NULL;
+	}
+
+	if (siso_create_connection(sender, ip, port, proto) != SISO_OK) {
+		MSG_ERROR(msg_module, "%s", siso_get_last_err(sender));
+		return NULL;
+	}
+
+	return sender;
+}
+
+sisoconf *add_sender(forwarding *conf, sisoconf *sender)
+{
+	if (conf->senders_cnt == conf->senders_max) {
+		conf->senders_max = (conf->senders_max == 0) ? 10 : conf->senders_max * 2;
+
+		conf->senders = realloc(conf->senders, sizeof(sisoconf*) * conf->senders_max);
+		if (conf->senders == NULL) {
+			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d).", __FILE__, __LINE__);
+			return NULL;
+		}
+	}
+
+	conf->senders[conf->senders_cnt++] = sender;
+	return sender;
+}
+
+sisoconf *process_destination(forwarding *conf, xmlDoc *doc, xmlNodePtr node)
+{
+	const char *ip = NULL, *port = NULL;
+	for (; node != NULL; node = node->next) {
+
+		if (!xmlStrcmp(node->name, (const xmlChar *) "ip")) {
+			if (ip) {
+				free((void*)ip);
+			}
+			ip = (const char *) xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
+
+		} else if (!xmlStrcmp(node->name, (const xmlChar *) "port")) {
+			if (port) {
+				free((void*)port);
+			}
+			port = (const char *) xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
+		}
+	}
+
+	sisoconf *sender = create_sender(conf, ip, port);
+
+	if (ip) {
+		free((void*)ip);
+	}
+
+	if (port) {
+		free((void*)port);
+	}
+
+	return sender;
+}
+
+void load_default_values(forwarding *conf, xmlDoc *doc, xmlNodePtr node)
+{
+	for (; node != NULL; node = node->next) {
+
+		if (!xmlStrcmp(node->name, (const xmlChar *) "defaultPort")) {
+			if (conf->default_port) {
+				free((void*)conf->default_port);
+			}
+			conf->default_port = (const char *) xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
+
+		} else if (!xmlStrcmp(node->name, (const xmlChar *) "protocol")) {
+			if (conf->default_protocol) {
+				free((void*)conf->default_protocol);
+			}
+			conf->default_protocol = (const char *) xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
+		}
+	}
+
+	conf->udp_connection = strcasecmp(get_default_protocol(conf), "UDP") == 0;
+	conf->distribution = DT_TO_ALL;
+}
+
 /**
  * \brief Initialize configuration by xml file
  * \param[in] conf Plugin configuration
  * \param[in] doc XML document file
  * \param[in] root XML root element
- * \return Destination address
+ * \return
  */
-char *forwarding_init_conf(forwarding *conf, xmlDoc *doc, xmlNodePtr root)
+bool forwarding_init_conf(forwarding *conf, xmlDoc *doc, xmlNodePtr root)
 {
 	xmlNodePtr cur = root->children;
-
-	bool type = false, addr = false, port = false;
-	char *destination = NULL;
 	xmlChar *aux_str = NULL;
 
-	while (cur) {
-		if (!xmlStrcmp(cur->name, (const xmlChar *) "type")) {
-			/* Get connection type */
-			if (type) {
-				MSG_ERROR(msg_module, "Multiple occurrences of type!");
-				return NULL;
-			}
-			aux_str = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
-			if (!xmlStrcasecmp(aux_str, (const xmlChar *) "tcp")) {
-				/* TCP */
-				conf->type = SOURCE_TYPE_TCP;
-			} else if (!xmlStrcasecmp(aux_str, (const xmlChar *) "udp")) {
-				/* UDP */
-				conf->type = SOURCE_TYPE_UDP;
-			} else if (!xmlStrcasecmp(aux_str, (const xmlChar *) "sctp")) {
-				/* SCTP */
-#ifdef HAVE_SCTP
-				conf->type = SOURCE_TYPE_SCTP;
-#else
-				MSG_ERROR(msg_module, "Plugin built without SCTP support!");
-				xmlFree(aux_str);
-				return NULL;
-#endif
-			} else {
-				MSG_ERROR(msg_module, "Unknown connection type \"%s\"!", aux_str);
-				xmlFree(aux_str);
-				return NULL;
-			}
-			type = true;
-		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "ipv4")) {
-			/* Parse IPv4 destination address */
-			if (addr) {
-				MSG_ERROR(msg_module, "Multiple occurrences of IP address!");
-				free(destination);
-				return NULL;
-			}
-			destination = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
-			conf->version = 4;
-			addr = true;
-		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "ipv6")) {
-			/* Parse IPv6 destination address */
-			if (addr) {
-				MSG_ERROR(msg_module, "Multiple occurrences of IP address!");
-				free(destination);
-				return NULL;
-			}
-			destination = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
-			conf->version = 6;
-			addr = true;
-		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "port")) {
-			/* Get destination port */
-			if (port) {
-				MSG_ERROR(msg_module, "Multiple occurrences of port!");
-				return NULL;
-			}
-			aux_str = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
-			conf->port = atoi((char *) aux_str);
-			port = true;
+	load_default_values(conf, doc, root->children);
 
+	while (cur) {
+		if (!xmlStrcmp(cur->name, (const xmlChar *) "destination")) {
+			sisoconf *sender = process_destination(conf, doc, cur->children);
+			if (sender == NULL || add_sender(conf, sender) == NULL) {
+				return false;
+			}
+		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "distribution")) {
+			aux_str = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+			if (!strcasecmp((const char *) aux_str, "RoundRobin")) {
+				conf->distribution = DT_ROUND_ROBIN;
+			}
 		/* UDP configuration */
 		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "templateLifeTime")) {
 			aux_str = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
@@ -407,17 +328,16 @@ char *forwarding_init_conf(forwarding *conf, xmlDoc *doc, xmlNodePtr root)
 		cur = cur->next;
 	}
 
-	if (!type || !addr || !port) {
-		MSG_ERROR(msg_module, "Missing some configuration element(s)");
-		return NULL;
+	if (conf->senders_cnt == 0) {
+		MSG_ERROR(msg_module, "No valid destination found!");
+		return false;
 	}
 
 	if (forwarding_init_records(conf)) {
-		free(destination);
-		return NULL;
+		return false;
 	}
 
-	return destination;
+	return true;
 }
 
 /**
@@ -431,20 +351,17 @@ int storage_init(char *params, void **config)
 	forwarding *conf = NULL;
 	xmlDoc *doc = NULL;
 	xmlNodePtr root = NULL;
-	char *destination = NULL;
-	int ret;
 
 	MSG_DEBUG(msg_module, "Initialization");
+
+	if (!params) {
+		MSG_ERROR(msg_module, "Missing plugin configuration!");
+		return -1;
+	}
 
 	conf = calloc(1, sizeof(forwarding));
 	if (!conf) {
 		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
-		return -1;
-	}
-
-	if (!params) {
-		MSG_ERROR(msg_module, "Missing plugin configuration!");
-		free(conf);
 		return -1;
 	}
 
@@ -467,31 +384,16 @@ int storage_init(char *params, void **config)
 		goto init_err;
 	}
 
-	destination = forwarding_init_conf(conf, doc, root);
-	if (destination == NULL) {
-		goto init_err;
-	}
-
-	if (conf->version == 4) {
-		ret = forwarding_connect4(conf, destination);
-	} else {
-		ret = forwarding_connect6(conf, destination);
-	}
-
-	if (ret) {
+	if (!forwarding_init_conf(conf, doc, root)) {
 		goto init_err;
 	}
 
 	*config = conf;
 
-	free(destination);
 	xmlFreeDoc(doc);
 	return 0;
 
 init_err:
-	if (destination) {
-		free(destination);
-	}
 	xmlFreeDoc(doc);
 	free(conf);
 	return -1;
@@ -504,10 +406,8 @@ init_err:
  */
 int store_now(const void *config)
 {
-	forwarding *conf = (forwarding *) config;
-
+	(void) config;
 	MSG_DEBUG(msg_module, "Flushing data");
-	fsync(conf->sockfd);
 
 	return 0;
 }
@@ -557,74 +457,20 @@ void *msg_to_packet(const struct ipfix_message *msg, int *packet_length)
 	return packet;
 }
 
-/**
- * \brief Send UDP packet
- * \param[in] conf Plugin configuration
- * \param[in] packet IPFIX packet
- * \param[in] length Packet length
- * \return -1 on error
- */
-int forwarding_send_udp(forwarding *conf, void *packet, int length)
+void send_data(sisoconf *sender, void *data, int length)
 {
-	if (conf->version == 4) {
-		return sendto(conf->sockfd, packet, length, 0,
-				(struct sockaddr *) &(conf->addr.addr4), sizeof(conf->addr.addr4));
-	} else {
-		return sendto(conf->sockfd, packet, length, 0,
-				(struct sockaddr *) &(conf->addr.addr6), sizeof(conf->addr.addr6));
+	if (siso_send(sender, data, length) != SISO_OK) {
+		MSG_ERROR(msg_module, "%s", siso_get_last_err(sender));
 	}
 }
 
-/**
- * \brief Send TCP packet
- * \param[in] conf Plugin configuration
- * \param[in] packet IPFIX packet
- * \param[in] length Packet length
- * \return -1 on error
- */
-int forwarding_send_tcp(forwarding *conf, void *packet, int length)
+void send_except_one(forwarding *conf, void *data, int length, int except_index)
 {
-	return send(conf->sockfd, packet, length, 0);
-}
-
-/**
- * \brief Send SCTP packet
- * \param[in] conf Plugin configuration
- * \param[in] packet IPFIX packet
- * \param[in] length Packet length
- * \return -1 on error
- */
-int forwarding_send_sctp(forwarding *conf, void *packet, int length)
-{
-	return send(conf->sockfd, packet, length, 0);
-}
-
-/**
- * \brief Send packet
- * \param[in] conf Plugin configuration
- * \param[in] packet IPFIX packet
- * \param[in] length Packet length
- */
-void forwarding_send(forwarding *conf, void *packet, int length)
-{
-	int ret = 0;
-
-	switch (conf->type) {
-	case SOURCE_TYPE_UDP:
-		ret = forwarding_send_udp(conf, packet, length);
-		break;
-	case SOURCE_TYPE_TCP:
-		ret = forwarding_send_tcp(conf, packet, length);
-		break;
-	case SOURCE_TYPE_SCTP:
-		ret = forwarding_send_sctp(conf, packet, length);
-		break;
-	default:
-		break;
-	}
-
-	if (ret < 0) {
-		MSG_WARNING(msg_module, "%s", strerror(errno));
+	for (int i = 0; i < conf->senders_cnt; ++i) {
+		if (i != except_index) {
+			MSG_ERROR(msg_module, "[%d] %d", i, length);
+			send_data(conf->senders[i], data, length);
+		}
 	}
 }
 
@@ -641,7 +487,7 @@ int forwarding_udp_sent(forwarding *conf, struct forwarding_template_record *rec
 							conf->udp.template_life_time : conf->udp.options_template_life_time;
 	uint32_t life_packets = (rec->type == TM_TEMPLATE) ?
 							conf->udp.template_life_packet : conf->udp.options_template_life_packet;
-	
+
 	/* Check template timeout */
 	if (life_time) {
 		if (rec->last_sent + life_time > act_time) {
@@ -649,7 +495,7 @@ int forwarding_udp_sent(forwarding *conf, struct forwarding_template_record *rec
 		}
 		rec->last_sent = act_time;
 	}
-	
+
 	/* Check template life packets */
 	if (life_packets) {
 		if (rec->packets < life_packets) {
@@ -657,7 +503,7 @@ int forwarding_udp_sent(forwarding *conf, struct forwarding_template_record *rec
 		}
 		rec->packets = 0;
 	}
-	
+
 	return 0;
 }
 
@@ -680,7 +526,7 @@ int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, 
 	if (i >= 0) {
 		if (tm_compare_template_records(conf->records[i]->record, rec)) {
 			/* records are equal */
-			if (conf->type == SOURCE_TYPE_UDP) {
+			if (conf->udp_connection) {
 				return forwarding_udp_sent(conf, conf->records[i]);
 			}
 			return 1;
@@ -832,7 +678,7 @@ int forwarding_update_templates(forwarding *conf, const struct ipfix_message *ms
 	int i, tid, tset_len = 4, otset_len = 4;
 	struct ipfix_template_set *templ_set = NULL, *option_set = NULL;
 	struct forwarding_template_record *rec = NULL;
-	
+
 	/* Check each used template */
 	for (i = 0; i < MSG_MAX_DATA_COUPLES && msg->data_couple[i].data_set; ++i) {
 		if (!msg->data_couple[i].data_template) {
@@ -847,7 +693,7 @@ int forwarding_update_templates(forwarding *conf, const struct ipfix_message *ms
 		}
 
 		rec->packets++;
-		
+
 		if (forwarding_udp_sent(conf, rec)) {
 			/* Template doesnt need to be sent */
 			continue;
@@ -864,7 +710,7 @@ int forwarding_update_templates(forwarding *conf, const struct ipfix_message *ms
 			otset_len += rec->length;
 		}
 	}
-	
+
 	/* Add sets into IPFIX message */
 	if (templ_set) {
 		templ_set->header.flowset_id = htons(IPFIX_TEMPLATE_FLOWSET_ID);
@@ -884,6 +730,46 @@ int forwarding_update_templates(forwarding *conf, const struct ipfix_message *ms
 	return offset;
 }
 
+void send_packet(forwarding *conf, void *msg, int length, int templ_only_len)
+{
+	switch (conf->distribution) {
+	case DT_ROUND_ROBIN:
+		MSG_ERROR(msg_module, "%d vs %d", length, templ_only_len);
+		/**
+		 * Round Robin:
+		 * send packet to only 1 destination.
+		 * next packet will be sent to the next destination.
+		 * Template sets MUST be sent to ALL destinations.
+		 * Templates are ALWAYS before data sets so we don't need to
+		 * copy them to other IPFIX packet. We can only change packet length.
+		 */
+		if (length == templ_only_len) {
+			send_except_one(conf, msg, length, -1);
+			break;
+		}
+
+		MSG_ERROR(msg_module, "[%d] %d", conf->sender_index, length);
+		send_data(conf->senders[conf->sender_index], msg, length);
+
+		if (templ_only_len > IPFIX_HEADER_LENGTH) {
+			((struct ipfix_header *) msg)->length = htons(templ_only_len);
+			send_except_one(conf, msg, templ_only_len, conf->sender_index);
+		}
+
+		conf->sender_index++;
+		if (conf->sender_index == conf->senders_cnt) {
+			conf->sender_index = 0;
+		}
+		break;
+	default:
+		/**
+		 * Send data to ALL destinations
+		 */
+		send_except_one(conf, msg, length, -1);
+		break;
+	}
+}
+
 /**
  * \brief Store packet - make packet from message and write it into socket
  * \param[in] config Plugin configuration
@@ -892,11 +778,11 @@ int forwarding_update_templates(forwarding *conf, const struct ipfix_message *ms
  * \return 0 on success
  */
 int store_packet(void *config, const struct ipfix_message *ipfix_msg,
-                 const struct ipfix_template_mgr *template_mgr)
+				 const struct ipfix_template_mgr *template_mgr)
 {
 	(void) template_mgr;
 	forwarding *conf = (forwarding *) config;
-	uint16_t length = 0, i, setlen;
+	uint16_t length = 0, i, setlen, templ_only_len;
 
 	uint8_t *new_msg = malloc(MSG_MAX_LENGTH);
 	if (!new_msg) {
@@ -910,10 +796,12 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	/* Remove already sent templates */
 	length = forwarding_remove_sent_templates(conf, ipfix_msg, new_msg);
 
-	if (conf->type == SOURCE_TYPE_UDP) {
+	if (conf->udp_connection) {
 		/* Add timeouted templates */
 		length = forwarding_update_templates(conf, ipfix_msg, new_msg, length);
 	}
+
+	templ_only_len = length;
 
 	/* Copy data sets */
 	for (i = 0; i < MSG_MAX_DATA_COUPLES && ipfix_msg->data_couple[i].data_set; ++i) {
@@ -925,11 +813,12 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	((struct ipfix_header *) new_msg)->length = htons(length);
 
 	/* Send data */
-	forwarding_send(conf, new_msg, length);
+	send_packet(conf, new_msg, length, templ_only_len);
 	free(new_msg);
 
 	return 0;
 }
+
 
 /**
  * \brief Close plugin
@@ -941,10 +830,6 @@ int storage_close(void **config)
 	MSG_DEBUG(msg_module, "CLOSE");
 	forwarding *conf = (forwarding *) *config;
 
-	if (conf->type != SOURCE_TYPE_UDP) {
-		close(conf->sockfd);
-	}
-
 	int i, c;
 	for (i = 0, c = 0; i < conf->records_max && c < conf->records_cnt; ++i) {
 		if (conf->records[i]) {
@@ -954,6 +839,11 @@ int storage_close(void **config)
 		}
 	}
 
+	for (i = 0; i < conf->senders_cnt; ++i) {
+		siso_destroy(conf->senders[i]);
+	}
+
+	free(conf->senders);
 	free(conf->records);
 	free(conf);
 
