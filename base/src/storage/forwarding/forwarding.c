@@ -468,7 +468,6 @@ void send_except_one(forwarding *conf, void *data, int length, int except_index)
 {
 	for (int i = 0; i < conf->senders_cnt; ++i) {
 		if (i != except_index) {
-			MSG_ERROR(msg_module, "[%d] %d", i, length);
 			send_data(conf->senders[i], data, length);
 		}
 	}
@@ -734,7 +733,6 @@ void send_packet(forwarding *conf, void *msg, int length, int templ_only_len)
 {
 	switch (conf->distribution) {
 	case DT_ROUND_ROBIN:
-		MSG_ERROR(msg_module, "%d vs %d", length, templ_only_len);
 		/**
 		 * Round Robin:
 		 * send packet to only 1 destination.
@@ -748,7 +746,6 @@ void send_packet(forwarding *conf, void *msg, int length, int templ_only_len)
 			break;
 		}
 
-		MSG_ERROR(msg_module, "[%d] %d", conf->sender_index, length);
 		send_data(conf->senders[conf->sender_index], msg, length);
 
 		if (templ_only_len > IPFIX_HEADER_LENGTH) {
