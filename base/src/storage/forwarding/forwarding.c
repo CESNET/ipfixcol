@@ -534,14 +534,14 @@ void *msg_to_packet(const struct ipfix_message *msg, int *packet_length)
 	offset += IPFIX_HEADER_LENGTH;
 
 	/* Copy template sets */
-	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; ++i) {
+	for (i = 0; i < MSG_MAX_TEMPL_SETS && msg->templ_set[i]; ++i) {
 		len = ntohs(msg->templ_set[i]->header.length);
 		memcpy(packet + offset, msg->templ_set[i], len);
 		offset += len;
 	}
 
 	/* Copy option template sets */
-	for (i = 0; i < MSG_MAX_OTEMPLATES && msg->opt_templ_set[i]; ++i) {
+	for (i = 0; i < MSG_MAX_OTEMPL_SETS && msg->opt_templ_set[i]; ++i) {
 		len = ntohs(msg->opt_templ_set[i]->header.length);
 		memcpy(packet + offset, msg->opt_templ_set[i], len);
 		offset += len;
@@ -711,13 +711,13 @@ int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, 
 void forwarding_remove_empty_sets(struct ipfix_message *msg)
 {
 	int i, j, len;
-	for (i = 0, j = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; ++i) {
+	for (i = 0, j = 0; i < MSG_MAX_TEMPL_SETS && msg->templ_set[i]; ++i) {
 		len = ntohs(msg->templ_set[i]->header.length);
 		if (len <= 4) {
 			/* Set correct message length */
 			msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) - len);
 			/* Shift all template sets behind this (there must not be hole) */
-			for (j = i; j < MSG_MAX_TEMPLATES - 1 && msg->templ_set[j]; ++j) {
+			for (j = i; j < MSG_MAX_TEMPL_SETS - 1 && msg->templ_set[j]; ++j) {
 				msg->templ_set[j] = msg->templ_set[j + 1];
 			}
 		}
@@ -762,7 +762,7 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 
 	/* Copy unsent templates to new message */
 	proc.type = TM_TEMPLATE;
-	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i] != NULL; ++i) {
+	for (i = 0; i < MSG_MAX_TEMPL_SETS && msg->templ_set[i] != NULL; ++i) {
 		prevo = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->templ_set[i]->header), 4);
 		proc.offset += 4;
@@ -780,7 +780,7 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 
 	/* Copy unsent option templates to new message */
 	proc.type = TM_OPTIONS_TEMPLATE;
-	for (i = 0; i < MSG_MAX_OTEMPLATES && msg->opt_templ_set[i]; ++i) {
+	for (i = 0; i < MSG_MAX_OTEMPL_SETS && msg->opt_templ_set[i]; ++i) {
 		prevo = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->opt_templ_set[i]->header), 4);
 		proc.offset += 4;
@@ -809,10 +809,10 @@ void forwarding_add_set(struct ipfix_message *msg, struct ipfix_template_set *se
 	int i;
 
 	// Find first empty slot
-	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; ++i);
+	for (i = 0; i < MSG_MAX_TEMPL_SETS && msg->templ_set[i]; ++i);
 
-	if (i == MSG_MAX_TEMPLATES) {
-		MSG_ERROR(msg_module, "Could not add template to IPFIX message, because message already features %u templates", MSG_MAX_TEMPLATES);
+	if (i == MSG_MAX_TEMPL_SETS) {
+		MSG_ERROR(msg_module, "Could not add template to IPFIX message, because message already features %u templates", MSG_MAX_TEMPL_SETS);
 	} else {
 		msg->templ_set[i] = set;
 		msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) + ntohs(set->header.length));

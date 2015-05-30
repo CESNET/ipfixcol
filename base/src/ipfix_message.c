@@ -74,7 +74,6 @@ static struct offset_field offsets[] = {
 #define read32(ptr) (*((uint32_t *) (ptr)))
 #define read64(ptr) (*((uint64_t *) (ptr)))
 
-
 /**
  * \brief Create ipfix_message structure from data in memory
  *

@@ -74,7 +74,6 @@ struct odip_ip_config {
 	struct ipfix_template_mgr *tm; /* Template Manager */
 };
 
-
 /* structure for processing message */
 struct odip_processor {
 	uint8_t *msg;
@@ -287,7 +286,7 @@ int intermediate_process_message(void *config, void *message)
 	
 	/* process template records */
 	proc.type = TM_TEMPLATE;
-	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; ++i) {
+	for (i = 0; i < MSG_MAX_TEMPL_SETS && msg->templ_set[i]; ++i) {
 		prevoffset = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->templ_set[i]->header), 4);
 		proc.offset += 4;
@@ -306,7 +305,7 @@ int intermediate_process_message(void *config, void *message)
 	
 	/* Process option templates */
 	proc.type = TM_OPTIONS_TEMPLATE;
-	for (i = 0; i < MSG_MAX_OTEMPLATES && msg->opt_templ_set[i]; ++i) {
+	for (i = 0; i < MSG_MAX_OTEMPL_SETS && msg->opt_templ_set[i]; ++i) {
 		prevoffset = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->opt_templ_set[i]->header), 4);
 		proc.offset += 4;
