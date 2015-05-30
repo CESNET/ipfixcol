@@ -73,7 +73,6 @@
  */
 #define INPUT_INTR -2
 
-
 /**
  * \enum SOURCE_TYPE
  * \brief Type of the source of the input data.
@@ -82,21 +81,21 @@
  * information structure\endlink (like \link #input_info_network network\endlink
  * or \link #input_info_file file\endlink).
  */
-enum SOURCE_TYPE{
+enum SOURCE_TYPE {
 	SOURCE_TYPE_UDP,          /**< IPFIX over UDP */
 	SOURCE_TYPE_TCP,          /**< IPFIX over TCP */
 	SOURCE_TYPE_TCPTLS,       /**< IPFIX over TCP secured with TLS */
 	SOURCE_TYPE_SCTP,         /**< IPFIX over SCTP */
- 	SOURCE_TYPE_NF5,          /**< NetFlow v5 */
+	SOURCE_TYPE_NF5,          /**< NetFlow v5 */
 	SOURCE_TYPE_NF9,          /**< NetFlow v9 */
 	SOURCE_TYPE_IPFIX_FILE,   /**< IPFIX File Format */
 	SOURCE_TYPE_COUNT         /**< number of defined SOURCE_TYPEs */
 };
 
-enum SOURCE_STATUS{
-	SOURCE_STATUS_NEW,     /**< New source connected */
-	SOURCE_STATUS_OPENED,         /**< Received first data from source */
-	SOURCE_STATUS_CLOSED       /**< Source closed */
+enum SOURCE_STATUS {
+	SOURCE_STATUS_NEW,        /**< New source connected */
+	SOURCE_STATUS_OPENED,     /**< Received first data from source */
+	SOURCE_STATUS_CLOSED      /**< Source closed */
 };
 
 /**
@@ -117,13 +116,13 @@ struct __attribute__((__packed__)) input_info {
  */
 struct __attribute__((__packed__)) input_info_network {
 	enum SOURCE_TYPE type;    /**< type of source - #SOURCE_TYPE_UDP,
-	                           * #SOURCE_TYPE_TCP, #SOURCE_TYPE_TCPTLS,
-	                           * #SOURCE_TYPE_SCTP, #SOURCE_TYPE_NF5,
-	                           * #SOURCE_TYPE_NF9 */
+                               * #SOURCE_TYPE_TCP, #SOURCE_TYPE_TCPTLS,
+                               * #SOURCE_TYPE_SCTP, #SOURCE_TYPE_NF5,
+                               * #SOURCE_TYPE_NF9 */
 	int sequence_number;      /**< sequence number for current source */
-	enum SOURCE_STATUS status;  /**< source status - #SOURCE_STATUS_OPENED,
-	                           * #SOURCE_STATUS_NEW, #SOURCE_STATUS_CLOSED */
-	uint32_t odid;                 /**< Observation Domain ID of source */
+	enum SOURCE_STATUS status;/**< source status - #SOURCE_STATUS_OPENED,
+							   * #SOURCE_STATUS_NEW, #SOURCE_STATUS_CLOSED */
+	uint32_t odid;            /**< Observation Domain ID of source */
 	uint8_t l3_proto;         /**< IP protocol byte */
 	union {
 		struct in6_addr ipv6;
@@ -136,16 +135,16 @@ struct __attribute__((__packed__)) input_info_network {
 	uint16_t src_port;        /**< source transport port in host byte order */
 	uint16_t dst_port;        /**< destination transport port in host byte order */
 	void *exporter_cert;      /**< X.509 certificate used by exporter when
-	                           * using TLS/DTLS */
+                               * using TLS/DTLS */
 	void *collector_cert;     /**< X.509 certificate used by collector when
-	                           * using TLS/DTLS */
-    char *template_life_time;           /**< value templateLifeTime from plugin 
+                               * using TLS/DTLS */
+	char *template_life_time;           /**< value templateLifeTime from plugin
                                          * config xml */
-    char *options_template_life_time;   /**< value optionsTemplateLifeTime 
+	char *options_template_life_time;   /**< value optionsTemplateLifeTime
                                          * from config xml */
-    char *template_life_packet;         /**< value templateLifePacket from 
+	char *template_life_packet;         /**< value templateLifePacket from
                                          * plugin config xml*/
-    char *options_template_life_packet; /**< value optionsTemplateLifePacket
+	char *options_template_life_packet; /**< value optionsTemplateLifePacket
                                          * from plugin config xml */
 };
 
@@ -154,12 +153,12 @@ struct __attribute__((__packed__)) input_info_network {
  * \brief Input information structure specific for file based data sources.
  */
 struct __attribute__((__packed__)) input_info_file {
-	enum SOURCE_TYPE type;    /**< type of source - #SOURCE_TYPE_IPFIX_FILE */
-	int sequence_number;      /**< sequence number for current source */
-	enum SOURCE_STATUS status;  /**< source status - #SOURCE_STATUS_OPENED,
-		                           * #SOURCE_STATUS_NEW, #SOURCE_STATUS_CLOSED */
-	uint32_t odid;                 /**< Observation Domain ID of source */
-	char *name;               /**< name of the input file */
+	enum SOURCE_TYPE type;     /**< type of source - #SOURCE_TYPE_IPFIX_FILE */
+	int sequence_number;       /**< sequence number for current source */
+	enum SOURCE_STATUS status; /**< source status - #SOURCE_STATUS_OPENED,
+                                * #SOURCE_STATUS_NEW, #SOURCE_STATUS_CLOSED */
+	uint32_t odid;             /**< Observation Domain ID of source */
+	char *name;                /**< name of the input file */
 };
 
 /**
