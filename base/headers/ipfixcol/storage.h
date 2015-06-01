@@ -46,8 +46,8 @@
 #include "api.h"
 
 #define MSG_MAX_LENGTH          65535
-#define MSG_MAX_OTEMPLATES      1024
-#define MSG_MAX_TEMPLATES       1024
+#define MSG_MAX_OTEMPL_SETS     1024
+#define MSG_MAX_TEMPL_SETS      1024
 #define MSG_MAX_DATA_COUPLES    1023
 
 /**
@@ -119,15 +119,15 @@ struct __attribute__((__packed__)) ipfix_message {
 	enum PLUGIN_STATUS                plugin_status;
 	int plugin_id;
 	/** Number of data records in message */
-	uint16_t 						  data_records_count;
+	uint16_t                          data_records_count;
 	/** Number of template records in message */
-	uint16_t						  templ_records_count;
+	uint16_t                          templ_records_count;
 	/** Number of options template records in message */
-	uint16_t						  opt_templ_records_count;
+	uint16_t                          opt_templ_records_count;
 	/** List of Template Sets in the packet */
-	struct ipfix_template_set         *templ_set[MSG_MAX_TEMPLATES];
+	struct ipfix_template_set         *templ_set[MSG_MAX_TEMPL_SETS];
 	/** List of Options Template Sets in the packet */
-	struct ipfix_options_template_set *opt_templ_set[MSG_MAX_OTEMPLATES];
+	struct ipfix_options_template_set *opt_templ_set[MSG_MAX_OTEMPL_SETS];
 	/** List of Data Sets (with a link to corresponding template) in the packet */
 	struct data_template_couple       data_couple[MSG_MAX_DATA_COUPLES];
 	/** Pointer to the live profile */
