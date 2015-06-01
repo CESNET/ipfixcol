@@ -40,6 +40,14 @@
 extern "C" {
 #include <ipfixcol.h>
 #include <ipfixcol/profiles.h>
+#include <libxml/parser.h>
+#include <libxml/tree.h>
+#include <siso.h>
+#include <errno.h>
+#include <string.h>
+#include <signal.h>
+#include <unistd.h>
+#include <sys/types.h>
 
 /* API version constant */
 IPFIXCOL_API_VERSION;
@@ -47,9 +55,26 @@ IPFIXCOL_API_VERSION;
 
 #include <stdexcept>
 #include <iostream>
+#include <fstream>
+#include <thread>
+
+#define LEN_BYTES 4
+#define BUFFER_SIZE 2048
 
 /* Identifier for verbose macros */
 static const char *msg_module = "profiler";
+
+struct daemon_config {
+	fd_set read_flags;
+	bool done;
+	const char *ip;
+	const char *port;
+	std::string xml_path;
+	sisoconf *receiver;
+	char buffer[BUFFER_SIZE];
+	std::string message;
+	int sockfd;
+};
 
 /**
  * \struct plugin_conf
@@ -58,17 +83,154 @@ static const char *msg_module = "profiler";
  */
 struct plugin_conf {
 	void *ip_config;	/**< intermediate process config */
+	std::thread thread;
+	daemon_config *daemon;
 };
+
+
+void reconfigure()
+{
+	kill(getpid(), SIGUSR1);
+}
+
+void save_config(daemon_config *daemon, bool reconf = true)
+{
+	if (!daemon->message.empty()) {
+		const char *path = profiles_get_xml_path();
+
+		MSG_DEBUG(msg_module, "Saving configuration to %s", path);
+
+		std::ofstream file(path);
+		file << daemon->message;
+
+		if (reconf) {
+			reconfigure();
+		}
+	}
+}
+
+void receive_config(daemon_config *daemon)
+{
+	MSG_DEBUG(msg_module, "Waiting for data from daemon");
+	daemon->message.clear();
+	uint32_t remaining;
+
+	int readed = read(daemon->sockfd, &remaining, LEN_BYTES);
+	if (readed != LEN_BYTES) {
+		MSG_ERROR(msg_module, "Cannot read data from daemon: %s", strerror(errno));
+		return;
+	}
+
+	remaining = ntohl(remaining);
+
+	MSG_DEBUG(msg_module, "Reading %d bytes", remaining);
+
+	while (remaining > 0) {
+		readed = read(daemon->sockfd, daemon->buffer, std::min(remaining, (uint32_t) BUFFER_SIZE));
+		if (readed < 1) {
+			MSG_ERROR(msg_module, "Error while reading message: %s", strerror(errno));
+			daemon->message.clear();
+			return;
+		}
+
+		daemon->buffer[readed] = '\0';
+		daemon->message += daemon->buffer;
+		remaining -= readed;
+	}
+
+}
+
+void daemon_loop(daemon_config *config)
+{
+	while (!config->done) {
+		receive_config(config);
+		save_config(config);
+	}
+
+	siso_close_connection(config->receiver);
+	siso_destroy(config->receiver);
+}
+
+void start_daemon(plugin_conf *config)
+{
+	if (siso_create_connection(config->daemon->receiver, config->daemon->ip, config->daemon->port, "TCP") != SISO_OK) {
+		throw std::runtime_error(siso_get_last_err(config->daemon->receiver));
+	}
+
+	config->daemon->sockfd = siso_get_socket(config->daemon->receiver);
+
+	receive_config(config->daemon);
+	save_config(config->daemon, false);
+
+	config->daemon->done = false;
+	config->thread = std::move(std::thread(daemon_loop, config->daemon));
+}
+
+void process_xml_config(struct plugin_conf *config, char *xml_config)
+{
+	xmlDoc *doc = xmlParseDoc(BAD_CAST xml_config);
+	if (doc == nullptr) {
+		throw std::invalid_argument("Unable to parse startup configuration!");
+	}
+
+	xmlNode *root = xmlDocGetRootElement(doc);
+	if (root == nullptr) {
+		xmlFreeDoc(doc);
+		throw std::invalid_argument("Cannot get document root element!");
+	}
+
+	xmlNode *node;
+	for (node = root->children; node != nullptr; node = node->next) {
+		if (node->type != XML_ELEMENT_NODE) {
+			continue;
+		}
+
+		std::string name = (const char *) node->name;
+		if (name != "configurator") {
+			continue;
+		}
+
+		for (xmlNode *daemon = node->children; daemon != nullptr; daemon = daemon->next) {
+			name = (const char *) daemon->name;
+			xmlChar *aux_char = xmlNodeListGetString(doc, daemon->children, 1);
+
+			if (config->daemon == nullptr) {
+				config->daemon = new daemon_config;
+			}
+
+			if (name == "ip") {
+				config->daemon->ip = (const char *) aux_char;
+			} else if (name == "port") {
+				config->daemon->port = (const char *) aux_char;
+			}
+		}
+	}
+
+	if (config->daemon != nullptr) {
+		if (config->daemon->ip == nullptr) {
+			throw std::invalid_argument("Missing configurator IP address");
+		}
+
+		if (config->daemon->port == nullptr) {
+			throw std::invalid_argument("Missing configurator port number");
+		}
+
+		config->daemon->xml_path = profiles_get_xml_path();
+		if (config->daemon->xml_path.empty()) {
+			throw std::runtime_error("Missing path to the profiles.xml");
+		}
+
+		config->daemon->receiver = siso_create();
+		if (config->daemon->receiver == nullptr) {
+			throw std::runtime_error("Cannot create sisoconf structure");
+		}
+	}
+
+	xmlFreeDoc(doc);
+}
 
 /**
  * \brief Plugin initialization
- * 
- * \param[in] params xml configuration
- * \param[in] ip_config	intermediate process config
- * \param[in] ip_id	intermediate process ID for template manager
- * \param[in] template_mgr template manager
- * \param[out] config config storage
- * \return 0 on success
  */
 int intermediate_init(char* params, void* ip_config, uint32_t ip_id, ipfix_template_mgr* template_mgr, void** config)
 {	
@@ -83,6 +245,11 @@ int intermediate_init(char* params, void* ip_config, uint32_t ip_id, ipfix_templ
 	try {
 		/* Create configuration */
 		plugin_conf *conf = new struct plugin_conf;
+		process_xml_config(conf, params);
+
+		if (conf->daemon != nullptr) {
+			start_daemon(conf);
+		}
 
 		/* Save configuration */
 		conf->ip_config = ip_config;
@@ -103,10 +270,6 @@ int intermediate_init(char* params, void* ip_config, uint32_t ip_id, ipfix_templ
 
 /**
  * \brief Process IPFIX message
- * 
- * \param[in] config plugin configuration
- * \param[in] message IPFIX message
- * \return 0 on success
  */
 int intermediate_process_message(void* config, void* message)
 {
@@ -135,16 +298,22 @@ int intermediate_process_message(void* config, void* message)
 
 /**
  * \brief Close intermediate plugin
- * 
- * \param[in] config plugin configuration
- * \return 0 on success
  */
 int intermediate_close(void *config)
 {
 	MSG_DEBUG(msg_module, "CLOSING");
 	plugin_conf *conf = static_cast<plugin_conf*>(config);
 	
-	/* Destroy profiles and configuration */
+	/* Destroy configuration */
+	if (conf->daemon) {
+		conf->daemon->done = true;
+		if (conf->thread.joinable()) {
+			conf->thread.join();
+		}
+
+		delete conf->daemon;
+	}
+
 	delete conf;
 
 	return 0;

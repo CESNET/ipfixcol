@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2015</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>11 March 2015</date>
+		<authorgroup>
+			<author>
+				<personname>
+					<firstname>Michal</firstname>
+					<surname>Kozubik</surname>
+				</personname>
+				<email>kozubik@cesnet.cz</email>
+				<contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">Data expiration tool</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+                <refname>profilesdaemon</refname>
+		<refpurpose>Daemon for expiring Fastbit data stored by IPFIXcol</refpurpose>
+	</refnamediv>
+	
+	<refsynopsisdiv>
+		<cmdsynopsis>
+                        <command>profilesdaemon</command>
+			<arg>-hrfVDokmc</arg>
+			<arg>-p pipe</arg>
+			<arg>-d depth</arg>
+			<arg>-s size</arg>
+			<arg>-w watermark</arg>
+			<arg>-v level</arg>
+			<arg>directory</arg>
+		</cmdsynopsis>
+	</refsynopsisdiv>
+
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+                        <command>profilesdaemon</command> is a data expiration tool and part of the IPFIXcol framework. It checks the size of data selected directories and expires old data as soon as the directories reach their maximum size.
+		</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Options</title>
+		<variablelist>
+			<varlistentry>
+				<term>-h</term>
+				<listitem>
+					<simpara>Show help and exit.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-V</term>
+				<listitem>
+					<simpara>Show version and exit.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-p <replaceable class="parameter">pipe</replaceable></term>
+				<listitem>
+                                        <simpara>Pipe used for communication between user program. Default pipe location is './profilesdaemon_fifo'.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-d <replaceable class="parameter">depth</replaceable></term>
+				<listitem>
+					<simpara>
+						Maximum <replaceable class="parameter">depth</replaceable> of watched directories.
+					</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-s <replaceable class="parameter">size</replaceable></term>
+				<listitem>
+					<simpara>
+						Maximum <replaceable class="parameter">size</replaceable> of watched directories. As soon as the watched directory's size reaches <replaceable class="parameter">size</replaceable>, the oldest data will be expired.                                                
+					</simpara>
+					<simpara>Allowed suffixes: B, k, K, m, M, g, G (default: M)</simpara>
+				</listitem>
+			</varlistentry>
+		
+			<varlistentry>
+				<term>-r</term>
+				<listitem>
+					<simpara>Rescan the selected directory. Note that the daemon MUST be running.</simpara>
+				</listitem>
+			</varlistentry>
+						
+			<varlistentry>
+				<term>-f</term>
+				<listitem>
+					<simpara>Force scanning, without considering stats.txt files (containing folder sizes).</simpara>
+				</listitem>
+			</varlistentry>
+						
+			<varlistentry>
+				<term>-v <replaceable class="parameter">level</replaceable></term>
+				<listitem>
+					<simpara>Set verbosity level.</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>-w <replaceable class="parameter">watermark</replaceable></term>
+				<listitem>
+					<simpara>Set watermark limit, i.e., the lower size limit for removing files after reaching the maximum size.</simpara>
+					<simpara>Allowed suffixes: B, k, K, m, M, g, G (default: M)</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>-D</term>
+				<listitem>
+                                        <simpara>Daemonize <command>profilesdaemon</command>.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-m</term>
+				<listitem>
+                                        <simpara>Enable multiple sources on top directory (disabled by default). When this option is set, <command>profilesdaemon</command> looks at each top level directory (each subdirectory of given folder) as a separate directory tree with their own data writer.
+					</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-k</term>
+				<listitem>
+                                        <simpara>Stop <command>profilesdaemon</command> daemon listening on pipe specified by <command>-p</command>.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-o</term>
+				<listitem>
+                                        <simpara>By default, <command>profilesdaemon</command> runs as a daemon on foreground (or background in case it has been started with <command>-D</command>). With this option, it only scans directories, expires old data (if needed) and stops without waiting for new data.</simpara>
+				</listitem>
+			</varlistentry>
+			
+			<varlistentry>
+				<term>-c</term>
+				<listitem>
+					<simpara>Change settings of running daemon listening on pipe specified by <command>-p</command>. Only the maximum size of watched directories (<command>-s</command>) and the watermark limit (<command>-w</command>) can be changed.</simpara>
+				</listitem>
+			</varlistentry>
+		</variablelist>
+	</refsect1>
+
+	<refsect1>
+		<title>Examples</title>
+                <literallayout>profilesdaemon -d 4 -s 5000 /data/collector/
+		Watch subdirectories of /data/collector. The <replaceable class="parameter">depth</replaceable> is set to 4, meaning that are watched with a maximum depth of 4, as in /data/collector/1/2/3/4. The maxmimum size is 5GB.</literallayout>
+                <literallayout>profilesdaemon -r /data/collector/2013/08/25
+                Intruct the daemon to rescan the given directory. This command is sent over the (default) pipe './profilesdaemon_fifo'.</literallayout>
+                <literallayout>profilesdaemon -d 4 -s 5000 -p /tmp/expirepipe /data/collector/
+                The path to the pipe is set to '/tmp/expirepipe', instead of the default './profilesdaemon_fifo'.</literallayout>
+                <literallayout>profilesdaemon -c -s 53G -w 250M -p /tmp/expirepipe
+                Change the settings of the <command>profilesdaemon</command> daemon that is listening on pipe '/tmp/expirepipe'; set the size to 53 GB and watermark limit to 250 MB.</literallayout>
+	</refsect1>
+
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>fbitdump</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+						<citerefentry><refentrytitle>fbitdump.xml</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
+						<citerefentry><refentrytitle>fbitmerge</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+						<citerefentry><refentrytitle>ipfixcol-fastbit-output</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org/technologies/ipfixcol/">http://www.liberouter.org/technologies/ipfixcol/</link>
+					</term>
+					<listitem>
+						<para>Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>

@@ -89,6 +89,7 @@ typedef struct ipfix_config {
 	xmlNode *collector_node;        /**< Collector node in startup.xml */
 	void *profiles[MAX_PROFILES_CONFIGS];/**< Profiles configurations */
 	char *profiles_file;			/**< Path to the profiles file */
+	char *profiles_file_old;
 	time_t profiles_file_tstamp;	/**< Timestamp of the profiles file */
 	int current_profiles;			/**< Current profiles configuration */
 	struct input input;             /**< Input plugin */

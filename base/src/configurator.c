@@ -61,6 +61,8 @@
 /* ID for MSG_ macros */
 static const char *msg_module = "configurator";
 
+configurator *global_config = NULL;
+
 /* TODO !! */
 #define PACKAGE "ipfixcol"
 
@@ -143,6 +145,8 @@ configurator *config_init(const char *internal, const char *startup)
 		free(config);
 		return NULL;
 	}
+
+	global_config = config;
 	
 	return config;
 }
@@ -814,6 +818,18 @@ void free_conf_list(struct plugin_xml_conf_list *list)
 	}
 }
 
+char *config_get_new_profiles_file(configurator *config)
+{
+	xmlNode *aux_node;
+	for (aux_node = config->collector_node->children; aux_node; aux_node = aux_node->next) {
+		if (!xmlStrcmp(aux_node->name, (xmlChar *) "profiles")) {
+			return (char *) xmlNodeGetContent(aux_node);
+		}
+	}
+
+	return NULL;
+}
+
 /**
  * \brief Create startup configuration
  * 
@@ -1096,36 +1112,27 @@ void *config_get_current_profiles(configurator *config)
  */
 void config_process_profiles(configurator *config)
 {
-	xmlNode *aux_node;
-	char *profiles_file = NULL;
-
-	/* Find path to the profiles xml file */
-	for (aux_node = config->collector_node->children; aux_node; aux_node = aux_node->next) {
-		if (!xmlStrcmp(aux_node->name, (xmlChar *) "profiles")) {
-			profiles_file = (char *) xmlNodeGetContent(aux_node);
-			break;
-		}
-	}
-
-	if (!profiles_file) {
+	if (!config->profiles_file) {
 		MSG_NOTICE(msg_module, "No profile configuration");
 		config_replace_profiles(config, NULL);
 		return;
 	}
 
 	/* Compare paths */
-	if (config->profiles_file && !strcmp(config->profiles_file, profiles_file)) {
+	if (config->profiles_file_old && !strcmp(config->profiles_file_old, config->profiles_file)) {
 		/* Path are the same, compare timestamps */
 		struct stat st;
-		if (stat(profiles_file, &st) != 0) {
-			MSG_ERROR(msg_module, "Cannot process profiles file %s: %s", profiles_file, strerror(errno));
-			free(profiles_file);
+		if (stat(config->profiles_file, &st) != 0) {
+			MSG_ERROR(msg_module, "Cannot process profiles file %s: %s", config->profiles_file, strerror(errno));
+			free(config->profiles_file);
+			config->profiles_file = config->profiles_file_old;
 			return;
 		}
 
 		if (config->profiles_file_tstamp == st.st_mtim.tv_sec) {
 			/* Files are the same */
-			free(profiles_file);
+			free(config->profiles_file);
+			config->profiles_file = config->profiles_file_old;
 			return;
 		}
 
@@ -1134,21 +1141,22 @@ void config_process_profiles(configurator *config)
 	}
 
 	/* Process XML file */
-	void *profiles = profiles_process_xml(profiles_file);
+	void *profiles = profiles_process_xml(config->profiles_file);
 	if (!profiles) {
-		free(profiles_file);
+		free(config->profiles_file);
 		MSG_ERROR(msg_module, "Cannot parse new profiles configuration; keeping old configuration...");
+		config->profiles_file = config->profiles_file_old;
 		return;
 	}
 
 	/* Replace profiles */
 	config_replace_profiles(config, profiles);
-	if (config->profiles_file) {
-		free(config->profiles_file);
+	if (config->profiles_file_old) {
+		free(config->profiles_file_old);
 	}
 
 	/* Save filename */
-	config->profiles_file = profiles_file;
+	config->profiles_file_old = config->profiles_file;
 }
 
 /**
@@ -1167,6 +1175,8 @@ int config_reconf(configurator *config)
 		return 1;
 	}
 	
+	config->profiles_file = config_get_new_profiles_file(config);
+
 	/* Process changes */
 	int ret = config_process_new_startup(config, new_startup);
 
@@ -1242,6 +1252,11 @@ void config_destroy(configurator *config)
 
 	/* Free configurator */
 	free(config);
+}
+
+const char *profiles_get_xml_path()
+{
+	return (global_config != NULL) ? global_config->profiles_file : NULL;
 }
 
 /**@}*/

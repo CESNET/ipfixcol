@@ -51,6 +51,13 @@
  */
 API void *profiles_process_xml(const char *file);
 
+/**
+ * \brief Get path to the profiles.xml file
+ *
+ * \return path to XML
+ */
+API const char *profiles_get_xml_path();
+
 /* ==== PROFILE ==== */
 /**
  * \brief Get profile name

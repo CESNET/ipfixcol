@@ -1,0 +1,37 @@
+Summary: Tool for profiles management
+Name: @PACKAGE_NAME@
+Version: @PACKAGE_VERSION@
+Release: @RELEASE@
+URL: http://www.liberouter.org/
+Source: http://homeproj.cesnet.cz/rpm/liberouter/stable/SOURCES/%{name}-%{version}-%{release}.tar.gz
+Group: Liberouter
+License: BSD
+Vendor: CESNET, z.s.p.o.
+Packager: @USERNAME@ <@USERMAIL@>
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
+
+BuildRequires: gcc-c++ make doxygen pkgconfig
+
+%description
+Tool for ipfix profiles management
+
+%prep
+%setup
+
+%post
+
+%preun
+
+%postun
+
+%build
+%configure --with-distro=@DISTRO@
+make
+make man
+
+%install
+make DESTDIR=%buildroot install
+
+%files
+%_bindir/profilesdaemon
+%_mandir/man1/profilesdaemon.1.gz
