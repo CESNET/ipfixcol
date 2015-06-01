@@ -67,10 +67,8 @@ IPFIXCOL_API_VERSION;
 
 static char *msg_module = "Anon IP";
 
-
 #define ANONYMIZATION_TYPE_TRUNCATION    1
 #define ANONYMIZATION_TYPE_CRYPTOPAN     2
-
 
 /* interesting IPFIX entities */
 /* IPv4 */                 /* element ID, IP version, element name */
@@ -99,7 +97,6 @@ static char *msg_module = "Anon IP";
 #define postNATSourceIPv6Address      {281, 6, "postNATSourceIPv6Address"}
 #define postNATDestinationIPv6Address {282, 6, "postNATDestinationIPv6Address"}
 
-
 struct ipfix_entity {
 	uint16_t element_id;
 	uint8_t ip_version;
@@ -112,17 +109,15 @@ static struct ipfix_entity entities_to_anonymize[] = {
 };
 #define entities_array_length     4
 
-
 /** plugin's configuration structure */
 struct anonymization_ip_config {
 	char *params;         /* XML configuration */
 	void *ip_config;      /* config structure for Intermediate Process */
 	uint8_t type;         /* anonymization type */
 	uint32_t ip_id;       /* Intermediate plugin source ID into template manager */
+	char *key;            /* Anonymization key */
 	struct ipfix_template_mgr *tm;
 };
-
-
 
 /**
  * \brief Truncate IPv4 address
@@ -136,7 +131,6 @@ static void truncate_IPv4Address(uint8_t *data)
 	*(data+3) = 0x00;
 }
 
-
 /**
  * \brief Truncate IPv6 address
  *
@@ -147,7 +141,6 @@ static void truncate_IPv6Address(uint8_t *data)
 {
 	memset(data+7, 0, 8);
 }
-
 
 /**
  *  \brief Initialize Intermediate Plugin
@@ -163,96 +156,115 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 {
 	struct anonymization_ip_config *conf;
 	int retval;
-	uint8_t key;
-
 
 	if (!params) {
 		MSG_ERROR(msg_module, "Missing plugin configuration");
 		return -1;
 	}
 
-	/* initialize Crypto-PAn library */
-	key = rand() % 256;
-	PAnonymizer_Init(&key);
-    	MSG_DEBUG(msg_module, "Crypto-PAn library initialized");
-
-	conf = (struct anonymization_ip_config *) malloc(sizeof(*conf));
+	conf = (struct anonymization_ip_config *) calloc(1, sizeof(*conf));
 	if (!conf) {
 		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
-	memset(conf, 0, sizeof(*conf));
 
-    /* parse params */
-    xmlDoc *doc = NULL;
-    xmlNode *root_element = NULL;
-    xmlNode *cur_node = NULL;
+	/* parse params */
+	xmlDoc *doc = NULL;
+	xmlNode *root_element = NULL;
+	xmlNode *cur_node = NULL;
 
+	/* parse xml string */
+	doc = xmlParseDoc(BAD_CAST params);
+	if (doc == NULL) {
+		MSG_ERROR(msg_module, "Cannot parse config xml");
+		retval = 1;
+		goto out;
+	}
 
-    /* parse xml string */
-    doc = xmlParseDoc(BAD_CAST params);
-    if (doc == NULL) {
-    	MSG_ERROR(msg_module, "Cannot parse config xml");
-        retval = 1;
-        goto out;
-    }
-    /* get the root element node */
-    root_element = xmlDocGetRootElement(doc);
-    if (root_element == NULL) {
-    	MSG_ERROR(msg_module, "Cannot get document root element");
-        retval = 1;
-        goto out;
-    }
+	/* get the root element node */
+	root_element = xmlDocGetRootElement(doc);
+	if (root_element == NULL) {
+		MSG_ERROR(msg_module, "Cannot get document root element");
+		retval = 1;
+		goto out;
+	}
 
+	/* go over all elements */
+	for (cur_node = root_element->children; cur_node; cur_node = cur_node->next) {
+		if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
+			/* copy value to memory - don't forget the terminating zero */
+			int tmp_val_len = strlen((char *) cur_node->children->content) + 1;
+			char *tmp_val = malloc(sizeof(char) * tmp_val_len);
 
-    /* go over all elements */
-    for (cur_node = root_element->children; cur_node; cur_node = cur_node->next) {
+			/* this is not a preferred cast, but we really want to use plain chars here */
+			if (tmp_val == NULL) {
+				MSG_ERROR(msg_module, "Cannot allocate memory: %s", strerror(errno));
+				retval = 1;
+				goto out;
+			}
 
-        if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
-            /* copy value to memory - don't forget the terminating zero */
-            int tmp_val_len = strlen((char *) cur_node->children->content) + 1;
-            char *tmp_val = malloc(sizeof(char) * tmp_val_len);
-            /* this is not a preferred cast, but we really want to use plain chars here */
-            if (tmp_val == NULL) {
-            	MSG_ERROR(msg_module, "Cannot allocate memory: %s", strerror(errno));
-                retval = 1;
-                goto out;
-            }
-            strncpy_safe(tmp_val, (char *)cur_node->children->content, tmp_val_len);
+			strncpy_safe(tmp_val, (char *)cur_node->children->content, tmp_val_len);
 
-            if (xmlStrEqual(cur_node->name, BAD_CAST "type")) { /* anonymization type */
-                if (!strcmp(tmp_val, "truncation")) {
-                	conf->type = ANONYMIZATION_TYPE_TRUNCATION;
-                } else if (!strcmp(tmp_val, "cryptopan")) {
-                	conf->type = ANONYMIZATION_TYPE_CRYPTOPAN;
-                }
-            }
-            free(tmp_val);
+			if (xmlStrEqual(cur_node->name, BAD_CAST "type")) { /* anonymization type */
+				if (!strcmp(tmp_val, "truncation")) {
+					conf->type = ANONYMIZATION_TYPE_TRUNCATION;
+				} else if (!strcmp(tmp_val, "cryptopan")) {
+					conf->type = ANONYMIZATION_TYPE_CRYPTOPAN;
+				} else {
+					MSG_ERROR(msg_module, "Unknown anonymization type (%s)", tmp_val);
+					free(tmp_val);
+					retval = 1;
+					goto out;
+				}
 
-        }
-    }
+				free(tmp_val);
+			} else if (xmlStrEqual(cur_node->name, BAD_CAST "key")) { /* anonymization key */
+				conf->key = tmp_val;
+			}
+		}
+	}
+
+	if (conf->type == ANONYMIZATION_TYPE_CRYPTOPAN) {
+		if (conf->key == NULL || strlen(conf->key) == 0) {
+			uint8_t random_key = rand() % 256;
+			PAnonymizer_Init(&random_key);
+		} else {
+			/* Check key length */
+			if (strlen(conf->key) == 32) {
+				PAnonymizer_Init((uint8_t *) conf->key);
+			} else {
+				MSG_ERROR(msg_module, "Key with invalid length provided (%s); must be 16, 24 or 32 bytes", conf->key);
+				retval = 1;
+				free(conf->key);
+				goto out;
+			}
+		}
+		
+		MSG_DEBUG(msg_module, "Crypto-PAn library initialized");
+	}
 
 	conf->params = params;
 	conf->ip_config = ip_config;
 	conf->ip_id = ip_id;
 	conf->tm = template_mgr;
-
-	xmlFreeDoc(doc);
-
 	*config = conf;
 
-	MSG_NOTICE(msg_module, "Successfully initialized");
+	xmlFreeDoc(doc);
+    xmlCleanupParser();
+
+	MSG_NOTICE(msg_module, "Plugin initialization completed successfully");
 
 	/* plugin successfully initialized */
 	return 0;
 
-
 out:
-	free(conf);
+	if (doc) {
+		xmlFreeDoc(doc);
+	}
 
+	free(conf);
 	return retval;
 }
-
 
 /**
  * \brief Anonymization Intermediate Process
@@ -265,7 +277,7 @@ int intermediate_process_message(void *config, void *message)
 {
 	struct ipfix_message *msg;
 	struct ipfix_data_set *data_set;
-	struct ipfix_template *template;
+	struct ipfix_template *templ;
 	int index;
 	int ret;
 	uint8_t *p;
@@ -278,8 +290,6 @@ int intermediate_process_message(void *config, void *message)
 	uint32_t odid;
 
 	conf = (struct anonymization_ip_config *) config;
-
-
 	msg = (struct ipfix_message *) message;
 
 	if (msg->source_status == SOURCE_STATUS_CLOSED) {
@@ -297,126 +307,115 @@ int intermediate_process_message(void *config, void *message)
 	odid = ntohl(msg->pkt_header->observation_domain_id);
 	index = 0;
 	while ((data_set = msg->data_couple[index].data_set) != NULL) {
-		template = msg->data_couple[index].data_template;
-
-		if (!template) {
-			/* oops, this is weird... no template for data set, skip it (note this might be a bug in previous intermediate plugin) */
+		templ = msg->data_couple[index].data_template;
+		if (!templ) {
+			MSG_WARNING(msg_module, "Data couple features no template");
 			++index;
 			continue;
 		}
 
 		int entities_index = 0;
 		while (entities_index < entities_array_length) {
-			ret = template_contains_field(template, entities_to_anonymize[entities_index].element_id);
+			ret = template_contains_field(templ, entities_to_anonymize[entities_index].element_id);
 			if (ret >= 0) {
 				switch (entities_to_anonymize[entities_index].ip_version) {
-				case 4: {
-					/* iterate over data records and modify IP address fields */
-					data_records = get_data_records(data_set, template);
+					case 4: {
+						/* iterate over data records and modify IP address fields */
+						data_records = get_data_records(data_set, templ);
 
-					data_records_index = 0;
-					while (data_records[data_records_index]) {
-						p = data_records[data_records_index];
-						message_get_data((uint8_t **) &data, p + ret, 4); /* IPv4 address is 4 octet integer */
+						data_records_index = 0;
+						while (data_records[data_records_index]) {
+							p = data_records[data_records_index];
+							message_get_data((uint8_t **) &data, p + ret, 4); /* IPv4 address is 4 octet integer */
+							inet_ntop(AF_INET, data, ip_orig, INET6_ADDRSTRLEN);
 
-						inet_ntop(AF_INET, data, ip_orig, INET6_ADDRSTRLEN);
+							if (conf->type == ANONYMIZATION_TYPE_CRYPTOPAN) {
+								/* anonymization type: cryptopan */
+								uint32_t new_addr;
+								uint32_t old_addr = (uint32_t) *data;
 
-						if (conf->type == ANONYMIZATION_TYPE_CRYPTOPAN) {
-							/* anonymization type: cryptopan */
-							uint32_t new_addr;
-							uint32_t old_addr = (uint32_t) *data;
+								old_addr = ntohl(old_addr);
 
-							old_addr = ntohl(old_addr);
+								/* anonymize given IPv4 address using CryptoPAn */
+								new_addr = anonymize(old_addr);
+								new_addr = htonl(new_addr);
 
-							/* anonymize given IPv4 address using CryptoPAn */
-							new_addr = anonymize(old_addr);
+								message_set_data(p + ret, (uint8_t *) &new_addr, 4);
+								inet_ntop(AF_INET, &new_addr, ip_anon, INET6_ADDRSTRLEN);
 
-							new_addr = htonl(new_addr);
+								MSG_DEBUG(msg_module, "[%u] %s %s -> %s", odid, entities_to_anonymize[entities_index].entity_name,
+										ip_orig, ip_anon);
 
-							message_set_data(p + ret, (uint8_t *) &new_addr, 4);
+								++data_records_index;
+								free(data);
+								continue;
+							} else if (conf->type == ANONYMIZATION_TYPE_TRUNCATION) {
+								/* anonymization type: truncation */
+								truncate_IPv4Address((uint8_t *) data);
+								message_set_data(p + ret, (uint8_t *) data, 4);
+								inet_ntop(AF_INET, data, ip_anon, INET6_ADDRSTRLEN);
 
-							inet_ntop(AF_INET, &new_addr, ip_anon, INET6_ADDRSTRLEN);
+								MSG_DEBUG(msg_module, "[%u] %s %s -> %s", odid, entities_to_anonymize[entities_index].entity_name,
+										ip_orig, ip_anon);
 
-							MSG_DEBUG(msg_module, "[%u] %s %s -> %s", odid, entities_to_anonymize[entities_index].entity_name,
-									ip_orig, ip_anon);
-
-							free(data);
-
-							++data_records_index;
-
-							continue;
+								++data_records_index;
+								free(data);
+								continue;
+							} else {
+								/* Do nothing */
+							}
 						}
 
-						/* anonymization type: truncation (this is default) */
-
-						truncate_IPv4Address((uint8_t *) data);
-						message_set_data(p + ret, (uint8_t *) data, 4);
-
-						inet_ntop(AF_INET, data, ip_anon, INET6_ADDRSTRLEN);
-
-						MSG_DEBUG(msg_module, "[%u] %s %s -> %s", odid, entities_to_anonymize[entities_index].entity_name,
-								ip_orig, ip_anon);
-
-						free(data);
-
-						++data_records_index;
+						free(data_records);
 					}
-
-					free(data_records);
-				}
-				break;
-				case 6: {
-					/* iterate over data records and modify fields with IP addresses */
-					data_records = get_data_records(data_set, template);
-
-					data_records_index = 0;
-					while (data_records[data_records_index]) {
-						p = data_records[data_records_index];
-						message_get_data((uint8_t **) &data, p + ret, 16); /* IPv6 address is 16 octet integer */
-
-						inet_ntop(AF_INET6, data, ip_orig, INET6_ADDRSTRLEN);
-
-						if (conf->type == ANONYMIZATION_TYPE_CRYPTOPAN) {
-							uint64_t *old_addr = (uint64_t *) data;
-							uint64_t new_addr[2];
-							anonymize_v6(old_addr, new_addr);
-
-							message_set_data(p + ret, (uint8_t *) new_addr, 16);
-
-							inet_ntop(AF_INET6, new_addr, ip_anon, INET6_ADDRSTRLEN);
-
-							MSG_DEBUG(msg_module, "[%u] %s %s -> %s", odid,
-									entities_to_anonymize[entities_index].entity_name, ip_orig, ip_anon);
-
-							free(data);
-
-							++data_records_index;
-
-							continue;
-						}
-
-						/* anonymization type: truncation (this is default) */
-
-
-						truncate_IPv6Address((uint8_t *) data);
-						message_set_data(p + ret, (uint8_t *) data, 16);
-
-						inet_ntop(AF_INET6, data, ip_anon, INET6_ADDRSTRLEN);
-
-						MSG_DEBUG(msg_module, "[%u] %s %s -> %s", odid,
-								entities_to_anonymize[entities_index].entity_name, ip_orig, ip_anon);
-
-						free(data);
-
-						++data_records_index;
-					}
-
-					free(data_records);
-				}
-				break;
-				default:
-					MSG_ERROR(msg_module, "[%u] Invalid address family", odid);
 					break;
+					case 6: {
+						/* iterate over data records and modify fields with IP addresses */
+						data_records = get_data_records(data_set, templ);
+
+						data_records_index = 0;
+						while (data_records[data_records_index]) {
+							p = data_records[data_records_index];
+							message_get_data((uint8_t **) &data, p + ret, 16); /* IPv6 address is 16 octet integer */
+							inet_ntop(AF_INET6, data, ip_orig, INET6_ADDRSTRLEN);
+
+							if (conf->type == ANONYMIZATION_TYPE_CRYPTOPAN) {
+								uint64_t *old_addr = (uint64_t *) data;
+								uint64_t new_addr[2];
+								anonymize_v6(old_addr, new_addr);
+
+								message_set_data(p + ret, (uint8_t *) new_addr, 16);
+								inet_ntop(AF_INET6, new_addr, ip_anon, INET6_ADDRSTRLEN);
+
+								MSG_DEBUG(msg_module, "[%u] %s: %s -> %s", odid,
+										entities_to_anonymize[entities_index].entity_name, ip_orig, ip_anon);
+
+								++data_records_index;
+								free(data);
+								continue;
+							} else if (conf->type == ANONYMIZATION_TYPE_TRUNCATION) {
+								/* anonymization type: truncation */
+								truncate_IPv6Address((uint8_t *) data);
+								message_set_data(p + ret, (uint8_t *) data, 16);
+								inet_ntop(AF_INET6, data, ip_anon, INET6_ADDRSTRLEN);
+
+								MSG_DEBUG(msg_module, "[%u] %s: %s -> %s", odid,
+										entities_to_anonymize[entities_index].entity_name, ip_orig, ip_anon);
+
+								free(data);
+								++data_records_index;
+								continue;
+							} else {
+								/* Do nothing */
+							}
+						}
+
+						free(data_records);
+					}
+					break;
+					default:
+						MSG_ERROR(msg_module, "[%u] Invalid address family", odid);
+						break;
 				} /* switch */
 			} /* if */
 
@@ -427,10 +426,8 @@ int intermediate_process_message(void *config, void *message)
 	}
 
 	pass_message(conf->ip_config, message);
-
 	return 0;
 }
-
 
 /**
  * \brief Close Intermediate Plugin
@@ -441,11 +438,13 @@ int intermediate_process_message(void *config, void *message)
 int intermediate_close(void *config)
 {
 	struct anonymization_ip_config *conf;
-
 	conf = (struct anonymization_ip_config *) config;
 
-	free(conf);
+	if (conf->key) {
+		free(conf->key);
+	}
 
+	free(conf);
 	return 0;
 }
 
