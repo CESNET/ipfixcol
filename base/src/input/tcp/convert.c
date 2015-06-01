@@ -47,7 +47,6 @@
 #include "sflowtool.h"
 #include "inttypes.h"
 
-
 /** Netflow v5 and v9 identifiers */
 #define SET_HEADER_LEN 4
 
@@ -99,9 +98,7 @@
 #define TEMPLATE_ROW_SIZE 4
 #define DEFAULT_ENTERPRISE_NUMBER (~((uint32_t) 0))
 
-
 /* Static creation of Netflow v5 Template Set */
-
 static uint16_t netflow_v5_template[NETFLOW_V5_TEMPLATE_LEN/2]={\
 		IPFIX_TEMPLATE_FLOWSET_ID,   NETFLOW_V5_TEMPLATE_LEN,\
 		IPFIX_MIN_RECORD_FLOWSET_ID, NETFLOW_V5_NUM_OF_FIELDS,
@@ -333,57 +330,57 @@ int insert_timestamp_template(struct ipfix_set_header *templSet)
 		tmp++;
 
 		/* Get template ID and number of elements */
-	    id = ntohs(tmp->flowset_id) - IPFIX_MIN_RECORD_FLOWSET_ID;
-	    num = ntohs(tmp->length);
+		id = ntohs(tmp->flowset_id) - IPFIX_MIN_RECORD_FLOWSET_ID;
+		num = ntohs(tmp->length);
 
-	    if (id >= templates.max) {
-	    	templates.max += 20;
-	    	templates.templ = realloc(templates.templ, templates.max * templates.cols * sizeof(int));
+		if (id >= templates.max) {
+			templates.max += 20;
+			templates.templ = realloc(templates.templ, templates.max * templates.cols * sizeof(int));
 
-	    	if (templates.templ == NULL) {
-	    		return 1;
-	    	}
-	    	unsigned int i;
-	    	for (i = (templates.max - 20) * templates.cols; i < templates.max * templates.cols; i++) {
-	    			templates.templ[i] = 0;
-	    	}
-	    }
+			if (templates.templ == NULL) {
+				return 1;
+			}
+			unsigned int i;
+			for (i = (templates.max - 20) * templates.cols; i < templates.max * templates.cols; i++) {
+					templates.templ[i] = 0;
+			}
+		}
 
-	    int len = templates.cols * id;
-	    int pos = len + 1;
+		int len = templates.cols * id;
+		int pos = len + 1;
 
-	    /* Set default values for length and timestamp position */
-	    templates.templ[len] = 0;
-	    templates.templ[pos] = -1;
+		/* Set default values for length and timestamp position */
+		templates.templ[len] = 0;
+		templates.templ[pos] = -1;
 
-	    /* Iterate through all elements */
-	    for (i = 0; i < num; i++) {
-	        tmp++;
+		/* Iterate through all elements */
+		for (i = 0; i < num; i++) {
+			tmp++;
 
-	        /* We are looking for timestamps - elements with id 21 (end) and 22 (start) */
-	        if (ntohs(tmp->flowset_id) == NETFLOW_V9_END_ELEM) {
-	        	/* We don't know which one comes first so we need to check it */
-	        	if (templates.templ[pos] == -1) {
-	        		templates.templ[pos] = templates.templ[len];
-	        	}
-
-	        	/* Change element ID and element length (32b -> 64b) */
-	        	tmp->flowset_id = htons(FLOW_END);
-	        	tmp->length = htons(BYTES_8);
-	        	templates.templ[len] += BYTES_4;
-	        } else if (ntohs(tmp->flowset_id) == NETFLOW_V9_START_ELEM) {
-	        	/* Do the same thing for element 22 */
-	        	if (templates.templ[pos] == -1) {
+			/* We are looking for timestamps - elements with id 21 (end) and 22 (start) */
+			if (ntohs(tmp->flowset_id) == NETFLOW_V9_END_ELEM) {
+				/* We don't know which one comes first so we need to check it */
+				if (templates.templ[pos] == -1) {
 					templates.templ[pos] = templates.templ[len];
 				}
 
-	        	tmp->flowset_id = htons(FLOW_START);
-	        	tmp->length = htons(BYTES_8);
-	        	templates.templ[len] += BYTES_4;
-	        } else {
-	        	templates.templ[len] += ntohs(tmp->length);
-	        }
-	    }
+				/* Change element ID and element length (32b -> 64b) */
+				tmp->flowset_id = htons(FLOW_END);
+				tmp->length = htons(BYTES_8);
+				templates.templ[len] += BYTES_4;
+			} else if (ntohs(tmp->flowset_id) == NETFLOW_V9_START_ELEM) {
+				/* Do the same thing for element 22 */
+				if (templates.templ[pos] == -1) {
+					templates.templ[pos] = templates.templ[len];
+				}
+
+				tmp->flowset_id = htons(FLOW_START);
+				tmp->length = htons(BYTES_8);
+				templates.templ[len] += BYTES_4;
+			} else {
+				templates.templ[len] += ntohs(tmp->length);
+			}
+		}
 	}
 	return 0;
 }
@@ -519,8 +516,8 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
 /**
  * \brief Converts packet from Netflow v5/v9 or sFlow format to IPFIX format
  *
- * Netflow v9 has almost the same format as ipfix but it has different Flowset IDs
- * and more informations in packet header.
+ * Netflow v9 has almost the same format as IPFIX but it has different Flowset IDs
+ * and more information in packet header.
  * Netflow v5 doesn't have (Option) Template Sets so they must be inserted into packet
  * with some other data that are missing (data set header etc.). Template is periodicaly
  * refreshed according to input_info.
@@ -535,15 +532,17 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 {
 	struct ipfix_header *header = (struct ipfix_header *) *packet;
 	uint16_t numOfFlowSamples = 0;
+	uint16_t offset = 0;
 	info_list = (struct input_info_list *) input_info;
+
 	switch (htons(header->version)) {
 		/* Netflow v9 packet */
 		case NETFLOW_V9_VERSION: {
-			uint64_t sysUp = ntohl(*((uint32_t *) (((uint8_t *)header) + 4)));
-			uint64_t unSec = ntohl(*((uint32_t *) (((uint8_t *)header) + 8)));
-
+			uint64_t sysUp = ntohl(*((uint32_t *) (((uint8_t *) header) + 4)));
+			uint64_t unSec = ntohl(*((uint32_t *) (((uint8_t *) header) + 8)));
 			uint64_t time_header = (unSec * 1000) - sysUp;
 
+			/* Remove sysUpTime field */
 			memmove(*packet + BYTES_4, *packet + BYTES_8, buff_len - BYTES_8);
 			memset(*packet + buff_len - BYTES_8, 0, BYTES_4);
 
@@ -552,11 +551,12 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 			header->length = htons(IPFIX_HEADER_LENGTH);
 			header->sequence_number = htonl(seqNo[NF9_SEQ_N]);
 
-			uint8_t *p = (uint8_t *) (*packet + IPFIX_HEADER_LENGTH);
 			struct ipfix_set_header *set_header;
+			uint8_t *p = (uint8_t *) (*packet + IPFIX_HEADER_LENGTH);
+			offset = IPFIX_HEADER_LENGTH;
 
-			while (p < (uint8_t*) *packet + *len) {
-				set_header = (struct ipfix_set_header*) p;
+			while (p < (uint8_t *) *packet + *len) {
+				set_header = (struct ipfix_set_header *) p;
 
 				switch (ntohs(set_header->flowset_id)) {
 					case NETFLOW_V9_TEMPLATE_SET_ID:
@@ -569,41 +569,58 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 							/* Check for enterprise elements */
 							*len += unpack_enterprise_elements(set_header, *len - ntohs(header->length));
 						}
+
 						break;
+
 					case NETFLOW_V9_OPT_TEMPLATE_SET_ID:
 						set_header->flowset_id = htons(IPFIX_OPTION_FLOWSET_ID);
 						break;
+
 					default:
 						if (ntohs(set_header->length) > 0) {
-							uint16_t shifted;
-							shifted = insert_timestamp_data(set_header, time_header, *len - ntohs(header->length));
+							uint16_t shifted = insert_timestamp_data(set_header, time_header, *len - ntohs(header->length));
 							*len += (shifted * 8);
+
+							/* Add padding bytes, if necessary */
+							uint16_t set_len = ntohs(set_header->length);
+							if (set_len % 4 != 0) {
+								int padding_len = 4 - (set_len % 4);
+
+								memmove(p + set_len + padding_len, p + set_len, *len - offset + set_len);
+								memset(p + set_len, 0, padding_len);
+
+								*len += padding_len;
+								set_header->length = htons(ntohs(set_header->length) + padding_len);
+							}
 						}
+
 						break;
 				}
 
-				header->length = htons(ntohs(header->length)+ntohs(set_header->length));
+				header->length = htons(ntohs(header->length) + ntohs(set_header->length));
 
 				if (ntohs(header->length) > *len) {
 					/* Real length of packet is smaller than it should be */
 					return;
 				}
 
-				if (ntohs(set_header->length) == 0) {
+				uint16_t set_len = ntohs(set_header->length);
+				if (set_len == 0) {
 					break;
 				}
-				p += ntohs(set_header->length);
+
+				p += set_len;
+				offset += set_len;
 			}
 
 			break; }
 
 		/* Netflow v5 packet */
 		case NETFLOW_V5_VERSION: {
-			uint64_t sysUp = ntohl(*((uint32_t *) (((uint8_t *)header) + 4)));
-			uint64_t unSec = ntohl(*((uint32_t *) (((uint8_t *)header) + 8)));
-			uint64_t unNsec = ntohl(*((uint32_t *) (((uint8_t *)header) + 12)));
-
-			uint64_t time_header = (unSec * 1000) + unNsec/1000000;
+			uint64_t sysUp = ntohl(*((uint32_t *) (((uint8_t *) header) + 4)));
+			uint64_t unSec = ntohl(*((uint32_t *) (((uint8_t *) header) + 8)));
+			uint64_t unNsec = ntohl(*((uint32_t *) (((uint8_t *) header) + 12)));
+			uint64_t time_header = (unSec * 1000) + (unNsec / 1000000);
 
 			numOfFlowSamples = ntohs(header->length);
 
@@ -630,8 +647,8 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 						(shifted * (NETFLOW_V5_DATA_SET_LEN + BYTES_4)) + (NETFLOW_V5_DATA_SET_LEN - LAST_OFFSET));
 
 				/* Set time values */
-				*((uint64_t *)(pkt + FIRST_OFFSET)) = htobe64(time_header - (sysUp - first));
-				*((uint64_t *)(pkt + LAST_OFFSET + BYTES_4)) = htobe64(time_header - (sysUp - last));
+				*((uint64_t *) (pkt + FIRST_OFFSET)) = htobe64(time_header - (sysUp - first));
+				*((uint64_t *) (pkt + LAST_OFFSET + BYTES_4)) = htobe64(time_header - (sysUp - last));
 				shifted++;
 			}
 
@@ -665,7 +682,9 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 			if (*len >= htons(header->length)) {
 				seqNo[SF_SEQ_N] += numOfFlowSamples;
 			}
+
 			break;
 	}
+
 	header->version = htons(IPFIX_VERSION);
 }
