@@ -85,6 +85,7 @@ struct output_manager_config {
 	pthread_t stat_thread;                      /**< Stat's thread ID */
 	int stat_interval;                          /**< Stat's interval */
 	uint64_t data_records;                      /**< Number of processed data records */
+	uint16_t last_msg_data_records;             /**< Number of data records in last message */
 	uint64_t lost_data_records;                 /**< Number of lost data records */
 	uint32_t first_seq;                         /**< Stream's first sequence number */
 	uint32_t last_seq;                          /**< Sequence number of last packet in stream */
