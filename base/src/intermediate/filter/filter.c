@@ -585,14 +585,14 @@ void filter_add_template_sets(struct ipfix_message *msg, uint8_t *ptr, int *offs
 	int length, i;
 
 	/* Copy template sets */
-	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; ++i) {
+	for (i = 0; i < MSG_MAX_TEMPL_SETS && msg->templ_set[i]; ++i) {
 		length = ntohs(msg->templ_set[i]->header.length);
 		memcpy(ptr + *offset, msg->templ_set[i], length);
 		*offset += length;
 	}
 
 	/* Copy options template sets */
-	for (i = 0; i < MSG_MAX_OTEMPLATES && msg->opt_templ_set[i]; ++i) {
+	for (i = 0; i < MSG_MAX_OTEMPL_SETS && msg->opt_templ_set[i]; ++i) {
 		length = ntohs(msg->opt_templ_set[i]->header.length);
 		memcpy(ptr + *offset, msg->opt_templ_set[i], length);
 		*offset += length;

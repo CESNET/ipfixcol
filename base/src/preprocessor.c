@@ -463,7 +463,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
 	preprocessor_udp_init((struct input_info_network *) msg->input_info, &udp_conf);
 
 	/* check for new templates */
-	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; i++) {
+	for (i = 0; i < MSG_MAX_TEMPL_SETS && msg->templ_set[i]; i++) {
 		ptr = (uint8_t*) &msg->templ_set[i]->first_record;
 		while (ptr < (uint8_t*) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) {
 			max_len = ((uint8_t *) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) - ptr;
@@ -478,7 +478,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
 	}
 
 	/* check for new option templates */
-	for (i = 0; i < MSG_MAX_OTEMPLATES && msg->opt_templ_set[i]; i++) {
+	for (i = 0; i < MSG_MAX_OTEMPL_SETS && msg->opt_templ_set[i]; i++) {
 		ptr = (uint8_t*) &msg->opt_templ_set[i]->first_record;
 		max_len = ((uint8_t *) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) - ptr;
 		while (ptr < (uint8_t*) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) {

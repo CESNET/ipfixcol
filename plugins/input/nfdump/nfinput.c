@@ -558,7 +558,7 @@ void *message_to_packet(const struct ipfix_message *msg, int *packet_length)
 	offset += IPFIX_HEADER_LENGTH;
 
 	/* Copy template sets */
-	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; ++i) {
+	for (i = 0; i < MSG_MAX_TEMPL_SETS && msg->templ_set[i]; ++i) {
 		aux_header = &(msg->templ_set[i]->header);
 		len = ntohs(aux_header->length);
 		for (c = 0; c < len; c += 4) {
@@ -569,7 +569,7 @@ void *message_to_packet(const struct ipfix_message *msg, int *packet_length)
 	}
 
 	/* Copy template sets */
-	for (i = 0; i < MSG_MAX_OTEMPLATES && msg->opt_templ_set[i]; ++i) {
+	for (i = 0; i < MSG_MAX_OTEMPL_SETS && msg->opt_templ_set[i]; ++i) {
 		aux_header = &(msg->opt_templ_set[i]->header);
 		len = ntohs(aux_header->length);
 		for (c = 0; c < len; c += 4) {
