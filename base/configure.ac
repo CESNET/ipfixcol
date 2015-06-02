@@ -39,7 +39,7 @@
 AC_PREREQ([2.60])
 
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol], [0.8.0])
+AC_INIT([ipfixcol], [0.8.1])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability subdir-objects])
 LT_PREREQ([2.2])
 LT_INIT([dlopen disable-static])
@@ -63,7 +63,13 @@ AC_ARG_ENABLE([debug],
         AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
         [AM_CFLAGS="$AM_CFLAGS -Wextra -g"
         AM_CPPFLAGS="$AM_CPPFLAGS -DDEBUG"])
-        
+
+# add --enable-sflow parameter
+AC_ARG_ENABLE([sflow],
+	AC_HELP_STRING([--enable-sflow],[enable sFlow support]), [SFLOW_CPPFLAGS="-DENABLE_SFLOW"])
+AM_CONDITIONAL([ENABLE_SFLOW], [test "$enable_sflow" = "yes"])
+AC_SUBST([SFLOW_CPPFLAGS])
+       
 AC_ARG_ENABLE([sctp], 
         AC_HELP_STRING([--disable-sctp],[disable sctp input plugin]))
 AM_CONDITIONAL([HAVE_SCTP], [test "$enable_sctp" != "no"])
@@ -75,7 +81,6 @@ AM_CONDITIONAL([HAVE_DOC], [test "$enable_doc" != "no"])
 # add --without-openssl parameter
 AC_ARG_WITH([openssl],
 	AC_HELP_STRING([--without-openssl],[disable TLS support]), [with_openssl=no], [with_openssl=yes])
-
 
 ############################ Check for programs ################################
 
@@ -247,8 +252,8 @@ echo "
   Prefix........: $prefix
   Distribution..: $DISTRO
   Debug build...: ${enable_debug:-no}
-  C Compiler....: $CC $AM_CFLAGS $CFLAGS
-  C++ Compiler..: $CXX $AM_CXXFLAGS $CXXFLAGS $AM_CPPFLAGS $CPPFLAGS
+  C Compiler....: $CC $AM_CFLAGS $CFLAGS $AM_CPPFLAGS $CPPFLAGS $TLS_CPPFLAGS $SFLOW_CPPFLAGS
+  C++ Compiler..: $CXX $AM_CXXFLAGS $CXXFLAGS $AM_CPPFLAGS $CPPFLAGS 
   Linker........: $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
   Build doc.....: ${enable_doc:-yes}

@@ -43,8 +43,10 @@
 #include <time.h>
 
 #include "convert.h"
+#ifdef ENABLE_SFLOW
 #include "sflow.h"
 #include "sflowtool.h"
+#endif
 #include "inttypes.h"
 
 /** Netflow v5 and v9 identifiers */
@@ -667,6 +669,7 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 
 		/* SFLOW packet (converted to Netflow v5 like packet */
 		default:
+#ifdef ENABLE_SFLOW
 			/* Conversion from sflow to Netflow v5 like IPFIX packet */
 			numOfFlowSamples = Process_sflow(*packet, *len);
 
@@ -682,7 +685,7 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 			if (*len >= htons(header->length)) {
 				seqNo[SF_SEQ_N] += numOfFlowSamples;
 			}
-
+#endif
 			break;
 	}
 
