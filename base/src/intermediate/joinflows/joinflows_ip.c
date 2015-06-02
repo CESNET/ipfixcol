@@ -898,7 +898,7 @@ int intermediate_process_message(void *config, void *message)
 
 	/* Process templates */
 	proc.type = TM_TEMPLATE;
-	for (i = 0; i < MSG_MAX_TEMPLATES && msg->templ_set[i]; ++i) {
+	for (i = 0; i < MSG_MAX_TEMPL_SETS && msg->templ_set[i]; ++i) {
 		prevoffset = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->templ_set[i]->header), 4);
 		proc.offset += 4;
@@ -920,7 +920,7 @@ int intermediate_process_message(void *config, void *message)
 	proc.trecords = 0;
 	/* Process option templates */
 	proc.type = TM_OPTIONS_TEMPLATE;
-	for (i = 0; i < MSG_MAX_OTEMPLATES && msg->opt_templ_set[i]; ++i) {
+	for (i = 0; i < MSG_MAX_OTEMPL_SETS && msg->opt_templ_set[i]; ++i) {
 		prevoffset = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->opt_templ_set[i]->header), 4);
 		proc.offset += 4;

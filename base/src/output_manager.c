@@ -350,13 +350,14 @@ static void *output_manager_plugin_thread(void* config)
 			}
 		} else if (seq_number > conf->first_seq) {
 			// Check for sequence number gap
-			if (seq_number - msg->data_records_count > conf->last_seq) {
-				__sync_fetch_and_add(&(conf->lost_data_records), seq_number - msg->data_records_count - conf->last_seq);
+			if (seq_number - conf->last_msg_data_records > conf->last_seq) {
+				__sync_fetch_and_add(&(conf->lost_data_records), seq_number - conf->last_msg_data_records - conf->last_seq);
 			}
 		} else {
 			// Do nothing
 		}
 
+		conf->last_msg_data_records = msg->data_records_count;
 		conf->last_seq = seq_number;
 		
 		/* Write data into input queue of Storage Plugins */

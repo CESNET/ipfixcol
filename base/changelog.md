@@ -1,5 +1,12 @@
 **Future release:**
 
+**Version 0.8.1:**
+
+*  Multiple destinations support in forwarding storage plugin
+*  Improvements to anonymization intermediate plugin
+*  Fixed sequence number gap detection
+*  Fixed padding problem in NFv9 -> IPFIX conversion
+
 **Version 0.8.0:**
 
 *  Added Simple Socket library (libsiso)

@@ -74,7 +74,6 @@ static struct offset_field offsets[] = {
 #define read32(ptr) (*((uint32_t *) (ptr)))
 #define read64(ptr) (*((uint64_t *) (ptr)))
 
-
 /**
  * \brief Create ipfix_message structure from data in memory
  *
@@ -176,12 +175,11 @@ struct ipfix_message *message_create_clone(struct ipfix_message *msg)
 		return NULL;
 	}
 
-	packet = (uint8_t *) malloc(ntohs(msg->pkt_header->length));
+	packet = (uint8_t *) calloc(1, ntohs(msg->pkt_header->length));
 	if (!packet) {
 		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
 		return NULL;
 	}
-	memset(packet, 0, sizeof(ntohs(msg->pkt_header->length)));
 
 	message = message_create_from_mem(packet, msg->pkt_header->length, msg->input_info, msg->source_status);
 	if (!message) {
@@ -300,12 +298,11 @@ uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_templat
 	uint16_t records_index = 0;
 
 	/* TODO - make it clever */
-	records = (uint8_t **) malloc(MSG_MAX_DATA_COUPLES * sizeof(uint8_t *));
+	records = (uint8_t **) calloc(MSG_MAX_DATA_COUPLES, sizeof(uint8_t *));
 	if (records == NULL) {
-		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return (uint8_t **) NULL;
 	}
-	memset(records, 0, MSG_MAX_DATA_COUPLES * sizeof(uint8_t *));
 
 	min_record_length = tmplt->data_length;
 	offset = 0;
@@ -321,6 +318,7 @@ uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_templat
 		data_record = (((uint8_t *) data_set) + offset);
 		records[records_index] = data_record;
 		offset += get_next_data_record_offset(data_record, tmplt);
+		++records_index;
 	}
 
 	return records;
@@ -337,20 +335,18 @@ struct ipfix_message *message_create_empty()
 	struct ipfix_message *message;
 	struct ipfix_header *header;
 
-	message = (struct ipfix_message *) malloc(sizeof(*message));
+	message = (struct ipfix_message *) calloc(1, sizeof(*message));
 	if (!message) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return NULL;
 	}
-	memset(message, 0, sizeof(*message));
 
-	header = (struct ipfix_header *) malloc(sizeof(*header));
+	header = (struct ipfix_header *) calloc(1, sizeof(*header));
 	if (!header) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		free(message);
 		return NULL;
 	}
-	memset(header, 0, sizeof(*header));
 
 	message->pkt_header = header;
 
