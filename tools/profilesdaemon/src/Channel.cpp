@@ -45,30 +45,6 @@
 
 #include <iostream>
 
-void Channel::print()
-{
-	std::cout << "\n";
-
-	std::cout << "CName:      " << m_name << "\n";
-	std::cout << "CProfile:   " << m_profile->getName() << "\n";
-	std::cout << "CPath:      " << m_pathName << "\n";
-	std::cout << "CFilter:    " << m_filter << "\n";
-	std::cout << "CListeners: ";
-
-	for (Channel *c: m_listeners) {
-		std::cout << c->getName() << ", ";
-	}
-
-	std::cout << "\n";
-
-	std::cout << "CSources:   ";
-
-	for (Channel *c: m_sources) {
-		std::cout << c->getName() << ", ";
-	}
-	std::cout << "\n";
-}
-
 /**
  * Trim string
  */

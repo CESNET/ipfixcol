@@ -56,10 +56,16 @@ IPFIXCOL_API_VERSION;
 #include <stdexcept>
 #include <iostream>
 #include <fstream>
+#include <iomanip>
+#include <sstream>
 #include <thread>
 
 #define LEN_BYTES 4
 #define BUFFER_SIZE 2048
+
+static const char *suffixes[] {
+	"B", "KB", "MB", "GB", nullptr
+};
 
 /* Identifier for verbose macros */
 static const char *msg_module = "profiler";
@@ -67,10 +73,10 @@ static const char *msg_module = "profiler";
 struct daemon_config {
 	fd_set read_flags;
 	bool done;
-	const char *ip;
-	const char *port;
+	const char *ip{};
+	const char *port{};
 	std::string xml_path;
-	sisoconf *receiver;
+	sisoconf *receiver{};
 	char buffer[BUFFER_SIZE];
 	std::string message;
 	int sockfd;
@@ -84,12 +90,26 @@ struct daemon_config {
 struct plugin_conf {
 	void *ip_config;	/**< intermediate process config */
 	std::thread thread;
-	daemon_config *daemon;
+	daemon_config *daemon{};
 };
 
+std::string formatSize(double size)
+{
+	int i = 0;
+
+	while (size > 1024.0 && suffixes[i + 1] != nullptr) {
+		size /= 1024.0;
+		++i;
+	}
+
+	std::ostringstream oss;
+	oss << std::setprecision(2) << size << " " << suffixes[i];
+	return oss.str();
+}
 
 void reconfigure()
 {
+	MSG_DEBUG(msg_module, "Reconfiguring process %d", getpid());
 	kill(getpid(), SIGUSR1);
 }
 
@@ -117,13 +137,15 @@ void receive_config(daemon_config *daemon)
 
 	int readed = read(daemon->sockfd, &remaining, LEN_BYTES);
 	if (readed != LEN_BYTES) {
-		MSG_ERROR(msg_module, "Cannot read data from daemon: %s", strerror(errno));
+		if (errno != EINTR) {
+			MSG_ERROR(msg_module, "Cannot read data from daemon: %s", strerror(errno));
+		}
 		return;
 	}
 
 	remaining = ntohl(remaining);
 
-	MSG_DEBUG(msg_module, "Reading %d bytes", remaining);
+	MSG_DEBUG(msg_module, "Reading %s", formatSize(remaining).c_str());
 
 	while (remaining > 0) {
 		readed = read(daemon->sockfd, daemon->buffer, std::min(remaining, (uint32_t) BUFFER_SIZE));
@@ -137,7 +159,6 @@ void receive_config(daemon_config *daemon)
 		daemon->message += daemon->buffer;
 		remaining -= readed;
 	}
-
 }
 
 void daemon_loop(daemon_config *config)
@@ -153,6 +174,7 @@ void daemon_loop(daemon_config *config)
 
 void start_daemon(plugin_conf *config)
 {
+	MSG_DEBUG(msg_module, "Creating siso connection");
 	if (siso_create_connection(config->daemon->receiver, config->daemon->ip, config->daemon->port, "TCP") != SISO_OK) {
 		throw std::runtime_error(siso_get_last_err(config->daemon->receiver));
 	}
@@ -179,7 +201,7 @@ void process_xml_config(struct plugin_conf *config, char *xml_config)
 		throw std::invalid_argument("Cannot get document root element!");
 	}
 
-	xmlNode *node;
+	xmlNode *node{nullptr};
 	for (node = root->children; node != nullptr; node = node->next) {
 		if (node->type != XML_ELEMENT_NODE) {
 			continue;
@@ -296,6 +318,11 @@ int intermediate_process_message(void* config, void* message)
 	return 0;
 }
 
+void handler(int signum)
+{
+	(void) signum;
+}
+
 /**
  * \brief Close intermediate plugin
  */
@@ -307,9 +334,33 @@ int intermediate_close(void *config)
 	/* Destroy configuration */
 	if (conf->daemon) {
 		conf->daemon->done = true;
+
+		/*
+		 * Daemon thread is blocked on "read" waiting for data from configurator
+		 *
+		 * To stop him:
+		 * 1) replace signal handler with empty one
+		 * 2) send interrupt signal so "read" is released with errno = EINTR
+		 * 3) restore old action handler
+		 * 4) join thread
+		 */
+
+		struct sigaction newAction, oldAction;
+		sigemptyset(&newAction.sa_mask);
+		newAction.sa_handler = handler;
+		newAction.sa_flags = 0;
+
+		sigaction(SIGINT, &newAction, &oldAction);
+		pthread_kill(conf->thread.native_handle(), SIGINT);
+		sigaction(SIGINT, &oldAction, NULL);
+
+
 		if (conf->thread.joinable()) {
 			conf->thread.join();
 		}
+
+		free((void*) conf->daemon->ip);
+		free((void*) conf->daemon->port);
 
 		delete conf->daemon;
 	}

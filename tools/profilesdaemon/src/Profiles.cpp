@@ -7,36 +7,10 @@
 #include <stdexcept>
 #include <sstream>
 
-void Profiles::printProfile(std::string path)
-{
-	Profile *profile = nameToProfile(path);
-	if (profile == nullptr) {
-		MSG_ERROR("%s not found", path.c_str());
-	} else {
-		profile->print(false);
-	}
-}
-
-void Profiles::printChannel(std::string path)
-{
-	Channel *channel = nameToChannel(path);
-	if (channel == nullptr) {
-		MSG_ERROR("%s not found", path.c_str());
-	} else {
-		channel->print();
-	}
-}
-
-void Profiles::print()
-{
-	std::cout << "Config file: " << m_xmlfile << std::endl;
-	rootProfile->print();
-}
-
 std::string Profiles::getXmlConfig()
 {
 	std::ostringstream stream;
-	m_doc.save(stream);
+	m_doc.save(stream, "\t", pugi::format_indent | pugi::format_no_declaration);
 
 	return stream.str();
 }
@@ -116,7 +90,7 @@ bool Profiles::removeProfile(std::string path)
 
 bool Profiles::saveChanges()
 {
-	m_doc.save_file(m_xmlfile.c_str());
+	m_doc.save_file(m_xmlfile.c_str(), "\t", pugi::format_indent | pugi::format_no_declaration);
 	m_collectors->sendConfigToAll();
 	return true;
 }

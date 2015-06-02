@@ -11,7 +11,7 @@
 
 static SocketController *socketController = nullptr;
 
-void handle(int signalNumber)
+void handler(int signalNumber)
 {
 	(void) signalNumber;
 
@@ -25,16 +25,18 @@ int SocketController::initControllerSocket(std::string path)
 	struct sockaddr_un address;
 	int newSocket = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (newSocket < 0) {
-		throw std::runtime_error(strerror(errno));
+		throw std::runtime_error(std::string("socket(): ") + strerror(errno));
 	}
 
 	address.sun_family = AF_UNIX;
 	strcpy(address.sun_path, path.c_str());
 	unlink(address.sun_path);
 
-	if (bind(newSocket, (struct sockaddr *)&address, strlen(address.sun_path) + sizeof(address.sun_family)) < 0) {
+	int len = strlen(address.sun_path) + sizeof(address.sun_family);
+	if (bind(newSocket, (struct sockaddr *)&address, len) < 0) {
 		close(newSocket);
-		throw std::runtime_error(strerror(errno));
+		MSG_ERROR("bind() to %s: %s", address.sun_path, strerror(errno));
+		throw std::runtime_error(std::string("bind() failed"));
 	}
 
 	return newSocket;
@@ -51,23 +53,23 @@ int SocketController::initCollectorsSocket(std::string port)
 	hints.ai_flags = AI_PASSIVE;
 
 	if (getaddrinfo(NULL, port.c_str(), &hints, &serverinfo) != 0) {
-		throw std::runtime_error(strerror(errno));
+		throw std::runtime_error(std::string("getaddrinfo(): ") + strerror(errno));
 	}
 
 	for (p = serverinfo; p != nullptr; p = p->ai_next) {
 		newSocket = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
 		if (newSocket < 0) {
-			MSG_WARNING(strerror(errno));
+			MSG_WARNING("socket(): %s", strerror(errno));
 			continue;
 		}
 
 		if (setsockopt(newSocket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) < 0) {
-			throw std::runtime_error(strerror(errno));
+			throw std::runtime_error(std::string("setsockopt(): ") + strerror(errno));
 		}
 
 		if (bind(newSocket, p->ai_addr, p->ai_addrlen) < 0) {
 			close(newSocket);
-			MSG_WARNING(strerror(errno));
+			MSG_WARNING("bind(): %s", strerror(errno));
 			continue;
 		}
 
@@ -75,39 +77,51 @@ int SocketController::initCollectorsSocket(std::string port)
 	}
 
 	if (p == nullptr) {
-		throw std::runtime_error("Failed to bind");
+		throw std::runtime_error("bind() failed");
 	}
 
 	freeaddrinfo(serverinfo);
 
 	if (listen(newSocket, BACKLOG) < 0) {
 		close(newSocket);
-		throw std::runtime_error(strerror(errno));
+		throw std::runtime_error(std::string("listen(): ") + strerror(errno));
 	}
 
 	return newSocket;
-
 }
 
 SocketController::SocketController(std::string controllerSocket, std::string portNumber)
 {
+	MSG_DEBUG("Initializing controller socket");
 	m_controllerSocket = initControllerSocket(controllerSocket);
+
+	MSG_DEBUG("Initializing socket for collectors");
 	m_collectorsSocket = initCollectorsSocket(portNumber);
+}
+
+SocketController::~SocketController()
+{
+	stop();
+	close(m_collectorsSocket);
+	close(m_controllerSocket);
+
+	for (uint16_t i = 0; i < m_activeCollectors.size(); ++i) {
+		close(m_activeCollectors[i]);
+	}
 }
 
 void SocketController::stop()
 {
-	m_done = true;
-
-	if (m_thread.joinable()) {
-		m_thread.join();
+	if (!m_done) {
+		MSG_DEBUG("Stopping socket controller");
+		m_done = true;
 	}
 }
 
 void SocketController::sendConfigToAll()
 {
-	m_actualConfig = m_profiles->getXmlConfig();
-	m_actualConfigLength = htonl(m_actualConfig.length());
+	MSG_DEBUG("Sending config to %d collector(s)", m_activeCollectors.size());
+	prepareConfigForSending();
 
 	for (uint16_t i = 0; i < m_activeCollectors.size(); ++i) {
 		sendConfigToCollector(i);
@@ -118,7 +132,7 @@ bool SocketController::sendData(int index, void *data, uint16_t length)
 {
 	if (send(m_activeCollectors[index], data, length, 0) != length) {
 		if (errno != EINTR) {
-			MSG_ERROR(strerror(errno));
+			MSG_ERROR("send(): %s", strerror(errno));
 			MSG_ERROR("Closing connection with collector");
 
 			close(m_activeCollectors[index]);
@@ -137,6 +151,12 @@ void SocketController::sendConfigToCollector(int index)
 	}
 }
 
+void SocketController::prepareConfigForSending()
+{
+	m_actualConfig = m_profiles->getXmlConfig();
+	m_actualConfigLength = htonl(m_actualConfig.length());
+}
+
 void SocketController::listenForCollectors()
 {
 	struct sockaddr_storage client;
@@ -146,6 +166,10 @@ void SocketController::listenForCollectors()
 	while (!m_done) {
 		newSocket = accept(m_collectorsSocket, (struct sockaddr*) &client, &addr_size);
 		if (newSocket < 0) {
+			if (errno == EINTR) {
+				continue;
+			}
+
 			MSG_ERROR(strerror(errno));
 			continue;
 		}
@@ -153,10 +177,23 @@ void SocketController::listenForCollectors()
 		m_activeCollectors.push_back(newSocket);
 
 		if (m_actualConfig.empty()) {
-			m_actualConfig = m_profiles->getXmlConfig();
+			prepareConfigForSending();
 		}
+		MSG_DEBUG("Sending config to new collector");
 		sendConfigToCollector(m_activeCollectors.size() - 1);
 	}
+}
+
+void SocketController::setupSignalHandler()
+{
+	socketController = this;
+
+	struct sigaction newAction;
+	newAction.sa_handler = handler;
+	newAction.sa_flags = 0;
+
+	sigemptyset(&newAction.sa_mask);
+	sigaction(SIGINT, &newAction, NULL);
 }
 
 void SocketController::run()
@@ -168,55 +205,93 @@ void SocketController::run()
 	struct sockaddr_un clientAddress;
 	socklen_t addressLength = sizeof(struct sockaddr_un);
 
-	socketController = this;
-	signal(SIGINT, handle);
+	setupSignalHandler();
 
 	while (!m_done) {
 		int numberOfBytes = recvfrom(m_controllerSocket, buffer, BUFFER_SIZE, 0,
 								 (struct sockaddr *) &clientAddress, &addressLength);
+
 		if (numberOfBytes < 0) {
-			MSG_ERROR("%s", strerror(errno));
+			if (errno == EINTR) {
+				continue;
+			}
+
+			MSG_ERROR("recvfrom(): %s", strerror(errno));
 			continue;
 		}
+
+		buffer[numberOfBytes] = '\0';
 
 		MSG_DEBUG("Message from controller: %s", buffer);
 
 		std::string response = processMessage(buffer);
 
-		MSG_DEBUG("Sending response: %s", response.c_str());
+		MSG_DEBUG("Sending response: %s to %s", response.c_str(), clientAddress.sun_path);
 
 		if (sendto(m_controllerSocket, response.c_str(), response.length(), 0,
 				   (struct sockaddr *) &clientAddress, addressLength) != (uint16_t) response.length()) {
-			MSG_ERROR("%s", strerror(errno));
+			MSG_ERROR("sendto(): %s", strerror(errno));
 		}
 	}
+
+	pthread_kill(m_thread.native_handle(), SIGINT);
+	m_thread.join();
+
+	MSG_DEBUG("Socket controller stopped");
 }
 
 std::string SocketController::processMessage(std::string message)
 {
-	std::cout << message << "\n";
 	json::Object response;
+	json::Array messages;
 	response["status"] = "OK";
 
 	json::Value jMessage = json::Deserialize(message);
-	if (jMessage.GetType() == json::NULLVal || !jMessage.HasKey("requests")) {
-		response["status"]  = "Error";
-		response["message"] = "Invalid request";
+
+	if (jMessage.GetType() != json::ObjectVal) {
+		messages.push_back("Invalid message");
+		response["status"]   = "Error";
+		response["messages"] = messages;
 		return json::Serialize(response);
 	}
 
-	json::Array requests = jMessage.ToArray();
-	std::string errorMessage{};
+	if (jMessage.HasKey("requests")) {
+		if (jMessage["requests"].GetType() != json::ArrayVal) {
+			response["status"] = "Error";
+			messages.push_back("'requests' element has to be an array");
+		} else {
 
-	for (json::Value &request : requests) {
+			json::Array requests = jMessage["requests"];
+			std::string errorMessage{};
 
-		errorMessage = processRequest(request.ToObject());
+			for (json::Value &request : requests) {
 
-		if (!errorMessage.empty()) {
-			response["status"]  = "Error";
-			response["message"] = errorMessage;
-			break;
+				try {
+					errorMessage = processRequest(request.ToObject());
+				} catch (std::exception &e) {
+					errorMessage = e.what();
+				}
+
+				if (!errorMessage.empty()) {
+					response["status"]  = "Error";
+					messages.push_back(errorMessage);
+				}
+			}
 		}
+	}
+
+	if (jMessage.HasKey("save") && response["status"] == "OK") {
+		json::Value jSave = jMessage["save"];
+
+		if (jSave.GetType() == json::BoolVal && jSave.ToBool()) {
+			m_profiles->saveChanges();
+		} else {
+			messages.push_back("Changes not saved, invalid value of 'save' element");
+		}
+	}
+
+	if (messages.size() > 0) {
+		response["messages"] = messages;
 	}
 
 	return json::Serialize(response);
@@ -255,7 +330,7 @@ std::string SocketController::processRequest(json::Object request)
 		channel = m_profiles->getChannel(path);
 
 	} else {
-		return "Unknown request type: " + type;
+		return "Unknown request type " + type;
 	}
 
 	/* Add or modify channel */
@@ -265,7 +340,7 @@ std::string SocketController::processRequest(json::Object request)
 			/* Check whether the new channel name is unique within profile */
 			for (Channel *c: channel->getProfile()->getChannels()) {
 				if (c->getName() == request["name"] && c != channel) {
-					return "Channel with name '" + c->getName() + "' already exists in profile '" + c->getProfile()->getName();
+					return "Channel with name " + c->getName() + " already exists in profile " + c->getProfile()->getName();
 				}
 			}
 

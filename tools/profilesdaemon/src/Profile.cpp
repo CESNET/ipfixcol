@@ -45,40 +45,6 @@
 
 #include <iostream>
 
-void Profile::print(bool recursive)
-{
-	std::cout << "\n";
-	std::cout << "Name:     " << m_name << "\n";
-	std::cout << "Parent:   " << (m_parent ? m_parent->getName() : "none") << "\n";
-	std::cout << "Path:     " << m_pathName << "\n";
-	std::cout << "Channels: ";
-
-	for (Channel *c : m_channels) {
-		std::cout << c->getName() << ", ";
-	}
-
-	std::cout << "\n";
-	std::cout << "Children: ";
-
-
-	for (Profile *c : m_children) {
-		std::cout << c->getName() << ", ";
-	}
-
-	std::cout << "\n";
-
-	if (recursive) {
-		for (Channel *c : m_channels) {
-			c->print();
-		}
-
-
-		for (Profile *c : m_children) {
-			c->print();
-		}
-	}
-}
-
 Profile::Profile(std::string name)
 	: m_name{name}
 {

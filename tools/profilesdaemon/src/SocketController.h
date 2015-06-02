@@ -23,6 +23,7 @@ class Profiles;
 class SocketController{
 public:
 	SocketController(std::string controllerSocket, std::string portNumber);
+	~SocketController();
 
 	void run();
 	void stop();
@@ -34,6 +35,8 @@ private:
 	bool sendData(int index, void *data, uint16_t length);
 	void sendConfigToCollector(int index);
 	void listenForCollectors();
+	void setupSignalHandler();
+	void prepareConfigForSending();
 
 	int initControllerSocket(std::string path);
 	int initCollectorsSocket(std::string port);

@@ -1,13 +1,14 @@
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CPPFLAGS += -I$(top_srcdir)/headers
+AM_CPPFLAGS += -I$(top_srcdir)/headers $(SISO_CPPFLAGS)
+AM_LDFLAGS += $(SISO_LDFLAGS) -module -avoid-version -shared
 pluginsdir = $(datadir)/ipfixcol/plugins
 
 sofile = $(pluginsdir)/ipfixcol-profiler-inter.so
 internalcfg = $(DESTDIR)$(sysconfdir)/ipfixcol/internalcfg.xml
 
 plugins_LTLIBRARIES = ipfixcol-profiler-inter.la
-ipfixcol_profiler_inter_la_LDFLAGS = -module -avoid-version -shared 
+#ipfixcol_profiler_inter_la_LDFLAGS = -module -avoid-version -shared
 ipfixcol_profiler_inter_la_SOURCES = profiler.cpp
 
 if HAVE_DOC

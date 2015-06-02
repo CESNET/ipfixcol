@@ -91,6 +91,23 @@ AC_ARG_ENABLE([doc],
 AM_CONDITIONAL([HAVE_DOC], [test "$enable_doc" != "no"])
 
 ############################ Check for libraries ###############################
+libsisodir="$srcdir/../../../base/src/utils/libsiso/"
+my_save_ldflags="$LDFLAGS"
+AS_IF([test -d "$libsisodir.libs"],
+	[AC_MSG_NOTICE([])
+	LDFLAGS="$LDFLAGS -L$libsisodir.libs"
+	AC_SEARCH_LIBS([siso_create],[siso], [
+		SISO_LDFLAGS="-L$libsisodir.libs"
+		SISO_CPPFLAGS="-I$libsisodir"
+		HAVE_SISO="yes"
+		AC_MSG_NOTICE([Using libsiso from $libsisodir])],
+		[HAVE_SISO="no"])],
+	[AC_SEARCH_LIBS([siso_create],[siso], [HAVE_SISO="yes"], [HAVE_SISO="no"]])
+)
+LDFLAGS="$my_save_ldflags"
+AS_IF([test "$HAVE_SISO" = "no"], AC_MSG_ERROR([Required library siso missing]))
+AC_SUBST([SISO_CPPFLAGS])
+AC_SUBST([SISO_LDFLAGS])
 
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar.h])

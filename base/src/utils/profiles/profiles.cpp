@@ -104,19 +104,23 @@ Channel *process_channel(Profile *profile, xmlNode *root, struct filter_parser_d
 		MSG_ERROR(msg_module, "Profile %s: missing channel name", profile_id(profile));
 		throw_empty;
 	}
-	
+
 	/* Create new channel */
 	Channel *channel = new Channel((char *) aux_char);
 	xmlFree(aux_char);
 	channel->setProfile(profile);
-	
+
 	/* Initialize parser data */
 	pdata->filter = NULL;
 	
 	/* Iterate through elements */
 	for (xmlNode *node = root->children; node; node = node->next) {
-		
 		if (!xmlStrcmp(node->name, (const xmlChar *) "filter")) {
+			aux_char = xmlNodeGetContent(node->children);
+			if (aux_char == NULL) {
+				continue;
+			}
+
 			/* Allocate space for filter */
 			filter_profile *fp = (filter_profile *) calloc(1, sizeof(filter_profile));
 			if (!fp) {
@@ -128,7 +132,7 @@ Channel *process_channel(Profile *profile, xmlNode *root, struct filter_parser_d
 			pdata->profile = fp;
 
 			/* Parse filter */
-			pdata->filter = (char *) xmlNodeGetContent(node->children);
+			pdata->filter = (char *) aux_char;
 			if (parse_filter(pdata) != 0) {
 				MSG_ERROR(msg_module, "Profile %s: channel %s: error while parsing filter", profile_id(profile), channel->getName().c_str());
 				filter_free_profile(fp);
@@ -137,7 +141,7 @@ Channel *process_channel(Profile *profile, xmlNode *root, struct filter_parser_d
 				throw_empty;
 			}
 			
-			free(pdata->filter);
+			free(aux_char);
 			
 			/* Set filter to channel */
 			channel->setFilter(pdata->profile);
@@ -145,9 +149,12 @@ Channel *process_channel(Profile *profile, xmlNode *root, struct filter_parser_d
 		} else if (!xmlStrcmp(node->name, (const xmlChar *) "sources")) {
 			/* Channel sources */
 			aux_char = xmlNodeGetContent(node->children);
+			if (aux_char == NULL) {
+				continue;
+			}
+
 			channel->setSources((char *) aux_char);
 			free(aux_char);
-			
 		}
 	}
 	

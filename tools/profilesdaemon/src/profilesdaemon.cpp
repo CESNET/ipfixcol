@@ -94,43 +94,13 @@ void print_version()
 	std::cout << "profilesdaemon v0.1" << "\n";
 }
 
-int testCase(std::string path, std::string channel, std::string profile)
-{
-	try {
-
-		Profiles *profiles = new Profiles(path);
-
-		if (!channel.empty()) {
-			profiles->addChannel(channel);
-			profiles->saveChanges();
-		}
-
-		if (!profile.empty()) {
-			profiles->addProfile(profile);
-			profiles->saveChanges();
-		}
-
-		if (channel.empty() && profile.empty()) {
-			profiles->print();
-		}
-
-	} catch (std::exception &e) {
-
-		MSG_ERROR(e.what());
-		return 1;
-
-	}
-
-	return 0;
-
-}
-
 int main(int argc, char *argv[])
 {
 	std::string profilesConfig{}, port{}, controlSocket{};
 	std::string channel{}, profile{};
 	int c;
 	bool daemonize{false};
+
 	while ((c = getopt_long(argc, argv, OPTSTRING, long_opts, NULL)) != -1) {
 		switch (c) {
 		case 'h':
@@ -151,12 +121,6 @@ int main(int argc, char *argv[])
 		case 'v':
 			MSG_SET_VERBOSE(std::atoi(optarg));
 			break;
-		case 'x':
-			channel = std::string(optarg);
-			break;
-		case 'X':
-			profile = std::string(optarg);
-			break;
 		case 'd':
 			daemonize = true;
 			break;
@@ -168,16 +132,10 @@ int main(int argc, char *argv[])
 
 	openlog(0, LOG_CONS | LOG_PID, LOG_USER);
 
-	if (daemonize) {
-		// TODO: daemonize
-	}
-
 	if (profilesConfig.empty()) {
 		MSG_ERROR("Missing path to the profiles configuration (-p)!");
 		return 1;
 	}
-
-	return testCase(profilesConfig, channel, profile);
 
 	if (controlSocket.empty()) {
 		MSG_ERROR("Missing path to the control socket (-s)!");
@@ -189,11 +147,29 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	Profiles *profiles = new Profiles(profilesConfig);
-	SocketController *sockets = new SocketController(controlSocket, port);
+	if (daemonize) {
+		closelog();
+		MSG_SYSLOG_INIT("profilesdaemon");
+		MSG_NOTICE("daemonizing...");
 
-	sockets->setProfiles(profiles);
-	sockets->run();
+		if (daemon(1, 0)) {
+			MSG_ERROR("daemon(): %s", strerror(errno));
+		}
+	}
+
+	try {
+		MSG_DEBUG("Creating profiles");
+		Profiles *profiles = new Profiles(profilesConfig);
+
+		MSG_DEBUG("Creating socket controller");
+		SocketController *sockets = new SocketController(controlSocket, port);
+
+		MSG_DEBUG("Running socket listener");
+		sockets->setProfiles(profiles);
+		sockets->run();
+	} catch (std::exception &e) {
+		MSG_ERROR(e.what());
+	}
 
 	closelog();
 }

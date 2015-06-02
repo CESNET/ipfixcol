@@ -53,7 +53,6 @@ class Channel;
  */
 class Profile {
 public:
-	void print(bool recursive = true);
 	/* Shortcuts */
 	using channelsVec = std::vector<Channel *>;
 	using profilesVec = std::vector<Profile *>;

@@ -12,9 +12,6 @@ class SocketController;
 
 class Profiles {
 public:
-	void printProfile(std::string path);
-	void printChannel(std::string path);
-	void print();
 	Profiles(std::string config);
 	~Profiles();
 

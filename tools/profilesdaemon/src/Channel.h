@@ -50,7 +50,6 @@ class Channel {
 	/* Shortcuts */
 	using channelsSet = std::set<Channel *>;
 public:
-	void print();
 	Channel(std::string name);
 	~Channel();
 
