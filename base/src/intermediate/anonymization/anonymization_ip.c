@@ -194,7 +194,7 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 		if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
 			/* copy value to memory - don't forget the terminating zero */
 			int tmp_val_len = strlen((char *) cur_node->children->content) + 1;
-			char *tmp_val = malloc(sizeof(char) * tmp_val_len);
+			char *tmp_val = calloc(tmp_val_len, sizeof(char));
 
 			/* this is not a preferred cast, but we really want to use plain chars here */
 			if (tmp_val == NULL) {
@@ -219,7 +219,11 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 
 				free(tmp_val);
 			} else if (xmlStrEqual(cur_node->name, BAD_CAST "key")) { /* anonymization key */
+				/* tmp_val must not be freed here since value must remain in conf->key */
 				conf->key = tmp_val;
+			} else {
+				MSG_WARNING(msg_module, "Unknown plugin configuration key ('%s')", cur_node->name);
+				free(tmp_val);
 			}
 		}
 	}
@@ -250,7 +254,7 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 	*config = conf;
 
 	xmlFreeDoc(doc);
-    xmlCleanupParser();
+	xmlCleanupParser();
 
 	MSG_NOTICE(msg_module, "Plugin initialization completed successfully");
 
