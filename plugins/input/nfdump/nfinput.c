@@ -313,7 +313,7 @@ void add_data_set(struct ipfix_message *ipfix_msg, struct ipfix_data_set *data_s
  */
 void add_template(struct ipfix_message *ipfix_msg, struct ipfix_template * template){
 	int i;
-	for (i = 0; i < MSG_MAX_TEMPLATES; i++) {
+	for (i = 0; i < MSG_MAX_TEMPL_SETS; i++) {
 		if (ipfix_msg->templ_set[i] == NULL) {
 			ipfix_msg->templ_set[i] = (struct ipfix_template_set *) \
 					calloc(1, sizeof(struct ipfix_template_set) + 8+template->template_length);
