@@ -94,10 +94,8 @@ struct input_info_file_list {
  */
 struct nfinput_config {
 	int fd;                  /**< file descriptor */
-	xmlChar *xml_file;       /**< input file URI from XML configuration 
-	                          * file. (e.g.: "file://tmp/ipfix.dump") */
-	char *file;              /**< path where to look for IPFIX files. same as
-	                          * xml_file, but without 'file:' */
+	xmlChar *xml_file;       /**< input file URI from XML configuration file. (e.g.: "file://tmp/ipfix.dump") */
+	char *file;              /**< path where to look for IPFIX files. same as xml_file, but without 'file:' */
 	char **input_files;      /**< list of all input files */
 	int findex;              /**< index to the current file in the list of files */
 	struct input_info_file_list	*in_info_list;
@@ -313,7 +311,7 @@ void add_data_set(struct ipfix_message *ipfix_msg, struct ipfix_data_set *data_s
  */
 void add_template(struct ipfix_message *ipfix_msg, struct ipfix_template * template){
 	int i;
-	for (i = 0; i < MSG_MAX_TEMPLATES; i++) {
+	for (i = 0; i < MSG_MAX_TEMPL_SETS; i++) {
 		if (ipfix_msg->templ_set[i] == NULL) {
 			ipfix_msg->templ_set[i] = (struct ipfix_template_set *) \
 					calloc(1, sizeof(struct ipfix_template_set) + 8+template->template_length);
@@ -492,7 +490,7 @@ int process_ext_map(struct extension_map_s * extension_map, struct extensions *e
  */
 void free_ext(struct extensions *ext)
 {
-	int i;
+	unsigned int i;
 	
 	for (i = 0; i <= ext->filled; i++) {
 		free(ext->map[i].value);
@@ -606,7 +604,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 {
 	struct nfinput_config *conf = (struct nfinput_config *) config;
 	unsigned int size = 0;
-	char *buffer = NULL, *buffer_start = NULL;;
+	char *buffer = NULL, *buffer_start = NULL;
 	uint buffer_size = 0;
 	
 	struct data_block_header_s block_header;
@@ -615,7 +613,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 
 	*info = (struct input_info *) &(conf->in_info_list->in_info);
 	
-	struct ipfix_message *msg;
+	struct ipfix_message *msg = NULL;
 	
 read_begin:
 	if (conf->block >= conf->header.NumBlocks) {
@@ -636,7 +634,7 @@ read_begin:
 			goto err_header;
 		}
 		MSG_ERROR(msg_module, "Failed to read header: %s", strerror(errno));
-	    ret = INPUT_ERROR;
+		ret = INPUT_ERROR;
 		goto err_header;
 	}
 	if (ret == 0) {
@@ -673,7 +671,7 @@ read_begin:
 			goto err_header;
 		}
 		MSG_ERROR(msg_module, "Failed to read block: %s", strerror(errno));
-	    ret = INPUT_ERROR;
+		ret = INPUT_ERROR;
 		goto err_header;
 	}
 	if (ret == 0) {
@@ -1003,14 +1001,14 @@ int input_init(char *params, void **config)
 	/* check whether we have found "file" element in configuration file */
 	if (conf->xml_file == NULL) {
 		MSG_ERROR(msg_module, "\"file\" element is missing. No input, "
-		                        "nothing to do");
+				"nothing to do");
 		goto err_xml;
 	}
 
 	/* we only support local files */
 	if (strncmp((char *) conf->xml_file, "file:", 5)) {
 		MSG_ERROR(msg_module, "element \"file\": invalid URI - "
-		                        "only allowed scheme is \"file:\"");
+				"only allowed scheme is \"file:\"");
 		goto err_xml;
 	}
 
