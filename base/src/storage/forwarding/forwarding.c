@@ -53,7 +53,6 @@
 /* API version constant */
 IPFIXCOL_API_VERSION;
 
-
 /* Identifier for MSG_* */
 static const char *msg_module = "forwarding storage";
 
@@ -75,6 +74,7 @@ int forwarding_get_record_index(forwarding *conf, uint16_t tid, int type)
 			}
 		}
 	}
+
 	return -1;
 }
 
@@ -127,9 +127,10 @@ struct forwarding_template_record *forwarding_add_record(forwarding *conf, struc
 		conf->records_max += 32;
 		conf->records = realloc(conf->records, conf->records_max * sizeof(struct forwarding_template_record *));
 		if (conf->records == NULL) {
-			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			return NULL;
 		}
+
 		/* Initialize new pointers */
 		for (i = conf->records_cnt; i < conf->records_max; ++i) {
 			conf->records[i] = NULL;
@@ -141,9 +142,10 @@ struct forwarding_template_record *forwarding_add_record(forwarding *conf, struc
 		if (conf->records[i] == NULL) {
 			conf->records[i] = calloc(1, sizeof(struct forwarding_template_record));
 			if (conf->records[i] == NULL) {
-				MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+				MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 				return NULL;
 			}
+
 			conf->records[i]->record = record;
 			conf->records[i]->type = type;
 			conf->records[i]->length = len;
@@ -169,6 +171,7 @@ int forwarding_init_records(forwarding *conf)
 	if (conf->records== NULL) {
 		return 1;
 	}
+
 	return 0;
 }
 
@@ -213,10 +216,9 @@ sisoconf *add_sender(forwarding *conf, sisoconf *sender)
 {
 	if (conf->senders_cnt == conf->senders_max) {
 		conf->senders_max = (conf->senders_max == 0) ? 10 : conf->senders_max * 2;
-
 		conf->senders = realloc(conf->senders, sizeof(sisoconf*) * conf->senders_max);
 		if (conf->senders == NULL) {
-			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d).", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			return NULL;
 		}
 	}
@@ -229,13 +231,11 @@ sisoconf *process_destination(forwarding *conf, xmlDoc *doc, xmlNodePtr node)
 {
 	const char *ip = NULL, *port = NULL;
 	for (; node != NULL; node = node->next) {
-
 		if (!xmlStrcmp(node->name, (const xmlChar *) "ip")) {
 			if (ip) {
 				free((void*)ip);
 			}
 			ip = (const char *) xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
-
 		} else if (!xmlStrcmp(node->name, (const xmlChar *) "port")) {
 			if (port) {
 				free((void*)port);
@@ -260,13 +260,11 @@ sisoconf *process_destination(forwarding *conf, xmlDoc *doc, xmlNodePtr node)
 void load_default_values(forwarding *conf, xmlDoc *doc, xmlNodePtr node)
 {
 	for (; node != NULL; node = node->next) {
-
 		if (!xmlStrcmp(node->name, (const xmlChar *) "defaultPort")) {
 			if (conf->default_port) {
 				free((void*)conf->default_port);
 			}
 			conf->default_port = (const char *) xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
-
 		} else if (!xmlStrcmp(node->name, (const xmlChar *) "protocol")) {
 			if (conf->default_protocol) {
 				free((void*)conf->default_protocol);
@@ -304,6 +302,7 @@ bool forwarding_init_conf(forwarding *conf, xmlDoc *doc, xmlNodePtr root)
 			if (!strcasecmp((const char *) aux_str, "RoundRobin")) {
 				conf->distribution = DT_ROUND_ROBIN;
 			}
+
 		/* UDP configuration */
 		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "templateLifeTime")) {
 			aux_str = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
@@ -318,13 +317,14 @@ bool forwarding_init_conf(forwarding *conf, xmlDoc *doc, xmlNodePtr root)
 			aux_str = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
 			conf->udp.options_template_life_packet = atoi((char *) aux_str);
 		} else if (xmlStrcmp(cur->name, (const xmlChar *) "fileFormat")) {
-			MSG_WARNING(msg_module, "Unknown element \"%s\"!", cur->name);
+			MSG_WARNING(msg_module, "Unknown element '%s'", cur->name);
 		}
 
 		if (aux_str) {
 			xmlFree(aux_str);
 			aux_str = NULL;
 		}
+
 		cur = cur->next;
 	}
 
@@ -355,32 +355,32 @@ int storage_init(char *params, void **config)
 	MSG_DEBUG(msg_module, "Initialization");
 
 	if (!params) {
-		MSG_ERROR(msg_module, "Missing plugin configuration!");
+		MSG_ERROR(msg_module, "Missing plugin configuration");
 		return -1;
 	}
 
 	conf = calloc(1, sizeof(forwarding));
 	if (!conf) {
-		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
 
 	doc = xmlParseDoc(BAD_CAST params);
 	if (!doc) {
-		MSG_ERROR(msg_module, "Cannot parse config xml!");
+		MSG_ERROR(msg_module, "Could not parse plugin configuration");
 		free(conf);
 		return -1;
 	}
 
 	root = xmlDocGetRootElement(doc);
 	if (!root) {
-		MSG_ERROR(msg_module, "Cannot get document root element!");
+		MSG_ERROR(msg_module, "Could not get plugin configuration root element");
 		free(conf);
 		return -1;
 	}
 
 	if (xmlStrcmp(root->name, (const xmlChar *) "fileWriter")) {
-		MSG_ERROR(msg_module, "Root node != fileWriter");
+		MSG_ERROR(msg_module, "Plugin configuration root node != 'fileWriter'");
 		goto init_err;
 	}
 
@@ -408,7 +408,6 @@ int store_now(const void *config)
 {
 	(void) config;
 	MSG_DEBUG(msg_module, "Flushing data");
-
 	return 0;
 }
 
@@ -424,7 +423,6 @@ void *msg_to_packet(const struct ipfix_message *msg, int *packet_length)
 
 	*packet_length = ntohs(msg->pkt_header->length);
 	void *packet = calloc(1, *packet_length);
-
 	if (!packet) {
 		return NULL;
 	}
@@ -483,9 +481,9 @@ int forwarding_udp_sent(forwarding *conf, struct forwarding_template_record *rec
 {
 	uint32_t act_time = time(NULL);
 	uint32_t life_time = (rec->type == TM_TEMPLATE) ?
-							conf->udp.template_life_time : conf->udp.options_template_life_time;
+			conf->udp.template_life_time : conf->udp.options_template_life_time;
 	uint32_t life_packets = (rec->type == TM_TEMPLATE) ?
-							conf->udp.template_life_packet : conf->udp.options_template_life_packet;
+			conf->udp.template_life_packet : conf->udp.options_template_life_packet;
 
 	/* Check template timeout */
 	if (life_time) {
@@ -537,7 +535,7 @@ int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, 
 	/* Store new record */
 	struct ipfix_template_record *stored = calloc(1, len);
 	if (!stored) {
-		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return 0;
 	}
 
@@ -561,6 +559,7 @@ void forwarding_remove_empty_sets(struct ipfix_message *msg)
 		if (len <= 4) {
 			/* Set correct message length */
 			msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) - len);
+
 			/* Shift all template sets behind this (there must not be hole) */
 			for (j = i; j < MSG_MAX_TEMPL_SETS - 1 && msg->templ_set[j]; ++j) {
 				msg->templ_set[j] = msg->templ_set[j + 1];
@@ -579,7 +578,6 @@ void forwarding_remove_empty_sets(struct ipfix_message *msg)
 void forwarding_process_template(uint8_t *rec, int rec_len, void *data)
 {
 	struct forwarding_process *proc = (struct forwarding_process *) data;
-
 	if (forwarding_record_sent(proc->conf, (struct ipfix_template_record *) rec, rec_len, proc->type)) {
 		return;
 	}
@@ -653,7 +651,7 @@ void forwarding_add_set(struct ipfix_message *msg, struct ipfix_template_set *se
 {
 	int i;
 
-	// Find first empty slot
+	/* Find first empty slot */
 	for (i = 0; i < MSG_MAX_TEMPL_SETS && msg->templ_set[i]; ++i);
 
 	if (i == MSG_MAX_TEMPL_SETS) {
@@ -718,6 +716,7 @@ int forwarding_update_templates(forwarding *conf, const struct ipfix_message *ms
 		free(templ_set);
 		offset += tset_len;
 	}
+
 	if (option_set) {
 		option_set->header.flowset_id = htons(IPFIX_OPTION_FLOWSET_ID);
 		option_set->header.length = htons(otset_len);
@@ -783,7 +782,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 
 	uint8_t *new_msg = malloc(MSG_MAX_LENGTH);
 	if (!new_msg) {
-		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return 1;
 	}
 
