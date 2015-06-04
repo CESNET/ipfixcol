@@ -286,10 +286,10 @@ void load_default_values(forwarding *conf, xmlDoc *doc, xmlNodePtr node)
  */
 bool forwarding_init_conf(forwarding *conf, xmlDoc *doc, xmlNodePtr root)
 {
+	load_default_values(conf, doc, root->children);
+
 	xmlNodePtr cur = root->children;
 	xmlChar *aux_str = NULL;
-
-	load_default_values(conf, doc, root->children);
 
 	while (cur) {
 		if (!xmlStrcmp(cur->name, (const xmlChar *) "destination")) {
@@ -316,6 +316,13 @@ bool forwarding_init_conf(forwarding *conf, xmlDoc *doc, xmlNodePtr root)
 		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "optionsTemplateLifePacket")) {
 			aux_str = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
 			conf->udp.options_template_life_packet = atoi((char *) aux_str);
+
+		/* Cases handled by load_default_values; avoid warnings in next if-statement */
+		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "defaultPort")
+				|| !xmlStrcasecmp(cur->name, (const xmlChar *) "protocol")) {
+			/* Do nothing */
+
+		/* Report unknown elements */
 		} else if (xmlStrcmp(cur->name, (const xmlChar *) "fileFormat")) {
 			MSG_WARNING(msg_module, "Unknown element '%s'", cur->name);
 		}
