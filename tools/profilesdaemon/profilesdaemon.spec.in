@@ -1,4 +1,4 @@
-Summary: Tool for profiles management
+Summary: Tool for profiles management and distribution
 Name: @PACKAGE_NAME@
 Version: @PACKAGE_VERSION@
 Release: @RELEASE@

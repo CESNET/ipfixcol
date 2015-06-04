@@ -10,6 +10,7 @@ AC_CONFIG_SUBDIRS([ base
 	tools/fbitconvert
 	tools/fbitmerge
 	tools/fbitexpire
+	tools/profilesdaemon
 	plugins/storage/fastbit
 	plugins/storage/fastbit_compression
 	plugins/storage/postgres

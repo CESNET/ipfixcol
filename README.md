@@ -13,6 +13,7 @@
     *  [fbitdump](#fbitdump)
     *  [fbitexpire](#fbitexpire)
     *  [fbitmerge](#fbitmerge)
+	*  [profilesdaemon](#profilesdaemon)
 6.  [Howto build](#build)
 7.  [RPM](#rpm)
 8.  [FastBit](#fastbit)
@@ -82,6 +83,12 @@ More info in it's [README](tools/fbitexpire/)
 Tool for merging FastBit data (saves free disk space, reduces number of files..)
 
 More info in it's [README](tools/fbitmerge/)
+
+###<a name="profilesdaemon"></a> profilesdaemon
+
+Tool for profiles management and distribution
+
+[More info](tools/profilesdaemon/)
 
 ##<a name="build"></a> How to build
 Whole framework can be build at once with

@@ -7,6 +7,7 @@ SUBDIRS = base \
 	tools/fbitdump \
 	tools/fbitmerge \
 	tools/fbitexpire \
+	tools/profilesdaemon \
 	plugins/storage/fastbit \
 	plugins/storage/fastbit_compression \
 	plugins/storage/postgres \
