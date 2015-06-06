@@ -120,43 +120,43 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
 	}
 
 	/* process IPFIX msg and fill up the ipfix_message structure */
-    uint8_t *p = msg + IPFIX_HEADER_LENGTH;
-    int t_set_count = 0;
-    int ot_set_count = 0;
-    int d_set_count = 0;
-    struct ipfix_set_header *set_header;
-    while (p < (uint8_t*) msg + pktlen) {
-        set_header = (struct ipfix_set_header*) p;
-        if ((uint8_t *) p + ntohs(set_header->length) > (uint8_t *) msg + pktlen) {
-        	MSG_WARNING(msg_module, "[%u] Malformed IPFIX message detected (bad length); skipping message...", odid);
-        	free(message);
-        	return NULL;
-        }
-        switch (ntohs(set_header->flowset_id)) {
-            case IPFIX_TEMPLATE_FLOWSET_ID:
-                message->templ_set[t_set_count++] = (struct ipfix_template_set *) set_header;
-                break;
-            case IPFIX_OPTION_FLOWSET_ID:
-                 message->opt_templ_set[ot_set_count++] = (struct ipfix_options_template_set *) set_header;
-                break;
-            default:
-                if (ntohs(set_header->flowset_id) < IPFIX_MIN_RECORD_FLOWSET_ID) {
-                	MSG_WARNING(msg_module, "[%u] Unknown Set ID %d", odid, ntohs(set_header->flowset_id));
-                } else {
-                    message->data_couple[d_set_count++].data_set = (struct ipfix_data_set*) set_header;
-                }
-                break;
-        }
+	uint8_t *p = msg + IPFIX_HEADER_LENGTH;
+	int t_set_count = 0;
+	int ot_set_count = 0;
+	int d_set_count = 0;
+	struct ipfix_set_header *set_header;
+	while (p < (uint8_t*) msg + pktlen) {
+		set_header = (struct ipfix_set_header*) p;
+		if ((uint8_t *) p + ntohs(set_header->length) > (uint8_t *) msg + pktlen) {
+			MSG_WARNING(msg_module, "[%u] Malformed IPFIX message detected (bad length); skipping message...", odid);
+			free(message);
+			return NULL;
+		}
+		switch (ntohs(set_header->flowset_id)) {
+			case IPFIX_TEMPLATE_FLOWSET_ID:
+				message->templ_set[t_set_count++] = (struct ipfix_template_set *) set_header;
+				break;
+			case IPFIX_OPTION_FLOWSET_ID:
+				 message->opt_templ_set[ot_set_count++] = (struct ipfix_options_template_set *) set_header;
+				break;
+			default:
+				if (ntohs(set_header->flowset_id) < IPFIX_MIN_RECORD_FLOWSET_ID) {
+					MSG_WARNING(msg_module, "[%u] Unknown Set ID %d", odid, ntohs(set_header->flowset_id));
+				} else {
+					message->data_couple[d_set_count++].data_set = (struct ipfix_data_set*) set_header;
+				}
+				break;
+		}
 
-        /* if length is wrong and pointer does not move, stop processing the message */
-        if (ntohs(set_header->length) == 0) {
-        	break;
-        }
+		/* if length is wrong and pointer does not move, stop processing the message */
+		if (ntohs(set_header->length) == 0) {
+			break;
+		}
 
-        p += ntohs(set_header->length);
-    }
+		p += ntohs(set_header->length);
+	}
 
-    return message;
+	return message;
 }
 
 /**
@@ -201,7 +201,6 @@ struct ipfix_message *message_create_clone(struct ipfix_message *msg)
  */
 int message_get_data(uint8_t **dest, uint8_t *source, int len)
 {
-
 	*dest = (uint8_t *) malloc(sizeof(uint8_t) * len);
 	if (!*dest) {
 		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
@@ -224,7 +223,6 @@ int message_get_data(uint8_t **dest, uint8_t *source, int len)
 int message_set_data(uint8_t *dest, uint8_t *source, int len)
 {
 	memcpy(dest, source, len);
-
 	return 0;
 }
 
@@ -777,29 +775,3 @@ struct metadata *message_copy_metadata(struct ipfix_message *src)
 
 	return metadata;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
