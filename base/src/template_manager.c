@@ -782,22 +782,24 @@ void tm_template_reference_dec(struct ipfix_template *templ)
 }
 
 /**
- * \brief Determines whether specific template contains given field
+ * \brief Determines whether specific template contains given field and returns
+ * the field's offset.
+ *
+ * \param[in] templ Template
+ * \param[in] field Field ID. In case of an enterprise-specific field, the
+ * enterprise bit must be set to 1
+ * \return Field offset on success, negative value otherwise
  */
 int template_contains_field(struct ipfix_template *templ, uint16_t field)
 {
+	uint16_t fields = 0;
 	uint8_t *p;
 	uint8_t variable_length = 0;
-	uint16_t fields = 0;
 	uint8_t hit = 0;
 
 	if (!templ) {
 		return -1;
 	}
-
-	uint16_t ie_id;
-	uint16_t field_length;
-	uint16_t total_length = 0;
 
 	if (templ->template_type == TM_OPTIONS_TEMPLATE) {
 		p = (uint8_t *) ((struct ipfix_options_template_record*) templ)->fields;
@@ -805,28 +807,32 @@ int template_contains_field(struct ipfix_template *templ, uint16_t field)
 		p = (uint8_t *) templ->fields;
 	}
 
+	uint16_t ie_id;
+	uint16_t field_length;
+	uint16_t total_length = 0;
+
 	while (fields < templ->field_count) {
-		ie_id = *((uint16_t *) p);            /* read IE ID */
-		field_length = *((uint16_t *) (p+2)); /* read field length */
+		ie_id = *((uint16_t *) p);
+		field_length = *((uint16_t *) (p + 2));
 
 		if (ie_id == field) {
-			/* we have found the field! */
 			hit = 1;
 			break;
 		}
 
-		/* count total length, if we don't find element with variable length */
+		/* Count total length, if we don't find element with variable length */
 		if (field_length == VAR_IE_LENGTH) {
 			variable_length = 1;
 		} else {
 			total_length += field_length;
 		}
 
-		/* no luck, move to the next field */
+		/* Move to next field (may be enterprise ID) */
 		p += 4;
 
-		/* check whether there is Enterprise Bit set */
+		/* Check whether field is enterprise-specific */
 		if (ie_id & 0x8000) {
+			/* Move to next field */
 			p += 4;
 		}
 
@@ -837,10 +843,90 @@ int template_contains_field(struct ipfix_template *templ, uint16_t field)
 		return (!variable_length) ? total_length : 0;
 	}
 
-	/* this template doesn't contain specified field */
+	/* Field could not be found in specific template */
 	return -1;
 }
 
+/**
+ * \brief Determines whether specific template contains given field and returns
+ * the field's offset.
+ *
+ * \param[in] templ Template
+ * \param[in] eid Enterprise ID (zero in case the field is not enterprise-specific)
+ * \param[in] fid Field ID
+ * \return Field offset on success, negative value otherwise
+ */
+int template_get_field_offset(struct ipfix_template *templ, uint16_t eid, uint16_t fid)
+{
+	uint16_t fields = 0;
+	uint8_t *p;
+	uint8_t variable_length = 0;
+	uint8_t hit = 0;
+
+	if (!templ) {
+		return -1;
+	}
+
+	if (templ->template_type == TM_OPTIONS_TEMPLATE) {
+		p = (uint8_t *) ((struct ipfix_options_template_record*) templ)->fields;
+	} else {
+		p = (uint8_t *) templ->fields;
+	}
+
+	uint32_t enterprise_id;
+	uint16_t ie_id;
+	uint16_t field_length;
+	uint16_t total_length = 0;
+
+	while (fields < templ->field_count) {
+		ie_id = *((uint16_t *) p);
+		field_length = *((uint16_t *) (p + 2));
+
+		if (ie_id == fid) {
+			/* 
+			 * In case we are not dealing with an enterprise-specific field, we
+			 * can stop and return, since we found the field. Otherwise, we have
+			 * to check whether the enterprise IDs match.
+			 */
+			if (eid == 0) {
+				hit = 1;
+				break;
+			}
+		}
+
+		/* Count total length, if we don't find element with variable length */
+		if (field_length == VAR_IE_LENGTH) {
+			variable_length = 1;
+		} else {
+			total_length += field_length;
+		}
+
+		/* Move to next field (may be enterprise ID) */
+		p += 4;
+
+		/* Check whether field is enterprise-specific */
+		if (eid > 0 && ie_id == fid) {
+			enterprise_id = *((uint32_t *) p);
+
+			if (enterprise_id == eid) {
+				hit = 1;
+				break;
+			}
+
+			/* Move to next field */
+			p += 4;
+		}
+
+		fields += 1;
+	}
+
+	if (hit) {
+		return (!variable_length) ? total_length : 0;
+	}
+
+	/* Field could not be found in specific template */
+	return -1;
+}
 
 /**
  * \brief Make ipfix_template_key from ODID, crc and template id
