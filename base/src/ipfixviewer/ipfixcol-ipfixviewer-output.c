@@ -42,8 +42,8 @@
 #include <unistd.h>
 #include <assert.h>
 #include <arpa/inet.h>
-#include <inttypes.h>
 #include <endian.h>
+#include <inttypes.h>
 #include <time.h>
 #include <string.h>
 
@@ -63,7 +63,7 @@
 IPFIXCOL_API_VERSION;
 
 /** Identifier to MSG_* macros */
-static char *msg_module = "viewer";
+static char *msg_module = "ipfixviewer";
 
 struct viewer_config {
 	/* structure so far empty */
@@ -86,7 +86,7 @@ static void print_header(struct ipfix_header *hdr)
 {
 	time_t time = (time_t) ntohl(hdr->export_time);
 	char *str_time = ctime(&time);
-	str_time[strlen(str_time)-1] = '\0';
+	str_time[strlen(str_time) - 1] = '\0';
 
 	printf("--------------------------------------------------------------------------------\n");
 	printf("IPFIX Message Header:\n");
@@ -105,9 +105,7 @@ static void print_header(struct ipfix_header *hdr)
  */
 static void print_set_header(struct ipfix_template_set *template_set)
 {
-	struct ipfix_set_header *set_header;
-
-	set_header = (struct ipfix_set_header *) template_set;
+	struct ipfix_set_header *set_header = (struct ipfix_set_header *) template_set;
 
 	printf("Set Header:\n");
 	printf("\tSet ID: %u", ntohs(set_header->flowset_id));
@@ -249,7 +247,7 @@ static int print_template_sets(const struct ipfix_message *ipfix_msg)
 	/* pick up first template set in the message */
 	template_set = ipfix_msg->templ_set[template_index];
 
-	while(template_set) {
+	while (template_set) {
 		printf("\n\n");
 		offset = 0;
 
@@ -296,8 +294,7 @@ static int print_options_template_sets(const struct ipfix_message *ipfix_msg)
 
 	template_set = ipfix_msg->opt_templ_set[template_index];
 
-
-	while(template_set) {
+	while (template_set) {
 		printf("\n\n");
 		offset = 0;
 
@@ -385,7 +382,7 @@ static uint16_t print_data_record(uint8_t *data_record, struct ipfix_template *t
 				printf("Value: 0x");
 
 				for (i = 0; i < length; i++) {
-    				printf("%02x", (data_record+offset)[i]);
+					printf("%02x", (data_record+offset)[i]);
 				}
 				printf("\n");
 
@@ -403,7 +400,7 @@ static uint16_t print_data_record(uint8_t *data_record, struct ipfix_template *t
 				printf("Value: 0x");
 
 				for (i = 0; i < length; i++) {
-    				printf("%02x", (data_record+offset)[i]);
+					printf("%02x", (data_record+offset)[i]);
 				}
 				printf("\n");
 
@@ -411,8 +408,6 @@ static uint16_t print_data_record(uint8_t *data_record, struct ipfix_template *t
 			}
 			break;
 		}
-
-
 
 		++index;
 		++count;
@@ -438,10 +433,9 @@ static int print_data_sets(const struct ipfix_message *ipfix_msg)
 	uint16_t min_record_length;
 	int padding;
 
-
 	data_set = ipfix_msg->data_couple[data_index].data_set;
 
-	while(data_set) {
+	while (data_set) {
 		printf("\n\n");
 		template = ipfix_msg->data_couple[data_index].data_template;
 		if (!template) {
@@ -496,12 +490,11 @@ int storage_init(char *params, void **config)
 	(void) params;
 	struct viewer_config *conf;
 
-	conf = (struct viewer_config *) malloc(sizeof(*conf));
+	conf = (struct viewer_config *) calloc(1, sizeof(*conf));
 	if (!conf) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
-	memset(conf, 0, sizeof(*conf));
 
 	*config = conf;
 	return 0;
@@ -519,7 +512,7 @@ int storage_init(char *params, void **config)
  * \return 0 on success, negative value otherwise
  */
 int store_packet(void *config, const struct ipfix_message *ipfix_msg,
-                           const struct ipfix_template_mgr *template_mgr)
+		const struct ipfix_template_mgr *template_mgr)
 {
 	struct viewer_config *conf;
 	(void) template_mgr;
@@ -534,11 +527,8 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	/* print header */
 	print_header(ipfix_msg->pkt_header);
 
-	/* print all templates */
 	print_template_sets(ipfix_msg);
-
 	print_options_template_sets(ipfix_msg);
-
 	print_data_sets(ipfix_msg);
 
 	return 0;
@@ -570,12 +560,8 @@ int store_now(const void *config)
  */
 int storage_close(void **config)
 {
-	struct viewer_config *conf;
-
-	conf = (struct viewer_config *) *config;
-
+	struct viewer_config *conf = (struct viewer_config *) *config;
 	free(conf);
-
 	return 0;
 }
 
