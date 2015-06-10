@@ -127,7 +127,7 @@ xmlNodePtr get_node(xmlXPathObjectPtr xpath_obj_file, char *nameval, char *namet
 		children1 = xpath_obj_file->nodesetval->nodeTab[i]->children;
 		while (children1) {
 			if ((!strncmp ((char*) children1->name, nametag, strlen (nametag) + 1))
-			        && (!xmlStrncmp (children1->children->content, (xmlChar *) nameval, xmlStrlen ((xmlChar *)nameval) + 1))) {
+					&& (!xmlStrncmp (children1->children->content, (xmlChar *) nameval, xmlStrlen ((xmlChar *)nameval) + 1))) {
 				/* element found*/
 				return xpath_obj_file->nodesetval->nodeTab[i];
 			}
@@ -284,13 +284,8 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	
-	if (argc == 2 && !strcmp(argv[1], "-h")) {
-		usage(argv[0]);
-		return 0;
-	}
-	
 	cmd = command_decode(argv[1]);
-	optind++;
+
 	/* parse params */
 	while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
 		switch (c) {
@@ -329,7 +324,6 @@ int main(int argc, char *argv[])
 			info.force = 1;
 			break;
 		default:
-			fprintf(stderr, "Unknown option '%s'\n", optarg);
 			return 1;
 		}
 	}
