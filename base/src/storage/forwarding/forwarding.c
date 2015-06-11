@@ -41,9 +41,7 @@
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 #include <stdbool.h>
-
 #include <string.h>
-
 #include <unistd.h>
 #include <errno.h>
 #include <ipfixcol/ipfix_message.h>
@@ -52,7 +50,6 @@
 
 /* API version constant */
 IPFIXCOL_API_VERSION;
-
 
 /* Identifier for MSG_* */
 static const char *msg_module = "forwarding storage";
@@ -203,6 +200,7 @@ sisoconf *create_sender(forwarding *conf, const char *ip, const char *port)
 
 	if (siso_create_connection(sender, ip, port, proto) != SISO_OK) {
 		MSG_ERROR(msg_module, "%s", siso_get_last_err(sender));
+		free(sender);
 		return NULL;
 	}
 
