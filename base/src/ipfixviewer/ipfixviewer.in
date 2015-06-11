@@ -37,13 +37,15 @@
 #
 
 # TODO generate this script by configure (@exec_prefix@/bin/ipfixcol?)
+IPFIXCOL_CONFIG="@pkgdatadir@/ipfixviewer_startup.xml"
 IPFIXCOL_EXEC="@bindir@/ipfixcol"
 IPFIXCOL_PARAMS="-c "
-IPFIXCOL_CONFIG="@pkgdatadir@/ipfixviewer_startup.xml"
 
 usage()
 {
-	echo "Usage: $0 IPFIX_FILE"
+	echo -e "\nUsage: $(basename $0) [options] <IPFIX_FILE>\n"
+	echo -e "Options:"
+	echo -e "  -h\tShow this help and exit"
 }
 
 sanity_check()
@@ -61,6 +63,18 @@ main()
 		usage
 		exit 1
 	fi
+
+	while getopts ":h" opt; do
+		case $opt in
+			h)
+				usage
+				exit 0
+				;;
+			\?)
+				echo "Unknown option: -$OPTARG"
+				;;
+		esac
+	done
 	
 	sanity_check
 
@@ -95,7 +109,5 @@ main()
 	exit 0
 }
 
-
 # invoke main function
 main $*
-
