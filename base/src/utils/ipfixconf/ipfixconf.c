@@ -40,13 +40,13 @@
 #define _GNU_SOURCE
 
 #include <errno.h>
+#include <fcntl.h>
+#include <getopt.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
-#include <string.h>
-
 #include <libxml/xpathInternals.h>
 
 #include "ipfixconf.h"
@@ -55,7 +55,15 @@
 #include "remover.h"
 
 #define DEFAULT_INTERNAL "/etc/ipfixcol/internalcfg.xml"
+
+/** Acceptable command-line parameters (normal) */
 #define OPTSTRING "hfc:p:n:s:t:"
+
+/** Acceptable command-line parameters (long) */
+struct option long_opts[] = {
+	{ "help", no_argument, NULL, 'h' },
+	{ 0, 0, 0, 0 }
+};
 
 #define CMD_ADD_STR    "add"
 #define CMD_REMOVE_STR "remove"
@@ -78,14 +86,14 @@ void usage(char *binary)
 	printf("  -c path          configuration file, default %s\n", DEFAULT_INTERNAL);
 	printf("  -p type          plugin type: i (input), m (intermediate), o (output)\n");
 	printf("  -n name          plugin name\n");
-	printf("  -s path          path to .so file\n");
-	printf("  -t thread_name   name of plugins's thread\n");
-	printf("  -f               force adding - when plugin already exists, rewrite it\n");
+	printf("  -s path          path to plugin .so file\n");
+	printf("  -t thread_name   plugin thread name\n");
+	printf("  -f               force add (rewrite plugin in case it already exists)\n");
 	printf("\n");
 	printf("Available commands:\n");
-	printf("  add              add new plugin to configuration, all informations required\n");
-	printf("  remove           remove plugin from configuration, plugin type and name must be set\n");
-	printf("  list             show configured plugins, type (-p) can be set\n");
+	printf("  add              add new plugin to configuration; all parameters are required\n");
+	printf("  remove           remove plugin from configuration; plugin type and name are required\n");
+	printf("  list             list configured plugins; type (-p) can be set\n");
 	printf("\n");
 }
 
@@ -127,7 +135,7 @@ xmlNodePtr get_node(xmlXPathObjectPtr xpath_obj_file, char *nameval, char *namet
 		children1 = xpath_obj_file->nodesetval->nodeTab[i]->children;
 		while (children1) {
 			if ((!strncmp ((char*) children1->name, nametag, strlen (nametag) + 1))
-			        && (!xmlStrncmp (children1->children->content, (xmlChar *) nameval, xmlStrlen ((xmlChar *)nameval) + 1))) {
+					&& (!xmlStrncmp (children1->children->content, (xmlChar *) nameval, xmlStrlen ((xmlChar *)nameval) + 1))) {
 				/* element found*/
 				return xpath_obj_file->nodesetval->nodeTab[i];
 			}
@@ -234,7 +242,6 @@ int open_xml(conf_info_t *info, char *internal_cfg)
  */
 int save_xml(conf_info_t *info, char *path)
 {
-//	xmlDocFormatDump(stdout, info->doc, 1);
 	xmlSaveFormatFile(path, info->doc, 1);
 	return 0;
 }
@@ -260,15 +267,19 @@ int close_xml(conf_info_t *info)
  */
 int command_decode(char *cmd)
 {
+	int ret;
+
 	if (!strncmp(cmd, CMD_ADD_STR, sizeof(CMD_ADD_STR))) {
-		return CMD_ADD;
+		ret = CMD_ADD;
 	} else if (!strncmp(cmd, CMD_REMOVE_STR, sizeof(CMD_REMOVE_STR))) {
-		return CMD_REMOVE;
+		ret = CMD_REMOVE;
 	} else if (!strncmp(cmd, CMD_LIST_STR, sizeof(CMD_LIST_STR))) {
-		return CMD_LIST;
+		ret = CMD_LIST;
 	} else {
-		return CMD_NONE;
+		ret = CMD_NONE;
 	}
+
+	return ret;
 }
 
 int main(int argc, char *argv[])
@@ -284,15 +295,10 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	
-	if (argc == 2 && !strcmp(argv[1], "-h")) {
-		usage(argv[0]);
-		return 0;
-	}
-	
 	cmd = command_decode(argv[1]);
-	optind++;
+
 	/* parse params */
-	while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
+	while ((c = getopt_long(argc, argv, OPTSTRING, long_opts, NULL)) != -1) {
 		switch (c) {
 		case 'h':
 			usage(argv[0]);
@@ -329,7 +335,6 @@ int main(int argc, char *argv[])
 			info.force = 1;
 			break;
 		default:
-			fprintf(stderr, "Unknown option '%s'\n", optarg);
 			return 1;
 		}
 	}
