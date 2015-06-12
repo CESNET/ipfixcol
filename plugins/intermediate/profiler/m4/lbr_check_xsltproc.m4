@@ -13,21 +13,35 @@
 #
 # Currently the macro knows the location of styles in following 
 # distributions:
+#
 # redhat
 # suse
+# mandrake
+# debian
+# arch
 #
 # Author: Petr Velan <petr.velan@cesnet.cz>
-# Modified: 2012-05-05
+# Modified: 2015-06-12
 #
 AC_DEFUN([LBR_CHECK_XSLTPROC],
 [AC_REQUIRE([LBR_SET_DISTRO])dnl
 # Check for xsltproc
 AC_CHECK_PROG(XSLTPROC, xsltproc, xsltproc)
-AM_CONDITIONAL([HAVE_XSLTPROC], [test -n $XSLTPROC])
+AM_CONDITIONAL([HAVE_XSLTPROC], [test -n "$XSLTPROC"])
 dnl
 # Check for Docbook stylesheets for manpages
 if test -n "$XSLTPROC"; then
     case $DISTRO in
+        redhat )
+            if test -f /usr/share/sgml/docbook/xsl-stylesheets/manpages/docbook.xsl; then
+                XSLTMANSTYLE="/usr/share/sgml/docbook/xsl-stylesheets/manpages/docbook.xsl"
+                XSLTHTMLSTYLE="/usr/share/sgml/docbook/xsl-stylesheets/html/docbook.xsl"
+                XSLTXHTMLSTYLE="/usr/share/sgml/docbook/xsl-stylesheets/xhtml/docbook.xsl"
+                BUILDREQS="$BUILDREQS docbook-style-xsl"
+            else
+                AC_MSG_ERROR(["Docbook XSL stylesheet for man pages not found!"])
+            fi
+            ;;
         suse )
             if test -f /usr/share/xml/docbook/stylesheet/nwalsh5/current/manpages/docbook.xsl; then
                 XSLTMANSTYLE="/usr/share/xml/docbook/stylesheet/nwalsh5/current/manpages/docbook.xsl"
@@ -43,25 +57,25 @@ if test -n "$XSLTPROC"; then
                 AC_MSG_ERROR(["Docbook XSL stylesheet for man pages not found!"])
             fi
             ;;
-        redhat )
-            if test -f /usr/share/sgml/docbook/xsl-stylesheets/manpages/docbook.xsl; then
-                XSLTMANSTYLE="/usr/share/sgml/docbook/xsl-stylesheets/manpages/docbook.xsl"
-                XSLTHTMLSTYLE="/usr/share/sgml/docbook/xsl-stylesheets/html/docbook.xsl"
-                XSLTXHTMLSTYLE="/usr/share/sgml/docbook/xsl-stylesheets/xhtml/docbook.xsl"
-                BUILDREQS="$BUILDREQS docbook-style-xsl"
+        debian )
+            if test -f /usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl; then
+                XSLTMANSTYLE="/usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl"
+                XSLTHTMLSTYLE="/usr/share/xml/docbook/stylesheet/docbook-xsl/html/docbook.xsl"
+                XSLTXHTMLSTYLE="/usr/share/xml/docbook/stylesheet/docbook-xsl/xhtml/docbook.xsl"
             else
                 AC_MSG_ERROR(["Docbook XSL stylesheet for man pages not found!"])
             fi
             ;;
-	debian )
-	    if test -f /usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl; then
-		XSLTMANSTYLE="/usr/share/xml/docbook/stylesheet/docbook-xsl/manpages/docbook.xsl"
-		XSLTHTMLSTYLE="/usr/share/xml/docbook/stylesheet/docbook-xsl/html/docbook.xsl"
-		XSLTXHTMLSTYLE="/usr/share/xml/docbook/stylesheet/docbook-xsl/xhtml/docbook.xsl"
-	    else
-		AC_MSG_ERROR(["Docbook XSL stylesheet for man pages not found!"])
-	    fi
-	    ;;
+        arch )
+            ARCH_DOCBOOK_VERSION=$(pacman -Q docbook-xsl | cut -d ' ' -f 2 | cut -d '-' -f 1)
+            if test -f /usr/share/xml/docbook/xsl-stylesheets-$ARCH_DOCBOOK_VERSION/manpages/docbook.xsl; then
+                XSLTMANSTYLE="/usr/share/xml/docbook/xsl-stylesheets-$ARCH_DOCBOOK_VERSION/manpages/docbook.xsl"
+                XSLTHTMLSTYLE="/usr/share/xml/docbook/xsl-stylesheets-$ARCH_DOCBOOK_VERSION/html/docbook.xsl"
+                XSLTXHTMLSTYLE="/usr/share/xml/docbook/xsl-stylesheets-$ARCH_DOCBOOK_VERSION/xhtml/docbook.xsl"
+            else
+                AC_MSG_ERROR(["Docbook XSL stylesheet for man pages not found!"])
+            fi
+            ;;
         * )
             AC_MSG_ERROR([Unsupported Linux distribution])
             ;;
