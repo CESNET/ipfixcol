@@ -602,8 +602,10 @@ void forwarding_process_template(uint8_t *rec, int rec_len, void *data)
  */
 int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_message *msg, uint8_t *new_msg)
 {
-	int i, prevo;
+	int i;
 	struct forwarding_process proc;
+	struct ipfix_template_set *templ_set;
+	struct ipfix_options_template_set *otempl_set;
 
 	proc.conf = conf;
 	proc.msg = new_msg;
@@ -612,37 +614,41 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 	/* Copy unsent templates to new message */
 	proc.type = TM_TEMPLATE;
 	for (i = 0; i < MSG_MAX_TEMPL_SETS && msg->templ_set[i] != NULL; ++i) {
-		prevo = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->templ_set[i]->header), 4);
+		templ_set = (struct ipfix_template_set *) (proc.msg + proc.offset);
 		proc.offset += 4;
 		proc.length = 4;
 
 		template_set_process_records(msg->templ_set[i], TM_TEMPLATE, &forwarding_process_template, (void *) &proc);
 
-		if (proc.offset == prevo + 4) {
-			proc.offset = prevo;
+		/* Empty set; only set header was added */
+		if (proc.length == 4) {
+			proc.offset = proc.length;
 			continue;
 		}
 
-		((struct ipfix_template_set *) proc.msg + prevo)->header.length = htons(proc.length);
+		/* Update set length in set header (due to potentially removed templates) */
+		templ_set->header.length = htons(proc.length);
 	}
 
 	/* Copy unsent option templates to new message */
 	proc.type = TM_OPTIONS_TEMPLATE;
 	for (i = 0; i < MSG_MAX_OTEMPL_SETS && msg->opt_templ_set[i]; ++i) {
-		prevo = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->opt_templ_set[i]->header), 4);
+		otempl_set = (struct ipfix_options_template_set *) (proc.msg + proc.offset);
 		proc.offset += 4;
 		proc.length = 4;
 
 		template_set_process_records((struct ipfix_template_set *) msg->opt_templ_set[i], TM_OPTIONS_TEMPLATE, &forwarding_process_template, (void *) &proc);
 
-		if (proc.offset == prevo + 4) {
-			proc.offset = prevo;
+		/* Empty set; only set header was added */
+		if (proc.length == 4) {
+			proc.offset = proc.length;
 			continue;
 		}
 
-		((struct ipfix_options_template_set *) proc.msg + prevo)->header.length = htons(proc.length);
+		/* Update set length in set header (due to potentially removed templates) */
+		otempl_set->header.length = htons(proc.length);
 	}
 
 	return proc.offset;
@@ -661,7 +667,7 @@ void forwarding_add_set(struct ipfix_message *msg, struct ipfix_template_set *se
 	for (i = 0; i < MSG_MAX_TEMPL_SETS && msg->templ_set[i]; ++i);
 
 	if (i == MSG_MAX_TEMPL_SETS) {
-		MSG_ERROR(msg_module, "Could not add template to IPFIX message, because message already features %u templates", MSG_MAX_TEMPL_SETS);
+		MSG_ERROR(msg_module, "Could not add template to IPFIX message; message already contains %u templates", MSG_MAX_TEMPL_SETS);
 	} else {
 		msg->templ_set[i] = set;
 		msg->pkt_header->length = htons(ntohs(msg->pkt_header->length) + ntohs(set->header.length));
