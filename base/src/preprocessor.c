@@ -589,19 +589,27 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		/* Process templates and correct sequence number */
 		preprocessor_process_templates(msg);
 
+		/* Get sequence number for current ODID
+		 * More inputs can have the same ODID so we need to keep that separately */
 		seqn = odid_info_get_sequence_number(ntohl(msg->pkt_header->observation_domain_id));
 
+		/* If we have a message with data records (the only one that updates sequence number), check the numbers */
 		if (msg->input_info->sequence_number != ntohl(msg->pkt_header->sequence_number) && msg->data_records_count > 0) {
 			if (!skip_seq_err) {
 				MSG_WARNING(msg_module, "[%u] Sequence number error; expected %u, got %u", input_info->odid, msg->input_info->sequence_number , ntohl(msg->pkt_header->sequence_number));
 			}
 
+			/* Add number of seen data records to ODID sequence number to keep up consistency*/
 			*seqn += (ntohl(msg->pkt_header->sequence_number) - msg->input_info->sequence_number);
+
+			/* Update sequence number of the source to get in sync again */
 			msg->input_info->sequence_number = ntohl(msg->pkt_header->sequence_number);
 		}
 
+		/* The message should have sequence number of the ODID from now on */
 		msg->pkt_header->sequence_number = htonl(*seqn);
 
+		/* Add the number of records to both ODID and source sequence numbers (for future check) */
 		msg->input_info->sequence_number += msg->data_records_count;
 		*seqn += msg->data_records_count;
 	}
