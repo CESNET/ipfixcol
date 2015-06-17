@@ -158,7 +158,7 @@ int template_table::dir_check(std::string path, bool new_dir) {
 				return this->dir_check(path.c_str(), true);
 			}
 
-			return 1;
+			return 0;
 		}
 
 		if(errno == ENOENT) { /* Check parent directory */
