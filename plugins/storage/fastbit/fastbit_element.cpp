@@ -47,7 +47,8 @@ extern "C" {
 
 #define NFv9_CONVERSION_ENTERPRISE_NUMBER (~((uint32_t) 0))
 
-int load_types_from_xml(struct fastbit_config *conf) {
+int load_types_from_xml(struct fastbit_config *conf)
+{
 	pugi::xml_document doc;
 	pugi::xml_parse_result result;
 	uint32_t en;
@@ -59,8 +60,8 @@ int load_types_from_xml(struct fastbit_config *conf) {
 
 	/* Check for errors */
 	if (!result) {
-		MSG_ERROR(MSG_MODULE, "%s parsed with errors!", ipfix_elements);
-		MSG_ERROR(MSG_MODULE, "Error description: %s", result.description());
+		MSG_ERROR(msg_module, "%s parsed with errors", ipfix_elements);
+		MSG_ERROR(msg_module, "Error description: %s", result.description());
 		return -1;
 	}
 
@@ -74,38 +75,38 @@ int load_types_from_xml(struct fastbit_config *conf) {
 
 		str_value = it->node().child_value("dataType");
 
-		if (str_value =="unsigned8" or  str_value =="unsigned16" or str_value =="unsigned32" or str_value =="unsigned64" or \
-				str_value =="dateTimeSeconds" or str_value =="dateTimeMilliseconds" or str_value =="dateTimeMicroseconds" or \
-				str_value =="dateTimeNanoseconds" or str_value =="ipv4Address" or str_value =="macAddress" or str_value == "boolean") {
-			type =UINT;
-		} else if (str_value =="signed8" or str_value =="signed16" or str_value =="signed32" or str_value =="signed64" ) {
+		if (str_value == "unsigned8" or  str_value == "unsigned16" or str_value == "unsigned32" or str_value == "unsigned64" or \
+				str_value == "dateTimeSeconds" or str_value == "dateTimeMilliseconds" or str_value == "dateTimeMicroseconds" or \
+				str_value == "dateTimeNanoseconds" or str_value == "ipv4Address" or str_value == "macAddress" or str_value == "boolean") {
+			type = UINT;
+		} else if (str_value == "signed8" or str_value == "signed16" or str_value == "signed32" or str_value == "signed64" ) {
 			type = INT;
-		} else if (str_value =="ipv6Address") {
+		} else if (str_value == "ipv6Address") {
 			type = IPv6;
-		} else if (str_value =="float32" or str_value =="float64") {
+		} else if (str_value == "float32" or str_value == "float64") {
 			type = FLOAT;
-		} else if (str_value =="string") {
+		} else if (str_value == "string") {
 			type = TEXT;
-		} else if (str_value =="octetArray" or str_value =="basicList" or str_value =="subTemplateList" or str_value=="subTemplateMultiList") {
+		} else if (str_value == "octetArray" or str_value == "basicList" or str_value == "subTemplateList" or str_value== "subTemplateMultiList") {
 			type = BLOB;
 		} else {
 			type = UNKNOWN;
 		}
 
 		(*conf->elements_types)[en][id] = type;
-		//std::cout << "el loaded: " << en << ":" << id <<":"<< type << std::endl;
 	}
 
 	return 0;
 }
 
-enum store_type get_type_from_xml(struct fastbit_config *conf, unsigned int en, unsigned int id) {
-	// Check whether a type has been determined for the specified element
+enum store_type get_type_from_xml(struct fastbit_config *conf, unsigned int en, unsigned int id)
+{
+	/* Check whether a type has been determined for the specified element */
 	if ((*conf->elements_types).count(en) == 0 || (*conf->elements_types)[en].count(id) == 0) {
 		if (en == NFv9_CONVERSION_ENTERPRISE_NUMBER) {
-			MSG_WARNING(MSG_MODULE,"No specification for e%ui%u found in %s (enterprise number converted from NFv9)", en, id, ipfix_elements);
+			MSG_WARNING(msg_module, "No specification for e%ui%u found in %s (enterprise number converted from NFv9)", en, id, ipfix_elements);
 		} else {
-			MSG_WARNING(MSG_MODULE,"No specification for e%ui%u found in %s", en, id, ipfix_elements);
+			MSG_WARNING(msg_module, "No specification for e%ui%u found in %s", en, id, ipfix_elements);
 		}
 
 		return UNKNOWN;
@@ -114,174 +115,201 @@ enum store_type get_type_from_xml(struct fastbit_config *conf, unsigned int en, 
 	return (*conf->elements_types)[en][id];
 }
 
-void element::byte_reorder(uint8_t *dst,uint8_t *src, int srcSize, int dstSize) {
+void element::byte_reorder(uint8_t *dst,uint8_t *src, int srcSize, int dstSize)
+{
 	(void) dstSize;
 	int i;
-	for(i=0;i<srcSize;i++) {
-		dst[i] = src[srcSize-i-1];
+	for (i = 0;i < srcSize; i++) {
+		dst[i] = src[srcSize - i - 1];
 	}
 }
 
 void element::setName(int en, int id, int part)
 {
-	if (part == -1) /* default */
-		sprintf( _name,"e%iid%hi", en, id);
-	else
-		sprintf( _name,"e%iid%hip%i", en, id, part);
-}
-
-void element::allocate_buffer(int count) {
-	_buf_max = count;
-	_buffer = (char *) realloc(_buffer,_size*count);
-	if (_buffer == NULL) {
-		fprintf(stderr,"Memory allocation failed!\n");
+	if (part == -1) { /* default */
+		sprintf( _name, "e%iid%hi", en, id);
+	} else {
+		sprintf( _name, "e%iid%hip%i", en, id, part);
 	}
 }
 
-void element::free_buffer() {
+void element::allocate_buffer(int count)
+{
+	_buf_max = count;
+	_buffer = (char *) realloc(_buffer, _size * count);
+	if (_buffer == NULL) {
+		fprintf(stderr, "Memory allocation failed\n");
+	}
+}
+
+void element::free_buffer()
+{
 	free(_buffer);
 }
 
-int element::append(void *data) {
+int element::append(void *data)
+{
 	if (_filled >= _buf_max) {
 		return 1;
 	}
 
-	memcpy(&(_buffer[size()*_filled]),data,size());
+	memcpy(&(_buffer[size()*_filled]), data, size());
 	_filled++;
 	return 0;
 }
 
-int element::flush(std::string path) {
+int element::flush(std::string path)
+{
 	FILE *f;
 	size_t check;
 	if (_filled > 0) {
-		//std::cout << "FLUSH ELEMENT:" << path << "/" << _name << std::endl;
-		//std::cout << "FLUSH BUFFER: size:" << _size << " filled:" << _filled << " max" << _buf_max << std::endl;
-		f = fopen((path +"/"+_name).c_str(),"a+");
+		f = fopen((path + "/" + _name).c_str(), "a+");
 		if (f == NULL) {
-			fprintf(stderr, "Error while writing data (fopen)!\n");
+			fprintf(stderr, "Error while writing data (fopen)\n");
 			return 1;
 		}
-		//std::cout << "FILE OPEN" << std::endl;
+
 		if (_buffer == NULL) {
-			fprintf(stderr, "Error while writing data! (buffer)\n");
+			fprintf(stderr, "Error while writing data (buffer)\n");
 			fclose(f);
 			return 1;
 		}
+
 		check = fwrite( _buffer, size() , _filled, f);
 		if (check != (size_t) _filled ) {
-			fprintf(stderr, "Error while writing data! (fwrite)\n");
+			fprintf(stderr, "Error while writing data (fwrite)\n");
 			fclose(f);
 			return 1;
 		}
+
 		_filled = 0;
 		fclose(f);
 	}
+
 	return 0;
 }
 
-std::string element::get_part_info() {
+std::string element::get_part_info()
+{
 	return  std::string("\nBegin Column") + \
 		"\nname = " + std::string(this->_name) + \
 		"\ndata_type = " + ibis::TYPESTRING[(int)this->_type] + \
 		"\nEnd Column\n";
 }
 
-el_var_size::el_var_size(int size, int en, int id, uint32_t buf_size) {
+el_var_size::el_var_size(int size, int en, int id, uint32_t buf_size)
+{
 	(void) buf_size;
 	data = NULL;
 	_size = size;
 	_filled = 0;
 	_buffer = NULL;
+
 	setName(en, id);
 	this->set_type();
 }
 
-uint16_t el_var_size::fill(uint8_t * data) {
-	//get size of data
+uint16_t el_var_size::fill(uint8_t * data)
+{
+	/* Get size of data */
 	if (data[0] < 255) {
-		_size = data[0] + 1; //1 is firs byte with true size
+		_size = data[0] + 1; /* 1 is first byte with true size */
 	} else {
 		_size = ntohs(*((uint16_t*) &data[1]));
-		_size+=3; //3 = 1 first byte with 256 and 2 bytes with true size
+		_size+=3; /* 3 = 1 first byte with 256 and 2 bytes with true size */
 	}
+
 	return _size;
 }
 
-int el_var_size::set_type() {
-	_type=ibis::UBYTE;
+int el_var_size::set_type()
+{
+	_type = ibis::UBYTE;
 	return 0;
 }
 
-el_float::el_float(int size, int en, int id, uint32_t buf_size) {
+el_float::el_float(int size, int en, int id, uint32_t buf_size)
+{
 	_size = size;
 	_filled = 0;
 	_buffer = NULL;
+
 	setName(en, id);
 	this->set_type();
+
 	if (buf_size == 0) {
 		buf_size = RESERVED_SPACE;
 	}
+
 	allocate_buffer(buf_size);
 }
 
-uint16_t el_float::fill(uint8_t * data) {
+uint16_t el_float::fill(uint8_t * data)
+{
 	switch(_size) {
 	case 4:
-		//flat32
+		/* float32 */
 		*((uint32_t*)&(float_value.float32)) = ntohl(*((uint32_t*) data));
 		this->append(&(float_value.float32));
 		break;
 	case 8:
-		//float64
+		/* float64 */
 		*((uint64_t*)&(float_value.float64)) = be64toh(*((uint64_t*) data));
 		this->append(&(float_value.float64));
 		break;
 	default:
-		MSG_ERROR(MSG_MODULE,"Wrong element size (%s - %u)!",_name,_size);
+		MSG_ERROR(msg_module, "Wrong element size (%s - %u)",_name,_size);
 		break;
 	}
+
 	return _size;
 }
 
-int el_float::set_type() {
+int el_float::set_type()
+{
 	switch(_size) {
 	case 4:
-		//flat32
+		/* float32 */
 		_type=ibis::FLOAT;
 		break;
 	case 8:
-		//float64
+		/* float64 */
 		_type=ibis::DOUBLE;
 		break;
 	default:
-		MSG_ERROR(MSG_MODULE,"Wrong element size (%s - %u)!",_name,_size);
+		MSG_ERROR(msg_module, "Wrong element size (%s - %u)",_name,_size);
 		break;
 	}
+
 	return 0;
 }
 
-el_text::el_text(int size, int en, int id, uint32_t buf_size) {
+el_text::el_text(int size, int en, int id, uint32_t buf_size)
+{
 	_size = 1; // this is size for flush function
 	_true_size = size; // this holds true size of string (var of fix size)
 	_var_size = false;
 	_offset = 0;
 	_filled = 0;
 	_buffer = NULL;
+
 	if (size == VAR_IE_LENGTH) { //its element with variable size
 		_var_size = true;
 	}
+
 	setName(en, id);
 	this->set_type();
+
 	if (buf_size == 0) {
 		 buf_size = RESERVED_SPACE;
 	}
+
 	allocate_buffer(buf_size);
 }
 
-int el_text::append_str(void *data, int size) {
-	//check buffer space
+int el_text::append_str(void *data, int size)
+{
+	/* Check buffer space */
 	if (_filled + size + 1 >= _buf_max) { // 1 = terminating zero
 		_buf_max = _buf_max + (100 * size) + 1; //TODO
 		_buffer = (char *) realloc(_buffer, _size * _buf_max);
@@ -298,8 +326,9 @@ int el_text::append_str(void *data, int size) {
 	return 0;
 }
 
-uint16_t el_text::fill(uint8_t * data) {
-	//get size of data
+uint16_t el_text::fill(uint8_t * data)
+{
+	/* Get size of data */
 	if (_var_size) {
 		if (data[0] < 255) {
 			_true_size = data[0];
@@ -310,34 +339,40 @@ uint16_t el_text::fill(uint8_t * data) {
 		}
 	}
 
-	this-> append_str(&(data[_offset]),_true_size);
+	this->append_str(&(data[_offset]),_true_size);
 	return _true_size + _offset;
 }
 
 
-el_ipv6::el_ipv6(int size, int en, int id, int part, uint32_t buf_size) {
+el_ipv6::el_ipv6(int size, int en, int id, int part, uint32_t buf_size)
+{
 	ipv6_value = 0;
 	_size = size;
 	_filled = 0;
 	_buffer = NULL;
+
 	setName(en, id, part);
 	this->set_type();
+
 	if (buf_size == 0) {
 		 buf_size = RESERVED_SPACE;
 	}
+
 	allocate_buffer(buf_size);
 }
 
-uint16_t el_ipv6::fill(uint8_t * data) {
-	//ulong
+uint16_t el_ipv6::fill(uint8_t * data)
+{
+	/* ulong */
 	ipv6_value = be64toh(*((uint64_t*) data));
 	this->append(&(ipv6_value));
 	return _size;
 }
 
-int el_ipv6::set_type() {
-	//ulong
-	_type=ibis::ULONG;
+int el_ipv6::set_type()
+{
+	/* ulong */
+	_type = ibis::ULONG;
 	return 0;
 }
 
@@ -348,7 +383,6 @@ el_blob::el_blob(int size, int en, int id, uint32_t buf_size):
 	_size = 1; /* This is size for flush function */
 	_buffer = NULL;
 	_filled = 0;
-	
 	uint_value = 0;
 
 	if (size == VAR_IE_LENGTH) { /* Element with variable size */
@@ -368,7 +402,7 @@ el_blob::el_blob(int size, int en, int id, uint32_t buf_size):
 	_sp_buffer_size = buf_size;
 	_sp_buffer = (char *) realloc(_sp_buffer, _sp_buffer_size);
 	if (_sp_buffer == NULL) {
-		MSG_ERROR(MSG_MODULE, "Memory allocation failed!");
+		MSG_ERROR(msg_module, "Memory allocation failed");
 		exit(-1);
 	}
 
@@ -430,15 +464,15 @@ int el_blob::flush(std::string path)
 	size_t check;
 	
 	if (_filled > 0 && _sp_buffer != NULL) {
-		f = fopen((path +"/"+_name+".sp").c_str(),"a+");
+		f = fopen((path +"/"+_name+".sp").c_str(), "a+");
 		if (f == NULL) {
-			MSG_ERROR(MSG_MODULE, "Error while writing data (fopen)!");
+			MSG_ERROR(msg_module, "Error while writing data (fopen)");
 			return 1;
 		}
 
 		check = fwrite( _sp_buffer, 1 , _sp_buffer_offset, f);
 		if (check != (size_t) _sp_buffer_offset ) {
-			MSG_ERROR(MSG_MODULE, "Error while writing data! (fwrite)");
+			MSG_ERROR(msg_module, "Error while writing data (fwrite)");
 			fclose(f);
 			return 1;
 		}
@@ -461,21 +495,25 @@ int el_blob::flush(std::string path)
 	return 0;
 }
 
-el_blob::~el_blob() {
-	/* Free sp buffer */
+el_blob::~el_blob()
+{
 	free(_sp_buffer);
 }
 
-el_uint::el_uint(int size, int en, int id, uint32_t buf_size) {
+el_uint::el_uint(int size, int en, int id, uint32_t buf_size)
+{
 	_real_size = size;
 	_size = 0;
 	_filled = 0;
 	_buffer = NULL;
+
 	setName(en, id);
 	this->set_type();
+
 	if (buf_size == 0) {
 		 buf_size = RESERVED_SPACE;
 	}
+
 	allocate_buffer(buf_size);
 }
 
@@ -484,12 +522,12 @@ uint16_t el_uint::fill(uint8_t * data) {
 	uint_value.ulong = 0;
 	switch(_real_size) {
 	case 1:
-		//ubyte
+		/* ubyte */
 		uint_value.ubyte = data[0];
 		this->append(&(uint_value.ubyte));
 		break;
 	case 2:
-		//ushort
+		/* ushort */
 		uint_value.ushort = ntohs(*((uint16_t*) data));
 		this->append(&(uint_value.ushort));
 		break;
@@ -498,7 +536,7 @@ uint16_t el_uint::fill(uint8_t * data) {
 		this->append(&(uint_value.uint));
 		break;
 	case 4:
-		//uint
+		/* uint */
 		uint_value.uint = ntohl(*((uint32_t*) data));
 		this->append(&(uint_value.uint));
 		break;
@@ -509,33 +547,35 @@ uint16_t el_uint::fill(uint8_t * data) {
 		this->append(&(uint_value.ulong));
 		break;
 	case 8:
-		//ulong
+		/* ulong */
 		uint_value.ulong = be64toh(*((uint64_t*) data));
 		this->append(&(uint_value.ulong));
 		break;
 	default:
-		MSG_ERROR(MSG_MODULE,"Wrong element size (%s - %u)!",_name,_size);
+		MSG_ERROR(msg_module, "Wrong element size (%s - %u)",_name,_size);
 		return 1;
 		break;
 	}
+
 	return _real_size;
 }
 
-int el_uint::set_type() {
+int el_uint::set_type()
+{
 	switch(_real_size) {
 	case 1:
-		//ubyte
+		/* ubyte */
 		_type=ibis::UBYTE;
 		_size = 1;
 		break;
 	case 2:
-		//ushort
+		/* ushort */
 		_type=ibis::USHORT;
 		_size = 2;
 		break;
 	case 3:
 	case 4:
-		//uint
+		/* uint */
 		_type=ibis::UINT;
 		_size = 4;
 		break;
@@ -543,34 +583,35 @@ int el_uint::set_type() {
 	case 6:
 	case 7:
 	case 8:
-		//ulong
+		/* ulong */
 		_type=ibis::ULONG;
 		_size = 8;
 		break;
 	default:
-		MSG_ERROR(MSG_MODULE,"Wrong element size (%s - %u)!",_name,_size);
+		MSG_ERROR(msg_module, "Wrong element size (%s - %u)",_name,_size);
 		return 1;
 		break;
 	}
+
 	return 0;
 }
 
-
-int el_sint::set_type() {
+int el_sint::set_type()
+{
 	switch(_real_size) {
 	case 1:
-		//ubyte
+		/* ubyte */
 		_type=ibis::BYTE;
 		_size = 1;
 		break;
 	case 2:
-		//ushort
+		/* ushort */
 		_type=ibis::SHORT;
 		_size = 2;
 		break;
 	case 3:
 	case 4:
-		//uint
+		/* uint */
 		_type=ibis::INT;
 		_size = 4;
 		break;
@@ -578,32 +619,38 @@ int el_sint::set_type() {
 	case 6:
 	case 7:
 	case 8:
-		//ulong
+		/* ulong */
 		_type=ibis::LONG;
 		_size = 8;
 		break;
 	default:
-		MSG_ERROR(MSG_MODULE,"Wrong element size (%s - %u)!",_name,_size);
+		MSG_ERROR(msg_module, "Wrong element size (%s - %u)",_name,_size);
 		return 1;
 		break;
 	}
+
 	return 0;
 }
 
-el_sint::el_sint(int size , int en, int id, uint32_t buf_size) {
+el_sint::el_sint(int size , int en, int id, uint32_t buf_size)
+{
 	_real_size = size;
 	_size = 0;
 	_filled = 0;
 	_buffer = NULL;
+
 	setName(en, id);
 	this->set_type();
+
 	if (buf_size == 0) {
 		 buf_size = RESERVED_SPACE;
 	}
+
 	allocate_buffer(buf_size);
 }
 
-el_unknown::el_unknown(int size, int en, int id, int part, uint32_t buf_size) {
+el_unknown::el_unknown(int size, int en, int id, int part, uint32_t buf_size)
+{
 	(void) en;
 	(void) id;
 	(void) part;
@@ -611,26 +658,32 @@ el_unknown::el_unknown(int size, int en, int id, int part, uint32_t buf_size) {
 
 	_size = size;
 
-	// Size of VAR_IE_LENGTH means variable-sized IE
+	/* Size of VAR_IE_LENGTH means variable-sized IE */
 	_var_size = (size == VAR_IE_LENGTH);
 }
 
-void el_unknown::allocate_buffer(int count) {
+void el_unknown::allocate_buffer(int count)
+{
 	(void) count;
 }
-void el_unknown::free_buffer() {}
 
-int el_unknown::append(void *data) {
+void el_unknown::free_buffer()
+{}
+
+int el_unknown::append(void *data)
+{
 	(void) data;
 	return 0;
 }
 
-int el_unknown::flush(std::string path) {
+int el_unknown::flush(std::string path)
+{
 	(void) path;
 	return 0;
 }
 
-uint16_t el_unknown::fill(uint8_t * data) {
+uint16_t el_unknown::fill(uint8_t * data)
+{
 	/* Get real size of the data */
 	if (_var_size) {
 		uint16_t true_size, offset;
@@ -641,12 +694,15 @@ uint16_t el_unknown::fill(uint8_t * data) {
 			true_size = ntohs(*((uint16_t*) &data[1]));
 			offset = 3;
 		}
+
 		return true_size + offset;
 	}
 
 	/* FiXED size */
 	return _size;
 }
-std::string el_unknown::get_part_info() {
+
+std::string el_unknown::get_part_info()
+{
 	return  std::string("");
 }

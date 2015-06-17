@@ -59,9 +59,6 @@ extern "C" {
 #include "fastbit.h"
 #include "config_struct.h"
 
-
-
-
 const int IE_NAME_LENGTH = 16;
 const int TYPE_NAME_LENGTH = 10;
 
@@ -216,7 +213,7 @@ typedef union float_union
 {
 	float float32;
 	double float64;
-}float_u;
+} float_u;
 
 class el_float : public element
 {
@@ -248,7 +245,6 @@ private:
 	uint16_t _true_size;
 	uint8_t _offset;
 public:
-	//char *text_value;
 	el_text(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
 
 	virtual uint16_t fill(uint8_t * data);
@@ -356,9 +352,6 @@ protected:
 
 	int set_type();
 };
-
-
-
 
 class el_sint : public el_uint
 {

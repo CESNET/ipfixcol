@@ -69,23 +69,24 @@ void FlowWatch::updateSQ(uint64_t SQ)
 		reseted = false;
 	} else {
 		if (SQ < firstSQ_) {
-			//detect SQ reset (modulo 2^32)
-			if(firstSQ_ > SQ_TOP_LIMIT && SQ < SQ_BOT_LIMIT) {
-				//is this first packet with reseted SQ?
-				if(lastSQ_ < SQ_BOT_LIMIT) {
-					if(lastSQ_ < SQ) {
+			/* Detect SQ reset (modulo 2^32) */
+			if (firstSQ_ > SQ_TOP_LIMIT && SQ < SQ_BOT_LIMIT) {
+				/* Is this first packet with reseted SQ? */
+				if (lastSQ_ < SQ_BOT_LIMIT) {
+					if (lastSQ_ < SQ) {
 						lastSQ_ = SQ;
 					}
 				} else {
 					lastSQ_ = SQ;
 				}
 			}
-			//first packet or out of order packet with lesser SQ
+
+			/* First packet or out of order packet with lesser SQ */
 			firstSQ_ = SQ;
 		}
 		if (SQ > lastSQ_) {
 			if(lastSQ_ < SQ_BOT_LIMIT && SQ > SQ_TOP_LIMIT){
-				//do nothing out of order packet with SQ num before SQ reset
+				/* Do nothing; out of order packet with SQ num before SQ reset */
 			} else {
 				lastSQ_ = SQ;
 			}
@@ -108,14 +109,19 @@ uint64_t FlowWatch::exportedFlows()
 	} else {
 		expFlows = lastSQ_ - firstSQ_;
 	}
+
 	return expFlows + lastFlows_;
 }
 
+uint64_t FlowWatch::receivedFlows()
+{
+	return recFlows_;
+}
 
 int FlowWatch::write(std::string dir)
 {
-	std::ofstream flowsFile;
-	std::ifstream iFlowsFile;
+	std::ofstream statFile;
+	std::ifstream iStatFile;
 	std::string fileName, tmp;
 	uint64_t exported = 0, received = 0;
 	struct stat st;
@@ -128,41 +134,35 @@ int FlowWatch::write(std::string dir)
 	/* Create filename */
 	fileName = dir + "flowsStats.txt";
 
-	iFlowsFile.open(fileName.c_str(), std::ios_base::in);
+	iStatFile.open(fileName.c_str(), std::ios_base::in);
 
 	/* Get current stats */
-	if (iFlowsFile.is_open()) {
+	if (iStatFile.is_open()) {
 		/* Read the first two lines containing numbers */
-		std::getline(iFlowsFile, tmp, ':');
-		iFlowsFile >> exported;
+		std::getline(iStatFile, tmp, ':');
+		iStatFile >> exported;
 
-		std::getline(iFlowsFile, tmp, ':');
-		iFlowsFile >> received;
+		std::getline(iStatFile, tmp, ':');
+		iStatFile >> received;
 
-		iFlowsFile.close();
+		iStatFile.close();
 	}
 
 	/* Write updated stats */
-	flowsFile.open(fileName.c_str(), std::ios_base::trunc | std::ios_base::out);
+	statFile.open(fileName.c_str(), std::ios_base::trunc | std::ios_base::out);
 
 	exported += exportedFlows();
 	received += receivedFlows();
 
-	if (flowsFile.is_open()) {
-		flowsFile << "Exported flows: "<< exported << std::endl;
-		flowsFile << "Received flows: "<< received << std::endl;
-		flowsFile << "Lost flows: "<< exported - received << std::endl;
-		flowsFile.close();
+	if (statFile.is_open()) {
+		statFile << "Exported flow records: " << exported << std::endl;
+		statFile << "Received flow records: " << received << std::endl;
+		statFile << "Lost flow records: " << exported - received << std::endl;
+		statFile.close();
 		return 0;
 	}
+
 	return -1;
 }
 
-uint64_t FlowWatch::receivedFlows()
-{
-	return recFlows_;
-}
-
-
 FlowWatch::~FlowWatch() {}
-
