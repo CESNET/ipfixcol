@@ -396,7 +396,8 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 
 	uint16_t template_id;
 	uint32_t oid = 0;
-	uint32_t rcFlows = 0;
+
+	int rcFlows = 0;
 	uint64_t rcFlowsSum = 0;
 
 	std::string dir;
@@ -511,8 +512,12 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 
 		/* Store this data record */
 		rcFlows = (*table).second->store(ipfix_msg->data_couple[i].data_set, dir, conf->new_dir);
-		rcFlowsSum += rcFlows;
-		rcnt += rcFlows;
+		if (rcFlows >= 0) {
+			rcFlowsSum += rcFlows;
+			rcnt += rcFlows;
+		} else {
+			MSG_WARNING(msg_module, "An error occurred during FastBit table store; no records were stored");
+		}
 	}
 
 	/* We've told all tables that the directory has changed */

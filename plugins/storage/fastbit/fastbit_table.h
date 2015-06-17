@@ -105,7 +105,7 @@ public:
 	 * @param path path to direcotry where should be data flushed
 	 * @param new_dir does the path lead to new directory?
 	 */
-	uint32_t store(ipfix_data_set * data_set, std::string path, bool new_dir);
+	int store(ipfix_data_set * data_set, std::string path, bool new_dir);
 
 	int update_part(std::string path);
 

@@ -191,7 +191,7 @@ int template_table::dir_check(std::string path, bool new_dir)
 	return 0;
 }
 
-uint32_t template_table::store(ipfix_data_set * data_set, std::string path, bool new_dir)
+int template_table::store(ipfix_data_set * data_set, std::string path, bool new_dir)
 {
 	uint8_t *data = data_set->records;
 	uint16_t element_size = 0;
