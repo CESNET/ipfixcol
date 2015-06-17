@@ -266,14 +266,26 @@ API void tm_remove_all_odid_templates(struct ipfix_template_mgr *tm, uint32_t od
 API struct ipfix_template_mgr *tm_create();
 
 /**
- * \brief Determines whether specific template contains given field
+ * \brief Determines whether specific template contains given field and returns
+ * the field's offset.
  *
- * \param[in]  templ template
- * \param[in]  field field
- * \return 0 on success, negative value otherwise.
+ * \param[in] templ Template
+ * \param[in] field Field ID. In case of an enterprise-specific field, the
+ * enterprise bit must be set to 1
+ * \return Field offset on success, negative value otherwise
  */
 API int template_contains_field(struct ipfix_template *templ, uint16_t field);
 
+/**
+ * \brief Determines whether specific template contains given field and returns
+ * the field's offset.
+ *
+ * \param[in] templ Template
+ * \param[in] eid Enterprise ID (zero in case the field is not enterprise-specific)
+ * \param[in] fid Field ID
+ * \return Field offset on success, negative value otherwise
+ */
+API int template_get_field_offset(struct ipfix_template *templ, uint16_t eid, uint16_t fid);
 
 /**
  * \brief Increment number of references to template
