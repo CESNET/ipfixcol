@@ -40,7 +40,6 @@
 #ifndef _TEMPLATE_TABLE_H_
 #define _TEMPLATE_TABLE_H_
 
-
 extern "C" {
 #include <ipfixcol/storage.h>
 #include <semaphore.h>
@@ -62,14 +61,9 @@ extern "C" {
 #include "fastbit_element.h"
 #include "config_struct.h"
 
-
-
-//extern const char *msg_module;
-
 class element; //needed because of Circular dependency
 
 uint64_t get_rows_from_part(const char *);
-
 
 /* For each uniq template is created instance of template_table object.
  * The object is used to parse data records belonging to the template
@@ -77,12 +71,11 @@ uint64_t get_rows_from_part(const char *);
 class template_table 
 {
 private:
-	uint32_t _buff_size; //number of values 
+	uint32_t _buff_size; /* Number of values */
 	uint64_t _rows_in_window;
 	uint64_t _rows_count;
 	uint16_t _template_id;
-	uint32_t _min_record_size;
-	//ibis::tablex * _tablex;
+	uint16_t _min_record_size;
 	char _name[10];
 	char _orig_name[10]; /**< saves the _name when renamed due to template collision*/
 	bool _new_dir; /**< Remember that the directory is supposed to be new */
