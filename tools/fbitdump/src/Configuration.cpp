@@ -1108,19 +1108,20 @@ Resolver *Configuration::getResolver() const
 	return this->resolver;
 }
 
-void Configuration::loadModules()
+int Configuration::loadModules()
 {
 	pugi::xpath_node_set nodes = this->getXMLConfiguration().select_nodes("/configuration/plugins/plugin");
-	std::string path, plainLevel;
+	std::string name, path, plainLevel;
 	pluginConf aux_conf;
 	
 	for (pugi::xpath_node_set::const_iterator ii = nodes.begin(); ii != nodes.end(); ii++) {
 		pugi::xpath_node node = *ii;
 		if (this->plugins.find(node.node().child_value("name")) != this->plugins.end()) {
-			MSG_ERROR(msg_module, "Duplicit module names %s", node.node().child_value("name"));
+			MSG_ERROR(msg_module, "Duplicate module name: %s", node.node().child_value("name"));
 			continue;
 		}
 
+		name = node.node().child_value("name");
 		path = node.node().child_value("path");
 		plainLevel = node.node().child_value("plainLevel");
 		
@@ -1137,6 +1138,22 @@ void Configuration::loadModules()
 		aux_conf.handle = dlopen(path.c_str(), RTLD_LAZY);
 		if (!aux_conf.handle) {
 			std::cerr << dlerror() << std::endl;
+
+			/* Check whether module is used in any field specification */
+			pugi::xpath_node_set elements = this->getXMLConfiguration().select_nodes("/configuration/columns/column/value/element");
+			for (pugi::xpath_node_set::const_iterator jj = elements.begin(); jj != elements.end(); jj++) {
+				pugi::xpath_node element = *jj;
+
+				/* Retrieve value of 'semantic' attribute */
+				std::string semantics = element.node().attribute("semantics").value();
+
+				/* Stop loading fbitdump if module is used in field specification */
+				if (semantics.find(name) != std::string::npos) {
+					MSG_ERROR(msg_module, "Module is used in field specification; aborting...");
+					return 1;
+				}
+			}
+
 			continue;
 		}
 
@@ -1163,6 +1180,8 @@ void Configuration::loadModules()
 		
 		this->plugins[node.node().child_value("name")] = aux_conf;
 	}
+
+	return 0;
 }
 
 void Configuration::unloadModules() {
