@@ -196,47 +196,47 @@ public:
 	void (*parse)(char *input, char *out, void *conf);
 	void *pluginConf;
 
-        /**
-         * \brief Returns summary type
-         * 
-         * \return summary type
-         */
-        std::string getSummaryType() const { return summaryType; }
-        
-        /**
-         * \brief Return true if summary type is sum
-         * 
-         * \return true if summary type is sum
-         */
-        bool isSumSummary() const{ return summaryType == "sum"; }
-        
-        /**
-         * \brief Return true if summary type is avg
-         * 
-         * \return true if summary type is avg
-         */
-        bool isAvgSummary() const { return summaryType == "avg"; }
-        
-        /**
-         * \brief Returns name for select clause
-         * 
-         * \return name for select clause
-         */
-        std::string getSelectName() const { return selectName; }
-        
-        /**
-         * \brief Returns number of parts
-         * 
-         * @return number of parts
-         */
-        int getParts() const { return this->ast->parts; }
-        
-        /**
-         * \brief Returns aggregation function
-         * 
-         * @return aggregation function
-         */
-        std::string getAggregateType() const { return ast->aggregation; }
+	/**
+	 * \brief Returns summary type
+	 *
+	 * \return summary type
+	 */
+	std::string getSummaryType() const { return summaryType; }
+
+	/**
+	 * \brief Return true if summary type is sum
+	 *
+	 * \return true if summary type is sum
+	 */
+	bool isSumSummary() const{ return summaryType == "sum"; }
+
+	/**
+	 * \brief Return true if summary type is avg
+	 *
+	 * \return true if summary type is avg
+	 */
+	bool isAvgSummary() const { return summaryType == "avg"; }
+
+	/**
+	 * \brief Returns name for select clause
+	 *
+	 * \return name for select clause
+	 */
+	std::string getSelectName() const { return selectName; }
+
+	/**
+	 * \brief Returns number of parts
+	 *
+	 * @return number of parts
+	 */
+	int getParts() const { return this->ast->parts; }
+
+	/**
+	 * \brief Returns aggregation function
+	 *
+	 * @return aggregation function
+	 */
+	std::string getAggregateType() const { return ast->aggregation; }
 private:
 
 	/**
@@ -375,7 +375,6 @@ private:
 	 */
 	void setAggregation(bool aggregation);
 
-
 	std::string nullStr;    /**< String to print when columns has no value */
 	std::string name;       /**< name of the column  */
 	int width;              /**< Width of the column */
@@ -385,8 +384,8 @@ private:
 	bool aggregation;       /**< Determines whether column is in aggregation mode */
 	std::string element;    /**< name of the file, which contains actual data for this column */
 	bool summary;			/**< Is this a summary column? */
-        std::string summaryType;/**< summary type - sum or avg */
-        std::string selectName; /**< name for select clause */
+	std::string summaryType;/**< summary type - sum or avg */
+	std::string selectName; /**< name for select clause */
 
 }; /* end of Column class */
 
