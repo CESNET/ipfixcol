@@ -169,7 +169,7 @@ int Configuration::init(int argc, char *argv[])
 					// Skip to next argument; make sure integer is not parsed as query filter
 					++optind;
 				} else {
-					this->plainLevel = 1;
+					this->plainLevel = 0;
 				}
 			} else {
 				this->plainLevel = Utils::strtoi(optarg, 10);
@@ -374,12 +374,12 @@ int Configuration::init(int argc, char *argv[])
 	if (this->optm) {
 		this->processmOption(optionm);
 	}
-	Utils::printStatus( "Parsing column indexes");
+	Utils::printStatus("Parsing column indexes");
 
 	/* parse indexes line */
 	this->parseIndexColumns(const_cast<char*>(indexes.c_str()));
 
-	Utils::printStatus( "Loading modules");
+	Utils::printStatus("Loading modules");
 
 	this->loadModules();
 
