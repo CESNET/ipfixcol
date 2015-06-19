@@ -172,7 +172,7 @@ int Configuration::init(int argc, char *argv[])
 					this->plainLevel = 1;
 				}
 			} else {
-				this->plainLevel = Utils::strtoi(argv[optind], 10);
+				this->plainLevel = Utils::strtoi(optarg, 10);
 				if (this->plainLevel == INT_MAX) {
 					throw std::invalid_argument("-N requires an integer parameter");
 				}
@@ -806,7 +806,6 @@ void Configuration::processmOption(std::string &order)
 
 	try {
 		Column *col = new Column(doc, order, this->getAggregate());
-
 		this->orderColumn = col;
 		return;
 	} catch (std::exception &e) {
