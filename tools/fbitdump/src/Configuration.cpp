@@ -144,12 +144,16 @@ int Configuration::init(int argc, char *argv[])
 				throw std::invalid_argument("-c requires a number specification");
 			}
 
-			this->maxRecords = atoi(optarg);
+			this->maxRecords = Utils::strtoi(optarg, 10);
+			if (this->maxRecords == INT_MAX) {
+				throw std::invalid_argument("-c requires an integer parameter");
+			}
+
 			maxCountSet = true; /* so that statistics knows whether to change the value */
 			break;
 		case 'D':
 			if (optarg == std::string("")) {
-				throw std::invalid_argument("-D requires a nameserver specification");
+				throw std::invalid_argument("-D requires a name server specification");
 			}
 
 			this->resolver = new Resolver(optarg);
@@ -169,9 +173,8 @@ int Configuration::init(int argc, char *argv[])
 				}
 			} else {
 				this->plainLevel = Utils::strtoi(argv[optind], 10);
-
 				if (this->plainLevel == INT_MAX) {
-					throw std::invalid_argument("-N requires an integer level specification");
+					throw std::invalid_argument("-N requires an integer parameter");
 				}
 			}
 
