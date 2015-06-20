@@ -9,7 +9,7 @@ SUBDIRS = 3rdparty src src/plugins
 
 if HAVE_DOC
 SUBDIRS += man \
-	    doc
+		doc
 endif
 
 .PHONY: doc
@@ -25,3 +25,6 @@ rpm: dist $(rpmspec)
 
 clean-local: 
 	rm -rf RPMBUILD
+
+fbitdump.xml: fbitdump.xml.template
+	sed 's|@pkgdatadir[@]|$(pkgdatadir)|g' $< > $@
