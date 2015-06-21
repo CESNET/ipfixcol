@@ -42,23 +42,83 @@
 #include <pthread.h>
 #include <libxml/tree.h>
 #include <sys/prctl.h>
-
 #include <ipfixcol.h>
 #include <signal.h>
 #include <errno.h>
+#include <dirent.h>
+#include <inttypes.h>
+
 #include "configurator.h"
 #include "data_manager.h"
 #include "output_manager.h"
-
-#include <dirent.h>
-#include <inttypes.h>
 
 /* MSG_ macros identifiers */
 static const char *msg_module = "output manager";
 static const char *stat_module = "stat";
 
-/* Output Manager's configuration - singleton */
+/* Output Manager configuration - singleton */
 struct output_manager_config *conf = NULL;
+
+/* These nodes are used to keep references to the various input_info data
+ * structures used by IPFIX messages that pass this Output Manager
+ */
+struct input_info_node {
+	struct input_info *input_info;
+	struct input_info_node *next;
+
+	/* Counter to be used by statistics thread */
+	uint64_t last_packets;
+	uint64_t last_data_records;
+	uint64_t last_lost_data_records;
+};
+
+/* List of input_info_node structures */
+struct input_info_node *input_info_list = NULL; /* Pointer to first node in list */
+
+/**
+ * \brief Add input_info as a node to input_info_list
+ *
+ * \param[in] node input_info object to add to list
+ */
+void add_input_info(struct input_info *node) {
+	struct input_info_node *aux_node = input_info_list;
+
+	/* Find last position in linked list */
+	while (aux_node && aux_node->input_info) {
+		aux_node = aux_node->next;
+	}
+
+	struct input_info_node *new_node = calloc(1, sizeof(struct input_info_node));
+	new_node->input_info = node;
+
+	if (input_info_list) {
+		new_node->next = input_info_list;
+		input_info_list = new_node;
+	} else {
+		/* input_info_list is empty */
+		new_node->next = NULL;
+		input_info_list = new_node;
+	}
+}
+
+/**
+ * \brief Retrieve input_info_node (containing input_info structure) from
+ * input_info_list, based on provided ODID
+ *
+ * \param[in] odid ODID to retrieve input_info for
+ */
+struct input_info_node *get_input_info_node(uint32_t odid) {
+	struct input_info_node *aux_node = input_info_list;
+	while (aux_node) {
+		if (aux_node->input_info->odid == odid) {
+			return aux_node;
+		}
+
+		aux_node = aux_node->next;
+	}
+
+	return NULL;
+}
 
 /**
  * \brief Dummy SIGUSR1 signal handler
@@ -289,8 +349,15 @@ static void *output_manager_plugin_thread(void* config)
 			break;
 		}
 
-		/* get appropriate data manager's config according to Observation domain ID */
-		data_config = get_data_mngmt_config (msg->input_info->odid, conf->data_managers);
+		/* Check whether we have a pointer to the input_info structure based on ODID */
+		struct input_info_node *input_info_node = get_input_info_node(msg->input_info->odid);
+		if (input_info_node == NULL) {
+			/* No reference to input_info structure for this ODID; add it */
+			add_input_info(msg->input_info);
+		}
+
+		/* Get appropriate data Manager config according to ODID */
+		data_config = get_data_mngmt_config(msg->input_info->odid, conf->data_managers);
 		if (data_config == NULL) {
 			/*
 			 * no data manager config for this observation domain ID found -
@@ -329,36 +396,6 @@ static void *output_manager_plugin_thread(void* config)
 			rbuffer_remove_reference(conf->in_queue, index, 1);
 			continue;
 		}
-
-		__sync_fetch_and_add(&(conf->packets), 1);
-		__sync_fetch_and_add(&(conf->data_records), msg->data_records_count);
-
-		/* Check for lost data records */
-		uint32_t seq_number = ntohl(msg->pkt_header->sequence_number);
-
-		// Set sequence number during first iteration
-		if (conf->first_seq == 0 && conf->last_seq == 0) {
-			conf->first_seq = seq_number;
-		} else if (seq_number < conf->first_seq) {
-			// Sequence number resetted (modulo 2^32 = 4294967296)
-			conf->first_seq = seq_number;
-			uint8_t delta_seq = 4294967296 - conf->last_seq + seq_number;
-
-			// Check for sequence number gap
-			if (delta_seq > msg->data_records_count) {
-				__sync_fetch_and_add(&(conf->lost_data_records), delta_seq - msg->data_records_count);
-			}
-		} else if (seq_number > conf->first_seq) {
-			// Check for sequence number gap
-			if (seq_number - conf->last_msg_data_records > conf->last_seq) {
-				__sync_fetch_and_add(&(conf->lost_data_records), seq_number - conf->last_msg_data_records - conf->last_seq);
-			}
-		} else {
-			// Do nothing
-		}
-
-		conf->last_msg_data_records = msg->data_records_count;
-		conf->last_seq = seq_number;
 		
 		/* Write data into input queue of Storage Plugins */
 		if (rbuffer_write(data_config->store_queue, msg, data_config->plugins_count) != 0) {
@@ -536,42 +573,36 @@ void statistics_print_buffers(struct output_manager_config *conf, FILE *stat_out
 	MSG_INFO(stat_module, "Queue utilization:");
 	
 	struct ring_buffer *prep_buffer = get_preprocessor_output_queue();
-	MSG_INFO(stat_module, "     preprocessor output queue: %u / %u", prep_buffer->count, prep_buffer->size);
+	MSG_INFO(stat_module, "     Preprocessor output queue: %u / %u", prep_buffer->count, prep_buffer->size);
 
-	/* Print info about Output Manager's queues */
+	/* Print info about Output Manager queues */
 	struct data_manager_config *dm = conf->data_managers;	
 	if (dm) {
-		MSG_INFO(stat_module, "     output manager output queues:");
-		MSG_INFO(stat_module, "         %.4s | %.10s / %.10s", "ODID", "waiting" ,"total size");
+		MSG_INFO(stat_module, "     Output Manager output queues:");
+		MSG_INFO(stat_module, "         %.4s | %.10s / %.10s", "ODID", "waiting", "total size");
 		
 		while (dm) {
-			MSG_INFO(stat_module, "         [%u] %10u / %u", dm->observation_domain_id, dm->store_queue->count, dm->store_queue->size);
+			MSG_INFO(stat_module, "   %10u %9u / %u", dm->observation_domain_id, dm->store_queue->count, dm->store_queue->size);
 			dm = dm->next;
 		}
 	}
 
-	// Print to file
+	/* Print to file */
 	if (stat_out_file) {
-		// Add contents here
+		/* Add contents here */
 	}
 }
 
 /**
  * \brief Periodically prints statistics about proccessing speed
  * 
- * @param config output manager's configuration
+ * @param config Output Manager configuration
  * @return 0;
  */
 static void *statistics_thread(void* config)
 {
 	struct output_manager_config *conf = (struct output_manager_config *) config;
-	time_t begin = time(NULL), time_now, diff_time;
-
-	uint64_t pkts, last_pkts, records, last_records, diff_pkts, diff_records;
-	pkts = last_pkts = records = last_records = diff_pkts = diff_records = 0;
-
-	uint64_t lost_records, last_lost_records, diff_lost_records;
-	lost_records = last_lost_records = diff_lost_records = 0;
+	time_t begin = time(NULL), time_now, runtime;
 	
 	/* create statistics config */
 	conf->stats.total_cpu = 0;
@@ -579,17 +610,17 @@ static void *statistics_thread(void* config)
 	conf->stats.cpus = sysconf(_SC_NPROCESSORS_ONLN);
 	snprintf(conf->stats.tasks_dir, MAX_DIR_LEN, "/proc/%d/task/", getpid());
 
-	// Create file handle in case statistics file has been specified in config
+	/* Create file handle in case statistics file has been specified in config */
 	FILE *stat_out_file = NULL;
 	xmlNode *node = conf->plugins_config->collector_node;
 	while (node != NULL) {
-		// Skip processing this node in case it's a comment
+		/* Skip processing this node in case it's a comment */
 		if (node->type == XML_COMMENT_NODE) {
 			node = node->next;
 			continue;
 		}
 
-		// Jump to collectingProcess tree, since 'statisticsFile' belongs to it (if present)
+		/* Jump to collectingProcess tree, since 'statisticsFile' belongs to it (if present) */
 		if (xmlStrcmp(node->name, (const xmlChar *) "collectingProcess") == 0) {
 			node = node->xmlChildrenNode;
 		}
@@ -638,38 +669,83 @@ static void *statistics_thread(void* config)
 		
 		/* Compute time */
 		time_now = time(NULL);
-		diff_time = time_now - begin;
-		
-		/* Update and save packets counter */
-		pkts = conf->packets;
-		diff_pkts = pkts - last_pkts;
-		last_pkts = pkts;
-		
-		/* Update and save data records counter */
-		records = conf->data_records;
-		diff_records = records - last_records;
-		last_records = records;
+		runtime = time_now - begin;
 
-		/* Collect lost data record counts from Data Managers */
-		lost_records = conf->lost_data_records;
-		diff_lost_records = lost_records - last_lost_records;
-		last_lost_records = lost_records;
-
-		/* print info */
-		MSG_INFO(stat_module, "Time: %lu", time_now);
-		MSG_INFO(stat_module, "%15s %15s %15s %15s %15s %15s %20s", "total time", "total packets", "tot. data rec.", "lost data rec.", "packets/s", "data records/s", "lost data records/s");
-		MSG_INFO(stat_module, "%15lu %15lu %15lu %15lu %15lu %15lu %20lu", diff_time, pkts, records, lost_records, diff_pkts/conf->stat_interval, diff_records/conf->stat_interval, diff_lost_records/conf->stat_interval);
+		/* Print info */
+		MSG_INFO(stat_module, "");
+		MSG_INFO(stat_module, "Time: %lu, runtime: %lu", time_now, runtime);
 
 		if (stat_out_file) {
 			rewind(stat_out_file); // Move to beginning of file
 			fprintf(stat_out_file, "%s=%lu\n", "TIME", time_now);
-			fprintf(stat_out_file, "%s=%lu\n", "RUN_TIME", diff_time);
-			fprintf(stat_out_file, "%s=%lu\n", "PACKETS", pkts);
-			fprintf(stat_out_file, "%s=%lu\n", "DATA_REC", records);
-			fprintf(stat_out_file, "%s=%lu\n", "LOST_DATA_REC", lost_records);
-			fprintf(stat_out_file, "%s=%lu\n", "PACKETS_SEC", diff_pkts/conf->stat_interval);
-			fprintf(stat_out_file, "%s=%lu\n", "DATA_REC_SEC", diff_records/conf->stat_interval);
-			fprintf(stat_out_file, "%s=%lu\n", "LOST_DATA_REC_SEC", diff_lost_records/conf->stat_interval);
+			fprintf(stat_out_file, "%s=%lu\n", "RUNTIME", runtime);
+		}
+
+		/* Variables for calculating sums */
+		uint64_t packets_total = 0;
+		uint64_t data_records_total = 0;
+		uint64_t lost_data_records_total = 0;
+
+		/* Variables for calculating delta (to previous measurement) */
+		uint32_t delta_packets;
+		uint32_t delta_data_records;
+		uint32_t delta_lost_data_records;
+
+		struct input_info_node *aux_node = input_info_list;
+		uint8_t aux_node_count = 0;
+		while (aux_node) {
+			MSG_INFO(stat_module, "%10s %15s %15s %15s %15s %15s %20s", "ODID", "packets", "data rec.", "lost data rec.", "packets/s", "data records/s", "lost data records/s");
+
+			delta_packets = aux_node->input_info->packets - aux_node->last_packets;
+			delta_data_records = aux_node->input_info->data_records - aux_node->last_data_records;
+			delta_lost_data_records = aux_node->input_info->sequence_number - aux_node->input_info->data_records - aux_node->last_lost_data_records;
+
+			MSG_INFO(stat_module, "%10u %15lu %15lu %15lu %15u %15u %20u",
+					aux_node->input_info->odid,
+					aux_node->input_info->packets,
+					aux_node->input_info->data_records,
+					aux_node->input_info->sequence_number - aux_node->input_info->data_records,
+					delta_packets / conf->stat_interval,
+					delta_data_records / conf->stat_interval,
+					delta_lost_data_records / conf->stat_interval
+			);
+
+			if (stat_out_file) {
+				fprintf(stat_out_file, "%s%u=%lu\n", "PACKETS",
+						aux_node->input_info->odid, aux_node->input_info->packets);
+				fprintf(stat_out_file, "%s%u=%lu\n", "DATA_REC",
+						aux_node->input_info->odid, aux_node->input_info->data_records);
+				fprintf(stat_out_file, "%s%u=%lu\n", "LOST_DATA_REC",
+						aux_node->input_info->odid, aux_node->input_info->sequence_number - aux_node->input_info->data_records);
+				fprintf(stat_out_file, "%s%u=%u\n", "PACKETS_SEC",
+						aux_node->input_info->odid, delta_packets / conf->stat_interval);
+				fprintf(stat_out_file, "%s%u=%u\n", "DATA_REC_SEC",
+						aux_node->input_info->odid, delta_data_records / conf->stat_interval);
+				fprintf(stat_out_file, "%s%u=%u\n", "LOST_DATA_REC_SEC",
+						aux_node->input_info->odid, delta_lost_data_records / conf->stat_interval);
+			}
+
+			/* Add values per ODID to sum */
+			packets_total += aux_node->input_info->packets;
+			data_records_total += aux_node->input_info->data_records;
+			lost_data_records_total += aux_node->input_info->sequence_number - aux_node->input_info->data_records;
+
+			/* Update 'last' values */
+			aux_node->last_packets = aux_node->input_info->packets;
+			aux_node->last_data_records = aux_node->input_info->data_records;
+			aux_node->last_lost_data_records = aux_node->input_info->sequence_number - aux_node->input_info->data_records;
+
+			aux_node = aux_node->next;
+			++aux_node_count;
+		}
+
+		/* Print totals row, but only in case there is more than one ODID */
+		if (aux_node_count > 1) {
+			MSG_INFO(stat_module, "%s", "----------------------------------------------------------");
+			MSG_INFO(stat_module, "%10s %15lu %15lu %15lu", "Total:", packets_total, data_records_total, lost_data_records_total);
+		}
+
+		if (stat_out_file) {
 			fflush(stat_out_file);
 		}
 		
@@ -772,6 +848,16 @@ void output_manager_close(void *config)
 			tmp = aux_config;
 			aux_config = aux_config->next;
 			data_manager_close(&tmp);
+		}
+
+		/* Free input_info_list */
+		if (input_info_list) {
+			struct input_info_node *aux_node = input_info_list;
+			while (aux_node) {
+				struct input_info_node *aux_node_rm = aux_node;
+				aux_node = aux_node->next;
+				free(aux_node_rm);
+			}
 		}
 
 		/* Free all thread structures for statistics */

@@ -612,6 +612,10 @@ void preprocessor_parse_msg (void* packet, int len, struct input_info* input_inf
 		/* Add the number of records to both ODID and source sequence numbers (for future check) */
 		msg->input_info->sequence_number += msg->data_records_count;
 		*seqn += msg->data_records_count;
+
+		/* Update other input_info variables */
+		++msg->input_info->packets;
+		msg->input_info->data_records += msg->data_records_count;
 	}
 
 	/* Send data to the first intermediate plugin */
