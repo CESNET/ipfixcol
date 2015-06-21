@@ -303,6 +303,14 @@ err_xml:
 
 err_init:
 	/* plugin initialization failed */
+	if (conf->xml_file) {
+		xmlFree(conf->xml_file);
+	}
+
+	if (conf->input_files) {
+		free(conf->input_files);
+	}
+
 	free(conf);
 	*config = NULL;
 
