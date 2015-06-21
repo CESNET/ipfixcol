@@ -106,7 +106,7 @@ static void* storage_plugin_thread(void *cfg)
     /* loop will break upon receiving NULL from buffer */
 	while (!stop) {
 		/* get next data */
-		msg = rbuffer_read (config->thread_config->queue, &index);
+		msg = rbuffer_read(config->thread_config->queue, &index);
 		if (msg == NULL) {
 			MSG_NOTICE("storage plugin thread", "[%u] No more data from Data Manager", config->odid);
             break;
@@ -133,7 +133,7 @@ static void* storage_plugin_thread(void *cfg)
 			break;
 		default: /* DATA */
 			if (can_read) {
-				config->store (config->config, msg, config->thread_config->template_mgr);
+				config->store(config->config, msg, config->thread_config->template_mgr);
 				rbuffer_remove_reference(config->thread_config->queue, index, 1);
 			}
 			break;
@@ -183,8 +183,8 @@ int data_manager_add_plugin(struct data_manager_config *config, struct storage *
 	plugin = config->storage_plugins[config->plugins_count];
 	
 	/* Initiate storage plugin */
-	xmlDocDumpMemory (plugin->xml_conf->xmldata, &plugin_params, NULL);
-	retval = plugin->init ((char*) plugin_params, &(plugin->config));
+	xmlDocDumpMemory(plugin->xml_conf->xmldata, &plugin_params, NULL);
+	retval = plugin->init((char*) plugin_params, &(plugin->config));
 	xmlFree(plugin_params);
 	
 	if (retval != 0) {

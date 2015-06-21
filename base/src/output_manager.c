@@ -133,11 +133,11 @@ void sig_handler(int s)
  *
  * \todo: improve search e.g. by some kind of sorting data_managers
  *
- * @param[in] id Observation domain ID of wanted Data manager.
- * @return Desired Data manager's configuration structure if exists, NULL if
+ * \param[in] id Observation domain ID of wanted Data manager.
+ * \return Desired Data Manager configuration structure if exists, NULL if
  * there is no Data manager for specified Observation domain ID
  */
-static struct data_manager_config *get_data_mngmt_config (uint32_t id, struct data_manager_config *data_mngmts)
+static struct data_manager_config *get_data_mngmt_config(uint32_t id, struct data_manager_config *data_mngmts)
 {
 	struct data_manager_config *aux_cfg = data_mngmts;
 
@@ -291,7 +291,7 @@ int output_manager_remove_plugin(int id)
 		return 0;
 	}
 	
-	/* Kill all it's instances */
+	/* Kill all its instances */
 	if (plugin->xml_conf->observation_domain_id) {
 		/* Has ODID - max. 1 instance */
 		data_mgr = get_data_mngmt_config(atol(plugin->xml_conf->observation_domain_id), conf->data_managers);
@@ -312,7 +312,7 @@ int output_manager_remove_plugin(int id)
 }
 
 /**
- * \brief Output Managers thread
+ * \brief Output Manager thread
  *
  * @param[in] config configuration structure
  * @return NULL
@@ -326,7 +326,7 @@ static void *output_manager_plugin_thread(void* config)
 	conf = (struct output_manager_config *) config;
 	index = conf->in_queue->read_offset;
 
-	/* set the thread name to reflect the configuration */
+	/* Set thread name to reflect the configuration */
 	prctl(PR_SET_NAME, "ipfixcol OM", 0, 0, 0);
 
 	/* loop will break upon receiving NULL from buffer */
@@ -345,7 +345,7 @@ static void *output_manager_plugin_thread(void* config)
 				continue;
 			}
 			
-			/* End manager */
+			/* Stop manager */
 			break;
 		}
 
@@ -360,7 +360,7 @@ static void *output_manager_plugin_thread(void* config)
 		data_config = get_data_mngmt_config(msg->input_info->odid, conf->data_managers);
 		if (data_config == NULL) {
 			/*
-			 * no data manager config for this observation domain ID found -
+			 * No data manager config for this observation domain ID found -
 			 * we have a new observation domain ID, so create new data manager for
 			 * it
 			 */
@@ -372,7 +372,7 @@ static void *output_manager_plugin_thread(void* config)
 				continue;
 			}
 
-			/* add config to data_mngmts structure */
+			/* Add config to data_mngmts structure */
 			output_manager_insert(conf, data_config);
 
 			MSG_NOTICE(msg_module, "[%u] Data Manager created", msg->input_info->odid);
@@ -399,13 +399,13 @@ static void *output_manager_plugin_thread(void* config)
 		
 		/* Write data into input queue of Storage Plugins */
 		if (rbuffer_write(data_config->store_queue, msg, data_config->plugins_count) != 0) {
-			MSG_WARNING(msg_module, "[%u] Unable to write into Data Manager's input queue; skipping data...", data_config->observation_domain_id);
+			MSG_WARNING(msg_module, "[%u] Unable to write into Data Manager input queue; skipping data...", data_config->observation_domain_id);
 			rbuffer_remove_reference(conf->in_queue, index, 1);
 			free(msg);
 			continue;
 		}
 		
-		/* Remove data from queue (without deallocating) */
+		/* Remove data from queue (without memory deallocation) */
 		rbuffer_remove_reference(conf->in_queue, index, 0);
 	}
 
@@ -507,7 +507,7 @@ static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
 			continue;
 		}
 		
-		/* parse stat file */
+		/* Parse stat file */
 		snprintf(stat_path, MAX_DIR_LEN, "%s/%s/stat", conf->tasks_dir, entry->d_name);
 		stat = fopen(stat_path, "r");
 		if (!stat) {
@@ -515,7 +515,7 @@ static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
 			continue;
 		}
 		
-		/* read thread info */
+		/* Read thread info */
 		uint8_t format_str_len = 62 + sizeof(MAX_DIR_LEN) + 1; // 62 is size of the raw format string, without MAX_DIR_LEN; +1 is null-terminating char
 		char format_str[format_str_len];
 		snprintf(format_str, format_str_len, "%%d (%%%d[^)]) %%c %%*d %%*d %%*d %%*d %%*d %%*u %%*u %%*u %%*u %%*u %%lu %%lu", MAX_DIR_LEN);
@@ -524,7 +524,7 @@ static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
 		}
 		fclose(stat);
 		
-		/* Count thread cpu time */
+		/* Count thread CPU time */
 		proc_time = utime + systime;
 		
 		struct stat_thread *thread = statistics_get_thread(conf, tid);
@@ -535,36 +535,36 @@ static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
 			}
 		}
 		
-		/* Count thread cpu usage (%) */
+		/* Count thread CPU utilization (%) */
 		if (thread->proc_time && total_cpu - conf->total_cpu > 0) {
 			usage = conf->cpus * (proc_time - thread->proc_time) * 100 / (float) (total_cpu - conf->total_cpu);
 		} else {
 			usage = 0.0;
 		}
 		
-		/* print statistics */
+		/* Print statistics */
 		MSG_INFO(stat_module, "%10d %7c %8.2f %% %15s", tid, state, usage, thread_name);
 		
-		/* update stats */
+		/* Update stats */
 		thread->proc_time = proc_time;
 	}
 
 	MSG_INFO(stat_module, "");
 	closedir(dir);
 
-	// Print to file
+	/* Print to file */
 	if (stat_out_file) {
-		// Add contents here
+		/* Add contents here */
 	}
 	
-	/* update stats */
+	/* Update stats */
 	conf->total_cpu = total_cpu;
 }
 
 /**
  * \brief Print queue usage
  * 
- * @param conf output manager's config
+ * @param conf Output Manager config
  * @param stat_out_file Output file for statistics
  */
 void statistics_print_buffers(struct output_manager_config *conf, FILE *stat_out_file)
@@ -604,7 +604,7 @@ static void *statistics_thread(void* config)
 	struct output_manager_config *conf = (struct output_manager_config *) config;
 	time_t begin = time(NULL), time_now, runtime;
 	
-	/* create statistics config */
+	/* Create statistics config */
 	conf->stats.total_cpu = 0;
 	conf->stats.threads = NULL;
 	conf->stats.cpus = sysconf(_SC_NPROCESSORS_ONLN);
@@ -637,7 +637,7 @@ static void *statistics_thread(void* config)
 				int max_len = strlen(stat_out_file_path) + 1 + 5 + 1;
 				char buf[max_len];
 
-				// snprintf ensures null-termination if (max_len != 0), which is always true
+				/* snprintf ensures null-termination if (max_len != 0), which is always true */
 				snprintf(buf, max_len, "%s.%d", stat_out_file_path, getpid());
 				stat_out_file = fopen(buf, "w");
 			} else {
@@ -646,7 +646,7 @@ static void *statistics_thread(void* config)
 
 			xmlFree(stat_out_file_path);
 
-			// No need to continue tree traversal, because 'statisticsFile' is only node to look for
+			/* No need to continue tree traversal, because 'statisticsFile' is only node to look for */
 			break;
 		}
 
@@ -656,13 +656,13 @@ static void *statistics_thread(void* config)
 	/* Catch SIGUSR1 */
 	signal(SIGUSR1, sig_handler);
 	
-	/* set thread name */
+	/* Set thread name */
 	prctl(PR_SET_NAME, "ipfixcol:stats", 0, 0, 0);
 	
 	while (conf->stat_interval) {
 		sleep(conf->stat_interval);
 		
-		/* killed by output manager*/
+		/* Killed by Output Manager */
 		if (conf->stats.done) {
 			break;
 		}
@@ -676,7 +676,7 @@ static void *statistics_thread(void* config)
 		MSG_INFO(stat_module, "Time: %lu, runtime: %lu", time_now, runtime);
 
 		if (stat_out_file) {
-			rewind(stat_out_file); // Move to beginning of file
+			rewind(stat_out_file); /* Move to beginning of file */
 			fprintf(stat_out_file, "%s=%lu\n", "TIME", time_now);
 			fprintf(stat_out_file, "%s=%lu\n", "RUNTIME", runtime);
 		}
@@ -749,10 +749,10 @@ static void *statistics_thread(void* config)
 			fflush(stat_out_file);
 		}
 		
-		/* print cpu usage by threads */
+		/* Print CPU usage by threads */
 		statistics_print_cpu(&(conf->stats), stat_out_file);
 		
-		/* print buffers usage */
+		/* Print buffer usage */
 		statistics_print_buffers(conf, stat_out_file);
 
 		MSG_INFO(stat_module, "");
@@ -785,12 +785,11 @@ int output_manager_create(configurator *plugins_config, int stat_interval, void 
 	conf->plugins_config = plugins_config;
 	
 	*config = conf;
-	
 	return 0;
 }
 
 /**
- * \brief Start Output Manager's thread(s)
+ * \brief Start Output Manager thread(s)
  * 
  * @return 0 on success
  */
@@ -829,7 +828,7 @@ void output_manager_close(void *config)
 	struct data_manager_config *aux_config = NULL, *tmp = NULL;
 	struct stat_thread *aux_thread = NULL, *tmp_thread = NULL;
 
-	/* Stop Output Manager's thread and free input buffer */
+	/* Stop Output Manager thread and free input buffer */
 	if (manager->running) {
 		rbuffer_write(manager->in_queue, NULL, 1);
 		pthread_join(manager->thread_id, NULL);
@@ -843,6 +842,7 @@ void output_manager_close(void *config)
 		}
 
 		aux_config = manager->data_managers;
+
 		/* Close all data managers */
 		while (aux_config) {
 			tmp = aux_config;
