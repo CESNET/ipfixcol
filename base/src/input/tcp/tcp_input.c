@@ -451,7 +451,9 @@ int input_init(char *params, void **config)
 
 			/* TLS configuration options */
 			for (cur_node = cur_node->xmlChildrenNode; cur_node; cur_node = cur_node->next) {
-				if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
+			if (cur_node->type == XML_ELEMENT_NODE
+						&& cur_node->children != NULL
+						&& cur_node->children->content != NULL) {
 					int tmp_val_len = strlen((char *) cur_node->children->content) + 1;
 					char *tmp_val = malloc(sizeof(char) * tmp_val_len);
 					if (!tmp_val) {
