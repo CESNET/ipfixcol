@@ -41,7 +41,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-
 #include <dirent.h>
 #include <errno.h>
 #include <limits.h>
@@ -294,7 +293,7 @@ char *utils_dir_from_path(char *path)
 /**
  * \brief Version of strncpy that ensures null-termination.
  */
-char *strncpy_safe (char *destination, const char *source, size_t num)
+char *strncpy_safe(char *destination, const char *source, size_t num)
 {
 	strncpy(destination, source, num);
 
@@ -309,10 +308,15 @@ char *strncpy_safe (char *destination, const char *source, size_t num)
  *
  * \return Converted integer value of the supplied String, INT_MAX otherwise.
  */
-int strtoi (const char* str, int base)
+int strtoi(const char* str, int base)
 {
 	char *end;
 	errno = 0;
+
+	if (str == NULL) {
+		return INT_MAX;
+	}
+	
 	const long ret_long = strtol(str, &end, base);
 	int ret_int;
 

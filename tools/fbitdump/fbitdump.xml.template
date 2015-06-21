@@ -21,13 +21,13 @@
 				is this element splitted.  
 			elements under <value type="plain"> have attribute 'semantics'. There are several pre-defined
 				options to format ouput columns: as
-				'ipv4'	 : expects uint32 column and prints it as IPv4 address
-				'ipv6'	 : expects uint64 column and prints it as IPv6 address. 'parts' attribute must be set to 2 
+				'ipv4'   : expects uint32 column and prints it as IPv4 address
+				'ipv6'   : expects uint64 column and prints it as IPv6 address. 'parts' attribute must be set to 2 
 				'tmstmp64': expects uint64 column (miliseconds since 1970) and prints it as timestamp
 				'tmstmp32': expects uint32 column (seconds since 1970) and prints it as timestamp
 				'tcpflags' : expects uint8 column and print it as TCP flags
 				'protocol' : expects uint8 column and prints a name of corresponding IP protocol
-				'flows'	: this is special column with no relation to the database. It is always computed as number of flows
+				'flows' : this is special column with no relation to the database. It is always computed as number of flows
 			elements under <value type="operation"> can also have attribute 'semantics'. Currently only following can be used:
 				'duration': formats miliseconds as seconds with precision 3.
 			elements under <value type="plain"> have attribute 'aggregation'. This determines how the columns is
@@ -1732,67 +1732,67 @@
 <plugins>
 	<plugin>
 		<name>httprt</name>
-		<path>/usr/share/fbitdump/plugins/httprt.so</path>
-                <plainLevel>1</plainLevel>
+		<path>@pkgdatadir@/plugins/httprt.so</path>
+		<plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>http_status_code</name>
-		<path>/usr/share/fbitdump/plugins/http_status_code.so</path>
-                <plainLevel>1</plainLevel>
+		<path>@pkgdatadir@/plugins/http_status_code.so</path>
+		<plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>sip_method</name>
-		<path>/usr/share/fbitdump/plugins/sip_method.so</path>
-                <plainLevel>1</plainLevel>
+		<path>@pkgdatadir@/plugins/sip_method.so</path>
+		<plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>dns_rcode</name>
-		<path>/usr/share/fbitdump/plugins/dns_rcode.so</path>
-                <plainLevel>1</plainLevel>
+		<path>@pkgdatadir@/plugins/dns_rcode.so</path>
+		<plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>tls_version</name>
-		<path>/usr/share/fbitdump/plugins/tls_version.so</path>
-                <plainLevel>1</plainLevel>
+		<path>@pkgdatadir@/plugins/tls_version.so</path>
+		<plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>tls_csuites</name>
-		<path>/usr/share/fbitdump/plugins/tls_csuites.so</path>
-                <plainLevel>1</plainLevel>
+		<path>@pkgdatadir@/plugins/tls_csuites.so</path>
+		<plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>tls_csuites_array</name>
-		<path>/usr/share/fbitdump/plugins/tls_csuites_array.so</path>
-                <plainLevel>1</plainLevel>
+		<path>@pkgdatadir@/plugins/tls_csuites_array.so</path>
+		<plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>voip_type</name>
-		<path>/usr/share/fbitdump/plugins/voip_type.so</path>
-                <plainLevel>1</plainLevel>
+		<path>@pkgdatadir@/plugins/voip_type.so</path>
+		<plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>voip_rtpcodec</name>
-		<path>/usr/share/fbitdump/plugins/voip_rtpcodec.so</path>
-                <plainLevel>1</plainLevel>
-    </plugin>
+		<path>@pkgdatadir@/plugins/voip_rtpcodec.so</path>
+		<plainLevel>1</plainLevel>
+	</plugin>
 	<plugin>
 		<name>smtp_statuscode</name>
-		<path>/usr/share/fbitdump/plugins/smtp_statuscode.so</path>
-                <plainLevel>1</plainLevel>
+		<path>@pkgdatadir@/plugins/smtp_statuscode.so</path>
+		<plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>smtp_command</name>
-		<path>/usr/share/fbitdump/plugins/smtp_command.so</path>
-                <plainLevel>1</plainLevel>
+		<path>@pkgdatadir@/plugins/smtp_command.so</path>
+		<plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>mac</name>
-		<path>/usr/share/fbitdump/plugins/mac.so</path>
+		<path>@pkgdatadir@/plugins/mac.so</path>
 		<plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
 		<name>multiplier</name>
-		<path>/usr/share/fbitdump/plugins/multiplier.so</path>
+		<path>@pkgdatadir@/plugins/multiplier.so</path>
 		<plainLevel>10</plainLevel>
 	</plugin>
 </plugins>

@@ -54,7 +54,6 @@
 namespace fbitdump
 {
 
-
 bool Printer::print(TableManager &tm)
 {
 	/* if there is nothing to print, return */
@@ -122,9 +121,9 @@ void Printer::printHeader() const
 
 		out << conf.getColumns()[i]->getName();
 	}
+
 	/* new line */
 	out << std::endl;
-
 }
 
 void Printer::printFooter(uint64_t numPrinted) const
@@ -144,6 +143,7 @@ void Printer::printFooter(uint64_t numPrinted) const
 			} else {
 				out << "Total ";
 			}
+
 			out << col->getName() << ": ";
 			std::string s = col->getSummaryType() + col->getSelectName();
 			Utils::formatNumber(st->getValue(s), out, conf.getPlainNumbers());
@@ -173,6 +173,7 @@ void Printer::printRow(const Cursor *cur) const
 
 		out << printValue(conf.getColumns()[i], cur);
 	}
+
 	out << "\n"; /* much faster then std::endl */
 }
 
@@ -193,13 +194,13 @@ const std::string Printer::printValue(const Column *col, const Cursor *cur) cons
 
 	std::string valueStr;
 
-	if (!col->getSemantics().empty() && ( col->getSemantics() != "flows" ) && ( col->format != NULL)) {
+	if (!col->getSemantics().empty() && (col->getSemantics() != "flows") && (col->format != NULL)) {
 		plugin_arg_t arg = {.type = val->type, .val = (const plugin_arg_val *) val->value};
-		col->format(&arg, (int) this->conf.getPlainNumbers(col->getSemantics()), plugin_buffer, col->pluginConf );
+		col->format(&arg, (int) this->conf.getPlainNumbers(col->getSemantics()), plugin_buffer, col->pluginConf);
 		valueStr.append(plugin_buffer);
-		
 	} else {
 		valueStr = val->toString(conf.getPlainNumbers());
+
 		/* when printing statistics, add percent part */
 		if (conf.getStatistics() && col->isSumSummary()) {
 			std::ostringstream ss;
@@ -208,7 +209,7 @@ const std::string Printer::printValue(const Column *col, const Cursor *cur) cons
 			sum = this->tableManager->getSummary()->getValue(name);
 
 			ss.precision(1);
-			ss << std::fixed << " (" << 100*val->toDouble()/sum << "%)";
+			ss << std::fixed << " (" << 100 * val->toDouble()/sum << "%)";
 			valueStr += ss.str();
 		}
 	}
@@ -220,13 +221,11 @@ const std::string Printer::printValue(const Column *col, const Cursor *cur) cons
 	plugin_buffer[0] = '\0';
 
 	return valueStr;
-
 }
 
 /* copy output stream and format */
 Printer::Printer(std::ostream &out, Configuration &conf):
 		out(out), conf(conf), tableManager(NULL), percentageWidth(8)
 {}
-
 
 }

@@ -144,12 +144,16 @@ int Configuration::init(int argc, char *argv[])
 				throw std::invalid_argument("-c requires a number specification");
 			}
 
-			this->maxRecords = atoi(optarg);
+			this->maxRecords = Utils::strtoi(optarg, 10);
+			if (this->maxRecords == INT_MAX) {
+				throw std::invalid_argument("-c requires an integer parameter");
+			}
+
 			maxCountSet = true; /* so that statistics knows whether to change the value */
 			break;
 		case 'D':
 			if (optarg == std::string("")) {
-				throw std::invalid_argument("-D requires a nameserver specification");
+				throw std::invalid_argument("-D requires a name server specification");
 			}
 
 			this->resolver = new Resolver(optarg);
@@ -165,13 +169,12 @@ int Configuration::init(int argc, char *argv[])
 					// Skip to next argument; make sure integer is not parsed as query filter
 					++optind;
 				} else {
-					this->plainLevel = 1;
+					this->plainLevel = 0;
 				}
 			} else {
-				this->plainLevel = Utils::strtoi(argv[optind], 10);
-
+				this->plainLevel = Utils::strtoi(optarg, 10);
 				if (this->plainLevel == INT_MAX) {
-					throw std::invalid_argument("-N requires an integer level specification");
+					throw std::invalid_argument("-N requires an integer parameter");
 				}
 			}
 
@@ -347,7 +350,7 @@ int Configuration::init(int argc, char *argv[])
 	/* open XML configuration file */
 	Utils::printStatus("Parsing configuration");
 	if (!this->doc.load_file(this->getXmlConfPath())) {
-		std::string err = std::string("XML '") + this->getXmlConfPath() + "' with columns configuration cannot be loaded!";
+		std::string err = std::string("XML '") + this->getXmlConfPath() + "' with columns configuration cannot be loaded";
 		throw std::invalid_argument(err);
 	}
 
@@ -371,14 +374,15 @@ int Configuration::init(int argc, char *argv[])
 	if (this->optm) {
 		this->processmOption(optionm);
 	}
-	Utils::printStatus( "Parsing column indexes");
+	Utils::printStatus("Parsing column indexes");
 
 	/* parse indexes line */
 	this->parseIndexColumns(const_cast<char*>(indexes.c_str()));
 
-	Utils::printStatus( "Loading modules");
-
-	this->loadModules();
+	Utils::printStatus("Loading modules");
+	if (this->loadModules() != 0) {
+		return 1;
+	}
 
 	/* read filter */
 	if (optind < argc) {
@@ -417,13 +421,11 @@ int Configuration::init(int argc, char *argv[])
 	this->plugins["protocol"].format = printProtocol;
 	this->plugins["tcpflags"].format = printTCPFlags;
 	this->plugins["duration"].format = printDuration;
-
-
 	this->plugins["tcpflags"].parse = parseFlags;
 	this->plugins["protocol"].parse = parseProto;
 	this->plugins["duration"].parse = parseDuration;
 
-	Utils::printStatus( "Preparing output format");
+	Utils::printStatus("Preparing output format");
 
 	/* prepare output format string from configuration file */
 	this->loadOutputFormat();
@@ -438,7 +440,7 @@ int Configuration::init(int argc, char *argv[])
 		return 1;
 	}
 
-	Utils::printStatus( "Searching for table parts");
+	Utils::printStatus("Searching for table parts");
 
 	/* search for table parts in specified directories */
 	this->searchForTableParts(tables);
@@ -488,7 +490,6 @@ void Configuration::searchForTableParts(stringVector &tables) throw (std::invali
 			this->parts.push_back(tables[i]);
 			continue;
 		}
-
 
 		/* read tables subdirectories, uses BFS */
 		DIR *d;
@@ -558,6 +559,7 @@ void Configuration::parseFormat(std::string format, std::string &orderby)
 
 			bool ok = true;
 			std::string alias = format.substr(matches[0].rm_so, matches[0].rm_eo - matches[0].rm_so);
+
 			/* discard processed part of the format string */
 			format = format.substr(matches[0].rm_eo);
 
@@ -604,11 +606,12 @@ void Configuration::parseFormat(std::string format, std::string &orderby)
 				std::cerr << e.what() << std::endl;
 			}
 		} else if ( err != REG_NOMATCH ) {
-			std::cerr << "Bad output format string" << std::endl;
+			std::cerr << "Malformed output format string" << std::endl;
 			break;
 		} else { /* rest is column separator */
 			col = new Column(format);
 			this->columns.push_back(col);
+
 			/* Nothing more to process */
 			format = "";
 		}
@@ -624,9 +627,9 @@ void Configuration::parseFormat(std::string format, std::string &orderby)
 		}
 
 		if (existing == orderby) {
-			MSG_ERROR("configuration", "No suitable column for sorting found in used format!");
+			MSG_ERROR("configuration", "No suitable column for sorting found in used format");
 		} else {
-			MSG_WARNING("configuration", "Sorting column '%s' not found in output format, using '%s'.", orderby.c_str(), existing.c_str());
+			MSG_WARNING("configuration", "Sorting column '%s' not found in output format; using '%s'", orderby.c_str(), existing.c_str());
 			orderby = existing;
 
 			delete this->orderColumn;
@@ -655,7 +658,6 @@ const columnVector Configuration::getAggregateColumns() const
 	/* go over all aliases */
 	for (stringSet::const_iterator aliasIt = this->aggregateColumnsAliases.begin();
 			aliasIt != this->aggregateColumnsAliases.end(); aliasIt++) {
-
 		try {
 			Column *col = new Column(this->doc, *aliasIt, this->aggregate);
 			aggregateColumns.push_back(col);
@@ -803,7 +805,6 @@ void Configuration::processmOption(std::string &order)
 
 	try {
 		Column *col = new Column(doc, order, this->getAggregate());
-
 		this->orderColumn = col;
 		return;
 	} catch (std::exception &e) {
@@ -887,8 +888,7 @@ bool Configuration::getOptionm() const
 Configuration::Configuration(): maxRecords(0), plainLevel(0), aggregate(false), quiet(false),
 		optm(false), orderColumn(NULL), resolver(NULL), statistics(false), orderAsc(true), extendedStats(false),
 		createIndexes(false), deleteIndexes(false), configFile(CONFIG_XML), templateInfo(false)
-{
-}
+{}
 
 void Configuration::pushCheckDir(std::string &dir, std::vector<std::string> &list)
 {
@@ -939,7 +939,6 @@ void Configuration::processMOption(stringVector &tables, const char *optarg, std
 				root = root.substr(0, slash);
 			}
 
-
 			if (!root.empty()) {
 				Utils::sanitizePath(root);
 			}
@@ -966,7 +965,7 @@ void Configuration::processMOption(stringVector &tables, const char *optarg, std
 		 * secondOpt = file2
 		 */
 		std::string firstOpt = optionr.substr(0, found);
-		std::string secondOpt = optionr.substr(found+1, optionr.length()-found);
+		std::string secondOpt = optionr.substr(found + 1, optionr.length()-found);
 		
 		Utils::sanitizePath(secondOpt);
 		uint16_t right_depth = std::count(secondOpt.begin(), secondOpt.end(), '/');
@@ -1004,7 +1003,6 @@ void Configuration::processMOption(stringVector &tables, const char *optarg, std
 			tables.push_back(table);
 		}
 	}
-	/* all done */
 }
 
 void Configuration::processROption(stringVector &tables, const char *optarg)
@@ -1015,7 +1013,7 @@ void Configuration::processROption(stringVector &tables, const char *optarg)
 	size_t pos = arg.find(':');
 	if (pos == arg.npos) {
 		/* Specified only one directory */
-	Utils::sanitizePath(arg);
+		Utils::sanitizePath(arg);
 		tables.push_back(arg);
 		return;
 	}
@@ -1110,19 +1108,20 @@ Resolver *Configuration::getResolver() const
 	return this->resolver;
 }
 
-void Configuration::loadModules()
+int Configuration::loadModules()
 {
 	pugi::xpath_node_set nodes = this->getXMLConfiguration().select_nodes("/configuration/plugins/plugin");
-	std::string path, plainLevel;
+	std::string name, path, plainLevel;
 	pluginConf aux_conf;
 	
 	for (pugi::xpath_node_set::const_iterator ii = nodes.begin(); ii != nodes.end(); ii++) {
 		pugi::xpath_node node = *ii;
 		if (this->plugins.find(node.node().child_value("name")) != this->plugins.end()) {
-			MSG_ERROR(msg_module, "Duplicit module names %s", node.node().child_value("name"));
+			MSG_ERROR(msg_module, "Duplicate module name: %s", node.node().child_value("name"));
 			continue;
 		}
 
+		name = node.node().child_value("name");
 		path = node.node().child_value("path");
 		plainLevel = node.node().child_value("plainLevel");
 		
@@ -1139,6 +1138,22 @@ void Configuration::loadModules()
 		aux_conf.handle = dlopen(path.c_str(), RTLD_LAZY);
 		if (!aux_conf.handle) {
 			std::cerr << dlerror() << std::endl;
+
+			/* Check whether module is used in any field specification */
+			pugi::xpath_node_set elements = this->getXMLConfiguration().select_nodes("/configuration/columns/column/value/element");
+			for (pugi::xpath_node_set::const_iterator jj = elements.begin(); jj != elements.end(); jj++) {
+				pugi::xpath_node element = *jj;
+
+				/* Retrieve value of 'semantic' attribute */
+				std::string semantics = element.node().attribute("semantics").value();
+
+				/* Stop loading fbitdump if module is used in field specification */
+				if (semantics.find(name) != std::string::npos) {
+					MSG_ERROR(msg_module, "Module is used in field specification; aborting...");
+					return 1;
+				}
+			}
+
 			continue;
 		}
 
@@ -1165,6 +1180,8 @@ void Configuration::loadModules()
 		
 		this->plugins[node.node().child_value("name")] = aux_conf;
 	}
+
+	return 0;
 }
 
 void Configuration::unloadModules() {
@@ -1173,6 +1190,7 @@ void Configuration::unloadModules() {
 			dlclose(it->second.handle);
 		}
 	}
+
 	this->plugins.clear();
 }
 
@@ -1197,4 +1215,5 @@ Configuration::~Configuration()
 
 /* Static variable with Configuration object */
 Configuration * Configuration::instance;
+
 } /* end of fbitdump namespace */

@@ -14,12 +14,12 @@
 		<date>5 December 2015</date>
 		<authorgroup>
 			<author>
-                <personname>
-    				<firstname>Petr</firstname>
-	    			<surname>Velan</surname>
-                </personname>
-                <email>petr.velan@cesnet.cz</email>
-                <contrib>developer</contrib>
+				<personname>
+					<firstname>Petr</firstname>
+					<surname>Velan</surname>
+				</personname>
+				<email>petr.velan@cesnet.cz</email>
+				<contrib>developer</contrib>
 			</author>
 		</authorgroup>
 		<orgname>The Liberouter Project</orgname>
@@ -35,14 +35,14 @@
 		<refname>fbitdump</refname>
 		<refpurpose>Tool for manipulating ipfix data in FastBit database format</refpurpose>
 	</refnamediv>
-    
-    <refsynopsisdiv>
-        <cmdsynopsis>
-            <command>fbitdump</command>
-            <arg>options</arg>
-            <arg>filter</arg>
-        </cmdsynopsis>
-    </refsynopsisdiv>
+	
+	<refsynopsisdiv>
+		<cmdsynopsis>
+			<command>fbitdump</command>
+			<arg>options</arg>
+			<arg>filter</arg>
+		</cmdsynopsis>
+	</refsynopsisdiv>
 
 	<refsect1>
 		<title>Description</title>
@@ -94,7 +94,7 @@
 				<term>-a</term>
 				<listitem>
 					<simpara>Aggregate flow data by standard 5-tuple (source IP, destination IP, source port, destination port, protocol).</simpara>
-                    <simpara>Columns with aliases %srcip4, %srcip6, %dstip4, %dstip6, %srcport, %dstport and %proto are expected to be defined in <filename>fbitdump.xml.</filename></simpara>
+					<simpara>Columns with aliases %srcip4, %srcip6, %dstip4, %dstip6, %srcport, %dstport and %proto are expected to be defined in <filename>fbitdump.xml.</filename></simpara>
 				</listitem>
 			</varlistentry>
 			
@@ -119,9 +119,9 @@
 				<term>-R <replaceable class="parameter">expr</replaceable></term>
 				<listitem>
 					<simpara>Read input from directory (and subdirectories recursively). Can be specified multiple times. <replaceable class="parameter">expr</replaceable> may be one of:</simpara>
-                    <simpara>/any/<emphasis>dir</emphasis> Read recursively all directories in directory <emphasis>dir</emphasis>.</simpara>
-                    <simpara>/any/<emphasis>dir1:dir2</emphasis> Read all directories from <emphasis>dir1</emphasis> to <emphasis>dir2</emphasis>. Directories are ordered using strverscmp(3).</simpara>
-                    <simpara>Directories are scanned recursively until directory containing fastbit part is found (contains '-part.txt').</simpara>
+					<simpara>/any/<emphasis>dir</emphasis> Read recursively all directories in directory <emphasis>dir</emphasis>.</simpara>
+					<simpara>/any/<emphasis>dir1:dir2</emphasis> Read all directories from <emphasis>dir1</emphasis> to <emphasis>dir2</emphasis>. Directories are ordered using strverscmp(3).</simpara>
+					<simpara>Directories are scanned recursively until directory containing fastbit part is found (contains '-part.txt').</simpara>
 				</listitem>
 			</varlistentry>
 			
@@ -139,7 +139,7 @@
 				<term>-m [<replaceable class="parameter">column [DESC|ASC]</replaceable>]</term>
 				<listitem>
 					<simpara>
-						Sort the flow records according to the specified column. Default is %ds column, i.e., the date first seen. 
+						Sort the flow records according to the specified column. Default is %ts column, i.e., the date first seen. 
 						This requires alias %column to be configured in <filename>fbitdump.xml</filename>. 
 						Optional DESC or ASC parameter can be specified after column which controls ordering direction: DESC for descending, ASC for ascending (default). 
 					</simpara>
@@ -242,40 +242,42 @@
 					<simpara>Print information about templates in directories specified by -R.</simpara>
 				</listitem>
 			</varlistentry>
-                        
-                        <varlistentry>
+						
+			<varlistentry>
 				<term>-S</term>
 				<listitem>
 					<simpara>Print available semantics.</simpara>
 				</listitem>
 			</varlistentry>
-                        
-                        <varlistentry>
+
+			<varlistentry>
 				<term>-O</term>
 				<listitem>
 					<simpara>Print available output formats.</simpara>
 				</listitem>
-			</varlistentry>
-                        
-                        <varlistentry>
+			</varlistentry> 
+
+			<varlistentry>
 				<term>-l</term>
 				<listitem>
 					<simpara>Print list of available formatting/parsing plugins.</simpara>
 				</listitem>
 			</varlistentry>
-                        <varlistentry>
-                            <term>-P <replaceable class="parameter">filter</replaceable></term>
-                            <listitem>
-                                <simpara>Post-aggregation filter. Only usable when aggregating. Must contain only columns from aggregated table.
-                                Syntax is the same as for basic filter.</simpara>
-                            </listitem>
-                        </varlistentry>
-						<varlistentry>
-                            <term>-Z</term>
-                            <listitem>>
-                                <simpara>Check filter syntax and exit.</simpara>
-                            </listitem>
-                        </varlistentry>
+
+			<varlistentry>
+				<term>-P <replaceable class="parameter">filter</replaceable></term>
+				<listitem>
+					<simpara>Post-aggregation filter. Only usable when aggregating. Must contain only columns from aggregated table.
+					Syntax is the same as for basic filter.</simpara>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>-Z</term>
+				<listitem>
+					<simpara>Check filter syntax and exit.</simpara>
+				</listitem>
+			</varlistentry>
 		</variablelist>
 	</refsect1>
 
@@ -358,26 +360,26 @@
 			<emphasis>and</emphasis> or <emphasis>or</emphasis> keyword. This is case independent.</simpara>
 		<simpara>Unlike nfdump, <emphasis>expr</emphasis> consists of</simpara>
 		<simpara>[NOT] <emphasis>%column</emphasis> <emphasis>cmp</emphasis> <emphasis>value</emphasis></simpara>
-        <simpara>[NOT] <emphasis>value</emphasis> <emphasis>cmp</emphasis> <emphasis>%column</emphasis></simpara>
-        <simpara>[NOT] <emphasis>%column</emphasis> <emphasis>cmp</emphasis> <emphasis>%column</emphasis></simpara>
+		<simpara>[NOT] <emphasis>value</emphasis> <emphasis>cmp</emphasis> <emphasis>%column</emphasis></simpara>
+		<simpara>[NOT] <emphasis>%column</emphasis> <emphasis>cmp</emphasis> <emphasis>%column</emphasis></simpara>
 		<simpara>[NOT] <emphasis>exists</emphasis> <emphasis>%column</emphasis></simpara>
 		<simpara>where <emphasis>cmp</emphasis> is not required (it will be added implicitly)</simpara>
 		<simpara><emphasis>%column</emphasis> is an element alias prefixed with %. %column element can be a computed value, that is a value that is not directly stored.
 		Alternately it is possible to specify the element name in e[x]id[y] format, where [x] means enterprise number and [y] element ID.
 		It is also possible to specify a group of columns (e.g., <emphasis>%port</emphasis> for source and destination port)</simpara>
 		<simpara><emphasis>cmp</emphasis> is one of '=', '==', '&lt;', '&gt;', '&lt;=', '&gt;=', '!='.
-        When filtering by string, '%' mark can be automatically inserted to the end or/and beginning of string value according to <emphasis>cmp</emphasis>:</simpara> 
-        <simplelist>
-                <member><emphasis>cmp</emphasis> is empty - looking for texts containing given string, '%' is inserted at both ends of string</member>
-                <member><emphasis>cmp</emphasis> is '=' - looking for exact match</member>
-                <member><emphasis>cmp</emphasis> is '&gt;' - looking for texts starting with given string, '%' is inserted at the beginning</member>
-                <member><emphasis>cmp</emphasis> is '&lt;' - looking for texts ending with given string, '%' is inserted at the end</member>
-        </simplelist>
+		When filtering by string, '%' mark can be automatically inserted to the end or/and beginning of string value according to <emphasis>cmp</emphasis>:</simpara> 
+		<simplelist>
+				<member><emphasis>cmp</emphasis> is empty - looking for texts containing given string, '%' is inserted at both ends of string</member>
+				<member><emphasis>cmp</emphasis> is '=' - looking for exact match</member>
+				<member><emphasis>cmp</emphasis> is '&gt;' - looking for texts starting with given string, '%' is inserted at the beginning</member>
+				<member><emphasis>cmp</emphasis> is '&lt;' - looking for texts ending with given string, '%' is inserted at the end</member>
+		</simplelist>
 		<simpara><emphasis>value</emphasis> is value of the column to compare with. The value can be specified as one of:</simpara>
 		<simplelist>
 				<member>Decimal number, optionally with one of [kKmMgGtT] suffix</member>
 				<member>Hexadecimal number in 0x.... format</member>
-                                <member>Float number, optionally with one of [kKmMgGtT] suffix</member>
+								<member>Float number, optionally with one of [kKmMgGtT] suffix</member>
 								<member>MAC address</member>
 				<member>IPv4 address in decimal format</member>
 				<member>IPv6 address in decimal format</member>
@@ -390,8 +392,8 @@
 		
 		<simpara>When filter contains <emphasis>NOT</emphasis>, whole expression is negated.</simpara>
 			
-        <simpara>Brackets '(' and ')' are also supported and can be used for creating complicated filter.</simpara>
-        
+		<simpara>Brackets '(' and ')' are also supported and can be used for creating complicated filter.</simpara>
+		
 		<simpara>Indexes will be built automatically on columns specified in filter clause, thus first query for any data without indexes might run longer.</simpara>
 	</refsect1>
 

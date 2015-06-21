@@ -323,7 +323,7 @@ private:
     /**
      * \brief Load plugins for parsing input and formatting output
      */
-	void loadModules();
+	int loadModules();
 
     /**
      * \brief Prints help to standard output

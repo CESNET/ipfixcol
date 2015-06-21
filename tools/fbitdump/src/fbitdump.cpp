@@ -120,7 +120,6 @@ int main(int argc, char *argv[])
 		/* check whether to delete indexes */
 		if (conf.getDeleteIndexes()) {
 			Utils::printStatus("Deleting indexes");
-
 			IndexManager::deleteIndexes(conf, tm);
 
 			if (access (conf.pipe_name.c_str(), F_OK ) == 0 ) {
@@ -173,7 +172,7 @@ int main(int argc, char *argv[])
 				tm.filter(filter);
 			}
 
-			/* clear line with spaces - removing progressbar if anny */
+			/* clear line with spaces - removing progress bar if any */
 			if (isatty(fileno(stdout))) {
 				std::cout.width(80);
 				std::cout.fill( ' ');
