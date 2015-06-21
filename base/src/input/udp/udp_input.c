@@ -389,16 +389,16 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 	}
 
 	/* Convert packet from Netflow v5/v9/sflow to IPFIX format */
-	if (htons(((struct ipfix_header *)(*packet))->version) != IPFIX_VERSION) {
+	if (htons(((struct ipfix_header *) (*packet))->version) != IPFIX_VERSION) {
 		convert_packet(packet, &length, (char *) conf->info_list);
 	}
 
 	/* Check if lengths are the same */
-	if (length < htons(((struct ipfix_header *)*packet)->length)) {
-		MSG_DEBUG(msg_module, "length = %d, header->length = %d", length, htons(((struct ipfix_header *)*packet)->length));
+	if (length < htons(((struct ipfix_header *) *packet)->length)) {
+		MSG_DEBUG(msg_module, "length = %d, header->length = %d", length, htons(((struct ipfix_header *) *packet)->length));
 		return INPUT_INTR;
-	} else if (length > htons(((struct ipfix_header *)*packet)->length)) {
-		length = htons(((struct ipfix_header *)*packet)->length);
+	} else if (length > htons(((struct ipfix_header *) *packet)->length)) {
+		length = htons(((struct ipfix_header *) *packet)->length);
 	}
 
 	/* go through input_info_list */
