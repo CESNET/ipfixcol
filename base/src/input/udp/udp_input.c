@@ -158,7 +158,9 @@ int input_init(char *params, void **config)
 
 	/* go over all elements */
 	for (cur_node = root_element->children; cur_node; cur_node = cur_node->next) {
-		if (cur_node->type == XML_ELEMENT_NODE && cur_node->children != NULL) {
+		if (cur_node->type == XML_ELEMENT_NODE
+				&& cur_node->children != NULL
+				&& cur_node->children->content != NULL) {
 			/* copy value to memory - don't forget the terminating zero */
 			int tmp_val_len = strlen((char *) cur_node->children->content) + 1;
 			char *tmp_val = malloc(sizeof(char) * tmp_val_len);
@@ -387,16 +389,16 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 	}
 
 	/* Convert packet from Netflow v5/v9/sflow to IPFIX format */
-	if (htons(((struct ipfix_header *)(*packet))->version) != IPFIX_VERSION) {
+	if (htons(((struct ipfix_header *) (*packet))->version) != IPFIX_VERSION) {
 		convert_packet(packet, &length, (char *) conf->info_list);
 	}
 
 	/* Check if lengths are the same */
-	if (length < htons(((struct ipfix_header *)*packet)->length)) {
-		MSG_DEBUG(msg_module, "length = %d, header->length = %d", length, htons(((struct ipfix_header *)*packet)->length));
+	if (length < htons(((struct ipfix_header *) *packet)->length)) {
+		MSG_DEBUG(msg_module, "length = %d, header->length = %d", length, htons(((struct ipfix_header *) *packet)->length));
 		return INPUT_INTR;
-	} else if (length > htons(((struct ipfix_header *)*packet)->length)) {
-		length = htons(((struct ipfix_header *)*packet)->length);
+	} else if (length > htons(((struct ipfix_header *) *packet)->length)) {
+		length = htons(((struct ipfix_header *) *packet)->length);
 	}
 
 	/* go through input_info_list */

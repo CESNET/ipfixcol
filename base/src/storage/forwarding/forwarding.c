@@ -232,12 +232,12 @@ sisoconf *process_destination(forwarding *conf, xmlDoc *doc, xmlNodePtr node)
 	for (; node != NULL; node = node->next) {
 		if (!xmlStrcmp(node->name, (const xmlChar *) "ip")) {
 			if (ip) {
-				free((void*)ip);
+				free((void *) ip);
 			}
 			ip = (const char *) xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
 		} else if (!xmlStrcmp(node->name, (const xmlChar *) "port")) {
 			if (port) {
-				free((void*)port);
+				free((void *) port);
 			}
 			port = (const char *) xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
 		}
@@ -246,11 +246,11 @@ sisoconf *process_destination(forwarding *conf, xmlDoc *doc, xmlNodePtr node)
 	sisoconf *sender = create_sender(conf, ip, port);
 
 	if (ip) {
-		free((void*)ip);
+		free((void *) ip);
 	}
 
 	if (port) {
-		free((void*)port);
+		free((void *) port);
 	}
 
 	return sender;
@@ -261,12 +261,12 @@ void load_default_values(forwarding *conf, xmlDoc *doc, xmlNodePtr node)
 	for (; node != NULL; node = node->next) {
 		if (!xmlStrcmp(node->name, (const xmlChar *) "defaultPort")) {
 			if (conf->default_port) {
-				free((void*)conf->default_port);
+				free((void *) conf->default_port);
 			}
 			conf->default_port = (const char *) xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
 		} else if (!xmlStrcmp(node->name, (const xmlChar *) "protocol")) {
 			if (conf->default_protocol) {
-				free((void*)conf->default_protocol);
+				free((void *) conf->default_protocol);
 			}
 			conf->default_protocol = (const char *) xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
 		}
@@ -335,7 +335,7 @@ bool forwarding_init_conf(forwarding *conf, xmlDoc *doc, xmlNodePtr root)
 	}
 
 	if (conf->senders_cnt == 0) {
-		MSG_ERROR(msg_module, "No valid destination found!");
+		MSG_ERROR(msg_module, "No valid destination found");
 		return false;
 	}
 
@@ -786,7 +786,7 @@ void send_packet(forwarding *conf, void *msg, int length, int templ_only_len)
  * \return 0 on success
  */
 int store_packet(void *config, const struct ipfix_message *ipfix_msg,
-				 const struct ipfix_template_mgr *template_mgr)
+		const struct ipfix_template_mgr *template_mgr)
 {
 	(void) template_mgr;
 	forwarding *conf = (forwarding *) config;
@@ -851,6 +851,14 @@ int storage_close(void **config)
 		siso_destroy(conf->senders[i]);
 	}
 
+	if (conf->default_port) {
+		free((void *) conf->default_port);
+	}
+
+	if (conf->default_protocol) {
+		free((void *) conf->default_protocol);
+	}
+	
 	free(conf->senders);
 	free(conf->records);
 	free(conf);

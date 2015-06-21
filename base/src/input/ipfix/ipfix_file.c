@@ -92,8 +92,8 @@ struct ipfix_config {
  *
  * Open next input file from list of available input files.
  *
- * \param[in] conf  input plugin config structure
- * \return  0 on success, negative value otherwise. In case
+ * \param[in] conf input plugin config structure
+ * \return 0 on success, negative value otherwise. In case
  * that there is no more input files to process conf->fd is 
  * set to NO_INPUT_FILE
  */
@@ -147,9 +147,7 @@ static int prepare_input_file(struct ipfix_config *conf)
  */
 static int close_input_file(struct ipfix_config *conf)
 {
-	int ret;
-
-	ret = close(conf->fd);
+	int ret = close(conf->fd);
 	if (ret == -1) {
 		MSG_ERROR(msg_module, "Error when closing output file");
 		return -1;
@@ -158,7 +156,6 @@ static int close_input_file(struct ipfix_config *conf)
 	MSG_NOTICE(msg_module, "Input file closed");
 
 	conf->fd = -1;
-
 	return 0;
 }
 
@@ -185,22 +182,18 @@ static int next_file(struct ipfix_config *conf)
 		ret = prepare_input_file(conf);
 	
 		if (conf->fd == NO_INPUT_FILE) {
-			/* no more input files */
+			/* No more input files */
 			return NO_INPUT_FILE;
 		} else if (ret == 0) {
-			/* ok, new input file ready */
+			/* OK, new input file ready */
 			break;
 		} else {
-			// Do nothing
+			/* Do nothing */
 		}
 	}
 
 	return ret;
 }
-
-/*
- * * * * Input plugin API implementation
-*/
 
 /**
  * \brief Plugin initialization
@@ -221,10 +214,9 @@ int input_init(char *params, void **config)
 	/* allocate memory for config structure */
 	conf = (struct ipfix_config *) calloc(1, sizeof(*conf));
 	if (!conf) {
-		MSG_ERROR(msg_module, "Not enough memory");
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
-	memset(conf, '\0', sizeof(*conf));
 
 	/* try to parse configuration file */
 	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
@@ -239,14 +231,14 @@ int input_init(char *params, void **config)
 		goto err_xml;
 	}
 	if (xmlStrcmp(cur->name, (const xmlChar *) "fileReader")) {
-		MSG_ERROR(msg_module, "root node != fileReader");
+		MSG_ERROR(msg_module, "Root node != fileReader");
 		goto err_init;
 	}
 
 	cur = cur->xmlChildrenNode;
 	while (cur != NULL) {
 		/* find out where to look for input file */
-		if ((!xmlStrcmp(cur->name, (const xmlChar *) "file"))) {
+		if (!xmlStrcmp(cur->name, (const xmlChar *) "file")) {
 			conf->xml_file = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
 			break;
 		}
@@ -262,7 +254,7 @@ int input_init(char *params, void **config)
 
 	/* we only support local files */
 	if (strncmp((char *) conf->xml_file, "file:", 5)) {
-		MSG_ERROR(msg_module, "element \"file\": invalid URI - only allowed scheme is \"file:\"");
+		MSG_ERROR(msg_module, "Element \"file\": invalid URI - allowed scheme is \"file:\"");
 		goto err_xml;
 	}
 
@@ -273,7 +265,6 @@ int input_init(char *params, void **config)
 	xmlFreeDoc(doc);
 
 	input_files = utils_files_from_path(conf->file);
-	
 	if (!input_files) {
 		goto err_init;
 	}
@@ -291,7 +282,7 @@ int input_init(char *params, void **config)
 	ret = next_file(conf);
 	if (ret < 0) {
 		/* no input files */
-		MSG_ERROR(msg_module, "No input files; nothing to do");
+		MSG_ERROR(msg_module, "No input file(s); nothing to do");
 		goto err_init;
 	}
 
@@ -303,6 +294,14 @@ err_xml:
 
 err_init:
 	/* plugin initialization failed */
+	if (conf->xml_file) {
+		xmlFree(conf->xml_file);
+	}
+
+	if (conf->input_files) {
+		free(conf->input_files);
+	}
+
 	free(conf);
 	*config = NULL;
 
@@ -331,14 +330,13 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 	char *packet_orig;	
 
 	conf = (struct ipfix_config *) config;
-	
 	*info = (struct input_info *) &(conf->in_info_list->in_info);
 	
 	packet_orig = *packet;
 	
 	header = (struct ipfix_header *) malloc(sizeof(*header));
 	if (!header) {
-		MSG_ERROR(msg_module, "Not enough memory");
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return INPUT_ERROR;
 	}
 
@@ -350,7 +348,7 @@ read_header:
 			ret = INPUT_INTR;
 			goto err_header;
 		}
-		MSG_ERROR(msg_module, "Failed to read IPFIX packet header: %s", strerror(errno));
+		MSG_ERROR(msg_module, "Failed to read IPFIX message header: %s", strerror(errno));
 		ret = INPUT_ERROR;
 		goto err_header;
 	}
@@ -370,10 +368,11 @@ read_header:
 	/* check magic number */
 	if (ntohs(header->version) != IPFIX_VERSION) {
 		/* not an IPFIX file */
-		MSG_ERROR(msg_module, "Bad magic number. Expected %x, got %x", IPFIX_VERSION, ntohs(header->version));
+		MSG_ERROR(msg_module, "Bad magic number; expected %x, got %x", IPFIX_VERSION, ntohs(header->version));
+
 		/* we don't know how big is this message. It's not IPFIX message or
 		 * header is corrupted. skip whole file */
-		MSG_ERROR(msg_module, "Input file may be corrupted. Skipping");
+		MSG_ERROR(msg_module, "Input file may be corrupted; skipping...");
 
 		/* try to open next input file */
 		*source_status = SOURCE_STATUS_CLOSED;
@@ -399,7 +398,7 @@ read_header:
 		/* allocate memory for whole IPFIX message */
 		*packet = (char *) malloc(packet_len);
 		if (*packet == NULL) {
-			MSG_ERROR(msg_module, "Not enough memory");
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			goto err_header;
 		}
 	}
@@ -465,7 +464,7 @@ err_header:
 /**
  * \brief Clean up
  *
- * \param[in] config  configuration structure
+ * \param[in] config configuration structure
  * \return 0 on success, negative value otherwise
  */
 int input_close(void **config)
@@ -488,7 +487,7 @@ int input_close(void **config)
 		free(aux_list);
 		aux_list = conf->in_info_list;
 	}
-	
+
 	xmlFree(conf->xml_file);
 	free(conf->in_info);
 	free(conf);
