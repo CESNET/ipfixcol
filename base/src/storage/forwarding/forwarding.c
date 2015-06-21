@@ -851,6 +851,14 @@ int storage_close(void **config)
 		siso_destroy(conf->senders[i]);
 	}
 
+	if (conf->default_port) {
+		free((void *) conf->default_port);
+	}
+
+	if (conf->default_protocol) {
+		free((void *) conf->default_protocol);
+	}
+	
 	free(conf->senders);
 	free(conf->records);
 	free(conf);
