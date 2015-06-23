@@ -37,6 +37,9 @@
  *
  */
 
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
 #include <ipfixcol.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,6 +61,7 @@
 #define NETFLOW_V5_TEMPLATE_LEN 76
 #define NETFLOW_V5_DATA_SET_LEN 52
 #define NETFLOW_V5_NUM_OF_FIELDS 17
+#define NETFLOW_V5_MAX_RECORD_COUNT 30
 
 #define NETFLOW_V9_TEMPLATE_SET_ID 0
 #define NETFLOW_V9_OPT_TEMPLATE_SET_ID 1
@@ -624,7 +628,7 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 			uint64_t unNsec = ntohl(*((uint32_t *) (((uint8_t *) header) + 12)));
 			uint64_t time_header = (unSec * 1000) + (unNsec / 1000000);
 
-			numOfFlowSamples = ntohs(header->length);
+			numOfFlowSamples = MIN(ntohs(header->length), NETFLOW_V5_MAX_RECORD_COUNT);
 
 			/* Header modification */
 			header->export_time = header->sequence_number;
