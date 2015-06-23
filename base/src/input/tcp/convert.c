@@ -363,8 +363,13 @@ int insert_timestamp_template(struct ipfix_set_header *templSet)
 			}
 		}
 
-		int len = templates.cols * id;
-		int pos = len + 1;
+		uint32_t len = templates.cols * id;
+		uint32_t pos = len + 1;
+
+		/* Input check: avoid overflow due to malicious flowset IDs */
+		if (len > templates.max * templates.cols) {
+			return 1;
+		}
 
 		/* Set default values for length and timestamp position */
 		templates.templ[len] = 0;
@@ -480,8 +485,13 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
 	id = ntohs(tmp->flowset_id) - IPFIX_MIN_RECORD_FLOWSET_ID;
 	len = ntohs(tmp->length) - 4;
 
-	int lenIndex = templates.cols * id;
-	int posIndex = lenIndex + 1;
+	uint32_t lenIndex = templates.cols * id;
+	uint32_t posIndex = lenIndex + 1;
+
+	/* Input check: avoid overflow due to malicious flowset IDs */
+	if (lenIndex > templates.max * templates.cols) {
+		return 0;
+	}
 
 	/* Get number of data records using the same template */
 	if (templates.templ[lenIndex] <= 0) {
