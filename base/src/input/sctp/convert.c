@@ -146,10 +146,10 @@ static uint32_t buff_len = 0;
  * \brief  List structure for input info
  */
 struct input_info_list {
-  struct input_info_network info;
-  struct input_info_list *next;
-  uint32_t last_sent;
-  uint16_t packets_sent;
+	struct input_info_network info;
+	struct input_info_list *next;
+	uint32_t last_sent;
+	uint16_t packets_sent;
 };
 
 struct templates_s {
@@ -225,7 +225,7 @@ int templates_realloc() {
 	/* Initialize allocated memory */
 	unsigned int i;
 	for (i = (templates.max - 20) * templates.cols; i < templates.max * templates.cols; i++) {
-			templates.templ[i] = 0;
+		templates.templ[i] = 0;
 	}
 
 	return 0;
@@ -326,7 +326,7 @@ uint16_t insert_template_set(char **packet, int numOfFlowSamples, ssize_t *len)
 	}
 }
 
-/* \brief Inserts 64b timestamps into netflow v9 template
+/* \brief Insert 64b timestamps into NetFlow v9 templates
  *
  * Finds original timestamps (e.id 21 and 22) and replaces them with 152 and 153
  *
@@ -357,6 +357,7 @@ int insert_timestamp_template(struct ipfix_set_header *templSet)
 			if (templates.templ == NULL) {
 				return 1;
 			}
+
 			unsigned int i;
 			for (i = (templates.max - 20) * templates.cols; i < templates.max * templates.cols; i++) {
 					templates.templ[i] = 0;
@@ -404,6 +405,7 @@ int insert_timestamp_template(struct ipfix_set_header *templSet)
 			}
 		}
 	}
+
 	return 0;
 }
 
@@ -464,9 +466,9 @@ int unpack_enterprise_elements(struct ipfix_set_header *templateSet, uint32_t re
 }
 
 /**
- * \brief Inserts 64b timestamps into netflow v9 Data Set
+ * \brief Insert 64b timestamps into NetFlow v9 data set
  *
- * Finds original timestamps and replaces them by 64b ipfix timestamps
+ * Finds original timestamps and replaces them with 64b 'IPFIX' timestamps
  *
  * \param dataSet pointer to Data Set
  * \param time_header time from packet header
@@ -696,7 +698,7 @@ int convert_packet(char **packet, ssize_t *len, char *input_info)
 		/* sFlow packet */
 		default:
 #ifdef ENABLE_SFLOW
-			/* Conversion from sflow to Netflow v50like IPFIX packet */
+			/* Conversion from sflow to Netflow v5-like IPFIX packet */
 			numOfFlowSamples = Process_sflow(*packet, *len);
 
 			/* Observation domain ID is unknown */

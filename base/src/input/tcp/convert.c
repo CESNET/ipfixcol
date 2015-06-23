@@ -404,6 +404,7 @@ int insert_timestamp_template(struct ipfix_set_header *templSet)
 			}
 		}
 	}
+
 	return 0;
 }
 
@@ -696,7 +697,7 @@ int convert_packet(char **packet, ssize_t *len, char *input_info)
 		/* sFlow packet */
 		default:
 #ifdef ENABLE_SFLOW
-			/* Conversion from sflow to Netflow v50like IPFIX packet */
+			/* Conversion from sflow to Netflow v5-like IPFIX packet */
 			numOfFlowSamples = Process_sflow(*packet, *len);
 
 			/* Observation domain ID is unknown */
