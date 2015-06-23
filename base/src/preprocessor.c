@@ -541,7 +541,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
  * @param input_info Input informations about source etc.
  * @param source_status Status of source (new, opened, closed)
  */
-void preprocessor_parse_msg (void* packet, int len, struct input_info* input_info, int source_status)
+void preprocessor_parse_msg(void* packet, int len, struct input_info* input_info, int source_status)
 {
 	struct ipfix_message* msg;
 	uint32_t *seqn;

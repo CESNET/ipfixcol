@@ -52,7 +52,7 @@
 #endif
 #include "inttypes.h"
 
-/** Netflow v5 and v9 identifiers */
+/** NetFlow v5 and v9 identifiers */
 #define SET_HEADER_LEN 4
 
 #define NETFLOW_V5_VERSION 5
@@ -175,6 +175,15 @@ static inline void modify()
 	netflow_v5_data_header[1] = htons(netflow_v5_data_header[1]);
 }
 
+/**
+  * \brief Prepare static variables used for inserting template and data sets
+  *
+  * Also allocate memory for templates
+  *
+  * \param[in] in_plugin Type of input plugin (UDP_PLUGIN...)
+  * \param[in] len Length of buff used in plugins
+  * \return 0 on success
+  */
 int convert_init(int in_plugin, int len) {
 	/* Initialize templates structure */
 	templates.max = 30;
@@ -222,8 +231,10 @@ int templates_realloc() {
 	return 0;
 }
 
+/**
+  * \brief Reallocate memory for templates
+  */
 void convert_close() {
-	/* Free allocated memory */
 	free(templates.templ);
 }
 
@@ -533,8 +544,9 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
  * \param[out] packet Flow information data in the form of IPFIX packet.
  * \param[in] len Length of packet
  * \param[in] input_info Information structure storing data needed for refreshing templates
+ * \return 0 on success
  */
-void convert_packet(char **packet, ssize_t *len, char *input_info)
+int convert_packet(char **packet, ssize_t *len, char *input_info)
 {
 	struct ipfix_header *header = (struct ipfix_header *) *packet;
 	uint16_t numOfFlowSamples = 0;
@@ -569,7 +581,7 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 						set_header->flowset_id = htons(IPFIX_TEMPLATE_FLOWSET_ID);
 						if (ntohs(set_header->length) > 0) {
 							if (insert_timestamp_template(set_header) != 0) {
-								return;
+								return -1;
 							}
 
 							/* Check for enterprise elements */
@@ -607,7 +619,7 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 
 				if (ntohs(header->length) > *len) {
 					/* Real length of packet is smaller than it should be */
-					return;
+					return -1;
 				}
 
 				uint16_t set_len = ntohs(set_header->length);
@@ -671,14 +683,14 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 
 			break; }
 
-		/* SFLOW packet (converted to Netflow v5 like packet */
+		/* sFlow packet */
 		default:
 #ifdef ENABLE_SFLOW
-			/* Conversion from sflow to Netflow v5 like IPFIX packet */
+			/* Conversion from sflow to Netflow v50like IPFIX packet */
 			numOfFlowSamples = Process_sflow(*packet, *len);
 
 			/* Observation domain ID is unknown */
-			header->observation_domain_id = 0; // ??
+			header->observation_domain_id = 0;
 
 			header->export_time = htonl((uint32_t) time(NULL));
 
@@ -689,9 +701,14 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 			if (*len >= htons(header->length)) {
 				seqNo[SF_SEQ_N] += numOfFlowSamples;
 			}
+#else
+			/* Conversion error */
+			return -1;
 #endif
 			break;
 	}
 
 	header->version = htons(IPFIX_VERSION);
+
+	return 0;
 }

@@ -390,12 +390,14 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 
 	/* Convert packet from Netflow v5/v9/sflow to IPFIX format */
 	if (htons(((struct ipfix_header *) (*packet))->version) != IPFIX_VERSION) {
-		convert_packet(packet, &length, (char *) conf->info_list);
+		if (convert_packet(packet, &length, (char *) conf->info_list) != 0) {
+			MSG_WARNING(msg_module, "Message conversion error; skipping message...");
+			return INPUT_INTR;
+		}
 	}
 
 	/* Check if lengths are the same */
 	if (length < htons(((struct ipfix_header *) *packet)->length)) {
-		MSG_DEBUG(msg_module, "length = %d, header->length = %d", length, htons(((struct ipfix_header *) *packet)->length));
 		return INPUT_INTR;
 	} else if (length > htons(((struct ipfix_header *) *packet)->length)) {
 		length = htons(((struct ipfix_header *) *packet)->length);
@@ -411,15 +413,16 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 					break;
 				}
 			} else {
-				if (info_list->info.src_addr.ipv6.s6_addr32[0] == address.sin6_addr.s6_addr32[0] &&
-						info_list->info.src_addr.ipv6.s6_addr32[1] == address.sin6_addr.s6_addr32[1] &&
-						info_list->info.src_addr.ipv6.s6_addr32[2] == address.sin6_addr.s6_addr32[2] &&
-						info_list->info.src_addr.ipv6.s6_addr32[3] == address.sin6_addr.s6_addr32[3]) {
+				if (info_list->info.src_addr.ipv6.s6_addr32[0] == address.sin6_addr.s6_addr32[0]
+						&& info_list->info.src_addr.ipv6.s6_addr32[1] == address.sin6_addr.s6_addr32[1]
+						&& info_list->info.src_addr.ipv6.s6_addr32[2] == address.sin6_addr.s6_addr32[2]
+						&& info_list->info.src_addr.ipv6.s6_addr32[3] == address.sin6_addr.s6_addr32[3]) {
 					break;
 				}
 			}
 		}
 	}
+
 	/* check whether we found the input_info */
 	if (info_list == NULL) {
 		MSG_NOTICE(msg_module, "New UDP exporter connected (unique port and address)");
