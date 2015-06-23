@@ -1172,6 +1172,7 @@ int config_reconf(configurator *config)
 	
 	startup_config *new_startup = config_create_startup(config);
 	if (!new_startup) {
+		xmlFreeDoc(config->new_doc);
 		return 1;
 	}
 	
