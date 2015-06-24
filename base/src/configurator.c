@@ -69,7 +69,7 @@ configurator *global_config = NULL;
 #define CHECK_ALLOC(_ptr_, _ret_)\
 do {\
 	if (!(_ptr_)) {\
-		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);\
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);\
 		return (_ret_);\
 	}\
 } while (0)
@@ -109,17 +109,17 @@ xmlDoc *config_open_xml(const char *filename)
 	/* Open file */
 	int fd = open(filename, O_RDONLY);
 	if (fd == -1) {
-		MSG_ERROR(msg_module, "Unable to open configuration file %s (%s)", filename, strerror(errno));
+		MSG_ERROR(msg_module, "Unable to open configuration file %s: %s", filename, strerror(errno));
 		return NULL;
 	}
 	
 	/* Parse it */
-	xmlDoc *xml_file = xmlReadFd (fd, NULL, NULL, XML_PARSE_NOERROR | XML_PARSE_NOWARNING | XML_PARSE_NOBLANKS);
+	xmlDoc *xml_file = xmlReadFd(fd, NULL, NULL, XML_PARSE_NOERROR | XML_PARSE_NOWARNING | XML_PARSE_NOBLANKS);
 	if (!xml_file) {
 		MSG_ERROR(msg_module, "Unable to parse configuration file %s", filename);
 		xml_file = NULL;
 	}
-	close (fd);
+	close(fd);
 	
 	return xml_file;
 }
@@ -641,7 +641,7 @@ int config_compare_xml(struct plugin_xml_conf *first, struct plugin_xml_conf *se
 	
 	sbuf = calloc(1, 2000);
 	if (!sbuf) {
-		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		free(fbuf);
 		return 1;
 	}
@@ -914,7 +914,7 @@ startup_config *config_create_startup(configurator *config)
 		startup->input[i] = calloc(1, sizeof(struct plugin_config));
 		
 		if (!startup->input[i]) {
-			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			free_conf_list(aux_list);
 			free_startup(startup);
 			return NULL;
@@ -937,7 +937,7 @@ startup_config *config_create_startup(configurator *config)
 		startup->storage[i] = calloc(1, sizeof(struct plugin_config));
 
 		if (!startup->storage[i]) {
-			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			free_conf_list(aux_list);
 			free_startup(startup);
 			return NULL;
@@ -957,7 +957,7 @@ startup_config *config_create_startup(configurator *config)
 		startup->inter[i] = calloc(1, sizeof(struct plugin_config));
 
 		if (!startup->inter[i]) {
-			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			free_conf_list(aux_list);
 			free_startup(startup);
 			return NULL;
@@ -1172,6 +1172,7 @@ int config_reconf(configurator *config)
 	
 	startup_config *new_startup = config_create_startup(config);
 	if (!new_startup) {
+		xmlFreeDoc(config->new_doc);
 		return 1;
 	}
 	
