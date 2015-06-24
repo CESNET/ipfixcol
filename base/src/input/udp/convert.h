@@ -47,32 +47,29 @@ enum {
 };
 
 /**
-  * \brief Prepare static variables used for inserting template and data sets
-  *  
-  *  Also allocate memory for templates
-  *
-  *  \param[in] in_plugin Type of input plugin (UDP_PLUGIN...)
-  *  \param[in] len Length of buff used in plugins
-  *  \return 0 on success
-  */
+ * \brief Prepare static variables used for inserting template and data sets
+ *
+ * Also allocate memory for templates
+ *
+ * \param[in] in_plugin Type of input plugin (UDP_PLUGIN...)
+ * \param[in] len Length of buff used in plugins
+ * \return 0 on success
+ */
 int convert_init(int in_plugin, int len);
 
 /**
-  * \brief Main function for packet conversion
-  *
-  * \param[out] packet Flow information data in the form of IPFIX packet
-  * \param[in] len Length of packet
-  * \param[in] input_info Information structure storing data needed for refreshing templates
-  */
-void convert_packet(char **packet, ssize_t *len, char *input_info);
+ * \brief Main function for packet conversion
+ *
+ * \param[out] packet Flow information data in the form of IPFIX packet
+ * \param[in] len Length of packet
+ * \param[in] input_info Information structure storing data needed for refreshing templates
+ * \return 0 on success, a negative value otherwise
+ */
+int convert_packet(char **packet, ssize_t *len, char *input_info);
 
 /**
-  * \brief Reallocate memory for templates
-  * 
-  * \return 0 on success
-  */
-
+ * \brief Reallocate memory for templates
+ */
 void convert_close();
-
 
 #endif

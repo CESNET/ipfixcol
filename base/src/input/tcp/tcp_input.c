@@ -895,8 +895,11 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		length += IPFIX_HEADER_LENGTH;
 
 		/* Convert packet from Netflow v5/v9/sflow to IPFIX format */
-		if (htons(((struct ipfix_header *)(*packet))->version) != IPFIX_VERSION) {
-			convert_packet(packet, &length, NULL);
+		if (htons(((struct ipfix_header *) (*packet))->version) != IPFIX_VERSION) {
+			if (convert_packet(packet, &length, NULL) != 0) {
+				MSG_WARNING(msg_module, "Message conversion error; skipping message...");
+				return INPUT_INTR;
+			}
 		}
 
 		/* Check if lengths are the same */

@@ -360,7 +360,7 @@ int main (int argc, char* argv[])
 	/* main loop */
 	while (!terminating) {
 		/* get data to process */
-		if ((get_retval = config->input.get (config->input.config, &input_info, &packet, &source_status)) < 0) {
+		if ((get_retval = config->input.get(config->input.config, &input_info, &packet, &source_status)) < 0) {
 			if ((!reconf && !terminating) || get_retval != INPUT_INTR) { /* if interrupted and closing, it's ok */
 				MSG_WARNING(msg_module, "[%d] Could not get IPFIX data", config->proc_id);
 			}
@@ -374,6 +374,7 @@ int main (int argc, char* argv[])
 				free(packet);
 				packet = NULL;
 			}
+
 			continue;
 		} else if (get_retval == INPUT_CLOSED) {
 			/* ensure that parser gets NULL packet => closed connection */
@@ -390,7 +391,7 @@ int main (int argc, char* argv[])
 		}
 
 		/* distribute data to the particular Data Manager for further processing */
-		preprocessor_parse_msg (packet, get_retval, input_info, source_status);
+		preprocessor_parse_msg(packet, get_retval, input_info, source_status);
 		source_status = SOURCE_STATUS_OPENED;
 		packet = NULL;
 		input_info = NULL;

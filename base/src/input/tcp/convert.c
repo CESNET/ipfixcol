@@ -37,6 +37,9 @@
  *
  */
 
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
 #include <ipfixcol.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,7 +52,7 @@
 #endif
 #include "inttypes.h"
 
-/** Netflow v5 and v9 identifiers */
+/** NetFlow v5 and v9 identifiers */
 #define SET_HEADER_LEN 4
 
 #define NETFLOW_V5_VERSION 5
@@ -58,6 +61,7 @@
 #define NETFLOW_V5_TEMPLATE_LEN 76
 #define NETFLOW_V5_DATA_SET_LEN 52
 #define NETFLOW_V5_NUM_OF_FIELDS 17
+#define NETFLOW_V5_MAX_RECORD_COUNT 30
 
 #define NETFLOW_V9_TEMPLATE_SET_ID 0
 #define NETFLOW_V9_OPT_TEMPLATE_SET_ID 1
@@ -171,6 +175,15 @@ static inline void modify()
 	netflow_v5_data_header[1] = htons(netflow_v5_data_header[1]);
 }
 
+/**
+  * \brief Prepare static variables used for inserting template and data sets
+  *
+  * Also allocate memory for templates
+  *
+  * \param[in] in_plugin Type of input plugin (UDP_PLUGIN...)
+  * \param[in] len Length of buff used in plugins
+  * \return 0 on success
+  */
 int convert_init(int in_plugin, int len) {
 	/* Initialize templates structure */
 	templates.max = 30;
@@ -218,8 +231,10 @@ int templates_realloc() {
 	return 0;
 }
 
+/**
+  * \brief Reallocate memory for templates
+  */
 void convert_close() {
-	/* Free allocated memory */
 	free(templates.templ);
 }
 
@@ -348,8 +363,13 @@ int insert_timestamp_template(struct ipfix_set_header *templSet)
 			}
 		}
 
-		int len = templates.cols * id;
-		int pos = len + 1;
+		uint32_t len = templates.cols * id;
+		uint32_t pos = len + 1;
+
+		/* Input check: avoid overflow due to malicious flowset IDs */
+		if (len > templates.max * templates.cols) {
+			return 1;
+		}
 
 		/* Set default values for length and timestamp position */
 		templates.templ[len] = 0;
@@ -384,6 +404,7 @@ int insert_timestamp_template(struct ipfix_set_header *templSet)
 			}
 		}
 	}
+
 	return 0;
 }
 
@@ -465,8 +486,13 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
 	id = ntohs(tmp->flowset_id) - IPFIX_MIN_RECORD_FLOWSET_ID;
 	len = ntohs(tmp->length) - 4;
 
-	int lenIndex = templates.cols * id;
-	int posIndex = lenIndex + 1;
+	uint32_t lenIndex = templates.cols * id;
+	uint32_t posIndex = lenIndex + 1;
+
+	/* Input check: avoid overflow due to malicious flowset IDs */
+	if (lenIndex > templates.max * templates.cols) {
+		return 0;
+	}
 
 	/* Get number of data records using the same template */
 	if (templates.templ[lenIndex] <= 0) {
@@ -529,8 +555,9 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
  * \param[out] packet Flow information data in the form of IPFIX packet.
  * \param[in] len Length of packet
  * \param[in] input_info Information structure storing data needed for refreshing templates
+ * \return 0 on success
  */
-void convert_packet(char **packet, ssize_t *len, char *input_info)
+int convert_packet(char **packet, ssize_t *len, char *input_info)
 {
 	struct ipfix_header *header = (struct ipfix_header *) *packet;
 	uint16_t numOfFlowSamples = 0;
@@ -565,7 +592,7 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 						set_header->flowset_id = htons(IPFIX_TEMPLATE_FLOWSET_ID);
 						if (ntohs(set_header->length) > 0) {
 							if (insert_timestamp_template(set_header) != 0) {
-								return;
+								return -1;
 							}
 
 							/* Check for enterprise elements */
@@ -603,7 +630,7 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 
 				if (ntohs(header->length) > *len) {
 					/* Real length of packet is smaller than it should be */
-					return;
+					return -1;
 				}
 
 				uint16_t set_len = ntohs(set_header->length);
@@ -624,7 +651,7 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 			uint64_t unNsec = ntohl(*((uint32_t *) (((uint8_t *) header) + 12)));
 			uint64_t time_header = (unSec * 1000) + (unNsec / 1000000);
 
-			numOfFlowSamples = ntohs(header->length);
+			numOfFlowSamples = MIN(ntohs(header->length), NETFLOW_V5_MAX_RECORD_COUNT);
 
 			/* Header modification */
 			header->export_time = header->sequence_number;
@@ -667,14 +694,14 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 
 			break; }
 
-		/* SFLOW packet (converted to Netflow v5 like packet */
+		/* sFlow packet */
 		default:
 #ifdef ENABLE_SFLOW
-			/* Conversion from sflow to Netflow v5 like IPFIX packet */
+			/* Conversion from sflow to Netflow v5-like IPFIX packet */
 			numOfFlowSamples = Process_sflow(*packet, *len);
 
 			/* Observation domain ID is unknown */
-			header->observation_domain_id = 0; // ??
+			header->observation_domain_id = 0;
 
 			header->export_time = htonl((uint32_t) time(NULL));
 
@@ -685,9 +712,14 @@ void convert_packet(char **packet, ssize_t *len, char *input_info)
 			if (*len >= htons(header->length)) {
 				seqNo[SF_SEQ_N] += numOfFlowSamples;
 			}
+#else
+			/* Conversion error */
+			return -1;
 #endif
 			break;
 	}
 
 	header->version = htons(IPFIX_VERSION);
+
+	return 0;
 }
