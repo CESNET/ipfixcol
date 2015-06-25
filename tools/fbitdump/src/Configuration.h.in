@@ -126,7 +126,7 @@ public:
      *
      * @return columnVector
      */
-    const columnVector getAggregateColumns() const;
+    const columnVector getAggregateColumns();
 
     /**
      * \brief Returns vector of columns containing columns
@@ -433,6 +433,7 @@ private:
         std::string aggregateFilter;        /**< User specified filter string for aggregated table */
 	std::string format;                 /**< Output format*/
 	columnVector columns;               /**< Vector of columns to print */
+	columnVector aggregateColumns;      /**< Used by getAggregateColumns() function */
 	std::string firstdir;               /**< First table (directory) user wants to work with */
 	std::string lastdir;                /**< Last table (directory) user wants to work with */
 	bool optm;                          /**< Indicates whether user specified "-m" option or not */

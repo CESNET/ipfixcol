@@ -651,22 +651,25 @@ std::string Configuration::getFilter() const
 	return this->filter;
 }
 
-const columnVector Configuration::getAggregateColumns() const
+const columnVector Configuration::getAggregateColumns()
 {
-	columnVector aggregateColumns;
+	/* Check whether the aggregate columns were already computed */
+	if (this->aggregateColumns.size() > 0) {
+		return this->aggregateColumns;
+	}
 
 	/* go over all aliases */
 	for (stringSet::const_iterator aliasIt = this->aggregateColumnsAliases.begin();
 			aliasIt != this->aggregateColumnsAliases.end(); aliasIt++) {
 		try {
 			Column *col = new Column(this->doc, *aliasIt, this->aggregate);
-			aggregateColumns.push_back(col);
+			this->aggregateColumns.push_back(col);
 		} catch (std::exception &e) {
 			std::cerr << e.what() << std::endl;
 		}
 	}
 
-	return aggregateColumns;
+	return this->aggregateColumns;
 }
 
 const columnVector Configuration::getSummaryColumns() const
@@ -1208,6 +1211,11 @@ Configuration::~Configuration()
 	}
 
 	this->unloadModules();
+
+	/* Free aggregate columns */
+	for (auto col: this->aggregateColumns) {
+		delete col;
+	}
 
 	delete this->resolver;
 	delete this->orderColumn;
