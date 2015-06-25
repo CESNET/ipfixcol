@@ -1,5 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4
-EXTRA_DIST = tools fbitdump.xml
+EXTRA_DIST = tools fbitdump.xml.template
 pkgdata_DATA = fbitdump.xml
 
 rpmspec = $(PACKAGE_TARNAME).spec
