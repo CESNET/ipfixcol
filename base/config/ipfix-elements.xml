@@ -513,6 +513,20 @@
 	</element>
 	<element>
 		<enterprise>0</enterprise>
+		<id>95</id>
+		<name>applicationId</name>
+		<dataType>unsigned32</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>96</id>
+		<name>applicationName</name>
+		<dataType>string</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
 		<id>90</id>
 		<name>mplsVpnRouteDistinguisher</name>
 		<dataType>octetArray</dataType>
@@ -2922,4 +2936,88 @@
                 <dataType>string</dataType>
                 <semantic></semantic>
         </element> 
+	<element>
+                <enterprise>39499</enterprise>
+                <id>61</id>
+                <name>NPMJitterDev</name>
+                <dataType>unsigned32</dataType>
+                <semantic></semantic>
+        </element>
+	<element>
+                <enterprise>39499</enterprise>
+                <id>62</id>
+                <name>NPMJitterAvg</name>
+                <dataType>unsigned32</dataType>
+                <semantic></semantic>
+        </element>
+	<element>
+                <enterprise>39499</enterprise>
+                <id>63</id>
+                <name>NPMJitterMin</name>
+                <dataType>unsigned32</dataType>
+                <semantic></semantic>
+        </element>
+	<element>
+                <enterprise>39499</enterprise>
+                <id>64</id>
+                <name>NPMJitterMax</name>
+                <dataType>unsigned32</dataType>
+                <semantic></semantic>
+        </element>
+	<element>
+                <enterprise>39499</enterprise>
+                <id>65</id>
+                <name>NPMDelayDev</name>
+                <dataType>unsigned32</dataType>
+                <semantic></semantic>
+        </element>
+	<element>
+                <enterprise>39499</enterprise>
+                <id>66</id>
+                <name>NPMDelayAvg</name>
+                <dataType>unsigned32</dataType>
+                <semantic></semantic>
+        </element>
+	<element>
+                <enterprise>39499</enterprise>
+                <id>67</id>
+                <name>NPMDelayMin</name>
+                <dataType>unsigned32</dataType>
+                <semantic></semantic>
+        </element>
+	<element>
+                <enterprise>39499</enterprise>
+                <id>68</id>
+                <name>NPMDelayMax</name>
+                <dataType>unsigned32</dataType>
+                <semantic></semantic>
+        </element>
+	<element>
+                <enterprise>39499</enterprise>
+                <id>69</id>
+                <name>NPMRoundTripTime</name>
+                <dataType>unsigned32</dataType>
+                <semantic></semantic>
+        </element> 
+        <element>
+                <enterprise>39499</enterprise>
+                <id>70</id>
+                <name>NPMServerResponseTime</name>
+                <dataType>unsigned32</dataType>
+                <semantic></semantic>
+        </element>
+	<element>
+                <enterprise>39499</enterprise>
+                <id>71</id>
+                <name>NPMTCPRetransmission</name>
+                <dataType>unsigned32</dataType>
+                <semantic></semantic>
+        </element>
+	<element>
+                <enterprise>39499</enterprise>
+                <id>72</id>
+                <name>NPMTCPOutOfOrder</name>
+                <dataType>unsigned32</dataType>
+                <semantic></semantic>
+        </element>
 </ipfix-elements>
