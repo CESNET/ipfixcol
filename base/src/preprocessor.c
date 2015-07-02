@@ -452,7 +452,8 @@ static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
 	uint8_t *ptr;
 	uint32_t records_count = 0;
 	int i, ret;
-	int max_len;     /* length to the end of the set = max length of the template */
+	uint16_t max_len; /* length to the end of the set = max length of the template */
+	uint16_t set_len;
 	uint32_t msg_counter = 0;
 
 	struct udp_conf udp_conf = {0};
@@ -467,9 +468,15 @@ static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
 
 	/* check for new templates */
 	for (i = 0; i < MSG_MAX_TEMPL_SETS && msg->templ_set[i]; i++) {
-		ptr = (uint8_t*) &msg->templ_set[i]->first_record;
-		while (ptr < (uint8_t*) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) {
-			max_len = ((uint8_t *) msg->templ_set[i] + ntohs(msg->templ_set[i]->header.length)) - ptr;
+		ptr = (uint8_t *) &msg->templ_set[i]->first_record;
+		set_len = ntohs(msg->templ_set[i]->header.length);
+		while (ptr < (uint8_t *) msg->templ_set[i] + set_len) {
+			if ((uint8_t *) msg->templ_set[i] + set_len - ptr < 4) {
+				/* Stop processing; padding bytes detected */
+				break;
+			}
+
+			max_len = ((uint8_t *) msg->templ_set[i] + set_len) - ptr;
 			ret = preprocessor_process_one_template(ptr, max_len, TM_TEMPLATE, msg_counter, msg->input_info, &key);
 			if (ret == 0) {
 				break;
@@ -482,9 +489,15 @@ static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
 
 	/* check for new option templates */
 	for (i = 0; i < MSG_MAX_OTEMPL_SETS && msg->opt_templ_set[i]; i++) {
-		ptr = (uint8_t*) &msg->opt_templ_set[i]->first_record;
-		max_len = ((uint8_t *) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) - ptr;
-		while (ptr < (uint8_t*) msg->opt_templ_set[i] + ntohs(msg->opt_templ_set[i]->header.length)) {
+		ptr = (uint8_t *) &msg->opt_templ_set[i]->first_record;
+		set_len = ntohs(msg->opt_templ_set[i]->header.length);
+		max_len = ((uint8_t *) msg->opt_templ_set[i] + set_len) - ptr;
+		while (ptr < (uint8_t *) msg->opt_templ_set[i] + set_len) {
+			if ((uint8_t *) msg->opt_templ_set[i] + set_len - ptr < 4) {
+				/* Stop processing; padding bytes detected */
+				break;
+			}
+
 			ret = preprocessor_process_one_template(ptr, max_len, TM_OPTIONS_TEMPLATE, msg_counter, msg->input_info, &key);
 			if (ret == 0) {
 				break;
@@ -494,6 +507,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
 			}
 		}
 	}
+
 	mdata_max = 0;
 
 	/* add template to message data_couples */

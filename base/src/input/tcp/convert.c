@@ -603,6 +603,52 @@ int convert_packet(char **packet, ssize_t *len, char *input_info)
 
 					case NETFLOW_V9_OPT_TEMPLATE_SET_ID:
 						set_header->flowset_id = htons(IPFIX_OPTION_FLOWSET_ID);
+						uint16_t set_len = ntohs(set_header->length);
+
+						/* Convert 'Option Scope Length' to 'Scope Field Count'
+						 * and 'Option Length' to 'Field Count'.
+						 */
+						struct ipfix_options_template_record *rec;
+						uint16_t rec_len;
+						uint16_t option_scope_len = 0, option_len = 0;
+						uint8_t *otempl_p = p + sizeof(struct ipfix_set_header);
+
+						/* Loop over all option template records; make sure that
+						 * padding is ignored by checking whether record header fits
+						 */
+						while (otempl_p - p < set_len - (uint8_t) (sizeof(struct ipfix_options_template_record) - sizeof(template_ie))) {
+							rec = (struct ipfix_options_template_record *) otempl_p;
+
+							option_scope_len = ntohs(rec->count);
+							option_len = ntohs(rec->scope_field_count);
+							rec_len = option_scope_len + option_len + sizeof(struct ipfix_options_template_record) - sizeof(template_ie);
+
+							uint8_t field_offset = 0, field_index = 0, scope_field_count = 0;
+							while (field_offset < option_scope_len + option_len) {
+								/* Option scope fields always come before regular fields */
+								if (field_offset < option_scope_len) {
+									++scope_field_count;
+								}
+
+								/* Enterprise number comes just after the IE, before the next IE */
+								if (ntohs(rec->fields[field_index].ie.id) & 0x8000) {
+									field_offset += sizeof(template_ie);
+									++field_index;
+								}
+
+								/* Set offset to next field */
+								field_offset += sizeof(template_ie);
+								++field_index;
+							}
+
+							/* Perform conversion from NetFlow v9 to IPFIX. */
+							rec->count = htons(field_index);
+							rec->scope_field_count = htons(scope_field_count);
+
+							/* Set offset to next record */
+							otempl_p += rec_len;
+						}
+
 						break;
 
 					default:
