@@ -54,7 +54,6 @@
 static char *msg_module = "preprocessor";
 
 static struct ring_buffer *preprocessor_out_queue = NULL;
-
 static configurator *global_config = NULL;
 
 /* Sequence number counter for each ODID */
@@ -98,7 +97,7 @@ struct odid_info *odid_info_add(uint32_t odid)
 
 	aux_info = calloc(1, sizeof(struct odid_info));
 	if (!aux_info) {
-		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return NULL;
 	}
 	aux_info->odid = odid;
@@ -274,23 +273,27 @@ uint32_t preprocessor_compute_crc(struct input_info *input_info)
  * @param[in,out] udp_conf 	UDP template configuration structure to be filled in
  * @return void
  */
-static void preprocessor_udp_init (struct input_info_network *input_info, struct udp_conf *udp_conf) {
+static void preprocessor_udp_init(struct input_info_network *input_info, struct udp_conf *udp_conf)
+{
 	if (input_info->type == SOURCE_TYPE_UDP) {
-		if (((struct input_info_network*) input_info)->template_life_time != NULL) {
-			udp_conf->template_life_time = atoi(((struct input_info_network*) input_info)->template_life_time);
+		if (input_info->template_life_time != NULL) {
+			udp_conf->template_life_time = atoi(((struct input_info_network *) input_info)->template_life_time);
 		} else {
 			udp_conf->template_life_time = TM_UDP_TIMEOUT;
 		}
+
 		if (input_info->template_life_packet != NULL) {
 			udp_conf->template_life_packet = atoi(input_info->template_life_packet);
 		} else {
 			udp_conf->template_life_packet = 0;
 		}
+
 		if (input_info->options_template_life_time != NULL) {
-			udp_conf->options_template_life_time = atoi(((struct input_info_network*) input_info)->options_template_life_time);
+			udp_conf->options_template_life_time = atoi(((struct input_info_network *) input_info)->options_template_life_time);
 		} else {
 			udp_conf->options_template_life_time = TM_UDP_TIMEOUT;
 		}
+
 		if (input_info->options_template_life_packet != NULL) {
 			udp_conf->options_template_life_packet = atoi(input_info->options_template_life_packet);
 		} else {
@@ -311,7 +314,7 @@ static void preprocessor_udp_init (struct input_info_network *input_info, struct
  * \return length of the template
  */
 static int preprocessor_process_one_template(void *tmpl, int max_len, int type, 
-	uint32_t msg_counter, struct input_info *input_info, struct ipfix_template_key *key)
+		uint32_t msg_counter, struct input_info *input_info, struct ipfix_template_key *key)
 {
 	struct ipfix_template_record *template_record;
 	struct ipfix_template *template;
@@ -398,7 +401,7 @@ void fill_metadata(uint8_t *rec, int rec_len, struct ipfix_template *templ, void
 		mdata_max = 75;
 		msg->metadata = calloc(mdata_max, sizeof(struct metadata));
 		if (!msg->metadata) {
-			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			mdata_max = 0;
 			return;
 		}
@@ -409,7 +412,7 @@ void fill_metadata(uint8_t *rec, int rec_len, struct ipfix_template *templ, void
 		void *new_mdata = realloc(msg->metadata, mdata_max * 2 * sizeof(struct metadata));
 		
 		if (!new_mdata) {
-			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			return;
 		}
 	
@@ -492,6 +495,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
 		}
 	}
 	mdata_max = 0;
+
 	/* add template to message data_couples */
 	for (i = 0; i < MSG_MAX_DATA_COUPLES && msg->data_couple[i].data_set; i++) {
 		key.tid = ntohs(msg->data_couple[i].data_set->header.flowset_id);
@@ -510,7 +514,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
 					(udp_conf.template_life_packet > 0 && /* life packet should be checked */
 					(uint32_t) (msg_counter - msg->data_couple[i].data_template->last_message) > udp_conf.template_life_packet))) {
 				MSG_WARNING(msg_module, "[%u] Data template with ID %i has expired; using old template...", key.odid,
-				                                               msg->data_couple[i].data_template->template_id);
+						msg->data_couple[i].data_template->template_id);
 			}
 
 			/* compute sequence number and fill metadata */
@@ -559,7 +563,7 @@ void preprocessor_parse_msg(void* packet, int len, struct input_info* input_info
 		odid_info_remove_source(input_info->odid);
 	} else {
 		if (input_info == NULL) {
-			MSG_WARNING(msg_module, "Invalid parameters in function preprocessor_parse_msg()");
+			MSG_WARNING(msg_module, "Invalid parameters in preprocessor_parse_msg()");
 
 			if (packet) {
 				free(packet);
@@ -574,7 +578,7 @@ void preprocessor_parse_msg(void* packet, int len, struct input_info* input_info
 			return;
 		}
 
-		/* process IPFIX packet and fill up the ipfix_message structure */
+		/* Process IPFIX packet and fill up the ipfix_message structure */
 		msg = message_create_from_mem(packet, len, input_info, source_status);
 		if (!msg) {
 			free(packet);
@@ -596,11 +600,11 @@ void preprocessor_parse_msg(void* packet, int len, struct input_info* input_info
 		/* If we have a message with data records (the only one that updates sequence number), check the numbers */
 		if (msg->input_info->sequence_number != ntohl(msg->pkt_header->sequence_number) && msg->data_records_count > 0) {
 			if (!skip_seq_err) {
-				MSG_WARNING(msg_module, "[%u] Sequence number error; expected %u, got %u", input_info->odid, msg->input_info->sequence_number , ntohl(msg->pkt_header->sequence_number));
+				MSG_WARNING(msg_module, "[%u] Sequence number error; expected %u, got %u", input_info->odid, msg->input_info->sequence_number, ntohl(msg->pkt_header->sequence_number));
 			}
 
-			/* Add number of seen data records to ODID sequence number to keep up consistency*/
-			*seqn += (ntohl(msg->pkt_header->sequence_number) - msg->input_info->sequence_number);
+			/* Add number of seen data records to ODID sequence number to maintain consistency */
+			*seqn += ntohl(msg->pkt_header->sequence_number) - msg->input_info->sequence_number;
 
 			/* Update sequence number of the source to get in sync again */
 			msg->input_info->sequence_number = ntohl(msg->pkt_header->sequence_number);
@@ -612,11 +616,15 @@ void preprocessor_parse_msg(void* packet, int len, struct input_info* input_info
 		/* Add the number of records to both ODID and source sequence numbers (for future check) */
 		msg->input_info->sequence_number += msg->data_records_count;
 		*seqn += msg->data_records_count;
+
+		/* Update other input_info variables */
+		++msg->input_info->packets;
+		msg->input_info->data_records += msg->data_records_count;
 	}
 
 	/* Send data to the first intermediate plugin */
 	if (rbuffer_write(preprocessor_out_queue, msg, 1) != 0) {
-		MSG_WARNING(msg_module, "[%u] Unable to write into Data Manager's input queue; skipping data...", input_info->odid);
+		MSG_WARNING(msg_module, "[%u] Unable to write into Data Manager input queue; skipping data...", input_info->odid);
 		message_free(msg);
 		packet = NULL;
 	}

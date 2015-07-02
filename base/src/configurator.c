@@ -329,7 +329,7 @@ int config_add_input(configurator *config, struct plugin_config *plugin, int ind
 		goto err;
 	}
 	
-	/* check api version */
+	/* Check API version */
 	unsigned int *plugin_api_version = (unsigned int *) dlsym(config->input.dll_handler, "ipfixcol_api_version");
 	if (!plugin_api_version) { /* no api version symbol */
 		MSG_ERROR(msg_module, "[%d] Unable to load plugin '%s'; API version number is missing...",
@@ -341,7 +341,7 @@ int config_add_input(configurator *config, struct plugin_config *plugin, int ind
 		goto err;
 	}
 
-	/* prepare Input API routines */
+	/* Prepare Input API routines */
 	config->input.init = dlsym(config->input.dll_handler, "input_init");
 	if (!config->input.init) {
 		MSG_ERROR(msg_module, "[%d] Unable to load input xml_conf (%s)", config->proc_id, dlerror());
@@ -360,10 +360,10 @@ int config_add_input(configurator *config, struct plugin_config *plugin, int ind
 		goto err;
 	}
 
-	/* extend the process name variable by input name */
+	/* Extend the process name variable by input name */
 	snprintf(config->process_name, 16, "%s:%s", PACKAGE, plugin->conf.name);
 
-	/* set the process name to reflect the input name */
+	/* Set the process name to reflect the input name */
 	prctl(PR_SET_NAME, config->process_name, 0, 0, 0);
 	
 	/* initialize plugin */
@@ -415,10 +415,10 @@ int config_add_inter(configurator *config, struct plugin_config *plugin, int ind
 		goto err;
 	}
 	
-	/* set intermediate thread name */
+	/* Set intermediate thread name */
 	snprintf(im_plugin->thread_name, 16, "med:%s", plugin->conf.name);
 	
-	/* check api version */
+	/* Check API version */
 	unsigned int *plugin_api_version = (unsigned int *) dlsym(im_plugin->dll_handler, "ipfixcol_api_version");
 	if (!plugin_api_version) { /* no api version symbol */
 		MSG_ERROR(msg_module, "[%d] Unable to load plugin '%s'; API version number is missing...",
@@ -430,7 +430,7 @@ int config_add_inter(configurator *config, struct plugin_config *plugin, int ind
 		goto err;
 	}
 
-	/* prepare Input API routines */
+	/* Prepare Input API routines */
 	im_plugin->intermediate_process_message = dlsym(im_plugin->dll_handler, "intermediate_process_message");
 	if (!im_plugin->intermediate_process_message) {
 		MSG_ERROR(msg_module, "Unable to load intermediate xml_conf (%s)", dlerror());
@@ -533,10 +533,10 @@ int config_add_storage(configurator *config, struct plugin_config *plugin, int i
 		goto err;
 	}
 	
-	/* set storage thread name */
+	/* Set storage thread name */
 	snprintf(st_plugin->thread_name, 16, "out:%s", plugin->conf.name);
 	
-	/* check api version */
+	/* Check API version */
 	unsigned int *plugin_api_version = (unsigned int *) dlsym(st_plugin->dll_handler, "ipfixcol_api_version");
 	if (!plugin_api_version) { /* no api version symbol */
 		MSG_ERROR(msg_module, "[%d] Unable to load plugin '%s'; API version number is missing...",
@@ -548,7 +548,7 @@ int config_add_storage(configurator *config, struct plugin_config *plugin, int i
 		goto err;
 	}
 
-	/* prepare Input API routines */
+	/* Prepare Input API routines */
 	st_plugin->init = dlsym(st_plugin->dll_handler, "storage_init");
 	if (!st_plugin->init) {
 		MSG_ERROR(msg_module, "[%d] Unable to load storage xml_conf (%s)", config->proc_id, dlerror());
