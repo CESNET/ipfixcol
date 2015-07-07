@@ -583,10 +583,7 @@ void Configuration::parseFormat(std::string format, std::string &orderby)
 				} while (false);
 
 				/* use the column only if everything was ok */
-				if (!ok) {
-					delete col;
-					removeNext = true;
-				} else {
+				if (ok) {
 					if (this->plugins.find(col->getSemantics()) != this->plugins.end()) {
 						col->format = this->plugins[col->getSemantics()].format;
 						if (this->plugins[col->getSemantics()].init) {
@@ -601,11 +598,14 @@ void Configuration::parseFormat(std::string format, std::string &orderby)
 					if (alias == orderby) {
 						order_found = true;
 					}
+				} else {
+					delete col;
+					removeNext = true;
 				}
 			} catch (std::exception &e) {
 				std::cerr << e.what() << std::endl;
 			}
-		} else if ( err != REG_NOMATCH ) {
+		} else if (err != REG_NOMATCH) {
 			std::cerr << "Malformed output format string" << std::endl;
 			break;
 		} else { /* rest is column separator */
@@ -905,7 +905,7 @@ void Configuration::pushCheckDir(std::string &dir, std::vector<std::string> &lis
 void Configuration::processMOption(stringVector &tables, const char *optarg, std::string &optionr)
 {
 	if (optionr.empty()) {
-		throw std::invalid_argument("Option -M requires -r to specify subdirectories!");
+		throw std::invalid_argument("Option -M requires -r to specify subdirectories");
 	}
 
 	std::vector<std::string> dirs;
