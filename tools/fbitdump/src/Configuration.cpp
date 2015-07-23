@@ -627,9 +627,9 @@ void Configuration::parseFormat(std::string format, std::string &orderby)
 		}
 
 		if (existing == orderby) {
-			MSG_ERROR("configuration", "No suitable column for sorting found in used format");
+			std::cerr << "No suitable column for sorting found in used format" << std::endl;
 		} else {
-			MSG_WARNING("configuration", "Sorting column '%s' not found in output format; using '%s'", orderby.c_str(), existing.c_str());
+			std::cerr << "Sorting column " << orderby << " not found in output format, using '" << existing << "'" << std::endl;
 			orderby = existing;
 
 			delete this->orderColumn;
