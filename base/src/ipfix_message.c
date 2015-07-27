@@ -660,18 +660,22 @@ int data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_templ
  */
 int template_set_process_records(struct ipfix_template_set *tset, int type, tset_callback_f processor, void *proc_data)
 {
-	int max_len, rec_len, count = 0;
-	uint8_t *ptr = (uint8_t*) &tset->first_record;
+	uint16_t max_len, rec_len, count = 0;
+	uint8_t *ptr = (uint8_t *) &tset->first_record;
 
-	while (ptr < (uint8_t*) tset + ntohs(tset->header.length)) {
+	while (ptr < (uint8_t *) tset + ntohs(tset->header.length)) {
 		max_len = ((uint8_t *) tset + ntohs(tset->header.length)) - ptr;
 		rec_len = tm_template_record_length((struct ipfix_template_record *) ptr, max_len, type, NULL);
-		if (rec_len == 0) {
+
+		/* Check whether padding was applied */
+		if (rec_len < sizeof(struct ipfix_template_record)) {
 			break;
 		}
+
 		if (processor) {
 			processor(ptr, rec_len, proc_data);
 		}
+
 		count++;
 		ptr += rec_len;
 	}
