@@ -278,7 +278,11 @@ uint16_t tm_template_record_length(struct ipfix_template_record *template, int m
 {
 	uint16_t len = tm_template_length(template, max_len, type, data_length);
 	if (len > 0) {
-		len = len - sizeof(struct ipfix_template) + sizeof(struct ipfix_template_record);
+		if (type == TM_TEMPLATE) { /* template */
+			len = len - sizeof(struct ipfix_template) + sizeof(struct ipfix_template_record);
+		} else { /* options template */
+			len = len - sizeof(struct ipfix_template) + sizeof(struct ipfix_options_template_record);
+		}
 	}
 
 	return len;
