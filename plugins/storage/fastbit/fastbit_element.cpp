@@ -99,7 +99,7 @@ int load_types_from_xml(struct fastbit_config *conf)
 	return 0;
 }
 
-enum store_type get_type_from_xml(struct fastbit_config *conf, unsigned int en, unsigned int id)
+enum store_type get_type_from_xml(struct fastbit_config *conf, uint32_t en, uint16_t id)
 {
 	/* Check whether a type has been determined for the specified element */
 	if ((*conf->elements_types).count(en) == 0 || (*conf->elements_types)[en].count(id) == 0) {
@@ -115,7 +115,7 @@ enum store_type get_type_from_xml(struct fastbit_config *conf, unsigned int en, 
 	return (*conf->elements_types)[en][id];
 }
 
-void element::byte_reorder(uint8_t *dst,uint8_t *src, int srcSize, int dstSize)
+void element::byte_reorder(uint8_t *dst, uint8_t *src, int srcSize, int dstSize)
 {
 	(void) dstSize;
 	int i;
@@ -124,7 +124,7 @@ void element::byte_reorder(uint8_t *dst,uint8_t *src, int srcSize, int dstSize)
 	}
 }
 
-void element::setName(int en, int id, int part)
+void element::setName(uint32_t en, uint16_t id, int part)
 {
 	if (part == -1) { /* default */
 		sprintf( _name, "e%iid%hi", en, id);
@@ -197,7 +197,7 @@ std::string element::get_part_info()
 		"\nEnd Column\n";
 }
 
-el_var_size::el_var_size(int size, int en, int id, uint32_t buf_size)
+el_var_size::el_var_size(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 {
 	(void) buf_size;
 	data = NULL;
@@ -209,7 +209,7 @@ el_var_size::el_var_size(int size, int en, int id, uint32_t buf_size)
 	this->set_type();
 }
 
-uint16_t el_var_size::fill(uint8_t * data)
+uint16_t el_var_size::fill(uint8_t *data)
 {
 	/* Get size of data */
 	if (data[0] < 255) {
@@ -228,7 +228,7 @@ int el_var_size::set_type()
 	return 0;
 }
 
-el_float::el_float(int size, int en, int id, uint32_t buf_size)
+el_float::el_float(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 {
 	_size = size;
 	_filled = 0;
@@ -244,7 +244,7 @@ el_float::el_float(int size, int en, int id, uint32_t buf_size)
 	allocate_buffer(buf_size);
 }
 
-uint16_t el_float::fill(uint8_t * data)
+uint16_t el_float::fill(uint8_t *data)
 {
 	switch(_size) {
 	case 4:
@@ -284,7 +284,7 @@ int el_float::set_type()
 	return 0;
 }
 
-el_text::el_text(int size, int en, int id, uint32_t buf_size)
+el_text::el_text(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 {
 	_size = 1; // this is size for flush function
 	_true_size = size; // this holds true size of string (var of fix size)
@@ -326,7 +326,7 @@ int el_text::append_str(void *data, int size)
 	return 0;
 }
 
-uint16_t el_text::fill(uint8_t * data)
+uint16_t el_text::fill(uint8_t *data)
 {
 	/* Get size of data */
 	if (_var_size) {
@@ -344,7 +344,7 @@ uint16_t el_text::fill(uint8_t * data)
 }
 
 
-el_ipv6::el_ipv6(int size, int en, int id, int part, uint32_t buf_size)
+el_ipv6::el_ipv6(int size, uint32_t en, uint16_t id, int part, uint32_t buf_size)
 {
 	ipv6_value = 0;
 	_size = size;
@@ -361,7 +361,7 @@ el_ipv6::el_ipv6(int size, int en, int id, int part, uint32_t buf_size)
 	allocate_buffer(buf_size);
 }
 
-uint16_t el_ipv6::fill(uint8_t * data)
+uint16_t el_ipv6::fill(uint8_t *data)
 {
 	/* ulong */
 	ipv6_value = be64toh(*((uint64_t*) data));
@@ -376,7 +376,7 @@ int el_ipv6::set_type()
 	return 0;
 }
 
-el_blob::el_blob(int size, int en, int id, uint32_t buf_size):
+el_blob::el_blob(int size, uint32_t en, uint16_t id, uint32_t buf_size):
 	_var_size(false), _true_size(size), _sp_buffer(NULL)
 {
 	/* Set variables defined in parent */
@@ -411,7 +411,7 @@ el_blob::el_blob(int size, int en, int id, uint32_t buf_size):
 	_sp_buffer_offset = 8; /* 8 byte numbers are used to record offset */
 }
 
-uint16_t el_blob::fill(uint8_t * data)
+uint16_t el_blob::fill(uint8_t *data)
 {
 	uint8_t _offset = 0;
 
@@ -500,7 +500,7 @@ el_blob::~el_blob()
 	free(_sp_buffer);
 }
 
-el_uint::el_uint(int size, int en, int id, uint32_t buf_size)
+el_uint::el_uint(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 {
 	_real_size = size;
 	_size = 0;
@@ -518,7 +518,7 @@ el_uint::el_uint(int size, int en, int id, uint32_t buf_size)
 }
 
 
-uint16_t el_uint::fill(uint8_t * data) {
+uint16_t el_uint::fill(uint8_t *data) {
 	uint_value.ulong = 0;
 	switch(_real_size) {
 	case 1:
@@ -632,7 +632,7 @@ int el_sint::set_type()
 	return 0;
 }
 
-el_sint::el_sint(int size , int en, int id, uint32_t buf_size)
+el_sint::el_sint(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 {
 	_real_size = size;
 	_size = 0;
@@ -649,7 +649,7 @@ el_sint::el_sint(int size , int en, int id, uint32_t buf_size)
 	allocate_buffer(buf_size);
 }
 
-el_unknown::el_unknown(int size, int en, int id, int part, uint32_t buf_size)
+el_unknown::el_unknown(int size, uint32_t en, uint16_t id, int part, uint32_t buf_size)
 {
 	(void) en;
 	(void) id;
@@ -682,7 +682,7 @@ int el_unknown::flush(std::string path)
 	return 0;
 }
 
-uint16_t el_unknown::fill(uint8_t * data)
+uint16_t el_unknown::fill(uint8_t *data)
 {
 	/* Get real size of the data */
 	if (_var_size) {

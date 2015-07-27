@@ -82,7 +82,7 @@ int load_types_from_xml(struct fastbit_config *conf);
  * @param id ID of information element
  * @return element type
  */
-enum store_type get_type_from_xml(struct fastbit_config *conf,unsigned int en,unsigned int id);
+enum store_type get_type_from_xml(struct fastbit_config *conf, uint32_t en, uint16_t id);
 
 /**
  * \brief Class wrapper for information elements
@@ -118,7 +118,7 @@ protected:
 	 * @param id ID of information element
 	 * @param part Number of part (used for IPv6)
 	 */
-	void setName(int en, int id, int part=-1);
+	void setName(uint32_t en, uint16_t id, int part = -1);
 
 	/**
 	 * \brief Copy data and change byte order
@@ -167,7 +167,7 @@ public:
 	 * @param data pointer to input data (usualy ipfix element)
 	 * @return size of the element read from the data
 	 */
-	virtual uint16_t fill(uint8_t * data) = 0;
+	virtual uint16_t fill(uint8_t *data) = 0;
 
 	/**
 	 * \brief Flush buffer content to file
@@ -189,7 +189,7 @@ class el_var_size : public element
 {
 public:
 	void *data;
-	el_var_size(int size = 0, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
+	el_var_size(int size = 0, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE);
 	/* core methods */
 	/**
 	 * \brief fill internal element value according to given data
@@ -202,7 +202,7 @@ public:
 	 * @return 0 on succes
 	 * @return 1 on failure
 	 */
-	virtual uint16_t fill(uint8_t * data);
+	virtual uint16_t fill(uint8_t *data);
 
 protected:
 	int set_type();
@@ -219,7 +219,7 @@ class el_float : public element
 {
 public:
 	float_u float_value;
-	el_float(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
+	el_float(int size = 1, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE);
 	/* core methods */
 	/**
 	 * \brief fill internal element value according to given data
@@ -232,7 +232,7 @@ public:
 	 * @return 0 on succes 
 	 * @return 1 on failure
 	 */
-	virtual uint16_t fill(uint8_t * data);
+	virtual uint16_t fill(uint8_t *data);
 
 protected:
 	int set_type();
@@ -245,9 +245,9 @@ private:
 	uint16_t _true_size;
 	uint8_t _offset;
 public:
-	el_text(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
+	el_text(int size = 1, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE);
 
-	virtual uint16_t fill(uint8_t * data);
+	virtual uint16_t fill(uint8_t *data);
 
 protected:
 	int set_type() {
@@ -269,7 +269,7 @@ class el_ipv6 : public element
 {
 public:
 	uint64_t ipv6_value;
-	el_ipv6(int size = 1, int en = 0, int id = 0,  int part = 0, uint32_t buf_size = RESERVED_SPACE);
+	el_ipv6(int size = 1, uint32_t en = 0, uint16_t id = 0, int part = 0, uint32_t buf_size = RESERVED_SPACE);
 	/* core methods */
 	/**
 	 * \brief fill internal element value according to given data
@@ -282,7 +282,7 @@ public:
 	 * @return 0 on succes
 	 * @return 1 on failure
 	 */
-	virtual uint16_t fill(uint8_t * data);
+	virtual uint16_t fill(uint8_t *data);
 
 protected:
 	int set_type();
@@ -291,8 +291,8 @@ protected:
 class el_blob : public element
 {
 public:
-	el_blob(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
-	virtual uint16_t fill(uint8_t * data);
+	el_blob(int size = 1, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE);
+	virtual uint16_t fill(uint8_t *data);
 	virtual ~el_blob();
 
 	/**
@@ -331,7 +331,7 @@ typedef union uinteger_union
 class el_uint : public element
 {
 public:
-	el_uint(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
+	el_uint(int size = 1, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE);
 	/* core methods */
 	/**
 	 * \brief fill internal element value according to given data
@@ -344,7 +344,7 @@ public:
 	 * @return 0 on succes
 	 * @return 1 on failure
 	 */
-	virtual uint16_t fill(uint8_t * data);
+	virtual uint16_t fill(uint8_t *data);
 
 protected:
 	uint_u uint_value;
@@ -356,7 +356,7 @@ protected:
 class el_sint : public el_uint
 {
 public:
-	el_sint(int size = 1, int en = 0, int id = 0, uint32_t buf_size = RESERVED_SPACE);
+	el_sint(int size = 1, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE);
 
 protected:
 	int set_type();
@@ -387,7 +387,7 @@ protected:
 	int append(void *data);
 
 public:
-	el_unknown(int size = 0, int en = 0, int id = 0,  int part = 0, uint32_t buf_size = 0);
+	el_unknown(int size = 0, uint32_t en = 0, uint16_t id = 0, int part = 0, uint32_t buf_size = 0);
 
 	/* core methods */
 	/**
@@ -400,7 +400,7 @@ public:
 	 * @param data pointer to input data (usualy ipfix element)
 	 * @return size of the element read from the data
 	 */
-	virtual uint16_t fill(uint8_t * data);
+	virtual uint16_t fill(uint8_t *data);
 
 	/**
 	 * \brief Flush buffer content to file

@@ -474,7 +474,6 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 				/* New template was created, it creates new directory if necessary */
 			}
 		}
-
 		
 		/* Should we create new window?  */
 		if (conf->records_window != 0 && rcnt > conf->records_window) {

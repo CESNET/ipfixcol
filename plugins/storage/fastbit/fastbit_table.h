@@ -89,11 +89,11 @@ public:
 	std::vector<element *> elements;
 	std::vector<element *>::iterator el_it;
 
-	template_table(int template_id, uint32_t buff_size);
+	template_table(uint16_t template_id, uint32_t buff_size);
 	int rows() {return _rows_count;}
 	void rows(int rows_count) {_rows_count = rows_count;}
 	std::string name(){return std::string(_name);}
-	int parse_template(struct ipfix_template * tmp,struct fastbit_config *config);
+	int parse_template(struct ipfix_template *tmp,struct fastbit_config *config);
 
 	/**
 	 * \brief parse data_set and store it's data in memory
@@ -105,7 +105,7 @@ public:
 	 * @param path path to direcotry where should be data flushed
 	 * @param new_dir does the path lead to new directory?
 	 */
-	int store(ipfix_data_set * data_set, std::string path, bool new_dir);
+	int store(ipfix_data_set *data_set, std::string path, bool new_dir);
 
 	int update_part(std::string path);
 
