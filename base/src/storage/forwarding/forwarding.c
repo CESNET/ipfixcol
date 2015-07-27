@@ -119,7 +119,7 @@ void forwarding_remove_record(forwarding *conf, uint32_t tid, int type)
 struct forwarding_template_record *forwarding_add_record(forwarding *conf, struct ipfix_template_record *record, int type, int len)
 {
 	int i;
-	MSG_DEBUG(msg_module, "%d adding", ntohs(record->template_id));
+	MSG_DEBUG(msg_module, "Adding %s ID %d", (type == TM_TEMPLATE) ? "template" : "options template", ntohs(record->template_id));
 	if (conf->records_cnt == conf->records_max) {
 		/* Array is full, need more memory */
 		conf->records_max += 32;
@@ -511,9 +511,8 @@ int forwarding_udp_sent(forwarding *conf, struct forwarding_template_record *rec
 }
 
 /**
- * \brief Checks whether template record was send earlier
- *
- * Also controls template updates and inserts not-sent records into array
+ * \brief Checks whether template record was sent before. Also controls template
+ * updates and inserts non-sent records into array.
  *
  * \param[in] conf Plugin configuration
  * \param[in] rec Template record
@@ -528,13 +527,13 @@ int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, 
 
 	if (i >= 0) {
 		if (tm_compare_template_records(conf->records[i]->record, rec)) {
-			/* records are equal */
+			/* Records are equal */
 			if (conf->udp_connection) {
 				return forwarding_udp_sent(conf, conf->records[i]);
 			}
 			return 1;
 		}
-		/* stored record is old, update it */
+		/* Stored record is old, update it */
 		forwarding_remove_record(conf, conf->records[i]->record->template_id, type);
 	}
 
@@ -555,6 +554,7 @@ int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, 
 
 /**
  * \brief Remove template sets without any template records
+ *
  * \param[in] msg IPFIX message
  */
 void forwarding_remove_empty_sets(struct ipfix_message *msg)
@@ -575,7 +575,7 @@ void forwarding_remove_empty_sets(struct ipfix_message *msg)
 }
 
 /**
- * \brief Process each (option) template
+ * \brief Process each (options) template
  *
  * \param[in] rec Template record
  * \param[in] rec_len Record's length
