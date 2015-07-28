@@ -43,12 +43,12 @@ static const char *msg_module = "nfdump input";
 
 
 //EXTENSION 0 -- not a real extension its just pading ect
-void ext0_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext0_fill_tm(uint16_t flags, struct ipfix_template * template){
 	MSG_NOTICE(msg_module, "\tZERO EXTENSION");
 }
 
 //EXTENSION 1
-void ext1_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext1_fill_tm(uint16_t flags, struct ipfix_template * template){
 	if(TestFlag(flags, FLAG_IPV6_ADDR)){
 		//sourceIPv6Address
 		template->fields[template->field_count].ie.id = 27;
@@ -76,7 +76,7 @@ void ext1_fill_tm(uint8_t flags, struct ipfix_template * template){
 }
 
 //EXTENSION 2
-void ext2_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext2_fill_tm(uint16_t flags, struct ipfix_template * template){
 	//packetDeltaCount
 	template->fields[template->field_count].ie.id = 2;
 	template->fields[template->field_count].ie.length = 8;
@@ -86,7 +86,7 @@ void ext2_fill_tm(uint8_t flags, struct ipfix_template * template){
 }
 
 //EXTENSION 3
-void ext3_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext3_fill_tm(uint16_t flags, struct ipfix_template * template){
 	//byteDeltaCount
 	template->fields[template->field_count].ie.id = 1;
 	template->fields[template->field_count].ie.length = 8;
@@ -97,7 +97,7 @@ void ext3_fill_tm(uint8_t flags, struct ipfix_template * template){
 
 //OPTIONAL EXTENSIONS
 //EXTENSION 4 - interface record (16b ints)
-void ext4_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext4_fill_tm(uint16_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 10;
 	template->fields[template->field_count].ie.length = 2;
 	template->field_count++;
@@ -110,7 +110,7 @@ void ext4_fill_tm(uint8_t flags, struct ipfix_template * template){
 }
 
 //EXTENSION 5 - interface record (32b ints)
-void ext5_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext5_fill_tm(uint16_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 10;
 	template->fields[template->field_count].ie.length = 4;
 	template->field_count++;
@@ -124,7 +124,7 @@ void ext5_fill_tm(uint8_t flags, struct ipfix_template * template){
 
 //OPTIONAL EXTENSIONS
 //EXTENSION 6 - AS record (16b ints)
-void ext6_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext6_fill_tm(uint16_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 16;
 	template->fields[template->field_count].ie.length = 2;
 	template->field_count++;
@@ -138,7 +138,7 @@ void ext6_fill_tm(uint8_t flags, struct ipfix_template * template){
 }
 
 //EXTENSION 7 - AS record (32b ints)
-void ext7_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext7_fill_tm(uint16_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 16;
 	template->fields[template->field_count].ie.length = 4;
 	template->field_count++;
@@ -152,7 +152,7 @@ void ext7_fill_tm(uint8_t flags, struct ipfix_template * template){
 }
 
 //EXTENSION 8 - dst tos, dir, srcmask, dstmask in one 32b int
-void ext8_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext8_fill_tm(uint16_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 55;
 	template->fields[template->field_count].ie.length = 1;
 	template->field_count++;
@@ -185,7 +185,7 @@ void ext8_fill_tm(uint8_t flags, struct ipfix_template * template){
 }
 
 //EXTENSION 9 - next hop ipv4
-void ext9_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext9_fill_tm(uint16_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 15;
 	template->fields[template->field_count].ie.length = 4;
 	template->field_count++;
@@ -195,7 +195,7 @@ void ext9_fill_tm(uint8_t flags, struct ipfix_template * template){
 
 
 //EXTENSION 10 - next hop ipv6
-void ext10_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext10_fill_tm(uint16_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 62;
 	template->fields[template->field_count].ie.length = 16;
 	template->field_count++;
@@ -205,7 +205,7 @@ void ext10_fill_tm(uint8_t flags, struct ipfix_template * template){
 
 
 //EXTENSION 11 - BGP next hop ipv4
-void ext11_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext11_fill_tm(uint16_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 18;
 	template->fields[template->field_count].ie.length = 4;
 	template->field_count++;
@@ -216,7 +216,7 @@ void ext11_fill_tm(uint8_t flags, struct ipfix_template * template){
 
 
 //EXTENSION 12 - BGP next hop ipv6
-void ext12_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext12_fill_tm(uint16_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 63;
 	template->fields[template->field_count].ie.length = 16;
 	template->field_count++;
@@ -225,7 +225,7 @@ void ext12_fill_tm(uint8_t flags, struct ipfix_template * template){
 }
 
 //EXTENSION 13 - VLAN record (16b ints)
-void ext13_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext13_fill_tm(uint16_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 58;
 	template->fields[template->field_count].ie.length = 2;
 	template->field_count++;
@@ -238,7 +238,7 @@ void ext13_fill_tm(uint8_t flags, struct ipfix_template * template){
 }
 
 //EXTENSION 14 - Out packet count (32b int)
-void ext14_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext14_fill_tm(uint16_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 24;
 	template->fields[template->field_count].ie.length = 4;
 	template->field_count++;
@@ -247,7 +247,7 @@ void ext14_fill_tm(uint8_t flags, struct ipfix_template * template){
 }
 
 //EXTENSION 15 - Out packet count (64b int)
-void ext15_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext15_fill_tm(uint16_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 24;
 	template->fields[template->field_count].ie.length = 8;
 	template->field_count++;
@@ -256,7 +256,7 @@ void ext15_fill_tm(uint8_t flags, struct ipfix_template * template){
 }
 
 //EXTENSION 16 - Out bytes count (32b int)
-void ext16_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext16_fill_tm(uint16_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 23;
 	template->fields[template->field_count].ie.length = 4;
 	template->field_count++;
@@ -265,7 +265,7 @@ void ext16_fill_tm(uint8_t flags, struct ipfix_template * template){
 }
 
 //EXTENSION 17 - Out bytes count (64b int)
-void ext17_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext17_fill_tm(uint16_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 23;
 	template->fields[template->field_count].ie.length = 8;
 	template->field_count++;
@@ -275,7 +275,7 @@ void ext17_fill_tm(uint8_t flags, struct ipfix_template * template){
 }
 
 //EXTENSION 18 - Aggr flows (32b int)
-void ext18_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext18_fill_tm(uint16_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 3;
 	template->fields[template->field_count].ie.length = 4;
 	template->field_count++;
@@ -285,7 +285,7 @@ void ext18_fill_tm(uint8_t flags, struct ipfix_template * template){
 }
 
 //EXTENSION 19 - Aggr flows (64b int)
-void ext19_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext19_fill_tm(uint16_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 3;
 	template->fields[template->field_count].ie.length = 8;
 	template->field_count++;
@@ -295,7 +295,7 @@ void ext19_fill_tm(uint8_t flags, struct ipfix_template * template){
 }
 
 //EXTENSION 20 - in src mac, out dst mac (64b int)
-void ext20_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext20_fill_tm(uint16_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 56;
 	template->fields[template->field_count].ie.length = 6;
 	template->field_count++;
@@ -309,7 +309,7 @@ void ext20_fill_tm(uint8_t flags, struct ipfix_template * template){
 }
 
 //EXTENSION 21 - in dst mac, out src mac (64b int)
-void ext21_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext21_fill_tm(uint16_t flags, struct ipfix_template * template){
 	template->fields[template->field_count].ie.id = 80;
 	template->fields[template->field_count].ie.length = 6;
 	template->field_count++;
@@ -322,7 +322,7 @@ void ext21_fill_tm(uint8_t flags, struct ipfix_template * template){
 }
 
 //EXTENSION 22 - MPLS (32b ints)
-void ext22_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext22_fill_tm(uint16_t flags, struct ipfix_template * template){
 	int i;
 	for(i=0;i<10;i++){
 		template->fields[template->field_count].ie.id = 70 + i;
@@ -334,18 +334,18 @@ void ext22_fill_tm(uint8_t flags, struct ipfix_template * template){
 }
 
 //EXTENSION 23 - Router ipv4
-void ext23_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext23_fill_tm(uint16_t flags, struct ipfix_template * template){
 	MSG_WARNING(msg_module, "There is no element for router ip (this extension is ignored)");
 }
 
 
 //EXTENSION 24 - Router ipv6
-void ext24_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext24_fill_tm(uint16_t flags, struct ipfix_template * template){
 	MSG_WARNING(msg_module, "There is no element for router ip (this extension is ignored)");
 }
 
 //EXTENSION 25 - Router source id
-void ext25_fill_tm(uint8_t flags, struct ipfix_template * template){
+void ext25_fill_tm(uint16_t flags, struct ipfix_template * template){
 	MSG_NOTICE(msg_module, "There is no element for router sourc id (filled as reserved 38 and 39 elements)");
 	template->fields[template->field_count].ie.id = 38;
 	template->fields[template->field_count].ie.length = 1;
@@ -356,4 +356,28 @@ void ext25_fill_tm(uint8_t flags, struct ipfix_template * template){
 	template->field_count++;
 	template->data_length += 1;
 	template->template_length += 8;
+}
+
+//EXTENSION 26 - BGP previous/next adjacent AS
+void ext26_fill_tm(uint16_t flags, struct ipfix_template * template){
+	// Next AS
+	template->fields[template->field_count].ie.id = 128;
+	template->fields[template->field_count].ie.length = 4;
+	template->field_count++;
+	template->data_length += 4;
+	// Previous AS
+	template->fields[template->field_count].ie.id = 129;
+	template->fields[template->field_count].ie.length = 4;
+	template->field_count++;
+	template->data_length += 4;
+	template->template_length += 8;
+}
+
+//EXTENSION 27 - Time flow received [ms] i.e. collectionTimeMiliseconds
+void ext27_fill_tm(uint16_t flags, struct ipfix_template * template){
+	template->fields[template->field_count].ie.id = 258;
+	template->fields[template->field_count].ie.length = 8;
+	template->field_count++;
+	template->data_length += 8;
+	template->template_length += 4;
 }

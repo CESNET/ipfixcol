@@ -45,7 +45,7 @@ static const char *msg_module = "nfdump input";
 
 
 //EXTENSION 0 -- not a real extension its just pading ect
-void ext0_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext0_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tZERO EXTENSION");
 }
 
@@ -79,7 +79,7 @@ void ext0_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 		(*offset)+=2;
 
 //EXTENSION 1
-void ext1_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext1_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	if(TestFlag(flags, FLAG_IPV6_ADDR)){
 		//MSG_DEBUG(msg_module, "\tIPv6-SRC: hight:%lu low:%lu",*((uint64_t *) &data[*offset]), \
 				*((uint64_t *) &data[(*offset)+2]));
@@ -100,7 +100,7 @@ void ext1_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 }
 
 //EXTENSION 2
-void ext2_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext2_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	if(TestFlag(flags, FLAG_PKG_64)){
 		//MSG_DEBUG(msg_module, "\tPACKET COUNTER: %lu", *((uint64_t *) &data[*offset]));
 		CONVERT_64();
@@ -114,7 +114,7 @@ void ext2_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 }
 
 //EXTENSION 3
-void ext3_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext3_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	if(TestFlag(flags, FLAG_BYTES_64)){
 		//MSG_DEBUG(msg_module, "\tBYTE COUNTER: %lu", *((uint64_t *) &data[*offset]));
 		CONVERT_64();
@@ -129,7 +129,7 @@ void ext3_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 
 //OPTIONAL EXTENSIONS
 //EXTENSION 4 - interface record (16b ints)
-void ext4_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext4_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tINTERFACE RECORD INPUT: %hu (16b)", *((uint16_t *) &data[*offset]));
 	//MSG_DEBUG(msg_module, "\tINTERFACE RECORD OUTPUT: %hu (16b)", *(((uint16_t *) &data[*offset])+1));
 	CONVERT_2x16();
@@ -137,7 +137,7 @@ void ext4_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 }
 
 //EXTENSION 5 - interface record (32b ints)
-void ext5_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext5_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tINTERFACE RECORD INPUT: %u (32b)", *((uint32_t *) &data[*offset]));
 	CONVERT_32();
 	//MSG_DEBUG(msg_module, "\tINTERFACE RECORD OUTPUT: %u (32b)", *((uint32_t *) &data[*offset]));
@@ -146,7 +146,7 @@ void ext5_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 
 //OPTIONAL EXTENSIONS
 //EXTENSION 6 - AS record (16b ints)
-void ext6_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext6_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tAS-SRC: %hu (16b)", *((uint16_t *) &data[*offset]));
 	//MSG_DEBUG(msg_module, "\tAS-DST: %hu (16b)", *(((uint16_t *) &data[*offset])+1));
 	CONVERT_2x16();
@@ -154,7 +154,7 @@ void ext6_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 }
 
 //EXTENSION 7 - AS record (32b ints)
-void ext7_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext7_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tAS-SRC: %u (32b)", *((uint32_t *) &data[*offset]));
 	CONVERT_32();
 	//MSG_DEBUG(msg_module, "\tAS-DST: %u (32b)", *((uint32_t *) &data[*offset]));
@@ -163,7 +163,7 @@ void ext7_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 }
 
 //EXTENSION 8 - dst tos, dir, srcmask, dstmask in one32b int
-void ext8_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext8_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tDST-TOS: %hhu (8b)", *((uint8_t *) &data[*offset]));
 	//MSG_DEBUG(msg_module, "\tDIR: %hhu (8b)", *(((uint8_t *) &data[*offset])+1));
 	//MSG_DEBUG(msg_module, "\tSRC-MASK: %hhu (8b)", *(((uint8_t *) &data[*offset])+2));
@@ -175,7 +175,7 @@ void ext8_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 }
 
 //EXTENSION 9 - next hop ipv4
-void ext9_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext9_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tNEXT-HOP: %u (ipv4)", *((uint32_t *) &data[*offset]));
 	CONVERT_32();
 
@@ -183,7 +183,7 @@ void ext9_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_se
 
 
 //EXTENSION 10 - next hop ipv6
-void ext10_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext10_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 
 	//MSG_DEBUG(msg_module, "\tNEXT-HOP: hight:%lu low:%lu (ipv6)",*((uint64_t *) &data[*offset]), \
 			*((uint64_t *) &data[(*offset)+8]));
@@ -193,7 +193,7 @@ void ext10_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_s
 
 
 //EXTENSION 11 - BGP next hop ipv4
-void ext11_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext11_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tBGP-NEXT-HOP: %u (ipv4)", *((uint32_t *) &data[*offset]));
 	CONVERT_32();
 
@@ -201,62 +201,62 @@ void ext11_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_s
 
 
 //EXTENSION 12 - BGP next hop ipv6
-void ext12_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext12_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tBGP-NEXT-HOP: hight:%lu low:%lu (ipv6)",*((uint64_t *) &data[*offset]), \
 			*((uint64_t *) &data[(*offset)+8]));
 	CONVERT_IPv6();
 }
 
 //EXTENSION 13 - VLAN record (16b ints)
-void ext13_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext13_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tVLAN-SRC: %hu (16b)", *((uint16_t *) &data[*offset]));
 	//MSG_DEBUG(msg_module, "\tVLAN-DST: %hu (16b)", *(((uint16_t *) &data[*offset])+1));
 	CONVERT_2x16();
 }
 
 //EXTENSION 14 - Out packet count (32b int)
-void ext14_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext14_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tOUT-PACKETS: %u (32b)", *((uint32_t *) &data[*offset]));
 	CONVERT_32();
 
 }
 
 //EXTENSION 15 - Out packet count (64b int)
-void ext15_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext15_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tOUT-PACKETS: %lu (64b)", *((uint64_t *) &data[*offset]));
 	CONVERT_64();
 
 }
 
 //EXTENSION 16 - Out bytes count (32b int)
-void ext16_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext16_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tOUT-BYTES: %u (32b)", *((uint32_t *) &data[*offset]));
 	CONVERT_32();
 }
 
 //EXTENSION 17 - Out bytes count (64b int)
-void ext17_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext17_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tOUT-BYTES: %lu (64b)", *((uint64_t *) &data[*offset]));
 	CONVERT_64();
 
 }
 
 //EXTENSION 18 - Aggr flows (32b int)
-void ext18_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext18_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tAGGR-FLOWS: %u (32b)", *((uint32_t *) &data[*offset]));
 	CONVERT_32();
 
 }
 
 //EXTENSION 19 - Aggr flows (64b int)
-void ext19_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext19_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tAGGR-FLOWS: %lu (64b)", *((uint64_t *) &data[*offset]));
 	CONVERT_64();
 
 }
 
 //EXTENSION 20 - in src mac, out dst mac (64b int)
-void ext20_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext20_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	uint64_t buf;
 	//MSG_DEBUG(msg_module, "\tIN-SRC-MAC: %lu (48b - 64 aling)", *((uint64_t *) &data[*offset]));
 	buf = htobe64(data[*offset]);
@@ -272,7 +272,7 @@ void ext20_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_s
 }
 
 //EXTENSION 21 - in dst mac, out src mac (64b int)
-void ext21_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext21_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	uint64_t buf;
 	//MSG_DEBUG(msg_module, "\tIN-DST-MAC: %lu (48b - 64 aling)", *((uint64_t *) &data[*offset]));
 	buf = htobe64(data[*offset]);
@@ -288,7 +288,7 @@ void ext21_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_s
 }
 
 //EXTENSION 22 - MPLS (32b ints)
-void ext22_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext22_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	int i=0;
 	char tmp[4];
 	for(i=0;i<10;i++){
@@ -301,22 +301,23 @@ void ext22_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_s
 }
 
 //EXTENSION 23 - Router ipv4
-void ext23_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext23_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tROUTER-IP: %u (ipv4)", *((uint32_t *) &data[*offset]));
-	CONVERT_32();
+    (*offset)++;
+//	CONVERT_32();
 }
 
 
 //EXTENSION 24 - Router ipv6
-void ext24_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext24_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tROUTER-IP: hight:%lu low:%lu (ipv6)",*((uint64_t *) &data[*offset]), \
 			*((uint64_t *) &data[(*offset)+8]));
-	CONVERT_IPv6();
-
+    (*offset)+=4;
+//	CONVERT_IPv6();
 }
 
 //EXTENSION 25 - Router source id
-void ext25_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set){
+void ext25_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
 	//MSG_DEBUG(msg_module, "\tROUTER-ID-FILL: %hu ", *((uint16_t *) &data[*offset]));
 	*((uint16_t *) &(data_set->records[data_set->header.length])) = htons(*((uint16_t *) &data[*offset])+1);
 	data_set->header.length += 2;
@@ -326,4 +327,15 @@ void ext25_parse(uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_s
 	data_set->header.length += 2;
 	(*offset)++;
 
+}
+
+//EXTENSION 26 - BGP previous/next adjacent AS
+void ext26_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
+	CONVERT_32();
+	CONVERT_32();
+}
+
+//EXTENSION 27 - Time flow received [ms] i.e. collectionTimeMiliseconds
+void ext27_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
+    CONVERT_64();
 }

@@ -69,8 +69,9 @@ IPFIXCOL_API_VERSION;
 static const char *msg_module = "nfdump input";
 
 #define NO_INPUT_FILE (-2)
-#define EXT_PARSE_CNT 26
-#define EXT_FILL_CNT  26
+
+#define BASIC_TEMPLATE_ID (-1)
+#define UNKNOWN_TEMPLATE (-1)
 
 /**
  * \brief Extension map structure
@@ -105,7 +106,13 @@ struct nfinput_config {
 	struct file_header_s header;     /**< header of readed file */
 	struct stat_record_s stats;      /**< stats record */
 	int basic_added;                 /**< flag indicating if basic templates was added */
-	int block;                       /**< block number in current file */
+	uint32_t block;                  /**< block number in current file */
+
+	char *block_buffer;              /**< Beginning of data block buffer     */
+	struct data_block_header_s block_header;  /**< Current data block header */
+	struct record_header_s *block_cur_rec;    /**< Pointer on current record in the block buffer */
+	uint32_t block_record;           /**< Record number in current block */
+	uint32_t data_records_sent;      /**< Number of already sent DATA records */
 };
 
 struct extension {
@@ -119,7 +126,7 @@ struct extension {
 /**
  * \brief Functions for parsing extensions
  */
-static void (*ext_parse[EXT_PARSE_CNT]) (uint32_t *data, int *offset, uint8_t flags, struct ipfix_data_set *data_set) = {
+static void (*ext_parse[]) (uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set) = {
 		ext0_parse,
 		ext1_parse,
 		ext2_parse,
@@ -145,13 +152,18 @@ static void (*ext_parse[EXT_PARSE_CNT]) (uint32_t *data, int *offset, uint8_t fl
 		ext22_parse,
 		ext23_parse,
 		ext24_parse,
-		ext25_parse
+		ext25_parse,
+		ext26_parse,
+		ext27_parse
 };
+
+// Size of ext_parse array
+#define EXT_PARSE_CNT (sizeof(ext_parse) / sizeof(*ext_parse))
 
 /**
  * \brief Functions for filling templates by extensions
  */
-static void (*ext_fill_tm[EXT_FILL_CNT]) (uint8_t flags, struct ipfix_template * template) = {
+static void (*ext_fill_tm[]) (uint16_t flags, struct ipfix_template * template) = {
 		ext0_fill_tm,
 		ext1_fill_tm,
 		ext2_fill_tm,
@@ -177,23 +189,31 @@ static void (*ext_fill_tm[EXT_FILL_CNT]) (uint8_t flags, struct ipfix_template *
 		ext22_fill_tm,
 		ext23_fill_tm,
 		ext24_fill_tm,
-		ext25_fill_tm
+		ext25_fill_tm,
+		ext26_fill_tm,
+		ext27_fill_tm
 };
+
+// Size of ext fill array
+#define EXT_FILL_CNT (sizeof(ext_fill_tm) / sizeof(*ext_fill_tm))
 
 #define HEADER_ELEMENTS 8
 static int header_elements[][2] = {
 		//id,size
-		{89,4},  //fwd_status
-		{152,8}, //flowEndSysUpTime MILLISECONDS !
-		{153,8}, //flowStartSysUpTime MILLISECONDS !
-		{6,2},  //tcpControlBits flags
-		{4,1},  //protocolIdentifier
-		{5,1},  //ipClassOfService
-		{7,2},  //sourceTransportPort
-		{11,2} //destinationTransportPort
+		{89,4},  // forwardingStatus
+		{152,8}, // flowStartMilliseconds
+		{153,8}, // flowEndMilliseconds
+		{6,2},   // tcpControlBits
+		{4,1},   // protocolIdentifier
+		{5,1},   // ipClassOfService
+		{7,2},   // sourceTransportPort
+		{11,2}   // destinationTransportPort
 };
 
 #define ALLOC_FIELDS_SIZE 60
+
+// Function prototype
+int next_file(struct nfinput_config *conf);
 
 /**
  * \brief Fill in data record with basic data common for block
@@ -201,25 +221,35 @@ static int header_elements[][2] = {
  * \param data_set New data set
  * \param record nfdump record
  */
-void fill_basic_data(struct ipfix_data_set *data_set, struct common_record_v0_s *record){
+void fill_basic_data(struct ipfix_data_set *data_set, struct record_header_s *record_head){
+	/**All required items in structures (common_record_s and common_record_v0_s)
+	 * have same offset */
+	struct common_record_s *record = (struct common_record_s*) record_head;
 
+	// forwardingStatus
 	data_set->records[data_set->header.length] = record->fwd_status;
 	data_set->header.length += 4;
+	// flowStartMilliseconds
 	*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64((uint64_t)record->first*1000+record->msec_first); //sec 2 msec
 	data_set->header.length += 8;
+	// flowEndMilliseconds
 	*((uint64_t *) &(data_set->records[data_set->header.length])) = htobe64((uint64_t)record->last*1000+record->msec_last); //sec 2 msec
 	data_set->header.length += 8;
+	// tcpControlBits
 	data_set->records[data_set->header.length+1] = record->tcp_flags;
 	data_set->header.length += 2;
+	// protocolIdentifier
 	data_set->records[data_set->header.length] =record->prot;
 	data_set->header.length += 1;
+	// ipClassOfService
 	data_set->records[data_set->header.length] =record->tos;
 	data_set->header.length += 1;
+	// sourceTransportPort
 	*((uint16_t *) &(data_set->records[data_set->header.length])) = htons(record->srcport);
 	data_set->header.length += 2;
+	// destinationTransportPort
 	*((uint16_t *) &(data_set->records[data_set->header.length])) = htons(record->dstport);
 	data_set->header.length += 2;
-
 }
 
 /**
@@ -228,14 +258,14 @@ void fill_basic_data(struct ipfix_data_set *data_set, struct common_record_v0_s 
  * \param flags some flags
  * \param template new IPFIX template
  */
-void fill_basic_template(uint8_t flags, struct ipfix_template **template){
+void fill_basic_template(uint16_t flags, struct ipfix_template **template){
 	static int template_id_counter = 256;
 
 	(*template) = (struct ipfix_template *) calloc(1, sizeof(struct ipfix_template) + \
 			ALLOC_FIELDS_SIZE * sizeof(template_ie));
 	
 	if(*template == NULL){
-		MSG_ERROR(msg_module, "Malloc faild to get space for ipfix template");
+		MSG_ERROR(msg_module, "Malloc failed to get space for ipfix template");
 		return;
 	}
 
@@ -252,11 +282,11 @@ void fill_basic_template(uint8_t flags, struct ipfix_template **template){
 
 	// add header elements into template
 	int i;
-	for(i=0;i<HEADER_ELEMENTS;i++){	
+	for(i = 0; i < HEADER_ELEMENTS; i++){
 		(*template)->fields[(*template)->field_count].ie.id = header_elements[i][0];
 		(*template)->fields[(*template)->field_count].ie.length = header_elements[i][1];
 		(*template)->field_count++;
-		(*template)->data_length += header_elements[i][1];  
+		(*template)->data_length += header_elements[i][1];
 		(*template)->template_length += 4;
 	}
 
@@ -361,49 +391,75 @@ void clean_tmp_manager(struct ipfix_template_mgr_record *manager){
  * \param msg Current IPFIX message
  * \return 0 on success
  */
-int process_ext_record(struct common_record_v0_s * record, struct extensions *ext, 
+int process_ext_record(struct record_header_s *record, struct extensions *ext,
 	struct ipfix_template_mgr_record *template_mgr, struct ipfix_message *msg)
 {
 	int data_offset = 0;
 	int id,eid;
 	unsigned j;
 
-	id = -1;
-	//check id -> most extensions should be on its index
-	if(ext->filled > record->ext_map && ext->map[record->ext_map].id == record->ext_map) {
-		id = record->ext_map;
-	} else { //index does NOT match map id.. we have to find it
-		for (j = 0; j < ext->filled + 1; j++) {
-			if (ext->map[j].id == record->ext_map) {
-				id = j;
-			}
+	uint16_t rec_flags;
+	uint16_t rec_ext_map;
+	uint32_t *rec_data;
+
+	switch(record->type) {
+	case CommonRecordV0Type: {
+		struct common_record_v0_s *tmp_rec = (struct common_record_v0_s*) record;
+		rec_flags = tmp_rec->flags;
+		rec_ext_map = tmp_rec->ext_map;
+		rec_data = tmp_rec->data;
 		}
+		break;
+	case CommonRecordType: {
+		struct common_record_s *tmp_rec = (struct common_record_s*) record;
+		rec_flags = tmp_rec->flags;
+		rec_ext_map = tmp_rec->ext_map;
+		rec_data = tmp_rec->data;
+		}
+		break;
+	default:
+		MSG_ERROR(msg_module, "Failed to process unknown data record (ID: %u)", record->type);
+		return -1;
+	}
+
+	id = UNKNOWN_TEMPLATE;
+	// Find index of correct extension map
+	for (unsigned i = 0; i < ext->filled + 1; i++) {
+		if (ext->map[i].id == rec_ext_map) {
+			id = i;
+		}
+	}
+
+	if (id == UNKNOWN_TEMPLATE) {
+		MSG_WARNING(msg_module, "Record with unknown (or unsupported) extension map skipped.");
+		// Or we can use default template only with mandatory extensions (template_mgr->templates[0])
+		return 0;
 	}
 
 	struct ipfix_template *tmp = NULL;
 	struct ipfix_data_set *set = NULL;
 	
-	if (TestFlag(record->flags, FLAG_IPV6_ADDR)) {
+	if (TestFlag(rec_flags, FLAG_IPV6_ADDR)) {
 		tmp = template_mgr->templates[ext->map[id].tmp6_index];
 	} else {
 		tmp = template_mgr->templates[ext->map[id].tmp4_index];
 	}
 
 	set = (struct ipfix_data_set *) calloc(1, sizeof(struct ipfix_data_set) + tmp->data_length);
-	
 	if (set == NULL) {
 		MSG_ERROR(msg_module, "Malloc failed getting memory for data set");
 		return -1;
 	}
-	
 	set->header.flowset_id = htons(tmp->template_id);
-	fill_basic_data(set, record);
-	ext_parse[1](record->data, &data_offset, record->flags, set);
-	ext_parse[2](record->data, &data_offset, record->flags, set);
-	ext_parse[3](record->data, &data_offset, record->flags, set);
 
-	for(eid = 0; eid < ext->map[id].values_count; eid++) {
-		ext_parse[ext->map[id].value[eid]](record->data, &data_offset, record->flags, set);
+	fill_basic_data(set, record);
+	ext_parse[1](rec_data, &data_offset, rec_flags, set);
+	ext_parse[2](rec_data, &data_offset, rec_flags, set);
+	ext_parse[3](rec_data, &data_offset, rec_flags, set);
+
+	for(int item = 0; item < ext->map[id].values_count; item++) {
+		int ext_id = ext->map[id].value[item];
+		ext_parse[ext_id](rec_data, &data_offset, rec_flags, set);
 	}
 
 	set->header.length += sizeof(struct ipfix_set_header);
@@ -420,12 +476,25 @@ int process_ext_record(struct common_record_v0_s * record, struct extensions *ex
  * \param msg Current IPFIX message
  * \return 0 on success
  */
-int process_ext_map(struct extension_map_s * extension_map, struct extensions *ext,
+int process_ext_map(struct record_header_s *record, struct extensions *ext,
 		struct ipfix_template_mgr_record *template_mgr, struct ipfix_message *msg)
-{
-	struct ipfix_template *template1;
-	struct ipfix_template *template2;
+{	
+	struct extension_map_s *extension_map = (struct extension_map_s*) record;
 
+	// Check if all extensions are supported
+	int eid = 0;
+	while (extension_map->ex_id[eid] != 0) {
+		if (extension_map->ex_id[eid] >= EXT_FILL_CNT) {
+			// Unsupported extension found
+			MSG_WARNING(msg_module, "Input file contains extension map (ID: %u) "
+				"with unsupported extension(s). Records that belongs to this "
+				"map will be skipped.", extension_map->map_id);
+			return 0;
+		}
+		++eid;
+	}
+
+	// Add new template
 	ext->filled++;
 	if (ext->filled == ext->size) {
 		//double the size of extension map array
@@ -454,6 +523,9 @@ int process_ext_map(struct extension_map_s * extension_map, struct extensions *e
 		template_mgr->max_length *= 2;
 	}
 
+	struct ipfix_template *template1;
+	struct ipfix_template *template2;
+
 	template_mgr->counter++;
 	//template for this record with ipv4
 	fill_basic_template(0, &(template_mgr->templates[template_mgr->counter]));
@@ -467,15 +539,13 @@ int process_ext_map(struct extension_map_s * extension_map, struct extensions *e
 	ext->map[ext->filled].id = extension_map->map_id;
 	ext->map[ext->filled].tmp6_index = template_mgr->counter;
 
-	int eid = 0;
-	for (eid = 0; eid < extension_map->size/2; eid++) { // extension id is 2 byte
-		if (extension_map->ex_id[eid] == 0) {
-			break;
-		}
+	eid = 0;
+	while (extension_map->ex_id[eid] != 0) {
 		ext->map[ext->filled].value[eid] = extension_map->ex_id[eid];
 		ext->map[ext->filled].values_count++;
 		ext_fill_tm[extension_map->ex_id[eid]] (0, template1);
 		ext_fill_tm[extension_map->ex_id[eid]] (1, template2);
+		++eid;
 	}
 
 	add_template(msg, template1);
@@ -526,6 +596,7 @@ int input_close(void **config)
 	
 	xmlFree(conf->xml_file);
 	free(conf->in_info);
+	free(conf->block_buffer);
 	
 	free_ext(&(conf->ext));
 	clean_tmp_manager(&(conf->template_mgr));
@@ -589,6 +660,121 @@ void *message_to_packet(const struct ipfix_message *msg, int *packet_length)
 }
 
 /**
+ * \brief Get new record from nfdump file(s)
+ * This function loads data blocks from nfdump files to internal buffer and
+ * prepares pointer to new record.
+ *
+ * \param[in,out] conf Plugin configuration
+ * \param[out] record Pointer to new record in internal buffer
+ * \return On success returns size of new record (in bytes). Otherwise returns
+ *         INPUT_ERROR or INPUT_CLOSED.
+ */
+int get_next_record(struct nfinput_config *conf, record_header_t **record)
+{
+	ssize_t read_size;
+	int ret;
+	record_header_t *rec_ptr, *next_rec_ptr;
+	char *block_end;
+
+	// Is there next record in same data block
+	if (conf->block_cur_rec != NULL) {
+		// TODO: check block_header endien
+		next_rec_ptr = (record_header_t *)(((char *)conf->block_cur_rec) + conf->block_cur_rec->size);
+		block_end = conf->block_buffer + conf->block_header.size;
+
+		// Is this end of data block?
+		if (conf->block_record < conf->block_header.NumRecords && (char*) next_rec_ptr < block_end) {
+			(*record) = next_rec_ptr;
+			conf->block_cur_rec = next_rec_ptr;
+			conf->block_record++;
+			return next_rec_ptr->size;
+		}
+
+		conf->block_record = 0;
+		conf->block_cur_rec = NULL;
+	}
+
+read_new_block:
+	// Read new block
+	if (conf->block < conf->header.NumBlocks) {
+		// Read header of data block
+		read_size = read(conf->fd, &conf->block_header, sizeof(data_block_header_t));
+		if (read_size < 0) {
+			MSG_ERROR(msg_module, "Failed to read data block header: %s", strerror(errno));
+			return INPUT_ERROR;
+		} else if (read_size == 0) {
+			// End of file -> next file
+			MSG_WARNING(msg_module, "Unexpected end of file.");
+			goto read_new_file;
+		} else if (read_size != sizeof(data_block_header_t)) {
+			// Part of data block header is missing
+			MSG_ERROR(msg_module, "Data block is probably corrupted.");
+			return INPUT_ERROR;
+		}
+		conf->block++;
+
+		// Check version of data block
+		if (conf->block_header.id != DATA_BLOCK_TYPE_2) {
+			// Unsupported data block type
+			MSG_ERROR(msg_module, "Unsupported data block detected.");
+			return INPUT_ERROR;
+		}
+
+	// TODO: decompress datablock
+		if (conf->header.flags & FLAG_COMPRESSED) {
+			MSG_ERROR(msg_module, "Decompression is not implemented. Coming soon.");
+			return INPUT_ERROR;
+		}
+
+		// Check size of buffer
+		if (conf->block_header.size > BUFFSIZE) {
+			// Maximum size of datablock should be same as BUFFSIZE!
+			MSG_ERROR(msg_module, "Datablock is too large.");
+			return INPUT_ERROR;
+		}
+
+		// Read content of data block
+		read_size = read(conf->fd, conf->block_buffer, conf->block_header.size);
+		if (read_size < 0) {
+			MSG_ERROR(msg_module, "Failed to read data block content: %s", strerror(errno));
+			return INPUT_ERROR;
+		} else if (read_size == 0 && conf->block_header.size != 0) {
+			// End of file -> next file
+			MSG_WARNING(msg_module, "Unexpected end of file.");
+			goto read_new_file;
+		} else if (read_size != conf->block_header.size) {
+			// Part of data block content is missing
+			MSG_ERROR(msg_module, "Data block is probably corrupted.");
+			return INPUT_ERROR;
+		}
+
+		// Is there any record?
+		if (conf->block_header.NumRecords == 0) {
+			MSG_WARNING(msg_module, "Empty data block found.");
+			goto read_new_block;
+		}
+
+		// Prepare new record
+		rec_ptr = (record_header_t *) conf->block_buffer;
+		(*record) = rec_ptr;
+		conf->block_cur_rec = rec_ptr;
+		conf->block_record = 1;  // First record is returned
+		return rec_ptr->size;
+	}
+
+read_new_file:
+	// Is there any new file?
+	ret = next_file(conf);
+	if (!ret) {
+		conf->block = 0;
+		goto read_new_block;
+	}
+
+	return (ret == NO_INPUT_FILE) ? INPUT_CLOSED : INPUT_ERROR;
+}
+
+
+/**
  * \brief Read nfdump message from file
  *
  * \param[in] config  input plugin config structure
@@ -602,166 +788,99 @@ void *message_to_packet(const struct ipfix_message *msg, int *packet_length)
  */ 
 int get_packet(void *config, struct input_info **info, char **packet, int *source_status)
 {
+	const uint32_t max_records_per_packet = 30; // Make only small packets
+
+	uint32_t processed_records = 0;
+	uint32_t processed_data_records = 0;
+	int ret_val = 0, stop = 0, packet_len = 0;
 	struct nfinput_config *conf = (struct nfinput_config *) config;
-	unsigned int size = 0;
-	char *buffer = NULL, *buffer_start = NULL;
-	uint buffer_size = 0;
-	
-	struct data_block_header_s block_header;
-	struct common_record_v0_s *record;
-	int stop = 0, ret, len;
 
-	*info = (struct input_info *) &(conf->in_info_list->in_info);
-	
-	struct ipfix_message *msg = NULL;
-	
-read_begin:
-	if (conf->block >= conf->header.NumBlocks) {
-		ret = next_file(conf);
-		if (ret == NO_INPUT_FILE) {
-			/* all files processed */
-			ret = INPUT_CLOSED;
-			goto err_header;
-		}
-		
-		goto read_begin;
-	}
-	
-	ret = read(conf->fd, &block_header, sizeof(struct data_block_header_s));
-	if (ret == -1) {
-		if (errno == EINTR) {
-			ret = INPUT_INTR;
-			goto err_header;
-		}
-		MSG_ERROR(msg_module, "Failed to read header: %s", strerror(errno));
-		ret = INPUT_ERROR;
-		goto err_header;
-	}
-	if (ret == 0) {
-		/* EOF, next file? */
-		*source_status = SOURCE_STATUS_CLOSED;
-		ret = next_file(conf);
-		if (ret == NO_INPUT_FILE) {
-			/* all files processed */
-			ret = INPUT_CLOSED;
-			goto err_header;
-		}
-		/* next file is ready */
-		goto read_begin;
-	}
-
-	if (buffer_start) {
-		free(buffer_start);
-		buffer_start = NULL;
-	}
-	
-	buffer_start = (char *) malloc(block_header.size);
-	if (buffer_start == NULL) {
-		MSG_ERROR(msg_module, "Can't allocate memory for record data");
-		goto err_header;
-	}
-	
-	buffer_size = block_header.size;
-	buffer = buffer_start;
-	
-	ret = read(conf->fd, buffer, block_header.size);
-	if (ret == -1) {
-		if (errno == EINTR) {
-			ret = INPUT_INTR;
-			goto err_header;
-		}
-		MSG_ERROR(msg_module, "Failed to read block: %s", strerror(errno));
-		ret = INPUT_ERROR;
-		goto err_header;
-	}
-	if (ret == 0) {
-		/* EOF, next file? */
-		*source_status = SOURCE_STATUS_CLOSED;
-		ret = next_file(conf);
-		if (ret == NO_INPUT_FILE) {
-			/* all files processed */
-			ret = INPUT_CLOSED;
-			goto err_header;
-		}
-		/* next file is ready */
-		goto read_begin;
-	}
-
-	size = 0;
-	//read block
-	
-	msg = calloc(1, sizeof(struct ipfix_message));
-	if (!msg) {
-		MSG_ERROR(msg_module, "Not enough memory");
+	// Prepare and init new message
+	struct ipfix_message *ipfix_msg = calloc(1, sizeof(struct ipfix_message));
+	if (!ipfix_msg) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
 		return INPUT_ERROR;
 	}
-	
-	init_ipfix_msg(msg);
-	
+
+	// Init ipfix messege structure
+	init_ipfix_msg(ipfix_msg);
+	ipfix_msg->pkt_header->sequence_number = htonl(conf->data_records_sent);
+
+
 	if (!conf->basic_added) {
+		// Add basic templates
 		conf->basic_added = 1;
-		add_template(msg, conf->template_mgr.templates[0]);
-		add_template(msg, conf->template_mgr.templates[1]);
+		add_template(ipfix_msg, conf->template_mgr.templates[0]);
+		add_template(ipfix_msg, conf->template_mgr.templates[1]);
+		processed_records += 2;
 	}
-	
-	while (size < block_header.size && !stop) {
-		record = (struct common_record_v0_s *) buffer;
+
+	// Read new records from nfdump file (templates + data)
+	while (processed_records < max_records_per_packet && !stop) {
+		record_header_t *record;
+		ret_val = get_next_record(conf, &record);
+		if (ret_val <= 0) {
+			// Failed to get new record
+			break;
+		}
+
 		switch (record->type) {
 		case CommonRecordV0Type:
-			stop = process_ext_record(record, &(conf->ext), &(conf->template_mgr), msg);
+		case CommonRecordType:
+			// Process data record
+			stop = process_ext_record(record, &(conf->ext), &(conf->template_mgr), ipfix_msg);
+			++processed_records;
+			++processed_data_records;
 			break;
 		case ExtensionMapType:
-			stop = process_ext_map((struct extension_map_s *) buffer, &(conf->ext), &(conf->template_mgr), msg);
+			// Process extension map (template)
+			stop = process_ext_map(record, &(conf->ext), &(conf->template_mgr), ipfix_msg);
+			++processed_records;
 			break;
 		default:
+			// Unsupported record type -> skip
+			MSG_DEBUG(msg_module, "Unsupported record type (%u) skipped.", record->type);
 			break;
 		}
-
-		size += record->size;
-		
-		if (size >= block_header.size) {
-			break;
-		}
-		
-		buffer += record->size;
 	}
-	
-	*packet = message_to_packet(msg, &len);
-	
-	conf->block++;
-	
+
+	conf->data_records_sent += processed_data_records;
 	*info = (struct input_info *) &(conf->in_info_list->in_info);
-	
-	/* Set source status */
-	*source_status = (*info)->status;
-	if ((*info)->status == SOURCE_STATUS_NEW) {
-		(*info)->status = SOURCE_STATUS_OPENED;
-		(*info)->odid = ntohl(((struct ipfix_header *) *packet)->observation_domain_id);
+
+	if (ret_val != INPUT_ERROR) {
+		*packet = message_to_packet(ipfix_msg, &packet_len);
+		if (!(*packet)) {
+			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+			ret_val = INPUT_ERROR;
+		}
+
+		if ((*info)->status == SOURCE_STATUS_NEW) {
+			(*info)->status = SOURCE_STATUS_OPENED;
+			(*info)->odid = ntohl(((struct ipfix_header*) *packet)->observation_domain_id);
+		}
+		if (ret_val == INPUT_CLOSED && processed_records == 0) {
+			(*info)->status = SOURCE_STATUS_CLOSED;
+		}
+
+		*source_status = (*info)->status;
+
+	} else {
+		*source_status = SOURCE_STATUS_CLOSED;
 	}
 
-	int i;
-	for (i = 0; msg->data_couple[i].data_set; ++i) {
-		free(msg->data_couple[i].data_set);
+	// Cleanup
+	for (int i = 0; ipfix_msg->data_couple[i].data_set; ++i) {
+		free(ipfix_msg->data_couple[i].data_set);
 	}
-	for (i = 0; msg->templ_set[i]; ++i) {
-		free(msg->templ_set[i]);
+	for (int i = 0; ipfix_msg->templ_set[i]; ++i) {
+		free(ipfix_msg->templ_set[i]);
 	}
-	
-	free(msg->pkt_header);
-	free(msg);
-	free(buffer_start);
-	
-	return len;
-	
-err_header:
-	if (msg) {
-		free(msg);
-	}
-	if (buffer_start) {
-		free(buffer_start);
-	}
-	return ret;
+	free(ipfix_msg->pkt_header);
+	free(ipfix_msg);
+
+	return (packet_len > IPFIX_HEADER_LENGTH) ? packet_len : ret_val;
 }
+
 
 static int read_header_and_stats(struct nfinput_config *conf)
 {
@@ -783,7 +902,7 @@ static int read_header_and_stats(struct nfinput_config *conf)
 		MSG_ERROR(msg_module, "Can't read file statistics: %s", conf->input_files[conf->findex - 1]);
 		return 1;
 	}
-	
+
 	//template for this record with ipv4
 	fill_basic_template(0, &(conf->template_mgr.templates[conf->template_mgr.counter]));
 	conf->ext.map[conf->ext.filled].tmp4_index = conf->template_mgr.counter;
@@ -791,9 +910,9 @@ static int read_header_and_stats(struct nfinput_config *conf)
 	conf->template_mgr.counter++;
 	//template for this record with ipv6
 	fill_basic_template(1, &(conf->template_mgr.templates[conf->template_mgr.counter]));
-	conf->ext.map[conf->ext.filled].id = 0;
+	conf->ext.map[conf->ext.filled].id = BASIC_TEMPLATE_ID;
 	conf->ext.map[conf->ext.filled].tmp6_index = conf->template_mgr.counter;
-	
+
 	return 0;
 }
 
@@ -836,7 +955,7 @@ static int prepare_input_file(struct nfinput_config *conf)
 	
 	info->in_info.name   = conf->input_files[conf->findex];
 	info->in_info.type   = SOURCE_TYPE_IPFIX_FILE;
-	info->in_info.status = SOURCE_STATUS_NEW; 
+	info->in_info.status = SOURCE_STATUS_NEW;
 	
 	/* Insert new input info into list */
 	info->next = conf->in_info_list;
@@ -862,6 +981,11 @@ static int close_input_file(struct nfinput_config *conf)
 {
 	int ret;
 
+	if (conf->fd < 0) {
+		/* File already closed */
+		return 0;
+	}
+
 	ret = close(conf->fd);
 	if (ret == -1) {
 		MSG_ERROR(msg_module, "Error when closing output file");
@@ -869,9 +993,7 @@ static int close_input_file(struct nfinput_config *conf)
 	}
 
 	MSG_NOTICE(msg_module, "Input file closed");
-
 	conf->fd = -1;
-
 	return 0;
 }
 
@@ -890,7 +1012,7 @@ int next_file(struct nfinput_config *conf)
 {
 	int ret;
 
-	if (conf->fd <= 0) {
+	if (conf->fd >= 0) {
 		close_input_file(conf);
 	}
 
@@ -1033,6 +1155,15 @@ int input_init(char *params, void **config)
 			MSG_NOTICE(msg_module, "\t%s", input_files[i]);
 		}
 	}
+
+	conf->block_buffer = (char *) malloc(BUFFSIZE);
+	if (!conf->block_buffer) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+		goto err_init;
+	}
+	conf->block_cur_rec = NULL;
+	conf->block_record = 0;
+	conf->data_records_sent = 0;
 	
 	ret = init_ext(conf);
 	if (ret) {
