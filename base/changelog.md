@@ -1,5 +1,7 @@
 **Future release:**
 
+* Fixed forwarding of UDP templates
+
 **Version 0.8.1:**
 
 *  Multiple destinations support in forwarding storage plugin

@@ -76,6 +76,11 @@
 			<defaultPort>4739</defaultPort>
 			<protocol>tcp</protocol>
 
+			<templateLifeTime>1800</templateLifeTime>
+			<optionsTemplateLifeTime>1800</optionsTemplateLifeTime>
+			<templateLifePacket>2048</templateLifePacket>
+			<optionsTemplateLifePacket>2048</optionsTemplateLifePacket>
+
 			<destination>
 				<ip>192.168.0.1</ip>
 			</destination>
@@ -117,6 +122,46 @@
 				</term>
 				<listitem>
 					<simpara>Connection type for all destinations
+					</simpara>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>
+					<command>templateLifeTime</command>
+				</term>
+				<listitem>
+					<simpara>Life time in seconds for UDP templates. Optional.
+					</simpara>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>
+					<command>optionsTemplateLifeTime</command>
+				</term>
+				<listitem>
+					<simpara>Life time in seconds for UDP option templates. Optional.
+					</simpara>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>
+					<command>templateLifePacket</command>
+				</term>
+				<listitem>
+					<simpara>Life time in packets for UDP templates. Optional.
+					</simpara>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>
+					<command>optionsTemplateLifePacket</command>
+				</term>
+				<listitem>
+					<simpara>Life time in packets for UDP option templates. Optional.
 					</simpara>
 				</listitem>
 			</varlistentry>
