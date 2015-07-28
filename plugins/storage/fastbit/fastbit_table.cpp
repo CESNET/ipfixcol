@@ -68,7 +68,7 @@ uint64_t get_rows_from_part(const char *part_path)
 	return rows;
 }
 
-template_table::template_table(int template_id, uint32_t buff_size): _rows_count(0)
+template_table::template_table(uint16_t template_id, uint32_t buff_size): _rows_count(0)
 {
 	_template_id = template_id;
 	sprintf(_name, "%u",template_id);
@@ -191,7 +191,7 @@ int template_table::dir_check(std::string path, bool new_dir)
 	return 0;
 }
 
-int template_table::store(ipfix_data_set * data_set, std::string path, bool new_dir)
+int template_table::store(ipfix_data_set *data_set, std::string path, bool new_dir)
 {
 	uint8_t *data = data_set->records;
 	uint16_t element_size = 0;
@@ -283,7 +283,7 @@ void template_table::flush(std::string path)
 	}
 }
 
-int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_config * config)
+int template_table::parse_template(struct ipfix_template *tmp,struct fastbit_config *config)
 {
 	int i;
 	uint32_t en = 0; /* enterprise number (0 = IANA elements) */
