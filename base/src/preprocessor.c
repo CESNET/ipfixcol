@@ -340,11 +340,11 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 		/* check for withdraw template message */
 	} else if (ntohs(template_record->count) == 0) {
 		ret = tm_remove_template(template_mgr, key);
-		MSG_NOTICE(msg_module, "[%u] Received %s withdrawal message", input_info->odid, (type==TM_TEMPLATE) ? "Template" : "Options template");
+		MSG_NOTICE(msg_module, "[%u] Received %s withdrawal message", input_info->odid, (type == TM_TEMPLATE) ? "Template" : "Options template");
 		/* Log error when removing unknown template */
 		if (ret == 1) {
 			MSG_WARNING(msg_module, "[%u] %s withdrawal message received for unknown template ID %u", input_info->odid,
-					(type==TM_TEMPLATE) ? "Template" : "Options template", ntohs(template_record->template_id));
+					(type == TM_TEMPLATE) ? "Template" : "Options template", ntohs(template_record->template_id));
 		}
 		return TM_TEMPLATE_WITHDRAW_LEN;
 		/* check whether template exists */
@@ -352,9 +352,9 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 		/* add template */
 		/* check that the template has valid ID ( < 256 ) */
 		if (ntohs(template_record->template_id) < 256) {
-			MSG_WARNING(msg_module, "[%u] %s ID %i is reserved and not valid for data set", key->odid, (type==TM_TEMPLATE) ? "Template" : "Options template", ntohs(template_record->template_id));
+			MSG_WARNING(msg_module, "[%u] %s ID %i is reserved and not valid for data set", key->odid, (type == TM_TEMPLATE) ? "Template" : "Options template", ntohs(template_record->template_id));
 		} else {
-			MSG_NOTICE(msg_module, "[%u] New %s ID %i", key->odid, (type==TM_TEMPLATE) ? "template" : "options template", ntohs(template_record->template_id));
+			MSG_NOTICE(msg_module, "[%u] New %s ID %i", key->odid, (type == TM_TEMPLATE) ? "template" : "options template", ntohs(template_record->template_id));
 			template = tm_add_template(template_mgr, tmpl, max_len, type, key);
 			/* Set new template ID according to ODID */
 			if (template) {
@@ -364,12 +364,12 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 	} else {
 		/* template already exists */
 		MSG_DEBUG(msg_module, "[%u] %s ID %i already exists; rewriting...", key->odid,
-				(type==TM_TEMPLATE) ? "Template" : "Options template", template->template_id);
+				(type == TM_TEMPLATE) ? "Template" : "Options template", template->template_id);
 		template = tm_update_template(template_mgr, tmpl, max_len, type, key);
 	}
 	if (template == NULL) {
 		MSG_WARNING(msg_module, "[%u] Cannot parse %s set; skipping to next set...", key->odid,
-				(type==TM_TEMPLATE) ? "template" : "options template");
+				(type == TM_TEMPLATE) ? "template" : "options template");
 		return 0;
 		/* update UDP timeouts */
 	} else if (input_info->type == SOURCE_TYPE_UDP) {

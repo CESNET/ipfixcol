@@ -73,7 +73,7 @@
 #define FIRST_OFFSET 24
 #define LAST_OFFSET 28
 
-/** IPFIX Element IDs used when creating Template Set */
+/* IPFIX Element IDs used when creating Template Set */
 #define SRC_IPV4_ADDR 8
 #define DST_IPV4_ADDR 12
 #define NEXTHOP_IPV4_ADDR 15
@@ -92,14 +92,14 @@
 #define SRC_AS 16
 #define DST_AS 17
 
-/** Defines for numbers of bytes */
+/* Defines for numbers of bytes */
 #define BYTES_1 1
 #define BYTES_2 2
 #define BYTES_4 4
 #define BYTES_8 8
 #define BYTES_12 12
 
-/** Defines for enterprise numbers unpacking in Netflow v9 */
+/* Defines for enterprise numbers unpacking in Netflow v9 */
 #define ENTERPRISE_BIT 0x8000
 #define TEMPLATE_ROW_SIZE 4
 #define DEFAULT_ENTERPRISE_NUMBER (~((uint32_t) 0))
@@ -184,7 +184,8 @@ static inline void modify()
   * \param[in] len Length of buff used in plugins
   * \return 0 on success
   */
-int convert_init(int in_plugin, int len) {
+int convert_init(int in_plugin, int len)
+{
 	/* Initialize templates structure */
 	templates.max = 30;
 	templates.cols = 2;
@@ -212,7 +213,8 @@ int convert_init(int in_plugin, int len) {
 	return 0;
 }
 
-int templates_realloc() {
+int templates_realloc()
+{
 	/* More templates are needed, realloc memory */
 	templates.max += 20;
 
@@ -234,7 +236,8 @@ int templates_realloc() {
 /**
   * \brief Reallocate memory for templates
   */
-void convert_close() {
+void convert_close()
+{
 	free(templates.templ);
 }
 
@@ -326,9 +329,9 @@ uint16_t insert_template_set(char **packet, int numOfFlowSamples, ssize_t *len)
 	}
 }
 
-/* \brief Insert 64b timestamps into NetFlow v9 templates
+/* \brief Inserts 64b timestamps into NetFlow v9 template
  *
- * Finds original timestamps (e.id 21 and 22) and replaces them with 152 and 153
+ * Finds original timestamps (field ID 21 and 22) and replaces them with field ID 152 and 153
  *
  * \param templSet pointer to Template Set
  */
@@ -357,10 +360,9 @@ int insert_timestamp_template(struct ipfix_set_header *templSet)
 			if (templates.templ == NULL) {
 				return 1;
 			}
-
 			unsigned int i;
 			for (i = (templates.max - 20) * templates.cols; i < templates.max * templates.cols; i++) {
-					templates.templ[i] = 0;
+				templates.templ[i] = 0;
 			}
 		}
 
@@ -410,10 +412,87 @@ int insert_timestamp_template(struct ipfix_set_header *templSet)
 }
 
 /**
- * \brief Unpack enteprise numbers in Netflow v9
+ * \brief Inserts 64b timestamps into NetFlow v9 Data Set
  *
- *	Searches all fields in Netflow v9 template that have
- *	ID bigger than 32767 (== enterprise bit is set to 1)
+ * Finds original timestamps and replaces them by 64b IPFIX timestamps
+ *
+ * \param dataSet pointer to Data Set
+ * \param time_header time from packet header
+ * \param remaining bytes behind this data set in packet
+ */
+int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header, uint32_t remaining)
+{
+	struct ipfix_set_header *tmp;
+	uint8_t *pkt;
+	uint16_t id, len, num, shifted, first_offset, last_offset;
+	int i;
+
+	tmp = dataSet;
+
+	/* Get used template ID and data set length */
+	id = ntohs(tmp->flowset_id) - IPFIX_MIN_RECORD_FLOWSET_ID;
+	len = ntohs(tmp->length) - 4;
+
+	uint32_t lenIndex = templates.cols * id;
+	uint32_t posIndex = lenIndex + 1;
+
+	/* Input check: avoid overflow due to malicious flowset IDs */
+	if (lenIndex > templates.max * templates.cols) {
+		return 0;
+	}
+
+	/* Get number of data records using the same template */
+	if (templates.templ[lenIndex] <= 0) {
+		return 0;
+	}
+	num = len / templates.templ[lenIndex];
+	if (num == 0) {
+		return 0;
+	}
+
+	/* Increase sequence number */
+	seqNo[NF9_SEQ_N] += num;
+
+	/* Iterate through all data records */
+	shifted = 0;
+	first_offset = templates.templ[posIndex];
+	last_offset = first_offset + 4;
+
+	for (i = num - 1; i >= 0; i--) {
+		/* Resize each timestamp in each data record to 64 bit */
+		pkt = (uint8_t *) dataSet + BYTES_4 + (i * templates.templ[lenIndex]);
+		uint64_t first = ntohl(*((uint32_t *) (pkt + first_offset)));
+		uint64_t last  = ntohl(*((uint32_t *) (pkt + last_offset)));
+
+		/* we need more space - 32b -> 64b timestamps => + 8 bytes
+		 *
+		 * everything behind timestamps in this record must be shifted: (templLen[id][0] + BYTES_4 - last_offset)
+		 *
+		 * all record behind this one must be shifted: (shifted * (templLen[id][0] + BYTES_8))
+		 *
+		 * all data/template sets behind this set must be shifted: (remaining - len)
+		 */
+		memmove(pkt + last_offset + BYTES_8, pkt + last_offset,
+				(shifted * (templates.templ[lenIndex] + BYTES_8)) +
+				(templates.templ[lenIndex] + BYTES_4 - last_offset) + (remaining - len));
+
+		/* Set time values */
+		*((uint64_t *)(pkt + first_offset)) = htobe64(time_header + first);
+		*((uint64_t *)(pkt + last_offset + BYTES_4)) = htobe64(time_header + last);
+
+		shifted++;
+	}
+
+	/* Increase set header length and packet total length */
+	tmp->length = htons(len + 4 + (shifted * BYTES_8));
+	return shifted;
+}
+
+/**
+ * \brief Unpack enterprise numbers in Netflow v9
+ *
+ *  Searches all fields in Netflow v9 template that have
+ *  ID bigger than 32767 (== enterprise bit is set to 1)
  *  and converts them into IPFIX enterprise element.
  *
  * \param templateSet Template Set
@@ -466,83 +545,6 @@ int unpack_enterprise_elements(struct ipfix_set_header *templateSet, uint32_t re
 }
 
 /**
- * \brief Insert 64b timestamps into NetFlow v9 data set
- *
- * Finds original timestamps and replaces them with 64b 'IPFIX' timestamps
- *
- * \param dataSet pointer to Data Set
- * \param time_header time from packet header
- * \param remaining bytes behind this data set in packet
- */
-int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header, uint32_t remaining)
-{
-	struct ipfix_set_header *tmp;
-	uint8_t *pkt;
-	uint16_t id, len, num, shifted, first_offset, last_offset;
-	int i;
-
-	tmp = dataSet;
-
-	/* Get used template id and data set length */
-	id = ntohs(tmp->flowset_id) - IPFIX_MIN_RECORD_FLOWSET_ID;
-	len = ntohs(tmp->length) - 4;
-
-	uint32_t lenIndex = templates.cols * id;
-	uint32_t posIndex = lenIndex + 1;
-
-	/* Input check: avoid overflow due to malicious flowset IDs */
-	if (lenIndex > templates.max * templates.cols) {
-		return 0;
-	}
-
-	/* Get number of data records using the same template */
-	if (templates.templ[lenIndex] <= 0) {
-		return 0;
-	}
-	num = len / templates.templ[lenIndex];
-	if (num == 0) {
-		return 0;
-	}
-
-	/* Increase sequence number */
-	seqNo[NF9_SEQ_N] += num;
-
-	/* Iterate through all data records */
-	shifted = 0;
-	first_offset = templates.templ[posIndex];
-	last_offset = first_offset + 4;
-
-	for (i = num - 1; i >= 0; i--) {
-		/* Resize each timestamp in each data record to 64 bit */
-		pkt = (uint8_t *) dataSet + BYTES_4 + (i * templates.templ[lenIndex]);
-		uint64_t first = ntohl(*((uint32_t *) (pkt + first_offset)));
-		uint64_t last  = ntohl(*((uint32_t *) (pkt + last_offset)));
-
-		/* we need more space - 32b -> 64b timestamps => + 8 bytes
-		 *
-		 * everything behind timestamps in this record must be shifted: (templLen[id][0] + BYTES_4 - last_offset)
-		 *
-		 * all record behind this one must be shifted: (shifted * (templLen[id][0] + BYTES_8))
-		 *
-		 * all data/template sets behind this set must be shifted: (remaining - len)
-		 */
-		memmove(pkt + last_offset + BYTES_8, pkt + last_offset,
-				(shifted * (templates.templ[lenIndex] + BYTES_8)) +
-				(templates.templ[lenIndex] + BYTES_4 - last_offset) +	(remaining - len));
-
-		/* Set time values */
-		*((uint64_t *)(pkt + first_offset)) = htobe64(time_header + first);
-		*((uint64_t *)(pkt + last_offset + BYTES_4)) = htobe64(time_header + last);
-
-		shifted++;
-	}
-
-	/* Increase set header length and packet total length*/
-	tmp->length = htons(len + 4 + (shifted * BYTES_8));
-	return shifted;
-}
-
-/**
  * \brief Converts packet from Netflow v5/v9 or sFlow format to IPFIX format
  *
  * Netflow v9 has almost the same format as IPFIX but it has different Flowset IDs
@@ -551,7 +553,7 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
  * with some other data that are missing (data set header etc.). Template is periodicaly
  * refreshed according to input_info.
  * sFlow format is very complicated - InMon Corp. source code is used (modified)
- * which converts it into Netflow v5 packet.
+ * which converts it into Netflow v5 packet. Support for sFlow is however disabled by default.
  *
  * \param[out] packet Flow information data in the form of IPFIX packet.
  * \param[in] len Length of packet
@@ -605,6 +607,14 @@ int convert_packet(char **packet, ssize_t *len, char *input_info)
 					case NETFLOW_V9_OPT_TEMPLATE_SET_ID:
 						set_header->flowset_id = htons(IPFIX_OPTION_FLOWSET_ID);
 						uint16_t set_len = ntohs(set_header->length);
+						if (set_len > 0) {
+							if (insert_timestamp_template(set_header) != 0) {
+								return -1;
+							}
+
+							/* Check for enterprise elements */
+							*len += unpack_enterprise_elements(set_header, *len - ntohs(header->length));
+						}
 
 						/* Convert 'Option Scope Length' to 'Scope Field Count'
 						 * and 'Option Length' to 'Field Count'.
@@ -642,7 +652,7 @@ int convert_packet(char **packet, ssize_t *len, char *input_info)
 								++field_index;
 							}
 
-							/* Perform conversion from NetFlow v9 to IPFIX. */
+							/* Perform conversion from NetFlow v9 to IPFIX */
 							rec->count = htons(field_index);
 							rec->scope_field_count = htons(scope_field_count);
 
@@ -709,12 +719,12 @@ int convert_packet(char **packet, ssize_t *len, char *input_info)
 			/* Update real packet length because of memmove() */
 			*len = *len - BYTES_8;
 
-			/* We need to resize time element (first and last seen) from 32 bit to 64 bit */
+			/* We need to resize time element (first and last seen) from 32 bits to 64 bits */
 			int i;
 			uint8_t *pkt;
 			uint16_t shifted = 0;
 			for (i = numOfFlowSamples - 1; i >= 0; i--) {
-				/* Resize each timestamp in each data record to 64 bit */
+				/* Resize each timestamp in each data record to 64 bits */
 				pkt = (uint8_t *) (*packet + IPFIX_HEADER_LENGTH + (i * (NETFLOW_V5_DATA_SET_LEN - BYTES_4)));
 				uint64_t first = ntohl(*((uint32_t *) (pkt + FIRST_OFFSET)));
 				uint64_t last  = ntohl(*((uint32_t *) (pkt + LAST_OFFSET)));
