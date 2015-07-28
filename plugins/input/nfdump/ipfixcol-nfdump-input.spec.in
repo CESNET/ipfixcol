@@ -11,8 +11,10 @@ Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 
 BuildRequires: gcc make doxygen
-BuildRequires: ipfixcol-devel >= 0.7.1 
+BuildRequires: ipfixcol-devel >= 0.7.1
+BuildRequires: lzo-devel
 Requires: ipfixcol >= 0.7.1
+Requires: lzo
 
 %description
 nfdump input plugin for ipfixcol.

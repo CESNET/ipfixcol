@@ -59,6 +59,9 @@
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
 
+// LZO library for decompression of data blocks
+#include <lzo/lzo1x.h>
+
 #include "nffile.h"
 #include "ext_parse.h"
 #include "ext_fill.h"
@@ -678,7 +681,6 @@ int get_next_record(struct nfinput_config *conf, record_header_t **record)
 
 	// Is there next record in same data block
 	if (conf->block_cur_rec != NULL) {
-		// TODO: check block_header endien
 		next_rec_ptr = (record_header_t *)(((char *)conf->block_cur_rec) + conf->block_cur_rec->size);
 		block_end = conf->block_buffer + conf->block_header.size;
 
@@ -720,12 +722,6 @@ read_new_block:
 			return INPUT_ERROR;
 		}
 
-	// TODO: decompress datablock
-		if (conf->header.flags & FLAG_COMPRESSED) {
-			MSG_ERROR(msg_module, "Decompression is not implemented. Coming soon.");
-			return INPUT_ERROR;
-		}
-
 		// Check size of buffer
 		if (conf->block_header.size > BUFFSIZE) {
 			// Maximum size of datablock should be same as BUFFSIZE!
@@ -752,6 +748,28 @@ read_new_block:
 		if (conf->block_header.NumRecords == 0) {
 			MSG_WARNING(msg_module, "Empty data block found.");
 			goto read_new_block;
+		}
+
+		// Decompress data block
+		if (conf->header.flags & FLAG_COMPRESSED) {
+			// Create new buffer
+			char *new_buffer = (char*) malloc(BUFFSIZE);
+			if (!new_buffer) {
+				MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+				return INPUT_ERROR;
+			}
+
+			uint64_t new_size = BUFFSIZE;
+			if (lzo1x_decompress(conf->block_buffer, conf->block_header.size,
+					new_buffer, &new_size, NULL) != LZO_E_OK) {
+				MSG_ERROR(msg_module, "Failed to decompress data block.");
+				free(new_buffer);
+				return INPUT_ERROR;
+			}
+
+			conf->block_header.size = new_size;
+			free(conf->block_buffer);
+			conf->block_buffer = new_buffer;
 		}
 
 		// Prepare new record
