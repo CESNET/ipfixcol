@@ -45,7 +45,7 @@
 	
 	<refsect1>
 		<title>Supported records and extensions</title>
-		<simpara>Plugin supports only extensions up to 25 and these types of records: CommonRecordV0Type and ExtensionMapType.
+		<simpara>Plugin supports only extensions up to 27 and these types of records: CommonRecordV0Type, CommonRecordType and ExtensionMapType.
                     It corresponds to nfdump version 1.6.x.
                 </simpara>
 		
