@@ -71,7 +71,8 @@ AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
 ############################ Check for libraries ###############################
-
+AC_SEARCH_LIBS([__lzo_init_v2], [lzo2],,
+    	AC_MSG_ERROR([Required library lzo2 missing]))
     	
 ###################### Check for configure parameters ##########################
 AC_ARG_ENABLE([debug], 
@@ -91,6 +92,8 @@ AS_IF([test -d $srcdir/../../../base/headers],
 )
 
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([lzo/lzoconf.h], , AC_MSG_ERROR([lzo/lzoconf.h header missing. Please install liblzo2-devel package]), [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([lzo/lzo1x.h], , AC_MSG_ERROR([lzo/lzo1x.h header missing. Please install liblzo2-devel package]), [AC_INCLUDES_DEFAULT])
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 AC_HEADER_STDBOOL
