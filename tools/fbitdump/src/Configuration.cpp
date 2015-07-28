@@ -273,7 +273,7 @@ int Configuration::init(int argc, char *argv[])
 			break;
 		case 'p':
 			if (optarg == std::string("")) {
-				throw std::invalid_argument("-p requires a path to open, empty string given");
+				throw std::invalid_argument("-p requires a path to open; empty string given");
 			}
 			if (access ( optarg, F_OK ) != 0 ) {
 				throw std::invalid_argument("Cannot access pipe");
@@ -350,7 +350,7 @@ int Configuration::init(int argc, char *argv[])
 	/* open XML configuration file */
 	Utils::printStatus("Parsing configuration");
 	if (!this->doc.load_file(this->getXmlConfPath())) {
-		std::string err = std::string("XML '") + this->getXmlConfPath() + "' with columns configuration cannot be loaded";
+		std::string err = std::string("XML '") + this->getXmlConfPath() + "' with column configurations cannot be loaded";
 		throw std::invalid_argument(err);
 	}
 
@@ -583,10 +583,7 @@ void Configuration::parseFormat(std::string format, std::string &orderby)
 				} while (false);
 
 				/* use the column only if everything was ok */
-				if (!ok) {
-					delete col;
-					removeNext = true;
-				} else {
+				if (ok) {
 					if (this->plugins.find(col->getSemantics()) != this->plugins.end()) {
 						col->format = this->plugins[col->getSemantics()].format;
 						if (this->plugins[col->getSemantics()].init) {
@@ -601,11 +598,14 @@ void Configuration::parseFormat(std::string format, std::string &orderby)
 					if (alias == orderby) {
 						order_found = true;
 					}
+				} else {
+					delete col;
+					removeNext = true;
 				}
 			} catch (std::exception &e) {
 				std::cerr << e.what() << std::endl;
 			}
-		} else if ( err != REG_NOMATCH ) {
+		} else if (err != REG_NOMATCH) {
 			std::cerr << "Malformed output format string" << std::endl;
 			break;
 		} else { /* rest is column separator */
@@ -889,7 +889,7 @@ void Configuration::pushCheckDir(std::string &dir, std::vector<std::string> &lis
 void Configuration::processMOption(stringVector &tables, const char *optarg, std::string &optionr)
 {
 	if (optionr.empty()) {
-		throw std::invalid_argument("Option -M requires -r to specify subdirectories!");
+		throw std::invalid_argument("Option -M requires -r to specify subdirectories");
 	}
 
 	std::vector<std::string> dirs;
@@ -1009,6 +1009,10 @@ void Configuration::processROption(stringVector &tables, const char *optarg)
 	std::string left = arg.substr(0, pos);
 	std::string right = arg.substr(pos + 1);
 
+	if (right[0] == '/') {
+		throw std::invalid_argument("Second path (" + right + ") is not a valid argument; full paths are not allowed");
+	}
+
 	/* Right path is ready and can be sanitized */
 	Utils::sanitizePath(right);
 
@@ -1017,18 +1021,27 @@ void Configuration::processROption(stringVector &tables, const char *optarg)
 
 	std::string root = left;
 	while (right_depth--) {
-	   root = root.substr(0, root.find_last_of('/'));
+		root = root.substr(0, root.find_last_of('/'));
 	}
 
 	/* Get first firectory */
 	if (root == left) {
-	   root = "./";
+		root = "./";
 	} else {
-	   left = left.substr(root.length() + 1);
+		left = left.substr(root.length() + 1);
 	}
 
 	Utils::sanitizePath(root);
 	Utils::sanitizePath(left);
+
+	struct stat sb_left;
+	struct stat sb_right;
+
+	if (stat((root + left).c_str(), &sb_left) != 0 && !S_ISDIR(sb_left.st_mode)) {
+		throw std::invalid_argument("First path (" + root + left + ") is not a valid directory");
+	} else if (stat((root + right).c_str(), &sb_right) != 0 && !S_ISDIR(sb_right.st_mode)) {
+		throw std::invalid_argument("Second path (" + root + right + ") is not a valid directory");
+	}
 
 	/* Load dirs */
 	Utils::loadDirsTree(root, left, right, tables);
