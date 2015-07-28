@@ -618,23 +618,7 @@ void Configuration::parseFormat(std::string format, std::string &orderby)
 	}
 
 	if (this->optm && !order_found) {
-		std::string existing = orderby;
-		for (columnVector::iterator it = this->columns.begin(); it != this->columns.end(); ++it) {
-			if (!(*it)->isOperation()) {
-				existing = *((*it)->getAliases().begin());
-				break;
-			}
-		}
-
-		if (existing == orderby) {
-			std::cerr << "No suitable column for sorting found in used format" << std::endl;
-		} else {
-			std::cerr << "Sorting column " << orderby << " not found in output format, using '" << existing << "'" << std::endl;
-			orderby = existing;
-
-			delete this->orderColumn;
-			this->processmOption(orderby);
-		}
+		throw std::runtime_error("Sorting column '" + orderby + "' is not present in the output format.");
 	}
 
 	/* free created regular expression */
