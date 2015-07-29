@@ -628,6 +628,50 @@ static void *statistics_thread(void* config)
 		if (xmlStrcmp(node->name, (const xmlChar *) "statisticsFile") == 0) {
 			char *stat_out_file_path = (char *) xmlNodeGetContent(node->xmlChildrenNode);
 			if (stat_out_file_path && strlen(stat_out_file_path) > 0) {
+				/* Determine statistics file path, i.e., full path minus basename */
+				char stat_out_path[strlen(stat_out_file_path)];
+				strncpy_safe(stat_out_path, stat_out_file_path, strlen(stat_out_file_path) - strlen(basename(stat_out_file_path)));
+
+				/* Check whether statistics file path exists */
+				DIR *stat_out_dir;
+				if ((stat_out_dir = opendir(stat_out_path)) == NULL) {
+					MSG_ERROR(msg_module, "Statistics file directory '%s' does not exist", stat_out_path);
+					xmlFree(stat_out_file_path);
+
+					/* Skip to next XML node in configuration */
+					node = node->next;
+					continue;
+				} else {
+					closedir(stat_out_dir);
+				}
+
+				/* Clean up previous statistics files */
+				char glob_path[strlen(stat_out_file_path) + 2]; // +2 is for wildcard (*) and null-terminating char
+				strncpy_safe(glob_path, stat_out_file_path, strlen(stat_out_file_path) + 1);
+				glob_path[strlen(stat_out_file_path)] = '*';
+				glob_path[strlen(stat_out_file_path) + 1] = '\0';
+
+				/* Search for files using glob */
+				int glob_ret, glob_flags = 0;
+				glob_t glob_results;
+				if ((glob_ret = glob(glob_path, glob_flags, NULL, &glob_results)) == 0) {
+					uint16_t i, stat_files_deleted = 0;
+					for (i = 0; i < glob_results.gl_pathc; ++i) {
+						if ((remove(glob_results.gl_pathv[i])) == 0) {
+							++stat_files_deleted;
+						} else {
+							MSG_ERROR(msg_module, "An error occurred while deleting statistics file '%s'", glob_results.gl_pathv[i]);
+						}
+					}
+
+					MSG_INFO(msg_module, "Cleaned up %u old statistics file(s)", stat_files_deleted);
+					globfree(&glob_results);
+				} else if (glob_ret == GLOB_NOMATCH) {
+					/* No matching files/directories found; do nothing */
+				} else {
+					/* Another glob error occurred; do nothing */
+				}
+
 				/* Consists of the following elements:
 				 *      strlen(stat_out_file_path) - length of supplied path
 				 *      1 - dot (.)
@@ -635,11 +679,11 @@ static void *statistics_thread(void* config)
 				 *      1 - null-terminating character
 				 */
 				int max_len = strlen(stat_out_file_path) + 1 + 5 + 1;
-				char buf[max_len];
+				char full_stat_out_file_path[max_len];
 
 				/* snprintf ensures null-termination if (max_len != 0), which is always true */
-				snprintf(buf, max_len, "%s.%d", stat_out_file_path, getpid());
-				stat_out_file = fopen(buf, "w");
+				snprintf(full_stat_out_file_path, max_len, "%s.%d", stat_out_file_path, getpid());
+				stat_out_file = fopen(full_stat_out_file_path, "w");
 			} else {
 				MSG_ERROR(msg_module, "Configuration error: 'statisticsFile' node has no value");
 			}
