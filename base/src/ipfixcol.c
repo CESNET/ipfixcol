@@ -126,10 +126,10 @@ void version ()
 void help ()
 {
 	printf ("Usage: %s [-c file] [-i file] [-dhVs] [-v level]\n", PACKAGE);
-	printf ("  -c file   Path to configuration file (default: %s)\n", DEFAULT_CONFIG_FILE);
+	printf ("  -c file   Path to startup configuration file (default: %s)\n", DEFAULT_CONFIG_FILE);
 	printf ("  -i file   Path to internal configuration file (default: %s)\n", INTERNAL_CONFIG_FILE);
 	printf ("  -e file   Path to IPFIX IE specification file (default: %s)\n", DEFAULT_IPFIX_ELEMENTS);
-	printf ("  -d        Daemonize\n");
+	printf ("  -d        Run daemonized\n");
 	printf ("  -h        Print this help\n");
 	printf ("  -v level  Increase logging verbosity (level: 0-3)\n");
 	printf ("  -V        Print version information\n");
