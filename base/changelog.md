@@ -1,6 +1,7 @@
 **Future release:**
 
 * Fixed forwarding of UDP templates
+* Unlimited number of incoming TCP connections
 
 **Version 0.8.1:**
 
