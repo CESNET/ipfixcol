@@ -1,4 +1,4 @@
-AM_CPPFLAGS += -I$(top_srcdir)/headers -std=c++11
+AM_CPPFLAGS += -I$(top_srcdir)/headers
 
 noinst_LIBRARIES = libprofiles.a
 
