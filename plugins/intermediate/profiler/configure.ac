@@ -78,7 +78,7 @@ AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
 AC_LANG([C++])
-LBR_SET_CXXSTD
+LBR_SET_CXXSTD([gnu++11])
 AM_CXXFLAGS="$AM_CXXFLAGS $CXXSTD"
 
 ###################### Check for configure parameters ##########################

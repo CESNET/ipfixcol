@@ -76,7 +76,7 @@ AC_PROG_INSTALL
 AC_PROG_RANLIB
 
 # Check for latest g++ standard
-LBR_SET_CXXSTD
+LBR_SET_CXXSTD([gnu++11])
 AM_CXXFLAGS="$AM_CXXFLAGS $CXXSTD"
 
 ############################ Check for libraries ###############################
