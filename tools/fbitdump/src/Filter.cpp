@@ -101,7 +101,7 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		if (input.empty()) {
 			input = tw;
 		} else {
-			input = tw + " AND " + input;
+			input = tw + " AND (" + input + ")";
 		}
 	}
 
