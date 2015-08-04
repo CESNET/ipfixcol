@@ -48,7 +48,7 @@ AC_CONFIG_SRCDIR([nfinput.c])
 AC_CONFIG_HEADERS([config.h])
 
 # Initialization
-CXXFLAGS="-Wall"
+AM_CFLAGS="-Wall -O2 -std=gnu99"
 
 RELEASE=1
 AC_SUBST(RELEASE)
@@ -131,6 +131,10 @@ if test -z "$XSLTPROC"; then
 	AC_MSG_WARN([Due to missing xsltproc you will not able to generate MAN pages.])
 fi
 
+# substitute automake CFLAGS and CPPFLAGS variables
+AC_SUBST([AM_CPPFLAGS])
+AC_SUBST([AM_CFLAGS])
+
 # generate output
 AC_CONFIG_FILES([Makefile
 				ipfixcol-nfdump-input.spec])
@@ -152,7 +156,7 @@ echo "
   $PACKAGE_NAME version $PACKAGE_VERSION
   Prefix........: $prefix
   Distribution..: $DISTRO
-  C Compiler....: $CC $CFLAGS $CPPFLAGS
+  C Compiler....: $CC $AM_CFLAGS $CFLAGS $AM_CPPFLAGS $CPPFLAGS
   Linker........: $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
   Build doc.....: ${enable_doc:-yes}
