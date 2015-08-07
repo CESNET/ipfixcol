@@ -1,7 +1,7 @@
 #ifndef SENDER_H
 #define SENDER_H
 
-#include "json.h"
+#include "nfdump_ext.h"
 
 extern "C" {
 #include <siso.h>

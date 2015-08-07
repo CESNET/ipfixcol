@@ -51,7 +51,7 @@ extern "C" {
 #include <iomanip>
 #include <map>
 
-static const char *msg_module = "json_storage";
+static const char *msg_module = "nfdump_ext_storage";
 
 #define READ_BYTE_ARR(_dst_, _src_, _len_) \
 do {\
@@ -63,7 +63,6 @@ do {\
 #define QUOTED(_str_) "\"" + (_str_) + "\""
 
 std::map<uint32_t, std::map<uint16_t, struct ipfix_element> > Storage::elements{};
-
 /**
  * \brief Constructor
  */
@@ -77,6 +76,12 @@ Storage::Storage()
 	/* Allocate space for buffers */
 	record.reserve(4096);
 	buffer.reserve(BUFF_SIZE);
+
+	
+
+	if(lnf_open(&filep, "nfdump_ext_storage.test", LNF_WRITE, "localhostfile" )!=LNF_OK){
+		MSG_DEBUG(msg_module, "Failed to open lnf file: %s\n", "");
+	}
 }
 
 Storage::~Storage()
@@ -84,6 +89,9 @@ Storage::~Storage()
 	for (Output *output: outputs) {
 		delete output;
 	}
+
+	lnf_rec_free(recp);
+	lnf_close(filep);
 }
 
 void Storage::getElement(uint32_t enterprise, uint16_t id, struct ipfix_element& element)
@@ -238,15 +246,58 @@ std::string Storage::rawName(uint32_t en, uint16_t id) const
 	return ss.str();
 }
 
+
+uint16_t Storage::mapToNfdump(uint64_t en, uint16_t id)
+{
+	static uint8_t map[]=
+		{
+			LNF_FLD_ZERO_, LNF_FLD_DOCTETS, LNF_FLD_DPKTS, LNF_FLD_AGGR_FLOWS, LNF_FLD_PROT, 0, LNF_FLD_TCP_FLAGS, LNF_FLD_SRCPORT,
+			LNF_FLD_SRCADDR, 0, 0, LNF_FLD_DSTPORT, LNF_FLD_DSTADDR, 0,	0, 0,
+			0,	0,	0,	0,	0,	0,	0,	0,
+			0,	0,	0, LNF_FLD_SRCADDR, LNF_FLD_DSTADDR, 0,	0,	0,
+			
+			0,	0,	0,	0,	0,	0,	0,	0,
+			0,	0,	0,	0,	0,	0,	0,	0,
+			0,	0,	0,	0,	0,	0,	0,	0,
+			0,	0,	0,	0,	0,	0,	0,	0,
+			
+			0,	0,	0,	0,	0,	0,	0,	0,
+			0,	0,	0,	0,	0,	0,	0,	0,
+			0,	0,	0,	0,	0,	0,	0,	0,
+			0,	0,	0,	0,	0,	0,	0,	0,
+			
+			0,	0,	0,	0,	0,	0,	0,	0,
+			0,	0,	0,	0,	0,	0,	0,	0,
+			0,	0,	0,	0,	0,	0,	0,	0,
+			0,	0,	0,	0,	0,	0,	0,	0,
+
+			0,	0,	0,	0,	0,	0,	0,	0,
+			0,	0,	0,	0,	0,	0,	0,	0,
+			0,	0,	0,	0,	0,	0,	0,	0,
+			LNF_FLD_FIRST, LNF_FLD_LAST, 0,	0,	0,	0,	0,	0,
+		};
+
+
+	if(!en && id < sizeof(map)){
+		return map[id];
+	}
+	else return 0;
+}
+
 /**
  * \brief Store data record
  */
 void Storage::storeDataRecord(struct metadata *mdata)
 {
 	offset = 0;
-
+	
 	record.clear();
-	record += "{\"@type\": \"ipfix.entry\", \"ipfix\": {";
+
+	lnf_rec_init(&recp);
+	uint64_t nflows = 1;
+
+	lnf_rec_fset(recp, LNF_FLD_AGGR_FLOWS, &nflows);
+	//lnf_brec1_t	brec={0};
 
 	struct ipfix_template *templ = mdata->record.templ;
 	uint8_t *data_record = (uint8_t*) mdata->record.record;
@@ -271,14 +322,21 @@ void Storage::storeDataRecord(struct metadata *mdata)
 			MSG_DEBUG(msg_module, "Unknown element (%s)", element.name.c_str());
 		}
 
-		if (count > 0) {
-			record += ", ";
+		uint8_t lnf_fld;
+
+		if((lnf_fld = mapToNfdump(enterprise, id))){
+			uint32_t bufik[4]={0};
+	
+			switch (element.type) {
+			case IPV4:
+					bufik[0] = read32(data_record + offset);
+					lnf_rec_fset(recp, lnf_fld, &bufik);
+				break;
+			default:
+				lnf_rec_fset(recp, lnf_fld, data_record + offset);
+			}
 		}
-
-		record += "\"";
-		record += element.name;
-		record += "\": \"";
-
+		/*
 		switch (element.type) {
 		case PROTOCOL:
 			record += translator.formatProtocol(read8(data_record + offset));
@@ -318,21 +376,21 @@ void Storage::storeDataRecord(struct metadata *mdata)
 		default:
 			readRawData(length, data_record, offset);
 			break;
-		}
-
-		record += "\"";
+		}*/
 
 		offset += length;
 	}
 	
-	/* Store metadata */
+	/* Store metadata 
 	if (processMetadata) {
 		record += "}, \"metadata\": {";
 		storeMetadata(mdata);
+	}*/
+	if (lnf_write(filep, recp) != LNF_OK) {
+			MSG_DEBUG(msg_module, "Can not write record.%s\n","");
 	}
-	
-	record += "}}\n";
-	sendData();
+
+	//sendData();
 }
 
 /**

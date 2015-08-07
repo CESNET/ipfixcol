@@ -1,7 +1,7 @@
 #ifndef PRINTER_H
 #define PRINTER_H
 
-#include "json.h"
+#include "nfdump_ext.h"
 
 class Printer : public Output
 {

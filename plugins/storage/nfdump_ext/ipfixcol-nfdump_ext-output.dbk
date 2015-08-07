@@ -26,36 +26,36 @@
 	</info>
 
 	<refmeta>
-		<refentrytitle>ipfixcol-json-output</refentrytitle>
+		<refentrytitle>ipfixcol-nfdump_ext-output</refentrytitle>
 		<manvolnum>1</manvolnum>
 		<refmiscinfo otherclass="manual" class="manual">JSON output plugin for IPFIXcol.</refmiscinfo>
 	</refmeta>
 
 	<refnamediv>
-		<refname>ipfixcol-json-output</refname>
+		<refname>ipfixcol-nfdump_ext-output</refname>
 		<refpurpose>JSON output plugin for IPFIXcol.</refpurpose>
 	</refnamediv>
 	
 	<refsect1>
 		<title>Description</title>
 		<simpara>
-			The <command>ipfix-json-output</command> plugin is a part of IPFIXcol (IPFIX collector). It converts IPFIX data into JSON format (each data set is an array of data records).
+			The <command>ipfix-nfdump_ext-output</command> plugin is a part of IPFIXcol (IPFIX collector). It converts IPFIX data into JSON format (each data set is an array of data records).
 			Some elements (timestamp, IP, MAC, tcp flags...) are converted into human readable format. Others are represented as plain numbers.
 		</simpara>
 	</refsect1>
 
 	<refsect1>
 		<title>Configuration</title>
-		<simpara>The collector must be configured to use json output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
+		<simpara>The collector must be configured to use nfdump_ext output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
 		The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves. 
 		</simpara>
-		<simpara><filename>startup.xml</filename> json example</simpara>
+		<simpara><filename>startup.xml</filename> nfdump_ext example</simpara>
 		<programlisting>
 	<![CDATA[
 	<destination>
 		<name>JSON storage plugin</name>
 		<fileWriter>
-			<fileFormat>json</fileFormat>
+			<fileFormat>nfdump_ext</fileFormat>
 			<output>
 				<type>print</type>
 			</output>

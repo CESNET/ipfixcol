@@ -1,5 +1,5 @@
 /**
- * \file json.h
+ * \file nfdump_ext.h
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief Header for JSON storage plugin
  *

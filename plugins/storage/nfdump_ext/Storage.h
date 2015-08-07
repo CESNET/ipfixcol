@@ -40,12 +40,16 @@
 #ifndef STORAGE_H
 #define	STORAGE_H
 
+extern "C"{
+#include <siso.h>
+#include <libnf.h>
+}
+
 #define __STDC_FORMAT_MACROS
 #include <ipfixcol/storage.h>
 #include <map>
-#include <siso.h>
 
-#include "json.h"
+#include "nfdump_ext.h"
 #include "pugixml/pugixml.hpp"
 #include "Translator.h"
 
@@ -176,6 +180,8 @@ private:
      * \brief Load informations about IPFIX elements into the memory
      */
     void loadElements();
+
+    uint16_t mapToNfdump(uint64_t en, uint16_t id);
     
 	/**
 	 * \brief Send JSON data to output processors
@@ -195,6 +201,12 @@ private:
 
 	std::string record;
 	static std::map<uint32_t, std::map<uint16_t, struct ipfix_element> > elements;
+
+    /*Edit support for libnf*/
+    lnf_file_t *filep;
+    lnf_rec_t *recp;
+
+
 };
 
 #endif	/* STORAGE_H */

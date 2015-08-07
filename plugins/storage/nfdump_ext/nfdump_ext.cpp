@@ -50,12 +50,12 @@ IPFIXCOL_API_VERSION;
 
 #include "pugixml.hpp"
 
-#include "json.h"
+#include "nfdump_ext.h"
 #include "Storage.h"
 #include "Printer.h"
 #include "Sender.h"
 
-static const char *msg_module = "json_storage";
+static const char *msg_module = "nfdump_ext_storage";
 
 struct json_conf {
 	bool metadata;

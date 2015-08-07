@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-static const char *msg_module = "json sender";
+static const char *msg_module = "nfdump_ext_storage";
 
 #define DEFAULT_IP		"127.0.0.1"
 #define DEFAULT_PORT	"4739"
