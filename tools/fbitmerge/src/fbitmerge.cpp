@@ -380,6 +380,8 @@ int merge_couple(const char *srcDir, const char *dstDir, const char *workDir)
 				ss << workDir << "/" << dstDir << "/" << (*dsti).first;
 
 				if (merge_dirs(buff.c_str(), ss.str().c_str()) != OK) {
+					closedir(sdir);
+					closedir(ddir);
 					return NOT_OK;
 				}
 
@@ -433,6 +435,8 @@ int merge_couple(const char *srcDir, const char *dstDir, const char *workDir)
 				ss << workDir << "/" << dstDir << "/" << (*dsti).first;
 
 				if (merge_dirs(buff.c_str(), ss.str().c_str()) != OK) {
+					closedir(sdir);
+					closedir(ddir);
 					return NOT_OK;
 				}
 				remove_folder_tree(buff.c_str());
