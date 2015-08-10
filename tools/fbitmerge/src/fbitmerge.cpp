@@ -43,6 +43,9 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <dirent.h>
+#include <errno.h>
+#include <getopt.h>
 
 #include <map>
 #include <vector>
@@ -50,12 +53,16 @@
 #include <iostream>
 #include <fstream>
 
-#include <dirent.h>
+#include <fastbit/ibis.h>
 #include "fbitmerge.h"
 
-#include <fastbit/ibis.h>
+#define OPTSTRING ":hk:b:p:smd"
 
-#define ARGUMENTS ":hk:b:p:smd"
+/** Acceptable command-line parameters (long) */
+struct option long_opts[] = {
+	{ "help", no_argument, NULL, 'h' },
+	{ 0, 0, 0, 0 }
+};
 
 static uint8_t separated = 0;
 
@@ -76,7 +83,7 @@ void usage()
 	std::cout << "\nUsage: fbitmerge [-hsd] -b basedir [-m | -k key] [-p prefix]\n";
 	std::cout << "-h\t Show this text\n";
 	std::cout << "-b\t Base directory path\n";
-	std::cout << "-k\t Merging key (h = hour, d = day...)\n";
+	std::cout << "-k\t Merging key (h=hour, d=day, m=month, y=year)\n";
 	std::cout << "-p\t Prefix of folders with fastbit data (default = none)\n";
 	std::cout << "\t !! If there are prefixed folders but prefix is not set, data from these\n";
 	std::cout << "\t    folders may be removed, errors may occur!\n";
@@ -99,7 +106,7 @@ void remove_folder_tree(const char *dirname)
 
 	dir = opendir(dirname);
 	if (dir == NULL) {
-		std::cerr << "Error when initializing directory " << dirname << std::endl;
+		std::cerr << "Error while initializing directory '" << dirname << "'" << std::endl;
 		return;
 	}
 
@@ -199,11 +206,11 @@ void merge_flowStats(const char *first, const char *second)
 
 	file_f.open(first, std::fstream::in);
 	if (!file_f.is_open()) {
-		std::cerr << "Can't open file " << first << " for reading!\n";
+		std::cerr << "Can't open file '" << first << "' for reading\n";
 	}
 	file_s.open(second, std::fstream::in);
 	if (!file_s.is_open()) {
-		std::cerr << "Can't open file " << second << " for reading!\n";
+		std::cerr << "Can't open file '" << second << "' for reading\n";
 		file_f.close();
 	}
 	int expFlows = 0;
@@ -237,7 +244,7 @@ void merge_flowStats(const char *first, const char *second)
 	/* Save data into second file */
 	file_s.open(second, std::fstream::out | std::fstream::trunc);
 	if (!file_s.is_open()) {
-		std::cerr << "Can't open file " << second << " for writing!\n";
+		std::cerr << "Can't open file '" << second << "' for writing\n";
 	} else {
 		file_s << "Exported flows: " << expFlows << std::endl;
 		file_s << "Received flows: " << recFlows << std::endl;
@@ -333,13 +340,13 @@ int merge_couple(const char *srcDir, const char *dstDir, const char *workDir)
 	/* Open them */
 	sdir = opendir(buff.c_str());
 	if (sdir == NULL) {
-		std::cerr << "Error while opening " << buff << std::endl;
+		std::cerr << "Error while opening '" << buff << "': " << strerror(errno) << std::endl;
 		return NOT_OK;
 	}
 
 	ddir = opendir(ss.str().c_str());
 	if (ddir == NULL) {
-		std::cerr << "Error while opening " << ss.str() << std::endl;
+		std::cerr << "Error while opening '" << ss.str() << "': " << strerror(errno) << std::endl;
 		closedir(sdir);
 		return NOT_OK;
 	}
@@ -410,14 +417,14 @@ int merge_couple(const char *srcDir, const char *dstDir, const char *workDir)
 				suffix = 'A';
 			} else if (suffix == 'Z') {
 				/* \TODO do it better */
-				std::cerr << "Not enough suffixes for folder " << (*srci).first << std::endl;
+				std::cerr << "Not enough suffixes for folder '" << (*srci).first << "'" << std::endl;
 				break;
 			} else {
 				suffix++;
 			}
 		}
 		if (rename(buff.c_str(), ss.str().c_str()) != 0) {
-			std::cerr << "Can't move folder " << buff << std::endl;
+			std::cerr << "Can't move folder '" << buff << "'" << std::endl;
 		}
 	}
 
@@ -475,7 +482,7 @@ int merge_all(const char *workDir, uint16_t key, const char *prefix)
 	DIR *dir = NULL;
 	dir = opendir(workDir);
 	if (dir == NULL) {
-		std::cerr << "Error when initializing directory " << workDir << std::endl;
+		std::cerr << "Error while initializing directory '" << workDir << "'" << std::endl;
 		return NOT_OK;
 	}
 
@@ -502,7 +509,7 @@ int merge_all(const char *workDir, uint16_t key, const char *prefix)
 		size += DATE_LEN + HOUR_LEN;
 		break;
 	default:
-		std::cerr << "Undefined key value!\n";
+		std::cerr << "Undefined key value\n";
 		closedir(dir);
 		return NOT_OK;
 	}
@@ -552,7 +559,7 @@ int merge_all(const char *workDir, uint16_t key, const char *prefix)
 			clear_ss(&ss);
 			ss << workDir << "/" << i->second;
 			if (rename(buff.c_str(), ss.str().c_str()) != 0) {
-				std::cerr << "Error while moving folder " << buff << std::endl;
+				std::cerr << "Error while moving folder '" << buff << "'" << std::endl;
 			}
 		}
 	}
@@ -581,7 +588,7 @@ int move_prefixed_dirs(const char *baseDir, const char *workDir, const char *pre
 
 	dir = opendir(workDir);
 	if (dir == NULL) {
-		std::cerr << "Error when initializing directory " << workDir << std::endl;
+		std::cerr << "Error while initializing directory '" << workDir << "'" << std::endl;
 		return NOT_OK;
 	}
 
@@ -610,7 +617,7 @@ int move_prefixed_dirs(const char *baseDir, const char *workDir, const char *pre
 					ss << baseDir << "/" << subdir->d_name;
 
 					if (rename(buff.c_str(), ss.str().c_str()) != 0) {
-						std::cerr << "Error while moving folder " << buff << std::endl;
+						std::cerr << "Error while moving folder '" << buff << "'" << std::endl;
 					}
 				} else {
 					if (move_prefixed_dirs(baseDir, buff.c_str(), prefix, key) != OK) {
@@ -626,7 +633,7 @@ int move_prefixed_dirs(const char *baseDir, const char *workDir, const char *pre
 				clear_ss(&ss);
 				ss << baseDir << "/" << subdir->d_name;
 				if (rename(buff.c_str(), ss.str().c_str()) != 0) {
-					std::cerr << "Error while moving folder " << buff << std::endl;
+					std::cerr << "Error while moving folder '" << buff << "'" << std::endl;
 				}
 			} else {
 				if (move_prefixed_dirs(baseDir, buff.c_str(), prefix, key) != OK) {
@@ -643,7 +650,7 @@ int move_prefixed_dirs(const char *baseDir, const char *workDir, const char *pre
 			clear_ss(&ss);
 			ss << baseDir << "/" << subdir->d_name;
 			if (rename(buff.c_str(), ss.str().c_str()) != 0) {
-				std::cerr << "Error while moving file " << buff << std::endl;
+				std::cerr << "Error while moving file '" << buff << "'" << std::endl;
 			}
 		}
 	}
@@ -662,6 +669,7 @@ int main(int argc, char *argv[])
 		usage();
 		return OK;
 	}
+
 	ibis::gVerbose = -10;
 
 	/* Process arguments */
@@ -673,7 +681,7 @@ int main(int argc, char *argv[])
 	std::stringstream ss;
 	std::string prefix;
 
-	while ((option = getopt(argc, argv, ARGUMENTS)) != -1) {
+	while ((option = getopt_long(argc, argv, OPTSTRING, long_opts, NULL)) != -1) {
 		switch (option) {
 		case 'h':
 			usage();
@@ -708,10 +716,11 @@ int main(int argc, char *argv[])
 			moveOnly = 1;
 			break;
 		case '?':
-			std::cerr << "Unkwnown argument " << (char) optopt << std::endl;
+			std::cerr << "Unknown argument: " << (char) optopt << std::endl;
+			usage();
 			return NOT_OK;
 		case ':':
-			std::cerr << "Missing parameter for argument " << (char) optopt << std::endl;
+			std::cerr << "Missing parameter for argument '" << (char) optopt << "'" << std::endl;
 			return NOT_OK;
 		default:
 			std::cerr << "Unknown error\n";
@@ -720,18 +729,18 @@ int main(int argc, char *argv[])
 	}
 
 	if (basedir.empty()) {
-		std::cerr << "\nBase directory path not set!\n\n";
+		std::cerr << "\nBase directory path not set\n\n";
 		return NOT_OK;
 	}
 
 	if (prefix.empty()) {
-		std::cout << "\nWarning: Prefix not set!\n\n";
+		std::cout << "\nWarning: Prefix not set\n\n";
 	}
 
 	/* Move all prefixed subdirs into basedir (or merge_all if separated set) */
 	if (moveOnly != 0) {
 		if (separated) {
-			std::cerr << "-s and -m arguments can't be set together!\n";
+			std::cerr << "-s and -m arguments can't be used together\n";
 			return NOT_OK;
 		}
 		if (move_prefixed_dirs(basedir.c_str(), basedir.c_str(), (prefix.empty() ? NULL : prefix.c_str()), key) != OK) {
@@ -742,12 +751,12 @@ int main(int argc, char *argv[])
 	}
 
 	if (key == -1) {
-		std::cerr << "\nUndefined key argument!\n\n";
+		std::cerr << "\nUndefined key argument\n\n";
 		return NOT_OK;
 	}
 
 	if (move_prefixed_dirs(basedir.c_str(), basedir.c_str(), (prefix.empty() ? NULL : prefix.c_str()), key) != OK) {
-		std::cerr << "Moving folders failed!\n";
+		std::cerr << "Moving folders failed\n";
 		return NOT_OK;
 	}
 
