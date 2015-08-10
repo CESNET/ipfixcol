@@ -608,6 +608,7 @@ int move_prefixed_dirs(const char *baseDir, const char *workDir, const char *pre
 					}
 				} else {
 					if (move_prefixed_dirs(baseDir, buff.c_str(), prefix, key) != OK) {
+						closedir(dir);
 						return NOT_OK;
 					}
 				}
@@ -623,6 +624,7 @@ int move_prefixed_dirs(const char *baseDir, const char *workDir, const char *pre
 				}
 			} else {
 				if (move_prefixed_dirs(baseDir, buff.c_str(), prefix, key) != OK) {
+					closedir(dir);
 					return NOT_OK;
 				}
 			}
