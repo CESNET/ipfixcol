@@ -499,6 +499,7 @@ int merge_all(const char *workDir, uint16_t key, const char *prefix)
 		break;
 	default:
 		std::cerr << "Undefined key value!\n";
+		closedir(dir);
 		return NOT_OK;
 	}
 
@@ -551,6 +552,7 @@ int merge_all(const char *workDir, uint16_t key, const char *prefix)
 			}
 		}
 	}
+
 	closedir(dir);
 	return OK;
 }
