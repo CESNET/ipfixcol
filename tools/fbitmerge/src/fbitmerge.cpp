@@ -37,7 +37,6 @@
  *
  */
 
-
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -608,7 +607,9 @@ int move_prefixed_dirs(const char *baseDir, const char *workDir, const char *pre
 				if (could_be(subdir->d_name) == OK) {
 					/* Separate set - don't move with workDir */
 					if (separated) {
-						merge_all(workDir, key, prefix);
+						if (merge_all(workDir, key, prefix) != OK) {
+							return NOT_OK;
+						}
 						break;
 					}
 
@@ -627,7 +628,9 @@ int move_prefixed_dirs(const char *baseDir, const char *workDir, const char *pre
 				}
 			} else if (strstr(subdir->d_name, prefix) == subdir->d_name) {
 				if (separated) {
-					merge_all(workDir, key, prefix);
+					if (merge_all(workDir, key, prefix) != OK) {
+						return NOT_OK;
+					}
 					break;
 				}
 				clear_ss(&ss);
@@ -762,7 +765,9 @@ int main(int argc, char *argv[])
 
 	/* if separate not set merge all in basedir */
 	if (!separated) {
-		merge_all(basedir.c_str(), key, prefix.c_str());
+		if (merge_all(basedir.c_str(), key, prefix.c_str()) != OK) {
+			return NOT_OK;
+		}
 	}
 
 	return OK;
