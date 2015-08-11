@@ -629,7 +629,7 @@ static void *statistics_thread(void* config)
 			char *stat_out_file_path = (char *) xmlNodeGetContent(node->xmlChildrenNode);
 			if (stat_out_file_path && strlen(stat_out_file_path) > 0) {
 				/* Determine statistics file path, i.e., full path minus basename */
-				char stat_out_path[strlen(stat_out_file_path)];
+				char stat_out_path[strlen(stat_out_file_path) + 1];
 				strncpy_safe(stat_out_path, stat_out_file_path, strlen(stat_out_file_path) - strlen(basename(stat_out_file_path)));
 
 				/* Check whether statistics file path exists */

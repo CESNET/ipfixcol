@@ -40,7 +40,6 @@
 #ifndef FBITMERGE_H_
 #define FBITMERGE_H_
 
-
 typedef std::map<std::string, int> innerDirMap;
 typedef std::map<std::string, innerDirMap> DIRMAP;
 
