@@ -41,6 +41,7 @@ extern "C" {
 #include <ipfixcol.h>
 #include <ipfixcol/profiles.h>
 #include <string.h>
+#include <endian.h>
 }
 
 #include "Storage.h"
@@ -247,34 +248,90 @@ std::string Storage::rawName(uint32_t en, uint16_t id) const
 }
 
 
-uint16_t Storage::mapToNfdump(uint64_t en, uint16_t id)
+uint16_t Storage::mapToLnf(uint64_t en, uint16_t id)
 {
 	static uint8_t map[]=
-		{
-			LNF_FLD_ZERO_, LNF_FLD_DOCTETS, LNF_FLD_DPKTS, LNF_FLD_AGGR_FLOWS, LNF_FLD_PROT, 0, LNF_FLD_TCP_FLAGS, LNF_FLD_SRCPORT,
-			LNF_FLD_SRCADDR, 0, 0, LNF_FLD_DSTPORT, LNF_FLD_DSTADDR, 0,	0, 0,
-			0,	0,	0,	0,	0,	0,	0,	0,
-			0,	0,	0, LNF_FLD_SRCADDR, LNF_FLD_DSTADDR, 0,	0,	0,
-			
-			0,	0,	0,	0,	0,	0,	0,	0,
-			0,	0,	0,	0,	0,	0,	0,	0,
-			0,	0,	0,	0,	0,	0,	0,	0,
-			0,	0,	0,	0,	0,	0,	0,	0,
-			
-			0,	0,	0,	0,	0,	0,	0,	0,
-			0,	0,	0,	0,	0,	0,	0,	0,
-			0,	0,	0,	0,	0,	0,	0,	0,
-			0,	0,	0,	0,	0,	0,	0,	0,
-			
-			0,	0,	0,	0,	0,	0,	0,	0,
-			0,	0,	0,	0,	0,	0,	0,	0,
-			0,	0,	0,	0,	0,	0,	0,	0,
-			0,	0,	0,	0,	0,	0,	0,	0,
-
-			0,	0,	0,	0,	0,	0,	0,	0,
-			0,	0,	0,	0,	0,	0,	0,	0,
-			0,	0,	0,	0,	0,	0,	0,	0,
-			LNF_FLD_FIRST, LNF_FLD_LAST, 0,	0,	0,	0,	0,	0,
+		{	//0-31
+			LNF_FLD_ZERO_, LNF_FLD_DOCTETS, LNF_FLD_DPKTS, LNF_FLD_AGGR_FLOWS,
+			LNF_FLD_PROT, LNF_FLD_TOS, LNF_FLD_TCP_FLAGS, LNF_FLD_SRCPORT,
+			LNF_FLD_SRCADDR, LNF_FLD_SRC_MASK, LNF_FLD_INPUT, LNF_FLD_DSTPORT,
+			LNF_FLD_DSTADDR, LNF_FLD_DST_MASK, LNF_FLD_OUTPUT, LNF_FLD_IP_NEXTHOP,
+			LNF_FLD_SRCAS, LNF_FLD_DSTAS,	LNF_FLD_BGP_NEXTHOP,	0,
+			0, LNF_FLD_LAST, LNF_FLD_FIRST, LNF_FLD_OUT_BYTES,
+			LNF_FLD_OUT_PKTS,	0,	0, LNF_FLD_SRCADDR,
+			LNF_FLD_DSTADDR, LNF_FLD_SRC_MASK, LNF_FLD_DST_MASK,	0,
+			//32-63
+			0,	0,	0,	0,
+			0,	0,	LNF_FLD_ENGINE_TYPE, LNF_FLD_ENGINE_ID,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	LNF_FLD_DST_TOS, //48 - 55
+			LNF_FLD_IN_SRC_MAC,	LNF_FLD_OUT_DST_MAC, LNF_FLD_SRC_VLAN, LNF_FLD_DST_VLAN,
+			0, LNF_FLD_DIR, LNF_FLD_IP_NEXTHOP,	LNF_FLD_BGP_NEXTHOP, //56 - 63
+			//64-95
+			0,	0,	0,	0,
+			0,	0,	LNF_FLD_MPLS_LABEL,	LNF_FLD_MPLS_LABEL, //64 - 71
+			LNF_FLD_MPLS_LABEL,	LNF_FLD_MPLS_LABEL, LNF_FLD_MPLS_LABEL,
+			LNF_FLD_MPLS_LABEL, LNF_FLD_MPLS_LABEL, LNF_FLD_MPLS_LABEL, LNF_FLD_MPLS_LABEL, LNF_FLD_MPLS_LABEL, //72 - 79
+			LNF_FLD_OUT_SRC_MAC, LNF_FLD_IN_DST_MAC,	0,	0,
+			0,	0,	0,	0, //80 - 87
+			0,	LNF_FLD_FWD_STATUS,	0,	0,
+			0,	0,	0,	0, //88 - 95
+			//96-127
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			//128-159
+			LNF_FLD_BGPNEXTADJACENTAS, LNF_FLD_BGPPREVADJACENTAS,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			LNF_FLD_CONN_ID,	0,	0,	0,
+			LNF_FLD_FIRST, LNF_FLD_LAST, 0,	0,
+			0,	0,	0,	0,
+			//160-191
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			LNF_FLD_ICMP_TYPE,	LNF_FLD_ICMP_CODE,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			//192-223
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			//224-255
+			0,	LNF_FLD_XLATE_SRC_IP,	LNF_FLD_XLATE_DST_IP,	LNF_FLD_XLATE_SRC_PORT,
+			LNF_FLD_XLATE_DST_PORT,	0,	LNF_FLD_EVENT_FLAG,	0,
+			0,	LNF_FLD_FW_XEVENT,	LNF_FLD_INGRESS_VRFID,	LNF_FLD_EGRESS_VRFID,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			//256-287
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	0,	0,	0,
+			0,	LNF_FLD_XLATE_SRC_IP,	LNF_FLD_XLATE_DST_IP,	0,
+			0,	0,	0,	0,
 		};
 
 
@@ -324,60 +381,48 @@ void Storage::storeDataRecord(struct metadata *mdata)
 
 		uint8_t lnf_fld;
 
-		if((lnf_fld = mapToNfdump(enterprise, id))){
-			uint32_t bufik[4]={0};
-	
-			switch (element.type) {
-			case IPV4:
-					bufik[0] = read32(data_record + offset);
-					lnf_rec_fset(recp, lnf_fld, &bufik);
-				break;
-			default:
-				lnf_rec_fset(recp, lnf_fld, data_record + offset);
+		if((lnf_fld = mapToLnf(enterprise, id))){
+			
+			union retype {
+				uint8_t B[16];
+				uint16_t W[8];
+				uint32_t DW[4];
+				uint64_t QW[2];
+			};
+
+			union retype varBuff={0};
+
+			switch (length) {
+				case sizeof(uint8_t):
+					lnf_rec_fset(recp, lnf_fld, data_record + offset);
+					break;
+				case sizeof(uint16_t):
+					varBuff.W[0] = htobe16(read16(data_record + offset));
+					lnf_rec_fset(recp, lnf_fld, &varBuff);
+					break;
+				case sizeof(uint32_t):
+					if(element.type != IPV4){
+						varBuff.DW[0] = htobe32(read32(data_record + offset));
+						lnf_rec_fset(recp, lnf_fld, &varBuff);
+					}else{
+						memset(&varBuff, 0x0, sizeof(lnf_ip_t));
+						varBuff.DW[3] = htole32(read32(data_record + offset));
+			 			lnf_rec_fset(recp, lnf_fld, &varBuff);
+					}	
+					break;
+				case sizeof(uint64_t):
+					varBuff.QW[0] = htobe64(read64(data_record + offset));
+					lnf_rec_fset(recp, lnf_fld, &varBuff);
+					break;
+				case 2*sizeof(uint64_t):
+					varBuff.DW[1] = htobe64(read64(data_record + offset));
+					varBuff.DW[0] = htobe64(read64(data_record + offset + sizeof(uint32_t)));
+					lnf_rec_fset(recp, lnf_fld, &varBuff);
+					break;
+				default:
+					lnf_rec_fset(recp, lnf_fld, data_record + offset);
 			}
 		}
-		/*
-		switch (element.type) {
-		case PROTOCOL:
-			record += translator.formatProtocol(read8(data_record + offset));
-			break;
-		case FLAGS:
-			record += translator.formatFlags(read16(data_record + offset));
-			break;
-		case IPV4:
-			record += translator.formatIPv4(read32(data_record + offset));
-			break;
-		case IPV6:{
-			READ_BYTE_ARR(addr6, data_record + offset, IPV6_LEN);
-			record += translator.formatIPv6(addr6);
-			break;}
-		case MAC: {
-			READ_BYTE_ARR(addrMac, data_record + offset, MAC_LEN);
-			record += translator.formatMac(addrMac);
-			break;}
-		case TSTAMP_SEC:
-			record += translator.formatTimestamp(read64(data_record + offset), t_units::SEC);
-			break;
-		case TSTAMP_MILLI:
-			record += translator.formatTimestamp(read64(data_record + offset), t_units::MILLISEC);
-			break;
-		case TSTAMP_MICRO:
-			record += translator.formatTimestamp(read64(data_record + offset), t_units::MICROSEC);
-			break;
-		case TSTAMP_NANO:
-			record += translator.formatTimestamp(read64(data_record + offset), t_units::NANOSEC);
-			break;
-		case STRING:
-			readString(length, data_record, offset);
-			break;
-		case RAW:
-			readRawData(length, data_record, offset);
-			break;
-		default:
-			readRawData(length, data_record, offset);
-			break;
-		}*/
-
 		offset += length;
 	}
 	
@@ -401,7 +446,7 @@ void Storage::storeMetadata(metadata* mdata)
 	std::stringstream ss;
 	
 	/* Geolocation info */
-	ss << "\"srcAS\": \"" << mdata->srcAS << "\", ";
+	ss << "\"srcAS\": \"" << mdata->srcAS << "\", ";                                     
 	ss << "\"dstAS\": \"" << mdata->dstAS << "\", ";
 	ss << "\"srcCountry\": \"" << mdata->srcCountry << "\", ";
 	ss << "\"dstCountry\": \"" << mdata->dstCountry << "\", ";

@@ -284,7 +284,7 @@ void Storage::storeDataRecord(struct metadata *mdata)
 			record += translator.formatProtocol(read8(data_record + offset));
 			break;
 		case FLAGS:
-			record += translator.formatFlags(read16(data_record + offset));
+			record += translator.formatFlags(read16(data_record + offset), length);
 			break;
 		case IPV4:
 			record += translator.formatIPv4(read32(data_record + offset));

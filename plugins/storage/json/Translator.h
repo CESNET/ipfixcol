@@ -100,9 +100,10 @@ public:
      * \brief Format TCP flags
      * 
      * @param flags
+     * @param length length of flags
      * @return formatted flags
      */
-	const char *formatFlags(uint16_t flags);
+	const char *formatFlags(uint16_t flags, size_t length);
     
 
 private:

@@ -181,7 +181,7 @@ private:
      */
     void loadElements();
 
-    uint16_t mapToNfdump(uint64_t en, uint16_t id);
+    uint16_t mapToLnf(uint64_t en, uint16_t id);
     
 	/**
 	 * \brief Send JSON data to output processors

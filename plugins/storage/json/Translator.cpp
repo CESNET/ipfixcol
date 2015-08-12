@@ -46,9 +46,10 @@
 /**
  * \brief Format flags
  */
-const char *Translator::formatFlags(uint16_t flags)
+const char *Translator::formatFlags(uint16_t flags, size_t length)
 {
-	flags = ntohs(flags);
+	if(length > 1)
+		flags = be16toh(flags);
 
 	buffer[0] = flags & 0x20 ? 'U' : '.';
 	buffer[1] = flags & 0x10 ? 'A' : '.';
