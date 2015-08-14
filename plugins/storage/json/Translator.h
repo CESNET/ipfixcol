@@ -97,13 +97,20 @@ public:
 	const char *formatProtocol(uint8_t proto) const;
     
     /**
-     * \brief Format TCP flags
+     * \brief Format TCP flags 16bits
      * 
      * @param flags
      * @return formatted flags
      */
-	const char *formatFlags(uint16_t flags);
-    
+	const char *formatFlags16(uint16_t flags);
+
+    /**
+     * \brief Format TCP flags 8bits
+     *
+     * @param flags
+     * @return formatted flags
+     */
+	const char *formatFlags8(uint8_t flags);
 
 private:
 

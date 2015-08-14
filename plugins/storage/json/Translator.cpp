@@ -44,12 +44,19 @@
 #include <vector>
 
 /**
- * \brief Format flags
+ * \brief Format flags 16bits
  */
-const char *Translator::formatFlags(uint16_t flags)
+const char *Translator::formatFlags16(uint16_t flags)
 {
 	flags = ntohs(flags);
+	return formatFlags8((uint8_t) flags);
+}
 
+/**
+ * \brief Format flags 8bits
+ */
+const char *Translator::formatFlags8(uint8_t flags)
+{
 	buffer[0] = flags & 0x20 ? 'U' : '.';
 	buffer[1] = flags & 0x10 ? 'A' : '.';
 	buffer[2] = flags & 0x08 ? 'P' : '.';
@@ -57,7 +64,7 @@ const char *Translator::formatFlags(uint16_t flags)
 	buffer[4] = flags & 0x02 ? 'S' : '.';
 	buffer[5] = flags & 0x01 ? 'F' : '.';
 	buffer[6] = '\0';
-	
+
 	return buffer;
 }
 
