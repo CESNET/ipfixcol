@@ -56,6 +56,7 @@
 		<name>JSON storage plugin</name>
 		<fileWriter>
 			<fileFormat>json</fileFormat>
+			<metadata>no</metadata>
 			<output>
 				<type>print</type>
 			</output>
@@ -77,6 +78,13 @@
 					<term><command>fileFormat</command></term>
 					<listitem>
 						<simpara>Same as in <filename>internalcfg.xml</filename> file.</simpara>
+					</listitem>
+				</varlistentry>
+
+				<varlistentry>
+					<term><command>metadata</command></term>
+					<listitem>
+						<simpara>Add record metadata to the output (yes/no) [default == no].</simpara>
 					</listitem>
 				</varlistentry>
 	
