@@ -49,6 +49,7 @@ IPFIXCOL_API_VERSION;
 #include <stdexcept>
 
 #include "pugixml.hpp"
+#include <libxml/parser.h>
 
 #include "nfdump_ext.h"
 #include "Storage.h"
@@ -57,15 +58,64 @@ IPFIXCOL_API_VERSION;
 
 static const char *msg_module = "nfdump_ext_storage";
 
-struct json_conf {
-	bool metadata;
+struct nfdump_ext_conf {
+	uint64_t intenval;
+	std::string *storage_dir
 	Storage *storage;
+	bool metadata;
+	bool align;
+
 };
 
-void process_startup_xml(struct json_conf *conf, char *params) 
+void process_startup_xml(struct nfdump_ext_conf *conf, char *params) 
 {
+	xmlDocPtr *doc = NULL;
+	xmlNode *cur = NULL;
+
+	/* try to parse configuration file */
+	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
+	if (doc == NULL) {
+		MSG_ERROR(msg_module, "Plugin configuration not parsed successfully");
+		goto err_init;
+	}
+	cur = xmlDocGetRootElement(doc);
+	if (cur == NULL) {
+		MSG_ERROR(msg_module, "Empty configuration");
+		goto err_xml;
+	}
+	if (xmlStrcmp(cur->name, (const xmlChar *) "nfdump_ext")) {
+		MSG_ERROR(msg_module, "Error in configuration, root node is not nfdump_ext");
+		goto err_init;
+	}
+	cur = cur->xmlChildrenNode;
+	while (cur != NULL) {
+		/* find out where to look for directory where data storage tree will be created */
+		if ((!xmlStrcmp(cur->name, (const xmlChar *) "storagePrefix"))) {
+			std::string prefix(xmlNodeListGetString(doc, cur, 1));
+			if(prefix != NULL)
+				conf->storage  = new std::string(prefix);
+
+		}else if((!xmlStrcmp(cur->name, (const xmlChar *) "timeWindow"))){
+			//interval and align
+
+		}else if((!xmlStrcmp(cur->name, (const xmlChar *) "fileOptions"))){
+			//prefix, suffix mask, identificator, compression, 
+
+		}
+		cur = cur->next;
+	}
+
+	/* check whether we have found "interval" element in configuration file */
+	if (conf->xml_file == NULL) {
+		MSG_WARNING(msg_module, "\"file\" element is missing. No input, "
+				"nothing to do");
+		goto err_xml;
+	}
+
 	pugi::xml_document doc;
 	pugi::xml_parse_result result = doc.load(params);
+
+
 	
 	if (!result) {
 		throw std::invalid_argument(std::string("Error when parsing parameters: ") + result.description());
@@ -75,6 +125,7 @@ void process_startup_xml(struct json_conf *conf, char *params)
 	pugi::xpath_node ie = doc.select_single_node("fileWriter");
 	
 	/* Check metadata processing */
+	//Unnecessary
 	std::string meta = ie.node().child_value("metadata");
 	conf->metadata = (meta == "yes");
 
@@ -86,7 +137,8 @@ void process_startup_xml(struct json_conf *conf, char *params)
 
 		Output *output{NULL};
 
-		if (type == "print") {
+		if (type == "save") {
+		//	output = new Saver(node);
 			output = new Printer(node);
 		} else if (type == "send") {
 			output = new Sender(node);
@@ -108,7 +160,7 @@ int storage_init (char *params, void **config)
 {	
 	try {
 		/* Create configuration */
-		struct json_conf *conf = new struct json_conf;
+		struct nfdump_ext_conf *conf = new struct nfdump_ext_conf;
 		
 		/* Create storage */
 		conf->storage = new Storage();
@@ -137,7 +189,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	const struct ipfix_template_mgr *template_mgr)
 {
 	(void) template_mgr;
-	struct json_conf *conf = (struct json_conf *) config;
+	struct nfdump_ext_conf *conf = (struct nfdump_ext_conf *) config;
 	
 	conf->storage->storeDataSets(ipfix_msg);
 	
@@ -155,7 +207,7 @@ extern "C"
 int storage_close (void **config)
 {
 	MSG_DEBUG(msg_module, "CLOSING");
-	struct json_conf *conf = (struct json_conf *) *config;
+	struct nfdump_ext_conf *conf = (struct nfdump_ext_conf *) *config;
 	
 	/* Destroy storage */
 	delete conf->storage;

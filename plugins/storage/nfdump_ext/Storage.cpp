@@ -81,7 +81,7 @@ Storage::Storage()
 	
 
 	if(lnf_open(&filep, "nfdump_ext_storage.test", LNF_WRITE, "localhostfile" )!=LNF_OK){
-		MSG_DEBUG(msg_module, "Failed to open lnf file: %s\n", "");
+		MSG_ERROR(msg_module, "Failed to open lnf file: %s\n", "");
 	}
 }
 
@@ -266,18 +266,18 @@ uint16_t Storage::mapToLnf(uint64_t en, uint16_t id)
 			0,	0,	0,	0,
 			0,	0,	0,	0,
 			0,	0,	0,	0,
-			0,	0,	0,	LNF_FLD_DST_TOS, //48 - 55
+			0,	0,	0,	LNF_FLD_DST_TOS, 
 			LNF_FLD_IN_SRC_MAC,	LNF_FLD_OUT_DST_MAC, LNF_FLD_SRC_VLAN, LNF_FLD_DST_VLAN,
-			0, LNF_FLD_DIR, LNF_FLD_IP_NEXTHOP,	LNF_FLD_BGP_NEXTHOP, //56 - 63
+			0, LNF_FLD_DIR, LNF_FLD_IP_NEXTHOP,	LNF_FLD_BGP_NEXTHOP, 
 			//64-95
 			0,	0,	0,	0,
-			0,	0,	LNF_FLD_MPLS_LABEL,	LNF_FLD_MPLS_LABEL, //64 - 71
+			0,	0,	LNF_FLD_MPLS_LABEL,	LNF_FLD_MPLS_LABEL, 
 			LNF_FLD_MPLS_LABEL,	LNF_FLD_MPLS_LABEL, LNF_FLD_MPLS_LABEL,
-			LNF_FLD_MPLS_LABEL, LNF_FLD_MPLS_LABEL, LNF_FLD_MPLS_LABEL, LNF_FLD_MPLS_LABEL, LNF_FLD_MPLS_LABEL, //72 - 79
+			LNF_FLD_MPLS_LABEL, LNF_FLD_MPLS_LABEL, LNF_FLD_MPLS_LABEL, LNF_FLD_MPLS_LABEL, LNF_FLD_MPLS_LABEL, 
 			LNF_FLD_OUT_SRC_MAC, LNF_FLD_IN_DST_MAC,	0,	0,
-			0,	0,	0,	0, //80 - 87
+			0,	0,	0,	0, 
 			0,	LNF_FLD_FWD_STATUS,	0,	0,
-			0,	0,	0,	0, //88 - 95
+			0,	0,	0,	0, 
 			//96-127
 			0,	0,	0,	0,
 			0,	0,	0,	0,
@@ -324,7 +324,7 @@ uint16_t Storage::mapToLnf(uint64_t en, uint16_t id)
 			0,	0,	0,	0,
 			0,	0,	0,	0,
 			//256-287
-			0,	0,	0,	0,
+			0,	0,	LNF_FLD_RECEIVED,	0,
 			0,	0,	0,	0,
 			0,	0,	0,	0,
 			0,	0,	0,	0,
@@ -432,7 +432,7 @@ void Storage::storeDataRecord(struct metadata *mdata)
 		storeMetadata(mdata);
 	}*/
 	if (lnf_write(filep, recp) != LNF_OK) {
-			MSG_DEBUG(msg_module, "Can not write record.%s\n","");
+			MSG_WARNING(msg_module, "Can not write record.%s\n","");
 	}
 
 	//sendData();
