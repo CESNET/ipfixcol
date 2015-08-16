@@ -70,7 +70,7 @@ static char *msg_module = "config";
  * @return Pointer to the children node with requested name. It should not be
  * freed since it is children of given node.
  */
-static inline xmlNodePtr get_children (xmlNodePtr node, const xmlChar* children_name)
+static inline xmlNodePtr get_children(xmlNodePtr node, const xmlChar* children_name)
 {
 	/* check validity of parameters */
 	if (!node || !children_name) {
@@ -81,7 +81,7 @@ static inline xmlNodePtr get_children (xmlNodePtr node, const xmlChar* children_
 
 	while (children) {
 		if (!xmlStrncmp (children->name, children_name, xmlStrlen (children_name)
-		        + 1)) {
+				+ 1)) {
 			return (children);
 		}
 		children = children->next;
@@ -101,7 +101,7 @@ static inline xmlNodePtr get_children (xmlNodePtr node, const xmlChar* children_
  * @return Content (string) of the requested element or NULL if such element.
  * doesn't exist. It should not be freed since it is a part of given node.
  */
-static inline xmlChar *get_children_content (xmlNodePtr node, xmlChar *children_name)
+static inline xmlChar *get_children_content(xmlNodePtr node, xmlChar *children_name)
 {
 	/* check validity of parameters */
 	if (!node || !children_name) {
@@ -114,7 +114,7 @@ static inline xmlChar *get_children_content (xmlNodePtr node, xmlChar *children_
 	/* search in children nodes */
 	while (cur) {
 		if (!xmlStrncmp (cur->name, children_name, xmlStrlen (children_name)
-		        + 1)) {
+				+ 1)) {
 			if (cur->children && (cur->children->type == XML_TEXT_NODE)) {
 				return (cur->children->content);
 			}
@@ -136,7 +136,7 @@ static inline xmlChar *get_children_content (xmlNodePtr node, xmlChar *children_
  * @return XPath Context for the internal XML configuration. Caller will need to
  * free it including separated free of return->doc.
  */
-static xmlXPathContextPtr ic_init (xmlChar* ns_name, char *internal_cfg)
+static xmlXPathContextPtr ic_init(xmlChar* ns_name, char *internal_cfg)
 {
 	int fd;
 	xmlDocPtr doc = NULL;
@@ -184,15 +184,15 @@ static xmlXPathContextPtr ic_init (xmlChar* ns_name, char *internal_cfg)
  * @return List of information about storage plugin for the specified collector,
  * NULL in case of error.
  */
-struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xmlDocPtr config, char *internal_cfg)
+struct plugin_xml_conf_list* get_storage_plugins(xmlNodePtr collector_node, xmlDocPtr config, char *internal_cfg)
 {
 	int i, j, k, l;
 	xmlDocPtr collector_doc = NULL, exporter_doc = NULL;
 	xmlNodePtr aux_node = NULL, node_filewriter = NULL;
 	xmlXPathContextPtr internal_ctxt = NULL, collector_ctxt = NULL,
-	        config_ctxt = NULL, exporter_ctxt = NULL;
+			config_ctxt = NULL, exporter_ctxt = NULL;
 	xmlXPathObjectPtr xpath_obj_expprocnames = NULL, xpath_obj_expproc = NULL,
-	        xpath_obj_destinations = NULL, xpath_obj_plugin_desc = NULL;
+			xpath_obj_destinations = NULL, xpath_obj_plugin_desc = NULL;
 	xmlChar *file_format = (xmlChar *) "", *file_format_inter, *plugin_file, *odid, *thread_name;
 	struct plugin_xml_conf_list* plugins = NULL, *aux_plugin = NULL;
 	char *odidptr;
@@ -355,6 +355,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
 				/* go to the next exportingProcess element */
 				aux_node = aux_node->next;
 			}
+
 			loop_cleanup:
 			/* free data from previous iteration in case of multiple exportingProcesses (also erased in cleanup) */
 			xmlXPathFreeObject (xpath_obj_destinations);
@@ -416,7 +417,7 @@ struct plugin_xml_conf_list* get_storage_plugins (xmlNodePtr collector_node, xml
  * @return Information about first input plugin for the specified collector,
  * NULL in case of error.
  */
-struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char *internal_cfg)
+struct plugin_xml_conf_list* get_input_plugins(xmlNodePtr collector_node, char *internal_cfg)
 {
 	int i, j;
 	xmlChar *collector_name;
@@ -494,7 +495,7 @@ struct plugin_xml_conf_list* get_input_plugins (xmlNodePtr collector_node, char 
 		children1 = children2 = children3 = xpath_obj_file->nodesetval->nodeTab[i]->children;
 		while (children1) {
 			if ((!strncmp ((char*) children1->name, "name", strlen ("name") + 1))
-			        && (!xmlStrncmp (children1->children->content, collector_name, xmlStrlen (collector_name) + 1))) {
+					&& (!xmlStrncmp (children1->children->content, collector_name, xmlStrlen (collector_name) + 1))) {
 				/* find the processName of specified inputPlugin in internalcfg.xml */
 				while (children3) {
 					if (!xmlStrncmp (children3->name, BAD_CAST "processName", strlen ("processName") + 1)) {
@@ -696,17 +697,17 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 	cleanup:
 	/* Cleanup of XPath data */
 	if (xpath_obj_core) {
-		xmlXPathFreeObject (xpath_obj_core);
+		xmlXPathFreeObject(xpath_obj_core);
 	}
 	if (xpath_obj_ipinter) {
-		xmlXPathFreeObject (xpath_obj_ipinter);
+		xmlXPathFreeObject(xpath_obj_ipinter);
 	}
 	if (config_ctxt) {
-		xmlXPathFreeContext (config_ctxt);
+		xmlXPathFreeContext(config_ctxt);
 	}
 	if (internal_ctxt) {
-		xmlFreeDoc (internal_ctxt->doc);
-		xmlXPathFreeContext (internal_ctxt);
+		xmlFreeDoc(internal_ctxt->doc);
+		xmlXPathFreeContext(internal_ctxt);
 	}
 
 
@@ -721,34 +722,33 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
  * @return List of \<collectingProcess\> nodes in the form of XPath objects, NULL
  * in case of error.
  */
-xmlXPathObjectPtr get_collectors (xmlDocPtr doc)
+xmlXPathObjectPtr get_collectors(xmlDocPtr doc)
 {
 	xmlXPathObjectPtr retval = NULL;
 	xmlXPathContextPtr context = NULL;
 
 	/* create xpath evaluation context */
-	if ((context = xmlXPathNewContext (doc)) == NULL) {
+	if ((context = xmlXPathNewContext(doc)) == NULL) {
 		return NULL;
 	}
 
 	/* register namespace */
-	if (xmlXPathRegisterNs (context, BAD_CAST "ietf-ipfix", BAD_CAST "urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp")
-	        != 0) {
+	if (xmlXPathRegisterNs(context, BAD_CAST "ietf-ipfix", BAD_CAST "urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp") != 0) {
 		return NULL;
 	}
 
 	/* search for collectingProcess nodes defining collectors */
 	if ((retval
-	        = xmlXPathEvalExpression (BAD_CAST "/ietf-ipfix:ipfix/ietf-ipfix:collectingProcess", context))
-	        != NULL) {
-		if (xmlXPathNodeSetIsEmpty (retval->nodesetval)) {
-			xmlXPathFreeObject (retval);
+			= xmlXPathEvalExpression(BAD_CAST "/ietf-ipfix:ipfix/ietf-ipfix:collectingProcess", context))
+			!= NULL) {
+		if (xmlXPathNodeSetIsEmpty(retval->nodesetval)) {
+			xmlXPathFreeObject(retval);
 			retval = NULL;
 		}
 	}
 
 	/* Cleanup of XPath data */
-	xmlXPathFreeContext (context);
+	xmlXPathFreeContext(context);
 
 	return (retval);
 }

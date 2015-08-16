@@ -255,7 +255,7 @@ int main (int argc, char* argv[])
 		MSG_SYSLOG_INIT(PACKAGE);
 		
 		/* and send all following messages to the syslog */
-		if (daemon (1, 0)) {
+		if (daemon(1, 0)) {
 			MSG_ERROR(msg_module, "%s", strerror(errno));
 		}
 	}
@@ -334,9 +334,7 @@ int main (int argc, char* argv[])
 	/* XML cleanup */
 	xmlXPathFreeObject(collectors);
 	
-	/*
-	 * create Template Manager
-	 */
+	/* Create Template Manager */
 	template_mgr = tm_create();
 	if (template_mgr == NULL) {
 		MSG_ERROR(msg_module, "[%d] Unable to create Template Manager", config->proc_id);
