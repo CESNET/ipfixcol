@@ -66,7 +66,7 @@ IPFIXCOL_API_VERSION;
 #include "fastbit_element.h"
 #include "FlowWatch.h"
 
-void * reorder_index(void * config)
+void *reorder_index(void * config)
 {
 	struct fastbit_config *conf = static_cast<struct fastbit_config*>(config);
 	ibis::table *index_table;
@@ -95,7 +95,7 @@ void * reorder_index(void * config)
 			index_table = ibis::table::create(dir.c_str());
 			ibis_columns = index_table->columnNames();
 			for (unsigned int i=0; i < conf->index_en_id->size(); i++) {
-				for (unsigned int j=0; j < ibis_columns.size(); j++ ) {
+				for (unsigned int j=0; j < ibis_columns.size(); j++) {
 					if ((*conf->index_en_id)[i] == std::string(ibis_columns[j])) {
 						MSG_DEBUG(msg_module, "Creating indexes: %s%s",dir.c_str(),(*conf->index_en_id)[i].c_str());
 						index_table->buildIndex(ibis_columns[j]);
@@ -156,7 +156,7 @@ void update_window_name(struct fastbit_config *conf)
 		ss.str("");
 		flushed++;
 	} else {
-		timeinfo = localtime ( &(conf->last_flush));
+		timeinfo = localtime (&(conf->last_flush));
 		strftime(formated_time, 17, "%Y%m%d%H%M%S", timeinfo);
 		conf->window_dir = conf->prefix + std::string(formated_time) + "/";
 	}
@@ -293,7 +293,7 @@ int process_startup_xml(char *params, struct fastbit_config* c)
 		namePrefix=ie.node().child_value("prefix");
 		c->prefix = namePrefix;
 
-		time ( &(c->last_flush));
+		time(&(c->last_flush));
 		
 		nameType=ie.node().child_value("type");
 		if (nameType == "time") {
@@ -304,7 +304,7 @@ int process_startup_xml(char *params, struct fastbit_config* c)
 					c->last_flush = ((c->last_flush/c->time_window) * c->time_window);
 				}
 			}
-			timeinfo = localtime ( &(c->last_flush));
+			timeinfo = localtime(&(c->last_flush));
 			strftime(formated_time, 17, "%Y%m%d%H%M%S", timeinfo);
 			c->window_dir = c->prefix + std::string(formated_time) + "/";
 		} else if (nameType == "incremental") {
@@ -334,46 +334,47 @@ extern "C"
 int storage_init(char *params, void **config)
 {
 	MSG_DEBUG(msg_module, "Fastbit plugin: initialization");
-	struct fastbit_config* c = NULL;
+	struct fastbit_config *c = NULL;
 
 	/* Create config structure */
-	(*config) = new struct fastbit_config;
+	*config = new struct fastbit_config;
 	if (*config == NULL) {
-		MSG_ERROR(msg_module, "Can't allocate memory for config structure");
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return 1;
 	}
-	c = (struct fastbit_config*)(*config);
+
+	c = (struct fastbit_config*) *config;
 	c->ob_dom = new std::map<uint32_t,std::map<uint16_t,template_table*>* >;
 	if (c->ob_dom == NULL) {
-		MSG_ERROR(msg_module, "Can't allocate memory for config structure");
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return 1;
 	}
 
 	c->flowWatch = new std::map<uint32_t,FlowWatch>;
 	if (c->flowWatch == NULL) {
-		MSG_ERROR(msg_module, "Can't allocate memory for config structure");
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return 1;
 	}
 
 	c->elements_types = new	std::map<uint32_t,std::map<uint16_t,enum store_type> >;
 	if (c->elements_types == NULL) {
-		MSG_ERROR(msg_module, "Can't allocate memory for config structure");
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return 1;
 	}
 	c->index_en_id = new std::vector<std::string>;
 	if (c->index_en_id == NULL) {
-		MSG_ERROR(msg_module, "Can't allocate memory for config structure");
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return 1;
 	}
 	c->dirs = new std::vector<std::string>;
 	if (c->dirs == NULL) {
-		MSG_ERROR(msg_module, "Can't allocate memory for config structure");
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return 1;
 	}
 
 	/* Parse configuration xml and updated configure structure according to it */
 	if (process_startup_xml(params, c)) {
-		MSG_ERROR(msg_module, "Unable to parse configuration xml");
+		MSG_ERROR(msg_module, "Unable to parse plugin configuration");
 		return 1;
 	}
 	
@@ -490,7 +491,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 		}
 
 		if (conf->time_window != 0) {
-			time ( &rawtime );
+			time(&rawtime);
 			if (difftime(rawtime,conf->last_flush) > conf->time_window) {
 				/* Flush data for all ODID */
 				for (dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++) {
