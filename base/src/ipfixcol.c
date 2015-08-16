@@ -265,6 +265,9 @@ int main (int argc, char* argv[])
 		/* and use default if not specified */
 		startup_config = DEFAULT_STARTUP_CONFIG;
 		MSG_NOTICE(msg_module, "Using default configuration file: %s", startup_config);
+	} else if (access(startup_config, R_OK) == -1) {
+		MSG_ERROR(msg_module, "Cannot open startup startup configuration file '%s': %s", startup_config, strerror(errno));
+		goto cleanup_err;
 	}
 
 	/* Check internal config file */
@@ -272,6 +275,15 @@ int main (int argc, char* argv[])
 		/* and use default if not specified */
 		internal_config = DEFAULT_INTERNAL_CONFIG;
 		MSG_NOTICE(msg_module, "Using default internal configuration file: %s", internal_config);
+	} else if (access(internal_config, R_OK) == -1) {
+		MSG_ERROR(msg_module, "Cannot open internal configuration file '%s': %s", internal_config, strerror(errno));
+		goto cleanup_err;
+	}
+
+	/* Check ipfix-elements file */
+	if (access(ipfix_elements, R_OK) == -1) {
+		MSG_ERROR(msg_module, "Cannot open IFPIX elements file '%s': %s", ipfix_elements, strerror(errno));
+		goto cleanup_err;
 	}
 	  
 	/* Initialize configurator */
