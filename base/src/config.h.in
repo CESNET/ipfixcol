@@ -56,10 +56,10 @@
  */
 
 /** Path to internal ipfixcol's configuration file */
-#define INTERNAL_CONFIG_FILE "@sysconfdir@/ipfixcol/internalcfg.xml"
+#define DEFAULT_INTERNAL_CONFIG "@sysconfdir@/ipfixcol/internalcfg.xml"
 
 /** Path to default (if not specified) user configuration file */
-#define DEFAULT_CONFIG_FILE "@sysconfdir@/ipfixcol/startup.xml"
+#define DEFAULT_STARTUP_CONFIG "@sysconfdir@/ipfixcol/startup.xml"
 
 /** Path to default ipfix-elements specification file */
 #define DEFAULT_IPFIX_ELEMENTS "@sysconfdir@/ipfixcol/ipfix-elements.xml"
