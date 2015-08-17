@@ -90,17 +90,16 @@ enum size {
 
 void usage();
 
-int merge_all(const char *workDir, uint16_t key, char *prefix);
+int merge_all(std::string workDir, uint16_t key, std::string prefix);
 
-int merge_couple(const char *srcDir, const char *dstDir, const char *workDir);
+int merge_couple(std::string srcDir, std::string dstDir, std::string workDir);
 
-int merge_dirs(const char *srcDir, const char *dstDir);
+int merge_dirs(std::string srcDir, std::string dstDir);
 
-void merge_flowStats(const char *first, const char *second);
+void merge_flowStats(std::string first, std::string second);
 
-int move_prefixed_dirs(const char *baseDir, const char *workDir, char *prefix, int key);
+int move_prefixed_dirs(std::string baseDir, std::string workDir, std::string prefix, int key);
 
-void remove_folder_tree(const char *dirname);
-
+void remove_folder_tree(std::string dirname);
 
 #endif /* FBITMERGE_H_ */
