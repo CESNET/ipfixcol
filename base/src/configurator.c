@@ -170,7 +170,7 @@ void config_free_plugin(struct plugin_config *plugin)
 				dlclose(plugin->input->dll_handler);
 			}
 
-			/* Input is pointer to configurator structure, don't free it */
+			/* Input is pointer to configurator structure; don't free it */
 			// free(plugin->input);
 		}
 		
