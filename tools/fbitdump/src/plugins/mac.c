@@ -49,6 +49,6 @@ void parse(char *input, char out[PLUGIN_BUFFER_SIZE], void *conf)
 		&((unsigned char *) &addr)[1],
 		&((unsigned char *) &addr)[0]);
 	
-	snprintf(out, PLUGIN_BUFFER_SIZE, "%" PRIu64, addr);
+	snprintf(out, PLUGIN_BUFFER_SIZE, "%" PRIu64 "UL", addr);
 }
 

@@ -132,7 +132,7 @@ void Filter::init(Configuration &conf) throw (std::invalid_argument)
 		/* clear the context */
 		yylex_destroy(this->scaninfo);
 	}
-	MSG_FILTER("Filter", this->filterString.c_str());
+	MSG_FILTER("Filter", "%s", this->filterString.c_str());
 
 }
 
@@ -246,6 +246,8 @@ void Filter::parseIPv6(std::string addr, std::string& part1, std::string& part2)
 
 	/* Save first part of address into parser structure string vector */
 	ss << be64toh(address[0]);
+	/* IPv6 is stored as unsigned long */
+	ss << "UL";
 	part1 = ss.str();
 
 	/* Clear stringstream */
@@ -254,6 +256,8 @@ void Filter::parseIPv6(std::string addr, std::string& part1, std::string& part2)
 
 	/* Save second part */
 	ss << be64toh(address[1]);
+	/* IPv6 is stored as unsigned long */
+	ss << "UL";
 	part2 = ss.str();
 }
 

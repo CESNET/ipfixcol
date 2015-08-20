@@ -377,7 +377,7 @@
 		</simplelist>
 		<simpara><emphasis>value</emphasis> is value of the column to compare with. The value can be specified as one of:</simpara>
 		<simplelist>
-				<member>Decimal number, optionally with one of [kKmMgGtT] suffix</member>
+				<member>Decimal number. One of [kKmMgGtT] or combination of [uU][lL] suffixes is allowed. The [uU][lL] suffix allows to specify that the number should be treated as unsigned long integer.</member>
 				<member>Hexadecimal number in 0x.... format</member>
 								<member>Float number, optionally with one of [kKmMgGtT] suffix</member>
 								<member>MAC address</member>
