@@ -60,8 +60,7 @@ int load_types_from_xml(struct fastbit_config *conf)
 
 	/* Check for errors */
 	if (!result) {
-		MSG_ERROR(msg_module, "%s parsed with errors", ipfix_elements);
-		MSG_ERROR(msg_module, "Error description: %s", result.description());
+		MSG_ERROR(msg_module, "Error while parsing '%s': %s", ipfix_elements, result.description());
 		return -1;
 	}
 
@@ -79,7 +78,7 @@ int load_types_from_xml(struct fastbit_config *conf)
 				str_value == "dateTimeSeconds" or str_value == "dateTimeMilliseconds" or str_value == "dateTimeMicroseconds" or \
 				str_value == "dateTimeNanoseconds" or str_value == "ipv4Address" or str_value == "macAddress" or str_value == "boolean") {
 			type = UINT;
-		} else if (str_value == "signed8" or str_value == "signed16" or str_value == "signed32" or str_value == "signed64" ) {
+		} else if (str_value == "signed8" or str_value == "signed16" or str_value == "signed32" or str_value == "signed64") {
 			type = INT;
 		} else if (str_value == "ipv6Address") {
 			type = IPv6;
@@ -127,9 +126,9 @@ void element::byte_reorder(uint8_t *dst, uint8_t *src, int srcSize, int dstSize)
 void element::setName(uint32_t en, uint16_t id, int part)
 {
 	if (part == -1) { /* default */
-		sprintf( _name, "e%iid%hi", en, id);
+		sprintf(_name, "e%iid%hi", en, id);
 	} else {
-		sprintf( _name, "e%iid%hip%i", en, id, part);
+		sprintf(_name, "e%iid%hip%i", en, id, part);
 	}
 }
 
@@ -175,8 +174,8 @@ int element::flush(std::string path)
 			return 1;
 		}
 
-		check = fwrite( _buffer, size() , _filled, f);
-		if (check != (size_t) _filled ) {
+		check = fwrite(_buffer, size() , _filled, f);
+		if (check != (size_t) _filled) {
 			fprintf(stderr, "Error while writing data (fwrite)\n");
 			fclose(f);
 			return 1;
@@ -191,7 +190,7 @@ int element::flush(std::string path)
 
 std::string element::get_part_info()
 {
-	return  std::string("\nBegin Column") + \
+	return std::string("\nBegin Column") + \
 		"\nname = " + std::string(this->_name) + \
 		"\ndata_type = " + ibis::TYPESTRING[(int)this->_type] + \
 		"\nEnd Column\n";
@@ -277,7 +276,7 @@ int el_float::set_type()
 		_type=ibis::DOUBLE;
 		break;
 	default:
-		MSG_ERROR(msg_module, "Wrong element size (%s - %u)",_name,_size);
+		MSG_ERROR(msg_module, "Wrong element size (%s - %u)", _name, _size);
 		break;
 	}
 
@@ -342,7 +341,6 @@ uint16_t el_text::fill(uint8_t *data)
 	this->append_str(&(data[_offset]),_true_size);
 	return _true_size + _offset;
 }
-
 
 el_ipv6::el_ipv6(int size, uint32_t en, uint16_t id, int part, uint32_t buf_size)
 {
@@ -470,8 +468,8 @@ int el_blob::flush(std::string path)
 			return 1;
 		}
 
-		check = fwrite( _sp_buffer, 1 , _sp_buffer_offset, f);
-		if (check != (size_t) _sp_buffer_offset ) {
+		check = fwrite(_sp_buffer, 1 , _sp_buffer_offset, f);
+		if (check != (size_t) _sp_buffer_offset) {
 			MSG_ERROR(msg_module, "Error while writing data (fwrite)");
 			fclose(f);
 			return 1;

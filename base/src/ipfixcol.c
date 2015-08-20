@@ -126,8 +126,8 @@ void version ()
 void help ()
 {
 	printf ("Usage: %s [-c file] [-i file] [-dhVs] [-v level]\n", PACKAGE);
-	printf ("  -c file   Path to startup configuration file (default: %s)\n", DEFAULT_CONFIG_FILE);
-	printf ("  -i file   Path to internal configuration file (default: %s)\n", INTERNAL_CONFIG_FILE);
+	printf ("  -c file   Path to startup configuration file (default: %s)\n", DEFAULT_STARTUP_CONFIG);
+	printf ("  -i file   Path to internal configuration file (default: %s)\n", DEFAULT_INTERNAL_CONFIG);
 	printf ("  -e file   Path to IPFIX IE specification file (default: %s)\n", DEFAULT_IPFIX_ELEMENTS);
 	printf ("  -d        Run daemonized\n");
 	printf ("  -h        Print this help\n");
@@ -164,7 +164,7 @@ int main (int argc, char* argv[])
 	int source_status = SOURCE_STATUS_OPENED, stat_interval = 0;
 	pid_t pid = 0;
 	bool daemonize = false;
-	char *config_file = NULL, *internal_file = NULL;
+	char *startup_config = NULL, *internal_config = NULL;
 	struct sigaction action;
 	char *packet = NULL;
 	struct input_info* input_info;
@@ -176,10 +176,10 @@ int main (int argc, char* argv[])
 	while ((c = getopt_long(argc, argv, OPTSTRING, long_opts, NULL)) != -1) {
 		switch (c) {
 		case 'c':
-			config_file = optarg;
+			startup_config = optarg;
 			break;
 		case 'i':
-			internal_file = optarg;
+			internal_config = optarg;
 			break;
 		case 'e':
 			ipfix_elements = optarg;
@@ -255,27 +255,27 @@ int main (int argc, char* argv[])
 		MSG_SYSLOG_INIT(PACKAGE);
 		
 		/* and send all following messages to the syslog */
-		if (daemon (1, 0)) {
+		if (daemon(1, 0)) {
 			MSG_ERROR(msg_module, "%s", strerror(errno));
 		}
 	}
 
-	/* check config file */
-	if (config_file == NULL) {
-		/* and use default if not specified */
-		config_file = DEFAULT_CONFIG_FILE;
-		MSG_NOTICE(msg_module, "Using default configuration file: %s", config_file);
+	/* Check config file */
+	if (startup_config == NULL) {
+		/* ... and use default if not specified */
+		startup_config = DEFAULT_STARTUP_CONFIG;
+		MSG_NOTICE(msg_module, "Using default configuration file: %s", startup_config);
 	}
 
-	/* check internal config file */
-	if (internal_file == NULL) {
-		/* and use default if not specified */
-		internal_file = INTERNAL_CONFIG_FILE;
-		MSG_NOTICE(msg_module, "Using default internal configuration file: %s", internal_file);
+	/* Check internal config file */
+	if (internal_config == NULL) {
+		/* ... and use default if not specified */
+		internal_config = DEFAULT_INTERNAL_CONFIG;
+		MSG_NOTICE(msg_module, "Using default internal configuration file: %s", internal_config);
 	}
 	  
 	/* Initialize configurator */
-	config = config_init(internal_file, config_file);
+	config = config_init(internal_config, startup_config);
 	if (!config) {
 		MSG_ERROR(msg_module, "Configurator initialization failed");
 		goto cleanup_err;
@@ -322,9 +322,7 @@ int main (int argc, char* argv[])
 	/* XML cleanup */
 	xmlXPathFreeObject(collectors);
 	
-	/*
-	 * create Template Manager
-	 */
+	/* Create Template Manager */
 	template_mgr = tm_create();
 	if (template_mgr == NULL) {
 		MSG_ERROR(msg_module, "[%d] Unable to create Template Manager", config->proc_id);
