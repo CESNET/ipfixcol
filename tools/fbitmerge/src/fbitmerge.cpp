@@ -1,7 +1,7 @@
 /**
  * \file fbitmerge.cpp
  * \author Michal Kozubik
- * \brief Tool for merging fastbit data
+ * \brief Tool for merging FastBit data
  *
  * Copyright (C) 2015 CESNET, z.s.p.o.
  *
@@ -45,6 +45,9 @@
 #include <dirent.h>
 #include <errno.h>
 #include <getopt.h>
+#include <sys/stat.h>
+#include <time.h>
+#include <utime.h>
 
 #include <fstream>
 #include <iostream>
@@ -74,9 +77,9 @@ void usage()
 	std::cout << "-h\t Show this text\n";
 	std::cout << "-b\t Base directory path\n";
 	std::cout << "-k\t Merging key (h=hour, d=day, m=month, y=year)\n";
-	std::cout << "-p\t Prefix of folders with fastbit data (default = none)\n";
+	std::cout << "-p\t Prefix of folders with FastBit data (default = none)\n";
 	std::cout << "\t !! If there are prefixed folders but prefix is not set, data from these\n";
-	std::cout << "\t    folders may be removed, errors may occur!\n";
+	std::cout << "\t    folders may be removed; errors may occur!\n";
 	std::cout << "-s\t Separate merging - only prefixed folders can be moved and deleted\n";
 	std::cout << "\t It means that their parent folders are merged separately, NOT together\n";
 	std::cout << "-m\t Move only - don't merge folders, only move all prefixed subdirs into basedir\n";
@@ -178,7 +181,7 @@ int could_be(char *dirname)
 	return OK;
 }
 
-/* \brief Merge two flowsstats file into one (doesn't remove anything)
+/* \brief Merge two flowsStats files into one (doesn't remove anything)
  *
  * Opens 2 flowsStats.txt files, reads values of exported, received and lost flows
  * and sum of both saves into second file
@@ -242,7 +245,7 @@ void merge_flowStats(std::string first, std::string second)
 	}
 }
 
-/* \brief Merges 2 folders containing fastbit data together (into second folder)
+/* \brief Merges 2 folders containing FastBit data together (into second folder)
  *
  * \param[in] srcDir source folder path
  * \param[in,out] dstDir destination folder path
@@ -298,6 +301,28 @@ int same_data(innerDirMap *first, innerDirMap *second)
 	return OK;
 }
 
+time_t get_file_atime(std::string path)
+{
+	struct stat file_stat;
+	if (stat(path.c_str(), &file_stat) < 0) {
+		std::cerr << "Could not retrieve file attributes for '" << path << "'" << std::endl;
+		return 0;
+	}
+
+	return file_stat.st_atime;
+}
+
+time_t get_file_mtime(std::string path)
+{
+	struct stat file_stat;
+	if (stat(path.c_str(), &file_stat) < 0) {
+		std::cerr << "Could not retrieve file attributes for '" << path << "'" << std::endl;
+		return 0;
+	}
+
+	return file_stat.st_mtime;
+}
+
 /* \brief Merges 2 folders in format <prefix>YYYYMMDDHHmmSS together
  *
  * Goes through subfolders of destination folder and saves their names. Then
@@ -319,7 +344,7 @@ int merge_couple(std::string srcDir, std::string dstDir, std::string workDir)
 	std::string src_dir_path = workDir + "/" + srcDir;
 	std::string dst_dir_path = workDir + "/" + dstDir;
 
-	/* Open them */
+	/* Open folders */
 	sdir = opendir(src_dir_path.c_str());
 	if (sdir == NULL) {
 		std::cerr << "Error while opening '" << src_dir_path << "': " << strerror(errno) << std::endl;
@@ -468,9 +493,11 @@ int merge_all(std::string workDir, uint16_t key, std::string prefix)
 	}
 
 	/* Go through subdirs */
-	std::map<uint32_t, std::string> dirMap;
+	std::map<uint32_t, std::string> dir_map;
+	std::map<uint32_t, time_t> dir_map_max_mtime;
 	struct dirent *subdir = NULL;
 	char key_str[size + 1];
+	std::string full_subdir_path;
 
 	while ((subdir = readdir(dir)) != NULL) {
 		if (subdir->d_name[0] == '.') {
@@ -482,33 +509,65 @@ int merge_all(std::string workDir, uint16_t key, std::string prefix)
 		memcpy(key_str, subdir->d_name + prefix.length(), size);
 		uint32_t key_int = atoi(key_str);
 
-		/* If it's not the first occurence of key value, merge these 2 folders,
-		 * else save it to map */
-		if (dirMap.find(key_int) == dirMap.end()) {
-			dirMap[key_int] = subdir->d_name;
+		/* Get mtime */
+		full_subdir_path = workDir + "/" + subdir->d_name;
+		time_t dir_mtime = get_file_mtime(full_subdir_path);
+
+		/* If it is the first occurrence of the key, store it in the map.
+		 * Otherwise, merge the two folders. */
+		if (dir_map.find(key_int) == dir_map.end()) {
+			dir_map[key_int] = subdir->d_name;
+			dir_map_max_mtime[key_int] = dir_mtime;
 		} else {
-			if (merge_couple(subdir->d_name, dirMap[key_int], workDir) != OK) {
+			/* Check whether mtime is larger than the one stored in map. If so,
+			 * update it. */
+			if (dir_mtime > dir_map_max_mtime[key_int]) {
+				dir_map_max_mtime[key_int] = dir_mtime;
+			}
+
+			/* Merge data */
+			if (merge_couple(subdir->d_name, dir_map[key_int], workDir) != OK) {
 				return NOT_OK;
 			}
 
 			/* Remove merged src folder */
-			remove_folder_tree(workDir + "/" + subdir->d_name);
+			remove_folder_tree(full_subdir_path);
 		}
 	}
 
-	/* Rename folders - reset name values after key to 0 */
-	for (std::map<uint32_t, std::string>::iterator i = dirMap.begin(); i != dirMap.end(); i++) {
+	/* Rename folders, if necessary - reset name values after key to 0. Also
+	 * update folder mtime. */
+	for (std::map<uint32_t, std::string>::iterator i = dir_map.begin(); i != dir_map.end(); i++) {
+		std::string first = i->second.substr(0, prefix.length() + size);
 		std::string last = i->second.substr(prefix.length() + size, std::string::npos);
-		if (stoi(last) != 0) {
-			std::string first = i->second.substr(0, prefix.length() + size);
-			last.assign(last.length(), '0');
 
-			std::string from_path = workDir + "/" + i->second;
-			std::string to_path = workDir + "/" + first + last;
+		std::string from_path = workDir + "/" + i->second;
+		std::string to_path = workDir + "/" + first + last;
+		
+		if (stoi(last) != 0) {
+			/* Update to_path */
+			last.assign(last.length(), '0');
+			to_path = workDir + "/" + first + last;
 
 			if (rename(from_path.c_str(), to_path.c_str()) != 0) {
 				std::cerr << "Error while renaming folder '" << (first + last) << "'" << std::endl;
 			}
+		}
+
+		/* Set mtime back in time, to the last (maximum) mtime of subfolders */
+		struct utimbuf new_file_times;
+		new_file_times.actime = get_file_atime(to_path);
+
+		/* Check whether entry is present in dir_map_max_mtime. This check should
+		 * never fail, since dir_map and dir_map_max_mtime should always be in sync */
+		if (dir_map_max_mtime.find(i->first) == dir_map_max_mtime.end()) {
+			std::cerr << "No maximum mtime known for '" << to_path << "'" << std::endl;
+			continue;
+		}
+
+		new_file_times.modtime = dir_map_max_mtime[i->first];
+		if (utime(to_path.c_str(), &new_file_times) < 0) {
+			std::cerr << "Could not update mtime of '" << to_path << "'" << std::endl;
 		}
 	}
 
