@@ -104,7 +104,7 @@ int template_table::update_part(std::string path)
 
 	f = fopen((path + "/-part.txt").c_str(), "w");
 	if (f == NULL){
-		MSG_ERROR(msg_module, "Cannot open/update -part.txt file");
+		MSG_ERROR(msg_module, "Cannot open file '-part.txt'");
 		return 1;
 	}
 
@@ -168,7 +168,7 @@ int template_table::dir_check(std::string path, bool new_dir)
 		if (errno == ENOENT) { /* Check parent directory */
 			pos = path.find_last_of("/\\");
 			if (pos == std::string::npos) {
-				MSG_ERROR(msg_module, "Cannot create directory %s", path.c_str());
+				MSG_ERROR(msg_module, "Cannot create directory '%s'", path.c_str());
 				return 2;
 			}
 
@@ -177,7 +177,7 @@ int template_table::dir_check(std::string path, bool new_dir)
 
 			/* Try to create the dir again */
 			if (mkdir(path.c_str(), 0777) != 0){
-				MSG_ERROR(msg_module, "Cannot create directory %s", path.c_str());
+				MSG_ERROR(msg_module, "Cannot create directory '%s'", path.c_str());
 				return 2;
 			}
 
@@ -185,7 +185,7 @@ int template_table::dir_check(std::string path, bool new_dir)
 		}
 
 		/* Other error */
-		MSG_ERROR(msg_module, "Cannot create directory %s", path.c_str());
+		MSG_ERROR(msg_module, "Cannot create directory '%s'", path.c_str());
 		return 2;
 	}
 	
@@ -294,7 +294,7 @@ int template_table::parse_template(struct ipfix_template *tmp,struct fastbit_con
 
 	/* Is there anything to parse? */
 	if (tmp == NULL){
-		MSG_WARNING(msg_module, "Received data without template, skipping");
+		MSG_WARNING(msg_module, "Received data without template; skipping data...");
 		return 1;
 	}
 
@@ -336,10 +336,11 @@ int template_table::parse_template(struct ipfix_template *tmp,struct fastbit_con
 				 */
 				/* Check size from template */
 				if (field->ie.length != 16) {
-					MSG_WARNING(msg_module, "Element e%iid%i has type IPv6 but size %i; skipping...", en, field->ie.id & 0x7FFF, field->ie.length);
+					MSG_WARNING(msg_module, "Element e%iid%i has type 'IPv6' but size '%i'; skipping...", en, field->ie.id & 0x7FFF, field->ie.length);
 					new_element = new el_unknown(field->ie.length);
 					break;
 				}
+
 				new_element = new el_ipv6(sizeof(uint64_t), en, field->ie.id & 0x7FFF, 0, _buff_size);
 				elements.push_back(new_element);
 
