@@ -65,6 +65,7 @@ uint64_t get_rows_from_part(const char *part_path)
 			rows = strtoul(str_row.c_str(), NULL, 0);
 		}
 	}
+
 	return rows;
 }
 
@@ -73,7 +74,7 @@ template_table::template_table(uint16_t template_id, uint32_t buff_size): _rows_
 	_template_id = template_id;
 	sprintf(_name, "%u",template_id);
 	_orig_name[0] = '\0'; /* Empty string indicates that we use original name from template_id */
-	_index=0;
+	_index = 0;
 	_rows_in_window = 0;
 	_min_record_size = 0;
 	_new_dir = true;
@@ -122,7 +123,7 @@ int template_table::update_part(std::string path)
 	}
 
 	part = ss.str();
-	fputs(part.c_str(),f);
+	fputs(part.c_str(), f);
 	fclose(f);
 	return 0;
 }
@@ -137,7 +138,6 @@ int template_table::dir_check(std::string path, bool new_dir)
 	if (mkdir(path.c_str(), 0777) != 0) {
 		if (errno == EEXIST) { /* dir already exists */
 			if (new_dir) {
-
 				/* Rename the table */
 				int len = strlen(this->_name);
 
@@ -168,7 +168,7 @@ int template_table::dir_check(std::string path, bool new_dir)
 		if (errno == ENOENT) { /* Check parent directory */
 			pos = path.find_last_of("/\\");
 			if (pos == std::string::npos) {
-				MSG_ERROR(msg_module, "Cannot create directory %s",path.c_str());
+				MSG_ERROR(msg_module, "Cannot create directory %s", path.c_str());
 				return 2;
 			}
 
@@ -177,14 +177,15 @@ int template_table::dir_check(std::string path, bool new_dir)
 
 			/* Try to create the dir again */
 			if (mkdir(path.c_str(), 0777) != 0){
-				MSG_ERROR(msg_module, "Cannot create directory %s",path.c_str());
+				MSG_ERROR(msg_module, "Cannot create directory %s", path.c_str());
 				return 2;
 			}
+
 			return 0;
 		}
 
 		/* Other error */
-		MSG_ERROR(msg_module, "Cannot create directory %s",path.c_str());
+		MSG_ERROR(msg_module, "Cannot create directory %s", path.c_str());
 		return 2;
 	}
 	
@@ -366,6 +367,7 @@ int template_table::parse_template(struct ipfix_template *tmp,struct fastbit_con
 				} else { /* TODO blob etc. */
 					new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 				}
+
 				break;
 		}
 
