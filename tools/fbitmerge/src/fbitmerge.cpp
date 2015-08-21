@@ -527,6 +527,7 @@ int merge_all(std::string workDir, uint16_t key, std::string prefix)
 
 			/* Merge data */
 			if (merge_couple(subdir->d_name, dir_map[key_int], workDir) != OK) {
+				closedir(dir);
 				return NOT_OK;
 			}
 
@@ -613,6 +614,7 @@ int move_prefixed_dirs(std::string baseDir, std::string workDir, std::string pre
 					/* Separate set - don't move with workDir */
 					if (separated) {
 						if (merge_all(workDir, key, prefix) != OK) {
+							closedir(dir);
 							return NOT_OK;
 						}
 
@@ -632,8 +634,10 @@ int move_prefixed_dirs(std::string baseDir, std::string workDir, std::string pre
 			} else if (strstr(subdir->d_name, prefix.c_str()) == subdir->d_name) {
 				if (separated) {
 					if (merge_all(workDir, key, prefix) != OK) {
+						closedir(dir);
 						return NOT_OK;
 					}
+
 					break;
 				}
 
