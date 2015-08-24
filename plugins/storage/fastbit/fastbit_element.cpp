@@ -132,7 +132,7 @@ void element::setName(uint32_t en, uint16_t id, int part)
 	}
 }
 
-void element::allocate_buffer(int count)
+void element::allocate_buffer(uint32_t count)
 {
 	_buf_max = count;
 	_buffer = (char *) realloc(_buffer, _size * count);
@@ -660,7 +660,7 @@ el_unknown::el_unknown(int size, uint32_t en, uint16_t id, int part, uint32_t bu
 	_var_size = (size == VAR_IE_LENGTH);
 }
 
-void el_unknown::allocate_buffer(int count)
+void el_unknown::allocate_buffer(uint32_t count)
 {
 	(void) count;
 }
