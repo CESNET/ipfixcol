@@ -516,7 +516,9 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 			rcFlowsSum += rcFlows;
 			rcnt += rcFlows;
 		} else {
-			MSG_WARNING(msg_module, "An error occurred during FastBit table store; no records were stored");
+			/* No need for showing error message here, since it is already done 
+			 * by store() in case of an error */
+			// MSG_ERROR(msg_module, "An error occurred during FastBit table store; no records were stored");
 		}
 	}
 
@@ -526,6 +528,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	if (rcFlowsSum) {
 		conf->flowWatch->at(oid).addFlows(rcFlowsSum);
 	}
+
 	conf->flowWatch->at(oid).updateSQ(ntohl(ipfix_msg->pkt_header->sequence_number));
 	return 0;
 }
