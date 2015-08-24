@@ -250,7 +250,7 @@ public:
 
 protected:
 	int set_type() {
-		_type=ibis::TEXT;
+		_type = ibis::TEXT;
 		return 0;
 	}
 
@@ -262,7 +262,6 @@ protected:
 	 */
 	int append_str(void *data, int size);
 };
-
 
 class el_ipv6 : public element
 {
@@ -314,7 +313,7 @@ protected:
 	uint32_t _sp_buffer_offset;
 	
 	int set_type(){
-		_type=ibis::BLOB;
+		_type = ibis::BLOB;
 		return 0;
 	}
 };
@@ -325,7 +324,7 @@ typedef union uinteger_union
 	uint16_t ushort;
 	uint32_t uint;
 	uint64_t ulong;
-}uint_u;
+} uint_u;
 
 class el_uint : public element
 {

@@ -137,7 +137,7 @@ void element::allocate_buffer(uint32_t count)
 	_buf_max = count;
 	_buffer = (char *) realloc(_buffer, _size * count);
 	if (_buffer == NULL) {
-		fprintf(stderr, "Memory allocation failed\n");
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 	}
 }
 
@@ -386,7 +386,7 @@ el_blob::el_blob(int size, uint32_t en, uint16_t id, uint32_t buf_size):
 	_filled = 0;
 	uint_value = 0;
 
-	if (size == VAR_IE_LENGTH) { /* Element with variable size */
+	if (size == VAR_IE_LENGTH) { /* Element with variable length */
 		_var_size = true;
 	}
 
@@ -403,7 +403,7 @@ el_blob::el_blob(int size, uint32_t en, uint16_t id, uint32_t buf_size):
 	_sp_buffer_size = buf_size;
 	_sp_buffer = (char *) realloc(_sp_buffer, _sp_buffer_size);
 	if (_sp_buffer == NULL) {
-		MSG_ERROR(msg_module, "Memory allocation failed");
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		exit(-1);
 	}
 
@@ -522,7 +522,6 @@ el_uint::el_uint(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 	allocate_buffer(buf_size);
 }
 
-
 uint16_t el_uint::fill(uint8_t *data) {
 	uint_value.ulong = 0;
 	switch(_real_size) {
@@ -557,7 +556,7 @@ uint16_t el_uint::fill(uint8_t *data) {
 		this->append(&(uint_value.ulong));
 		break;
 	default:
-		InvalidMSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
+		MSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
 		return 1;
 		break;
 	}
@@ -593,7 +592,7 @@ int el_uint::set_type()
 		_size = 8;
 		break;
 	default:
-		InvalidMSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
+		MSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
 		return 1;
 		break;
 	}
@@ -629,7 +628,7 @@ int el_sint::set_type()
 		_size = 8;
 		break;
 	default:
-		InvalidMSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
+		MSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
 		return 1;
 		break;
 	}
