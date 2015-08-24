@@ -213,9 +213,12 @@ uint16_t el_var_size::fill(uint8_t *data)
 	/* Get size of data */
 	if (data[0] < 255) {
 		_size = data[0] + 1; /* 1 is first byte with true size */
+	} else if (data[0] == 255) {
+		/* Length is stored in second and third octet */
+		_size = ntohs(*((uint16_t *) &data[1]));
+		_size += 3;
 	} else {
-		_size = ntohs(*((uint16_t*) &data[1]));
-		_size+=3; /* 3 = 1 first byte with 256 and 2 bytes with true size */
+		MSG_ERROR(msg_module, "Invalid (variable) length specification: %u", data[0]);
 	}
 
 	return _size;
@@ -415,12 +418,16 @@ uint16_t el_blob::fill(uint8_t *data)
 
 	/* Get real size of the data */
 	if (_var_size) {
+		/* Length is stored in first octet if < 255 */
 		if (data[0] < 255) {
 			_true_size = data[0];
 			_offset = 1;
-		} else {
-			_true_size = ntohs(*((uint16_t*) &data[1]));
+		} else if (data[0] == 255) {
+			/* Length is stored in second and third octet */
+			_true_size = ntohs(*((uint16_t *) &data[1]));
 			_offset = 3;
+		} else {
+			MSG_ERROR(msg_module, "Invalid (variable) length specification: %u", data[0]);
 		}
 	}
 
@@ -688,9 +695,12 @@ uint16_t el_unknown::fill(uint8_t *data)
 		if (data[0] < 255) {
 			true_size = data[0];
 			offset = 1;
-		} else {
-			true_size = ntohs(*((uint16_t*) &data[1]));
+		} else if (data[0] == 255) {
+			/* Length is stored in second and third octet */
+			true_size = ntohs(*((uint16_t *) &data[1]));
 			offset = 3;
+		} else {
+			MSG_ERROR(msg_module, "Invalid (variable) length specification: %u", data[0]);
 		}
 
 		return true_size + offset;
