@@ -97,8 +97,8 @@ protected:
 	   exp: e0id16, e20id50.... */
 	char _name[IE_NAME_LENGTH];
 
-	int _filled;  /* number of items are stored in buffer*/
-	int _buf_max; /* maximum number of items buffer can hold */
+	uint32_t _filled;  /* number of items are stored in buffer */
+	uint32_t _buf_max; /* maximum number of items buffer can hold */
 	char *_buffer; /* items buffer */
 
 	/**
@@ -132,14 +132,14 @@ protected:
 	 * @param size size of memory to copy & reorder from source data
 	 * @param offset offset for destination memory (useful when reordering int16_t to int32_t etc)
 	 */
-	void byte_reorder(uint8_t *dst,uint8_t *src, int size, int offset=0);
+	void byte_reorder(uint8_t *dst, uint8_t *src, int size, int offset = 0);
 
 	/**
 	 * \brief allocate memory for buffer
 	 *
 	 * @param count Number of elements that the buffer should hold
 	 */
-	void allocate_buffer(int count);
+	void allocate_buffer(uint32_t count);
 
 	/**
 	 * \brief free memory for buffer
@@ -208,7 +208,6 @@ protected:
 	int set_type();
 };
 
-
 typedef union float_union
 {
 	float float32;
@@ -251,7 +250,7 @@ public:
 
 protected:
 	int set_type() {
-		_type=ibis::TEXT;
+		_type = ibis::TEXT;
 		return 0;
 	}
 
@@ -263,7 +262,6 @@ protected:
 	 */
 	int append_str(void *data, int size);
 };
-
 
 class el_ipv6 : public element
 {
@@ -315,7 +313,7 @@ protected:
 	uint32_t _sp_buffer_offset;
 	
 	int set_type(){
-		_type=ibis::BLOB;
+		_type = ibis::BLOB;
 		return 0;
 	}
 };
@@ -326,7 +324,7 @@ typedef union uinteger_union
 	uint16_t ushort;
 	uint32_t uint;
 	uint64_t ulong;
-}uint_u;
+} uint_u;
 
 class el_uint : public element
 {
@@ -372,7 +370,7 @@ protected:
 	 *
 	 * @param count Number of elements that the buffer should hold
 	 */
-	void allocate_buffer(int count);
+	void allocate_buffer(uint32_t count);
 
 	/**
 	 * \brief free memory for buffer

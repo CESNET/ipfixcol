@@ -132,12 +132,12 @@ void element::setName(uint32_t en, uint16_t id, int part)
 	}
 }
 
-void element::allocate_buffer(int count)
+void element::allocate_buffer(uint32_t count)
 {
 	_buf_max = count;
 	_buffer = (char *) realloc(_buffer, _size * count);
 	if (_buffer == NULL) {
-		fprintf(stderr, "Memory allocation failed\n");
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 	}
 }
 
@@ -213,9 +213,12 @@ uint16_t el_var_size::fill(uint8_t *data)
 	/* Get size of data */
 	if (data[0] < 255) {
 		_size = data[0] + 1; /* 1 is first byte with true size */
+	} else if (data[0] == 255) {
+		/* Length is stored in second and third octet */
+		_size = ntohs(*((uint16_t *) &data[1]));
+		_size += 3;
 	} else {
-		_size = ntohs(*((uint16_t*) &data[1]));
-		_size+=3; /* 3 = 1 first byte with 256 and 2 bytes with true size */
+		MSG_ERROR(msg_module, "Invalid (variable) length specification: %u", data[0]);
 	}
 
 	return _size;
@@ -383,7 +386,7 @@ el_blob::el_blob(int size, uint32_t en, uint16_t id, uint32_t buf_size):
 	_filled = 0;
 	uint_value = 0;
 
-	if (size == VAR_IE_LENGTH) { /* Element with variable size */
+	if (size == VAR_IE_LENGTH) { /* Element with variable length */
 		_var_size = true;
 	}
 
@@ -400,7 +403,7 @@ el_blob::el_blob(int size, uint32_t en, uint16_t id, uint32_t buf_size):
 	_sp_buffer_size = buf_size;
 	_sp_buffer = (char *) realloc(_sp_buffer, _sp_buffer_size);
 	if (_sp_buffer == NULL) {
-		MSG_ERROR(msg_module, "Memory allocation failed");
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		exit(-1);
 	}
 
@@ -415,12 +418,16 @@ uint16_t el_blob::fill(uint8_t *data)
 
 	/* Get real size of the data */
 	if (_var_size) {
+		/* Length is stored in first octet if < 255 */
 		if (data[0] < 255) {
 			_true_size = data[0];
 			_offset = 1;
-		} else {
-			_true_size = ntohs(*((uint16_t*) &data[1]));
+		} else if (data[0] == 255) {
+			/* Length is stored in second and third octet */
+			_true_size = ntohs(*((uint16_t *) &data[1]));
 			_offset = 3;
+		} else {
+			MSG_ERROR(msg_module, "Invalid (variable) length specification: %u", data[0]);
 		}
 	}
 
@@ -515,7 +522,6 @@ el_uint::el_uint(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 	allocate_buffer(buf_size);
 }
 
-
 uint16_t el_uint::fill(uint8_t *data) {
 	uint_value.ulong = 0;
 	switch(_real_size) {
@@ -550,7 +556,7 @@ uint16_t el_uint::fill(uint8_t *data) {
 		this->append(&(uint_value.ulong));
 		break;
 	default:
-		InvalidMSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
+		MSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
 		return 1;
 		break;
 	}
@@ -586,7 +592,7 @@ int el_uint::set_type()
 		_size = 8;
 		break;
 	default:
-		InvalidMSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
+		MSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
 		return 1;
 		break;
 	}
@@ -622,7 +628,7 @@ int el_sint::set_type()
 		_size = 8;
 		break;
 	default:
-		InvalidMSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
+		MSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
 		return 1;
 		break;
 	}
@@ -660,7 +666,7 @@ el_unknown::el_unknown(int size, uint32_t en, uint16_t id, int part, uint32_t bu
 	_var_size = (size == VAR_IE_LENGTH);
 }
 
-void el_unknown::allocate_buffer(int count)
+void el_unknown::allocate_buffer(uint32_t count)
 {
 	(void) count;
 }
@@ -688,9 +694,12 @@ uint16_t el_unknown::fill(uint8_t *data)
 		if (data[0] < 255) {
 			true_size = data[0];
 			offset = 1;
-		} else {
-			true_size = ntohs(*((uint16_t*) &data[1]));
+		} else if (data[0] == 255) {
+			/* Length is stored in second and third octet */
+			true_size = ntohs(*((uint16_t *) &data[1]));
 			offset = 3;
+		} else {
+			MSG_ERROR(msg_module, "Invalid (variable) length specification: %u", data[0]);
 		}
 
 		return true_size + offset;
