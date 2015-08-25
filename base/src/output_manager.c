@@ -602,7 +602,7 @@ void statistics_print_buffers(struct output_manager_config *conf, FILE *stat_out
 static void *statistics_thread(void* config)
 {
 	struct output_manager_config *conf = (struct output_manager_config *) config;
-	time_t begin = time(NULL), time_now, runtime;
+	time_t begin = time(NULL), time_now, run_time;
 	
 	/* Create statistics config */
 	conf->stats.total_cpu = 0;
@@ -610,8 +610,12 @@ static void *statistics_thread(void* config)
 	conf->stats.cpus = sysconf(_SC_NPROCESSORS_ONLN);
 	snprintf(conf->stats.tasks_dir, MAX_DIR_LEN, "/proc/%d/task/", getpid());
 
-	/* Create file handle in case statistics file has been specified in config */
-	FILE *stat_out_file = NULL;
+	/* If statistics are enabled (using -S), printing them to console is default */
+	uint8_t print_stat_to_file = 0;
+	uint8_t print_stat_to_console = 1;
+
+	/* Process XML config */
+	char *full_stat_out_file_path = NULL;
 	xmlNode *node = conf->plugins_config->collector_node;
 	while (node != NULL) {
 		/* Skip processing this node in case it's a comment */
@@ -626,8 +630,13 @@ static void *statistics_thread(void* config)
 		}
 
 		if (xmlStrcmp(node->name, (const xmlChar *) "statisticsFile") == 0) {
+			/* Disable printing statistics to console when printing to file */
+			print_stat_to_console = 0;
+
 			char *stat_out_file_path = (char *) xmlNodeGetContent(node->xmlChildrenNode);
 			if (stat_out_file_path && strlen(stat_out_file_path) > 0) {
+				print_stat_to_file = 1;
+
 				/* Determine statistics file path, i.e., full path minus basename */
 				char stat_out_path[strlen(stat_out_file_path) + 1];
 				strncpy_safe(stat_out_path, stat_out_file_path, strlen(stat_out_file_path) - strlen(basename(stat_out_file_path)));
@@ -678,12 +687,11 @@ static void *statistics_thread(void* config)
 				 *      5 - we assume that a PID has a maximum length of 5 digits
 				 *      1 - null-terminating character
 				 */
-				int max_len = strlen(stat_out_file_path) + 1 + 5 + 1;
-				char full_stat_out_file_path[max_len];
+				uint8_t max_len = strlen(stat_out_file_path) + 1 + 5 + 1;
+				full_stat_out_file_path = calloc(max_len, sizeof(char));
 
 				/* snprintf ensures null-termination if (max_len != 0), which is always true */
 				snprintf(full_stat_out_file_path, max_len, "%s.%d", stat_out_file_path, getpid());
-				stat_out_file = fopen(full_stat_out_file_path, "w");
 			} else {
 				MSG_ERROR(msg_module, "Configuration error: 'statisticsFile' node has no value");
 			}
@@ -703,6 +711,7 @@ static void *statistics_thread(void* config)
 	/* Set thread name */
 	prctl(PR_SET_NAME, "ipfixcol:stats", 0, 0, 0);
 	
+	FILE *stat_out_file = NULL;
 	while (conf->stat_interval) {
 		sleep(conf->stat_interval);
 		
@@ -713,16 +722,25 @@ static void *statistics_thread(void* config)
 		
 		/* Compute time */
 		time_now = time(NULL);
-		runtime = time_now - begin;
+		run_time = time_now - begin;
 
 		/* Print info */
-		if (stat_out_file) {
-			rewind(stat_out_file); /* Move to beginning of file */
-			fprintf(stat_out_file, "%s=%lu\n", "TIME", time_now);
-			fprintf(stat_out_file, "%s=%lu\n", "RUNTIME", runtime);
-		} else {
+		if (print_stat_to_file) {
+			if (full_stat_out_file_path) {
+				stat_out_file = fopen(full_stat_out_file_path, "w");
+
+				if (!stat_out_file) {
+					MSG_ERROR(msg_module, "Could not open statistics file '%s'", full_stat_out_file_path);
+				}
+
+				fprintf(stat_out_file, "%s=%lu\n", "TIME", time_now);
+				fprintf(stat_out_file, "%s=%lu\n", "RUN_TIME", run_time);
+			} else {
+				MSG_ERROR(msg_module, "Could not determine statistics file path");
+			}
+		} else if (print_stat_to_console) {
 			MSG_INFO(stat_module, "");
-			MSG_INFO(stat_module, "Time: %lu, runtime: %lu", time_now, runtime);
+			MSG_INFO(stat_module, "Time: %lu, run time: %lu", time_now, run_time);
 			MSG_INFO(stat_module, "%10s %15s %15s %15s %15s %15s %20s", "ODID", "packets", "data rec.", "lost data rec.", "packets/s", "data records/s", "lost data records/s");
 		}
 
@@ -743,20 +761,20 @@ static void *statistics_thread(void* config)
 			delta_data_records = aux_node->input_info->data_records - aux_node->last_data_records;
 			delta_lost_data_records = aux_node->input_info->sequence_number - aux_node->input_info->data_records - aux_node->last_lost_data_records;
 
-			if (stat_out_file) {
-				fprintf(stat_out_file, "%s%u=%lu\n", "PACKETS",
+			if (print_stat_to_file) {
+				fprintf(stat_out_file, "%s_%u=%lu\n", "PACKETS",
 						aux_node->input_info->odid, aux_node->input_info->packets);
-				fprintf(stat_out_file, "%s%u=%lu\n", "DATA_REC",
+				fprintf(stat_out_file, "%s_%u=%lu\n", "DATA_REC",
 						aux_node->input_info->odid, aux_node->input_info->data_records);
-				fprintf(stat_out_file, "%s%u=%lu\n", "LOST_DATA_REC",
+				fprintf(stat_out_file, "%s_%u=%lu\n", "LOST_DATA_REC",
 						aux_node->input_info->odid, aux_node->input_info->sequence_number - aux_node->input_info->data_records);
-				fprintf(stat_out_file, "%s%u=%u\n", "PACKETS_SEC",
+				fprintf(stat_out_file, "%s_%u=%u\n", "PACKETS_SEC",
 						aux_node->input_info->odid, delta_packets / conf->stat_interval);
-				fprintf(stat_out_file, "%s%u=%u\n", "DATA_REC_SEC",
+				fprintf(stat_out_file, "%s_%u=%u\n", "DATA_REC_SEC",
 						aux_node->input_info->odid, delta_data_records / conf->stat_interval);
-				fprintf(stat_out_file, "%s%u=%u\n", "LOST_DATA_REC_SEC",
+				fprintf(stat_out_file, "%s_%u=%u\n", "LOST_DATA_REC_SEC",
 						aux_node->input_info->odid, delta_lost_data_records / conf->stat_interval);
-			} else {
+			} else if (print_stat_to_console) {
 				MSG_INFO(stat_module, "%10u %15lu %15lu %15lu %15u %15u %20u",
 						aux_node->input_info->odid,
 						aux_node->input_info->packets,
@@ -781,9 +799,7 @@ static void *statistics_thread(void* config)
 			++aux_node_count;
 		}
 
-		if (stat_out_file) {
-			fflush(stat_out_file);
-		} else if (aux_node_count > 1) {
+		if (print_stat_to_console && aux_node_count > 1) {
 			/* Print totals row, but only in case there is more than one ODID */
 			MSG_INFO(stat_module, "%s", "----------------------------------------------------------");
 			MSG_INFO(stat_module, "%10s %15lu %15lu %15lu", "Total:", packets_total, data_records_total, lost_data_records_total);
@@ -794,10 +810,16 @@ static void *statistics_thread(void* config)
 		
 		/* Print buffer usage */
 		statistics_print_buffers(conf, stat_out_file);
+
+		/* Flush input stream and close file */
+		if (print_stat_to_file) {
+			fflush(stat_out_file);
+			fclose(stat_out_file);
+		}
 	}
 
-	if (stat_out_file) {
-		fclose(stat_out_file);
+	if (print_stat_to_file) {
+		free(full_stat_out_file_path);
 	}
 	
 	return NULL;
