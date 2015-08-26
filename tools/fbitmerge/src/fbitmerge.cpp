@@ -206,30 +206,30 @@ void merge_flowStats(std::string first, std::string second)
 		file_f.close();
 	}
 
-	int expFlows = 0;
-	int recFlows = 0;
-	int lostFlows = 0;
+	int exported_flows = 0;
+	int received_flows = 0;
+	int lost_flows = 0;
 	std::string buff;
 
 	/* Read data from first file */
 	if (file_f.is_open()) {
 		std::getline(file_f, buff);
-		expFlows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
+		exported_flows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
 		std::getline(file_f, buff);
-		recFlows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
+		received_flows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
 		std::getline(file_f, buff);
-		lostFlows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
+		lost_flows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
 		file_f.close();
 	}
 
 	/* Add data from second file */
 	if (file_s.is_open()) {
 		std::getline(file_s, buff);
-		expFlows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
+		exported_flows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
 		std::getline(file_s, buff);
-		recFlows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
+		received_flows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
 		std::getline(file_s, buff);
-		lostFlows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
+		lost_flows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
 		file_s.close();
 	}
 
@@ -238,9 +238,9 @@ void merge_flowStats(std::string first, std::string second)
 	if (!file_s.is_open()) {
 		std::cerr << "Cannot open file '" << second << "' for writing\n";
 	} else {
-		file_s << "Exported flows: " << expFlows << std::endl;
-		file_s << "Received flows: " << recFlows << std::endl;
-		file_s << "Lost flows: " << lostFlows << std::endl;
+		file_s << "Exported flows: " << exported_flows << std::endl;
+		file_s << "Received flows: " << received_flows << std::endl;
+		file_s << "Lost flows: " << lost_flows << std::endl;
 		file_s.close();
 	}
 }
@@ -539,6 +539,12 @@ int merge_all(std::string workDir, uint16_t key, std::string prefix)
 	/* Rename folders, if necessary - reset name values after key to 0. Also
 	 * update folder mtime. */
 	for (std::map<uint32_t, std::string>::iterator i = dir_map.begin(); i != dir_map.end(); i++) {
+		if (prefix.length() + size > i->second.length()) {
+			std::cerr << "Error while preparing to rename folder '" << i->second << \
+					"': folder name shorther than expected" << std::endl;
+			continue;
+		}
+
 		std::string first = i->second.substr(0, prefix.length() + size);
 		std::string last = i->second.substr(prefix.length() + size, std::string::npos);
 
@@ -552,6 +558,7 @@ int merge_all(std::string workDir, uint16_t key, std::string prefix)
 
 			if (rename(from_path.c_str(), to_path.c_str()) != 0) {
 				std::cerr << "Error while renaming folder '" << (first + last) << "'" << std::endl;
+				continue;
 			}
 		}
 
