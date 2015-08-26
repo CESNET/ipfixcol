@@ -206,30 +206,30 @@ void merge_flowStats(std::string first, std::string second)
 		file_f.close();
 	}
 
-	int expFlows = 0;
-	int recFlows = 0;
-	int lostFlows = 0;
+	int exported_flows = 0;
+	int received_flows = 0;
+	int lost_flows = 0;
 	std::string buff;
 
 	/* Read data from first file */
 	if (file_f.is_open()) {
 		std::getline(file_f, buff);
-		expFlows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
+		exported_flows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
 		std::getline(file_f, buff);
-		recFlows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
+		received_flows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
 		std::getline(file_f, buff);
-		lostFlows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
+		lost_flows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
 		file_f.close();
 	}
 
 	/* Add data from second file */
 	if (file_s.is_open()) {
 		std::getline(file_s, buff);
-		expFlows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
+		exported_flows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
 		std::getline(file_s, buff);
-		recFlows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
+		received_flows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
 		std::getline(file_s, buff);
-		lostFlows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
+		lost_flows += atoi(buff.substr(buff.find(":") + 2, buff.length()).c_str());
 		file_s.close();
 	}
 
@@ -238,9 +238,9 @@ void merge_flowStats(std::string first, std::string second)
 	if (!file_s.is_open()) {
 		std::cerr << "Cannot open file '" << second << "' for writing\n";
 	} else {
-		file_s << "Exported flows: " << expFlows << std::endl;
-		file_s << "Received flows: " << recFlows << std::endl;
-		file_s << "Lost flows: " << lostFlows << std::endl;
+		file_s << "Exported flows: " << exported_flows << std::endl;
+		file_s << "Received flows: " << received_flows << std::endl;
+		file_s << "Lost flows: " << lost_flows << std::endl;
 		file_s.close();
 	}
 }
