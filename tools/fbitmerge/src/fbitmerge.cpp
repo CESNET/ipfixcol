@@ -539,6 +539,12 @@ int merge_all(std::string workDir, uint16_t key, std::string prefix)
 	/* Rename folders, if necessary - reset name values after key to 0. Also
 	 * update folder mtime. */
 	for (std::map<uint32_t, std::string>::iterator i = dir_map.begin(); i != dir_map.end(); i++) {
+		if (prefix.length() + size > i->second.length()) {
+			std::cerr << "Error while preparing to rename folder '" << i->second << \
+					"': folder name shorther than expected" << std::endl;
+			continue;
+		}
+
 		std::string first = i->second.substr(0, prefix.length() + size);
 		std::string last = i->second.substr(prefix.length() + size, std::string::npos);
 
@@ -552,6 +558,7 @@ int merge_all(std::string workDir, uint16_t key, std::string prefix)
 
 			if (rename(from_path.c_str(), to_path.c_str()) != 0) {
 				std::cerr << "Error while renaming folder '" << (first + last) << "'" << std::endl;
+				continue;
 			}
 		}
 
