@@ -109,6 +109,12 @@ AS_IF([test "$HAVE_SISO" = "no"], AC_MSG_ERROR([Required library siso missing]))
 AC_SUBST([SISO_CPPFLAGS])
 AC_SUBST([SISO_LDFLAGS])
 
+### LibXML2 ###
+AC_CHECK_LIB([xml2], [main],
+    [LIBS="`xml2-config --libs` $AM_LDFLAGS"
+    CXXFLAGS="`xml2-config --cflags` $AM_CPPFLAGS"],
+    AC_MSG_ERROR([Requried library libxml2 not found]))
+
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar.h])
 
