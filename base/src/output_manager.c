@@ -324,6 +324,7 @@ static void *output_manager_plugin_thread(void* config)
 	struct data_manager_config *data_config = NULL;
 	struct ipfix_message* msg = NULL;
 	unsigned int index;
+	uint32_t odid;
 
 	conf = (struct output_manager_config *) config;
 	index = conf->in_queue->read_offset;
@@ -350,7 +351,6 @@ static void *output_manager_plugin_thread(void* config)
 			/* Stop manager */
 			break;
 		}
-
 		/* Check whether we have a pointer to the input_info structure based on ODID */
 		struct input_info_node *input_info_node = get_input_info_node(msg->input_info->odid);
 		if (input_info_node == NULL) {
@@ -358,26 +358,27 @@ static void *output_manager_plugin_thread(void* config)
 			add_input_info(msg->input_info);
 		}
 
+		odid = (conf->odid_merge) ? 0 : msg->input_info->odid;
+
 		/* Get appropriate data Manager config according to ODID */
-		data_config = get_data_mngmt_config(msg->input_info->odid, conf->data_managers);
+		data_config = get_data_mngmt_config(odid, conf->data_managers);
 		if (data_config == NULL) {
 			/*
 			 * No data manager config for this observation domain ID found -
 			 * we have a new observation domain ID, so create new data manager for
 			 * it
 			 */
-			data_config = data_manager_create(msg->input_info->odid, conf->storage_plugins);
+			data_config = data_manager_create(odid, conf->storage_plugins);
 			if (data_config == NULL) {
 				MSG_WARNING(msg_module, "[%u] Unable to create Data Manager; skipping data...",
-						msg->input_info->odid);
+						odid);
 				rbuffer_remove_reference(conf->in_queue, index, 1);
 				continue;
 			}
 
 			/* Add config to data_mngmts structure */
 			output_manager_insert(conf, data_config);
-
-			MSG_NOTICE(msg_module, "[%u] Data Manager created", msg->input_info->odid);
+			MSG_NOTICE(msg_module, "[%u] Data Manager created", odid);
 		}
 
 		if (msg->source_status == SOURCE_STATUS_NEW) {
@@ -833,7 +834,7 @@ static void *statistics_thread(void* config)
  * @param[out] config configuration structure
  * @return 0 on success, negative value otherwise
  */
-int output_manager_create(configurator *plugins_config, int stat_interval, void **config)
+int output_manager_create(configurator *plugins_config, int stat_interval, bool odid_merge, void **config)
 {
 	conf = calloc(1, sizeof(struct output_manager_config));
 	if (!conf) {
@@ -843,6 +844,7 @@ int output_manager_create(configurator *plugins_config, int stat_interval, void 
 	
 	conf->stat_interval = stat_interval;
 	conf->plugins_config = plugins_config;
+	conf->odid_merge = odid_merge;
 	
 	*config = conf;
 	return 0;
