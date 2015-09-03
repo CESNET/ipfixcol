@@ -51,7 +51,7 @@ Example:
       }
    ]
 }
-
+```
 
 ###Configuration
 
@@ -79,6 +79,7 @@ Here is an example of configuration in **startup.xml**:
     <name>JSON storage plugin</name>
 	<fileWriter>
 		<fileFormat>json</fileFormat>
+		<metadata>no</metadata>
 		<output>
 			<type>print</type>
 		</output>
@@ -92,7 +93,7 @@ Here is an example of configuration in **startup.xml**:
 	</fileWriter>
 </destination>
 ```
-
+* **metadata** - add record metadata to the output (yes/no) [default == no]
 * **output** - specifies JSON data processor. Multiple outputs are supported.
 * **output - type** - processor type. Actually only **print** and **send** are supported.
 * **output:print** - writes data to the standard output.

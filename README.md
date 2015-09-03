@@ -28,6 +28,8 @@ IPFIXcol framework is a set of:
 * input, intermediate and storage **plugins** for collector
 * **tools** for data processing etc.
 
+To generate data for the IPFIXcol, look at the list [list of supported flow exporters](https://github.com/CESNET/ipfixcol/wiki/Supported-Flow-Exporters).
+
 ##<a name="ipfixcol"></a> IPFIXcol
 Described in it's [README](base/)
 

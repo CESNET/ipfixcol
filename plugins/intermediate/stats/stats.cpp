@@ -221,11 +221,10 @@ stats_data *stats_rrd_create(plugin_conf *conf, std::string file)
 
 	/*
 	 * Set start time
-	 * time is decreased by 1 because immediately after RRD creation
-	 * update is called and rrd library requires at least 1 time
-	 * unit between updates
+	 * time is decreased by conf->interval because it is not possible to
+	 * update the RRD for the next step time.
 	 */
-	snprintf(buffer, 64, "--start=%lld", (long long) time(NULL) - 1);
+	snprintf(buffer, 64, "--start=%lu", stats->last - conf->interval);
 	argv.push_back(buffer);
 
 	/* Set interval */

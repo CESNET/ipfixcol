@@ -44,6 +44,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #include "config.h"
 #include "queues.h"
@@ -78,9 +79,10 @@ struct output_manager_config {
 	struct data_manager_config *data_managers;  /**< output managers */
 	struct data_manager_config *last;           /**< last Output Manager in list */
 	struct storage *storage_plugins[32];        /**< Storage plugins */
-	struct ring_buffer *in_queue;               /**< input queue */
-	struct ring_buffer *new_in;
-	int running;
+	struct ring_buffer *in_queue;               /**< Input queue */
+	struct ring_buffer *new_in;                 /**< New input queue */
+	int running;                                /**< Status of manager */
+	bool odid_merge;                            /**< Enable common data manager */
 	pthread_t thread_id;                        /**< Manager's thread ID */
 	pthread_t stat_thread;                      /**< Stat's thread ID */
 	int stat_interval;                          /**< Stat's interval */
@@ -98,7 +100,7 @@ struct output_manager_config {
  * @param[out] config configuration structure
  * @return 0 on success, negative value otherwise
  */
-int output_manager_create(configurator *plugins_config, int stat_interval, void **config);
+int output_manager_create(configurator *plugins_config, int stat_interval, bool odid_merge, void **config);
 
 /**
  * \brief Start data processing

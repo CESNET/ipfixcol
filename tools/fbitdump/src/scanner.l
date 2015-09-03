@@ -55,7 +55,7 @@ typedef parser::Parser::token token;
 /* regexp aliases */
 _COLUMN %[a-zA-Z0-9]+
 _RAWCOLUMN e[0-9]+id[0-9]+(p[0-9]+)?
-_NUMBER [0-9]+[kKmMgGtT]{0,1}
+_NUMBER [0-9]+([kKmMgGtT]{0,1}|[uU]?[lL]?)
 _HEXNUM 0x[0-9a-fA-F]+
 _FLOAT  [0-9]+\.[0-9]+[kKmMgGtT]{0,1}
 _MAC ([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}

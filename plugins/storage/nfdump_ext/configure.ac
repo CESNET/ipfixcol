@@ -54,7 +54,7 @@ LT_INIT([dlopen disable-static])
 
 # Initialization
 : ${CXXFLAGS=""}
-AM_CXXFLAGS="-Wall -O2"
+AM_CXXFLAGS="-Wall -O0"
 AC_LANG([C++])
 
 RELEASE=1
@@ -114,10 +114,10 @@ AC_SUBST([SISO_LDFLAGS])
 AC_SEARCH_LIBS([lnf_open], [nf], [], [AC_MSG_ERROR([Unable to find the libnf library])])
 
 ### LibXML2 ###
-AC_CHECK_LIB([xml2], [main],
-    [LIBS="`xml2-config --libs` $LIBS"
-    CXXFLAGS="`xml2-config --cflags` $CFLAGS"],
-    AC_MSG_ERROR([Requried library libxml2 not found]))
+#AC_CHECK_LIB([xml2], [main],
+#    [LIBS="`xml2-config --libs` $LIBS"
+#    CXXFLAGS="`xml2-config --cflags` $CFLAGS"],
+#    AC_MSG_ERROR([Requried library libxml2 not found]))
 
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar.h])

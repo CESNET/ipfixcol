@@ -78,7 +78,7 @@ AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
 AC_LANG([C++])
-LBR_SET_CXXSTD
+LBR_SET_CXXSTD([gnu++11])
 AM_CXXFLAGS="$AM_CXXFLAGS $CXXSTD"
 
 ###################### Check for configure parameters ##########################
@@ -111,9 +111,15 @@ AC_SUBST([SISO_LDFLAGS])
 
 ### LibXML2 ###
 AC_CHECK_LIB([xml2], [main],
+<<<<<<< HEAD
     [LIBS="`xml2-config --libs` $AM_LDFLAGS"
     CXXFLAGS="`xml2-config --cflags` $AM_CPPFLAGS"],
     AC_MSG_ERROR([Requried library libxml2 not found]))
+=======
+    [LIBS="`xml2-config --libs` $LIBS"
+    CPPFLAGS="`xml2-config --cflags` $CPPFLAGS"],
+    AC_MSG_ERROR([Libxml2 not found ]))
+>>>>>>> 79ffb1d5ded4d9b14519e3e00be8d47e9901c3ae
 
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar.h])

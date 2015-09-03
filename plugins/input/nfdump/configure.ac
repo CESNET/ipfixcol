@@ -48,7 +48,7 @@ AC_CONFIG_SRCDIR([nfinput.c])
 AC_CONFIG_HEADERS([config.h])
 
 # Initialization
-CXXFLAGS="-Wall"
+AM_CFLAGS="-Wall -O2 -std=gnu99"
 
 RELEASE=1
 AC_SUBST(RELEASE)
@@ -71,7 +71,8 @@ AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
 ############################ Check for libraries ###############################
-
+AC_SEARCH_LIBS([__lzo_init_v2], [lzo2],,
+    	AC_MSG_ERROR([Required library lzo2 missing]))
     	
 ###################### Check for configure parameters ##########################
 AC_ARG_ENABLE([debug], 
@@ -91,6 +92,8 @@ AS_IF([test -d $srcdir/../../../base/headers],
 )
 
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([lzo/lzoconf.h], , AC_MSG_ERROR([lzo/lzoconf.h header missing. Please install liblzo2-devel package]), [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS([lzo/lzo1x.h], , AC_MSG_ERROR([lzo/lzo1x.h header missing. Please install liblzo2-devel package]), [AC_INCLUDES_DEFAULT])
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 AC_HEADER_STDBOOL
@@ -128,6 +131,10 @@ if test -z "$XSLTPROC"; then
 	AC_MSG_WARN([Due to missing xsltproc you will not able to generate MAN pages.])
 fi
 
+# substitute automake CFLAGS and CPPFLAGS variables
+AC_SUBST([AM_CPPFLAGS])
+AC_SUBST([AM_CFLAGS])
+
 # generate output
 AC_CONFIG_FILES([Makefile
 				ipfixcol-nfdump-input.spec])
@@ -149,7 +156,7 @@ echo "
   $PACKAGE_NAME version $PACKAGE_VERSION
   Prefix........: $prefix
   Distribution..: $DISTRO
-  C Compiler....: $CC $CFLAGS $CPPFLAGS
+  C Compiler....: $CC $AM_CFLAGS $CFLAGS $AM_CPPFLAGS $CPPFLAGS
   Linker........: $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
   Build doc.....: ${enable_doc:-yes}

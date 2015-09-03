@@ -456,7 +456,7 @@ struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint
  */
 int data_record_field_offset(uint8_t *data_record, struct ipfix_template *template, uint32_t enterprise, uint16_t id, int *data_length)
 {
-	int ieid;
+	int ieid, enterprise_id;
 	int count, offset = 0, index, length, prevoffset;
 	struct ipfix_template_row *row = NULL;
 
@@ -478,11 +478,12 @@ int data_record_field_offset(uint8_t *data_record, struct ipfix_template *templa
 	for (count = index = 0; count < template->field_count; count++, index++) {
 		length = template->fields[index].ie.length;
 		ieid = template->fields[index].ie.id;
+		enterprise_id = 0;
 
 		if (ieid >> 15) {
 			/* Enterprise Number */
 			ieid &= 0x7FFF;
-			++index;
+			enterprise_id = template->fields[++index].enterprise_number;
 		}
 		prevoffset = offset;
 
@@ -513,7 +514,7 @@ int data_record_field_offset(uint8_t *data_record, struct ipfix_template *templa
 		}
 
 		/* Field found */
-		if (id == ieid) {
+		if (id == ieid && enterprise == enterprise_id) {
 			if (data_length) {
 				*data_length = length;
 			}
@@ -660,18 +661,22 @@ int data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_templ
  */
 int template_set_process_records(struct ipfix_template_set *tset, int type, tset_callback_f processor, void *proc_data)
 {
-	int max_len, rec_len, count = 0;
-	uint8_t *ptr = (uint8_t*) &tset->first_record;
+	uint16_t max_len, rec_len, count = 0;
+	uint8_t *ptr = (uint8_t *) &tset->first_record;
 
-	while (ptr < (uint8_t*) tset + ntohs(tset->header.length)) {
+	while (ptr < (uint8_t *) tset + ntohs(tset->header.length)) {
 		max_len = ((uint8_t *) tset + ntohs(tset->header.length)) - ptr;
 		rec_len = tm_template_record_length((struct ipfix_template_record *) ptr, max_len, type, NULL);
-		if (rec_len == 0) {
+
+		/* Check whether padding was applied */
+		if (rec_len < sizeof(struct ipfix_template_record)) {
 			break;
 		}
+
 		if (processor) {
 			processor(ptr, rec_len, proc_data);
 		}
+
 		count++;
 		ptr += rec_len;
 	}

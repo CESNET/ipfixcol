@@ -17,9 +17,7 @@ ipfixcol_nfdump_ext_output_la_SOURCES = \
 	nfdump_ext.cpp nfdump_ext.h \
 	Storage.cpp Storage.h \
 	Translator.cpp Translator.h \
-	protocols.h protocols.cpp \
-	Sender.cpp Sender.h \
-	Printer.cpp Printer.h
+        protocols.h protocols.cpp
 
 ipfixcol_nfdump_ext_output_la_LIBADD = pugixml/libpugixml.la
 

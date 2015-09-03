@@ -119,7 +119,7 @@ void forwarding_remove_record(forwarding *conf, uint32_t tid, int type)
 struct forwarding_template_record *forwarding_add_record(forwarding *conf, struct ipfix_template_record *record, int type, int len)
 {
 	int i;
-	MSG_DEBUG(msg_module, "%d adding", ntohs(record->template_id));
+	MSG_DEBUG(msg_module, "Adding %s ID %d", (type == TM_TEMPLATE) ? "template" : "options template", ntohs(record->template_id));
 	if (conf->records_cnt == conf->records_max) {
 		/* Array is full, need more memory */
 		conf->records_max += 32;
@@ -491,29 +491,22 @@ int forwarding_udp_sent(forwarding *conf, struct forwarding_template_record *rec
 	uint32_t life_packets = (rec->type == TM_TEMPLATE) ?
 			conf->udp.template_life_packet : conf->udp.options_template_life_packet;
 
-	/* Check template timeout */
-	if (life_time) {
-		if (rec->last_sent + life_time > act_time) {
-			return 1;
-		}
+	/* Do we need to refresh the template? */
+	if ((life_time && rec->last_sent + life_time <= act_time) ||
+		(life_packets && rec->packets >= life_packets)) {
+		/* Refresh needed, reset counters */
 		rec->last_sent = act_time;
-	}
-
-	/* Check template life packets */
-	if (life_packets) {
-		if (rec->packets < life_packets) {
-			return 1;
-		}
 		rec->packets = 0;
+		return 0;
 	}
 
-	return 0;
+	return 1;
 }
 
 /**
- * \brief Checks whether template record was send earlier
- *
- * Also controls template updates and inserts not-sent records into array
+ * \brief Checks whether template record was sent before. Also controls template
+ * updates and inserts non-sent records into array.
+ * Does not check UDP template lifetimes, just whether it was ever sent
  *
  * \param[in] conf Plugin configuration
  * \param[in] rec Template record
@@ -528,13 +521,10 @@ int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, 
 
 	if (i >= 0) {
 		if (tm_compare_template_records(conf->records[i]->record, rec)) {
-			/* records are equal */
-			if (conf->udp_connection) {
-				return forwarding_udp_sent(conf, conf->records[i]);
-			}
+			/* Records are equal */
 			return 1;
 		}
-		/* stored record is old, update it */
+		/* Stored record is old, update it */
 		forwarding_remove_record(conf, conf->records[i]->record->template_id, type);
 	}
 
@@ -555,6 +545,7 @@ int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, 
 
 /**
  * \brief Remove template sets without any template records
+ *
  * \param[in] msg IPFIX message
  */
 void forwarding_remove_empty_sets(struct ipfix_message *msg)
@@ -575,7 +566,7 @@ void forwarding_remove_empty_sets(struct ipfix_message *msg)
 }
 
 /**
- * \brief Process each (option) template
+ * \brief Process each (options) template
  *
  * \param[in] rec Template record
  * \param[in] rec_len Record's length
@@ -584,6 +575,8 @@ void forwarding_remove_empty_sets(struct ipfix_message *msg)
 void forwarding_process_template(uint8_t *rec, int rec_len, void *data)
 {
 	struct forwarding_process *proc = (struct forwarding_process *) data;
+	/* Do not copy the template when it was already sent.
+	 * UDP templates are added based on their lifetime elsewhere */
 	if (forwarding_record_sent(proc->conf, (struct ipfix_template_record *) rec, rec_len, proc->type)) {
 		return;
 	}
@@ -595,6 +588,9 @@ void forwarding_process_template(uint8_t *rec, int rec_len, void *data)
 
 /**
  * \brief Remove templates already sent in past (TCP only)
+ * It also saves observed templates into internal array and
+ * copies new templates to output message
+ *
  * \param[in] conf Plugin configuration
  * \param[in] msg IPFIX message
  * \param[in] new_msg new IPFIX message
@@ -801,11 +797,11 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	memcpy(new_msg, ipfix_msg->pkt_header, IPFIX_HEADER_LENGTH);
 	length += IPFIX_HEADER_LENGTH;
 
-	/* Remove already sent templates */
+	/* Process new templates. Remove already sent templates in TCP */
 	length = forwarding_remove_sent_templates(conf, ipfix_msg, new_msg);
 
 	if (conf->udp_connection) {
-		/* Add timeouted templates */
+		/* Add timeouted templates for UDP */
 		length = forwarding_update_templates(conf, ipfix_msg, new_msg, length);
 	}
 

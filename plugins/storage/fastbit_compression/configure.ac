@@ -96,7 +96,7 @@ AC_ARG_ENABLE(bzip,
 ### LibXML2 ###
 AC_CHECK_LIB([xml2], [main],
     [LIBS="`xml2-config --libs` $LIBS"
-    AM_CXXFLAGS="`xml2-config --cflags` $CFLAGS"],
+    AM_CXXFLAGS="`xml2-config --cflags` $AM_CXXFLAGS"],
     AC_MSG_ERROR([Libxml2 not found ]))
 
 AC_SEARCH_LIBS([fastbit_init], [fastbit],,
@@ -115,7 +115,7 @@ AC_CHECK_HEADERS([arpa/inet.h limits.h stdint.h stdlib.h string.h unistd.h])
 
 # use current CXX flags
 my_save_cxxflags="$CXXFLAGS"
-CXXFLAGS="$CXXFLAGS $CXXSTD $AM_CXXFLAGS"
+CXXFLAGS="$CXXFLAGS $AM_CXXFLAGS"
 
 AC_CHECK_HEADERS([libxml/xmlversion.h], , AC_MSG_ERROR([libxml headers missing. Please install libxml2-devel package]), [AC_INCLUDES_DEFAULT])
 

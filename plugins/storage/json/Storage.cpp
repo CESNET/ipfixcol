@@ -284,7 +284,9 @@ void Storage::storeDataRecord(struct metadata *mdata)
 			record += translator.formatProtocol(read8(data_record + offset));
 			break;
 		case FLAGS:
-			record += translator.formatFlags(read16(data_record + offset), length);
+			record += (length > 1)
+				? translator.formatFlags16(read16(data_record + offset))
+				: translator.formatFlags8(read8(data_record + offset));
 			break;
 		case IPV4:
 			record += translator.formatIPv4(read32(data_record + offset));
@@ -354,22 +356,35 @@ void Storage::storeMetadata(metadata* mdata)
 
 	
 	/* Profiles */
+	record += "\"profiles\": [";
 	if (mdata->channels) {
-		record += "\"profiles\": [";
+		// Get name of root profile
+		void *profile_ptr, *prev_profile_ptr;
+		const char *root_profile_name;
 
+		profile_ptr = channel_get_profile(mdata->channels[0]);
+		while (profile_ptr != NULL) {
+			prev_profile_ptr = profile_ptr;
+			profile_ptr = profile_get_parent(profile_ptr);
+		}
+		root_profile_name = profile_get_name(prev_profile_ptr);
+
+		// Process all channels
 		for (int i = 0; mdata->channels[i] != 0; ++i) {
 			if (i > 0) {
 				record += ", ";
 			}
 
 			record += "{\"profile\": \"";
-			record += channel_get_name(mdata->channels[i]);
+			record += root_profile_name;
+			record += "/";
+			record += profile_get_path(channel_get_profile(mdata->channels[i]));
+
 			record += "\", \"channel\": \"";
-			record += profile_get_name(channel_get_profile(mdata->channels[i]));
+			record += channel_get_name(mdata->channels[i]);
 			record += "\"}";
 		}
-
-		record += "]";
 	}
+	record += "]";
 }
 

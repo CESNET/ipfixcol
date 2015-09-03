@@ -41,117 +41,92 @@
 extern "C" {
 #include <ipfixcol.h>
 #include <siso.h>
+
  
 /* API version constant */
 IPFIXCOL_API_VERSION;
 }
 
 #include <stdexcept>
+#include <sstream>
 
 #include "pugixml.hpp"
-#include <libxml/parser.h>
 
 #include "nfdump_ext.h"
 #include "Storage.h"
-#include "Printer.h"
-#include "Sender.h"
+
 
 static const char *msg_module = "nfdump_ext_storage";
 
-struct nfdump_ext_conf {
-	uint64_t intenval;
-	std::string *storage_dir
-	Storage *storage;
-	bool metadata;
-	bool align;
+#define DEF_TIME_WINDOW 300
+#define DEF_PREFIX "lnfstore."
+#define DEF_STORAGE_PATH ""
+#define DEF_SUFFIX_MASK "%F%R"
+#define DEF_IDENT "lnfstore"
+#define DEF_UTILIZE_CHANNELS false
+#define DEF_COMPRESS false
+#define DEF_ALIGN true
 
+struct nfdump_ext_conf
+{
+    Storage *storage;
+
+    bool utilize_channels;
+    bool compress;
+	bool align;
 };
+
 
 void process_startup_xml(struct nfdump_ext_conf *conf, char *params) 
 {
-	xmlDocPtr *doc = NULL;
-	xmlNode *cur = NULL;
+    pugi::xml_document doc;
+    pugi::xml_parse_result result = doc.load(params);
 
-	/* try to parse configuration file */
-	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
-	if (doc == NULL) {
-		MSG_ERROR(msg_module, "Plugin configuration not parsed successfully");
-		goto err_init;
-	}
-	cur = xmlDocGetRootElement(doc);
-	if (cur == NULL) {
-		MSG_ERROR(msg_module, "Empty configuration");
-		goto err_xml;
-	}
-	if (xmlStrcmp(cur->name, (const xmlChar *) "nfdump_ext")) {
-		MSG_ERROR(msg_module, "Error in configuration, root node is not nfdump_ext");
-		goto err_init;
-	}
-	cur = cur->xmlChildrenNode;
-	while (cur != NULL) {
-		/* find out where to look for directory where data storage tree will be created */
-		if ((!xmlStrcmp(cur->name, (const xmlChar *) "storagePrefix"))) {
-			std::string prefix(xmlNodeListGetString(doc, cur, 1));
-			if(prefix != NULL)
-				conf->storage  = new std::string(prefix);
+    if (!result) {
+        throw std::invalid_argument(std::string("Error when parsing parameters: ") + result.description());
+    }
 
-		}else if((!xmlStrcmp(cur->name, (const xmlChar *) "timeWindow"))){
-			//interval and align
+    /* Get configuration */
+    pugi::xpath_node ie = doc.select_single_node("fileWriter");
+    std::string value = (ie.node().child_value("fileFormat"));
+    if( value != "nfdump_ext"){
+        throw std::invalid_argument(std::string("Bad file writer name: ") + value);
+    }
 
-		}else if((!xmlStrcmp(cur->name, (const xmlChar *) "fileOptions"))){
-			//prefix, suffix mask, identificator, compression, 
+    /* Check metadata processing */
+    std::string tmp = ie.node().child_value("utilizeChannels");
+    conf->storage->setUtilizeChannels(tmp == "yes");
 
-		}
-		cur = cur->next;
-	}
+    tmp = ie.node().child_value("storagePath");
+    conf->storage->setStoragePath(tmp);
 
-	/* check whether we have found "interval" element in configuration file */
-	if (conf->xml_file == NULL) {
-		MSG_WARNING(msg_module, "\"file\" element is missing. No input, "
-				"nothing to do");
-		goto err_xml;
-	}
+    tmp = ie.node().child_value("prefix");
+    conf->storage->setNamePrefix(tmp);
 
-	pugi::xml_document doc;
-	pugi::xml_parse_result result = doc.load(params);
+    tmp = ie.node().child_value("suffixMask");
+    conf->storage->setNameSuffixMask(tmp);
 
+    tmp = ie.node().child_value("identificatorField");
+    conf->storage->setIdentificator(tmp.substr(0, 128));
 
-	
-	if (!result) {
-		throw std::invalid_argument(std::string("Error when parsing parameters: ") + result.description());
-	}
+    /* Process all outputs */
+    pugi::xpath_node_set opts = doc.select_nodes("/fileWriter/dumpInterval/*");
 
-	/* Get configuration */
-	pugi::xpath_node ie = doc.select_single_node("fileWriter");
-	
-	/* Check metadata processing */
-	//Unnecessary
-	std::string meta = ie.node().child_value("metadata");
-	conf->metadata = (meta == "yes");
-
-	/* Process all outputs */
-	pugi::xpath_node_set outputs = doc.select_nodes("/fileWriter/output");
-
-	for (auto& node: outputs) {
-		std::string type = node.node().child_value("type");
-
-		Output *output{NULL};
-
-		if (type == "save") {
-		//	output = new Saver(node);
-			output = new Printer(node);
-		} else if (type == "send") {
-			output = new Sender(node);
-		} else {
-			throw std::invalid_argument("Unknown output type \"" + type + "\"");
-		}
-
-		conf->storage->addOutput(output);
-	}
-
-	if (!conf->storage->hasSomeOutput()) {
-		throw std::invalid_argument("No valid output specified!");
-	}
+    std::stringstream ss;
+    for (auto& node: opts) {
+        value = node.node().name();
+        if(value == "timeWindow"){
+            time_t seconds;
+            ss << node.node().child_value();
+            ss >> seconds;
+            conf->storage->setTimeWindow(seconds);
+            continue;
+        }else if(value == "align"){
+            conf->storage->setWindowAlignment(node.node().child_value() == std::string("yes"));
+            continue;
+        }
+        throw std::invalid_argument(std::string("Not a valid option !")+ value);
+    }
 }
 
 /* plugin inicialization */
@@ -160,7 +135,7 @@ int storage_init (char *params, void **config)
 {	
 	try {
 		/* Create configuration */
-		struct nfdump_ext_conf *conf = new struct nfdump_ext_conf;
+        struct nfdump_ext_conf *conf = new struct nfdump_ext_conf;
 		
 		/* Create storage */
 		conf->storage = new Storage();
@@ -169,7 +144,7 @@ int storage_init (char *params, void **config)
 		process_startup_xml(conf, params);
 		
 		/* Configure metadata processing */
-		conf->storage->setMetadataProcessing(conf->metadata);
+        //conf->storage->setMetadataProcessing(conf->metadata);
 		
 		/* Save configuration */
 		*config = conf;

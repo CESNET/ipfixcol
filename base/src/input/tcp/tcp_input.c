@@ -61,6 +61,7 @@
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 #include <time.h>
+#include <stdbool.h>
 
 #include <ipfixcol.h>
 #include "convert.h"
@@ -85,8 +86,8 @@ IPFIXCOL_API_VERSION;
 #define DEFAULT_PORT "4739"
 /* backlog for tcp connections */
 #define BACKLOG SOMAXCONN
-/* size of array of socket addresses */
-#define ADDR_ARRAY_SIZE 50
+/* initial size of array of socket addresses */
+#define ADDR_ARRAY_INITIAL_SIZE 50
 
 /** Identifier to MSG_* macros */
 static char *msg_module = "TCP input";
@@ -113,7 +114,8 @@ struct plugin_conf {
 	struct input_info_network info; /**< basic information structure */
 	fd_set master; /**< set of all active sockets */
 	int fd_max; /**< max file descriptor number */
-	struct sockaddr_in6 *sock_addresses[ADDR_ARRAY_SIZE]; /*< array of addresses indexed by sockets */
+	struct sockaddr_in6 **sock_addresses; /*< array of addresses indexed by sockets */
+	uint16_t sock_addresses_max;
 	struct input_info_list *info_list; /**< list of infromation structures
 										* passed to collector */
 #ifdef TLS_SUPPORT
@@ -192,6 +194,82 @@ void input_listen_tls_cleanup(void *config, struct cleanup *maid)
 	}
 }
 #endif
+
+/**
+ * \brief Resizes socket addresses storage
+ * \param conf plugin configuration
+ * \return true on success
+ */
+bool enlarge_sock_addresses(struct plugin_conf *conf)
+{
+	uint16_t old_max = conf->sock_addresses_max;
+	conf->sock_addresses_max += ADDR_ARRAY_INITIAL_SIZE;
+
+	struct sockaddr_in6 **new_addresses = realloc(conf->sock_addresses, conf->sock_addresses_max * sizeof(void*));
+	if (new_addresses == NULL) {
+		MSG_ERROR(msg_module, "Cannot allocate memory: %s", strerror(errno));
+		conf->sock_addresses_max = old_max;
+		return false;
+	}
+
+	// Initializes newly allocated memory
+	conf->sock_addresses = new_addresses;
+	memset(&(conf->sock_addresses[old_max]), 0, ADDR_ARRAY_INITIAL_SIZE * sizeof(void*));
+
+	return true;
+}
+
+/**
+ * \brief Stores socket address and resizes array if needed
+ * \param conf plugin configuration
+ * \param address socket address
+ * \param position socket address position (socket file descriptor)
+ * \return true on success
+ */
+bool add_sock_address(struct plugin_conf *conf, struct sockaddr_in6 *address, uint16_t position)
+{
+	if (position >= conf->sock_addresses_max) {
+		if (!enlarge_sock_addresses(conf)) {
+			return false;
+		}
+	}
+
+	conf->sock_addresses[position] = address;
+	return true;
+}
+
+/**
+ * \brief Removes socket address and frees memory
+ * \param conf plugin configuration
+ * \param position address position (socket file descriptor)
+ */
+void remove_sock_address(struct plugin_conf *conf, uint16_t position)
+{
+	if (conf->sock_addresses[position] != NULL) {
+		free(conf->sock_addresses[position]);
+		conf->sock_addresses[position] = NULL;
+	}
+}
+
+/**
+ * \brief Removes all addresses and destroys storage
+ * \param conf plugin configuration
+ */
+void destroy_sock_addresses(struct plugin_conf *conf)
+{
+	if (conf->sock_addresses == NULL) {
+		return;
+	}
+
+	for (int i = 0; i < conf->sock_addresses_max; ++i) {
+		if (conf->sock_addresses[i] != NULL) {
+			free(conf->sock_addresses[i]);
+		}
+	}
+
+	free(conf->sock_addresses);
+	conf->sock_addresses = NULL;
+}
 
 /**
  * \brief Funtion that listens for new connetions
@@ -317,7 +395,10 @@ void *input_listen(void *config)
 		}
 
 		/* copy socket address to config structure */
-		conf->sock_addresses[new_sock] = address;
+		if (!add_sock_address(conf, address, new_sock)) {
+			MSG_ERROR(msg_module, "Cannot store another socket address!");
+			break;
+		}
 
 		/* print info */
 		if (conf->info.l3_proto == 4) {
@@ -411,6 +492,12 @@ int input_init(char *params, void **config)
 	conf = calloc(1, sizeof(struct plugin_conf));
 	if (conf == NULL) {
 		MSG_ERROR(msg_module, "Cannot allocate memory for config structure: %s", strerror(errno));
+		retval = 1;
+		goto out;
+	}
+
+	if (!enlarge_sock_addresses(conf)) {
+		MSG_ERROR(msg_module, "Cannot initialize array for socket address");
 		retval = 1;
 		goto out;
 	}
@@ -984,7 +1071,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		pthread_mutex_lock(&mutex);
 		close(sock);
 		FD_CLR(sock, &conf->master);
-		free(conf->sock_addresses[sock]);
+		remove_sock_address(conf, sock);
 		pthread_mutex_unlock(&mutex);
 
 		return INPUT_CLOSED;
@@ -1049,11 +1136,10 @@ int input_close(void **config)
 				error++;
 				MSG_ERROR(msg_module, "Cannot close socket: %s", strerror(errno));
 			}
-			if (conf->sock_addresses[sock] != NULL) {
-				free(conf->sock_addresses[sock]);
-			}
 		}
 	}
+
+	destroy_sock_addresses(conf);
 
 	/* free input_info list */
 	while (conf->info_list) {

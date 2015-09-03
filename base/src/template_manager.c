@@ -44,9 +44,9 @@
 
 #include <ipfixcol.h>
 
-/**TEMPLATE_FIELD_LEN length of standard template field */
+/** TEMPLATE_FIELD_LEN length of standard template field */
 #define TEMPLATE_FIELD_LEN 4
-/**TEMPLATE_ENT_FIELD_LEN length of template enterprise number */
+/** TEMPLATE_ENT_FIELD_LEN length of template enterprise number */
 #define TEMPLATE_ENT_NUM_LEN 4
 
 /** Identifier to MSG_* macros */
@@ -154,9 +154,9 @@ static void tm_copy_fields(uint8_t *to, uint8_t *from, uint16_t length)
 			*((uint16_t*)(template_ptr+offset+i*2)) = ntohs(*((uint16_t*)(tmpl_ptr+offset+i*2)));
 		}
 		offset += TEMPLATE_FIELD_LEN;
-		if (*((uint16_t *) (template_ptr+offset-TEMPLATE_FIELD_LEN)) & 0x8000) { /* enterprise element has first bit set to 1*/
-			for (i=0; i < TEMPLATE_ENT_NUM_LEN / 4; i++) {
-				*((uint32_t*)(template_ptr+offset)) = ntohl(*((uint32_t*)(tmpl_ptr+offset)));
+		if (*((uint16_t *) (template_ptr + offset - TEMPLATE_FIELD_LEN)) & 0x8000) { /* enterprise element has first bit set to 1*/
+			for (i = 0; i < TEMPLATE_ENT_NUM_LEN / 4; i++) {
+				*((uint32_t *) (template_ptr + offset)) = ntohl(*((uint32_t*) (tmpl_ptr + offset)));
 			}
 			offset += TEMPLATE_ENT_NUM_LEN;
 		}
@@ -233,7 +233,7 @@ static uint16_t tm_template_length(struct ipfix_template_record *template, int m
 		fields = (uint8_t *) ((struct ipfix_options_template_record*) template)->fields;
 	}
 
-	for (count=0; count < ntohs(template->count); count++) {
+	for (count = 0; count < ntohs(template->count); count++) {
 		/* count data record length */
 		tmp_data_length = ntohs(*((uint16_t *) (fields + fields_length + 2)));
 
@@ -243,14 +243,14 @@ static uint16_t tm_template_length(struct ipfix_template_record *template, int m
 			 * but it can tell us what is the smallest length
 			 * of the Data Record possible */
 			data_record_length |= 0x80000000;
-			data_record_length += 1;           /* every field is at least 1 byte long */
+			data_record_length += 1; /* every field is at least 1 byte long */
 		} else {
 			/* actual length is stored in the template */
 			data_record_length += tmp_data_length;
 		}
 
 		/* enterprise element has first bit set to 1 */
-		if (ntohs((*((uint16_t *) (fields+fields_length)))) & 0x8000) {
+		if (ntohs((*((uint16_t *) (fields + fields_length)))) & 0x8000) {
 			fields_length += TEMPLATE_ENT_NUM_LEN;
 		}
 		fields_length += TEMPLATE_FIELD_LEN;
@@ -258,7 +258,7 @@ static uint16_t tm_template_length(struct ipfix_template_record *template, int m
 		if (fields_length > max_len) {
 			/* oops, no more template fields... we reached end of message
 			 * or end of the set. what can we do, this message is obviously
-			 * malformed, skip it */
+			 * malformed; skip it */
 			return 0;
 		}
 	}
@@ -272,20 +272,24 @@ static uint16_t tm_template_length(struct ipfix_template_record *template, int m
 }
 
 /**
- * \brief Get templaterecord length
+ * \brief Get template record length
  */
 uint16_t tm_template_record_length(struct ipfix_template_record *template, int max_len, int type, uint32_t *data_length)
 {
 	uint16_t len = tm_template_length(template, max_len, type, data_length);
 	if (len > 0) {
-		len = len - sizeof(struct ipfix_template) + sizeof(struct ipfix_template_record);
+		if (type == TM_TEMPLATE) { /* template */
+			len = len - sizeof(struct ipfix_template) + sizeof(struct ipfix_template_record);
+		} else { /* options template */
+			len = len - sizeof(struct ipfix_template) + sizeof(struct ipfix_options_template_record);
+		}
 	}
 
 	return len;
 }
 
 /**
- * \brief Create new ipfix template
+ * \brief Create new IPFIX template
  *
  * \param[in] template ipfix template data
  * \param[in] max_len maximum length of template

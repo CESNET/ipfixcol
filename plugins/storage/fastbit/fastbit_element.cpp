@@ -60,8 +60,7 @@ int load_types_from_xml(struct fastbit_config *conf)
 
 	/* Check for errors */
 	if (!result) {
-		MSG_ERROR(msg_module, "%s parsed with errors", ipfix_elements);
-		MSG_ERROR(msg_module, "Error description: %s", result.description());
+		MSG_ERROR(msg_module, "Error while parsing '%s': %s", ipfix_elements, result.description());
 		return -1;
 	}
 
@@ -69,17 +68,17 @@ int load_types_from_xml(struct fastbit_config *conf)
 	for (pugi::xpath_node_set::const_iterator it = elements.begin(); it != elements.end(); ++it)
 	{
 		str_value = it->node().child_value("enterprise");
-		en = strtoul(str_value.c_str(),NULL,0);
+		en = strtoul(str_value.c_str(), NULL, 0);
 		str_value = it->node().child_value("id");
-		id = strtoul(str_value.c_str(),NULL,0);
+		id = strtoul(str_value.c_str(), NULL, 0);
 
 		str_value = it->node().child_value("dataType");
 
-		if (str_value == "unsigned8" or  str_value == "unsigned16" or str_value == "unsigned32" or str_value == "unsigned64" or \
+		if (str_value == "unsigned8" or str_value == "unsigned16" or str_value == "unsigned32" or str_value == "unsigned64" or \
 				str_value == "dateTimeSeconds" or str_value == "dateTimeMilliseconds" or str_value == "dateTimeMicroseconds" or \
 				str_value == "dateTimeNanoseconds" or str_value == "ipv4Address" or str_value == "macAddress" or str_value == "boolean") {
 			type = UINT;
-		} else if (str_value == "signed8" or str_value == "signed16" or str_value == "signed32" or str_value == "signed64" ) {
+		} else if (str_value == "signed8" or str_value == "signed16" or str_value == "signed32" or str_value == "signed64") {
 			type = INT;
 		} else if (str_value == "ipv6Address") {
 			type = IPv6;
@@ -99,14 +98,14 @@ int load_types_from_xml(struct fastbit_config *conf)
 	return 0;
 }
 
-enum store_type get_type_from_xml(struct fastbit_config *conf, unsigned int en, unsigned int id)
+enum store_type get_type_from_xml(struct fastbit_config *conf, uint32_t en, uint16_t id)
 {
 	/* Check whether a type has been determined for the specified element */
 	if ((*conf->elements_types).count(en) == 0 || (*conf->elements_types)[en].count(id) == 0) {
 		if (en == NFv9_CONVERSION_ENTERPRISE_NUMBER) {
-			MSG_WARNING(msg_module, "No specification for e%ui%u found in %s (enterprise number converted from NFv9)", en, id, ipfix_elements);
+			MSG_WARNING(msg_module, "No specification for e%uid%u found in '%s' (enterprise number converted from NFv9)", en, id, ipfix_elements);
 		} else {
-			MSG_WARNING(msg_module, "No specification for e%ui%u found in %s", en, id, ipfix_elements);
+			MSG_WARNING(msg_module, "No specification for e%uid%u found in '%s'", en, id, ipfix_elements);
 		}
 
 		return UNKNOWN;
@@ -115,7 +114,7 @@ enum store_type get_type_from_xml(struct fastbit_config *conf, unsigned int en, 
 	return (*conf->elements_types)[en][id];
 }
 
-void element::byte_reorder(uint8_t *dst,uint8_t *src, int srcSize, int dstSize)
+void element::byte_reorder(uint8_t *dst, uint8_t *src, int srcSize, int dstSize)
 {
 	(void) dstSize;
 	int i;
@@ -124,21 +123,21 @@ void element::byte_reorder(uint8_t *dst,uint8_t *src, int srcSize, int dstSize)
 	}
 }
 
-void element::setName(int en, int id, int part)
+void element::setName(uint32_t en, uint16_t id, int part)
 {
 	if (part == -1) { /* default */
-		sprintf( _name, "e%iid%hi", en, id);
+		sprintf(_name, "e%iid%hi", en, id);
 	} else {
-		sprintf( _name, "e%iid%hip%i", en, id, part);
+		sprintf(_name, "e%iid%hip%i", en, id, part);
 	}
 }
 
-void element::allocate_buffer(int count)
+void element::allocate_buffer(uint32_t count)
 {
 	_buf_max = count;
 	_buffer = (char *) realloc(_buffer, _size * count);
 	if (_buffer == NULL) {
-		fprintf(stderr, "Memory allocation failed\n");
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 	}
 }
 
@@ -175,8 +174,8 @@ int element::flush(std::string path)
 			return 1;
 		}
 
-		check = fwrite( _buffer, size() , _filled, f);
-		if (check != (size_t) _filled ) {
+		check = fwrite(_buffer, size(), _filled, f);
+		if (check != (size_t) _filled) {
 			fprintf(stderr, "Error while writing data (fwrite)\n");
 			fclose(f);
 			return 1;
@@ -191,13 +190,13 @@ int element::flush(std::string path)
 
 std::string element::get_part_info()
 {
-	return  std::string("\nBegin Column") + \
+	return std::string("\nBegin Column") + \
 		"\nname = " + std::string(this->_name) + \
-		"\ndata_type = " + ibis::TYPESTRING[(int)this->_type] + \
+		"\ndata_type = " + ibis::TYPESTRING[(int) this->_type] + \
 		"\nEnd Column\n";
 }
 
-el_var_size::el_var_size(int size, int en, int id, uint32_t buf_size)
+el_var_size::el_var_size(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 {
 	(void) buf_size;
 	data = NULL;
@@ -209,14 +208,17 @@ el_var_size::el_var_size(int size, int en, int id, uint32_t buf_size)
 	this->set_type();
 }
 
-uint16_t el_var_size::fill(uint8_t * data)
+uint16_t el_var_size::fill(uint8_t *data)
 {
 	/* Get size of data */
 	if (data[0] < 255) {
 		_size = data[0] + 1; /* 1 is first byte with true size */
+	} else if (data[0] == 255) {
+		/* Length is stored in second and third octet */
+		_size = ntohs(*((uint16_t *) &data[1]));
+		_size += 3;
 	} else {
-		_size = ntohs(*((uint16_t*) &data[1]));
-		_size+=3; /* 3 = 1 first byte with 256 and 2 bytes with true size */
+		MSG_ERROR(msg_module, "Invalid (variable) length specification: %u", data[0]);
 	}
 
 	return _size;
@@ -228,7 +230,7 @@ int el_var_size::set_type()
 	return 0;
 }
 
-el_float::el_float(int size, int en, int id, uint32_t buf_size)
+el_float::el_float(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 {
 	_size = size;
 	_filled = 0;
@@ -244,7 +246,7 @@ el_float::el_float(int size, int en, int id, uint32_t buf_size)
 	allocate_buffer(buf_size);
 }
 
-uint16_t el_float::fill(uint8_t * data)
+uint16_t el_float::fill(uint8_t *data)
 {
 	switch(_size) {
 	case 4:
@@ -258,7 +260,7 @@ uint16_t el_float::fill(uint8_t * data)
 		this->append(&(float_value.float64));
 		break;
 	default:
-		MSG_ERROR(msg_module, "Wrong element size (%s - %u)",_name,_size);
+		MSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
 		break;
 	}
 
@@ -270,21 +272,21 @@ int el_float::set_type()
 	switch(_size) {
 	case 4:
 		/* float32 */
-		_type=ibis::FLOAT;
+		_type = ibis::FLOAT;
 		break;
 	case 8:
 		/* float64 */
-		_type=ibis::DOUBLE;
+		_type = ibis::DOUBLE;
 		break;
 	default:
-		MSG_ERROR(msg_module, "Wrong element size (%s - %u)",_name,_size);
+		MSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
 		break;
 	}
 
 	return 0;
 }
 
-el_text::el_text(int size, int en, int id, uint32_t buf_size)
+el_text::el_text(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 {
 	_size = 1; // this is size for flush function
 	_true_size = size; // this holds true size of string (var of fix size)
@@ -311,7 +313,7 @@ int el_text::append_str(void *data, int size)
 {
 	/* Check buffer space */
 	if (_filled + size + 1 >= _buf_max) { // 1 = terminating zero
-		_buf_max = _buf_max + (100 * size) + 1; //TODO
+		_buf_max = _buf_max + (100 * size) + 1; // TODO
 		_buffer = (char *) realloc(_buffer, _size * _buf_max);
 	}
 
@@ -326,7 +328,7 @@ int el_text::append_str(void *data, int size)
 	return 0;
 }
 
-uint16_t el_text::fill(uint8_t * data)
+uint16_t el_text::fill(uint8_t *data)
 {
 	/* Get size of data */
 	if (_var_size) {
@@ -334,17 +336,16 @@ uint16_t el_text::fill(uint8_t * data)
 			_true_size = data[0];
 			_offset = 1;
 		} else {
-			_true_size = ntohs(*((uint16_t*) &data[1]));
+			_true_size = ntohs(*((uint16_t *) &data[1]));
 			_offset = 3;
 		}
 	}
 
-	this->append_str(&(data[_offset]),_true_size);
+	this->append_str(&(data[_offset]), _true_size);
 	return _true_size + _offset;
 }
 
-
-el_ipv6::el_ipv6(int size, int en, int id, int part, uint32_t buf_size)
+el_ipv6::el_ipv6(int size, uint32_t en, uint16_t id, int part, uint32_t buf_size)
 {
 	ipv6_value = 0;
 	_size = size;
@@ -355,13 +356,13 @@ el_ipv6::el_ipv6(int size, int en, int id, int part, uint32_t buf_size)
 	this->set_type();
 
 	if (buf_size == 0) {
-		 buf_size = RESERVED_SPACE;
+		buf_size = RESERVED_SPACE;
 	}
 
 	allocate_buffer(buf_size);
 }
 
-uint16_t el_ipv6::fill(uint8_t * data)
+uint16_t el_ipv6::fill(uint8_t *data)
 {
 	/* ulong */
 	ipv6_value = be64toh(*((uint64_t*) data));
@@ -376,7 +377,7 @@ int el_ipv6::set_type()
 	return 0;
 }
 
-el_blob::el_blob(int size, int en, int id, uint32_t buf_size):
+el_blob::el_blob(int size, uint32_t en, uint16_t id, uint32_t buf_size):
 	_var_size(false), _true_size(size), _sp_buffer(NULL)
 {
 	/* Set variables defined in parent */
@@ -385,7 +386,7 @@ el_blob::el_blob(int size, int en, int id, uint32_t buf_size):
 	_filled = 0;
 	uint_value = 0;
 
-	if (size == VAR_IE_LENGTH) { /* Element with variable size */
+	if (size == VAR_IE_LENGTH) { /* Element with variable length */
 		_var_size = true;
 	}
 
@@ -402,7 +403,7 @@ el_blob::el_blob(int size, int en, int id, uint32_t buf_size):
 	_sp_buffer_size = buf_size;
 	_sp_buffer = (char *) realloc(_sp_buffer, _sp_buffer_size);
 	if (_sp_buffer == NULL) {
-		MSG_ERROR(msg_module, "Memory allocation failed");
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		exit(-1);
 	}
 
@@ -411,23 +412,27 @@ el_blob::el_blob(int size, int en, int id, uint32_t buf_size):
 	_sp_buffer_offset = 8; /* 8 byte numbers are used to record offset */
 }
 
-uint16_t el_blob::fill(uint8_t * data)
+uint16_t el_blob::fill(uint8_t *data)
 {
 	uint8_t _offset = 0;
 
 	/* Get real size of the data */
 	if (_var_size) {
+		/* Length is stored in first octet if < 255 */
 		if (data[0] < 255) {
 			_true_size = data[0];
 			_offset = 1;
-		} else {
-			_true_size = ntohs(*((uint16_t*) &data[1]));
+		} else if (data[0] == 255) {
+			/* Length is stored in second and third octet */
+			_true_size = ntohs(*((uint16_t *) &data[1]));
 			_offset = 3;
+		} else {
+			MSG_ERROR(msg_module, "Invalid (variable) length specification: %u", data[0]);
 		}
 	}
 
 	if (_filled + _true_size >= _buf_max) {
-		_buf_max += 100*_true_size; // TODO find some better constant
+		_buf_max += 100 * _true_size; // TODO find some better constant
 		_buffer = (char *) realloc(_buffer, _buf_max);
 		if (_buffer == NULL) {
 			perror("realloc blob buffer");
@@ -464,14 +469,14 @@ int el_blob::flush(std::string path)
 	size_t check;
 	
 	if (_filled > 0 && _sp_buffer != NULL) {
-		f = fopen((path +"/"+_name+".sp").c_str(), "a+");
+		f = fopen((path + "/" + _name + ".sp").c_str(), "a+");
 		if (f == NULL) {
 			MSG_ERROR(msg_module, "Error while writing data (fopen)");
 			return 1;
 		}
 
-		check = fwrite( _sp_buffer, 1 , _sp_buffer_offset, f);
-		if (check != (size_t) _sp_buffer_offset ) {
+		check = fwrite(_sp_buffer, 1 , _sp_buffer_offset, f);
+		if (check != (size_t) _sp_buffer_offset) {
 			MSG_ERROR(msg_module, "Error while writing data (fwrite)");
 			fclose(f);
 			return 1;
@@ -500,7 +505,7 @@ el_blob::~el_blob()
 	free(_sp_buffer);
 }
 
-el_uint::el_uint(int size, int en, int id, uint32_t buf_size)
+el_uint::el_uint(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 {
 	_real_size = size;
 	_size = 0;
@@ -517,8 +522,7 @@ el_uint::el_uint(int size, int en, int id, uint32_t buf_size)
 	allocate_buffer(buf_size);
 }
 
-
-uint16_t el_uint::fill(uint8_t * data) {
+uint16_t el_uint::fill(uint8_t *data) {
 	uint_value.ulong = 0;
 	switch(_real_size) {
 	case 1:
@@ -528,7 +532,7 @@ uint16_t el_uint::fill(uint8_t * data) {
 		break;
 	case 2:
 		/* ushort */
-		uint_value.ushort = ntohs(*((uint16_t*) data));
+		uint_value.ushort = ntohs(*((uint16_t *) data));
 		this->append(&(uint_value.ushort));
 		break;
 	case 3:
@@ -537,7 +541,7 @@ uint16_t el_uint::fill(uint8_t * data) {
 		break;
 	case 4:
 		/* uint */
-		uint_value.uint = ntohl(*((uint32_t*) data));
+		uint_value.uint = ntohl(*((uint32_t *) data));
 		this->append(&(uint_value.uint));
 		break;
 	case 5:
@@ -548,11 +552,11 @@ uint16_t el_uint::fill(uint8_t * data) {
 		break;
 	case 8:
 		/* ulong */
-		uint_value.ulong = be64toh(*((uint64_t*) data));
+		uint_value.ulong = be64toh(*((uint64_t *) data));
 		this->append(&(uint_value.ulong));
 		break;
 	default:
-		MSG_ERROR(msg_module, "Wrong element size (%s - %u)",_name,_size);
+		MSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
 		return 1;
 		break;
 	}
@@ -565,18 +569,18 @@ int el_uint::set_type()
 	switch(_real_size) {
 	case 1:
 		/* ubyte */
-		_type=ibis::UBYTE;
+		_type = ibis::UBYTE;
 		_size = 1;
 		break;
 	case 2:
 		/* ushort */
-		_type=ibis::USHORT;
+		_type = ibis::USHORT;
 		_size = 2;
 		break;
 	case 3:
 	case 4:
 		/* uint */
-		_type=ibis::UINT;
+		_type = ibis::UINT;
 		_size = 4;
 		break;
 	case 5:
@@ -584,11 +588,11 @@ int el_uint::set_type()
 	case 7:
 	case 8:
 		/* ulong */
-		_type=ibis::ULONG;
+		_type = ibis::ULONG;
 		_size = 8;
 		break;
 	default:
-		MSG_ERROR(msg_module, "Wrong element size (%s - %u)",_name,_size);
+		MSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
 		return 1;
 		break;
 	}
@@ -601,18 +605,18 @@ int el_sint::set_type()
 	switch(_real_size) {
 	case 1:
 		/* ubyte */
-		_type=ibis::BYTE;
+		_type = ibis::BYTE;
 		_size = 1;
 		break;
 	case 2:
 		/* ushort */
-		_type=ibis::SHORT;
+		_type = ibis::SHORT;
 		_size = 2;
 		break;
 	case 3:
 	case 4:
 		/* uint */
-		_type=ibis::INT;
+		_type = ibis::INT;
 		_size = 4;
 		break;
 	case 5:
@@ -620,11 +624,11 @@ int el_sint::set_type()
 	case 7:
 	case 8:
 		/* ulong */
-		_type=ibis::LONG;
+		_type = ibis::LONG;
 		_size = 8;
 		break;
 	default:
-		MSG_ERROR(msg_module, "Wrong element size (%s - %u)",_name,_size);
+		MSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
 		return 1;
 		break;
 	}
@@ -632,7 +636,7 @@ int el_sint::set_type()
 	return 0;
 }
 
-el_sint::el_sint(int size , int en, int id, uint32_t buf_size)
+el_sint::el_sint(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 {
 	_real_size = size;
 	_size = 0;
@@ -649,7 +653,7 @@ el_sint::el_sint(int size , int en, int id, uint32_t buf_size)
 	allocate_buffer(buf_size);
 }
 
-el_unknown::el_unknown(int size, int en, int id, int part, uint32_t buf_size)
+el_unknown::el_unknown(int size, uint32_t en, uint16_t id, int part, uint32_t buf_size)
 {
 	(void) en;
 	(void) id;
@@ -662,7 +666,7 @@ el_unknown::el_unknown(int size, int en, int id, int part, uint32_t buf_size)
 	_var_size = (size == VAR_IE_LENGTH);
 }
 
-void el_unknown::allocate_buffer(int count)
+void el_unknown::allocate_buffer(uint32_t count)
 {
 	(void) count;
 }
@@ -682,7 +686,7 @@ int el_unknown::flush(std::string path)
 	return 0;
 }
 
-uint16_t el_unknown::fill(uint8_t * data)
+uint16_t el_unknown::fill(uint8_t *data)
 {
 	/* Get real size of the data */
 	if (_var_size) {
@@ -690,15 +694,18 @@ uint16_t el_unknown::fill(uint8_t * data)
 		if (data[0] < 255) {
 			true_size = data[0];
 			offset = 1;
-		} else {
-			true_size = ntohs(*((uint16_t*) &data[1]));
+		} else if (data[0] == 255) {
+			/* Length is stored in second and third octet */
+			true_size = ntohs(*((uint16_t *) &data[1]));
 			offset = 3;
+		} else {
+			MSG_ERROR(msg_module, "Invalid (variable) length specification: %u", data[0]);
 		}
 
 		return true_size + offset;
 	}
 
-	/* FiXED size */
+	/* FIXED size */
 	return _size;
 }
 

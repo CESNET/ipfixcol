@@ -76,7 +76,7 @@ void process_startup_xml(struct json_conf *conf, char *params)
 	
 	/* Check metadata processing */
 	std::string meta = ie.node().child_value("metadata");
-	conf->metadata = (meta == "yes");
+	conf->metadata = (meta == "yes") || (meta == "true") || (meta == "1");
 
 	/* Process all outputs */
 	pugi::xpath_node_set outputs = doc.select_nodes("/fileWriter/output");

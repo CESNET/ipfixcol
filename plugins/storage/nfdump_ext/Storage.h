@@ -87,40 +87,37 @@ public:
     /**
      * \brief Constructor
      */
-	Storage();
-	~Storage();
-    
-	/**
-	 * \brief Add new output processor
-	 * \param[in] output
-	 */
-	void addOutput(Output *output) { outputs.push_back(output); }
+    Storage();
+    ~Storage();
 
-	bool hasSomeOutput() { return !outputs.empty(); }
-    
+
     /**
      * \brief Store IPFIX message
-     * 
+     *
      * @param msg IPFIX message
      */
-	void storeDataSets(const struct ipfix_message *msg);
-    
-	/**
-	 * \brief Set metadata processing enabled/disabled
-	 * 
+    void storeDataSets(const struct ipfix_message *msg);
+
+    /**
+     * \brief Set metadata processing enabled/disabled
+     *
      * @param enabled
      */
-	void setMetadataProcessing(bool enabled) { processMetadata = enabled; }
 
-	/**
-	 * \brief Enable/disable data printing instead of sending them
-	 *
-	 * \param enabled
-	 */
-	void setPrintOnly(bool enabled) { printOnly = enabled; }
-	
+    void setWindowAlignment(bool value = true){ align = value; }
+    void setUtilizeChannels(bool enabled = true){ utilize_channels = enabled; }
+    void setCompression(bool value = true){ compress = value; }
+    void setTimeWindow(unsigned int seconds){ time_window = seconds; }
+    void setNameSuffixMask(std::string suffix_mask){ this->suffix_mask = suffix_mask; }
+    void setNamePrefix(std::string prefix){ this->prefix = prefix; }
+    void setStoragePath(std::string storage_path){ this->storage_path = storage_path; }
+    void setIdentificator(std::string ident){ identificator = ident; }
+
+
 private:
     
+    uint8_t mapToLnf(uint64_t en, uint16_t id);
+
     /**
      * \brief Get real field length
      * 
@@ -181,32 +178,39 @@ private:
      */
     void loadElements();
 
-    uint16_t mapToLnf(uint64_t en, uint16_t id);
-    
-	/**
-	 * \brief Send JSON data to output processors
-     */
-	void sendData() const;
-    
-	bool processMetadata{false};	/**< Metadata processing enabled */
-	bool printOnly{false};
-	uint8_t addr6[IPV6_LEN];
-	uint8_t addrMac[MAC_LEN];
-	uint16_t offset, id, length;
-	uint32_t enterprise;
+    int createDirHierarchy(std::string path);
+    void createTimeWindow(time_t hint);
+    int registerFile(std::string prof_path, std::map<std::string, lnf_file_t*> *files);
+
+    uint16_t offset, id, length;
+    uint32_t enterprise;
     Translator translator;          /**< number -> string translator */
 
-	std::vector<Output*> outputs{};
-	std::vector<char> buffer;
+    std::vector<char> buffer;
+    std::string record;
 
-	std::string record;
-	static std::map<uint32_t, std::map<uint16_t, struct ipfix_element> > elements;
+    static std::map<uint32_t, std::map<uint16_t, struct ipfix_element> > elements;
 
-    /*Edit support for libnf*/
-    lnf_file_t *filep;
+    static std::map<uint16_t, uint8_t> ie_id_map;          /**< Translation maps ipfix -> lnf */
+    static std::map<uint32_t, uint8_t> enterprise_map;
+    std::map<std::string, lnf_file_t*> file_map;       /**< Files for record sorting according to profiles */
+
     lnf_rec_t *recp;
 
+    time_t window_start;    /**< Begining of time window */
 
+    std::string suffix;         /**< Actual time window specific filename suffix */
+    std::string dir_hier;       /**< Actual time window specific hierarchy */
+
+    uint64_t time_window;       /**< Dump interval in [s] */
+
+    std::string storage_path;   /**< Root directory for storage files */
+    std::string prefix;         /**< Filename prefix */
+    std::string suffix_mask;    /**< Filename suffix formatting string */
+    std::string identificator;
+    bool utilize_channels;
+    bool compress;
+    bool align;
 };
 
 #endif	/* STORAGE_H */

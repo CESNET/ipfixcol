@@ -65,15 +65,16 @@ uint64_t get_rows_from_part(const char *part_path)
 			rows = strtoul(str_row.c_str(), NULL, 0);
 		}
 	}
+
 	return rows;
 }
 
-template_table::template_table(int template_id, uint32_t buff_size): _rows_count(0)
+template_table::template_table(uint16_t template_id, uint32_t buff_size): _rows_count(0)
 {
 	_template_id = template_id;
 	sprintf(_name, "%u",template_id);
 	_orig_name[0] = '\0'; /* Empty string indicates that we use original name from template_id */
-	_index=0;
+	_index = 0;
 	_rows_in_window = 0;
 	_min_record_size = 0;
 	_new_dir = true;
@@ -103,7 +104,7 @@ int template_table::update_part(std::string path)
 
 	f = fopen((path + "/-part.txt").c_str(), "w");
 	if (f == NULL){
-		MSG_ERROR(msg_module, "Cannot open/update -part.txt file");
+		MSG_ERROR(msg_module, "Cannot open file '-part.txt'");
 		return 1;
 	}
 
@@ -122,7 +123,7 @@ int template_table::update_part(std::string path)
 	}
 
 	part = ss.str();
-	fputs(part.c_str(),f);
+	fputs(part.c_str(), f);
 	fclose(f);
 	return 0;
 }
@@ -137,7 +138,6 @@ int template_table::dir_check(std::string path, bool new_dir)
 	if (mkdir(path.c_str(), 0777) != 0) {
 		if (errno == EEXIST) { /* dir already exists */
 			if (new_dir) {
-
 				/* Rename the table */
 				int len = strlen(this->_name);
 
@@ -168,7 +168,7 @@ int template_table::dir_check(std::string path, bool new_dir)
 		if (errno == ENOENT) { /* Check parent directory */
 			pos = path.find_last_of("/\\");
 			if (pos == std::string::npos) {
-				MSG_ERROR(msg_module, "Cannot create directory %s",path.c_str());
+				MSG_ERROR(msg_module, "Cannot create directory '%s'", path.c_str());
 				return 2;
 			}
 
@@ -177,21 +177,22 @@ int template_table::dir_check(std::string path, bool new_dir)
 
 			/* Try to create the dir again */
 			if (mkdir(path.c_str(), 0777) != 0){
-				MSG_ERROR(msg_module, "Cannot create directory %s",path.c_str());
+				MSG_ERROR(msg_module, "Cannot create directory '%s'", path.c_str());
 				return 2;
 			}
+
 			return 0;
 		}
 
 		/* Other error */
-		MSG_ERROR(msg_module, "Cannot create directory %s",path.c_str());
+		MSG_ERROR(msg_module, "Cannot create directory '%s'", path.c_str());
 		return 2;
 	}
 	
 	return 0;
 }
 
-int template_table::store(ipfix_data_set * data_set, std::string path, bool new_dir)
+int template_table::store(ipfix_data_set *data_set, std::string path, bool new_dir)
 {
 	uint8_t *data = data_set->records;
 	uint16_t element_size = 0;
@@ -283,7 +284,7 @@ void template_table::flush(std::string path)
 	}
 }
 
-int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_config * config)
+int template_table::parse_template(struct ipfix_template *tmp,struct fastbit_config *config)
 {
 	int i;
 	uint32_t en = 0; /* enterprise number (0 = IANA elements) */
@@ -293,7 +294,7 @@ int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_co
 
 	/* Is there anything to parse? */
 	if (tmp == NULL){
-		MSG_WARNING(msg_module, "Received data without template, skipping");
+		MSG_WARNING(msg_module, "Received data without template; skipping data...");
 		return 1;
 	}
 
@@ -335,10 +336,11 @@ int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_co
 				 */
 				/* Check size from template */
 				if (field->ie.length != 16) {
-					MSG_WARNING(msg_module, "Element e%iid%i has type IPv6 but size %i; skipping...", en, field->ie.id & 0x7FFF, field->ie.length);
+					MSG_WARNING(msg_module, "Element e%iid%i has type 'IPv6' but size '%i'; skipping...", en, field->ie.id & 0x7FFF, field->ie.length);
 					new_element = new el_unknown(field->ie.length);
 					break;
 				}
+
 				new_element = new el_ipv6(sizeof(uint64_t), en, field->ie.id & 0x7FFF, 0, _buff_size);
 				elements.push_back(new_element);
 
@@ -366,6 +368,7 @@ int template_table::parse_template(struct ipfix_template * tmp,struct fastbit_co
 				} else { /* TODO blob etc. */
 					new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 				}
+
 				break;
 		}
 

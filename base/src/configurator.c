@@ -109,14 +109,14 @@ xmlDoc *config_open_xml(const char *filename)
 	/* Open file */
 	int fd = open(filename, O_RDONLY);
 	if (fd == -1) {
-		MSG_ERROR(msg_module, "Unable to open configuration file %s: %s", filename, strerror(errno));
+		MSG_ERROR(msg_module, "Unable to open configuration file '%s': %s", filename, strerror(errno));
 		return NULL;
 	}
 	
 	/* Parse it */
 	xmlDoc *xml_file = xmlReadFd(fd, NULL, NULL, XML_PARSE_NOERROR | XML_PARSE_NOWARNING | XML_PARSE_NOBLANKS);
 	if (!xml_file) {
-		MSG_ERROR(msg_module, "Unable to parse configuration file %s", filename);
+		MSG_ERROR(msg_module, "Unable to parse configuration file '%s'", filename);
 		xml_file = NULL;
 	}
 	close(fd);
@@ -170,7 +170,7 @@ void config_free_plugin(struct plugin_config *plugin)
 				dlclose(plugin->input->dll_handler);
 			}
 
-			/* Input is pointer to configurator structure, don't free it */
+			/* Input is pointer to configurator structure; don't free it */
 			// free(plugin->input);
 		}
 		

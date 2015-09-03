@@ -8,7 +8,7 @@
 # pidfile: /var/run/ipfixcol.pid
   
 prog="ipfixcol"
-params="-v 2 -d"
+params="-v 2"
 
 start() {
 	# Check whether ipfixcol is running
@@ -48,7 +48,7 @@ stop() {
 
 # Prints output when first argument is '1'
 status() {
-	ps ax | grep "$prog $params" | grep -v grep > /dev/null
+	ps -eo command | grep "^$prog $params" > /dev/null
 	retval=$?
 	if [ "$#" -eq 1 ] && [ "$1" -eq 1 ]; then
 		if [ "$retval" -eq 0 ]; then

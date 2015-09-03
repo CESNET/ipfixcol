@@ -1,5 +1,9 @@
 **Future release:**
 
+*  Fixed filter problems with unsigned logn values
+*  Fixed problem with -t parameter
+*  Sorting column is required in output format
+
 *  Using aliases in SELECT clause to identify columns
 *  Computed columns are now evaluated in fastbit library
 *  Summary columns must have specified summary type (sum or avg)

@@ -55,6 +55,7 @@ enum class t_units {
 class Translator {
 public:
     
+
     /**
      * \brief Format IPv4 address into dotted format
      * 

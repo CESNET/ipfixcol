@@ -108,6 +108,12 @@ AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
+# Use latest g++ standard. Make sure that it is at least gnu++11
+AC_LANG(C++)
+LBR_SET_CXXSTD(gnu++11)
+AM_CXXFLAGS="$AM_CXXFLAGS $CXXSTD"
+AC_LANG(C)
+
 # Check compiler visibility option
 LBR_CHECK_VISIBILITY([hidden])
 AS_IF([test "$VISIBILITY" = "no"], [AC_MSG_ERROR([compiler does not support -fvisibility])])
@@ -198,7 +204,8 @@ AC_CHECK_DECL([be64toh], [AC_DEFINE([HAVE_BE64TOH], [1],
 			 [[#include <endian.h>]])
 
 # substitute automake CFLAGS and CPPFLAGS variables
-AC_SUBST([AM_CPPFLAGS])        
+AC_SUBST([AM_CPPFLAGS])
+AC_SUBST([AM_CXXFLAGS])
 AC_SUBST([AM_CFLAGS])
 
 # generate output

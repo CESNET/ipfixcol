@@ -47,6 +47,8 @@
 #include <errno.h>
 #include <dirent.h>
 #include <inttypes.h>
+#include <glob.h>
+#include <libgen.h>
 
 #include "configurator.h"
 #include "data_manager.h"
@@ -322,6 +324,7 @@ static void *output_manager_plugin_thread(void* config)
 	struct data_manager_config *data_config = NULL;
 	struct ipfix_message* msg = NULL;
 	unsigned int index;
+	uint32_t odid;
 
 	conf = (struct output_manager_config *) config;
 	index = conf->in_queue->read_offset;
@@ -348,7 +351,6 @@ static void *output_manager_plugin_thread(void* config)
 			/* Stop manager */
 			break;
 		}
-
 		/* Check whether we have a pointer to the input_info structure based on ODID */
 		struct input_info_node *input_info_node = get_input_info_node(msg->input_info->odid);
 		if (input_info_node == NULL) {
@@ -356,26 +358,27 @@ static void *output_manager_plugin_thread(void* config)
 			add_input_info(msg->input_info);
 		}
 
+		odid = (conf->odid_merge) ? 0 : msg->input_info->odid;
+
 		/* Get appropriate data Manager config according to ODID */
-		data_config = get_data_mngmt_config(msg->input_info->odid, conf->data_managers);
+		data_config = get_data_mngmt_config(odid, conf->data_managers);
 		if (data_config == NULL) {
 			/*
 			 * No data manager config for this observation domain ID found -
 			 * we have a new observation domain ID, so create new data manager for
 			 * it
 			 */
-			data_config = data_manager_create(msg->input_info->odid, conf->storage_plugins);
+			data_config = data_manager_create(odid, conf->storage_plugins);
 			if (data_config == NULL) {
 				MSG_WARNING(msg_module, "[%u] Unable to create Data Manager; skipping data...",
-						msg->input_info->odid);
+						odid);
 				rbuffer_remove_reference(conf->in_queue, index, 1);
 				continue;
 			}
 
 			/* Add config to data_mngmts structure */
 			output_manager_insert(conf, data_config);
-
-			MSG_NOTICE(msg_module, "[%u] Data Manager created", msg->input_info->odid);
+			MSG_NOTICE(msg_module, "[%u] Data Manager created", odid);
 		}
 
 		if (msg->source_status == SOURCE_STATUS_NEW) {
@@ -485,80 +488,79 @@ struct stat_thread *statistics_add_thread(struct stat_conf *conf, long tid)
  */
 static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
 {
-	DIR *dir = opendir(conf->tasks_dir);
-	if (!dir) {
-		MSG_WARNING(stat_module, "Cannot open directory '%s'", conf->tasks_dir);
-		return;
-	}
-	
-	FILE *stat;
-	struct dirent *entry;
-	char stat_path[MAX_DIR_LEN], thread_name[MAX_DIR_LEN], state;
-	int tid = 0;
-	unsigned long utime, systime;
-	uint64_t proc_time;
-	uint64_t total_cpu = statistics_total_cpu();
-	float usage;
-	
-	MSG_INFO(stat_module, "");
-	MSG_INFO(stat_module, "%10s %7s %10s %15s", "TID", "state", "cpu usage", "thread name");
-	while ((entry = readdir(dir)) != NULL) {
-		if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) {
-			continue;
-		}
-		
-		/* Parse stat file */
-		snprintf(stat_path, MAX_DIR_LEN, "%s/%s/stat", conf->tasks_dir, entry->d_name);
-		stat = fopen(stat_path, "r");
-		if (!stat) {
-			MSG_WARNING(stat_module, "Cannot open file '%s'", stat_path);
-			continue;
-		}
-		
-		/* Read thread info */
-		uint8_t format_str_len = 62 + sizeof(MAX_DIR_LEN) + 1; // 62 is size of the raw format string, without MAX_DIR_LEN; +1 is null-terminating char
-		char format_str[format_str_len];
-		snprintf(format_str, format_str_len, "%%d (%%%d[^)]) %%c %%*d %%*d %%*d %%*d %%*d %%*u %%*u %%*u %%*u %%*u %%lu %%lu", MAX_DIR_LEN);
-		if (fscanf(stat, format_str, &tid, thread_name, &state, &utime, &systime) == EOF) {
-			MSG_ERROR(stat_module, "Error while reading %s: %s", stat_path, strerror(errno));
-		}
-		fclose(stat);
-		
-		/* Count thread CPU time */
-		proc_time = utime + systime;
-		
-		struct stat_thread *thread = statistics_get_thread(conf, tid);
-		if (!thread) {
-			thread = statistics_add_thread(conf, tid);
-			if (!thread) {
-				continue;
-			}
-		}
-		
-		/* Count thread CPU utilization (%) */
-		if (thread->proc_time && total_cpu - conf->total_cpu > 0) {
-			usage = conf->cpus * (proc_time - thread->proc_time) * 100 / (float) (total_cpu - conf->total_cpu);
-		} else {
-			usage = 0.0;
-		}
-		
-		/* Print statistics */
-		MSG_INFO(stat_module, "%10d %7c %8.2f %% %15s", tid, state, usage, thread_name);
-		
-		/* Update stats */
-		thread->proc_time = proc_time;
-	}
-
-	MSG_INFO(stat_module, "");
-	closedir(dir);
-
-	/* Print to file */
 	if (stat_out_file) {
 		/* Add contents here */
+	} else {
+		DIR *dir = opendir(conf->tasks_dir);
+		if (!dir) {
+			MSG_WARNING(stat_module, "Cannot open directory '%s'", conf->tasks_dir);
+			return;
+		}
+		
+		FILE *stat;
+		struct dirent *entry;
+		char stat_path[MAX_DIR_LEN], thread_name[MAX_DIR_LEN], state;
+		int tid = 0;
+		unsigned long utime, systime;
+		uint64_t proc_time;
+		uint64_t total_cpu = statistics_total_cpu();
+		float usage;
+		
+		MSG_INFO(stat_module, "");
+		MSG_INFO(stat_module, "%10s %7s %10s %15s", "TID", "state", "cpu usage", "thread name");
+		while ((entry = readdir(dir)) != NULL) {
+			if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) {
+				continue;
+			}
+			
+			/* Parse stat file */
+			snprintf(stat_path, MAX_DIR_LEN, "%s/%s/stat", conf->tasks_dir, entry->d_name);
+			stat = fopen(stat_path, "r");
+			if (!stat) {
+				MSG_WARNING(stat_module, "Cannot open file '%s'", stat_path);
+				continue;
+			}
+			
+			/* Read thread info */
+			uint8_t format_str_len = 62 + sizeof(MAX_DIR_LEN) + 1; // 62 is size of the raw format string, without MAX_DIR_LEN; +1 is null-terminating char
+			char format_str[format_str_len];
+			snprintf(format_str, format_str_len, "%%d (%%%d[^)]) %%c %%*d %%*d %%*d %%*d %%*d %%*u %%*u %%*u %%*u %%*u %%lu %%lu", MAX_DIR_LEN);
+			if (fscanf(stat, format_str, &tid, thread_name, &state, &utime, &systime) == EOF) {
+				MSG_ERROR(stat_module, "Error while reading %s: %s", stat_path, strerror(errno));
+			}
+			fclose(stat);
+			
+			/* Count thread CPU time */
+			proc_time = utime + systime;
+			
+			struct stat_thread *thread = statistics_get_thread(conf, tid);
+			if (!thread) {
+				thread = statistics_add_thread(conf, tid);
+				if (!thread) {
+					continue;
+				}
+			}
+			
+			/* Count thread CPU utilization (%) */
+			if (thread->proc_time && total_cpu - conf->total_cpu > 0) {
+				usage = conf->cpus * (proc_time - thread->proc_time) * 100 / (float) (total_cpu - conf->total_cpu);
+			} else {
+				usage = 0.0;
+			}
+			
+			/* Print statistics */
+			MSG_INFO(stat_module, "%10d %7c %8.2f %% %15s", tid, state, usage, thread_name);
+			
+			/* Update stats */
+			thread->proc_time = proc_time;
+		}
+
+		MSG_INFO(stat_module, "");
+		closedir(dir);
+
+		/* Update stats */
+		conf->total_cpu = total_cpu;
 	}
-	
-	/* Update stats */
-	conf->total_cpu = total_cpu;
 }
 
 /**
@@ -569,27 +571,26 @@ static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
  */
 void statistics_print_buffers(struct output_manager_config *conf, FILE *stat_out_file)
 {
-	/* Print info about preprocessor's output queue */
-	MSG_INFO(stat_module, "Queue utilization:");
-	
-	struct ring_buffer *prep_buffer = get_preprocessor_output_queue();
-	MSG_INFO(stat_module, "     Preprocessor output queue: %u / %u", prep_buffer->count, prep_buffer->size);
-
-	/* Print info about Output Manager queues */
-	struct data_manager_config *dm = conf->data_managers;	
-	if (dm) {
-		MSG_INFO(stat_module, "     Output Manager output queues:");
-		MSG_INFO(stat_module, "         %.4s | %.10s / %.10s", "ODID", "waiting", "total size");
-		
-		while (dm) {
-			MSG_INFO(stat_module, "   %10u %9u / %u", dm->observation_domain_id, dm->store_queue->count, dm->store_queue->size);
-			dm = dm->next;
-		}
-	}
-
-	/* Print to file */
 	if (stat_out_file) {
 		/* Add contents here */
+	} else {
+		/* Print info about preprocessor's output queue */
+		MSG_INFO(stat_module, "Queue utilization:");
+		
+		struct ring_buffer *prep_buffer = get_preprocessor_output_queue();
+		MSG_INFO(stat_module, "     Preprocessor output queue: %u / %u", prep_buffer->count, prep_buffer->size);
+
+		/* Print info about Output Manager queues */
+		struct data_manager_config *dm = conf->data_managers;
+		if (dm) {
+			MSG_INFO(stat_module, "     Output Manager output queues:");
+			MSG_INFO(stat_module, "         %.4s | %.10s / %.10s", "ODID", "waiting", "total size");
+			
+			while (dm) {
+				MSG_INFO(stat_module, "   %10u %9u / %u", dm->observation_domain_id, dm->store_queue->count, dm->store_queue->size);
+				dm = dm->next;
+			}
+		}
 	}
 }
 
@@ -602,7 +603,7 @@ void statistics_print_buffers(struct output_manager_config *conf, FILE *stat_out
 static void *statistics_thread(void* config)
 {
 	struct output_manager_config *conf = (struct output_manager_config *) config;
-	time_t begin = time(NULL), time_now, runtime;
+	time_t begin = time(NULL), time_now, run_time;
 	
 	/* Create statistics config */
 	conf->stats.total_cpu = 0;
@@ -610,8 +611,12 @@ static void *statistics_thread(void* config)
 	conf->stats.cpus = sysconf(_SC_NPROCESSORS_ONLN);
 	snprintf(conf->stats.tasks_dir, MAX_DIR_LEN, "/proc/%d/task/", getpid());
 
-	/* Create file handle in case statistics file has been specified in config */
-	FILE *stat_out_file = NULL;
+	/* If statistics are enabled (using -S), printing them to console is default */
+	uint8_t print_stat_to_file = 0;
+	uint8_t print_stat_to_console = 1;
+
+	/* Process XML config */
+	char *full_stat_out_file_path = NULL;
 	xmlNode *node = conf->plugins_config->collector_node;
 	while (node != NULL) {
 		/* Skip processing this node in case it's a comment */
@@ -626,20 +631,68 @@ static void *statistics_thread(void* config)
 		}
 
 		if (xmlStrcmp(node->name, (const xmlChar *) "statisticsFile") == 0) {
+			/* Disable printing statistics to console when printing to file */
+			print_stat_to_console = 0;
+
 			char *stat_out_file_path = (char *) xmlNodeGetContent(node->xmlChildrenNode);
 			if (stat_out_file_path && strlen(stat_out_file_path) > 0) {
+				print_stat_to_file = 1;
+
+				/* Determine statistics file path, i.e., full path minus basename */
+				char stat_out_path[strlen(stat_out_file_path) + 1];
+				strncpy_safe(stat_out_path, stat_out_file_path, strlen(stat_out_file_path) - strlen(basename(stat_out_file_path)));
+
+				/* Check whether statistics file path exists */
+				DIR *stat_out_dir;
+				if ((stat_out_dir = opendir(stat_out_path)) == NULL) {
+					MSG_ERROR(msg_module, "Statistics file directory '%s' does not exist", stat_out_path);
+					xmlFree(stat_out_file_path);
+
+					/* Skip to next XML node in configuration */
+					node = node->next;
+					continue;
+				} else {
+					closedir(stat_out_dir);
+				}
+
+				/* Clean up previous statistics files */
+				char glob_path[strlen(stat_out_file_path) + 2]; // +2 is for wildcard (*) and null-terminating char
+				strncpy_safe(glob_path, stat_out_file_path, strlen(stat_out_file_path) + 1);
+				glob_path[strlen(stat_out_file_path)] = '*';
+				glob_path[strlen(stat_out_file_path) + 1] = '\0';
+
+				/* Search for files using glob */
+				int glob_ret, glob_flags = 0;
+				glob_t glob_results;
+				if ((glob_ret = glob(glob_path, glob_flags, NULL, &glob_results)) == 0) {
+					uint16_t i, stat_files_deleted = 0;
+					for (i = 0; i < glob_results.gl_pathc; ++i) {
+						if ((remove(glob_results.gl_pathv[i])) == 0) {
+							++stat_files_deleted;
+						} else {
+							MSG_ERROR(msg_module, "An error occurred while deleting statistics file '%s'", glob_results.gl_pathv[i]);
+						}
+					}
+
+					MSG_INFO(msg_module, "Cleaned up %u old statistics file(s)", stat_files_deleted);
+					globfree(&glob_results);
+				} else if (glob_ret == GLOB_NOMATCH) {
+					/* No matching files/directories found; do nothing */
+				} else {
+					/* Another glob error occurred; do nothing */
+				}
+
 				/* Consists of the following elements:
 				 *      strlen(stat_out_file_path) - length of supplied path
 				 *      1 - dot (.)
 				 *      5 - we assume that a PID has a maximum length of 5 digits
 				 *      1 - null-terminating character
 				 */
-				int max_len = strlen(stat_out_file_path) + 1 + 5 + 1;
-				char buf[max_len];
+				uint8_t max_len = strlen(stat_out_file_path) + 1 + 5 + 1;
+				full_stat_out_file_path = calloc(max_len, sizeof(char));
 
 				/* snprintf ensures null-termination if (max_len != 0), which is always true */
-				snprintf(buf, max_len, "%s.%d", stat_out_file_path, getpid());
-				stat_out_file = fopen(buf, "w");
+				snprintf(full_stat_out_file_path, max_len, "%s.%d", stat_out_file_path, getpid());
 			} else {
 				MSG_ERROR(msg_module, "Configuration error: 'statisticsFile' node has no value");
 			}
@@ -659,6 +712,7 @@ static void *statistics_thread(void* config)
 	/* Set thread name */
 	prctl(PR_SET_NAME, "ipfixcol:stats", 0, 0, 0);
 	
+	FILE *stat_out_file = NULL;
 	while (conf->stat_interval) {
 		sleep(conf->stat_interval);
 		
@@ -669,16 +723,26 @@ static void *statistics_thread(void* config)
 		
 		/* Compute time */
 		time_now = time(NULL);
-		runtime = time_now - begin;
+		run_time = time_now - begin;
 
 		/* Print info */
-		MSG_INFO(stat_module, "");
-		MSG_INFO(stat_module, "Time: %lu, runtime: %lu", time_now, runtime);
+		if (print_stat_to_file) {
+			if (full_stat_out_file_path) {
+				stat_out_file = fopen(full_stat_out_file_path, "w");
 
-		if (stat_out_file) {
-			rewind(stat_out_file); /* Move to beginning of file */
-			fprintf(stat_out_file, "%s=%lu\n", "TIME", time_now);
-			fprintf(stat_out_file, "%s=%lu\n", "RUNTIME", runtime);
+				if (!stat_out_file) {
+					MSG_ERROR(msg_module, "Could not open statistics file '%s'", full_stat_out_file_path);
+				}
+
+				fprintf(stat_out_file, "%s=%lu\n", "TIME", time_now);
+				fprintf(stat_out_file, "%s=%lu\n", "RUN_TIME", run_time);
+			} else {
+				MSG_ERROR(msg_module, "Could not determine statistics file path");
+			}
+		} else if (print_stat_to_console) {
+			MSG_INFO(stat_module, "");
+			MSG_INFO(stat_module, "Time: %lu, run time: %lu", time_now, run_time);
+			MSG_INFO(stat_module, "%10s %15s %15s %15s %15s %15s %20s", "ODID", "packets", "data rec.", "lost data rec.", "packets/s", "data records/s", "lost data records/s");
 		}
 
 		/* Variables for calculating sums */
@@ -694,35 +758,32 @@ static void *statistics_thread(void* config)
 		struct input_info_node *aux_node = input_info_list;
 		uint8_t aux_node_count = 0;
 		while (aux_node) {
-			MSG_INFO(stat_module, "%10s %15s %15s %15s %15s %15s %20s", "ODID", "packets", "data rec.", "lost data rec.", "packets/s", "data records/s", "lost data records/s");
-
 			delta_packets = aux_node->input_info->packets - aux_node->last_packets;
 			delta_data_records = aux_node->input_info->data_records - aux_node->last_data_records;
 			delta_lost_data_records = aux_node->input_info->sequence_number - aux_node->input_info->data_records - aux_node->last_lost_data_records;
 
-			MSG_INFO(stat_module, "%10u %15lu %15lu %15lu %15u %15u %20u",
-					aux_node->input_info->odid,
-					aux_node->input_info->packets,
-					aux_node->input_info->data_records,
-					aux_node->input_info->sequence_number - aux_node->input_info->data_records,
-					delta_packets / conf->stat_interval,
-					delta_data_records / conf->stat_interval,
-					delta_lost_data_records / conf->stat_interval
-			);
-
-			if (stat_out_file) {
-				fprintf(stat_out_file, "%s%u=%lu\n", "PACKETS",
+			if (print_stat_to_file) {
+				fprintf(stat_out_file, "%s_%u=%lu\n", "PACKETS",
 						aux_node->input_info->odid, aux_node->input_info->packets);
-				fprintf(stat_out_file, "%s%u=%lu\n", "DATA_REC",
+				fprintf(stat_out_file, "%s_%u=%lu\n", "DATA_REC",
 						aux_node->input_info->odid, aux_node->input_info->data_records);
-				fprintf(stat_out_file, "%s%u=%lu\n", "LOST_DATA_REC",
+				fprintf(stat_out_file, "%s_%u=%lu\n", "LOST_DATA_REC",
 						aux_node->input_info->odid, aux_node->input_info->sequence_number - aux_node->input_info->data_records);
-				fprintf(stat_out_file, "%s%u=%u\n", "PACKETS_SEC",
+				fprintf(stat_out_file, "%s_%u=%u\n", "PACKETS_SEC",
 						aux_node->input_info->odid, delta_packets / conf->stat_interval);
-				fprintf(stat_out_file, "%s%u=%u\n", "DATA_REC_SEC",
+				fprintf(stat_out_file, "%s_%u=%u\n", "DATA_REC_SEC",
 						aux_node->input_info->odid, delta_data_records / conf->stat_interval);
-				fprintf(stat_out_file, "%s%u=%u\n", "LOST_DATA_REC_SEC",
+				fprintf(stat_out_file, "%s_%u=%u\n", "LOST_DATA_REC_SEC",
 						aux_node->input_info->odid, delta_lost_data_records / conf->stat_interval);
+			} else if (print_stat_to_console) {
+				MSG_INFO(stat_module, "%10u %15lu %15lu %15lu %15u %15u %20u",
+						aux_node->input_info->odid,
+						aux_node->input_info->packets,
+						aux_node->input_info->data_records,
+						aux_node->input_info->sequence_number - aux_node->input_info->data_records,
+						delta_packets / conf->stat_interval,
+						delta_data_records / conf->stat_interval,
+						delta_lost_data_records / conf->stat_interval);
 			}
 
 			/* Add values per ODID to sum */
@@ -739,14 +800,10 @@ static void *statistics_thread(void* config)
 			++aux_node_count;
 		}
 
-		/* Print totals row, but only in case there is more than one ODID */
-		if (aux_node_count > 1) {
+		if (print_stat_to_console && aux_node_count > 1) {
+			/* Print totals row, but only in case there is more than one ODID */
 			MSG_INFO(stat_module, "%s", "----------------------------------------------------------");
 			MSG_INFO(stat_module, "%10s %15lu %15lu %15lu", "Total:", packets_total, data_records_total, lost_data_records_total);
-		}
-
-		if (stat_out_file) {
-			fflush(stat_out_file);
 		}
 		
 		/* Print CPU usage by threads */
@@ -755,11 +812,15 @@ static void *statistics_thread(void* config)
 		/* Print buffer usage */
 		statistics_print_buffers(conf, stat_out_file);
 
-		MSG_INFO(stat_module, "");
+		/* Flush input stream and close file */
+		if (print_stat_to_file) {
+			fflush(stat_out_file);
+			fclose(stat_out_file);
+		}
 	}
 
-	if (stat_out_file) {
-		fclose(stat_out_file);
+	if (print_stat_to_file) {
+		free(full_stat_out_file_path);
 	}
 	
 	return NULL;
@@ -773,7 +834,7 @@ static void *statistics_thread(void* config)
  * @param[out] config configuration structure
  * @return 0 on success, negative value otherwise
  */
-int output_manager_create(configurator *plugins_config, int stat_interval, void **config)
+int output_manager_create(configurator *plugins_config, int stat_interval, bool odid_merge, void **config)
 {
 	conf = calloc(1, sizeof(struct output_manager_config));
 	if (!conf) {
@@ -783,6 +844,7 @@ int output_manager_create(configurator *plugins_config, int stat_interval, void 
 	
 	conf->stat_interval = stat_interval;
 	conf->plugins_config = plugins_config;
+	conf->odid_merge = odid_merge;
 	
 	*config = conf;
 	return 0;
