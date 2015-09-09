@@ -73,7 +73,7 @@ static uint8_t separated = 0;
  */
 void usage()
 {
-	std::cout << "\nUsage: fbitmerge [-hsd] -b basedir [-m | -k key] [-p prefix]\n";
+	std::cout << "\nUsage: fbitmerge [-hs] -b basedir [-m | -k key] [-p prefix]\n";
 	std::cout << "-h\t Show this text\n";
 	std::cout << "-b\t Base directory path\n";
 	std::cout << "-k\t Merging key (h=hour, d=day, m=month, y=year)\n";
