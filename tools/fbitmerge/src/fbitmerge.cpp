@@ -380,7 +380,7 @@ int merge_couple(std::string src_dir, std::string dst_dir, std::string work_dir)
 
 	/* Iterate through whole dst_map and src_map and find folders with same data (and data types) */
 	for (DIRMAP::iterator dst_i = dst_map.begin(); dst_i != dst_map.end(); ++dst_i) {
-		for (DIRMAP::iterator src_i = src_map.begin(); src_i != src_map.end(); ++src_i) {
+		for (DIRMAP::iterator src_i = src_map.begin(); src_i != src_map.end(); ) {
 			if (same_data(&((*dst_i).second), &((*src_i).second)) == OK) {
 				/* If found, merge it */
 				if (merge_dirs(src_dir_path + "/" + (*src_i).first,
@@ -391,7 +391,9 @@ int merge_couple(std::string src_dir, std::string dst_dir, std::string work_dir)
 				}
 
 				/* We don't need this folder anymore */
-				srcMap.erase((*srci).first);
+				src_i = src_map.erase(src_i);
+			} else {
+				++src_i;
 			}
 		}
 	}
@@ -422,9 +424,10 @@ int merge_couple(std::string src_dir, std::string dst_dir, std::string work_dir)
 	}
 
 	/* Now merge template directories with same data (and data types) in dst_dir */
-	for (DIRMAP::iterator dst_i = dst_map.begin(); dst_i != dst_map.end(); ++dst_i) {
-		for (DIRMAP::iterator it = dst_i; it != dst_map.end(); ++it) {
+	for (DIRMAP::iterator dst_i = dst_map.begin(); dst_i != dst_map.end(); ) {
+		for (DIRMAP::iterator it = dst_i; it != dst_map.end(); ) {
 			if (it == dst_i) {
+				++it;
 				continue;
 			}
 
@@ -437,9 +440,13 @@ int merge_couple(std::string src_dir, std::string dst_dir, std::string work_dir)
 				}
 
 				remove_folder_tree((dst_dir_path + "/" + (*it).first).c_str());
-				dstMap.erase((*it).first);
+				it = dst_map.erase(it);
 			}
+
+			++it;
 		}
+
+		++dst_i;
 	}
 
 	/* Finally merge flowsStats.txt files */
