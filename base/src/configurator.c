@@ -847,6 +847,7 @@ startup_config *config_create_startup(configurator *config)
 	/* Get new collector's node */
 	xmlNode *collector_node = NULL, *aux_node, *aux_collector;
 	xmlChar *collector_name = NULL, *aux_name;
+	bool single_mgr_warning = false;
 	
 	/* Get actual collector name */
 	for (aux_node = config->collector_node->children; aux_node; aux_node = aux_node->next) {
@@ -933,6 +934,7 @@ startup_config *config_create_startup(configurator *config)
 	
 	/* Store them into array */
 	i = 0;
+	startup->single_data_manager = false;
 	for (aux_conf = aux_list; aux_conf; aux_conf = aux_conf->next, ++i) {
 		startup->storage[i] = calloc(1, sizeof(struct plugin_config));
 
@@ -944,6 +946,22 @@ startup_config *config_create_startup(configurator *config)
 		}
 		
 		startup->storage[i]->conf = aux_conf->config;
+
+		// Check if configuration will run with single data manager
+		if (startup->single_data_manager == aux_conf->config.require_single_manager ||
+				single_mgr_warning) {
+			continue;
+		}
+
+		if (i != 0) {
+			// There is at least one plugin without required single data mngr
+			MSG_WARNING(msg_module, "All storage plugins will run with single data manager");
+			single_mgr_warning = true;
+		}
+
+		if (aux_conf->config.require_single_manager) {
+			startup->single_data_manager = true;
+		}
 	}
 	startup->storage[i] = NULL;
 	free_conf_list(aux_list);
@@ -1017,19 +1035,43 @@ int config_process_new_startup(configurator *config, startup_config *new_startup
 			}
 			new_startup->storage[i] = NULL;
 		}
+
+		/* Manager mode */
+		if (new_startup->single_data_manager) {
+			output_manager_set_mode(OM_SINGLE);
+		}
 		
 		return 0;
 	}
 	
-	/* Process changes in all plugins */
+	// Process input plugins changes
 	if (config_process_changes(config, config->startup->input,   new_startup->input,   PLUGIN_INPUT) != 0) {
 		return 1;
 	}
 	
+	// Process intermediate plugins changes
 	if (config_process_changes(config, config->startup->inter,   new_startup->inter,   PLUGIN_INTER) != 0) {
 		return 1;
 	}
-	
+
+	// Check if output manager mode is still same
+	if (config->startup->single_data_manager != new_startup->single_data_manager) {
+		bool single_mode = new_startup->single_data_manager;
+
+		// Single data manager vs. multiple data managers
+		MSG_WARNING(msg_module, "Output data manager mode will be set to %s mode",
+			single_mode ? "single" : "multiple");
+
+		// Delete all data managers (and plugins)
+		if (output_manager_set_mode(single_mode ? OM_SINGLE : OM_MULTIPLE) != 0) {
+			return 1;
+		}
+
+		// Done, new plugins will be dynamically created by output manager
+		config->startup->single_data_manager = new_startup->single_data_manager;
+	}
+
+	// Process storage plugins changes
 	if (config_process_changes(config, config->startup->storage, new_startup->storage, PLUGIN_STORAGE) != 0) {
 		return 1;
 	}

@@ -40,6 +40,7 @@
 #ifndef CONFIGURATOR_H
 #define	CONFIGURATOR_H
 
+#include <stdbool.h>
 #include "config.h"
 
 /**
@@ -79,6 +80,7 @@ typedef struct startup_config_s {
 	struct plugin_config *input[8];     /**< Input plugins */
 	struct plugin_config *inter[8];     /**< Intermediate plugins */
 	struct plugin_config *storage[8];   /**< Storage plugins */
+	bool single_data_manager;           /**< Use single (common) data manager */
 } startup_config;
 
 typedef struct ipfix_config {

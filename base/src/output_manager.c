@@ -200,7 +200,10 @@ void output_manager_remove(struct output_manager_config *output_manager, struct 
 	}
 	uint32_t odid = old_manager->observation_domain_id;
 	data_manager_close(&old_manager);
-	tm_remove_all_odid_templates(template_mgr, odid);
+
+	if (!output_manager->perman_odid_merge && output_manager->manager_mode != OM_SINGLE) {
+		tm_remove_all_odid_templates(template_mgr, odid);
+	}
 }
 
 /**
@@ -358,7 +361,8 @@ static void *output_manager_plugin_thread(void* config)
 			add_input_info(msg->input_info);
 		}
 
-		odid = (conf->odid_merge) ? 0 : msg->input_info->odid;
+		odid = (conf->perman_odid_merge || conf->manager_mode == OM_SINGLE)
+				? 0 : msg->input_info->odid;
 
 		/* Get appropriate data Manager config according to ODID */
 		data_config = get_data_mngmt_config(odid, conf->data_managers);
@@ -831,6 +835,7 @@ static void *statistics_thread(void* config)
  *
  * @param[in] plugins_config plugins configurator
  * @param[in] stat_interval statistics printing interval
+ * @param[in] odid_merge enable single output manager permanently
  * @param[out] config configuration structure
  * @return 0 on success, negative value otherwise
  */
@@ -842,9 +847,10 @@ int output_manager_create(configurator *plugins_config, int stat_interval, bool 
 		return -1;
 	}
 	
+	conf->manager_mode = odid_merge ? OM_SINGLE : OM_MULTIPLE;
 	conf->stat_interval = stat_interval;
 	conf->plugins_config = plugins_config;
-	conf->odid_merge = odid_merge;
+	conf->perman_odid_merge = odid_merge;
 	
 	*config = conf;
 	return 0;
@@ -932,4 +938,64 @@ void output_manager_close(void *config)
 	}
 	
 	free(manager);
+}
+
+/**
+ * \brief Change mode of output manager
+ *
+ * Allow to change mode from single mode to multi mode and vice versa.
+ * If new mode is different from current mode, all data managers are removed.
+ * If the manager thread is running, it will be stopped and restarted later.
+ *
+ * \param[in] mode New mode of output manager
+ * \return 0 on successs
+ */
+int output_manager_set_mode(enum om_mode mode)
+{
+	if (conf->perman_odid_merge) {
+		// Nothing can be changed, permanent single manager mode enabled
+		if (mode == OM_MULTIPLE) {
+			MSG_WARNING(msg_module, "Unable to change output manager mode. "
+				"Single manager permanently enabled ('-M' argument).");
+		}
+		return 0;
+	}
+
+	if (conf->manager_mode == mode) {
+		// Mode is still same
+		return 0;
+	}
+
+	if (conf->running) {
+		MSG_DEBUG(msg_module, "Stopping Output manager thread");
+		// Stop output manager's thread
+		rbuffer_write(conf->in_queue, NULL, 1);
+		pthread_join(conf->thread_id, NULL);
+	}
+
+	// Delete data managers
+	struct data_manager_config *aux_config = conf->data_managers;
+	while (aux_config) {
+		struct data_manager_config *tmp = aux_config;
+		aux_config = aux_config->next;
+		data_manager_close(&tmp);
+	}
+	conf->data_managers = NULL;
+	conf->last = NULL;
+	conf->manager_mode = mode;
+
+	if (conf->running) {
+		// Restart the thread
+		int retval;
+		MSG_DEBUG(msg_module, "Restarting Output manager thread");
+		retval = pthread_create(&(conf->thread_id), NULL,
+			&output_manager_plugin_thread, (void *) conf);
+		if (retval != 0) {
+			MSG_ERROR(msg_module, "Unable to create Output Manager thread");
+			free(conf);
+			return -1;
+		}
+	}
+
+	return 0;
 }
