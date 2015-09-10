@@ -51,6 +51,7 @@ enum {
 	MAX_MONTH = 12,
 	CONTROL_BUFF_LEN = 5
 };
+
 enum {
 	SEC_LEN = 2,
 	MIN_LEN = 2,
@@ -92,14 +93,14 @@ void usage();
 
 int merge_all(std::string workDir, uint16_t key, std::string prefix);
 
-int merge_couple(std::string srcDir, std::string dstDir, std::string workDir);
+int merge_couple(std::string src_dir, std::string dst_dir, std::string work_dir);
 
-int merge_dirs(std::string srcDir, std::string dstDir);
+int merge_dirs(std::string src_dir, std::string dst_dir);
 
-void merge_flowStats(std::string first, std::string second);
+void merge_flows_stats(std::string first, std::string second);
 
-int move_prefixed_dirs(std::string baseDir, std::string workDir, std::string prefix, int key);
+int move_prefixed_dirs(std::string base_dir, std::string work_dir, std::string prefix, int key);
 
-void remove_folder_tree(std::string dirname);
+void remove_folder_tree(std::string dir_name);
 
 #endif /* FBITMERGE_H_ */
