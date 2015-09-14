@@ -717,13 +717,8 @@ static void *statistics_thread(void* config)
 	prctl(PR_SET_NAME, "ipfixcol:stats", 0, 0, 0);
 	
 	FILE *stat_out_file = NULL;
-	while (conf->stat_interval) {
+	while (conf->stat_interval && !conf->stats.done) { /* stats.done can be set by Output Manager */
 		sleep(conf->stat_interval);
-		
-		/* Killed by Output Manager */
-		if (conf->stats.done) {
-			break;
-		}
 		
 		/* Compute time */
 		time_now = time(NULL);
@@ -735,13 +730,15 @@ static void *statistics_thread(void* config)
 				stat_out_file = fopen(full_stat_out_file_path, "w");
 
 				if (!stat_out_file) {
-					MSG_ERROR(msg_module, "Could not open statistics file '%s'", full_stat_out_file_path);
+					MSG_ERROR(msg_module, "Could not open statistics file '%s'; stopping statistics thread", full_stat_out_file_path);
+					break;
 				}
 
 				fprintf(stat_out_file, "%s=%lu\n", "TIME", time_now);
 				fprintf(stat_out_file, "%s=%lu\n", "RUN_TIME", run_time);
 			} else {
-				MSG_ERROR(msg_module, "Could not determine statistics file path");
+				MSG_ERROR(msg_module, "Could not determine statistics file path; stopping statistics thread");
+				break;
 			}
 		} else if (print_stat_to_console) {
 			MSG_INFO(stat_module, "");
