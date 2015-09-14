@@ -312,7 +312,7 @@ int process_startup_xml(char *params, struct fastbit_config* c)
 		} else if (name_type == "prefix") {
 			c->dump_name = PREFIX;
 			if (c->prefix == "") {
-				c->prefix == "fbitfiles";
+				c->prefix = "fbitfiles";
 			}
 
 			c->window_dir = c->prefix + "/";
