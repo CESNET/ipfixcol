@@ -289,7 +289,7 @@ void Filter::parseIPv6Sub(parserStruct *ps, std::string addr) const throw (std::
 	uint8_t subnetPos, i;
 	uint16_t subnet;
 	uint64_t min[2], max[2], subnetIP[2];
-	std::string part1, part2;
+	std::string part[2];
 	std::stringstream ss;
 
 	/* Get subnet number */
@@ -304,15 +304,15 @@ void Filter::parseIPv6Sub(parserStruct *ps, std::string addr) const throw (std::
 		subnetIP[1] <<= 64 - (subnet - 64);
 	} else {
 		subnetIP[1] = 0;
-		subnetIP[0] = 64 - subnet;
+		subnetIP[0] <<= 64 - subnet;
 	}
 
 	/* Parse IP address to calculate minimal and maximal host address */
-	this->parseIPv6(addr.substr(0, subnetPos - 1), part1, part2);
+	this->parseIPv6(addr.substr(0, subnetPos - 1), part[0], part[1]);
 
 	/* Calculate minimal and maximal host address for both parts */
 	for (i = 0; i < 2; i++) {
-		min[i] = atol(part1.c_str()) & subnetIP[i];
+		min[i] = atol(part[i].c_str()) & subnetIP[i];
 		max[i] = min[i] | (~subnetIP[i]);
 
 		ss.str(std::string());
@@ -762,13 +762,13 @@ std::string Filter::parseExpSub(parserStruct *left, std::string cmp, parserStruc
 	std::string exp, op, opGroup, cmp1, cmp2;
 
 	if (cmp == "!=") {
-		cmp1 = " <= ";
-		cmp2 = " >= ";
+		cmp1 = " < ";
+		cmp2 = " > ";
 		op = " or ";
 		opGroup = " and ";
 	} else {
-		cmp1 = " > ";
-		cmp2 = " < ";
+		cmp1 = " >= ";
+		cmp2 = " <= ";
 		op = " and ";
 		opGroup = " or ";
 	}
