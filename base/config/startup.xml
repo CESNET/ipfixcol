@@ -92,6 +92,10 @@
 				<file>file://tmp/collected-records-tcp.ipfix</file>
 			</fileWriter>
 		</destination>
+
+		<!--## Enable single Data manager - only one instance of storage plugin(s)
+		shared between every ODID -->
+<!--	<singleManager>yes</singleManager> -->
 	</exportingProcess>
 
 	<exportingProcess>
