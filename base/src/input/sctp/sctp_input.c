@@ -708,7 +708,7 @@ wait_for_data:
 	}
 
 	if (msg_length < IPFIX_HEADER_LENGTH) {
-		MSG_ERROR(msg_module, "Packet header is incomplete; skipping message...", msg_length);
+		MSG_WARNING(msg_module, "Packet header is incomplete; skipping message...", msg_length);
 		return INPUT_INTR;
 	}
 
@@ -721,11 +721,11 @@ wait_for_data:
 	}
 
 	/* Check if lengths are the same */
-	if (msg_length < htons(((struct ipfix_header *)*packet)->length)) {
-		MSG_ERROR(msg_module, "Packet is incomplete; skipping message...");
+	if (msg_length < htons(((struct ipfix_header *) *packet)->length)) {
+		MSG_WARNING(msg_module, "Packet is incomplete; skipping message...");
 		return INPUT_INTR;
-	} else if (msg_length > htons(((struct ipfix_header *)*packet)->length)) {
-		msg_length = htons(((struct ipfix_header *)*packet)->length);
+	} else if (msg_length > htons(((struct ipfix_header *) *packet)->length)) {
+		msg_length = htons(((struct ipfix_header *) *packet)->length);
 	}
 
 #if 0

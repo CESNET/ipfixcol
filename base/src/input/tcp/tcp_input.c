@@ -957,7 +957,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		if (packet_length > BUFF_LEN) {
 			*packet = realloc(*packet, packet_length);
 			if (*packet == NULL) {
-				MSG_ERROR(msg_module, "Packet too big and realloc failed: %s", strerror(errno));
+				MSG_WARNING(msg_module, "Packet too big and realloc failed: %s", strerror(errno));
 				return INPUT_ERROR;
 			}
 		}
@@ -972,11 +972,11 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 			if (errno == EINTR) {
 				return INPUT_INTR;
 			}
-			MSG_WARNING(msg_module, "Failed to receive IPFIX packet: %s", strerror(errno));
-			return INPUT_ERROR;
 
+			MSG_ERROR(msg_module, "Failed to receive IPFIX packet: %s", strerror(errno));
+			return INPUT_ERROR;
 		} else if (length < packet_length - IPFIX_HEADER_LENGTH) {
-			MSG_ERROR(msg_module, "Read IPFIX data is too short (%i): %s", length, strerror(errno));
+			MSG_WARNING(msg_module, "Read IPFIX data is too short (%i): %s", length, strerror(errno));
 		}
 
 		length += IPFIX_HEADER_LENGTH;
@@ -997,7 +997,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 			length = htons(((struct ipfix_header*)*packet)->length);
 		}
 	} else if (length != 0) {
-		MSG_ERROR(msg_module, "Packet header is incomplete; closing connection...");
+		MSG_WARNING(msg_module, "Packet header is incomplete; closing connection...");
 
 		/* this will close the connection */
 		length = 0;
@@ -1062,6 +1062,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		} else {
 			inet_ntop(AF_INET6, &conf->sock_addresses[sock]->sin6_addr, src_addr, INET6_ADDRSTRLEN);
 		}
+
 		(*info)->status = SOURCE_STATUS_CLOSED;
 		*source_status = SOURCE_STATUS_CLOSED;
 
