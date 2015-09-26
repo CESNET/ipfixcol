@@ -158,7 +158,7 @@ void *listen_worker(void *data) {
 		/* input_info - fill out information about input */
 		node = (struct input_info_node *) calloc(1, sizeof(*node));
 		if (!node) {
-			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			goto err_assoc;
 		}
 
@@ -254,7 +254,7 @@ int input_init(char *params, void **config)
 	/* allocate memory for config structure */
 	conf = (struct sctp_config *) malloc(sizeof(*conf));
 	if (!conf) {
-		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
 	memset(conf, 0, sizeof(*conf));
@@ -264,7 +264,7 @@ int input_init(char *params, void **config)
 	sockaddr6_listen = (struct sockaddr_in6 **) 
 	malloc(DEFAULT_NUMBER_OF_ADDRESSES * sizeof(*(sockaddr6_listen)));
 	if (sockaddr6_listen == NULL) {
-		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		goto err_sockaddr6;
 	}
 	memset(sockaddr6_listen, 0, sizeof(DEFAULT_NUMBER_OF_ADDRESSES * sizeof(*(sockaddr6_listen))));
@@ -274,7 +274,7 @@ int input_init(char *params, void **config)
 	 * sctp_bindx() for multi-homing support */
 	sockaddr_listen = (struct sockaddr_in **) calloc(DEFAULT_NUMBER_OF_ADDRESSES, sizeof(*(sockaddr_listen)));
 	if (sockaddr_listen == NULL) {
-		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		goto err_sockaddr;
 	}
 	sockaddr_listen_max = DEFAULT_NUMBER_OF_ADDRESSES;
@@ -324,7 +324,7 @@ int input_init(char *params, void **config)
 				/* add new IPv4 address */
 				sockaddr = (struct sockaddr_in *) malloc(sizeof(*sockaddr));
 				if (!sockaddr) {
-					MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+					MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 					goto err_sockaddr_case;
 				}
 				memset(sockaddr, 0, sizeof(*sockaddr));
@@ -378,7 +378,7 @@ err_sockaddr_case:
 				/* add new IPv6 address */
 				sockaddr6 = (struct sockaddr_in6 *) malloc(sizeof(*sockaddr6));
 				if (!sockaddr6) {
-					MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+					MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 					goto err_sockaddr6_case;
 				}
 				memset(sockaddr6, 0, sizeof(*sockaddr6));
@@ -457,7 +457,7 @@ err_sockaddr6_case:
 	if ((sockaddr6_listen_counter == 0) && (sockaddr_listen_counter == 0)) {
 		sockaddr6 = (struct sockaddr_in6 *) calloc(1, sizeof(*sockaddr6));
 		if (!sockaddr6) {
-			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			goto err;
 		}
 
@@ -691,7 +691,7 @@ wait_for_data:
 		/* TODO - we can check how big the message is from its header */
 		*packet = (char *) malloc(MSG_MAX_LENGTH);
 		if (*packet == NULL) {
-			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			ret = INPUT_ERROR;
 			goto out;
 		}
