@@ -68,8 +68,8 @@
 /* API version constant */
 IPFIXCOL_API_VERSION;
 
-#define DEFAULT_LISTEN_PORT_UNSECURE 4739
-#define DEFAULT_LISTEN_PORT_SECURE   4740   /* listen port when used with DTLS */
+#define DEFAULT_LISTEN_PORT        4739
+#define DEFAULT_LISTEN_PORT_DLTS   4740   /* listen port when used with DTLS */
 
 /* maximum input/output streams per association */
 #define INSTREAMS_PER_SOCKET         20
@@ -471,7 +471,7 @@ err_sockaddr6_case:
 
 	/* use default listen port if not specified otherwise */
 	if (conf->listen_port == 0) {
-		conf->listen_port = DEFAULT_LISTEN_PORT_UNSECURE;
+		conf->listen_port = DEFAULT_LISTEN_PORT;
 	}
 
 	/* same port for every IPv4 address */

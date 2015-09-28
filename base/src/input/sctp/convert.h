@@ -46,6 +46,8 @@ enum {
 	SCTP_PLUGIN
 };
 
+#define CONVERSION_ERROR -1
+
 /**
  * \brief Prepare static variables used for inserting template and data sets
  *
