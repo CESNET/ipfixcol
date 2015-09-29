@@ -237,12 +237,12 @@ void odip_copy_template_info(struct ipfix_template *to, struct ipfix_template *f
 int intermediate_process_message(void *config, void *message)
 {
 	struct odip_ip_config *conf = (struct odip_ip_config *) config;
-	struct ipfix_message  *msg  = (struct ipfix_message  *) message;
-	struct ipfix_message  *new_msg = NULL;
+	struct ipfix_message *msg = (struct ipfix_message *) message;
+	struct ipfix_message *new_msg = NULL;
 	
 	struct input_info_network *info = (struct input_info_network *) msg->input_info;
 	struct odip_processor proc;
-	int i, new_i = 0, prevoffset, tsets = 0, otsets = 0;
+	int i, new_i = 0, prev_offset, tsets = 0, otsets = 0;
 	
 	/* source closed or not network source */
 	if (msg->source_status == SOURCE_STATUS_CLOSED || msg->input_info->type == SOURCE_TYPE_IPFIX_FILE) {
@@ -286,17 +286,17 @@ int intermediate_process_message(void *config, void *message)
 	/* process template records */
 	proc.type = TM_TEMPLATE;
 	for (i = 0; i < MSG_MAX_TEMPL_SETS && msg->templ_set[i]; ++i) {
-		prevoffset = proc.offset;
+		prev_offset = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->templ_set[i]->header), 4);
 		proc.offset += 4;
 		proc.length = 4;
 
 		template_set_process_records(msg->templ_set[i], proc.type, &templates_processor, (void *) &proc);
 
-		if (proc.offset == prevoffset + 4) {
-			proc.offset = prevoffset;
+		if (proc.offset == prev_offset + 4) {
+			proc.offset = prev_offset;
 		} else {
-			new_msg->templ_set[tsets] = (struct ipfix_template_set *) ((uint8_t *) proc.msg + prevoffset);
+			new_msg->templ_set[tsets] = (struct ipfix_template_set *) ((uint8_t *) proc.msg + prev_offset);
 			new_msg->templ_set[tsets]->header.length = htons(proc.length);
 			tsets++;
 		}
@@ -305,17 +305,17 @@ int intermediate_process_message(void *config, void *message)
 	/* Process option templates */
 	proc.type = TM_OPTIONS_TEMPLATE;
 	for (i = 0; i < MSG_MAX_OTEMPL_SETS && msg->opt_templ_set[i]; ++i) {
-		prevoffset = proc.offset;
+		prev_offset = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->opt_templ_set[i]->header), 4);
 		proc.offset += 4;
 		proc.length = 4;
 
 		template_set_process_records((struct ipfix_template_set *) msg->opt_templ_set[i], proc.type, &templates_processor, (void *) &proc);
 
-		if (proc.offset == prevoffset + 4) {
-			proc.offset = prevoffset;
+		if (proc.offset == prev_offset + 4) {
+			proc.offset = prev_offset;
 		} else {
-			new_msg->opt_templ_set[otsets] = (struct ipfix_options_template_set *) ((uint8_t *) proc.msg + prevoffset);
+			new_msg->opt_templ_set[otsets] = (struct ipfix_options_template_set *) ((uint8_t *) proc.msg + prev_offset);
 			new_msg->opt_templ_set[otsets]->header.length = htons(proc.length);
 			otsets++;
 		}
