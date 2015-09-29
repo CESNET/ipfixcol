@@ -714,7 +714,7 @@ wait_for_data:
 
 	/* Convert packet from Netflow v5/v9/sflow to IPFIX format */
 	if (htons(((struct ipfix_header *) (*packet))->version) != IPFIX_VERSION) {
-		if (convert_packet(packet, &msg_length, NULL) != 0) {
+		if (convert_packet(packet, &msg_length, MSG_MAX_LENGTH, NULL) != 0) {
 			MSG_WARNING(msg_module, "Message conversion error; skipping message...");
 			return INPUT_INTR;
 		}

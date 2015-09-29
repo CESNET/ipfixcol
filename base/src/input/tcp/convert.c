@@ -556,10 +556,11 @@ int unpack_enterprise_elements(struct ipfix_set_header *template_set, uint32_t r
  *
  * \param[out] packet Flow information data in the form of IPFIX packet.
  * \param[in] len Length of packet
+ * \param[in] max_len Amount of memory allocated for packet
  * \param[in] input_info Information structure storing data needed for refreshing templates
  * \return 0 on success
  */
-int convert_packet(char **packet, ssize_t *len, char *input_info)
+int convert_packet(char **packet, ssize_t *len, uint16_t max_len, char *input_info)
 {
 	struct ipfix_header *header = (struct ipfix_header *) *packet;
 	uint16_t flow_sample_count = 0;
@@ -673,8 +674,25 @@ int convert_packet(char **packet, ssize_t *len, char *input_info)
 							 * but recommended.
 							 */
 							uint16_t set_len = ntohs(set_header->length);
+
+							/* Sanity check: does set header length have a realistic value? 
+							 * We have seen cases where this code was triggered for non-NFv9
+							 * PDUs, resulting in invalid operations.
+							 */
+							if (set_len > *len) {
+								return CONVERSION_ERROR;
+							}
+
 							if (set_len % 4 != 0) {
-								int padding_len = 4 - (set_len % 4);
+								uint8_t padding_len = 4 - (set_len % 4);
+
+								/* Check whether new packet will be larger than max_len. If so,
+								 * we just fail the conversion to IPFIX to avoid having to perform
+								 * lots of reallocs (expensive).
+								 */
+								if (*len + padding_len > max_len) {
+									return CONVERSION_ERROR;
+								}
 
 								memmove(p + set_len + padding_len, p + set_len, *len - offset + set_len);
 								memset(p + set_len, 0, padding_len);
