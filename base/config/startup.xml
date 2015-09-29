@@ -16,9 +16,9 @@
 			<!--## Options template lifetime in seconds -->
 			<optionsTemplateLifeTime>1800</optionsTemplateLifeTime>
 			<!--## Template lifetime in packets (for how many packets is template valid) -->
-<!--		<templateLifePacket>5</templateLifePacket> -->
+			<!-- <templateLifePacket>5</templateLifePacket>  -->
 			<!--## Options template lifetime in packets -->
-<!--		<optionsTemplateLifePacket>100</optionsTemplateLifePacket> -->
+			<!-- <optionsTemplateLifePacket>100</optionsTemplateLifePacket>  -->
 			<!--## Local address to listen on. If empty, bind to all interfaces -->
 			<localIPAddress>127.0.0.1</localIPAddress>
 		</udpCollector>
@@ -53,17 +53,16 @@
 	<!--## Exporting process configuration -->
 	<exportingProcess>
 		<!--## Name of the exporting process, must match <exportingProcess> element
-			   in <collectingProcess>
-		-->
+			   in <collectingProcess> -->
 		<name>File writer UDP</name>
 		<!--## Specification of storage plugin -->
 		<destination>
 			<!--## Arbitrary name -->
 			<name>Write to /tmp folder</name>
 			<!--## Observation domain ID valid for this storage plugin 
-			       Only packets with this ODID will be passed to the plugin
-			       If unspecified, plugin is used for unknown ODIDs 
-			         (and not for any of specified)
+				   Only packets with this ODID will be passed to the plugin
+				   If unspecified, plugin is used for unknown ODIDs 
+					 (and not for any of specified)
 			-->
 			<observationDomainId>1</observationDomainId>
 			<!--## This element is passed to storage plugin -->
@@ -95,7 +94,7 @@
 
 		<!--## Enable single Data manager - only one instance of storage plugin(s)
 		shared between every ODID -->
-<!--	<singleManager>yes</singleManager> -->
+		<!-- <singleManager>yes</singleManager>  -->
 	</exportingProcess>
 
 	<exportingProcess>
@@ -109,9 +108,8 @@
 		</destination>
 	</exportingProcess>
 
-<!-- List of active Intermediate Plugins -->
+	<!-- List of active Intermediate Plugins -->
 	<intermediatePlugins>
-	
 		<!-- Dummy Intermediate Plugin - does nothing -->
 		<dummy_ip>
 		</dummy_ip>
@@ -131,22 +129,20 @@
 		-->
 		
 		<!-- Configuration for joinflows plugin -->
-<!--	<joinflows_ip>	-->
-		  <!-- Set destination ODID -->
-<!--		<join to="2">	-->
-			  <!-- Set source ODIDs for this dst ODID -->
-<!--			<from>1</from>	-->
-<!--			<from>3</from>	-->
-<!--		</join>	-->
-		  <!-- Set another destination ODID -->
-<!--		<join to="4">	-->
-<!--			<from>5</from>	-->
+		<!-- <joinflows_ip>	-->
+			<!-- Set destination ODID -->
+			<!-- <join to="2"> -->
+				<!-- Set source ODIDs for this dst ODID -->
+				<!-- <from>1</from>	-->
+				<!-- <from>3</from> -->
+			<!-- </join> -->
+			<!-- Set another destination ODID -->
+			<!-- <join to="4"> -->
+				<!-- <from>5</from> -->
 				<!-- All ODIDs not mentioned in any <join> block 
 				  will be mapped on this dst ODID -->
-<!--			<from>*</from>	-->
-<!--		</join>	-->
-<!--	</joinflows_ip>	-->
-		
+				<!-- <from>*</from> -->
+			<!-- </join> -->
+		<!-- </joinflows_ip> -->
 	</intermediatePlugins>
-		
 </ipfix>
