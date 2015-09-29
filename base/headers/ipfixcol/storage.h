@@ -89,18 +89,18 @@ enum PLUGIN_STATUS {
  * \brief Structure for one data record with it's length and template
  */
 struct ipfix_record {
-	void *record;       /**< Data record */
-	uint16_t length;    /**< Record's length */
+	void *record;                   /**< Data record */
+	uint16_t length;                /**< Record's length */
 	struct ipfix_template *templ;   /**< Record's template */
 };
 
 struct __attribute__((packed)) metadata {
 	struct ipfix_record record;     /**< IPFIX data record */
-	uint16_t srcCountry;			/**< Source country code */
-	uint16_t dstCountry;			/**< Destination country code */
+	uint16_t srcCountry;            /**< Source country code */
+	uint16_t dstCountry;            /**< Destination country code */
 	uint32_t srcAS;                 /**< Source AS */
 	uint32_t dstAS;                 /**< Destination AS */
-	void **channels;				/**< Array of channels assigned to this record */
+	void **channels;                /**< Array of channels assigned to this record */
 	char srcName[32];
 	char dstName[32];
 };
