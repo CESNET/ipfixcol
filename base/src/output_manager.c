@@ -950,27 +950,27 @@ void output_manager_close(void *config)
 int output_manager_set_mode(enum om_mode mode)
 {
 	if (conf->perman_odid_merge) {
-		// Nothing can be changed, permanent single manager mode enabled
+		/* Nothing can be changed, permanent single manager mode enabled */
 		if (mode == OM_MULTIPLE) {
 			MSG_WARNING(msg_module, "Unable to change output manager mode. "
-				"Single manager permanently enabled ('-M' argument).");
+				"Single manager mode permanently enabled ('-M' argument)");
 		}
 		return 0;
 	}
 
 	if (conf->manager_mode == mode) {
-		// Mode is still same
+		/* Mode is still same */
 		return 0;
 	}
 
 	if (conf->running) {
 		MSG_DEBUG(msg_module, "Stopping Output manager thread");
-		// Stop output manager's thread
+		/* Stop output manager's thread */
 		rbuffer_write(conf->in_queue, NULL, 1);
 		pthread_join(conf->thread_id, NULL);
 	}
 
-	// Delete data managers
+	/* Delete data managers */
 	struct data_manager_config *aux_config = conf->data_managers;
 	while (aux_config) {
 		struct data_manager_config *tmp = aux_config;
@@ -982,11 +982,11 @@ int output_manager_set_mode(enum om_mode mode)
 	conf->manager_mode = mode;
 
 	if (conf->running) {
-		// Restart the thread
+		/* Restart thread */
 		int retval;
 		MSG_DEBUG(msg_module, "Restarting Output manager thread");
 		retval = pthread_create(&(conf->thread_id), NULL,
-			&output_manager_plugin_thread, (void *) conf);
+				&output_manager_plugin_thread, (void *) conf);
 		if (retval != 0) {
 			MSG_ERROR(msg_module, "Unable to create Output Manager thread");
 			free(conf);

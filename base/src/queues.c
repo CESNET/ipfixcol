@@ -52,66 +52,67 @@ static char *msg_module = "queue";
  * @param[in] size Size of the ring buffer.
  * @return Pointer to initialized ring buffer structure.
  */
-struct ring_buffer* rbuffer_init (unsigned int size)
+struct ring_buffer* rbuffer_init(uint16_t size)
 {
 	struct ring_buffer* retval = NULL;
 
 	if (size == 0) {
 		MSG_ERROR(msg_module, "Size of the ring buffer set to zero");
-		return (NULL);
+		return NULL;
 	}
 
-	retval = (struct ring_buffer*) malloc (sizeof(struct ring_buffer));
+	retval = (struct ring_buffer*) malloc(sizeof(struct ring_buffer));
 	if (retval == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
-		return (NULL);
+		return NULL;
 	}
 
 	retval->read_offset = 0;
 	retval->write_offset = 0;
 	retval->count = 0;
 	retval->size = size;
-	retval->data = (struct ipfix_message**) malloc (size * sizeof(struct ipfix_message*));
+	retval->data = (struct ipfix_message **) malloc(size * sizeof(struct ipfix_message*));
 	if (retval->data == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
-		free (retval);
-		return (NULL);
+		free(retval);
+		return NULL;
 	}
-	retval->data_references = (unsigned int*) calloc (size, sizeof(unsigned int));
+
+	retval->data_references = (unsigned int *) calloc(size, sizeof(unsigned int));
 	if (retval->data_references == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
-		free (retval->data);
-		free (retval);
-		return (NULL);
+		free(retval->data);
+		free(retval);
+		return NULL;
 	}
 
-	if (pthread_mutex_init (&(retval->mutex), NULL) != 0) {
+	if (pthread_mutex_init(&(retval->mutex), NULL) != 0) {
 		MSG_ERROR(msg_module, "Initialization of condition variable failed (%s:%d)", __FILE__, __LINE__);
-		free (retval->data_references);
-		free (retval->data);
-		free (retval);
-		return (NULL);
+		free(retval->data_references);
+		free(retval->data);
+		free(retval);
+		return NULL;
 	}
 
-	if (pthread_cond_init (&(retval->cond), NULL) != 0) {
+	if (pthread_cond_init(&(retval->cond), NULL) != 0) {
 		MSG_ERROR(msg_module, "Initialization of condition variable failed (%s:%d)", __FILE__, __LINE__);
-		pthread_mutex_destroy (&(retval->mutex));
-		free (retval->data_references);
-		free (retval->data);
-		free (retval);
-		return (NULL);
+		pthread_mutex_destroy(&(retval->mutex));
+		free(retval->data_references);
+		free(retval->data);
+		free(retval);
+		return NULL;
 	}
 
-	if (pthread_cond_init (&(retval->cond_empty), NULL) != 0) {
+	if (pthread_cond_init(&(retval->cond_empty), NULL) != 0) {
 		MSG_ERROR(msg_module, "Initialization of condition variable failed (%s:%d)", __FILE__, __LINE__);
-		pthread_mutex_destroy (&(retval->mutex));
-		free (retval->data_references);
-		free (retval->data);
-		free (retval);
-		return (NULL);
+		pthread_mutex_destroy(&(retval->mutex));
+		free(retval->data_references);
+		free(retval->data);
+		free(retval);
+		return NULL;
 	}
 
-	return (retval);
+	return retval;
 }
 
 /**
@@ -119,52 +120,52 @@ struct ring_buffer* rbuffer_init (unsigned int size)
  *
  * @param[in] rbuffer Ring buffer.
  * @param[in] record IPFIX message structure to be added into the ring buffer.
- * @param[in] refcount Initial refference count - number of reading threads.
+ * @param[in] ref_count Initial refference count - number of reading threads.
  * @return 0 on success, nonzero on error.
  */
-int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, unsigned int refcount)
+int rbuffer_write(struct ring_buffer* rbuffer, struct ipfix_message* record, uint16_t ref_count)
 {
-	if (rbuffer == NULL || refcount == 0) {
+	if (rbuffer == NULL || ref_count == 0) {
 		MSG_ERROR(msg_module, "Invalid ring buffer write parameters");
-		return (EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 
-	if (pthread_mutex_lock (&(rbuffer->mutex)) != 0) {
+	if (pthread_mutex_lock(&(rbuffer->mutex)) != 0) {
 		MSG_ERROR(msg_module, "Mutex lock failed (%s:%d)", __FILE__, __LINE__);
-		return (EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 	/* it will be never more than ring buffer size, but just to be sure I'm checking it 
 	 * leave one position in buffer free, so that faster thread cannot read 
 	 * data yet not procees by slower one */
 	while (rbuffer->count + 1 >= rbuffer->size) {
-		if (pthread_cond_wait (&(rbuffer->cond), &(rbuffer->mutex)) != 0) {
+		if (pthread_cond_wait(&(rbuffer->cond), &(rbuffer->mutex)) != 0) {
 			MSG_ERROR(msg_module, "Condition wait failed (%s:%d)", __FILE__, __LINE__);
 
-			if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
+			if (pthread_mutex_unlock(&(rbuffer->mutex)) != 0) {
 				MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
 			}
 			
-			return (EXIT_FAILURE);
+			return EXIT_FAILURE;
 		}
 	}
 
 	rbuffer->data[rbuffer->write_offset] = record;
-	rbuffer->data_references[rbuffer->write_offset] = refcount;
+	rbuffer->data_references[rbuffer->write_offset] = ref_count;
 	rbuffer->write_offset = (rbuffer->write_offset + 1) % rbuffer->size;
 	rbuffer->count++;
 
 	/* I did change of rbuffer->count so inform about it other threads (read threads) */
-	if (pthread_cond_signal (&(rbuffer->cond)) != 0) {
+	if (pthread_cond_signal(&(rbuffer->cond)) != 0) {
 		MSG_ERROR(msg_module, "Condition signal failed (%s:%d)", __FILE__, __LINE__);
-		return (EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 
-	if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
+	if (pthread_mutex_unlock(&(rbuffer->mutex)) != 0) {
 		MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
-		return (EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 
-	return (EXIT_SUCCESS);
+	return EXIT_SUCCESS;
 }
 
 /**
@@ -176,7 +177,7 @@ int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, un
  * to get record from index (if value in index is valid).
  * @return Read data from specified index (or read offset) or NULL on error.
  */
-struct ipfix_message* rbuffer_read (struct ring_buffer* rbuffer, unsigned int *index)
+struct ipfix_message* rbuffer_read(struct ring_buffer* rbuffer, unsigned int *index)
 {
 	if (*index == (unsigned int) -1) {
 		/* if no index specified -> read from read_offset, so just 1 record in ring buffer required */
@@ -184,37 +185,37 @@ struct ipfix_message* rbuffer_read (struct ring_buffer* rbuffer, unsigned int *i
 	}
 
 	/* check if the ring buffer is full enough, if not wait (and block) for it */
-	if (pthread_mutex_lock (&(rbuffer->mutex)) != 0) {
+	if (pthread_mutex_lock(&(rbuffer->mutex)) != 0) {
 		MSG_ERROR(msg_module, "Mutex lock failed (%s:%d)", __FILE__, __LINE__);
-		return (NULL);
+		return NULL;
 	}
 	/* wait when trying to read from write_offset - no data here yer
 	 * otherwise it's ok, reading tread connot outrun the writing one,
 	 * unles it demands indexes nonlinearly */
 	while (rbuffer->write_offset == *index) {
-		if (pthread_cond_wait (&(rbuffer->cond), &(rbuffer->mutex)) != 0) {
+		if (pthread_cond_wait(&(rbuffer->cond), &(rbuffer->mutex)) != 0) {
 			MSG_ERROR(msg_module, "Condition wait failed (%s:%d)", __FILE__, __LINE__);
 
-			if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
+			if (pthread_mutex_unlock(&(rbuffer->mutex)) != 0) {
 				MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
 			}
 
-			return (NULL);
+			return NULL;
 		}
 	}
 	if (pthread_mutex_unlock(&(rbuffer->mutex)) != 0) {
 		MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
-		return (NULL);
+		return NULL;
 	}
 
 	/* Wake up other threads waiting for read */
-	if (pthread_cond_signal (&(rbuffer->cond)) != 0) {
+	if (pthread_cond_signal(&(rbuffer->cond)) != 0) {
 		MSG_ERROR(msg_module, "Condition signal failed (%s:%d)", __FILE__, __LINE__);
-		return (NULL);
+		return NULL;
 	}
 
 	/* get data */
-	return (rbuffer->data[*index]);
+	return rbuffer->data[*index];
 }
 
 /**
@@ -231,31 +232,32 @@ struct ipfix_message* rbuffer_read (struct ring_buffer* rbuffer, unsigned int *i
  *
  * @param[in] rbuffer Ring buffer.
  * @param[in] index Index of the item in the ring buffer.
- * @param[in] dofree 1 to free data with 0 references, 0 to lose data by removing
+ * @param[in] do_free 1 to free data with 0 references, 0 to lose data by removing
  * the pointer, but do not free the data.
  * @return 0 on success, nonzero on error - no reference on item
  */
-int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, int dofree)
+int rbuffer_remove_reference(struct ring_buffer* rbuffer, unsigned int index, uint8_t do_free)
 {
 	int i;
 
 	/* atomic rbuffer->data_references[index]--; and check <= 0 */
-	if (__sync_fetch_and_sub (&(rbuffer->data_references[index]), 1) <= 0) {
-		return (EXIT_FAILURE);
+	if (__sync_fetch_and_sub(&(rbuffer->data_references[index]), 1) <= 0) {
+		return EXIT_FAILURE;
 	}
 
-	if (pthread_mutex_lock (&(rbuffer->mutex)) != 0) {
+	if (pthread_mutex_lock(&(rbuffer->mutex)) != 0) {
 		MSG_ERROR(msg_module, "Mutex lock failed (%s:%d)", __FILE__, __LINE__);
-		return (EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
+
 	/* it will be never less than zero, but just to be sure I'm checking it */
 	if (rbuffer->data_references[rbuffer->read_offset] <= 0) {
 		while ((rbuffer->data_references[rbuffer->read_offset] == 0) && (rbuffer->count > 0)) {
-			if (dofree) {
+			if (do_free) {
 				/* free the data */
 				if (rbuffer->data[rbuffer->read_offset]) {
 					if (rbuffer->data[rbuffer->read_offset]->pkt_header) {
-						free (rbuffer->data[rbuffer->read_offset]->pkt_header);
+						free(rbuffer->data[rbuffer->read_offset]->pkt_header);
 					}
 
 					/* Decrement reference on templates */
@@ -269,46 +271,48 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
 						message_free_metadata(rbuffer->data[rbuffer->read_offset]);
 					}
 					
-					free (rbuffer->data[rbuffer->read_offset]);
+					free(rbuffer->data[rbuffer->read_offset]);
 				}
 			}
+
 			/* move offset pointer in ring buffer */
 			rbuffer->read_offset = (rbuffer->read_offset + 1) % rbuffer->size;
 			rbuffer->count--;
 
 			/* signal to write thread waiting for empty queue */
 			if (rbuffer->count == 0) {
-				if (pthread_cond_signal (&(rbuffer->cond_empty)) != 0) {
+				if (pthread_cond_signal(&(rbuffer->cond_empty)) != 0) {
 					MSG_ERROR(msg_module, "Condition signal failed (%s:%d)", __FILE__, __LINE__);
 
-					if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
+					if (pthread_mutex_unlock(&(rbuffer->mutex)) != 0) {
 						MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
 					}
 
-					return (EXIT_FAILURE);
+					return EXIT_FAILURE;
 				}
 			}
 		}
-		if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
+		if (pthread_mutex_unlock(&(rbuffer->mutex)) != 0) {
 			MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
-			return (EXIT_FAILURE);
+			return EXIT_FAILURE;
 		}
 	} else {
-		if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
+		if (pthread_mutex_unlock(&(rbuffer->mutex)) != 0) {
 			MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
-			return (EXIT_FAILURE);
+			return EXIT_FAILURE;
 		}
+
 		/* only reference decrease was done, moving rbuffer->read_offset not */
-		return (EXIT_SUCCESS);
+		return EXIT_SUCCESS;
 	}
 
 	/* I did change of rbuffer->count so inform about it other threads (mainly write thread) */
-	if (pthread_cond_signal (&(rbuffer->cond)) != 0) {
+	if (pthread_cond_signal(&(rbuffer->cond)) != 0) {
 		MSG_ERROR(msg_module, "Condition signal failed (%s:%d)", __FILE__, __LINE__);
-		return (EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 
-	return (EXIT_SUCCESS);
+	return EXIT_SUCCESS;
 }
 
 /**
@@ -318,23 +322,23 @@ int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, i
  * @return 0 on success, nonzero on error
  */
 int rbuffer_wait_empty(struct ring_buffer* rbuffer) {
-	if (pthread_mutex_lock (&(rbuffer->mutex)) != 0) {
+	if (pthread_mutex_lock(&(rbuffer->mutex)) != 0) {
 		MSG_ERROR(msg_module, "Mutex lock failed (%s:%d)", __FILE__, __LINE__);
-		return (EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 
 	while (rbuffer->count > 0) {
-		if (pthread_cond_wait (&(rbuffer->cond_empty), &(rbuffer->mutex)) != 0) {
+		if (pthread_cond_wait(&(rbuffer->cond_empty), &(rbuffer->mutex)) != 0) {
 			MSG_ERROR(msg_module, "Condition wait failed (%s:%d)", __FILE__, __LINE__);
-			return (EXIT_FAILURE);
+			return EXIT_FAILURE;
 		}
 	}
 
-	if (pthread_mutex_unlock (&(rbuffer->mutex)) != 0) {
+	if (pthread_mutex_unlock(&(rbuffer->mutex)) != 0) {
 		MSG_ERROR(msg_module, "Mutex unlock failed (%s:%d)", __FILE__, __LINE__);
-		return (EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
-	return (EXIT_SUCCESS);
+	return EXIT_SUCCESS;
 }
 
 /**
@@ -343,22 +347,21 @@ int rbuffer_wait_empty(struct ring_buffer* rbuffer) {
  * @param[in] rbuffer Ring buffer to destroy.
  * @return 0 on success, nonzero on error.
  */
-int rbuffer_free (struct ring_buffer* rbuffer)
+int rbuffer_free(struct ring_buffer* rbuffer)
 {
 	if (rbuffer) {
 		if (rbuffer->data_references) {
-			free (rbuffer->data_references);
+			free(rbuffer->data_references);
 		}
 		if (rbuffer->data) {
-			free (rbuffer->data);
+			free(rbuffer->data);
 		}
 
-		pthread_cond_destroy (&(rbuffer->cond));
-		pthread_cond_destroy (&(rbuffer->cond_empty));
-		pthread_mutex_destroy (&(rbuffer->mutex));
-
-		free (rbuffer);
+		pthread_cond_destroy(&(rbuffer->cond));
+		pthread_cond_destroy(&(rbuffer->cond_empty));
+		pthread_mutex_destroy(&(rbuffer->mutex));
+		free(rbuffer);
 	}
 
-	return (EXIT_SUCCESS);
+	return EXIT_SUCCESS;
 }

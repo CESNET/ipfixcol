@@ -49,7 +49,7 @@
 #include "config.h"
 #include <ipfixcol/intermediate.h>
 
-static char *msg_module = "Intermediate Process";
+static char *msg_module = "intermediate_process";
 
 /**
  * \brief Wait for data from input queue in loop.
@@ -62,7 +62,7 @@ static char *msg_module = "Intermediate Process";
 void *ip_loop(void *config)
 {
 	struct intermediate *conf = (struct intermediate *) config;
-	struct ipfix_message *message;
+	struct ipfix_message *msg;
 	unsigned int index;
 
 	prctl(PR_SET_NAME, conf->thread_name, 0, 0, 0);
@@ -70,10 +70,11 @@ void *ip_loop(void *config)
 	/* wait for messages and process them */
 	while (1) {
 		index = -1;
+
 		/* get message from input buffer */
-		message = rbuffer_read(conf->in_queue, &index);
+		msg = rbuffer_read(conf->in_queue, &index);
 		
-		if (!message) {
+		if (!msg) {
 			rbuffer_remove_reference(conf->in_queue, index, 1);
 			if (conf->new_in) {
 				/* Set new input queue */
@@ -82,6 +83,7 @@ void *ip_loop(void *config)
 				pthread_cond_signal(&conf->in_q_cond);
 				continue;
 			}
+
 			/* terminating mediator */
 			MSG_DEBUG(msg_module, "NULL message; terminating intermediate process %s...", conf->thread_name);
 			break;
@@ -90,7 +92,7 @@ void *ip_loop(void *config)
 		conf->dropped = false;
 		
 		/* process message */
-		conf->intermediate_process_message(conf->plugin_config, message);
+		conf->intermediate_process_message(conf->plugin_config, msg);
 
 		if (!conf->dropped) {
 			/* remove message from input queue, but do not free memory (it must be done later in output manager) */
@@ -152,18 +154,18 @@ int ip_init(struct intermediate *conf, uint32_t ip_id)
 /**
  * \brief Pass processed IPFIX message to the output queue.
  */
-int pass_message(void *config, struct ipfix_message *message)
+int pass_message(void *config, struct ipfix_message *msg)
 {
 	struct intermediate *conf;
 	int ret;
 
 	conf = (struct intermediate *) config;
 
-	if (message == NULL) {
+	if (msg == NULL) {
 		MSG_WARNING(msg_module, "NULL message from intermediate plugin; skipping...");
 		return 0;
 	}
-	ret = rbuffer_write(conf->out_queue, message, 1);
+	ret = rbuffer_write(conf->out_queue, msg, 1);
 
 	return ret;
 }
@@ -171,10 +173,10 @@ int pass_message(void *config, struct ipfix_message *message)
 /**
  * \brief Drop IPFIX message.
  */
-int drop_message(void *config, struct ipfix_message *message)
+int drop_message(void *config, struct ipfix_message *msg)
 {
 	struct intermediate *conf = (struct intermediate *) config;
-	(void) message;
+	(void) msg;
 
 	rbuffer_remove_reference(conf->in_queue, conf->index, 1);
 	conf->dropped = true;
