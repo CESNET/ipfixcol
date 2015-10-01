@@ -73,7 +73,6 @@ enum partsType {
 	PT_NUMBER,
 	PT_CMP,
 	PT_BITCOLVAL,
-        PT_MAC,
 	PT_IPv4,
 	PT_IPv4_SUB,
 	PT_IPv6,
@@ -93,7 +92,7 @@ typedef struct _parserStruct {
 	std::string colType;
 	stringSet baseCols;
 	void (*parse)(char *input, char *out, void*);
-        void *parseConf;
+	void *parseConf;
 	std::vector<std::string> parts;
 } parserStruct;
 

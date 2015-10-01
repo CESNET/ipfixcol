@@ -636,25 +636,38 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 
 	if (right->type == PT_STRING) {
 		/* If it is string, we need to parse it
-		 * Type may transform from string to number (if coltype is PT_PROTO) - we can't change cmp to LIKE here.
+		 * Type may transform from string to number - we can't change cmp to LIKE here.
 		 *
 		 * Column::parse function (from plugins) takes "char *input" and "char[size] output" but for parsing
 		 * hostnames we need function that fills parser structure with translated addresses
 		 *
 		 * For all other string values, parse function from plugin is called
 		 */
-		if (!left->colType.empty() && left->colType == "ipv4") {
+		if (!left->colType.empty() && left->colType == "ipv4") { /* IPv4 hostname */
 			this->parseHostname(right, AF_INET);
-		} else if (!left->colType.empty() && left->colType == "ipv6") {
+		} else if (!left->colType.empty() && left->colType == "ipv6") { /* IPv6 hostname */
 			this->parseHostname(right, AF_INET6);
-		} else {
+		} else if (left->parse) { /* String with parse function */
+			char buff[PLUGIN_BUFFER_SIZE];
+			left->parse((char *) right->parts[0].c_str(), buff, left->parseConf);
+			if (strlen(buff) > 0) {
+				right->parts[0] = std::string(buff);
+				right->type = PT_NUMBER;
+			} else {
+				/* Wrong filter, end processing */
+				throw std::invalid_argument(std::string("Cannot parse '" + right->parts[0] + "' as " + left->colType));
+			}
+		} else { /* Standard string type */
 			this->parseStringType(right, left, cmp);
 		}
 	}
+
+	/* Provide default comparison operator */
 	if (cmp.empty()) {
 		cmp = "=";
 	}
 
+	/* Subnets and IPv6 hostnames must be parsed separately - they require complicated expressions */
 	switch (right->type) {
 		case PT_IPv4_SUB:
 		case PT_IPv6_SUB:
@@ -663,15 +676,7 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 		case PT_HOSTNAME6:
 			/* If it was IPv6 hostname, we need to combine "and" and "or" operators - parse it somewhere else */
 			return this->parseExpHost6(left, cmp, right);
-		default:
-			if (left->parse) {
-				char buff[PLUGIN_BUFFER_SIZE];
-				left->parse((char *) right->parts[0].c_str(), buff, left->parseConf);
-				if (strlen(buff) > 0) {
-					right->parts[0] = std::string(buff);
-					right->type = PT_NUMBER;
-				}
-			}
+		default: /* Don't touch others */
 			break;
 	}
 
@@ -856,13 +861,6 @@ std::string Filter::parseExpHost6(parserStruct *left, std::string cmp, parserStr
 	return exp;
 }
 
-void Filter::parseMac(parserStruct *ps, std::string text) const
-{
-	ps->nParts = 1;
-	ps->type = PT_MAC;
-	ps->parts.push_back(text);
-}
-
 void Filter::parseString(parserStruct *ps, std::string text) const throw (std::invalid_argument)
 {
 	if (ps == NULL) {
@@ -879,7 +877,7 @@ void Filter::parseStringType(parserStruct *ps, parserStruct *col, std::string &c
 	if (ps == NULL) {
 		throw std::invalid_argument(std::string("Cannot parse string by type, NULL parser structure"));
 	}
-
+/*
 	if (col->parse != NULL) {
 		char buff[PLUGIN_BUFFER_SIZE];
 		col->parse((char *) ps->parts[0].c_str(), buff, col->parseConf);
@@ -888,6 +886,7 @@ void Filter::parseStringType(parserStruct *ps, parserStruct *col, std::string &c
 			ps->type = PT_NUMBER;
 		}
 	}
+*/
 
 	if (ps->type == PT_STRING) {
 		/* For all other columns with string value it stays as it is */
