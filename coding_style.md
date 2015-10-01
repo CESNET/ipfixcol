@@ -1,14 +1,22 @@
 ### Coding style guidelines IPFIXcol
 
-#### [Tabs vs. spaces]
+#### Tabs vs. spaces
 
-Tabs should be used. Spaces at line ends must be avoided.
+Tabs should be used. Spaces at line ends must be avoided. Operands and operators must be separated by a single space:
 
-#### [malloc vs. calloc]
+```
+msg->length = htons(len + 4);
+```
+
+#### malloc vs. calloc
 
 To ensure that all variables are initialized, the use of malloc should be avoided, if possible. calloc is generally preferred. In case one decides for using malloc, a comment must be added to explain the case.
 
-#### [Indentation & loops]
+#### Naming of variables and functions
+
+Variable and function names should be short and descriptive, written in lower-case only. Camel case is therefore not allowed.
+
+#### Indentation & loops
 
 ```
 for (condition_A && condition_B
@@ -18,7 +26,7 @@ for (condition_A && condition_B
 }
 ```
 
-#### [Function definitions]
+#### Function definitions
 
 ```
 struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_info* input_info, int source_status)
@@ -39,7 +47,7 @@ Notes:
     1) Note the space between the function name and the parameter list.
     2) The opening curly brace is to be put on the same line as the (last part of) parameter list.
 
-#### [Check for memory allocation errors]
+#### Check for memory allocation errors
 
 ```
 struct ipfix_template_record *new_rec;
@@ -50,10 +58,12 @@ if (retval == NULL) {
 }
 ```
 
-#### [Comments]
+#### Comments
 
 ```
-// Single-line comments should be used just for single lines
+// Single-line comments should be used just for single lines, to comment code.
+
+/* These comments should be used for instructional comments on code */
 
 /*
  * Multi-line comments should be used as soon as a comment
@@ -61,7 +71,7 @@ if (retval == NULL) {
  */
 ```
 
-#### [Other]
+#### Other
 
 In case of any doubts or issues other than described in this document, the Linux kernel coding style [1] is leading.
 
