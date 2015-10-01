@@ -365,8 +365,12 @@ int main (int argc, char* argv[])
 	while (!terminating) {
 		/* get data to process */
 		if ((get_retval = config->input.get(config->input.config, &input_info, &packet, &source_status)) < 0) {
-			if ((!reconf && !terminating) || get_retval != INPUT_INTR) { /* if interrupted and closing, it's ok */
-				MSG_WARNING(msg_module, "[%d] Could not get IPFIX data", config->proc_id);
+			if ((!reconf && !terminating) || get_retval != INPUT_INTR) {
+				/* If interrupted and closing, it's OK */
+				/* We don't print warnings or errors here, since we leave that responsibility
+				 * to the respective input plugin.
+				 */
+				// MSG_WARNING(msg_module, "[%d] Could not get IPFIX data", config->proc_id);
 			}
 			
 			if (reconf) {
@@ -431,6 +435,7 @@ cleanup:
 			pid = wait(NULL);
 			MSG_NOTICE(msg_module, "[%d] Collector child process '%d' terminated", config->proc_id, pid);
 		}
+
 		MSG_NOTICE(msg_module, "[%d] Closing collector", config->proc_id);
 	}
 

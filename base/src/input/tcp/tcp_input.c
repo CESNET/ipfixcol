@@ -380,7 +380,7 @@ void *input_listen(void *config)
 
 			if (conf->ssl_list[i] != ssl) {
 				/* limit reached. no space for new SSL structure */
-				MSG_WARNING(msg_module, "Limit on the number of TLS connections reached; tearing down this connection...");
+				MSG_WARNING(msg_module, "Reached limit on the number of TLS connections; tearing down this connection...");
 				/* cleanup */
 				input_listen_tls_cleanup(conf, &maid);
 				continue;
@@ -396,7 +396,7 @@ void *input_listen(void *config)
 
 		/* copy socket address to config structure */
 		if (!add_sock_address(conf, address, new_sock)) {
-			MSG_ERROR(msg_module, "Cannot store another socket address!");
+			MSG_ERROR(msg_module, "Cannot store another socket address");
 			break;
 		}
 
@@ -729,7 +729,7 @@ int input_init(char *params, void **config)
 		
 		ssl_list = (SSL **) malloc(sizeof(SSL *) * DEFAULT_SIZE_SSL_LIST);
 		if (ssl_list == NULL) {
-			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			retval = 1;
 			goto out;
 		}
@@ -923,6 +923,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 				break;
 			}
 		}
+
 		length = SSL_read(ssl, *packet, IPFIX_HEADER_LENGTH);
 		if (length < 0) {
 			/* read operation was not successful */
@@ -930,6 +931,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 				if (errno == EINTR) {
 					return INPUT_INTR;
 				}
+
 				MSG_ERROR(msg_module, "Failed to receive IPFIX packet header: %s", strerror(errno));
 				return INPUT_ERROR;
 			}
@@ -942,6 +944,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 			if (errno == EINTR) {
 				return INPUT_INTR;
 			}
+
 			MSG_ERROR(msg_module, "Failed to receive IPFIX packet header: %s", strerror(errno));
 			return INPUT_ERROR;
 		}
@@ -957,7 +960,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		if (packet_length > BUFF_LEN) {
 			*packet = realloc(*packet, packet_length);
 			if (*packet == NULL) {
-				MSG_ERROR(msg_module, "Packet too big and realloc failed: %s", strerror(errno));
+				MSG_WARNING(msg_module, "Packet too big and realloc failed: %s", strerror(errno));
 				return INPUT_ERROR;
 			}
 		}
@@ -972,11 +975,11 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 			if (errno == EINTR) {
 				return INPUT_INTR;
 			}
-			MSG_WARNING(msg_module, "Failed to receive IPFIX packet: %s", strerror(errno));
-			return INPUT_ERROR;
 
+			MSG_ERROR(msg_module, "Failed to receive IPFIX packet: %s", strerror(errno));
+			return INPUT_ERROR;
 		} else if (length < packet_length - IPFIX_HEADER_LENGTH) {
-			MSG_ERROR(msg_module, "Read IPFIX data is too short (%i): %s", length, strerror(errno));
+			MSG_WARNING(msg_module, "Read IPFIX data is too short (%i): %s", length, strerror(errno));
 		}
 
 		length += IPFIX_HEADER_LENGTH;
@@ -997,7 +1000,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 			length = htons(((struct ipfix_header*)*packet)->length);
 		}
 	} else if (length != 0) {
-		MSG_ERROR(msg_module, "Packet header is incomplete; closing connection...");
+		MSG_WARNING(msg_module, "Packet header is incomplete; closing connection...");
 
 		/* this will close the connection */
 		length = 0;
@@ -1062,6 +1065,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		} else {
 			inet_ntop(AF_INET6, &conf->sock_addresses[sock]->sin6_addr, src_addr, INET6_ADDRSTRLEN);
 		}
+
 		(*info)->status = SOURCE_STATUS_CLOSED;
 		*source_status = SOURCE_STATUS_CLOSED;
 
