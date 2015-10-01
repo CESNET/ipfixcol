@@ -46,6 +46,8 @@ enum {
 	SCTP_PLUGIN
 };
 
+#define CONVERSION_ERROR -1
+
 /**
  * \brief Prepare static variables used for inserting template and data sets
  *
@@ -62,10 +64,11 @@ int convert_init(int in_plugin, int len);
  *
  * \param[out] packet Flow information data in the form of IPFIX packet
  * \param[in] len Length of packet
+ * \param[in] max_len Amount of memory allocated for packet
  * \param[in] input_info Information structure storing data needed for refreshing templates
  * \return 0 on success, a negative value otherwise
  */
-int convert_packet(char **packet, ssize_t *len, char *input_info);
+int convert_packet(char **packet, ssize_t *len, uint16_t max_len, char *input_info);
 
 /**
  * \brief Reallocate memory for templates

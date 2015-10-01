@@ -456,7 +456,8 @@ struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint
  */
 int data_record_field_offset(uint8_t *data_record, struct ipfix_template *template, uint32_t enterprise, uint16_t id, int *data_length)
 {
-	int ieid, enterprise_id;
+	uint16_t ie_id;
+	uint32_t enterprise_id;
 	int count, offset = 0, index, length, prevoffset;
 	struct ipfix_template_row *row = NULL;
 
@@ -477,47 +478,50 @@ int data_record_field_offset(uint8_t *data_record, struct ipfix_template *templa
 	/* Data record with variable length field(s) */
 	for (count = index = 0; count < template->field_count; count++, index++) {
 		length = template->fields[index].ie.length;
-		ieid = template->fields[index].ie.id;
+		ie_id = template->fields[index].ie.id;
 		enterprise_id = 0;
 
-		if (ieid >> 15) {
+		if (ie_id >> 15) {
 			/* Enterprise Number */
-			ieid &= 0x7FFF;
+			ie_id &= 0x7FFF;
 			enterprise_id = template->fields[++index].enterprise_number;
 		}
+
 		prevoffset = offset;
 
 		switch (length) {
-		case (1):
-		case (2):
-		case (4):
-		case (8):
-			offset += length;
-			break;
-		default:
-			if (length != VAR_IE_LENGTH) {
+			case (1):
+			case (2):
+			case (4):
+			case (8):
 				offset += length;
-			} else {
-				/* variable length */
-				length = *((uint8_t *) (data_record+offset));
-				offset += 1;
+				break;
+			default:
+				if (length != VAR_IE_LENGTH) {
+					offset += length;
+				} else {
+					/* variable length */
+					length = *((uint8_t *) (data_record+offset));
+					offset += 1;
 
-				if (length == 255) {
-					length = ntohs(*((uint16_t *) (data_record+offset)));
-					offset += 2;
+					if (length == 255) {
+						length = ntohs(*((uint16_t *) (data_record+offset)));
+						offset += 2;
+					}
+
+					prevoffset = offset;
+					offset += length;
 				}
 
-				prevoffset = offset;
-				offset += length;
-			}
-			break;
+				break;
 		}
 
 		/* Field found */
-		if (id == ieid && enterprise == enterprise_id) {
+		if (id == ie_id && enterprise == enterprise_id) {
 			if (data_length) {
 				*data_length = length;
 			}
+
 			return prevoffset;
 		}
 
