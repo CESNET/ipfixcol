@@ -848,6 +848,14 @@ int output_manager_create(configurator *plugins_config, int stat_interval, bool 
 	conf->stat_interval = stat_interval;
 	conf->plugins_config = plugins_config;
 	conf->perman_odid_merge = odid_merge;
+
+	if (conf->manager_mode == OM_SINGLE) {
+		MSG_NOTICE(msg_module, "Configuring Output Manager in single manager mode");
+	} else if (conf->manager_mode == OM_MULTIPLE) {
+		MSG_NOTICE(msg_module, "Configuring Output Manager in multiple manager mode");
+	} else {
+		/* Unknown mode */
+	}
 	
 	*config = conf;
 	return 0;
@@ -980,6 +988,14 @@ int output_manager_set_mode(enum om_mode mode)
 	conf->data_managers = NULL;
 	conf->last = NULL;
 	conf->manager_mode = mode;
+
+	if (mode == OM_SINGLE) {
+		MSG_NOTICE(msg_module, "Switching Output Manager to single manager mode");
+	} else if (mode == OM_MULTIPLE) {
+		MSG_NOTICE(msg_module, "Switching Output Manager to multiple manager mode");
+	} else {
+		/* Unknown mode */
+	}
 
 	if (conf->running) {
 		/* Restart thread */
