@@ -367,6 +367,10 @@
 		<simpara><emphasis>%column</emphasis> is an element alias prefixed with %. %column element can be a computed value, that is a value that is not directly stored.
 		Alternately it is possible to specify the element name in e[x]id[y] format, where [x] means enterprise number and [y] element ID.
 		It is also possible to specify a group of columns (e.g., <emphasis>%port</emphasis> for source and destination port)</simpara>
+		<simpara>It is also possible to mask <emphasis>%column</emphasis> with binary and (&amp;) or binary or (|). Following example select all flows with SYN flag:</simpara>
+		<simplelist>
+			<member>%flg | S > 0</member>
+		</simplelist>
 		<simpara><emphasis>cmp</emphasis> is one of '=', '==', '&lt;', '&gt;', '&lt;=', '&gt;=', '!='.
 		When filtering by string, '%' mark can be automatically inserted to the end or/and beginning of string value according to <emphasis>cmp</emphasis>:</simpara> 
 		<simplelist>

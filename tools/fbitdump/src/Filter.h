@@ -411,12 +411,23 @@ protected:
 	void parseHostname(parserStruct *ps, uint8_t af_type) const throw (std::invalid_argument);
 
 	/**
+	 * \brief Applies plugin specific parsing to the value.
+	 *
+	 * left->parse must be valid pointer to parse function
+	 *
+	 * @params left Parser struct with parse function
+	 * @params right Parser struct with value to be parsed
+	 * @return true if parsing was successful, false otherwise
+	 */
+	void parsePlugin(parserStruct *left, parserStruct *right) const throw (std::invalid_argument);
+
+	/**
 	 * \brief If type is PT_BITCOLVAL, return only column part of this expression
 	 *
 	 * @param name Expression
 	 * @param type Type of column
 	 */
-	std::string onlyCol(std::string &name, partsType type) const;
+	std::string onlyCol(std::string &fdfname, partsType type) const;
 
 	/**
 	 * \brief Create EXISTS(column) expression

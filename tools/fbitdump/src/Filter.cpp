@@ -618,6 +618,11 @@ void Filter::parseBitColVal(parserStruct *ps, parserStruct *left, std::string op
 			j--;
 		}
 
+		/* Parse value if necessary */
+		if (left->parse) {
+			parsePlugin(left, right);
+		}
+
 		/* Create new expression and save it into parser structure */
 		ps->nParts++;
 		ps->parts.push_back(
@@ -626,6 +631,24 @@ void Filter::parseBitColVal(parserStruct *ps, parserStruct *left, std::string op
 
 	/* Set type of structure */
 	ps->type = PT_BITCOLVAL;
+
+	/* Copy the parse function so that the value can also be parsed */
+	if (left->parse) {
+		ps->parse = left->parse;
+	}
+}
+
+void Filter::parsePlugin(parserStruct *left, parserStruct *right) const throw (std::invalid_argument)
+{
+	char buff[PLUGIN_BUFFER_SIZE];
+	left->parse((char *) right->parts[0].c_str(), buff, left->parseConf);
+	if (strlen(buff) > 0) {
+		right->parts[0] = std::string(buff);
+		right->type = PT_NUMBER;
+	} else {
+		/* Wrong filter, end processing */
+		throw std::invalid_argument(std::string("Cannot parse '" + right->parts[0] + "' as " + left->colType));
+	}
 }
 
 std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *right) const throw (std::invalid_argument)
@@ -648,15 +671,7 @@ std::string Filter::parseExp(parserStruct *left, std::string cmp, parserStruct *
 		} else if (!left->colType.empty() && left->colType == "ipv6") { /* IPv6 hostname */
 			this->parseHostname(right, AF_INET6);
 		} else if (left->parse) { /* String with parse function */
-			char buff[PLUGIN_BUFFER_SIZE];
-			left->parse((char *) right->parts[0].c_str(), buff, left->parseConf);
-			if (strlen(buff) > 0) {
-				right->parts[0] = std::string(buff);
-				right->type = PT_NUMBER;
-			} else {
-				/* Wrong filter, end processing */
-				throw std::invalid_argument(std::string("Cannot parse '" + right->parts[0] + "' as " + left->colType));
-			}
+			parsePlugin(left, right);
 		} else { /* Standard string type */
 			this->parseStringType(right, left, cmp);
 		}
@@ -1020,6 +1035,7 @@ bool Filter::checkFilter()
 	
 	return wc.parse(this->filterString.c_str()) == 0;
 }
+
 
 Filter::Filter(Configuration &conf) throw (std::invalid_argument)
 {
