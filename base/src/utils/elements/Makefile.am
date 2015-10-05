@@ -1,8 +1,8 @@
 AM_CPPFLAGS += -I$(top_srcdir)/headers
 
-noinst_LIBRARIES = libelements.a
+AM_CFLAGS += -fPIC
 
-libelements_a_CFLAGS = -fPIC
+noinst_LIBRARIES = libelements.a
 libelements_a_SOURCES = \
 	collection.c collection.h \
 	element.c element.h \

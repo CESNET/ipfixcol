@@ -1,5 +1,5 @@
 /**
- * \file sctp/convert.c
+ * \file utils/conversion/convert.c
  * \author Michal Kozubik <kozubik.michal@gmail.com>
  * \brief Packet conversion from Netflow v5/v9 or sFlow to IPFIX format.
  *
