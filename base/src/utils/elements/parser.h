@@ -1,10 +1,9 @@
-/*
- * Author: Radek Krejci <rkrejci@cesnet.cz>
- * The main devel header for IPFIX Collector.
+/**
+ * \file parser.h
+ * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
+ * \brief Functions for parsing XML definitions of IPFIX elements
  *
  * Copyright (C) 2015 CESNET, z.s.p.o.
- *
- * LICENSE TERMS
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,7 +23,7 @@
  * License (GPL) version 2 or later, in which case the provisions
  * of the GPL apply INSTEAD OF those given above.
  *
- * This software is provided ``as is'', and any express or implied
+ * This software is provided ``as is, and any express or implied
  * warranties, including, but not limited to, the implied warranties of
  * merchantability and fitness for a particular purpose are disclaimed.
  * In no event shall the company or contributors be liable for any
@@ -38,37 +37,14 @@
  *
  */
 
-#ifndef IPFIXCOL_H_
-#define IPFIXCOL_H_
+#ifndef _ELEMENT_PARSER_
+#define _ELEMENT_PARSER_
 
-/**
- * \mainpage IPFIX Collector Developer's Documentation
- *
- * This documents provides documentation of IPFIX Collector (ipfixcol). We
- * provides public API of the collector's input plugins as well as its storage
- * (output) plugins.
- */
+#include <libxml/tree.h>
+#include "element.h"
 
-/**
- * \defgroup publicAPIs Public ipfixcol's APIs
- * \brief APIs for connecting plugins into the ipfixcol.
- */
+// Parse an element
+ipfix_element_t *parse_element(xmlNodePtr node);
 
-/**
- * \defgroup inputPlugins ipficol's Input Plugins
- * \brief Input plugins for the ipfixcol.
- */
+#endif /* _ELEMENT_PARSER_ */
 
-#include <ipfixcol/input.h>
-#include <ipfixcol/storage.h>
-#include <ipfixcol/ipfix.h>
-#include <ipfixcol/templates.h>
-#include <ipfixcol/verbose.h>
-#include <ipfixcol/centos5.h>
-#include <ipfixcol/utils.h>
-#include <ipfixcol/intermediate.h>
-#include <ipfixcol/api.h>
-#include <ipfixcol/ipfix_message.h>
-#include <ipfixcol/ipfix_element.h>
-
-#endif /* IPFIXCOL_H_ */
