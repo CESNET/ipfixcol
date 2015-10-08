@@ -82,7 +82,8 @@ struct input_info_node *input_info_list = NULL; /* Pointer to first node in list
  *
  * \param[in] node input_info object to add to list
  */
-void add_input_info(struct input_info *node) {
+void add_input_info(struct input_info *node)
+{
 	struct input_info_node *aux_node = input_info_list;
 
 	/* Find last position in linked list */
@@ -104,22 +105,30 @@ void add_input_info(struct input_info *node) {
 }
 
 /**
- * \brief Retrieve input_info_node (containing input_info structure) from
- * input_info_list, based on provided ODID
+ * \brief Removes input_info from the input_info_list
  *
- * \param[in] odid ODID to retrieve input_info for
+ * \param[in] node input_info structure to be removed from the list
  */
-struct input_info_node *get_input_info_node(uint32_t odid) {
+void remove_input_info(struct input_info *node)
+{
 	struct input_info_node *aux_node = input_info_list;
-	while (aux_node) {
-		if (aux_node->input_info->odid == odid) {
-			return aux_node;
-		}
+	struct input_info_node *prev_node = NULL;
 
+	/* Find the position of input info node cotaining the node in the linked list */
+	while (aux_node && aux_node->input_info != node) {
+		prev_node = aux_node;
 		aux_node = aux_node->next;
 	}
 
-	return NULL;
+	/* Delete it from the list */
+	if (prev_node == NULL) {
+		input_info_list = aux_node->next;
+	} else {
+		prev_node->next = aux_node->next;
+	}
+
+	/* Delete it from the memory */
+	free(aux_node);
 }
 
 /**
@@ -354,12 +363,6 @@ static void *output_manager_plugin_thread(void* config)
 			/* Stop manager */
 			break;
 		}
-		/* Check whether we have a pointer to the input_info structure based on ODID */
-		struct input_info_node *input_info_node = get_input_info_node(msg->input_info->odid);
-		if (input_info_node == NULL) {
-			/* No reference to input_info structure for this ODID; add it */
-			add_input_info(msg->input_info);
-		}
 
 		odid = (conf->perman_odid_merge || conf->manager_mode == OM_SINGLE)
 				? 0 : msg->input_info->odid;
@@ -389,10 +392,15 @@ static void *output_manager_plugin_thread(void* config)
 			/* New source, increment reference counter */
 			MSG_DEBUG(msg_module, "[%u] New source", data_config->observation_domain_id);
 			data_config->references++;
+			/* Add input info for the statistics thread to read */
+			add_input_info(msg->input_info);
 		} else if (msg->source_status == SOURCE_STATUS_CLOSED) {
 			/* Source closed, decrement reference counter */
 			MSG_DEBUG(msg_module, "[%u] Closed source", data_config->observation_domain_id);
 			data_config->references--;
+
+			/* Remove input_info from statistics */
+			remove_input_info(msg->input_info);
 
 			if (data_config->references == 0) {
 				/* No reference for this ODID, close DM */
