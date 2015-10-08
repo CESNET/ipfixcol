@@ -2,6 +2,8 @@
 
 * Fixed forwarding of UDP templates
 * Unlimited number of incoming TCP connections
+* Fixed statistics rpo multiple inputs with same ODID
+* Fixed incorrect message when API version does not match
 
 **Version 0.8.1:**
 
