@@ -68,6 +68,9 @@ Reconfiguration can:
 
 ###<a name="storage"></a>Storage plugins
 
+By default, Output manager dynamically creates for each ODID an instance of Data manager with private instances of storage plugins. This can be useful, for example, when you want to store flows from different ODIDs into different files.
+If you don't need to have different storage plugins for every ODID, you can enable single Data manager in **startup.xml** by adding `<singleManager>yes</singleManager>` to particular exporting process.
+
 * **IPFIX file** format storage plugin stores data in the IPFIX format in flat files. The storage path must be configured in **startup.xml** to determine where to store the data.
 
 * **ipfixviewer** storage plugin displays captured ipfix data (doesn't store them).

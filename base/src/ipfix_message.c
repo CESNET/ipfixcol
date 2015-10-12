@@ -91,7 +91,7 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
 
 	message = (struct ipfix_message*) calloc (1, sizeof(struct ipfix_message));
 	if (!message) {
-		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return NULL;
 	}
 
@@ -125,7 +125,7 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
 	int ot_set_count = 0;
 	int d_set_count = 0;
 	struct ipfix_set_header *set_header;
-	while (p < (uint8_t*) msg + pktlen) {
+	while (p < (uint8_t *) msg + pktlen) {
 		set_header = (struct ipfix_set_header*) p;
 		if ((uint8_t *) p + ntohs(set_header->length) > (uint8_t *) msg + pktlen) {
 			MSG_WARNING(msg_module, "[%u] Malformed IPFIX message detected (bad length); skipping message...", odid);
@@ -167,28 +167,28 @@ struct ipfix_message *message_create_from_mem(void *msg, int len, struct input_i
  */
 struct ipfix_message *message_create_clone(struct ipfix_message *msg)
 {
-	struct ipfix_message *message;
+	struct ipfix_message *new_msg;
 	uint8_t *packet;
 
 	if (!msg) {
-		MSG_DEBUG(msg_module, "Trying to clone IPFIX message, but argument is NULL");
+		MSG_ERROR(msg_module, "Cannot clone IPFIX message, because source message is NULL");
 		return NULL;
 	}
 
 	packet = (uint8_t *) calloc(1, ntohs(msg->pkt_header->length));
 	if (!packet) {
-		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return NULL;
 	}
 
-	message = message_create_from_mem(packet, msg->pkt_header->length, msg->input_info, msg->source_status);
-	if (!message) {
+	new_msg = message_create_from_mem(packet, msg->pkt_header->length, msg->input_info, msg->source_status);
+	if (!new_msg) {
 		MSG_DEBUG(msg_module, "Unable to clone IPFIX message");
 		free(packet);
 		return NULL;
 	}
 
-	return message;
+	return new_msg;
 }
 
 /**
@@ -203,7 +203,7 @@ int message_get_data(uint8_t **dest, uint8_t *source, int len)
 {
 	*dest = (uint8_t *) malloc(sizeof(uint8_t) * len);
 	if (!*dest) {
-		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
 
@@ -456,7 +456,8 @@ struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint
  */
 int data_record_field_offset(uint8_t *data_record, struct ipfix_template *template, uint32_t enterprise, uint16_t id, int *data_length)
 {
-	int ieid, enterprise_id;
+	uint16_t ie_id;
+	uint32_t enterprise_id;
 	int count, offset = 0, index, length, prevoffset;
 	struct ipfix_template_row *row = NULL;
 
@@ -477,47 +478,50 @@ int data_record_field_offset(uint8_t *data_record, struct ipfix_template *templa
 	/* Data record with variable length field(s) */
 	for (count = index = 0; count < template->field_count; count++, index++) {
 		length = template->fields[index].ie.length;
-		ieid = template->fields[index].ie.id;
+		ie_id = template->fields[index].ie.id;
 		enterprise_id = 0;
 
-		if (ieid >> 15) {
+		if (ie_id >> 15) {
 			/* Enterprise Number */
-			ieid &= 0x7FFF;
+			ie_id &= 0x7FFF;
 			enterprise_id = template->fields[++index].enterprise_number;
 		}
+
 		prevoffset = offset;
 
 		switch (length) {
-		case (1):
-		case (2):
-		case (4):
-		case (8):
-			offset += length;
-			break;
-		default:
-			if (length != VAR_IE_LENGTH) {
+			case (1):
+			case (2):
+			case (4):
+			case (8):
 				offset += length;
-			} else {
-				/* variable length */
-				length = *((uint8_t *) (data_record+offset));
-				offset += 1;
+				break;
+			default:
+				if (length != VAR_IE_LENGTH) {
+					offset += length;
+				} else {
+					/* variable length */
+					length = *((uint8_t *) (data_record+offset));
+					offset += 1;
 
-				if (length == 255) {
-					length = ntohs(*((uint16_t *) (data_record+offset)));
-					offset += 2;
+					if (length == 255) {
+						length = ntohs(*((uint16_t *) (data_record+offset)));
+						offset += 2;
+					}
+
+					prevoffset = offset;
+					offset += length;
 				}
 
-				prevoffset = offset;
-				offset += length;
-			}
-			break;
+				break;
 		}
 
 		/* Field found */
-		if (id == ieid && enterprise == enterprise_id) {
+		if (id == ie_id && enterprise == enterprise_id) {
 			if (data_length) {
 				*data_length = length;
 			}
+
 			return prevoffset;
 		}
 
@@ -632,7 +636,7 @@ uint16_t data_record_length(uint8_t *data_record, struct ipfix_template *templat
  */
 int data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_template *templ, dset_callback_f processor, void *proc_data)
 {
-	uint16_t setlen = ntohs(data_set->header.length), rec_len, count = 0;
+	uint16_t set_len = ntohs(data_set->header.length), rec_len, count = 0;
 	uint8_t *ptr = data_set->records;
 
 	uint16_t min_record_length = templ->data_length;
@@ -643,7 +647,7 @@ int data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_templ
 		min_record_length = min_record_length & 0x7fff; /* size of the fields, variable fields excluded  */
 	}
 
-	while ((int) setlen - (int) offset - (int) min_record_length >= 0) {
+	while ((int) set_len - (int) offset - (int) min_record_length >= 0) {
 		ptr = (((uint8_t *) data_set) + offset);
 		rec_len = data_record_length(ptr, templ);
 		if (processor) {
@@ -717,7 +721,7 @@ void data_set_set_field(struct ipfix_data_set *data_set, struct ipfix_template *
 int data_set_records_count(struct ipfix_data_set *data_set, struct ipfix_template *template)
 {
 	if (template->data_length & 0x80000000) {
-		/* damn... there is a Information Element with variable length. we have to
+		/* damn... there is an Information Element with variable length. We have to
 		 * compute number of the Data Records in current Set by hand */
 		/* Get number of records */
 		return data_set_process_records(data_set, template, NULL, NULL);
@@ -744,7 +748,7 @@ struct metadata *message_copy_metadata(struct ipfix_message *src)
 {
 	struct metadata *metadata = calloc(src->data_records_count, sizeof(struct metadata));
 	if (!metadata) {
-		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return NULL;
 	}
 
@@ -768,7 +772,7 @@ struct metadata *message_copy_metadata(struct ipfix_message *src)
 
 		metadata[i].channels = calloc(channels + 1, sizeof(void*));
 		if (!metadata) {
-			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			free(metadata);
 			return NULL;
 		}

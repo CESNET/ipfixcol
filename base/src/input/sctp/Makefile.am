@@ -1,11 +1,7 @@
 pluginsdir = $(pkgdatadir)/plugins
-AM_CPPFLAGS = -I$(top_srcdir)/headers $(SFLOW_CPPFLAGS)
+AM_CPPFLAGS = -I$(top_srcdir)/headers -I$(top_srcdir)/src/utils/conversion
 
 plugins_LTLIBRARIES = ipfixcol-sctp-input.la
-ipfixcol_sctp_input_la_LDFLAGS = -module -avoid-version -shared
-ipfixcol_sctp_input_la_LIBADD = -lsctp -lrt
-
-ipfixcol_sctp_input_la_SOURCES = sctp_input.c convert.c convert.h
-if ENABLE_SFLOW
-ipfixcol_sctp_input_la_SOURCES += sflow.c sflow.h sflowtool.h
-endif
+ipfixcol_sctp_input_la_LDFLAGS = -module -avoid-version -shared -L$(top_srcdir)/src/utils/conversion
+ipfixcol_sctp_input_la_LIBADD = -lsctp -lrt -lconversion
+ipfixcol_sctp_input_la_SOURCES = sctp_input.c

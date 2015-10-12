@@ -69,5 +69,6 @@
 #include <ipfixcol/intermediate.h>
 #include <ipfixcol/api.h>
 #include <ipfixcol/ipfix_message.h>
+#include <ipfixcol/ipfix_element.h>
 
 #endif /* IPFIXCOL_H_ */

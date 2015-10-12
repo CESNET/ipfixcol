@@ -161,8 +161,8 @@ list:
 value:
 	  NUMBER { $$ = new fbitdump::_parserStruct; filter.parseNumber($$, *$1); delete $1; }
 	| HEXNUM { $$ = new fbitdump::_parserStruct; filter.parseHex($$, *$1); delete $1; }
-        | FLOAT  { $$ = new fbitdump::_parserStruct; filter.parseFloat($$, *$1); delete $1; }
-        | MAC  { $$ = new fbitdump::_parserStruct; filter.parseMac($$, *$1); delete $1; }
+	| FLOAT  { $$ = new fbitdump::_parserStruct; filter.parseFloat($$, *$1); delete $1; }
+	| MAC  { $$ = new fbitdump::_parserStruct; filter.parseString($$, *$1); delete $1; }
 	| IPv4 { $$ = new fbitdump::_parserStruct; filter.parseIPv4($$, *$1); delete $1; }
 	| IPv4_SUB { $$ = new fbitdump::_parserStruct; filter.parseIPv4Sub($$, *$1); delete $1; }
 	| IPv6 { $$ = new fbitdump::_parserStruct; filter.parseIPv6($$, *$1); delete $1; }

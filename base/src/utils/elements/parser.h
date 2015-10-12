@@ -1,7 +1,7 @@
 /**
- * \file udp/convert.h
- * \author Michal Kozubik <kozubik.michal@gmail.com>
- * \brief Packet conversion from Netflow v5/v9 or sFlow to IPFIX format.
+ * \file parser.h
+ * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
+ * \brief Functions for parsing XML definitions of IPFIX elements
  *
  * Copyright (C) 2015 CESNET, z.s.p.o.
  *
@@ -37,39 +37,14 @@
  *
  */
 
-#ifndef __CONVERT_H
-#define __CONVERT_H
+#ifndef _ELEMENT_PARSER_
+#define _ELEMENT_PARSER_
 
-enum {
-	UDP_PLUGIN,
-	TCP_PLUGIN,
-	SCTP_PLUGIN
-};
+#include <libxml/tree.h>
+#include "element.h"
 
-/**
- * \brief Prepare static variables used for inserting template and data sets
- *
- * Also allocate memory for templates
- *
- * \param[in] in_plugin Type of input plugin (UDP_PLUGIN...)
- * \param[in] len Length of buff used in plugins
- * \return 0 on success
- */
-int convert_init(int in_plugin, int len);
+// Parse an element
+ipfix_element_t *parse_element(xmlNodePtr node);
 
-/**
- * \brief Main function for packet conversion
- *
- * \param[out] packet Flow information data in the form of IPFIX packet
- * \param[in] len Length of packet
- * \param[in] input_info Information structure storing data needed for refreshing templates
- * \return 0 on success, a negative value otherwise
- */
-int convert_packet(char **packet, ssize_t *len, char *input_info);
+#endif /* _ELEMENT_PARSER_ */
 
-/**
- * \brief Reallocate memory for templates
- */
-void convert_close();
-
-#endif

@@ -80,14 +80,14 @@ void *reorder_index(void * config)
 		/* Reorder partitions */
 		if (conf->reorder == 1) {
 			MSG_DEBUG(msg_module, "Reordering: %s",dir.c_str());
-			reorder_part = new ibis::part(dir.c_str(),NULL, false);
+			reorder_part = new ibis::part(dir.c_str(), NULL, false);
 			reorder_part->reorder(); /* TODO return value */
 			delete reorder_part;
 		}
 
 		/* Build indexes */
 		if (conf->indexes == 1) { /* Build all indexes */
-			MSG_DEBUG(msg_module, "Creating indexes: %s",dir.c_str());
+			MSG_DEBUG(msg_module, "Creating indexes: %s", dir.c_str());
 			index_table = ibis::table::create(dir.c_str());
 			index_table->buildIndexes(NULL);
 			delete index_table;
@@ -97,7 +97,7 @@ void *reorder_index(void * config)
 			for (unsigned int i=0; i < conf->index_en_id->size(); i++) {
 				for (unsigned int j=0; j < ibis_columns.size(); j++) {
 					if ((*conf->index_en_id)[i] == std::string(ibis_columns[j])) {
-						MSG_DEBUG(msg_module, "Creating indexes: %s%s",dir.c_str(),(*conf->index_en_id)[i].c_str());
+						MSG_DEBUG(msg_module, "Creating indexes: %s%s", dir.c_str(), (*conf->index_en_id)[i].c_str());
 						index_table->buildIndex(ibis_columns[j]);
 					}
 				}
@@ -107,14 +107,14 @@ void *reorder_index(void * config)
 
 		ibis::fileManager::instance().flushDir(dir.c_str());
 	}
+
 	sem_post(&(conf->sem));
 	return NULL;
 }
 
 std::string dir_hierarchy(struct fastbit_config *config, uint32_t oid)
 {
-	struct tm * timeinfo;
-
+	struct tm *timeinfo;
 	const int ft_size = 1000;
 	char formated_time[ft_size];
 	std::string dir;
@@ -136,7 +136,6 @@ std::string dir_hierarchy(struct fastbit_config *config, uint32_t oid)
 	}
 
 	dir += config->window_dir;
-
 	return dir;
 }
 
@@ -156,7 +155,7 @@ void update_window_name(struct fastbit_config *conf)
 		ss.str("");
 		flushed++;
 	} else {
-		timeinfo = localtime (&(conf->last_flush));
+		timeinfo = localtime(&(conf->last_flush));
 		strftime(formated_time, 17, "%Y%m%d%H%M%S", timeinfo);
 		conf->window_dir = conf->prefix + std::string(formated_time) + "/";
 	}
@@ -165,7 +164,7 @@ void update_window_name(struct fastbit_config *conf)
 void flush_data(struct fastbit_config *conf, uint32_t odid, std::map<uint16_t,template_table*> *templates, bool close)
 {
 	std::string dir;
-	std::map<uint16_t,template_table*>::iterator table;
+	std::map<uint16_t, template_table*>::iterator table;
 	int s;
 	pthread_t index_thread;
 	std::stringstream ss;
@@ -182,7 +181,7 @@ void flush_data(struct fastbit_config *conf, uint32_t odid, std::map<uint16_t,te
 
 		dir = dir_hierarchy(conf, odid);
 
-		for (table = templates->begin(); table != templates->end();table++) {
+		for (table = templates->begin(); table != templates->end(); table++) {
 			conf->dirs->push_back(dir + ((*table).second)->name() + "/");
 			(*table).second->flush(dir);
 			(*table).second->reset_rows();
@@ -202,7 +201,7 @@ void flush_data(struct fastbit_config *conf, uint32_t odid, std::map<uint16_t,te
 	}
 
 	if (close) {
-		s = pthread_join(index_thread,NULL);
+		s = pthread_join(index_thread, NULL);
 		if (s != 0) {
 			MSG_ERROR(msg_module, "pthread_join");
 		}
@@ -216,10 +215,9 @@ void flush_data(struct fastbit_config *conf, uint32_t odid, std::map<uint16_t,te
 
 int process_startup_xml(char *params, struct fastbit_config* c)
 {
-	struct tm * timeinfo;
+	struct tm *timeinfo;
 	char formated_time[17];
-	std::string path, timeWindow, recordLimit, nameType, namePrefix, indexes, test, timeAligment;
-
+	std::string path, time_window, record_limit, name_type, name_prefix, indexes, test, time_alignment;
 	pugi::xml_document doc;
 	doc.load(params);
 
@@ -230,23 +228,23 @@ int process_startup_xml(char *params, struct fastbit_config* c)
 		}
 
 		pugi::xpath_node ie = doc.select_single_node("fileWriter");
-		path=ie.node().child_value("path");
+		path = ie.node().child_value("path");
 
 		/* Make sure path ends with '/' character */
-		if (path.at(path.size() -1) != '/') {
+		if (path.at(path.size() - 1) != '/') {
 			c->sys_dir = path + "/";
 		} else {
 			c->sys_dir = path;
 		}
 
 		c->indexes = 0;
-		indexes=ie.node().child_value("onTheFlyIndexes");
+		indexes = ie.node().child_value("onTheFlyIndexes");
 		if (indexes == "yes") {
 			c->indexes = 1;
 		}
 
 		c->reorder = 0;
-		indexes=ie.node().child_value("reorder");
+		indexes = ie.node().child_value("reorder");
 		if (indexes == "yes") {
 			c->reorder = 1;
 		}
@@ -265,7 +263,7 @@ int process_startup_xml(char *params, struct fastbit_config* c)
 			}
 
 			/* Make sure IPv6 elements are indexed */
-			if (IPv6 == get_type_from_xml(c,strtoul(en.c_str(),NULL,0), strtoul(id.c_str(),NULL,0))) {
+			if (IPv6 == get_type_from_xml(c, strtoul(en.c_str(), NULL, 0), strtoul(id.c_str(), NULL, 0))) {
 				c->index_en_id->push_back("e" + en + "id" + id + "p0");
 				c->index_en_id->push_back("e" + en + "id" + id + "p1");
 			} else {
@@ -278,48 +276,49 @@ int process_startup_xml(char *params, struct fastbit_config* c)
 		}
 
 		ie = doc.select_single_node("fileWriter/dumpInterval");
-		timeWindow=ie.node().child_value("timeWindow");
-		c->time_window = atoi(timeWindow.c_str());
+		time_window = ie.node().child_value("timeWindow");
+		c->time_window = atoi(time_window.c_str());
 
-		recordLimit=ie.node().child_value("recordLimit");
-		c->records_window = atoi(recordLimit.c_str());
+		record_limit = ie.node().child_value("recordLimit");
+		c->records_window = atoi(record_limit.c_str());
 
-		recordLimit=ie.node().child_value("bufferSize");
-		c->buff_size = atoi(recordLimit.c_str());
+		record_limit = ie.node().child_value("bufferSize");
+		c->buff_size = atoi(record_limit.c_str());
 
-		timeAligment=ie.node().child_value("timeAlignment");
+		time_alignment = ie.node().child_value("timeAlignment");
 
 		ie = doc.select_single_node("fileWriter/namingStrategy");
-		namePrefix=ie.node().child_value("prefix");
-		c->prefix = namePrefix;
+		name_prefix = ie.node().child_value("prefix");
+		c->prefix = name_prefix;
 
 		time(&(c->last_flush));
 		
-		nameType=ie.node().child_value("type");
-		if (nameType == "time") {
+		name_type = ie.node().child_value("type");
+		if (name_type == "time") {
 			c->dump_name = TIME;
-			if (timeAligment == "yes") {
+			if (time_alignment == "yes") {
 				if (c->time_window > 0) {
 					/* operators '/' and '*' are used for round down time to time window */
-					c->last_flush = ((c->last_flush/c->time_window) * c->time_window);
+					c->last_flush = ((c->last_flush / c->time_window) * c->time_window);
 				}
 			}
+
 			timeinfo = localtime(&(c->last_flush));
 			strftime(formated_time, 17, "%Y%m%d%H%M%S", timeinfo);
 			c->window_dir = c->prefix + std::string(formated_time) + "/";
-		} else if (nameType == "incremental") {
+		} else if (name_type == "incremental") {
 			c->dump_name = INCREMENTAL;
 			c->window_dir = c->prefix + "000000000001/";
-		} else if (nameType == "prefix") {
+		} else if (name_type == "prefix") {
 			c->dump_name = PREFIX;
 			if (c->prefix == "") {
-				c->prefix == "fbitfiles";
+				c->prefix = "fbitfiles";
 			}
 
 			c->window_dir = c->prefix + "/";
 		}
 
-		if (sem_init(&(c->sem),0,1)) {
+		if (sem_init(&(c->sem), 0, 1)) {
 			MSG_ERROR(msg_module, "Error semaphore init");
 			return 1;
 		}
@@ -344,28 +343,30 @@ int storage_init(char *params, void **config)
 	}
 
 	c = (struct fastbit_config*) *config;
-	c->ob_dom = new std::map<uint32_t,std::map<uint16_t,template_table*>* >;
+	c->ob_dom = new std::map<uint32_t, std::map<uint16_t, template_table*> *>;
 	if (c->ob_dom == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return 1;
 	}
 
-	c->flowWatch = new std::map<uint32_t,FlowWatch>;
+	c->flowWatch = new std::map<uint32_t, FlowWatch>;
 	if (c->flowWatch == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return 1;
 	}
 
-	c->elements_types = new	std::map<uint32_t,std::map<uint16_t,enum store_type> >;
+	c->elements_types = new	std::map<uint32_t, std::map<uint16_t, enum store_type>>;
 	if (c->elements_types == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return 1;
 	}
+
 	c->index_en_id = new std::vector<std::string>;
 	if (c->index_en_id == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return 1;
 	}
+
 	c->dirs = new std::vector<std::string>;
 	if (c->dirs == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
@@ -387,12 +388,12 @@ extern "C"
 int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 		const struct ipfix_template_mgr *template_mgr) {
 	(void) template_mgr;
-	std::map<uint16_t,template_table*>::iterator table;
+	std::map<uint16_t, template_table*>::iterator table;
 	struct fastbit_config *conf = (struct fastbit_config *) config;
-	std::map<uint16_t,template_table*> *templates = NULL;
-	std::map<uint16_t,template_table*> *old_templates = NULL; /* Templates to be removed */
-	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom = conf->ob_dom;
-	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
+	std::map<uint16_t, template_table*> *templates = NULL;
+	std::map<uint16_t, template_table*> *old_templates = NULL; /* Templates to be removed */
+	std::map<uint32_t, std::map<uint16_t, template_table*> *> *ob_dom = conf->ob_dom;
+	std::map<uint32_t, std::map<uint16_t, template_table*> *>::iterator dom_id;
 	static int rcnt = 0;
 
 	uint16_t template_id;
@@ -409,7 +410,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	oid = ntohl(ipfix_msg->pkt_header->observation_domain_id);
 	if ((dom_id = ob_dom->find(oid)) == ob_dom->end()) {
 		MSG_DEBUG(msg_module, "Received new ODID: %u", oid);
-		std::map<uint16_t,template_table*> *new_dom_id = new std::map<uint16_t,template_table*>;
+		std::map<uint16_t, template_table*> *new_dom_id = new std::map<uint16_t, template_table*>;
 		ob_dom->insert(std::make_pair(oid, new_dom_id));
 		dom_id = ob_dom->find(oid);
 
@@ -417,7 +418,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	}
 
 	templates = (*dom_id).second;
-	dir = dir_hierarchy(conf,(*dom_id).first);
+	dir = dir_hierarchy(conf, (*dom_id).first);
 
 	/* Message from ipfixcol have maximum of MSG_MAX_DATA_COUPLES data records */
 	for (i = 0 ; i < MSG_MAX_DATA_COUPLES && ipfix_msg->data_couple[i].data_set; i++) {	
@@ -438,7 +439,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 				continue;
 			}
 			
-			templates->insert(std::pair<uint16_t,template_table*>(template_id,table_tmp));
+			templates->insert(std::pair<uint16_t, template_table*>(template_id, table_tmp));
 			table = templates->find(template_id);
 		} else {
 			/* Check template time. On reception of a new template it is crucial to rewrite the old one. */
@@ -446,10 +447,12 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 				MSG_DEBUG(msg_module, "Received new template with already used Template ID: %hu", template_id);
 
 				/* Init map for old template if necessary */
-				if (old_templates == NULL) old_templates = new std::map<uint16_t,template_table*>;
+				if (old_templates == NULL) {
+					old_templates = new std::map<uint16_t,template_table*>;
+				}
 
 				/* Store old template */
-				old_templates->insert(std::pair<uint16_t,template_table*>(table->first,table->second));
+				old_templates->insert(std::pair<uint16_t, template_table*>(table->first, table->second));
 
 				/* Flush data */
 				flush_data(conf, oid, old_templates, false);
@@ -470,7 +473,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 					continue;
 				}
 
-				templates->insert(std::pair<uint16_t,template_table*>(template_id,table_tmp));
+				templates->insert(std::pair<uint16_t, template_table*>(template_id, table_tmp));
 				table = templates->find(template_id);
 				/* New template was created, it creates new directory if necessary */
 			}
@@ -494,7 +497,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 			time(&rawtime);
 			if (difftime(rawtime,conf->last_flush) > conf->time_window) {
 				/* Flush data for all ODID */
-				for (dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++) {
+				for (dom_id = ob_dom->begin(); dom_id != ob_dom->end(); dom_id++) {
 					flush_data(conf, (*dom_id).first, (*dom_id).second, false);
 				}
 
@@ -544,19 +547,19 @@ extern "C"
 int storage_close(void **config)
 {
 	struct fastbit_config *conf = (struct fastbit_config *) (*config);
-	std::map<uint16_t,template_table*>::iterator table;
-	std::map<uint16_t,template_table*> *templates;
-	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom = conf->ob_dom;
-	std::map<uint32_t,std::map<uint16_t,template_table*>* >::iterator dom_id;
+	std::map<uint16_t, template_table*>::iterator table;
+	std::map<uint16_t, template_table*> *templates;
+	std::map<uint32_t, std::map<uint16_t, template_table*> *> *ob_dom = conf->ob_dom;
+	std::map<uint32_t, std::map<uint16_t, template_table*> *>::iterator dom_id;
 
 	/* Flush data, remove templates */
-	for (dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++) {
+	for (dom_id = ob_dom->begin(); dom_id != ob_dom->end(); dom_id++) {
 		/* Flush data */
 		templates = (*dom_id).second;
 		flush_data(conf, (*dom_id).first, templates, true);
 
 		/* Free templates */
-		for (table = templates->begin(); table!=templates->end();table++) {
+		for (table = templates->begin(); table != templates->end(); table++) {
 			delete (*table).second;
 		}
 		delete (*dom_id).second;

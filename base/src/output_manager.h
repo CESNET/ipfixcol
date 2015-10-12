@@ -70,6 +70,12 @@ struct stat_conf {
 	int done;
 };
 
+/** Mode of output manager */
+enum om_mode {
+	OM_MULTIPLE = 0, /**< (default) One data manager per ODID      */
+	OM_SINGLE        /**< Single common data manager for all ODIDs */
+};
+
 /**
  * \struct output_mm_config
  *
@@ -82,7 +88,8 @@ struct output_manager_config {
 	struct ring_buffer *in_queue;               /**< Input queue */
 	struct ring_buffer *new_in;                 /**< New input queue */
 	int running;                                /**< Status of manager */
-	bool odid_merge;                            /**< Enable common data manager */
+	bool perman_odid_merge;                     /**< Enable permanently single data manager */
+	enum om_mode manager_mode;                       /**< Manager mode */
 	pthread_t thread_id;                        /**< Manager's thread ID */
 	pthread_t stat_thread;                      /**< Stat's thread ID */
 	int stat_interval;                          /**< Stat's interval */
@@ -145,5 +152,17 @@ void output_manager_set_in_queue(struct ring_buffer *in_queue);
  * \return input queue
  */
 struct ring_buffer *output_manager_get_in_queue();
+
+/**
+ * \brief Change mode of output manager
+ *
+ * Allow to change mode from single mode to multi mode and vice versa.
+ * If new mode is different from current mode, all data managers are removed.
+ * If the manager thread is running, it will be stopped and restarted later.
+ *
+ * \param[in] mode New mode of output manager
+ * \return 0 on successs
+ */
+int output_manager_set_mode(enum om_mode mode);
 
 #endif /* OUTPUT_MANAGER_H_ */

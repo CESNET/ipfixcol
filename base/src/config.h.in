@@ -75,6 +75,7 @@ struct plugin_xml_conf {
 	char *file;
 	xmlDocPtr xmldata;
 	char name[16]; /**< name for process or thread read from configuration*/
+	bool require_single_manager;
 };
 
 /**

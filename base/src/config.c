@@ -191,9 +191,11 @@ struct plugin_xml_conf_list* get_storage_plugins(xmlNodePtr collector_node, xmlD
 			config_ctxt = NULL, exporter_ctxt = NULL;
 	xmlXPathObjectPtr xpath_obj_expprocnames = NULL, xpath_obj_expproc = NULL,
 			xpath_obj_destinations = NULL, xpath_obj_plugin_desc = NULL;
-	xmlChar *file_format = (xmlChar *) "", *file_format_inter, *plugin_file, *odid, *thread_name;
+	xmlChar *file_format = (xmlChar *) "", *file_format_inter, *plugin_file,
+			*odid, *thread_name, *single_mgr_txt;
 	struct plugin_xml_conf_list* plugins = NULL, *aux_plugin = NULL;
 	char *odidptr;
+	bool single_mgr;
 
 	/* initiate internal config - open xml file, get xmlDoc and prepare xpath context for it */
 	if ((internal_ctxt = ic_init(BAD_CAST "cesnet-ipfixcol-int", internal_cfg)) == NULL) {
@@ -263,6 +265,13 @@ struct plugin_xml_conf_list* get_storage_plugins(xmlNodePtr collector_node, xmlD
 						/* now check if it is a <fileWriter> because all storage plugins ARE <fileWriter>s */
 						exporter_doc = xmlNewDoc(BAD_CAST "1.0");
 						xmlDocSetRootElement(exporter_doc, xmlCopyNode (xpath_obj_expproc->nodesetval->nodeTab[j], 1));
+
+						/* check if single output data manager is required */
+						single_mgr = false;
+						single_mgr_txt = get_children_content(xpath_obj_expproc->nodesetval->nodeTab[j], BAD_CAST "singleManager");
+						if (single_mgr_txt) {
+							single_mgr = !xmlStrcmp(single_mgr_txt, BAD_CAST "yes");
+						}
 
 						/* create xpath evaluation context of <exportingProcess> node */
 						exporter_ctxt = xmlXPathNewContext(exporter_doc);
@@ -340,6 +349,8 @@ struct plugin_xml_conf_list* get_storage_plugins(xmlNodePtr collector_node, xmlD
 									}
 									aux_plugin->config.xmldata = xmlNewDoc (BAD_CAST "1.0");
 									xmlDocSetRootElement(aux_plugin->config.xmldata, xmlCopyNode(node_filewriter, 1));
+
+									aux_plugin->config.require_single_manager = single_mgr;
 
 									/* link new plugin item into the return list */
 									aux_plugin->next = plugins;

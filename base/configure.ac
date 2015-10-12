@@ -232,6 +232,8 @@ AC_CONFIG_FILES([Makefile
 				src/utils/ipfixsend/Makefile
 				src/utils/libsiso/Makefile
 				src/utils/profiles/Makefile
+				src/utils/elements/Makefile
+				src/utils/conversion/Makefile
 				config/Makefile
 				headers/Makefile
 				documentation/doxygen/Makefile

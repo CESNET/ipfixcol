@@ -75,7 +75,7 @@ IPFIXCOL_API_VERSION;
 /** Identifier to MSG_* macros */
 static char *msg_module = "UDP input";
 
-/** UDP input plugin identification for packet conversion from netflow to ipfix format */
+/** UDP input plugin identification for packet conversion from NetFlow to IPFIX */
 #define UDP_INPUT_PLUGIN
 
 /**
@@ -357,15 +357,16 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 {
 	/* get socket */
 	int sock = ((struct plugin_conf*) config)->socket;
-	ssize_t length = 0;
-	socklen_t addr_length = sizeof(struct sockaddr_in6);
+	ssize_t len = 0;
+	uint16_t max_msg_len = BUFF_LEN * sizeof(char);
+	socklen_t addr_len = sizeof(struct sockaddr_in6);
 	struct sockaddr_in6 address;
 	struct plugin_conf *conf = config;
 	struct input_info_list *info_list;
 
 	/* allocate memory for packet, if needed */
 	if (!*packet) {
-		*packet = malloc(BUFF_LEN * sizeof(char));
+		*packet = malloc(max_msg_len);
 		if (!*packet) {
 			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			return INPUT_ERROR;
@@ -373,8 +374,8 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 	}
 
 	/* receive packet */
-	length = recvfrom(sock, *packet, BUFF_LEN, 0, (struct sockaddr*) &address, &addr_length);
-	if (length == -1) {
+	len = recvfrom(sock, *packet, BUFF_LEN, 0, (struct sockaddr*) &address, &addr_len);
+	if (len == -1) {
 		if (errno == EINTR) {
 			return INPUT_INTR;
 		}
@@ -383,24 +384,24 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		return INPUT_ERROR;
 	}
 
-	if (length < IPFIX_HEADER_LENGTH) {
-		MSG_ERROR(msg_module, "Packet header is incomplete; skipping message...");
+	if (len < IPFIX_HEADER_LENGTH) {
+		MSG_WARNING(msg_module, "Packet header is incomplete; skipping message...");
 		return INPUT_INTR;
 	}
 
-	/* Convert packet from Netflow v5/v9/sflow to IPFIX format */
+	/* Try to convert packet from Netflow v5/v9/sflow to IPFIX */
 	if (htons(((struct ipfix_header *) (*packet))->version) != IPFIX_VERSION) {
-		if (convert_packet(packet, &length, (char *) conf->info_list) != 0) {
+		if (convert_packet(packet, &len, max_msg_len, (char *) conf->info_list) != 0) {
 			MSG_WARNING(msg_module, "Message conversion error; skipping message...");
 			return INPUT_INTR;
 		}
 	}
 
 	/* Check if lengths are the same */
-	if (length < htons(((struct ipfix_header *) *packet)->length)) {
+	if (len < htons(((struct ipfix_header *) *packet)->length)) {
 		return INPUT_INTR;
-	} else if (length > htons(((struct ipfix_header *) *packet)->length)) {
-		length = htons(((struct ipfix_header *) *packet)->length);
+	} else if (len > htons(((struct ipfix_header *) *packet)->length)) {
+		len = htons(((struct ipfix_header *) *packet)->length);
 	}
 
 	/* go through input_info_list */
@@ -468,7 +469,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 	/* pass info to the collector */
 	*info = (struct input_info*) info_list;
 
-	return length;
+	return len;
 }
 
 /**

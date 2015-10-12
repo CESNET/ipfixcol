@@ -48,7 +48,6 @@
  * @{
  */
 
-
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
@@ -68,9 +67,9 @@ static const char *msg_module = "odip";
 
 /* plugin's configuration structure */
 struct odip_ip_config {
-	char *params;  /* input parameters */
-	void *ip_config; /* internal process configuration */
-	uint32_t ip_id; /* source ID for Template Manager */
+	char *params;                  /* input parameters */
+	void *ip_config;               /* internal process configuration */
+	uint32_t ip_id;                /* source ID for Template Manager */
 	struct ipfix_template_mgr *tm; /* Template Manager */
 };
 
@@ -103,7 +102,7 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 	struct odip_ip_config *conf;
 	conf = (struct odip_ip_config *) calloc(1, sizeof(*conf));
 	if (!conf) {
-		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
 
@@ -112,7 +111,7 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 	conf->tm = template_mgr;
 	
 	*config = conf;
-	MSG_NOTICE(msg_module, "Successfully initialized");
+	MSG_NOTICE(msg_module, "Plugin initialization completed successfully");
 	return 0;
 }
 
@@ -127,10 +126,6 @@ void templates_processor(uint8_t *rec, int rec_len, void *data)
 {
 	struct ipfix_template_record *record = (struct ipfix_template_record *) rec;
 	struct odip_processor *proc = (struct odip_processor *) data;
-	uint16_t odip4_field = htons(ODIP4_FIELD);
-	uint16_t odip6_field = htons(ODIP6_FIELD);
-	uint16_t odip4_length = htons(ODIP4_LENGTH);
-	uint16_t odip6_length = htons(ODIP6_LENGTH);
 	
 	/* which version of ip should be added */
 	int add = 0;
@@ -149,26 +144,30 @@ void templates_processor(uint8_t *rec, int rec_len, void *data)
 	
 	/* add information about source IP (if needed) */
 	switch (add) {
-	case 4:
-		MSG_DEBUG(msg_module, "[%u] %d - added info about exporter's source address (IPv4)", proc->info->odid, htons(new_rec->template_id));
-		memcpy(proc->msg + proc->offset, &odip4_field, 2);
-		memcpy(proc->msg + proc->offset + 2, &odip4_length, 2);
-		proc->offset += 4;
-		proc->length += 4;
-		new_rec->count = htons(ntohs(new_rec->count) + 1);
-		break;
-	case 6:
-		MSG_DEBUG(msg_module, "[%u] %d - added info about exporter's source address (IPv6)", proc->info->odid, htons(new_rec->template_id));
-		memcpy(proc->msg + proc->offset, &odip6_field, 2);
-		memcpy(proc->msg + proc->offset + 2, &odip6_length, 2);
-		proc->offset += 4;
-		proc->length += 4;
-		new_rec->count = htons(ntohs(new_rec->count) + 1);
-		add = 4;
-		break;
-	default:
-		MSG_DEBUG(msg_module, "[%u] %d - already contains information about exporter's source address", proc->info->odid, htons(new_rec->template_id));
-		break;
+		case 4: {
+			// MSG_DEBUG(msg_module, "[%u] %d - added info about exporter's source address (IPv4)", proc->info->odid, htons(new_rec->template_id));
+			uint16_t odip4_field = htons(ODIP4_FIELD);
+			uint16_t odip4_length = htons(ODIP4_LENGTH);
+			memcpy(proc->msg + proc->offset, &odip4_field, 2);
+			memcpy(proc->msg + proc->offset + 2, &odip4_length, 2);
+			proc->offset += 4;
+			proc->length += 4;
+			new_rec->count = htons(ntohs(new_rec->count) + 1);
+			break; }
+		case 6: {
+			// MSG_DEBUG(msg_module, "[%u] %d - added info about exporter's source address (IPv6)", proc->info->odid, htons(new_rec->template_id));
+			uint16_t odip6_field = htons(ODIP6_FIELD);
+			uint16_t odip6_length = htons(ODIP6_LENGTH);
+			memcpy(proc->msg + proc->offset, &odip6_field, 2);
+			memcpy(proc->msg + proc->offset + 2, &odip6_length, 2);
+			proc->offset += 4;
+			proc->length += 4;
+			new_rec->count = htons(ntohs(new_rec->count) + 1);
+			add = 4;
+			break; }
+		default:
+			// MSG_DEBUG(msg_module, "[%u] %d - already contains information about exporter's source address", proc->info->odid, htons(new_rec->template_id));
+			break;
 	}
 	
 	/* save template into template manager */
@@ -238,12 +237,12 @@ void odip_copy_template_info(struct ipfix_template *to, struct ipfix_template *f
 int intermediate_process_message(void *config, void *message)
 {
 	struct odip_ip_config *conf = (struct odip_ip_config *) config;
-	struct ipfix_message  *msg  = (struct ipfix_message  *) message;
-	struct ipfix_message  *new_msg = NULL;
+	struct ipfix_message *msg = (struct ipfix_message *) message;
+	struct ipfix_message *new_msg = NULL;
 	
 	struct input_info_network *info = (struct input_info_network *) msg->input_info;
 	struct odip_processor proc;
-	int i, new_i = 0, prevoffset, tsets = 0, otsets = 0;
+	int i, new_i = 0, prev_offset, tsets = 0, otsets = 0;
 	
 	/* source closed or not network source */
 	if (msg->source_status == SOURCE_STATUS_CLOSED || msg->input_info->type == SOURCE_TYPE_IPFIX_FILE) {
@@ -259,13 +258,13 @@ int intermediate_process_message(void *config, void *message)
 	}
 	
 	if (!proc.msg) {
-		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return 1;
 	}
 
 	new_msg = calloc(1, sizeof(struct ipfix_message));
 	if (!new_msg) {
-		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		free(proc.msg);
 		return 1;
 	}
@@ -287,17 +286,17 @@ int intermediate_process_message(void *config, void *message)
 	/* process template records */
 	proc.type = TM_TEMPLATE;
 	for (i = 0; i < MSG_MAX_TEMPL_SETS && msg->templ_set[i]; ++i) {
-		prevoffset = proc.offset;
+		prev_offset = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->templ_set[i]->header), 4);
 		proc.offset += 4;
 		proc.length = 4;
 
 		template_set_process_records(msg->templ_set[i], proc.type, &templates_processor, (void *) &proc);
 
-		if (proc.offset == prevoffset + 4) {
-			proc.offset = prevoffset;
+		if (proc.offset == prev_offset + 4) {
+			proc.offset = prev_offset;
 		} else {
-			new_msg->templ_set[tsets] = (struct ipfix_template_set *) ((uint8_t *) proc.msg + prevoffset);
+			new_msg->templ_set[tsets] = (struct ipfix_template_set *) ((uint8_t *) proc.msg + prev_offset);
 			new_msg->templ_set[tsets]->header.length = htons(proc.length);
 			tsets++;
 		}
@@ -306,17 +305,17 @@ int intermediate_process_message(void *config, void *message)
 	/* Process option templates */
 	proc.type = TM_OPTIONS_TEMPLATE;
 	for (i = 0; i < MSG_MAX_OTEMPL_SETS && msg->opt_templ_set[i]; ++i) {
-		prevoffset = proc.offset;
+		prev_offset = proc.offset;
 		memcpy(proc.msg + proc.offset, &(msg->opt_templ_set[i]->header), 4);
 		proc.offset += 4;
 		proc.length = 4;
 
 		template_set_process_records((struct ipfix_template_set *) msg->opt_templ_set[i], proc.type, &templates_processor, (void *) &proc);
 
-		if (proc.offset == prevoffset + 4) {
-			proc.offset = prevoffset;
+		if (proc.offset == prev_offset + 4) {
+			proc.offset = prev_offset;
 		} else {
-			new_msg->opt_templ_set[otsets] = (struct ipfix_options_template_set *) ((uint8_t *) proc.msg + prevoffset);
+			new_msg->opt_templ_set[otsets] = (struct ipfix_options_template_set *) ((uint8_t *) proc.msg + prev_offset);
 			new_msg->opt_templ_set[otsets]->header.length = htons(proc.length);
 			otsets++;
 		}
@@ -327,12 +326,12 @@ int intermediate_process_message(void *config, void *message)
 
 	/* Process data records */
 	uint16_t metadata_index = 0;
-
 	for (i = 0; i < MSG_MAX_DATA_COUPLES && msg->data_couple[i].data_set; ++i) {
 		struct ipfix_template *templ = msg->data_couple[i].data_template;
 		if (!templ) {
 			continue;
 		}
+
 		proc.key.tid = templ->template_id;
 		struct ipfix_template *new_templ = tm_get_template(conf->tm, &(proc.key));
 		if (new_templ == NULL) {
@@ -362,9 +361,9 @@ int intermediate_process_message(void *config, void *message)
 		new_msg->data_couple[new_i].data_set->header.flowset_id = htons(new_msg->data_couple[new_i].data_template->template_id);
 
 		/* Update templates in metadata */
-		while (metadata_index < msg->data_records_count &&
-			   metadata_index < proc.metadata_index &&
-			   new_msg->metadata[metadata_index].record.templ == templ) {
+		while (metadata_index < msg->data_records_count
+			   && metadata_index < proc.metadata_index
+			   && new_msg->metadata[metadata_index].record.templ == templ) {
 			new_msg->metadata[metadata_index].record.templ = new_templ;
 			metadata_index++;
 		}

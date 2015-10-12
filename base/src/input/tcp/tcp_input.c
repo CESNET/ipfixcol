@@ -380,7 +380,7 @@ void *input_listen(void *config)
 
 			if (conf->ssl_list[i] != ssl) {
 				/* limit reached. no space for new SSL structure */
-				MSG_WARNING(msg_module, "Limit on the number of TLS connections reached; tearing down this connection...");
+				MSG_WARNING(msg_module, "Reached limit on the number of TLS connections; tearing down this connection...");
 				/* cleanup */
 				input_listen_tls_cleanup(conf, &maid);
 				continue;
@@ -396,7 +396,7 @@ void *input_listen(void *config)
 
 		/* copy socket address to config structure */
 		if (!add_sock_address(conf, address, new_sock)) {
-			MSG_ERROR(msg_module, "Cannot store another socket address!");
+			MSG_ERROR(msg_module, "Cannot store another socket address");
 			break;
 		}
 
@@ -729,7 +729,7 @@ int input_init(char *params, void **config)
 		
 		ssl_list = (SSL **) malloc(sizeof(SSL *) * DEFAULT_SIZE_SSL_LIST);
 		if (ssl_list == NULL) {
-			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			retval = 1;
 			goto out;
 		}
@@ -860,7 +860,8 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 {
 	/* temporary socket set */
 	fd_set tmp_set;
-	ssize_t length = 0, packet_length;
+	ssize_t len = 0, packet_len;
+	uint16_t max_msg_len = BUFF_LEN * sizeof(char);
 	struct timeval tv;
 	char src_addr[INET6_ADDRSTRLEN];
 	struct sockaddr_in6 *address;
@@ -874,7 +875,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 
 	/* allocate memory for packet, if needed */
 	if (*packet == NULL) {
-		*packet = malloc(BUFF_LEN * sizeof(char));
+		*packet = malloc(max_msg_len);
 		if (*packet == NULL) {
 			MSG_ERROR(msg_module, "Cannot allocate memory for the packet, malloc failed: %s", strerror(errno));
 		}
@@ -923,13 +924,15 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 				break;
 			}
 		}
-		length = SSL_read(ssl, *packet, IPFIX_HEADER_LENGTH);
-		if (length < 0) {
+
+		len = SSL_read(ssl, *packet, IPFIX_HEADER_LENGTH);
+		if (len < 0) {
 			/* read operation was not successful */
-			if (SSL_get_error(ssl, length) == SSL_ERROR_SYSCALL) {
+			if (SSL_get_error(ssl, len) == SSL_ERROR_SYSCALL) {
 				if (errno == EINTR) {
 					return INPUT_INTR;
 				}
+
 				MSG_ERROR(msg_module, "Failed to receive IPFIX packet header: %s", strerror(errno));
 				return INPUT_ERROR;
 			}
@@ -937,11 +940,12 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 	} else {
 #endif
 		/* receive without TLS */
-		length = recv(sock, *packet, IPFIX_HEADER_LENGTH, MSG_WAITALL);
-		if (length == -1) {
+		len = recv(sock, *packet, IPFIX_HEADER_LENGTH, MSG_WAITALL);
+		if (len == -1) {
 			if (errno == EINTR) {
 				return INPUT_INTR;
 			}
+
 			MSG_ERROR(msg_module, "Failed to receive IPFIX packet header: %s", strerror(errno));
 			return INPUT_ERROR;
 		}
@@ -949,13 +953,13 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 	}
 #endif
 	
-	if (length >= IPFIX_HEADER_LENGTH) { /* header received */
+	if (len >= IPFIX_HEADER_LENGTH) { /* header received */
 		/* get packet total length */
-		packet_length = ntohs(((struct ipfix_header *) *packet)->length);
+		packet_len = ntohs(((struct ipfix_header *) *packet)->length);
 
 		/* check whether buffer is big enough */
-		if (packet_length > BUFF_LEN) {
-			*packet = realloc(*packet, packet_length);
+		if (packet_len > BUFF_LEN) {
+			*packet = realloc(*packet, packet_len);
 			if (*packet == NULL) {
 				MSG_ERROR(msg_module, "Packet too big and realloc failed: %s", strerror(errno));
 				return INPUT_ERROR;
@@ -964,43 +968,43 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 
 		/* receive the rest of the ipfix packet */
 		if (ntohs(((struct ipfix_header *) *packet)->version) == IPFIX_VERSION) {
-			length = recv(sock, (*packet) + IPFIX_HEADER_LENGTH, packet_length - IPFIX_HEADER_LENGTH, MSG_WAITALL);
+			len = recv(sock, (*packet) + IPFIX_HEADER_LENGTH, packet_len - IPFIX_HEADER_LENGTH, MSG_WAITALL);
 		} else {
-			length = recv(sock, (*packet) + IPFIX_HEADER_LENGTH, BUFF_LEN - IPFIX_HEADER_LENGTH, 0);
+			len = recv(sock, (*packet) + IPFIX_HEADER_LENGTH, BUFF_LEN - IPFIX_HEADER_LENGTH, 0);
 		}
-		if (length == -1) {
+
+		if (len == -1) {
 			if (errno == EINTR) {
 				return INPUT_INTR;
 			}
 			MSG_WARNING(msg_module, "Failed to receive IPFIX packet: %s", strerror(errno));
 			return INPUT_ERROR;
 
-		} else if (length < packet_length - IPFIX_HEADER_LENGTH) {
-			MSG_ERROR(msg_module, "Read IPFIX data is too short (%i): %s", length, strerror(errno));
+		} else if (len < packet_len - IPFIX_HEADER_LENGTH) {
+			MSG_WARNING(msg_module, "Read IPFIX data is too short (%i): %s", len, strerror(errno));
 		}
 
-		length += IPFIX_HEADER_LENGTH;
+		len += IPFIX_HEADER_LENGTH;
 
 		/* Convert packet from Netflow v5/v9/sflow to IPFIX format */
 		if (htons(((struct ipfix_header *) (*packet))->version) != IPFIX_VERSION) {
-			if (convert_packet(packet, &length, NULL) != 0) {
+			if (convert_packet(packet, &len, max_msg_len, NULL) != 0) {
 				MSG_WARNING(msg_module, "Message conversion error; skipping message...");
 				return INPUT_INTR;
 			}
 		}
 
 		/* Check if lengths are the same */
-		if (length < htons(((struct ipfix_header *)*packet)->length)) {
-			MSG_DEBUG(msg_module, "length = %d, header->length = %d", length, htons(((struct ipfix_header *)*packet)->length));
+		if (len < htons(((struct ipfix_header *) *packet)->length)) {
 			return INPUT_INTR;
-		} else if (length >  htons(((struct ipfix_header *)*packet)->length)) {
-			length = htons(((struct ipfix_header*)*packet)->length);
+		} else if (len > htons(((struct ipfix_header *) *packet)->length)) {
+			len = htons(((struct ipfix_header*) *packet)->length);
 		}
-	} else if (length != 0) {
-		MSG_ERROR(msg_module, "Packet header is incomplete; closing connection...");
+	} else if (len != 0) {
+		MSG_WARNING(msg_module, "Packet header is incomplete; closing connection...");
 
 		/* this will close the connection */
-		length = 0;
+		len = 0;
 	}
 
 	/* get peer address from configuration */
@@ -1042,7 +1046,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 	*info = (struct input_info*) &info_list->info;
 
 	/* check whether socket closed */
-	if (length == 0) {
+	if (len == 0) {
 #ifdef TLS_SUPPORT
 		if (conf->tls) {
 			if (SSL_get_shutdown(ssl) != SSL_RECEIVED_SHUTDOWN) {
@@ -1062,6 +1066,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		} else {
 			inet_ntop(AF_INET6, &conf->sock_addresses[sock]->sin6_addr, src_addr, INET6_ADDRSTRLEN);
 		}
+
 		(*info)->status = SOURCE_STATUS_CLOSED;
 		*source_status = SOURCE_STATUS_CLOSED;
 
@@ -1077,7 +1082,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		return INPUT_CLOSED;
 	}
 
-	return length;
+	return len;
 }
 
 /**

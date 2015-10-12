@@ -63,10 +63,10 @@
  *
  */
 struct ring_buffer {
-	unsigned int read_offset;
-	unsigned int write_offset;
-	unsigned int size;
-	unsigned int count;
+	uint16_t read_offset;
+	uint16_t write_offset;
+	uint16_t size;
+	uint16_t count;
 	pthread_mutex_t mutex;
 	pthread_cond_t cond;
 	pthread_cond_t cond_empty;
@@ -80,7 +80,7 @@ struct ring_buffer {
  * @param[in] size Size of the ring buffer.
  * @return Pointer to initialized ring buffer structure.
  */
-struct ring_buffer* rbuffer_init (unsigned int size);
+struct ring_buffer* rbuffer_init(uint16_t size);
 
 /**
  * \brief Add new record into the ring buffer.
@@ -90,7 +90,7 @@ struct ring_buffer* rbuffer_init (unsigned int size);
  * @param[in] refcount Initial refference count - number of reading threads.
  * @return 0 on success, nonzero on error.
  */
-int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, unsigned int refcount);
+int rbuffer_write(struct ring_buffer* rbuffer, struct ipfix_message* record, uint16_t ref_count);
 
 /**
  * \brief Get pointer to data in ring buffer - its position is specified by
@@ -101,7 +101,7 @@ int rbuffer_write (struct ring_buffer* rbuffer, struct ipfix_message* record, un
  * to get record from index (if value in index is valid).
  * @return Read data from specified index (or read offset) or NULL on error.
  */
-struct ipfix_message* rbuffer_read (struct ring_buffer* rbuffer, unsigned int *index);
+struct ipfix_message* rbuffer_read(struct ring_buffer* rbuffer, unsigned int *index);
 
 /**
  * \brief Decrease reference counter on specified record in ring buffer.
@@ -117,11 +117,11 @@ struct ipfix_message* rbuffer_read (struct ring_buffer* rbuffer, unsigned int *i
  *
  * @param[in] rbuffer Ring buffer.
  * @param[in] index Index of the item in the ring buffer.
- * @param[in] dofree 1 to free data with 0 references, 0 to lose data by removing
+ * @param[in] do_free 1 to free data with 0 references, 0 to lose data by removing
  * the pointer, but do not free the data.
  * @return 0 on success, nonzero on error - no reference on item
  */
-int rbuffer_remove_reference (struct ring_buffer* rbuffer, unsigned int index, int dofree);
+int rbuffer_remove_reference(struct ring_buffer* rbuffer, unsigned int index, uint8_t do_free);
 
 /**
  * \brief Wait for queue to became empty
@@ -137,6 +137,6 @@ int rbuffer_wait_empty(struct ring_buffer* rbuffer);
  * @param[in] rbuffer Ring buffer to destroy.
  * @return 0 on success, nonzero on error.
  */
-int rbuffer_free (struct ring_buffer* rbuffer);
+int rbuffer_free(struct ring_buffer* rbuffer);
 
 #endif /* QUEUES_H_ */

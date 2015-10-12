@@ -68,8 +68,8 @@
 /* API version constant */
 IPFIXCOL_API_VERSION;
 
-#define DEFAULT_LISTEN_PORT_UNSECURE 4739
-#define DEFAULT_LISTEN_PORT_SECURE   4740   /* listen port when used with DTLS */
+#define DEFAULT_LISTEN_PORT        4739
+#define DEFAULT_LISTEN_PORT_DLTS   4740   /* listen port when used with DTLS */
 
 /* maximum input/output streams per association */
 #define INSTREAMS_PER_SOCKET         20
@@ -158,7 +158,7 @@ void *listen_worker(void *data) {
 		/* input_info - fill out information about input */
 		node = (struct input_info_node *) calloc(1, sizeof(*node));
 		if (!node) {
-			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			goto err_assoc;
 		}
 
@@ -254,7 +254,7 @@ int input_init(char *params, void **config)
 	/* allocate memory for config structure */
 	conf = (struct sctp_config *) malloc(sizeof(*conf));
 	if (!conf) {
-		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
 	memset(conf, 0, sizeof(*conf));
@@ -264,7 +264,7 @@ int input_init(char *params, void **config)
 	sockaddr6_listen = (struct sockaddr_in6 **) 
 	malloc(DEFAULT_NUMBER_OF_ADDRESSES * sizeof(*(sockaddr6_listen)));
 	if (sockaddr6_listen == NULL) {
-		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		goto err_sockaddr6;
 	}
 	memset(sockaddr6_listen, 0, sizeof(DEFAULT_NUMBER_OF_ADDRESSES * sizeof(*(sockaddr6_listen))));
@@ -274,7 +274,7 @@ int input_init(char *params, void **config)
 	 * sctp_bindx() for multi-homing support */
 	sockaddr_listen = (struct sockaddr_in **) calloc(DEFAULT_NUMBER_OF_ADDRESSES, sizeof(*(sockaddr_listen)));
 	if (sockaddr_listen == NULL) {
-		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		goto err_sockaddr;
 	}
 	sockaddr_listen_max = DEFAULT_NUMBER_OF_ADDRESSES;
@@ -324,7 +324,7 @@ int input_init(char *params, void **config)
 				/* add new IPv4 address */
 				sockaddr = (struct sockaddr_in *) malloc(sizeof(*sockaddr));
 				if (!sockaddr) {
-					MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+					MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 					goto err_sockaddr_case;
 				}
 				memset(sockaddr, 0, sizeof(*sockaddr));
@@ -378,7 +378,7 @@ err_sockaddr_case:
 				/* add new IPv6 address */
 				sockaddr6 = (struct sockaddr_in6 *) malloc(sizeof(*sockaddr6));
 				if (!sockaddr6) {
-					MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+					MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 					goto err_sockaddr6_case;
 				}
 				memset(sockaddr6, 0, sizeof(*sockaddr6));
@@ -457,7 +457,7 @@ err_sockaddr6_case:
 	if ((sockaddr6_listen_counter == 0) && (sockaddr_listen_counter == 0)) {
 		sockaddr6 = (struct sockaddr_in6 *) calloc(1, sizeof(*sockaddr6));
 		if (!sockaddr6) {
-			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			goto err;
 		}
 
@@ -471,7 +471,7 @@ err_sockaddr6_case:
 
 	/* use default listen port if not specified otherwise */
 	if (conf->listen_port == 0) {
-		conf->listen_port = DEFAULT_LISTEN_PORT_UNSECURE;
+		conf->listen_port = DEFAULT_LISTEN_PORT;
 	}
 
 	/* same port for every IPv4 address */
@@ -691,7 +691,7 @@ wait_for_data:
 		/* TODO - we can check how big the message is from its header */
 		*packet = (char *) malloc(MSG_MAX_LENGTH);
 		if (*packet == NULL) {
-			MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			ret = INPUT_ERROR;
 			goto out;
 		}
@@ -708,24 +708,24 @@ wait_for_data:
 	}
 
 	if (msg_length < IPFIX_HEADER_LENGTH) {
-		MSG_ERROR(msg_module, "Packet header is incomplete; skipping message...", msg_length);
+		MSG_WARNING(msg_module, "Packet header is incomplete; skipping message...", msg_length);
 		return INPUT_INTR;
 	}
 
 	/* Convert packet from Netflow v5/v9/sflow to IPFIX format */
 	if (htons(((struct ipfix_header *) (*packet))->version) != IPFIX_VERSION) {
-		if (convert_packet(packet, &msg_length, NULL) != 0) {
+		if (convert_packet(packet, &msg_length, MSG_MAX_LENGTH, NULL) != 0) {
 			MSG_WARNING(msg_module, "Message conversion error; skipping message...");
 			return INPUT_INTR;
 		}
 	}
 
 	/* Check if lengths are the same */
-	if (msg_length < htons(((struct ipfix_header *)*packet)->length)) {
-		MSG_ERROR(msg_module, "Packet is incomplete; skipping message...");
+	if (msg_length < htons(((struct ipfix_header *) *packet)->length)) {
+		MSG_WARNING(msg_module, "Packet is incomplete; skipping message...");
 		return INPUT_INTR;
-	} else if (msg_length > htons(((struct ipfix_header *)*packet)->length)) {
-		msg_length = htons(((struct ipfix_header *)*packet)->length);
+	} else if (msg_length > htons(((struct ipfix_header *) *packet)->length)) {
+		msg_length = htons(((struct ipfix_header *) *packet)->length);
 	}
 
 #if 0
