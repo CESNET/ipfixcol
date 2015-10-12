@@ -1,0 +1,49 @@
+language: c
+compiler:
+  - gcc
+
+branches:
+  only:
+    - coverity_scan
+
+env:
+  global:
+   # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+   #   via the "travis encrypt" command using the project repo's public key
+   - secure: "HsoAtSTud0oaY//GZVwORggNiIyj98AHVZ3E5jDwmMDdDTvliDfdaFzeTxVBE7VKIGghXCk5TmujBbCFYRVhvY9/7rOckoGpe2S8mhl9bQGQXecTPGnOxjgj7Vw1bzKJbsS4llbZAtwd3vCqL19/XR455gULmAqd7mah5GcTod0="
+
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -y libxml2-dev libsctp-dev libsctp1 xsltproc docbook-xsl doxygen libpq-dev libbz2-dev liblzo2-dev libgeoip-dev librrd-dev libsqlite3-dev
+  - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 50
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 50
+
+install:
+#  - git clone https://github.com/CESNET/libfastbit.git && cd libfastbit/ && autoreconf -i && ./configure --prefix=/usr && make && sudo make install && cd .. && rm -rf libfastbit/
+  - wget http://liberouter.org/~thorgrin/libfastbit.tar.gz && sudo tar -xzpf libfastbit.tar.gz -C / && rm libfastbit.tar.gz
+
+script:
+  # clean after coverity addon - we want to test clean build
+  - git clean -d -f .
+  # build base first (for libsiso dependeny)
+  - cd base/ && autoreconf -i && ./configure && make && cd ..
+  # build the rest of the project
+  - autoreconf -i
+  - ./configure
+  - make
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - gcc-4.8
+    - g++-4.8
+  coverity_scan:
+    project:
+      name: "CESNET/ipfixcol"
+      description: "Build submitted via Travis CI"
+    notification_email: petr.velan@cesnet.cz
+    build_command_prepend: "cd base/ && autoreconf -i && ./configure && make && cd .. && autoreconf -i && ./configure &&  make clean"
+    build_command:   "make"
+    branch_pattern: coverity_scan
