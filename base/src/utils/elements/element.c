@@ -49,6 +49,10 @@
 #include "element.h"
 #include "parser.h"
 
+/* Ignore BIG_LINES libxml2 option when it is not supported */
+#ifndef XML_PARSE_BIG_LINES
+#define XML_PARSE_BIG_LINES 0
+#endif
 
 /** Default number of preallocated elements in auxiliary structures */
 #define ELEM_DEF_COUNT (32)
