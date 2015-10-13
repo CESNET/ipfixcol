@@ -119,7 +119,10 @@ AS_IF([test -d $srcdir/../../../base/headers],
 	[AM_CPPFLAGS+="-I$srcdir/../../../base/headers"]
 )
 
+cppflags_save="$CPPFLAGS"
+CPPFLAGS="$CPPFLAGS $AM_CPPFLAGS"
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
+CPPFLAGS="$cppflags_save"
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 AC_HEADER_STDBOOL
