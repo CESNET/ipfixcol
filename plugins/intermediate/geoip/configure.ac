@@ -127,6 +127,7 @@ AC_CHECK_DECL([be64toh], [AC_DEFINE([HAVE_BE64TOH], [1],
 ############################### Set output #####################################
 # Substitute compiler flags
 AC_SUBST([AM_CFLAGS])
+AC_SUBST([AM_CPPFLAGS])
 AC_SUBST([AM_LDFLAGS])
 
 AC_SUBST(RPMBUILD)

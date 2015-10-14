@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CPPFLAGS += -I$(top_srcdir)/headers $(SISO_CPPFLAGS)
+AM_CPPFLAGS +=  $(SISO_CPPFLAGS)
 AM_LDFLAGS += $(SISO_LDFLAGS) -module -avoid-version -shared
 pluginsdir = $(datadir)/ipfixcol/plugins
 
