@@ -12,6 +12,8 @@ SUBDIRS = base \
 	plugins/storage/fastbit_compression \
 	plugins/storage/postgres \
 	plugins/storage/json \
+	plugins/storage/statistics \
+	plugins/storage/nfdump \
 	plugins/input/nfdump \
 	plugins/intermediate/geoip \
 	plugins/intermediate/profiler \
