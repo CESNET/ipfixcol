@@ -267,7 +267,7 @@ int input_init(char *params, void **config)
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		goto err_sockaddr6;
 	}
-	memset(sockaddr6_listen, 0, sizeof(DEFAULT_NUMBER_OF_ADDRESSES * sizeof(*(sockaddr6_listen))));
+	memset(sockaddr6_listen, 0, DEFAULT_NUMBER_OF_ADDRESSES * sizeof(*(sockaddr6_listen)));
 	sockaddr6_listen_max = DEFAULT_NUMBER_OF_ADDRESSES;
 
 	/* array for IPv4 listen addresses. this array will later be used with 

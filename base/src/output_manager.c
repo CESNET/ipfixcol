@@ -120,6 +120,11 @@ void remove_input_info(struct input_info *node)
 		aux_node = aux_node->next;
 	}
 
+	/* Node not found, nothiung to dO */
+	if (!aux_node) {
+		return;
+	}
+
 	/* Delete it from the list */
 	if (prev_node == NULL) {
 		input_info_list = aux_node->next;

@@ -639,7 +639,7 @@ int data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_templ
 	uint16_t set_len = ntohs(data_set->header.length), rec_len, count = 0;
 	uint8_t *ptr = data_set->records;
 
-	uint16_t min_record_length = templ->data_length;
+	uint32_t min_record_length = templ->data_length;
 	uint32_t offset = 4;
 
 	if (min_record_length & 0x80000000) {

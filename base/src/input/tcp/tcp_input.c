@@ -417,7 +417,7 @@ void *input_listen(void *config)
 			break;
 		}
 
-		memcpy(&input_info->info, &conf->info, sizeof(struct input_info_list));
+		memcpy(&input_info->info, &conf->info, sizeof(struct input_info_network));
 
 		/* set status to new connection */
 		input_info->info.status = SOURCE_STATUS_NEW;
@@ -591,9 +591,13 @@ int input_init(char *params, void **config)
 			strncpy_safe(tmp_val, (char *)cur_node->children->content, tmp_val_len);
 
 			if (xmlStrEqual(cur_node->name, BAD_CAST "localPort")) { /* set local port */
-				port = tmp_val;
+				if (port == NULL) {
+					port = tmp_val;
+				}
 			} else if (xmlStrEqual(cur_node->name, BAD_CAST "localIPAddress")) { /* set local address */
-				address = tmp_val;
+				if (address == NULL) {
+					address = tmp_val;
+				}
 			/* save following configuration to input_info */
 			} else if (xmlStrEqual(cur_node->name, BAD_CAST "templateLifeTime")) {
 				conf->info.template_life_time = tmp_val;
