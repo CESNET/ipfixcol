@@ -122,7 +122,7 @@ int Configuration::init(int argc, char *argv[])
 			parseAggregateArg(optarg);
 			break;
 		case 'f':
-			if (optarg == std::string("")) {
+			if (optarg == NULL || optarg == std::string("")) {
 				throw std::invalid_argument("-f requires filter file specification");
 			}
 
@@ -140,7 +140,7 @@ int Configuration::init(int argc, char *argv[])
 			maxCountSet = true; /* so that statistics knows whether to change the value */
 			break;
 		case 'c': /* number of records to display */
-			if (optarg == std::string("")) {
+			if (optarg == NULL || optarg == std::string("")) {
 				throw std::invalid_argument("-c requires a number specification");
 			}
 
@@ -152,7 +152,7 @@ int Configuration::init(int argc, char *argv[])
 			maxCountSet = true; /* so that statistics knows whether to change the value */
 			break;
 		case 'D':
-			if (optarg == std::string("")) {
+			if (optarg == NULL || optarg == std::string("")) {
 				throw std::invalid_argument("-D requires a name server specification");
 			}
 
@@ -180,6 +180,10 @@ int Configuration::init(int argc, char *argv[])
 
 			break;
 		case 's': {
+			if (optarg == NULL || optarg == std::string("")) {
+				throw std::invalid_argument("-s requires a statistics specification");
+			}
+
 			/* Similar to -A option*/
 			this->statistics = true;
 
@@ -229,7 +233,7 @@ int Configuration::init(int argc, char *argv[])
 			NOT_SUPPORTED
 			break;
 		case 'M':
-			if (optarg == std::string("")) {
+			if (optarg == NULL || optarg == std::string("")) {
 				throw std::invalid_argument("-M requires a directory specification");
 			}
 
@@ -237,7 +241,7 @@ int Configuration::init(int argc, char *argv[])
 			/* this option will be processed later (it depends on -r or -R) */
 			break;
 		case 'r': {/* -M help argument */
-			if (optarg == std::string("")) {
+			if (optarg == NULL || optarg == std::string("")) {
 				throw std::invalid_argument("-r requires a path specification");
 			}
 
@@ -256,7 +260,7 @@ int Configuration::init(int argc, char *argv[])
 			break;
 
 		case 'R':
-			if (optarg == std::string("")) {
+			if (optarg == NULL || optarg == std::string("")) {
 				throw std::invalid_argument("-R requires a path specification");
 			}
 
@@ -265,14 +269,14 @@ int Configuration::init(int argc, char *argv[])
 			break;
 
 		case 'o': /* output format */
-			if (optarg == std::string("")) {
+			if (optarg == NULL || optarg == std::string("")) {
 				throw std::invalid_argument("-o requires an output path specification");
 			}
 			
 			this->format = optarg;
 			break;
 		case 'p':
-			if (optarg == std::string("")) {
+			if (optarg == NULL || optarg == std::string("")) {
 				throw std::invalid_argument("-p requires a path to open; empty string given");
 			}
 			if (access ( optarg, F_OK ) != 0 ) {
@@ -283,7 +287,7 @@ int Configuration::init(int argc, char *argv[])
 			break;
 
 		case 'v':
-			if (optarg == std::string("")) {
+			if (optarg == NULL || optarg == std::string("")) {
 				throw std::invalid_argument("-v requires a verbosity level specification");
 			}
 			
@@ -293,7 +297,7 @@ int Configuration::init(int argc, char *argv[])
 			this->checkFilters = true;
 			break;
 		case 't':
-			if (optarg == std::string("")) {
+			if (optarg == NULL || optarg == std::string("")) {
 				throw std::invalid_argument("-t requires a time window specification");
 			}
 			
@@ -312,7 +316,7 @@ int Configuration::init(int argc, char *argv[])
 			}
 			break;
 		case 'C': /* Configuration file */
-			if (optarg == std::string("")) {
+			if (optarg == NULL || optarg == std::string("")) {
 				throw std::invalid_argument("-C requires a path to configuration file, empty string given");
 			}
 			this->configFile = optarg;
@@ -330,7 +334,7 @@ int Configuration::init(int argc, char *argv[])
 			print_modules = true;
 			break;
 		case 'P':
-			if (optarg == std::string("")) {
+			if (optarg == NULL || optarg == std::string("")) {
 				throw std::invalid_argument("-P requires a filter specification");
 			}
 			

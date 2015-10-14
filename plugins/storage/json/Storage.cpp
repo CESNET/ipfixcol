@@ -67,7 +67,8 @@ std::map<uint32_t, std::map<uint16_t, struct ipfix_element> > Storage::elements{
 /**
  * \brief Constructor
  */
-Storage::Storage()
+Storage::Storage():
+offset(0), id(0), length(0), enterprise(0)
 {
 	/* Load only once for all plugins */
 	if (elements.empty()) {
@@ -359,8 +360,8 @@ void Storage::storeMetadata(metadata* mdata)
 	record += "\"profiles\": [";
 	if (mdata->channels) {
 		// Get name of root profile
-		void *profile_ptr, *prev_profile_ptr;
-		const char *root_profile_name;
+		void *profile_ptr = NULL, *prev_profile_ptr = NULL;
+		const char *root_profile_name = NULL;
 
 		profile_ptr = channel_get_profile(mdata->channels[0]);
 		while (profile_ptr != NULL) {
