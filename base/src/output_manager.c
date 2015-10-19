@@ -600,12 +600,16 @@ void statistics_print_buffers(struct output_manager_config *conf, FILE *stat_out
 		/* Print info about Output Manager queues */
 		struct data_manager_config *dm = conf->data_managers;
 		if (dm) {
-			MSG_INFO(stat_module, "     Output Manager output queues:");
-			MSG_INFO(stat_module, "         %.4s | %.10s / %.10s", "ODID", "waiting", "total size");
-			
-			while (dm) {
-				MSG_INFO(stat_module, "   %10u %9u / %u", dm->observation_domain_id, dm->store_queue->count, dm->store_queue->size);
-				dm = dm->next;
+			if (conf->manager_mode == OM_SINGLE) {
+				MSG_INFO(stat_module, "     Output Manager output queue: %u / %u", dm->store_queue->count, dm->store_queue->size);
+			} else {
+				MSG_INFO(stat_module, "     Output Manager output queues:");
+				MSG_INFO(stat_module, "         %.4s | %.10s / %.10s", "ODID", "waiting", "total size");
+				
+				while (dm) {
+					MSG_INFO(stat_module, "   %10u %9u / %u", dm->observation_domain_id, dm->store_queue->count, dm->store_queue->size);
+					dm = dm->next;
+				}
 			}
 		}
 	}
