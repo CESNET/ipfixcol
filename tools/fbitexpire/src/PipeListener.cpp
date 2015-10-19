@@ -86,21 +86,21 @@ void PipeListener::loop()
 				switch(_buff[0]) {
 				case 'r':
 					/* rescan folder */
-					MSG_NOTICE(msg_module, "triggered rescan of %s", _buff.substr(1).c_str());
+					MSG_INFO(msg_module, "triggered rescan of %s", _buff.substr(1).c_str());
 					_buff = _buff.substr(1);
 					_scanner->rescan(_buff);
 					break;
 				case 'k':
 					/* Stop daemon */
-					MSG_NOTICE(msg_module, "triggered daemon termination");
+					MSG_INFO(msg_module, "triggered daemon termination");
 					_done = true;
 					break;
 				case 's':
-					MSG_NOTICE(msg_module, "setting max. directory size (%s)", _buff.substr(1).c_str());
+					MSG_INFO(msg_module, "setting max. directory size (%s)", _buff.substr(1).c_str());
 					_scanner->setMaxSize(_buff.substr(1), true);
 					break;
 				case 'w':
-					MSG_NOTICE(msg_module, "setting lower limit (%s)", _buff.substr(1).c_str());
+					MSG_INFO(msg_module, "setting lower limit (%s)", _buff.substr(1).c_str());
 					_scanner->setWatermark(_buff.substr(1));
 					break;
 				}

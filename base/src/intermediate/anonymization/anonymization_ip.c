@@ -37,7 +37,6 @@
  *
  */
 
-
 /**
  * \defgroup anonInter Anonymization Intermediate Process
  * \ingroup intermediatePlugins
@@ -47,7 +46,6 @@
  *
  * @{
  */
-
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -256,7 +254,7 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 	xmlFreeDoc(doc);
 	xmlCleanupParser();
 
-	MSG_NOTICE(msg_module, "Plugin initialization completed successfully");
+	MSG_INFO(msg_module, "Plugin initialization completed successfully");
 
 	/* plugin successfully initialized */
 	return 0;

@@ -185,11 +185,11 @@ static int init_trap_ifc(unirec_config *conf)
 
 
 	for (int i = 0; i < conf->ifc_count; i++) {
-		MSG_NOTICE(msg_module, "Setting interafece %u buffer %s\n", i, conf->ifc_buff_switch[i] ? "ON" : "OFF");
+		MSG_INFO(msg_module, "Setting interface %u buffer %s\n", i, conf->ifc_buff_switch[i] ? "ON" : "OFF");
 		trap_ctx_ifcctl(conf->trap_ctx_ptr, TRAPIFC_OUTPUT, i, TRAPCTL_BUFFERSWITCH, conf->ifc_buff_switch[i]);
-		MSG_NOTICE(msg_module, "Setting interafece %u autoflush to %llu us\n", i, conf->ifc_buff_timeout[i]);
+		MSG_INFO(msg_module, "Setting interface %u autoflush to %llu us\n", i, conf->ifc_buff_timeout[i]);
 		trap_ctx_ifcctl(conf->trap_ctx_ptr, TRAPIFC_OUTPUT, i, TRAPCTL_AUTOFLUSH_TIMEOUT, conf->ifc_buff_timeout[i]);
-		MSG_NOTICE(msg_module, "Setting interafece %u timeout to %llu us\n", i, conf->ifc[i].timeout);
+		MSG_INFO(msg_module, "Setting interface %u timeout to %llu us\n", i, conf->ifc[i].timeout);
 		trap_ctx_ifcctl(conf->trap_ctx_ptr, TRAPIFC_OUTPUT, i, TRAPCTL_SETTIMEOUT, (int) conf->ifc[i].timeout);
 	}
 	return 1;
@@ -261,7 +261,7 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 	unirecField *matchField;
 
 	uint16_t ipfix_id;
-        uint32_t en_id;
+	uint32_t en_id;
 	uint64_t sec, msec, frac;
 
 	/* Go over all fields */
@@ -298,7 +298,7 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 						switch (matchField->type) {
 							case UNIREC_FIELD_IP:
 								if ((en_id == 0 && (ipfix_id == 8 || ipfix_id == 12)) ||
-								    (en_id == 39499 && ipfix_id == 40)) {
+										(en_id == 39499 && ipfix_id == 40)) {
 									// IPv4 or INVEA_SIP_RTP_IPV4
 									// Put IPv4 into 128 bits in a special way (see ipaddr.h in Nemea-UniRec for details)
 									*(uint64_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) = 0;
@@ -316,7 +316,7 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 								}
 								else if (template->fields[index].ie.length == 8) {
 									*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) =  ntohl(*(uint32_t*)(data_record + offset + size_length + 4));
-                                                        	} else {
+								} else {
 									*(uint32_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) =  0xFFFFFFFF;
 								}
 								break;
@@ -340,7 +340,7 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
 								if (matchField->size >= length) {
 									data_copy( (conf->ifc[i].buffer) + matchField->offset_ar[i],	// Offset to Unirec buffer for current ifc
 										   (data_record + offset + size_length),		// Offset to data in Ipfix message
-									   	length);						// Size of element
+										length);						// Size of element
 								} else {
 									// set maximum value to unirec element
 									memset( (conf->ifc[i].buffer) + matchField->offset_ar[i],
@@ -462,13 +462,13 @@ static int process_data_sets(const struct ipfix_message *ipfix_msg, unirec_confi
 			// Process data record only once
 			ret = process_record(data_record, template, conf);
 
-			//Check that the record was processes successfuly
+			// Check that the record was processes successfuly
 			if (ret == 0) {
 				return -1;
 			}
 			
- 	             	 //Fill dynamic fields for every UniRec record and send it
-                	for (i = 0; i < conf->ifc_count; i++) {
+			// Fill dynamic fields for every UniRec record and send it
+			for (i = 0; i < conf->ifc_count; i++) {
 				// Check if we have all required fields
 				if (conf->ifc[i].requiredCount == conf->ifc[i].requiredFilled) {
 					// Fill dynamic fields if there are ones
@@ -577,10 +577,10 @@ static int8_t getUnirecFieldTypeFromIpfixId(ipfixElement ipfix_el)
 	uint16_t id = ipfix_el.id;
 	uint32_t en = ipfix_el.en;
 
- 	if ((en == 0 && (id == 8 || id == 12)) ||
-            (en == 39499 && id== 40) ||
-	    (en == 0 && (id == 27 || id == 28)) ||
-            (en == 39499 && id == 41)) {
+	if ((en == 0 && (id == 8 || id == 12)) ||
+			(en == 39499 && id== 40) ||
+		(en == 0 && (id == 27 || id == 28)) ||
+			(en == 39499 && id == 41)) {
 		// IP or INVEA_SIP_RTP_IP
 		return UNIREC_FIELD_IP;
 	} else if (en == 0 && id == 2) {
@@ -973,9 +973,9 @@ static int parse_format(unirec_config *conf_plugin)
 			return 1;
 		}
 		ht = fht_init(1 << round,
-		              FIELDS_HT_KEYSIZE,
-		              sizeof(unirecField*),
-		              FIELDS_HT_STASH_SIZE);
+				FIELDS_HT_KEYSIZE,
+				sizeof(unirecField*),
+				FIELDS_HT_STASH_SIZE);
 		
 		for (dbg_i = 0, currentField = conf_plugin->fields; currentField != NULL ; dbg_i++, currentField = currentField->next) {
 			for (int i = 0; i < currentField->ipfixCount; i++) {
@@ -1029,8 +1029,8 @@ int storage_init (char *params, void **config)
 	unirec_config *conf;
 	xmlDocPtr doc;
 	xmlNodePtr cur;
-        xmlNodePtr cur_sub;
-        int service_ifc_flag = 0;
+	xmlNodePtr cur_sub;
+	int service_ifc_flag = 0;
 	int ifc_count_read = 0;
 	int ifc_count_space = 16;
 	int ifc_count_step = 16;
@@ -1195,7 +1195,6 @@ int storage_init (char *params, void **config)
 		goto err_parse;
 	}
 
-
 	/* Set number of TRAP output interfaces */
 	module_info.num_ifc_out = conf->ifc_count;
 	/* Set verbosity of TRAP library */
@@ -1203,13 +1202,13 @@ int storage_init (char *params, void **config)
 		trap_set_verbose_level(-1);
 	} else if (verbose == ICMSG_WARNING) {
 		trap_set_verbose_level(0); //0
-	} else if (verbose == ICMSG_NOTICE) {
+	} else if (verbose == ICMSG_INFO) {
 		trap_set_verbose_level(1); // 0
 	} else if (verbose == ICMSG_DEBUG) {
 		trap_set_verbose_level(2); // 0
 	}
-	MSG_NOTICE(msg_module, "Verbosity level of TRAP set to %i\n", trap_get_verbose_level());
 
+	MSG_INFO(msg_module, "Verbosity level of TRAP set to %i\n", trap_get_verbose_level());
 
 	/* Initialize Trap */
 	if (!init_trap_ifc(conf)) {
@@ -1265,7 +1264,7 @@ err_init:
  * \return 0 on success, nonzero else.
  */
 int store_packet (void *config, const struct ipfix_message *ipfix_msg,
-        const struct ipfix_template_mgr *template_mgr)
+		const struct ipfix_template_mgr *template_mgr)
 {
 	if (config == NULL || ipfix_msg == NULL) {
 		return -1;
@@ -1327,7 +1326,7 @@ int storage_close (void **config)
 		free(conf->ifc[i].buffer);
 		free(conf->ifc[i].dynAr);
 	}
-        destroy_fields(conf->fields);
+		destroy_fields(conf->fields);
 
 	free(*config);
 	return 0;

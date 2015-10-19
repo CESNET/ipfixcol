@@ -40,53 +40,57 @@
 #ifndef VERBOSE_H_
 #define VERBOSE_H_
 
-extern int  verbose;
+extern int verbose;
 extern bool use_syslog;
 
 typedef enum {
 	ICMSG_ERROR,
 	ICMSG_WARNING,
-	ICMSG_NOTICE,
-	ICMSG_DEBUG
+	ICMSG_INFO,
+	ICMSG_DEBUG,
 } ICMSG_LEVEL;
 
 /**
- * \brief Macros for printing error messages
- * 
- * \param module Identification of program part that generated this message
- * \param format
+ * \brief Macros for printing error messages.
+ * @param module Identification of program component that generated this message
+ * @param format
  */
-#define MSG_ERROR(module, format, ...) if(verbose < ICMSG_ERROR); else icmsg_print(ICMSG_ERROR, "ERROR", module, format, ## __VA_ARGS__)
-#define MSG_WARNING(module, format, ...) if(verbose < ICMSG_WARNING); else icmsg_print(ICMSG_WARNING, "WARNING", module, format, ## __VA_ARGS__)
-#define MSG_NOTICE(module, format, ...) if(verbose < ICMSG_NOTICE); else icmsg_print(ICMSG_NOTICE, "NOTICE", module, format, ## __VA_ARGS__)
-#define MSG_DEBUG(module, format, ...) if(verbose < ICMSG_DEBUG); else icmsg_print(ICMSG_DEBUG, "DEBUG", module, format, ## __VA_ARGS__)
+#define MSG_ERROR(module, format, ...) if (verbose >= ICMSG_ERROR) icmsg_print(ICMSG_ERROR, "ERROR", module, format, ##__VA_ARGS__)
+#define MSG_WARNING(module, format, ...) if (verbose >= ICMSG_WARNING) icmsg_print(ICMSG_WARNING, "WARNING", module, format, ## __VA_ARGS__)
+#define MSG_INFO(module, format, ...) if (verbose >= ICMSG_INFO) icmsg_print(ICMSG_INFO, "INFO", module, format, ## __VA_ARGS__)
+#define MSG_DEBUG(module, format, ...) if (verbose >= ICMSG_DEBUG) icmsg_print(ICMSG_DEBUG, "DEBUG", module, format, ## __VA_ARGS__)
 
 /**
- * \brief Macrot for initialising syslog
+ * \brief Macro for printing common messages, without severity prefix.
  *
- * \param ident Identification for syslog
+ * In syslog, all of these messages will have LOG_INFO severity.
+ *
+ * @param level The verbosity level at which this message should be printed
+ * @param format
  */
-#define MSG_SYSLOG_INIT(ident) openlog(ident, LOG_PID, LOG_DAEMON); use_syslog = true
-
-
 #define MSG_COMMON(format, ...) icmsg_print_common(format, ## __VA_ARGS__)
 
 /**
- * \brief Set verbose level to level
+ * \brief Macro for initialising syslog.
  *
- * \param level
+ * @param ident Identification for syslog
+ */
+#define MSG_SYSLOG_INIT(ident) openlog(ident, LOG_PID, LOG_DAEMON); use_syslog = true;
+
+/**
+ * \brief Set verbosity level to the specified level.
+ *
+ * @param level
  */
 #define MSG_SET_VERBOSE(level) verbose = level;
 
 /**
- * \brief Printing function
+ * \brief Printing function.
  *
- * \param lvl Level of the message (for syslog severity)
- * \param prefix Message prefix (ERROR, NOTICE...)
- * \param module Module name
- * \param format message format
+ * @param level Verbosity level of the message (for syslog severity)
+ * @param format
  */
-void icmsg_print(ICMSG_LEVEL lvl, const char *prefix, const char *module, const char *format, ...);
+void icmsg_print(ICMSG_LEVEL level, const char *type, const char *module, const char *format, ...);
 void icmsg_print_common(const char *format, ...);
 
 #endif /* VERBOSE_H_ */

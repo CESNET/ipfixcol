@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
 	if (daemonize) {
 		closelog();
 		MSG_SYSLOG_INIT("profilesdaemon");
-		MSG_NOTICE("daemonizing...");
+		MSG_INFO("daemonizing...");
 
 		if (daemon(1, 0)) {
 			MSG_ERROR("daemon(): %s", strerror(errno));

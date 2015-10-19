@@ -653,7 +653,7 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 
 	xmlFreeDoc(doc);
 	*config = conf;
-	MSG_NOTICE(msg_module, "Successfully initialized");
+	MSG_INFO(msg_module, "Successfully initialized");
 	return 0;
 }
 
@@ -757,7 +757,7 @@ struct source *joinflows_get_source_by_mapping(struct joinflows_ip_config *conf,
 			/* Add source to list so next time it will be found by joinflows_get_source */
 			new_src->next = conf->sources;
 			conf->sources = new_src;
-			MSG_NOTICE(msg_module, "[%u -> %u] Added implicit source for this join group.", odid, odid);
+			MSG_INFO(msg_module, "[%u -> %u] Added implicit source for this join group.", odid, odid);
 			return new_src;
 		}
 	}

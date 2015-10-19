@@ -47,7 +47,6 @@
  * @{
  */
 
-
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
@@ -238,7 +237,7 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 	
 	conf->ip_config = ip_config;
 	*config = conf;
-	MSG_NOTICE(msg_module, "Successfully initialized");
+	MSG_INFO(msg_module, "Successfully initialized");
 	return 0;
 	
 cleanup_err:

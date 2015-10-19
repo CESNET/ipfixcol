@@ -96,7 +96,7 @@ void Channel::setSources(std::string sources)
 	/* TOP channel, ignore any source specification */
 	if (!m_profile->getParent()) {
 		if (sources != "*") {
-			MSG_NOTICE(msg_module, "Ignoring source specification on top channel %s", m_name.c_str());
+			MSG_INFO(msg_module, "Ignoring source specification on top channel %s", m_name.c_str());
 		}
 		return;
 	}

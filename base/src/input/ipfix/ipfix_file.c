@@ -108,7 +108,7 @@ static int prepare_input_file(struct ipfix_config *conf)
 		return -1;
 	}
 
-	MSG_NOTICE(msg_module, "Opening input file: %s", conf->input_files[conf->findex]);
+	MSG_INFO(msg_module, "Opening input file: %s", conf->input_files[conf->findex]);
 	
 	fd = open(conf->input_files[conf->findex], O_RDONLY);
 	if (fd == -1) {
@@ -153,7 +153,7 @@ static int close_input_file(struct ipfix_config *conf)
 		return -1;
 	}
 
-	MSG_NOTICE(msg_module, "Input file closed");
+	MSG_INFO(msg_module, "Input file closed");
 
 	conf->fd = -1;
 	return 0;
@@ -273,9 +273,9 @@ int input_init(char *params, void **config)
 	
 	/* print all input files */
 	if (input_files[0] != NULL) {
-		MSG_NOTICE(msg_module, "List of input files:");
+		MSG_INFO(msg_module, "List of input files:");
 		for (i = 0; input_files[i] != NULL; i++) {
-			MSG_NOTICE(msg_module, "\t%s", input_files[i]);
+			MSG_INFO(msg_module, "\t%s", input_files[i]);
 		}
 	}
 	

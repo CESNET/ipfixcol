@@ -1,2 +1,2 @@
-NOTICE: preprocessor: [0] Received Template withdrawal message
+INFO: preprocessor: [0] Received Template withdrawal message
 WARNING: preprocessor: [0] Template withdrawal message received for unknown template ID 256
