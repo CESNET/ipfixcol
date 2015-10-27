@@ -45,40 +45,51 @@ extern int verbose;
 typedef enum {
 	ICMSG_ERROR,
 	ICMSG_WARNING,
-	ICMSG_NOTICE,
-	ICMSG_DEBUG
+	ICMSG_INFO,
+	ICMSG_DEBUG,
 } ICMSG_LEVEL;
 
 /**
- * \brief Macros for printing error messages
- * @param module Identification of program part that generated this message
- * @param format
+ * \brief Macros for printing error messages.
+ * \param module Identification of program component that generated this message
+ * \param format
  */
 #define MSG_FILTER(module, format, ...) if (verbose >= ICMSG_WARNING) icmsg_print(module, NULL, format, ##__VA_ARGS__)
 #define MSG_ERROR(module, format, ...) if (verbose >= ICMSG_ERROR) icmsg_print("ERROR", module, format, ##__VA_ARGS__)
 #define MSG_WARNING(module, format, ...) if (verbose >= ICMSG_WARNING) icmsg_print("WARNING", module, format, ## __VA_ARGS__)
-#define MSG_NOTICE(module, format, ...) if (verbose >= ICMSG_NOTICE) icmsg_print("NOTICE", module, format, ## __VA_ARGS__)
+#define MSG_INFO(module, format, ...) if (verbose >= ICMSG_INFO) icmsg_print("INFO", module, format, ## __VA_ARGS__)
 #define MSG_DEBUG(module, format, ...) if (verbose >= ICMSG_DEBUG) icmsg_print("DEBUG", module, format, ## __VA_ARGS__)
 
 /**
- * \brief Macro for printing commong messages, without severity prefix
+ * \brief Macro for printing common messages, without severity prefix.
  *
- * @param level The verbosity level at which this message should be printed
- * @param format
+ * In syslog, all of these messages will have LOG_INFO severity.
+ *
+ * \param level The verbosity level at which this message should be printed
+ * \param format
  */
-#define MSG_COMMON(level, format, ...) if(verbose < level); else icmsg_print(-1, format"\n", ## __VA_ARGS__)
+#define MSG_COMMON(level, format, ...) if (verbose < level); else icmsg_print(-1, format"\n", ## __VA_ARGS__)
 
 /**
- * \brief Set verbose level to level
+ * \brief Macro for initialising syslog.
  *
- * @param level
+ * \param ident Identification for syslog
+ */
+#define MSG_SYSLOG_INIT(ident) openlog(ident, LOG_PID, LOG_DAEMON);
+
+/**
+ * \brief Set verbosity level to the specified level.
+ *
+ * \param level
  */
 #define MSG_SET_VERBOSE(level) verbose = level;
 
 /**
- * \brief Printing function
+ * \brief Printing function.
  *
- * @param format
+ * \param level Verbosity level of the message (for syslog severity)
+ * \param module
+ * \param format
  */
 void icmsg_print(const char *type, const char *module, const char *format, ...);
 

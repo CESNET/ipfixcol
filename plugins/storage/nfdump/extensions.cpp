@@ -694,7 +694,7 @@ uint16_t Extension22::fill(uint16_t id, uint16_t size, uint8_t *element_data
 
 //EXTENSION 25 - Router source id
 /*void ext25_fill_tm(uint8_t flags, struct ipfix_data_template * data_template){
-        MSG_NOTICE(msg_str, "There is no element for router sourc id (filled as reserved 38 and 39 elements)");
+        MSG_INFO(msg_str, "There is no element for router sourc id (filled as reserved 38 and 39 elements)");
         data_template->fields[data_template->field_count].ie.id = 38;
         data_template->fields[data_template->field_count].ie.length = 1;
         data_template->field_count++;

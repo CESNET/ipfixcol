@@ -1221,7 +1221,7 @@ int storage_close(void **config)
 	conf = (struct postgres_config *) *config;
 
 	PQfinish(conf->conn);
-	MSG_NOTICE(msg_module, "Connection to the database has been closed.");
+	MSG_INFO(msg_module, "Connection to the database has been closed.");
 
 	free(conf->table_names);
 	free(conf);

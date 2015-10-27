@@ -39,12 +39,11 @@
 #include "ext_fill.h"
 #include "nffile.h"
 
-static const char *msg_module = "nfdump input";
-
+static const char *msg_module = "nfdump_input";
 
 //EXTENSION 0 -- not a real extension its just pading ect
 void ext0_fill_tm(uint16_t flags, struct ipfix_template * template){
-	MSG_NOTICE(msg_module, "\tZERO EXTENSION");
+	MSG_INFO(msg_module, "ZERO EXTENSION");
 }
 
 //EXTENSION 1
@@ -335,18 +334,18 @@ void ext22_fill_tm(uint16_t flags, struct ipfix_template * template){
 
 //EXTENSION 23 - Router ipv4
 void ext23_fill_tm(uint16_t flags, struct ipfix_template * template){
-	MSG_WARNING(msg_module, "There is no element for router ip (this extension is ignored)");
+	MSG_WARNING(msg_module, "There is no element for router IP address (this extension is ignored)");
 }
 
 
 //EXTENSION 24 - Router ipv6
 void ext24_fill_tm(uint16_t flags, struct ipfix_template * template){
-	MSG_WARNING(msg_module, "There is no element for router ip (this extension is ignored)");
+	MSG_WARNING(msg_module, "There is no element for router IP address (this extension is ignored)");
 }
 
 //EXTENSION 25 - Router source id
 void ext25_fill_tm(uint16_t flags, struct ipfix_template * template){
-	MSG_NOTICE(msg_module, "There is no element for router sourc id (filled as reserved 38 and 39 elements)");
+	MSG_INFO(msg_module, "There is no element for router source ID (filled as reserved 38 and 39 elements)");
 	template->fields[template->field_count].ie.id = 38;
 	template->fields[template->field_count].ie.length = 1;
 	template->field_count++;

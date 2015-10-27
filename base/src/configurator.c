@@ -230,7 +230,7 @@ int config_remove_input(configurator *config, int index)
 {
 	struct plugin_config *plugin = config->startup->input[index];
 	
-	MSG_NOTICE(msg_module, "[%d] Closing input plugin %d (%s)", config->proc_id, index, plugin->conf.name);
+	MSG_INFO(msg_module, "[%d] Closing input plugin %d (%s)", config->proc_id, index, plugin->conf.name);
 	
 	/* Free plugin */
 	config_free_plugin(plugin);
@@ -251,7 +251,7 @@ int config_remove_inter(configurator *config, int index)
 {
 	struct plugin_config *plugin = config->startup->inter[index];
 	
-	MSG_NOTICE(msg_module, "[%d] Closing intermediate plugin %d (%s)", config->proc_id, index, plugin->conf.name);
+	MSG_INFO(msg_module, "[%d] Closing intermediate plugin %d (%s)", config->proc_id, index, plugin->conf.name);
 	
 	struct ring_buffer *in_queue = NULL, *out_queue = NULL;
 	
@@ -294,7 +294,7 @@ int config_remove_storage(configurator *config, int index)
 {
 	struct plugin_config *plugin = config->startup->storage[index];
 	
-	MSG_NOTICE(msg_module, "[%d] Closing storage plugin %d (%s)", config->proc_id, index, plugin->conf.name);
+	MSG_INFO(msg_module, "[%d] Closing storage plugin %d (%s)", config->proc_id, index, plugin->conf.name);
 	
 	/* Remove it from startup config */
 	config->startup->storage[index] = NULL;
@@ -318,7 +318,7 @@ int config_remove_storage(configurator *config, int index)
  */
 int config_add_input(configurator *config, struct plugin_config *plugin, int index)
 {	
-	MSG_NOTICE(msg_module, "[%d] Opening input plugin: %s", config->proc_id, plugin->conf.file);
+	MSG_INFO(msg_module, "[%d] Opening input plugin: %s", config->proc_id, plugin->conf.file);
 	
 	/* Save configuration */
 	config->input.xml_conf = &(plugin->conf);
@@ -402,7 +402,7 @@ err:
  */
 int config_add_inter(configurator *config, struct plugin_config *plugin, int index)
 {
-	MSG_NOTICE(msg_module, "[%d] Opening intermediate xml_conf: %s", config->proc_id, plugin->conf.file);
+	MSG_INFO(msg_module, "[%d] Opening intermediate xml_conf: %s", config->proc_id, plugin->conf.file);
 	
 	struct intermediate *im_plugin = calloc(1, sizeof(struct intermediate));
 	CHECK_ALLOC(im_plugin, 1);
@@ -519,7 +519,7 @@ err:
  */
 int config_add_storage(configurator *config, struct plugin_config *plugin, int index)
 {
-	MSG_NOTICE(msg_module, "[%d] Opening storage xml_conf: %s", config->proc_id, plugin->conf.file);
+	MSG_INFO(msg_module, "[%d] Opening storage xml_conf: %s", config->proc_id, plugin->conf.file);
 	
 	/* Create storage plugin structure */
 	struct storage *st_plugin = calloc(1, sizeof(struct storage));
@@ -1157,7 +1157,7 @@ void *config_get_current_profiles(configurator *config)
 void config_process_profiles(configurator *config)
 {
 	if (!config->profiles_file) {
-		MSG_NOTICE(msg_module, "No profile configuration");
+		MSG_INFO(msg_module, "No profile configuration");
 		config_replace_profiles(config, NULL);
 		return;
 	}
