@@ -340,10 +340,6 @@ void free_config(struct fastbit_plugin_conf *conf)
 		}
 	}
 
-	if (conf == NULL) {
-		return;
-	}
-
 	if (conf->db_path) {
 		free(conf->db_path);
 	}

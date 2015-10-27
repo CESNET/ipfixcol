@@ -453,7 +453,7 @@ void fb_table::flush()
 	MSG_DEBUG(MSG_MODULE, "creating directory '%s'", dir);
 	if (!mkdir_parents(dir, 0775)) {
 		MSG_ERROR(MSG_MODULE, "failed creating directory %s: %s", dir, strerror(errno));
-		free(part_file_path);
+		delete[] part_file_path;
 		return;
 	}
 
@@ -480,7 +480,7 @@ void fb_table::flush()
 	part_file = fopen(part_file_path, "w");
 	if (part_file == NULL) {
 		MSG_WARNING(MSG_MODULE, "couldn't open file '%s': %s", part_file_path, strerror(errno));
-		free(part_file_path);
+		delete[] part_file_path;
 		return;
 	}
 	fprintf(part_file, "# meta data for data partition %u written by ipfixcol fastbit plugin on %s\n\n", template_id, "date");
