@@ -37,10 +37,15 @@
  *
  */
 
+/**
+ * @todo We are not sure if conversion for type BOOLEAN is in little or big endian -> how to translate it to json. It is necessary to solve it.
+ */
+
 extern "C" {
 #include <ipfixcol.h>
 #include <ipfixcol/profiles.h>
 #include <string.h>
+//#include <ipfix_element.h>
 }
 
 #include "Storage.h"
@@ -51,6 +56,8 @@ extern "C" {
 #include <iomanip>
 #include <map>
 
+#define quotation(function) 
+
 static const char *msg_module = "json_storage";
 
 #define READ_BYTE_ARR(_dst_, _src_, _len_) \
@@ -60,21 +67,22 @@ do {\
 	} \
 } while(0)
 
-#define QUOTED(_str_) "\"" + (_str_) + "\""
+#define QUOTED(_func_) record += std::string("\"") + std::string(_func_) + std::string("\"");
+//#define QUOTED(_func_) record += "\""; record += (_func_); record += "\"";
+//#define QUOTED(_func_) (_func_);
 
-std::map<uint32_t, std::map<uint16_t, struct ipfix_element> > Storage::elements{};
+struct json_conf {
+        bool metadata;
+        Storage *storage;
+        bool tcpFlags;  /**< tcpFlags format - true = formated, false = RAW */
+        bool timestamp; /**< timestamp format - true = formated, false = UNIX */
+};
 
 /**
  * \brief Constructor
  */
-Storage::Storage():
-offset(0), id(0), length(0), enterprise(0)
+Storage::Storage()
 {
-	/* Load only once for all plugins */
-	if (elements.empty()) {
-		this->loadElements();
-	}
-
 	/* Allocate space for buffers */
 	record.reserve(4096);
 	buffer.reserve(BUFF_SIZE);
@@ -84,59 +92,6 @@ Storage::~Storage()
 {
 	for (Output *output: outputs) {
 		delete output;
-	}
-}
-
-void Storage::getElement(uint32_t enterprise, uint16_t id, struct ipfix_element& element)
-{
-	element = elements[enterprise][id];
-	if (element.type == UNKNOWN && element.name.empty()) {
-		element.name = rawName(enterprise, id);
-		elements[enterprise][id] = element;
-	}
-}
-
-/**
- * \brief Load elements into memory
- */
-void Storage::loadElements()
-{
-	pugi::xml_document doc;
-
-	/* Load file */
-	pugi::xml_parse_result result = doc.load_file(ipfix_elements);
-
-	/* Check for errors */
-	if (!result) {
-		std::stringstream ss;
-		ss << "Error when parsing '" << ipfix_elements << "': " << result.description();
-		throw std::invalid_argument(ss.str());
-	}
-
-	/* Get all elements */
-	pugi::xpath_node_set elements_set = doc.select_nodes("/ipfix-elements/element");
-	for (auto node: elements_set) {
-		uint32_t en = strtoul(node.node().child_value("enterprise"), NULL, 0);
-		uint64_t id = strtoul(node.node().child_value("id"), NULL, 0);
-
-		struct ipfix_element element{};
-		
-		element.name = node.node().child_value("name");
-		std::string dataType = node.node().child_value("dataType");
-
-		if		(element.name == "protocolIdentifier")	 element.type = PROTOCOL;
-		else if (element.name == "tcpControlBits")		 element.type = FLAGS;
-		else if (dataType	  == "ipv4Address")			 element.type = IPV4;
-		else if (dataType	  == "ipv6Address")			 element.type = IPV6;
-		else if (dataType	  == "macAddress")			 element.type = MAC;
-		else if (dataType	  == "dateTimeSeconds")		 element.type = TSTAMP_SEC;
-		else if (dataType	  == "dateTimeMilliseconds") element.type = TSTAMP_MILLI;
-		else if (dataType	  == "dateTimeMicroseconds") element.type = TSTAMP_MICRO;
-		else if (dataType	  == "dateTimeNanoseconds")  element.type = TSTAMP_NANO;
-		else if (dataType	  == "string")				 element.type = STRING;
-		else											 element.type = RAW;
-		
-		elements[en][id] = element;
 	}
 }
 
@@ -153,11 +108,11 @@ void Storage::sendData() const
 /**
  * \brief Store data sets
  */
-void Storage::storeDataSets(const ipfix_message* ipfix_msg)
+void Storage::storeDataSets(const ipfix_message* ipfix_msg, struct json_conf * config)
 {	
 	/* Iterate through all data records */
 	for (int i = 0; i < ipfix_msg->data_records_count; ++i) {
-		storeDataRecord(&(ipfix_msg->metadata[i]));
+		storeDataRecord(&(ipfix_msg->metadata[i]), config);
 	}
 }
 
@@ -191,8 +146,34 @@ void Storage::readString(uint16_t& length, uint8_t *data_record, uint16_t &offse
 	/* Get string length */
 	length = realLength(length, data_record, offset);
 	
-	/* Read string */
-	record.append((const char *)(data_record + offset), length);
+	/* Read string and replace white spaces by \notation (\n, \t, ...) */
+
+	unsigned long int index  = 0;
+	unsigned long int index2 = 0;
+	const char * pointer = (const char *)(data_record + offset);
+
+	for(index = 0; index != length; index++) {	
+
+		switch(pointer[index]) {
+
+		case TABULATOR:		stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = 't'; break;
+		case NEWLINE:		stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = 'n'; break;
+		case QUOTATION:		stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = '\"'; break;
+		case REVERSESOLIDUS:	stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = '\\'; break;
+		case SOLIDUS:		stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = '/'; break;
+		case BACKSPACE:		stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = 'b'; break;
+		case FORMFEED:		stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = 'f'; break;
+		case RETURN:		stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = 'r'; break;
+		default:		stringWithEscseq[index2++] = pointer[index]; break;
+
+		}
+		
+	}
+
+	stringWithEscseq[index2] = '\0';
+
+	record.append((const char *) stringWithEscseq);
+
 }
 
 /**
@@ -226,7 +207,7 @@ void Storage::readRawData(uint16_t &length, uint8_t* data_record, uint16_t &offs
 		record += "0x";
 	}
 
-	record += buffer.data();
+	QUOTED(buffer.data());
 }
 
 /**
@@ -242,16 +223,17 @@ std::string Storage::rawName(uint32_t en, uint16_t id) const
 /**
  * \brief Store data record
  */
-void Storage::storeDataRecord(struct metadata *mdata)
+void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 {
 	offset = 0;
-
 	record.clear();
 	record += "{\"@type\": \"ipfix.entry\", \"ipfix\": {";
 
 	struct ipfix_template *templ = mdata->record.templ;
 	uint8_t *data_record = (uint8_t*) mdata->record.record;
-	
+
+	//printf("%d %d %d\n\n\n", config->tcpFlags, config->timestamp, config->metadata);
+
 	/* get all fields */
 	for (uint16_t count = 0, index = 0; count < templ->field_count; ++count, ++index) {
 		/* Get Enterprise number and ID */
@@ -265,11 +247,9 @@ void Storage::storeDataRecord(struct metadata *mdata)
 		}
 		
 		/* Get element informations */
-		struct ipfix_element& element = elements[enterprise][id];
-		if (element.type == UNKNOWN && element.name.empty()) {
-			element.name = rawName(enterprise, id);
-			elements[enterprise][id] = element;
-			MSG_DEBUG(msg_module, "Unknown element (%s)", element.name.c_str());
+		const ipfix_element_t * element = get_element_by_id(id, enterprise);
+		if (element == NULL) {
+			MSG_DEBUG(msg_module, "Unknown element (%s)", element->name);
 		}
 
 		if (count > 0) {
@@ -277,53 +257,97 @@ void Storage::storeDataRecord(struct metadata *mdata)
 		}
 
 		record += "\"";
-		record += element.name;
-		record += "\": \"";
+		record += element->name;
+		record += "\": ";
 
-		switch (element.type) {
-		case PROTOCOL:
-			record += translator.formatProtocol(read8(data_record + offset));
-			break;
-		case FLAGS:
-			record += (length > 1)
-				? translator.formatFlags16(read16(data_record + offset))
-				: translator.formatFlags8(read8(data_record + offset));
-			break;
-		case IPV4:
-			record += translator.formatIPv4(read32(data_record + offset));
-			break;
-		case IPV6:{
-			READ_BYTE_ARR(addr6, data_record + offset, IPV6_LEN);
-			record += translator.formatIPv6(addr6);
-			break;}
-		case MAC: {
-			READ_BYTE_ARR(addrMac, data_record + offset, MAC_LEN);
-			record += translator.formatMac(addrMac);
-			break;}
-		case TSTAMP_SEC:
-			record += translator.formatTimestamp(read64(data_record + offset), t_units::SEC);
-			break;
-		case TSTAMP_MILLI:
-			record += translator.formatTimestamp(read64(data_record + offset), t_units::MILLISEC);
-			break;
-		case TSTAMP_MICRO:
-			record += translator.formatTimestamp(read64(data_record + offset), t_units::MICROSEC);
-			break;
-		case TSTAMP_NANO:
-			record += translator.formatTimestamp(read64(data_record + offset), t_units::NANOSEC);
-			break;
-		case STRING:
-			readString(length, data_record, offset);
-			break;
-		case RAW:
-			readRawData(length, data_record, offset);
-			break;
-		default:
-			readRawData(length, data_record, offset);
-			break;
+		if(element->type == ET_UNSIGNED_8 || element->type == ET_UNSIGNED_16 || element->type == ET_UNSIGNED_32 || element->type == ET_UNSIGNED_64) {
+			if(length == BYTE1) {
+				if(element->semantic == ES_FLAGS) {
+					if(config->tcpFlags)
+						QUOTED(translator.formatFlags8(read8(data_record + offset)))
+					else
+						record += std::to_string((uint8_t) (read8(data_record + offset)));
+				} else if(!strcmp(element->name, "protocolIdentifier"))
+					QUOTED(translator.formatProtocol(read8(data_record + offset)))
+				else
+					record += std::to_string((uint8_t) (read8(data_record + offset)));
+			} else if(length == BYTE2) {
+				if(element->semantic == ES_FLAGS) {
+					if(config->tcpFlags)
+						QUOTED(translator.formatFlags16(read16(data_record + offset)))
+					else
+						record += std::to_string((uint16_t) ntohs(read16(data_record + offset)));
+				} else
+					record += std::to_string((uint16_t) ntohs(read16(data_record + offset)));
+			} else if(length == BYTE4)
+				record += std::to_string((uint32_t) ntohl(read32(data_record + offset)));
+			else	// 8 [B]
+				record += std::to_string((uint64_t) be64toh(read64(data_record + offset)));
+		} else if(element->type == ET_SIGNED_8 || element->type == ET_SIGNED_16 || element->type == ET_SIGNED_32 || element->type == ET_SIGNED_64) {
+			if(length == BYTE1) 
+				record += std::to_string((char) (read8(data_record + offset)));
+			else if(length == BYTE2)
+				record += std::to_string((int16_t) read8(data_record + offset));
+			else if(length == BYTE4)
+				record += std::to_string((int32_t) ntohl(read32(data_record + offset)));
+			else
+				record += std::to_string((int64_t) be64toh(read64(data_record + offset)));
+		} else if(element->type == ET_FLOAT_32 || element->type == ET_FLOAT_64) {
+			if(length == BYTE4)
+				record += std::to_string((float) ntohl(read32(data_record + offset)));
+			else
+				record += std::to_string((double) be64toh(read64(data_record + offset)));
+		} else {
+			switch (element->type) {
+			case ET_IPV4_ADDRESS:
+				QUOTED(translator.formatIPv4(read32(data_record + offset)))
+				break;
+			case ET_IPV6_ADDRESS:
+				READ_BYTE_ARR(addr6, data_record + offset, IPV6_LEN);
+				QUOTED(translator.formatIPv6(addr6))
+				break;
+			case ET_MAC_ADDRESS:
+				READ_BYTE_ARR(addrMac, data_record + offset, MAC_LEN);
+				QUOTED(translator.formatMac(addrMac))
+				break;
+			case ET_DATE_TIME_SECONDS:
+				if(config->timestamp)
+					QUOTED(translator.formatTimestamp(read64(data_record + offset), t_units::SEC))
+				else
+					record += std::to_string((int64_t) be64toh(read64(data_record + offset)));
+				break;
+			case ET_DATE_TIME_MILLISECONDS:
+				if(config->timestamp)
+					QUOTED(translator.formatTimestamp(read64(data_record + offset), t_units::MILLISEC))
+				else
+					record += std::to_string((int64_t) be64toh(read64(data_record + offset)));
+				break;
+			case ET_DATE_TIME_MICROSECONDS:
+				if(config->timestamp)
+					QUOTED(translator.formatTimestamp(read64(data_record + offset), t_units::MICROSEC))
+				else
+					record += std::to_string((int64_t) be64toh(read64(data_record + offset)));
+				break;
+			case ET_DATE_TIME_NANOSECONDS:
+				if(config->timestamp)
+					QUOTED(translator.formatTimestamp(read64(data_record + offset), t_units::NANOSEC))
+				else
+					record += std::to_string((int64_t) be64toh(read64(data_record + offset)));
+				break;
+			case ET_STRING:
+				readString(length, data_record, offset);
+				break;
+			case ET_BOOLEAN:
+				readRawData(length, data_record, offset);
+				break;
+			case ET_UNASSIGNED: 
+				readRawData(length, data_record, offset);
+				break;
+			default:
+				readRawData(length, data_record, offset);
+				break;
+			}
 		}
-
-		record += "\"";
 
 		offset += length;
 	}
@@ -360,8 +384,8 @@ void Storage::storeMetadata(metadata* mdata)
 	record += "\"profiles\": [";
 	if (mdata->channels) {
 		// Get name of root profile
-		void *profile_ptr = NULL, *prev_profile_ptr = NULL;
-		const char *root_profile_name = NULL;
+		void *profile_ptr, *prev_profile_ptr;
+		const char *root_profile_name;
 
 		profile_ptr = channel_get_profile(mdata->channels[0]);
 		while (profile_ptr != NULL) {

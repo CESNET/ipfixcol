@@ -58,8 +58,10 @@ IPFIXCOL_API_VERSION;
 static const char *msg_module = "json_storage";
 
 struct json_conf {
-	bool metadata;
-	Storage *storage;
+        bool metadata;
+        Storage *storage;
+        bool tcpFlags;  /**< tcpFlags format - true = formated, false = RAW */
+        bool timestamp; /**< timestamp format - true = formated, false = UNIX */
 };
 
 void process_startup_xml(struct json_conf *conf, char *params) 
@@ -79,7 +81,15 @@ void process_startup_xml(struct json_conf *conf, char *params)
 	conf->metadata = (meta == "yes") || (meta == "true") || (meta == "1");
 
 	/* Process all outputs */
-	pugi::xpath_node_set outputs = doc.select_nodes("/fileWriter/output");
+	std::string tcpFlags = ie.node().child_value("tcpFlags");
+        conf->tcpFlags = (tcpFlags == "formated") || (tcpFlags == "Formated") || (tcpFlags == "FORMATED");
+
+        /* Check time format */
+        std::string timestamp = ie.node().child_value("timestamp");
+        conf->timestamp = (timestamp == "formated") || (timestamp == "Formated") || (timestamp == "FORMATED");
+
+        /* Process all outputs */
+        pugi::xpath_node_set outputs = doc.select_nodes("/fileWriter/output");
 
 	for (auto& node: outputs) {
 		std::string type = node.node().child_value("type");
@@ -139,8 +149,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	(void) template_mgr;
 	struct json_conf *conf = (struct json_conf *) config;
 	
-	conf->storage->storeDataSets(ipfix_msg);
-	
+	conf->storage->storeDataSets(ipfix_msg, conf);
 	return 0;
 }
 
