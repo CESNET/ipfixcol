@@ -248,8 +248,9 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 		
 		/* Get element informations */
 		const ipfix_element_t * element = get_element_by_id(id, enterprise);
-		if (element == NULL) {
+		if (element == NULL) { /* Skip unknown elements */
 			MSG_DEBUG(msg_module, "Unknown element (%s)", element->name);
+			continue;
 		}
 
 		if (count > 0) {

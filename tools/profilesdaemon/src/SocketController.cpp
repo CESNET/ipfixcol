@@ -29,7 +29,9 @@ int SocketController::initControllerSocket(std::string path)
 	}
 
 	address.sun_family = AF_UNIX;
-	strcpy(address.sun_path, path.c_str());
+	/* Make string zero terminated and copy safely */
+	address.sun_path[sizeof(address.sun_path) - 1] = '\0';
+	strncpy(address.sun_path, path.c_str(), sizeof(address.sun_path) - 1);
 	unlink(address.sun_path);
 
 	int len = strlen(address.sun_path) + sizeof(address.sun_family);

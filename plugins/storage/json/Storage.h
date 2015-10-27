@@ -171,8 +171,8 @@ private:
 	bool printOnly{false};
 	uint8_t addr6[IPV6_LEN];
 	uint8_t addrMac[MAC_LEN];
-	uint16_t offset, id, length;
-	uint32_t enterprise;
+	uint16_t offset{0}, id{0}, length{0};
+	uint32_t enterprise{0};
     Translator translator;          /**< number -> string translator */
 
 	std::vector<Output*> outputs{};

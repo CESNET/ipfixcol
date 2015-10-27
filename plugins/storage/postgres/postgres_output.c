@@ -757,6 +757,8 @@ static int insert_into(struct postgres_config *conf, const char *table_name, con
 					case (DATETIMENANOSECONDS):
 						float64 = uint64 / 1000000000;
 						break;
+					default:
+						float64 = uint64; /* Unknown date type */
 					}
 
 					sql_len += snprintf(sql_command+sql_len, sql_command_max_len-sql_len,
@@ -1028,6 +1030,7 @@ int storage_init(char *params, void **config)
 	/* use default values if not specified in configuration */
 	if (!dbname) {
 		dbname = DEFAULT_CONFIG_DBNAME;
+		dbname_allocated = 0;
 	}
 
 	/* create connection string */

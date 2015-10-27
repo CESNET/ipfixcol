@@ -296,6 +296,7 @@ bool get_db_path(struct fastbit_plugin_conf *conf, time_t start_time, int timesl
 
 	*result = (char *) malloc(strlen(dir) + 1 + strlen(name) + strlen(conf->prefix) + 1);
 	if (*result == NULL) {
+		free(dir);
 		return false;
 	}
 	strcpy(*result, dir);
@@ -320,10 +321,10 @@ ipfix_type_t ipfix_type_from_string(const char *type_name)
 
 ipfix_type_t get_element_type(uint32_t enterprise_id, uint16_t element_id)
 {
-	xmlDoc *doc;
-	xmlNode *cur, *cur2;
+	xmlDoc *doc = NULL;
+	xmlNode *cur = NULL, *cur2 = NULL;
 	xmlChar *text = NULL;
-	unsigned int enterprise, id;
+	unsigned int enterprise = 0, id = 0;
 	ipfix_type_t type = IPFIX_TYPE_UNKNOWN;
 
 	doc = xmlParseFile(IPFIX_ELEMENTS_FILE);
@@ -358,7 +359,7 @@ ipfix_type_t get_element_type(uint32_t enterprise_id, uint16_t element_id)
 				}
 				cur2 = cur2->next;
 			}
-			if (enterprise == enterprise_id && id == element_id) {
+			if (enterprise == enterprise_id && id == element_id && text != NULL) {
 				type = ipfix_type_from_string((char *) text);
 				break;
 			}
@@ -443,7 +444,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	time_t t;
 	int timeslot;
 	std::map<uint32_t, dbslot>::iterator db_iter;
-	char *db_dir;
+	char *db_dir = NULL;
 	uint32_t odid = ntohl(ipfix_msg->pkt_header->observation_domain_id);
 	uint32_t sequence_number = ntohl(ipfix_msg->pkt_header->sequence_number);
 

@@ -604,6 +604,8 @@ int input_close(void **config)
 	free_ext(&(conf->ext));
 	clean_tmp_manager(&(conf->template_mgr));
 	free(conf);
+
+	return 0;
 }
 
 
@@ -870,18 +872,18 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		if (!(*packet)) {
 			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
 			ret_val = INPUT_ERROR;
-		}
+		} else {
 
-		if ((*info)->status == SOURCE_STATUS_NEW) {
-			(*info)->status = SOURCE_STATUS_OPENED;
-			(*info)->odid = ntohl(((struct ipfix_header*) *packet)->observation_domain_id);
-		}
-		if (ret_val == INPUT_CLOSED && processed_records == 0) {
-			(*info)->status = SOURCE_STATUS_CLOSED;
-		}
+			if ((*info)->status == SOURCE_STATUS_NEW) {
+				(*info)->status = SOURCE_STATUS_OPENED;
+				(*info)->odid = ntohl(((struct ipfix_header*) *packet)->observation_domain_id);
+			}
+			if (ret_val == INPUT_CLOSED && processed_records == 0) {
+				(*info)->status = SOURCE_STATUS_CLOSED;
+			}
 
-		*source_status = (*info)->status;
-
+			*source_status = (*info)->status;
+		}
 	} else {
 		*source_status = SOURCE_STATUS_CLOSED;
 	}
@@ -961,7 +963,7 @@ static int prepare_input_file(struct nfinput_config *conf)
 	if (fd == -1) {
 		/* input file doesn't exist or we don't have read permission */
 		MSG_ERROR(msg_module, "Unable to open input file: %s", conf->input_files[conf->findex]);
-		ret = -1;
+		return -1;
 	}
 
 	/* New file == new input info */

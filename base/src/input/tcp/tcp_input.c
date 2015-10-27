@@ -590,14 +590,10 @@ int input_init(char *params, void **config)
 			}
 			strncpy_safe(tmp_val, (char *)cur_node->children->content, tmp_val_len);
 
-			if (xmlStrEqual(cur_node->name, BAD_CAST "localPort")) { /* set local port */
-				if (port == NULL) {
-					port = tmp_val;
-				}
-			} else if (xmlStrEqual(cur_node->name, BAD_CAST "localIPAddress")) { /* set local address */
-				if (address == NULL) {
-					address = tmp_val;
-				}
+			if (xmlStrEqual(cur_node->name, BAD_CAST "localPort") && port == NULL) { /* set local port */
+				port = tmp_val;
+			} else if (xmlStrEqual(cur_node->name, BAD_CAST "localIPAddress") && address == NULL) { /* set local address */
+				address = tmp_val;
 			/* save following configuration to input_info */
 			} else if (xmlStrEqual(cur_node->name, BAD_CAST "templateLifeTime")) {
 				conf->info.template_life_time = tmp_val;
