@@ -889,10 +889,13 @@ void Filter::parseString(parserStruct *ps, std::string text) const throw (std::i
 
 void Filter::parseStringType(parserStruct *ps, parserStruct *col, std::string &cmp) const throw (std::invalid_argument)
 {
+	(void) col;
+
 	if (ps == NULL) {
 		throw std::invalid_argument(std::string("Cannot parse string by type, NULL parser structure"));
 	}
-/*
+
+	/*
 	if (col->parse != NULL) {
 		char buff[PLUGIN_BUFFER_SIZE];
 		col->parse((char *) ps->parts[0].c_str(), buff, col->parseConf);
@@ -901,7 +904,7 @@ void Filter::parseStringType(parserStruct *ps, parserStruct *col, std::string &c
 			ps->type = PT_NUMBER;
 		}
 	}
-*/
+	*/
 
 	if (ps->type == PT_STRING) {
 		/* For all other columns with string value it stays as it is */

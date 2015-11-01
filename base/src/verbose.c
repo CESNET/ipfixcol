@@ -1,7 +1,7 @@
 /**
  * \file verbose.c
  * \author Petr Velan <petr.velan@cesnet.cz>
- * \brief Main body of the ipfixcol
+ * \brief Main body of ipfixcol
  *
  * Copyright (C) 2015 CESNET, z.s.p.o.
  *
@@ -42,14 +42,14 @@
 #include <stdarg.h>
 #include <syslog.h>
 
-/* Default is to print only errors */
+/* Default is to print errors only */
 int verbose = ICMSG_ERROR;
 
 /* Do not use syslog unless specified otherwise */
 int use_syslog = 0;
 int skip_seq_err = 0;
 
-void icmsg_print(ICMSG_LEVEL lvl, const char *format, ...)
+void icmsg_print(ICMSG_LEVEL level, const char *format, ...)
 {
 	va_list ap;
 	int priority;
@@ -60,13 +60,13 @@ void icmsg_print(ICMSG_LEVEL lvl, const char *format, ...)
 
 	if (use_syslog) {
 		va_start(ap, format);
-		switch (lvl) {
-		case ICMSG_ERROR: priority = LOG_ERR; break;
-		case ICMSG_WARNING: priority = LOG_WARNING; break;
-		case ICMSG_NOTICE: priority = LOG_NOTICE; break;
-		case ICMSG_DEBUG: priority = LOG_DEBUG; break;
-		default: priority = LOG_INFO; break;
+		switch (level) {
+			case ICMSG_ERROR: priority = LOG_ERR; break;
+			case ICMSG_WARNING: priority = LOG_WARNING; break;
+			case ICMSG_DEBUG: priority = LOG_DEBUG; break;
+			default: priority = LOG_INFO; break;
 		}
+
 		vsyslog(priority, format, ap);
 		va_end(ap);
 	}

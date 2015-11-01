@@ -41,12 +41,12 @@
 #include "ext_parse.h"
 #include "nffile.h"
 
-static const char *msg_module = "nfdump input";
+static const char *msg_module = "nfdump_input";
 
 
 //EXTENSION 0 -- not a real extension its just pading ect
 void ext0_parse(uint32_t *data, int *offset, uint16_t flags, struct ipfix_data_set *data_set){
-	//MSG_DEBUG(msg_module, "\tZERO EXTENSION");
+	//MSG_DEBUG(msg_module, "ZERO EXTENSION");
 }
 
 

@@ -330,14 +330,14 @@ void free_config(struct fastbit_plugin_conf *conf)
 {
 	std::map<std::string, column_writer *>::iterator writers_it;
 
+	if (conf == NULL) {
+		return;
+	}
+
 	for (writers_it = conf->writers.begin(); writers_it != conf->writers.end(); writers_it++) {
 		if (writers_it->second) {
 			delete writers_it->second;
 		}
-	}
-
-	if (conf == NULL) {
-		return;
 	}
 
 	if (conf->db_path) {

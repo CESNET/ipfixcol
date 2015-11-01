@@ -108,7 +108,7 @@ static void* storage_plugin_thread(void *cfg)
 		/* get next data */
 		msg = rbuffer_read(config->thread_config->queue, &index);
 		if (msg == NULL) {
-			MSG_NOTICE("storage plugin thread", "[%u] No more data from Data Manager", config->odid);
+			MSG_INFO("storage plugin thread", "[%u] No more data from Data Manager", config->odid);
             break;
 		}
 		
@@ -147,7 +147,7 @@ static void* storage_plugin_thread(void *cfg)
 		free(starting_msg);
 	}
 
-	MSG_NOTICE("storage plugin thread", "[%u] Closing storage plugin thread", config->odid);
+	MSG_INFO("storage plugin thread", "[%u] Closing storage plugin thread", config->odid);
 	return (NULL);
 }
 

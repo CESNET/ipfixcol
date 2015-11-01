@@ -297,6 +297,9 @@ uint16_t CommonBlock::fill(uint16_t id, uint16_t size, uint8_t *element_data
 	return size;
 }
 
+//EXTENSION 1
+Extension1::Extension1(): IPv4_(false) {}
+
 //EXTENSION 1 IP addresses
 int Extension1::checkElements(int ids_cnt, uint16_t *ids, Extension **ids_ext){
 	bool srcIPv6,dstIPv6,srcIPv4,dstIPv4;
@@ -694,7 +697,7 @@ uint16_t Extension22::fill(uint16_t id, uint16_t size, uint8_t *element_data
 
 //EXTENSION 25 - Router source id
 /*void ext25_fill_tm(uint8_t flags, struct ipfix_data_template * data_template){
-        MSG_NOTICE(msg_str, "There is no element for router sourc id (filled as reserved 38 and 39 elements)");
+        MSG_INFO(msg_str, "There is no element for router sourc id (filled as reserved 38 and 39 elements)");
         data_template->fields[data_template->field_count].ie.id = 38;
         data_template->fields[data_template->field_count].ie.length = 1;
         data_template->field_count++;

@@ -71,6 +71,15 @@ if (retval == NULL) {
  */
 ```
 
+#### Verbosity levels
+
+To ensure consistent usage of log verbosity levels, please use the following definitions:
+
+* Error - Something went really wrong, e.g., memory errors or disk full.
+* Warning - This is not right, but I can continue. You should have a look at what happended though.
+* Info - I have something to say, but I don't expect you to listen.
+* Debug - All information that is only interesting for programmers.
+
 #### Other
 
 In case of any doubts or issues other than described in this document, the Linux kernel coding style [1] is leading.

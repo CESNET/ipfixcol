@@ -44,6 +44,15 @@
 #include "storage.h"
 
 /**
+ * \brief Type of a profile
+ */
+enum PROFILE_TYPE {
+	PT_UNDEF,
+	PT_NORMAL,  /**< Real profile - store data           */
+	PT_SHADOW   /**< Shadow profile - do not store data  */
+};
+
+/**
  * \brief Process xml file with profiles configuration
  *
  * \param[in] file path to the xml file

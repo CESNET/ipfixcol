@@ -131,7 +131,7 @@ int Configuration::init(int argc, char *argv[])
 		case 'n':
 			/* same as -c, but -c takes precedence */
 			if (!maxCountSet) {
-				if (optarg == std::string("")) {
+				if (optarg == NULL || optarg == std::string("")) {
 					throw std::invalid_argument("-n requires a number specification");
 				}
 				this->maxRecords = atoi(optarg);

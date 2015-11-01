@@ -390,7 +390,7 @@ static void *output_manager_plugin_thread(void* config)
 
 			/* Add config to data_mngmts structure */
 			output_manager_insert(conf, data_config);
-			MSG_NOTICE(msg_module, "[%u] Data Manager created", odid);
+			MSG_INFO(msg_module, "[%u] Data Manager created", odid);
 		}
 
 		if (msg->source_status == SOURCE_STATUS_NEW) {
@@ -429,7 +429,7 @@ static void *output_manager_plugin_thread(void* config)
 		rbuffer_remove_reference(conf->in_queue, index, 0);
 	}
 
-	MSG_NOTICE(msg_module, "Closing Output Manager thread");
+	MSG_INFO(msg_module, "Closing Output Manager thread");
 
 	return (void *) 0;
 }
@@ -867,9 +867,9 @@ int output_manager_create(configurator *plugins_config, int stat_interval, bool 
 	conf->perman_odid_merge = odid_merge;
 
 	if (conf->manager_mode == OM_SINGLE) {
-		MSG_NOTICE(msg_module, "Configuring Output Manager in single manager mode");
+		MSG_INFO(msg_module, "Configuring Output Manager in single manager mode");
 	} else if (conf->manager_mode == OM_MULTIPLE) {
-		MSG_NOTICE(msg_module, "Configuring Output Manager in multiple manager mode");
+		MSG_INFO(msg_module, "Configuring Output Manager in multiple manager mode");
 	} else {
 		/* Unknown mode */
 	}
@@ -1007,9 +1007,9 @@ int output_manager_set_mode(enum om_mode mode)
 	conf->manager_mode = mode;
 
 	if (mode == OM_SINGLE) {
-		MSG_NOTICE(msg_module, "Switching Output Manager to single manager mode");
+		MSG_INFO(msg_module, "Switching Output Manager to single manager mode");
 	} else if (mode == OM_MULTIPLE) {
-		MSG_NOTICE(msg_module, "Switching Output Manager to multiple manager mode");
+		MSG_INFO(msg_module, "Switching Output Manager to multiple manager mode");
 	} else {
 		/* Unknown mode */
 	}

@@ -270,14 +270,14 @@ int main (int argc, char* argv[])
 	if (startup_config == NULL) {
 		/* ... and use default if not specified */
 		startup_config = DEFAULT_STARTUP_CONFIG;
-		MSG_NOTICE(msg_module, "Using default configuration file: %s", startup_config);
+		MSG_INFO(msg_module, "Using default configuration file: %s", startup_config);
 	}
 
 	/* Check internal config file */
 	if (internal_config == NULL) {
 		/* ... and use default if not specified */
 		internal_config = DEFAULT_INTERNAL_CONFIG;
-		MSG_NOTICE(msg_module, "Using default internal configuration file: %s", internal_config);
+		MSG_INFO(msg_module, "Using default internal configuration file: %s", internal_config);
 	}
 	  
 	/* Initialize configurator */
@@ -313,7 +313,7 @@ int main (int argc, char* argv[])
 			/* else child - just continue to handle plugins */
 			config->proc_id = i;
 			
-			MSG_NOTICE(msg_module, "[%d] New collector process started", config->proc_id);
+			MSG_INFO(msg_module, "[%d] New collector process started", config->proc_id);
 		}
 		
 		/* DEBUG - remove this */
@@ -433,10 +433,10 @@ cleanup:
 	if (pid > 0) {
 		for (i = 0; i < proc_count; i++) {
 			pid = wait(NULL);
-			MSG_NOTICE(msg_module, "[%d] Collector child process '%d' terminated", config->proc_id, pid);
+			MSG_INFO(msg_module, "[%d] Collector child process '%d' terminated", config->proc_id, pid);
 		}
 
-		MSG_NOTICE(msg_module, "[%d] Closing collector", config->proc_id);
+		MSG_INFO(msg_module, "[%d] Closing collector", config->proc_id);
 	}
 
 	/* destroy template manager */

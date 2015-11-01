@@ -48,8 +48,8 @@ profile_id_t Profile::profiles_cnt = 1;
 /**
  * Constructor
  */
-Profile::Profile(std::string name)
-: m_id{profiles_cnt++}, m_name{name}
+Profile::Profile(std::string name, PROFILE_TYPE type)
+: m_id{profiles_cnt++}, m_name{name}, m_type{type}
 {
 }
 
@@ -120,7 +120,8 @@ void Profile::removeChannel(channel_id_t id)
 		src->removeListener(ch);
 	}
 
-	delete ch;
+	// TODO: clear source list and unsubscribe listeners?
+	m_channels.erase(it);
 }
 
 /**

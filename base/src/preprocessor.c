@@ -129,7 +129,7 @@ struct odid_info *odid_info_add_source(uint32_t odid)
 	}
 
 	aux_info->sources++;
-	MSG_NOTICE(msg_module, "[%u] Accepted data from %d. source with this ODID", odid, aux_info->sources);
+	MSG_INFO(msg_module, "[%u] Accepted data from %d. source with this ODID", odid, aux_info->sources);
 	return aux_info;
 }
 
@@ -340,7 +340,7 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 		/* check for withdraw template message */
 	} else if (ntohs(template_record->count) == 0) {
 		ret = tm_remove_template(template_mgr, key);
-		MSG_NOTICE(msg_module, "[%u] Received %s withdrawal message", input_info->odid, (type == TM_TEMPLATE) ? "Template" : "Options template");
+		MSG_INFO(msg_module, "[%u] Received %s withdrawal message", input_info->odid, (type == TM_TEMPLATE) ? "Template" : "Options template");
 		/* Log error when removing unknown template */
 		if (ret == 1) {
 			MSG_WARNING(msg_module, "[%u] %s withdrawal message received for unknown template ID %u", input_info->odid,
@@ -354,7 +354,7 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 		if (ntohs(template_record->template_id) < 256) {
 			MSG_WARNING(msg_module, "[%u] %s ID %i is reserved and not valid for data set", key->odid, (type == TM_TEMPLATE) ? "Template" : "Options template", ntohs(template_record->template_id));
 		} else {
-			MSG_NOTICE(msg_module, "[%u] New %s ID %i", key->odid, (type == TM_TEMPLATE) ? "template" : "options template", ntohs(template_record->template_id));
+			MSG_INFO(msg_module, "[%u] New %s ID %i", key->odid, (type == TM_TEMPLATE) ? "template" : "options template", ntohs(template_record->template_id));
 			template = tm_add_template(template_mgr, tmpl, max_len, type, key);
 			/* Set new template ID according to ODID */
 			if (template) {

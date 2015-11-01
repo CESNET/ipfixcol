@@ -724,7 +724,7 @@ void tm_remove_all_odid_templates(struct ipfix_template_mgr *tm, uint32_t odid)
 {
 	struct ipfix_template_mgr_record *prev_rec = tm->first, *aux_rec = tm->first;
 
-	MSG_NOTICE(msg_module, "[%u] Removing all templates", odid);
+	MSG_INFO(msg_module, "[%u] Removing all templates", odid);
 
 	while (aux_rec) {
 		if (aux_rec->key >> 32 == odid) {

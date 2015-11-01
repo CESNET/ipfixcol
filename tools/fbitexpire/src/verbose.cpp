@@ -68,11 +68,11 @@ void icmsg_print_common(const char *format, ...)
 	}
 }
 
-void icmsg_print(ICMSG_LEVEL lvl, const char *prefix, const char *module, const char *format, ...)
+void icmsg_print(ICMSG_LEVEL level, const char *type, const char *module, const char *format, ...)
 {
 	std::stringstream msg;
 	
-	msg << prefix << ": " << module << ": " << format << "\n";
+	msg << type << ": " << module << ": " << format << "\n";
 	
 	va_list ap;
 	int priority;
@@ -83,13 +83,13 @@ void icmsg_print(ICMSG_LEVEL lvl, const char *prefix, const char *module, const 
 
 	if (use_syslog) {
 		va_start(ap, format);
-		switch (lvl) {
-		case ICMSG_ERROR:   priority = LOG_ERR;     break;
-		case ICMSG_WARNING: priority = LOG_WARNING; break;
-		case ICMSG_NOTICE:  priority = LOG_NOTICE;  break;
-		case ICMSG_DEBUG:   priority = LOG_DEBUG;   break;
-		default:            priority = LOG_INFO;    break;
+		switch (level) {
+			case ICMSG_ERROR:   priority = LOG_ERR;     break;
+			case ICMSG_WARNING: priority = LOG_WARNING; break;
+			case ICMSG_DEBUG:   priority = LOG_DEBUG;   break;
+			default:            priority = LOG_INFO;    break;
 		}
+
 		vsyslog(priority, msg.str().c_str(), ap);
 		va_end(ap);
 	}
