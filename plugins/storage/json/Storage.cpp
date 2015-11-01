@@ -68,8 +68,6 @@ do {\
 } while(0)
 
 #define QUOTED(_func_) record += std::string("\"") + std::string(_func_) + std::string("\"");
-//#define QUOTED(_func_) record += "\""; record += (_func_); record += "\"";
-//#define QUOTED(_func_) (_func_);
 
 struct json_conf {
         bool metadata;
@@ -232,8 +230,6 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 	struct ipfix_template *templ = mdata->record.templ;
 	uint8_t *data_record = (uint8_t*) mdata->record.record;
 
-	//printf("%d %d %d\n\n\n", config->tcpFlags, config->timestamp, config->metadata);
-
 	/* get all fields */
 	for (uint16_t count = 0, index = 0; count < templ->field_count; ++count, ++index) {
 		/* Get Enterprise number and ID */
@@ -249,7 +245,9 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 		/* Get element informations */
 		const ipfix_element_t * element = get_element_by_id(id, enterprise);
 		if (element == NULL) {
-			MSG_DEBUG(msg_module, "Unknown element (%s)", element->name);
+			printf("UNKNOWN ELEMENT\n");
+			continue;
+			MSG_DEBUG(msg_module, "Unknown element");
 		}
 
 		if (count > 0) {

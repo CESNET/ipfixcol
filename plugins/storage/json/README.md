@@ -80,6 +80,9 @@ Here is an example of configuration in **startup.xml**:
 	<fileWriter>
 		<fileFormat>json</fileFormat>
 		<metadata>no</metadata>
+		<tcpFlags>raw</tcpFlags>
+		<timestamp>unix</timestamp>
+
 		<output>
 			<type>print</type>
 		</output>
@@ -94,6 +97,8 @@ Here is an example of configuration in **startup.xml**:
 </destination>
 ```
 * **metadata** - add record metadata to the output (yes/no) [default == no]
+* **tcpFlags** - Convert TCP flags to formated style of dots and letters (formated) or as a number (raw) [default == raw]
+* **timestamp** - Convert all times to formated style (formated) or as a number (unix) [default == unix]
 * **output** - specifies JSON data processor. Multiple outputs are supported.
 * **output - type** - processor type. Actually only **print** and **send** are supported.
 * **output:print** - writes data to the standard output.

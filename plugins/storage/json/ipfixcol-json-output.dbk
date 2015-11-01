@@ -57,6 +57,8 @@
 		<fileWriter>
 			<fileFormat>json</fileFormat>
 			<metadata>no</metadata>
+			<tcpFlags>raw</tcpFlags>
+			<timestamp>unix</timestamp>
 			<output>
 				<type>print</type>
 			</output>
@@ -71,7 +73,7 @@
 	</destination>
 	]]>
 		</programlisting>
-	
+
 		<para>
 			<variablelist>
 				<varlistentry>
@@ -85,6 +87,20 @@
 					<term><command>metadata</command></term>
 					<listitem>
 						<simpara>Add record metadata to the output (yes/no) [default == no].</simpara>
+					</listitem>
+				</varlistentry>
+
+				<varlistentry>
+					<term><command>tcpFlags</command></term>
+					<listitem>
+						<simpara>Convert TCP flags to formated style of dots and letters (formated) or as a number (raw) [default == raw].</simpara>
+					</listitem>
+				</varlistentry>
+		
+				<varlistentry>
+					<term><command>timestamp</command></term>
+					<listitem>
+						<simpara>Convert all times to formated style (formated) or as a number (unix) [default == unix].</simpara>
 					</listitem>
 				</varlistentry>
 	
