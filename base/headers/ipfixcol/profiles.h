@@ -77,6 +77,22 @@ API const char *profiles_get_xml_path();
 API const char *profile_get_name(void *profile);
 
 /**
+ * \brief Get profile type
+ *
+ * \param[in] profile
+ * \return profile type
+ */
+API enum PROFILE_TYPE profile_get_type(void *profile);
+
+/**
+ * \brief Get profile directory
+ *
+ * \param[in] profile
+ * \return profile directory
+ */
+API const char *profile_get_directory(void *profile);
+
+/**
  * \brief Get profile path
  *
  * \param[in] profile

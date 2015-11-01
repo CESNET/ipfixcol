@@ -154,6 +154,13 @@ public:
 	void setDirectory(std::string dir) { m_directory = dir; }
 
 	/**
+	 * \brief Get profile's type
+	 *
+	 * \return Type of the profile
+	 */
+	enum PROFILE_TYPE getType() { return m_type; }
+
+	/**
 	 * \brief Update path name from ancestors
 	 */
 	void updatePathName();

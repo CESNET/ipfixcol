@@ -623,6 +623,22 @@ const char *profile_get_name(void *profile)
 }
 
 /**
+ * Get profile type
+ */
+PROFILE_TYPE profile_get_type(void *profile)
+{
+	return ((Profile *) profile)->getType();
+}
+
+/**
+ * Get profile directory
+ */
+const char *profile_get_directory(void *profile)
+{
+	return ((Profile *) profile)->getDirectory().c_str();
+}
+
+/**
  * Get profile path
  */
 const char *profile_get_path(void *profile)
