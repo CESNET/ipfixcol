@@ -140,29 +140,51 @@ void Channel::setSources(std::string sources)
 void Channel::addListener(Channel* listener)
 {
 	m_listeners.insert(listener);
+	listener->m_sources.insert(this);
 }
 
 void Channel::removeListener(Channel *child)
 {
 	/* Find listener */
-	channelsSet::iterator it = std::find(m_listeners.begin(), m_listeners.end(), child);
+	channelsSet::iterator listen_it = std::find(m_listeners.begin(),
+		m_listeners.end(), child);
 
 	/* Remove it */
-	if (it != m_listeners.end()) {
-		m_listeners.erase(it);
+	if (listen_it != m_listeners.end()) {
+		m_listeners.erase(listen_it);
+	}
+
+	/* Find this channel in listener's sources */
+	channelsSet::iterator source_it = std::find(child->m_sources.begin(),
+		child->m_sources.end(), this);
+
+	/* Remove it */
+	if (source_it != child->m_sources.end()) {
+		child->m_sources.erase(source_it);
 	}
 }
 
 void Channel::removeListener(channel_id_t id)
 {
 	/* Find listener */
-	channelsSet::iterator it = std::find_if(m_listeners.begin(), m_listeners.end(),
-											[id](Channel *ch) { return ch->getId() == id;});
+	channelsSet::iterator listen_it = std::find_if(m_listeners.begin(),
+		m_listeners.end(), [id](Channel *ch) { return ch->getId() == id;});
 
-	/* Remove it */
-	if (it != m_listeners.end()) {
-		m_listeners.erase(it);
+	if (listen_it == m_listeners.end()) {
+		return;
 	}
+
+	/* Find this channel in listener's sources */
+	Channel *listener = *listen_it;
+	channelsSet::iterator source_it = std::find(listener->m_sources.begin(),
+		listener->m_sources.end(), this);
+
+	/* Remove both of them */
+	if (source_it != listener->m_sources.end()) {
+		listener->m_sources.erase(source_it);
+	}
+
+	m_listeners.erase(listen_it);
 }
 
 /**
