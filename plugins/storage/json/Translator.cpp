@@ -43,6 +43,15 @@
 #include <arpa/inet.h>
 #include <vector>
 
+#include "Storage.h"
+
+struct json_conf {
+        bool metadata;
+        Storage *storage;
+        bool tcpFlags;  /**< tcpFlags format - true = formated, false = RAW */
+        bool timestamp; /**< timestamp format - true = formated, false = UNIX */
+};
+
 /**
  * \brief Format flags 16bits
  */
@@ -57,13 +66,15 @@ const char *Translator::formatFlags16(uint16_t flags)
  */
 const char *Translator::formatFlags8(uint8_t flags)
 {
-	buffer[0] = flags & 0x20 ? 'U' : '.';
-	buffer[1] = flags & 0x10 ? 'A' : '.';
-	buffer[2] = flags & 0x08 ? 'P' : '.';
-	buffer[3] = flags & 0x04 ? 'R' : '.';
-	buffer[4] = flags & 0x02 ? 'S' : '.';
-	buffer[5] = flags & 0x01 ? 'F' : '.';
-	buffer[6] = '\0';
+	buffer[0] = '"';
+	buffer[1] = flags & 0x20 ? 'U' : '.';
+	buffer[2] = flags & 0x10 ? 'A' : '.';
+	buffer[3] = flags & 0x08 ? 'P' : '.';
+	buffer[4] = flags & 0x04 ? 'R' : '.';
+	buffer[5] = flags & 0x02 ? 'S' : '.';
+	buffer[6] = flags & 0x01 ? 'F' : '.';
+	buffer[7] = '"';
+	buffer[8] = '\0';
 
 	return buffer;
 }
@@ -91,47 +102,122 @@ const char *Translator::formatIPv6(uint8_t* addr)
  */
 const char *Translator::formatMac(uint8_t* addr)
 {	
-	snprintf(buffer, BUFF_SIZE, "%02x:%02x:%02x:%02x:%02x:%02x", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+	snprintf(buffer, BUFF_SIZE, "\"%02x:%02x:%02x:%02x:%02x:%02x\"", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 	return buffer;
 }
 
 /**
  * \brief Format protocol
  */
-const char *Translator::formatProtocol(uint8_t proto) const
+const char *Translator::formatProtocol(uint8_t proto)
 {
-	return protocols[proto];
+	sprintf(buffer, "\"%s\"", protocols[proto]);
+	return buffer;
 }
 
 /**
  * \brief Format timestamp
  */
-const char *Translator::formatTimestamp(uint64_t tstamp, t_units units)
+const char *Translator::formatTimestamp(uint64_t tstamp, t_units units, struct json_conf * config)
 {	
-	tstamp = be64toh(tstamp);
+
+	if(config->timestamp) {
+		tstamp = be64toh(tstamp);
 	
-	/* Convert to milliseconds */
-	switch (units) {
-	case t_units::SEC:
-		tstamp *= 1000;
-		break;
-	case t_units::MICROSEC:
-		tstamp /= 1000;
-		break;
-	case t_units::NANOSEC:
-		tstamp /= 1000000;
-		break;
-	default: /* MILLI is default */
-		break;
-	}
+		/* Convert to milliseconds */
+		switch (units) {
+		case t_units::SEC:
+			tstamp *= 1000;
+			break;
+		case t_units::MICROSEC:
+			tstamp /= 1000;
+			break;
+		case t_units::NANOSEC:
+			tstamp /= 1000000;
+			break;
+		default: /* MILLI is default */
+			break;
+		}
 	
-	timesec = tstamp / 1000;
-	msec	= tstamp % 1000;
-	tm		= localtime(&timesec);
+		timesec = tstamp / 1000;
+		msec	= tstamp % 1000;
+		tm		= localtime(&timesec);
 	
-	strftime(buffer, 20, "%FT%T", tm);
-	/* append miliseconds */
-	sprintf(&(buffer[19]), ".%03u", (const unsigned int) msec);
-	
+		strftime(buffer, 21, "\"%FT%T", tm);
+		/* append miliseconds */
+		sprintf(&(buffer[19]), ".%03u\"", (const unsigned int) msec);
+
+	} else {
+
+		sprintf(buffer, "%lu", tstamp);
+	}	
+
+	return buffer;
+}
+
+/**
+ * \brief Verification of data type unsigned int
+ */
+const char *Translator::toUnsigned(uint16_t *length, uint8_t *data_record, uint16_t offset, const ipfix_element_t * element, struct json_conf * config)
+{
+	if(*length == BYTE1) {
+		if(element->semantic == ES_FLAGS) {
+			if(config->tcpFlags)
+				return formatFlags8(read8(data_record + offset));
+			else
+				sprintf(buffer, "%hhu", (uint8_t) (read8(data_record + offset)));
+		} else if(!strcmp(element->name, "protocolIdentifier"))
+			return(formatProtocol(read8(data_record + offset)));
+		else
+			sprintf(buffer, "%hhu", (uint8_t) (read8(data_record + offset)));
+	} else if(*length == BYTE2) {
+		if(element->semantic == ES_FLAGS) {
+			if(config->tcpFlags)
+				return formatFlags16(read16(data_record + offset));
+			else
+				sprintf(buffer, "%hu", (uint16_t) ntohs(read16(data_record + offset)));
+		} else
+			sprintf(buffer, "%hu", (uint16_t) ntohs(read16(data_record + offset)));
+	} else if(*length == BYTE4)
+		sprintf(buffer, "%u", (uint32_t) ntohl(read32(data_record + offset)));
+	else if(*length == BYTE8)
+		sprintf(buffer, "%lu", (uint64_t) be64toh(read64(data_record + offset)));
+	else
+		sprintf(buffer, "%s", "\"unknown\"");
+
+	return buffer;
+}
+
+/**
+ * \brief Verification of data type signed int
+ */
+const char *Translator::toSigned(uint16_t *length, uint8_t *data_record, uint16_t offset)
+{
+	if(*length == BYTE1)
+		sprintf(buffer, "%c", (char) (read8(data_record + offset)));
+	else if(*length == BYTE2)
+		sprintf(buffer, "%hd", (int16_t) read8(data_record + offset));
+	else if(*length == BYTE4)
+		sprintf(buffer, "%d", (int32_t) ntohl(read32(data_record + offset)));
+	else if(*length == BYTE8)
+		sprintf(buffer, "%ld", (int64_t) be64toh(read64(data_record + offset)));
+	else
+		sprintf(buffer, "\"unknown\"");
+
+	return buffer;
+}
+
+/**
+ * \brief Verification of data type float
+ */
+const char *Translator::toFloat(uint16_t *length, uint8_t *data_record, uint16_t offset)
+{		
+	if(*length == BYTE4)
+		sprintf(buffer, "%f", (float) ntohl(read32(data_record + offset)));
+	else if(*length == BYTE8)
+		sprintf(buffer, "%lf", (double) be64toh(read64(data_record + offset)));
+	else
+		sprintf(buffer, "\"unknown\"");
+
 	return buffer;
 }

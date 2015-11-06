@@ -42,8 +42,24 @@
 
 #include <string>
 #include <vector>
+//#include "Storage.h"
+
+extern "C" {
+#include <ipfixcol.h>
+#include <ipfixcol/profiles.h>
+#include <string.h>
+//#include <ipfix_element.h>
+}
 
 #define BUFF_SIZE 128
+
+/* size of bytes 1, 2, 4 or 8 */
+#define BYTE1 1
+#define BYTE2 2
+#define BYTE4 4
+#define BYTE8 8
+
+class Storage;
 
 enum class t_units {
     SEC,
@@ -62,7 +78,7 @@ public:
      * @return formatted address
      */
 	const char *formatIPv4(uint32_t addr);
-    
+
     /**
      * \brief Format IPv6 address
      * 
@@ -86,7 +102,7 @@ public:
      * @param units time units
      * @return  formatted timestamp
      */
-	const char *formatTimestamp(uint64_t tstamp, t_units units);
+	const char *formatTimestamp(uint64_t tstamp, t_units units, struct json_conf * config);
     
     /**
      * \brief Format protocol
@@ -94,7 +110,7 @@ public:
      * @param proto protocol
      * @return formatted protocol
      */
-	const char *formatProtocol(uint8_t proto) const;
+	const char *formatProtocol(uint8_t proto); 
     
     /**
      * \brief Format TCP flags 16bits
@@ -111,6 +127,38 @@ public:
      * @return formatted flags
      */
 	const char *formatFlags8(uint8_t flags);
+
+    /**
+     * \brief Checks, if real length of record is the same as its data type. If not, converts to real length.
+     *
+     * @param length length of record
+     * @param data_record pointer to head of data record
+     * @param offset offset since head of data record
+     * @param element pointer to actuall element in record
+     * @param config pointer to configuration structure
+     * @return value of Unsigned int
+     */
+	const char *toUnsigned(uint16_t *length, uint8_t *data_record, uint16_t offset, const ipfix_element_t * element, struct json_conf * config);
+
+    /**
+     * \brief Checks, if real length of record is the same as its data type. If not, converts to real length.
+     *
+     * @param length length of record
+     * @param data_record pointer to head of data record
+     * @param offset offset since head of data record
+     * @return value of Signed int
+     */
+	const char *toSigned(uint16_t *length, uint8_t *data_record, uint16_t offset);
+
+    /**
+     * \brief Checks, if real length of record is the same as its data type. If not, converts to real length.
+     *
+     * @param length length of record
+     * @param data_record pointer to head of data record
+     * @param offset offset since head of data record
+     * @return value of Float
+     */
+	const char *toFloat(uint16_t *length, uint8_t *data_record, uint16_t offset);
 
 private:
 
