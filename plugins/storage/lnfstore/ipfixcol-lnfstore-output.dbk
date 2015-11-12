@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2008-2015</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>1 Nov 2015</date>
+		<authorgroup>
+			<author>
+				<personname>
+					<firstname>Imrich</firstname>
+					<surname>Štoffa</surname>
+				</personname>
+				<email>xstoff02@stud.fit.vutbr.cz</email>
+				<contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol-lnfstore-output</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">lnfstore output plugin for IPFIXcol.</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>ipfixcol-lnfstore-output</refname>
+		<refpurpose>lnfstore output plugin for IPFIXcol that does not store any data.</refpurpose>
+	</refnamediv>
+	
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+			The <command>ipfix-lnfstore-output</command> plugin is a part of IPFIXcol (IPFIX collector). 
+			It provides means to test the collector without actually storing any data. Every call of store_packet function can have specified delay,
+			so that the throughput of the collector can be tested and required performance of storage plugins can be determined.
+		</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Configuration</title>
+		<simpara>The collector must be configured to use lnfstore output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
+		The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves. 
+		</simpara>
+		<simpara><filename>startup.xml</filename> lnfstore example</simpara>
+		<programlisting>
+	<![CDATA[
+	<destination>
+		<name>Write to local folder</name>
+		<fileWriter>
+			<fileFormat>lnfstore</fileFormat>
+			<storagePath>./storage</storagePath>
+			<profiles>false</profiles>
+			<compress>true</compress>
+			<prefix>lnf.</prefix>
+			<suffixMask>%F%R</suffixMask>
+			<identificatorField>def</identificatorField>
+			<dumpInterval>
+				<timeWindow>300</timeWindow>
+				<align>yes</align>
+			</dumpInterval>
+		</fileWriter>
+	</destination>
+
+	]]>
+		</programlisting>
+	
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term><command>fileFormat</command></term>
+					<listitem>
+						<simpara>Same as in <filename>internalcfg.xml</filename> file.</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>delay</command></term>
+					<listitem>
+						<simpara>Number of microseconds that store_data function should take. This function is called once per every input packet with data.</simpara>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org/technologies/ipfixcol/">http://www.liberouter.org/technologies/ipfixcol/</link>
+					</term>
+					<listitem>
+						<para>IPFIXCOL Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>
