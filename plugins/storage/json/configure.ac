@@ -86,13 +86,14 @@ AC_CHECK_FILE([/etc/protocols],[PROTOCOLS=yes], [PROTOCOLS=no])
 
 ###################### Check for configure parameters ##########################
 AC_ARG_ENABLE([debug], 
-        AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
-        [AM_CXXFLAGS="$AM_CXXFLAGS -Wextra -g"])
+	AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
+		[AM_CXXFLAGS="$AM_CXXFLAGS -Wextra -g"])
 
 AC_ARG_ENABLE([doc],
-        AC_HELP_STRING([--disable-doc],[disable documentation building]))
+	AC_HELP_STRING([--disable-doc],[disable documentation building]))
 AM_CONDITIONAL([HAVE_DOC], [test "$enable_doc" != "no"],, [$enable_doc=yes])
 ############################ Check for libraries ###############################
+
 libsisodir="$srcdir/../../../base/src/utils/libsiso/"
 my_save_ldflags="$LDFLAGS"
 AS_IF([test -d "$libsisodir.libs"],
@@ -110,6 +111,10 @@ LDFLAGS="$my_save_ldflags"
 AS_IF([test "$HAVE_SISO" = "no"], AC_MSG_ERROR([Required library siso missing]))
 AC_SUBST([SISO_CPPFLAGS])
 AC_SUBST([SISO_LDFLAGS])
+
+AC_CHECK_LIB([pthread], [pthread_create],
+	[CXXFLAGS="$CXXFLAGS -pthread"],
+	AC_MSG_ERROR([Required library pthread missing]))
 
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar.h])
@@ -142,8 +147,8 @@ AC_CHECK_FUNCS([realloc])
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([floor memmove mkdir strchr strstr strtol strtoul])
 AC_CHECK_DECL([be64toh], [AC_DEFINE([HAVE_BE64TOH], [1],
-                               [Define if macro be64toh exists.])],,
-							   [[#include <endian.h>]])
+	[Define if macro be64toh exists.])],,
+	[[#include <endian.h>]])
 
 ############################### Set output #####################################
 # Substitute compiler flags
@@ -156,8 +161,8 @@ AC_SUBST(XSLTPROC)
 
 # generate output
 AC_CONFIG_FILES([Makefile
-		pugixml/Makefile
-		ipfixcol-json-output.spec])
+	pugixml/Makefile
+	ipfixcol-json-output.spec])
 
 # tools makefiles
 
@@ -169,9 +174,9 @@ AS_IF([test "x$PROTOCOLS" = "xno"], AC_MSG_WARN([Due to missing /etc/protocols y
 AS_IF([test -z "$AWK"], AC_MSG_WARN([Due to missing awk you will not be able to generate protocols.cpp from /etc/protocols]))
 
 AM_COND_IF(HAVE_DOC,
-    [AM_COND_IF(HAVE_XSLTPROC, ,
-        AC_MSG_ERROR([Missing xsltproc - install it or run with --disable-doc])
-    )]
+	[AM_COND_IF(HAVE_XSLTPROC, ,
+		AC_MSG_ERROR([Missing xsltproc - install it or run with --disable-doc])
+	)]
 )
 
 # Print final summary

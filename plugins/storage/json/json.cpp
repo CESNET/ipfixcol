@@ -54,6 +54,7 @@ IPFIXCOL_API_VERSION;
 #include "Storage.h"
 #include "Printer.h"
 #include "Sender.h"
+#include "Server.h"
 
 static const char *msg_module = "json_storage";
 
@@ -82,14 +83,14 @@ void process_startup_xml(struct json_conf *conf, char *params)
 
 	/* Process all outputs */
 	std::string tcpFlags = ie.node().child_value("tcpFlags");
-        conf->tcpFlags = (tcpFlags == "formated") || (tcpFlags == "Formated") || (tcpFlags == "FORMATED");
+	conf->tcpFlags = (tcpFlags == "formated") || (tcpFlags == "Formated") || (tcpFlags == "FORMATED");
 
-        /* Check time format */
-        std::string timestamp = ie.node().child_value("timestamp");
-        conf->timestamp = (timestamp == "formated") || (timestamp == "Formated") || (timestamp == "FORMATED");
+	/* Check time format */
+	std::string timestamp = ie.node().child_value("timestamp");
+	conf->timestamp = (timestamp == "formated") || (timestamp == "Formated") || (timestamp == "FORMATED");
 
-        /* Process all outputs */
-        pugi::xpath_node_set outputs = doc.select_nodes("/fileWriter/output");
+	/* Process all outputs */
+	pugi::xpath_node_set outputs = doc.select_nodes("/fileWriter/output");
 
 	for (auto& node: outputs) {
 		std::string type = node.node().child_value("type");
@@ -100,6 +101,8 @@ void process_startup_xml(struct json_conf *conf, char *params)
 			output = new Printer(node);
 		} else if (type == "send") {
 			output = new Sender(node);
+		} else if (type == "server") {
+			output = new Server(node);
 		} else {
 			throw std::invalid_argument("Unknown output type \"" + type + "\"");
 		}
