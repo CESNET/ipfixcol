@@ -93,18 +93,27 @@ Here is an example of configuration in **startup.xml**:
 			<port>4444</port>
 			<protocol>udp</protocol>
 		</output>
+
+		<output>
+			<type>server</type>
+			<port>4800</port>
+			<blocking>no</blocking>
+		</output>
 	</fileWriter>
 </destination>
 ```
-* **metadata** - add record metadata to the output (yes/no) [default == no]
-* **tcpFlags** - Convert TCP flags to formated style of dots and letters (formated) or as a number (raw) [default == raw]
-* **timestamp** - Convert all times to formated style (formated) or as a number (unix) [default == unix]
-* **output** - specifies JSON data processor. Multiple outputs are supported.
-* **output - type** - processor type. Actually only **print** and **send** are supported.
-* **output:print** - writes data to the standard output.
-* **output:send** - sends data over the network.
-* **send - ip** - IPv4/IPv6 address of remote host (default 127.0.0.1).
-* **send - port** - port number (default 4739)
-* **send - protocol** - connection protocol, one of UDP/TCP/SCTP (default UDP). This field is case insensitive.
+* **metadata** - Add record metadata to the output (yes/no) [default == no].
+* **tcpFlags** - Convert TCP flags to formated style of dots and letters (formated) or as a number (raw) [default == raw].
+* **timestamp** - Convert all times to formated style (formated) or as a number (unix) [default == unix].
+* **output** - Specifies JSON data processor. Multiple outputs are supported.
+	* **type** - Output type. Actually only **print**, **send** and **server** are supported.
+* **output:print** - Writes data to the standard output.
+* **output:send** - Sends data over the network.
+	* **ip** - IPv4/IPv6 address of remote host (default 127.0.0.1).
+	* **port** - Remote port number (default 4739)
+	* **protocol** - Connection protocol, one of UDP/TCP/SCTP (default UDP). This field is case insensitive.
+* **output:server** - Sends data over the network to connected clients.
+	* **port** - Local port number.
+	* **blocking** - Type of the connection. Blocking (yes) or non-blocking (no).
 
 [Back to Top](#top)
