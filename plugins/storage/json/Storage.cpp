@@ -229,7 +229,7 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 {
 	offset = 0;
 	record.clear();
-	record += "{\"@type\": \"ipfix.entry\", \"ipfix\": {";
+	record += "{\"@type\": \"ipfix.entry\", ";
 
 	struct ipfix_template *templ = mdata->record.templ;
 	uint8_t *data_record = (uint8_t*) mdata->record.record;
@@ -258,7 +258,7 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 			record += ", ";
 		}
 
-		record += "\"";
+		record += "\"ipfix.";
 		record += element->name;
 		record += "\": ";
 
@@ -342,7 +342,7 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 		storeMetadata(mdata);
 	}
 	
-	record += "}}\n";
+	record += "}\n";
 	sendData();
 }
 
