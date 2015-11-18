@@ -11,45 +11,24 @@ Example:
 
 ```json
 {
-   "@type":"ipfix.entry",
-   "ipfix":[
-      {
-         "destinationIPv4Address":"123.123.123.1",
-         "destinationTransportPort":"8612",
-         "e0id34":"0",
-         "e0id35":"0",
-         "egressInterface":"0",
-         "flowEndMilliseconds":"2014-07-21T11:35:53.973",
-         "flowStartMilliseconds":"2014-07-21T11:35:53.973",
-         "ingressInterface":"0",
-         "ipClassOfService":"0",
-         "ipTTL":"64",
-         "ipVersion":"4",
-         "octetDeltaCount":"44",
-         "packetDeltaCount":"1",
-         "protocolIdentifier":"UDP",
-         "sourceIPv4Address":"132.132.132.1",
-         "sourceTransportPort":"58744"
-      },
-      {
-         "destinationIPv4Address":"224.224.0.1",
-         "destinationTransportPort":"8612",
-         "e0id34":"0",
-         "e0id35":"0",
-         "egressInterface":"0",
-         "flowEndMilliseconds":"2014-07-21T11:35:53.974",
-         "flowStartMilliseconds":"2014-07-21T11:35:53.974",
-         "ingressInterface":"0",
-         "ipClassOfService":"0",
-         "ipTTL":"1",
-         "ipVersion":"4",
-         "octetDeltaCount":"44",
-         "packetDeltaCount":"1",
-         "protocolIdentifier":"UDP",
-         "sourceIPv4Address":"123.123.123.1",
-         "sourceTransportPort":"51624"
-      }
-   ]
+	"@type": "ipfix.entry",
+	"ipfix.octetDeltaCount": 3970,
+	"ipfix.packetDeltaCount": 14,
+	"ipfix.flowStartMilliseconds": "2015-08-03T14:10:2.012",
+	"ipfix.flowEndMilliseconds": "2015-08-03T14:11:2.380",
+	"ipfix.ingressInterface": 2,
+	"ipfix.ipVersion": 4,
+	"ipfix.sourceIPv4Address": "52.24.214.8",
+	"ipfix.destinationIPv4Address": "147.175.54.248",
+	"ipfix.ipClassOfService": 0,
+	"ipfix.ipTTL": 52,
+	"ipfix.protocolIdentifier": "TCP",
+	"ipfix.tcpControlBits": ".AP.SF",
+	"ipfix.sourceTransportPort": 443,
+	"ipfix.destinationTransportPort": 49285,
+	"ipfix.egressInterface": 0,
+	"ipfix.samplingInterval": 0,
+	"ipfix.samplingAlgorithm": 0
 }
 ```
 
@@ -80,8 +59,8 @@ Here is an example of configuration in **startup.xml**:
 	<fileWriter>
 		<fileFormat>json</fileFormat>
 		<metadata>no</metadata>
-		<tcpFlags>raw</tcpFlags>
-		<timestamp>unix</timestamp>
+		<tcpFlags>formated</tcpFlags>
+		<timestamp>formated</timestamp>
 
 		<output>
 			<type>print</type>
@@ -97,7 +76,7 @@ Here is an example of configuration in **startup.xml**:
 		<output>
 			<type>server</type>
 			<port>4800</port>
-			<blocking>no</blocking>
+			<blocking>yes</blocking>
 		</output>
 	</fileWriter>
 </destination>

@@ -57,8 +57,8 @@
 		<fileWriter>
 			<fileFormat>json</fileFormat>
 			<metadata>no</metadata>
-			<tcpFlags>raw</tcpFlags>
-			<timestamp>unix</timestamp>
+			<tcpFlags>formated</tcpFlags>
+			<timestamp>formated</timestamp>
 			<output>
 				<type>print</type>
 			</output>
@@ -73,7 +73,7 @@
 			<output>
 				<type>server</type>
 				<port>4800</port>
-				<blocking>no</blocking>
+				<blocking>yes</blocking>
 			</output>
 
 		</fileWriter>
