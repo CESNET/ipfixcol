@@ -57,8 +57,8 @@
 		<fileWriter>
 			<fileFormat>json</fileFormat>
 			<metadata>no</metadata>
-			<tcpFlags>raw</tcpFlags>
-			<timestamp>unix</timestamp>
+			<tcpFlags>formated</tcpFlags>
+			<timestamp>formated</timestamp>
 			<output>
 				<type>print</type>
 			</output>
@@ -69,6 +69,13 @@
 				<port>4444</port>
 				<protocol>udp</protocol>
 			</output>
+
+			<output>
+				<type>server</type>
+				<port>4800</port>
+				<blocking>yes</blocking>
+			</output>
+
 		</fileWriter>
 	</destination>
 	]]>
@@ -120,32 +127,52 @@
 				<varlistentry>
 					<term><command>output - print</command></term>
 					<listitem>
-						<simpara>Writes data to the standard output</simpara>
+						<simpara>Writes data to the standard output.</simpara>
 					</listitem>
 				</varlistentry>
 
 				<varlistentry>
 					<term><command>output - send</command></term>
 					<listitem>
-						<simpara>Sends data over the network</simpara>
+						<simpara>Sends data over the network.</simpara>
 						<varlistentry>
 							<term><command>ip</command></term>
 							<listitem>
-								<simpara>IPv4/IPv6 address of remote host (default 127.0.0.1)</simpara>
+								<simpara>IPv4/IPv6 address of remote host (default 127.0.0.1).</simpara>
 							</listitem>
 						</varlistentry>
 
 						<varlistentry>
 							<term><command>port</command></term>
 							<listitem>
-								<simpara>Port number (default 4739)</simpara>
+								<simpara>Remove port number (default 4739).</simpara>
 							</listitem>
 						</varlistentry>
 
 						<varlistentry>
 							<term><command>protocol</command></term>
 							<listitem>
-								<simpara>Connection protocol, one of UDP/TCP/SCTP (default UDP). This field is case insensitive</simpara>
+								<simpara>Connection protocol, one of UDP/TCP/SCTP (default UDP). This field is case insensitive.</simpara>
+							</listitem>
+						</varlistentry>
+					</listitem>
+				</varlistentry>
+
+				<varlistentry>
+					<term><command>output - server</command></term>
+					<listitem>
+						<simpara>Sends data over the network to connected clients.</simpara>
+						<varlistentry>
+							<term><command>port</command></term>
+							<listitem>
+								<simpara>Local port number.</simpara>
+							</listitem>
+						</varlistentry>
+
+						<varlistentry>
+							<term><command>blocking</command></term>
+							<listitem>
+								<simpara>Type of the connection. Blocking (yes) or non-blocking (no).</simpara>
 							</listitem>
 						</varlistentry>
 					</listitem>

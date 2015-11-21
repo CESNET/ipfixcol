@@ -58,12 +58,6 @@
 #define IPV6_LEN 16
 #define MAC_LEN  6
 
-/* size of bytes 1, 2, 4 or 8 */
-#define BYTE1 1
-#define BYTE2 2
-#define BYTE4 4
-#define BYTE8 8
-
 /* white spaces needed to replace them by \n otation (\n \t ..) */
 #define SPACE           ' '
 #define TABULATOR       '\t'
@@ -113,6 +107,8 @@ public:
 	void setPrintOnly(bool enabled) { printOnly = enabled; }
 	
 private:
+
+    Translator translator;          /**< number -> string translator */
     
     /**
      * \brief Get real field length
@@ -173,12 +169,11 @@ private:
 	uint8_t addrMac[MAC_LEN];
 	uint16_t offset{0}, id{0}, length{0};
 	uint32_t enterprise{0};
-    Translator translator;          /**< number -> string translator */
 
 	std::vector<Output*> outputs{};
 	std::vector<char> buffer;
 
-	char stringWithEscseq[(65536 * 2) - 1];	/**< String from IPFIXpacket with white spaces replaced by \notations (\n \t ...)  */
+	char stringWithEscseq[(65536 * 2)];	/**< String from IPFIXpacket with white spaces replaced by \notations (\n \t ...)  */
 	std::string record;
 };
 
