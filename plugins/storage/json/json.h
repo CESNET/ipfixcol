@@ -48,6 +48,20 @@ extern "C" {
 #include <string>
 #include "pugixml/pugixml.hpp"
 
+// Class prototype
+class Storage;
+
+/**
+ * \brief JSON plugin configuration
+ */
+struct json_conf {
+        bool metadata;
+        Storage *storage;
+        bool tcpFlags;  /**< tcpFlags format  - true = formated, false = RAW  */
+        bool timestamp; /**< timestamp format - true = formated, false = UNIX */
+        bool protocol;  /**< protocol format  - true = RAW, false = formated  */
+};
+
 class Output
 {
 public:

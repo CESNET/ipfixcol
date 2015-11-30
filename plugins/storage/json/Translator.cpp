@@ -45,13 +45,6 @@
 
 #include "Storage.h"
 
-struct json_conf {
-        bool metadata;
-        Storage *storage;
-        bool tcpFlags;  /**< tcpFlags format - true = formated, false = RAW */
-        bool timestamp; /**< timestamp format - true = formated, false = UNIX */
-};
-
 /**
  * \brief Format flags 16bits
  */
@@ -111,7 +104,7 @@ const char *Translator::formatMac(uint8_t* addr)
  */
 const char *Translator::formatProtocol(uint8_t proto)
 {
-	sprintf(buffer, "\"%s\"", protocols[proto]);
+	snprintf(buffer, BUFF_SIZE, "\"%s\"", protocols[proto]);
 	return buffer;
 }
 
@@ -156,68 +149,80 @@ const char *Translator::formatTimestamp(uint64_t tstamp, t_units units, struct j
 }
 
 /**
- * \brief Verification of data type unsigned int
+ * \brief Conversion of unsigned int
  */
 const char *Translator::toUnsigned(uint16_t *length, uint8_t *data_record, uint16_t offset, const ipfix_element_t * element, struct json_conf * config)
 {
 	if(*length == BYTE1) {
-		if(element->semantic == ES_FLAGS) {
-			if(config->tcpFlags)
-				return formatFlags8(read8(data_record + offset));
-			else
-				sprintf(buffer, "%hhu", (uint8_t) (read8(data_record + offset)));
-		} else if(!strcmp(element->name, "protocolIdentifier"))
-			return(formatProtocol(read8(data_record + offset)));
-		else
-			sprintf(buffer, "%hhu", (uint8_t) (read8(data_record + offset)));
+		// 1 byte
+		if(element->en == 0 && element->id == 6 && config->tcpFlags) {
+			// Formated TCP flags
+			return formatFlags8(read8(data_record + offset));
+		} else if (element->en == 0 && element->id == 4 && !config->protocol) {
+			// Formated protocol identification (TCP, UDP, ICMP,...)
+			return (formatProtocol(read8(data_record + offset)));
+		} else {
+			// Other elements
+			snprintf(buffer, BUFF_SIZE, "%" PRIu8, read8(data_record + offset));
+		}
 	} else if(*length == BYTE2) {
-		if(element->semantic == ES_FLAGS) {
-			if(config->tcpFlags)
-				return formatFlags16(read16(data_record + offset));
-			else
-				sprintf(buffer, "%hu", (uint16_t) ntohs(read16(data_record + offset)));
-		} else
-			sprintf(buffer, "%hu", (uint16_t) ntohs(read16(data_record + offset)));
-	} else if(*length == BYTE4)
-		sprintf(buffer, "%u", (uint32_t) ntohl(read32(data_record + offset)));
-	else if(*length == BYTE8)
-		sprintf(buffer, "%lu", (uint64_t) be64toh(read64(data_record + offset)));
-	else
-		sprintf(buffer, "%s", "\"unknown\"");
+		// 2 bytes
+		if (element->en == 0 && element->id == 6 && config->tcpFlags) {
+			// Formated TCP flags
+			return formatFlags16(read16(data_record + offset));
+		} else {
+			// Other elements
+			snprintf(buffer, BUFF_SIZE, "%" PRIu16, ntohs(read16(data_record + offset)));
+		}
+	} else if(*length == BYTE4) {
+		// 4 bytes
+		snprintf(buffer, BUFF_SIZE, "%" PRIu32, ntohl(read32(data_record + offset)));
+	} else if(*length == BYTE8) {
+		// 8 bytes
+		snprintf(buffer, BUFF_SIZE, "%" PRIu64, be64toh(read64(data_record + offset)));
+	} else {
+		// Other sizes
+		snprintf(buffer, BUFF_SIZE, "%s", "\"unknown\"");
+	}
 
 	return buffer;
 }
 
 /**
- * \brief Verification of data type signed int
+ * \brief Conversion of signed int
  */
 const char *Translator::toSigned(uint16_t *length, uint8_t *data_record, uint16_t offset)
 {
-	if(*length == BYTE1)
-		sprintf(buffer, "%c", (char) (read8(data_record + offset)));
-	else if(*length == BYTE2)
-		sprintf(buffer, "%hd", (int16_t) read8(data_record + offset));
-	else if(*length == BYTE4)
-		sprintf(buffer, "%d", (int32_t) ntohl(read32(data_record + offset)));
-	else if(*length == BYTE8)
-		sprintf(buffer, "%ld", (int64_t) be64toh(read64(data_record + offset)));
-	else
-		sprintf(buffer, "\"unknown\"");
+	if(*length == BYTE1) {
+		// 1 byte
+		snprintf(buffer, BUFF_SIZE, "%" PRId8, (int8_t) read8(data_record + offset));
+	} else if(*length == BYTE2) {
+		// 2 bytes
+		snprintf(buffer, BUFF_SIZE, "%" PRId16, (int16_t) ntohs(read16(data_record + offset)));
+	} else if(*length == BYTE4) {
+		// 4 bytes
+		snprintf(buffer, BUFF_SIZE, "%" PRId32, (int32_t) ntohl(read32(data_record + offset)));
+	} else if(*length == BYTE8) {
+		// 8 bytes
+		snprintf(buffer, BUFF_SIZE, "%" PRId64, (int64_t) be64toh(read64(data_record + offset)));
+	} else {
+		snprintf(buffer, BUFF_SIZE, "\"unknown\"");
+	}
 
 	return buffer;
 }
 
 /**
- * \brief Verification of data type float
+ * \brief Conversion of float
  */
 const char *Translator::toFloat(uint16_t *length, uint8_t *data_record, uint16_t offset)
 {		
 	if(*length == BYTE4)
-		sprintf(buffer, "%f", (float) ntohl(read32(data_record + offset)));
+		snprintf(buffer, BUFF_SIZE, "%f", (float) ntohl(read32(data_record + offset)));
 	else if(*length == BYTE8)
-		sprintf(buffer, "%lf", (double) be64toh(read64(data_record + offset)));
+		snprintf(buffer, BUFF_SIZE, "%lf", (double) be64toh(read64(data_record + offset)));
 	else
-		sprintf(buffer, "\"unknown\"");
+		snprintf(buffer, BUFF_SIZE, "\"unknown\"");
 
 	return buffer;
 }

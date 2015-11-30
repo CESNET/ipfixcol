@@ -56,8 +56,6 @@ extern "C" {
 #include <iomanip>
 #include <map>
 
-#define quotation(function) 
-
 static const char *msg_module = "json_storage";
 
 #define READ_BYTE_ARR(_dst_, _src_, _len_) \
@@ -66,13 +64,6 @@ do {\
 		(_dst_)[i] = read8((_src_) + i); \
 	} \
 } while(0)
-
-struct json_conf {
-        bool metadata;
-        Storage *storage;
-        bool tcpFlags;  /**< tcpFlags format - true = formated, false = RAW */
-        bool timestamp; /**< timestamp format - true = formated, false = UNIX */
-};
 
 /**
  * \brief Constructor
@@ -143,7 +134,6 @@ void Storage::readString(uint16_t& length, uint8_t *data_record, uint16_t &offse
 	length = realLength(length, data_record, offset);
 	
 	/* Read string and replace white spaces by \notation (\n, \t, ...) */
-
 	unsigned long int index  = 0;
 	unsigned long int index2 = 0;
 	const char * pointer = (const char *)(data_record + offset);
@@ -169,11 +159,8 @@ void Storage::readString(uint16_t& length, uint8_t *data_record, uint16_t &offse
 	}
 
 	stringWithEscseq[index2++] = '"';
-
 	stringWithEscseq[index2] = '\0';
-
 	record.append((const char *) stringWithEscseq);
-
 }
 
 /**
@@ -181,6 +168,8 @@ void Storage::readString(uint16_t& length, uint8_t *data_record, uint16_t &offse
  */
 void Storage::readRawData(uint16_t &length, uint8_t* data_record, uint16_t &offset)
 {
+	record += '"';
+
 	/* Read raw value */
 	switch (length) {
 	case 1:
@@ -207,8 +196,7 @@ void Storage::readRawData(uint16_t &length, uint8_t* data_record, uint16_t &offs
 		record += "0x";
 	}
 
-	record += '"';
-	record +=  buffer.data();
+	record += buffer.data();
 	record += '"';
 }
 
@@ -227,6 +215,8 @@ std::string Storage::rawName(uint32_t en, uint16_t id) const
  */
 void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 {
+	std::string tmp_name;
+
 	offset = 0;
 	record.clear();
 	record += "{\"@type\": \"ipfix.entry\", ";
@@ -249,9 +239,9 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 		/* Get element informations */
 		const ipfix_element_t * element = get_element_by_id(id, enterprise);
 		if (element == NULL) {
-			printf("UNKNOWN ELEMENT\n");
-			continue;
-			MSG_DEBUG(msg_module, "Unknown element");
+			// Element not found
+			tmp_name = rawName(enterprise, id);
+			MSG_DEBUG(msg_module, "Unknown element (%s)", tmp_name.c_str());
 		}
 
 		if (count > 0) {
@@ -259,10 +249,10 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 		}
 
 		record += "\"ipfix.";
-		record += element->name;
+		record += (element != NULL) ? element->name : tmp_name;
 		record += "\": ";
 
-		switch (element->type) {
+		switch ((element != NULL) ? element->type : ET_UNASSIGNED) {
 		case ET_UNSIGNED_8:
 			record += translator.toUnsigned(&length, data_record, offset, element, config);
 			break;
