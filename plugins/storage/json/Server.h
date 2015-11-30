@@ -60,16 +60,18 @@ public:
 	void ProcessDataRecord(const std::string& record);
 
 private:
-	// Brief description of a client
-	static std::string get_client_desc(const struct sockaddr_storage &client);
-
-	// Acceptor's thread function
-	static void *thread_accept(void *context);
+	/** Transmission status */
+	enum Send_status {
+		SEND_OK,               /**< Succesfully sent */
+		SEND_WOULDBLOCK,       /**< Message skipped or partly sent */
+		SEND_FAILED            /**< Failed */
+	};
 
 	/** Structure for connected client */
 	typedef struct client_s {
-		struct sockaddr_storage info; /**< Info about client (IP, port) */
-		int socket;                   /**< Client's socket */
+		struct sockaddr_storage info; /**< Info about client (IP, port)     */
+		int socket;                   /**< Client's socket                  */
+		std::string msg_rest;   /**< Rest of a message in non-blocking mode */
 	} client_t;
 
 	/** Configuration of acceptor thread */
@@ -89,6 +91,14 @@ private:
 	bool _non_blocking;
 	/** Acceptor of new clients */
 	acceptor_t *_acceptor;
+
+	// Brief description of a client
+	static std::string get_client_desc(const struct sockaddr_storage &client);
+	// Send data to the client
+	enum Send_status msg_send(const char *data, ssize_t len, client_t &client);
+
+	// Acceptor's thread function
+	static void *thread_accept(void *context);
 };
 
 #endif // SERVER_H

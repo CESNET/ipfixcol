@@ -254,6 +254,68 @@ void *Server::thread_accept(void *context)
 }
 
 /**
+ * \brief Send a message to a client
+ *
+ * Sends the message to the client using prepared socket. When non-blocking mode
+ * is enabled and only part of the message was sent, the rest of the message is
+ * stored in the client's profile.
+ * \param[in] data The message
+ * \param[in] len The length of the message
+ * \param[in,out] client Client
+ * \return Transmission status
+ */
+enum Server::Send_status Server::msg_send(const char *data, ssize_t len,
+	client_t &client)
+{
+	ssize_t now;
+	ssize_t todo = len;
+	const char *ptr = data;
+
+	int flags = MSG_NOSIGNAL;
+	if (_non_blocking) {
+		flags |= MSG_DONTWAIT;
+	}
+
+	while (todo > 0) {
+		now = send(client.socket, ptr, todo, flags);
+
+		if (now == -1) {
+			if (_non_blocking && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+				// Non-blocking mode
+				break;
+			}
+
+			// Connection failed
+			MSG_INFO(msg_module, "Client disconnected: %s (%s)",
+					get_client_desc(client.info).c_str(), strerror(errno));
+			return SEND_FAILED;
+		}
+
+		ptr  += now;
+		todo -= now;
+	}
+
+	if (todo <= 0) {
+		return SEND_OK;
+	}
+
+	// Non-blocking mode - (partly) failed to sent the message
+	if (todo == len) {
+		// No part of the message was sent
+		return SEND_WOULDBLOCK;
+	}
+
+	/*
+	 * Partly sent. Store the rest of the message for the next transmission to
+	 * avoid invalid JSON format. Temporary string should be here, because it is
+	 * possible to "data == rest.c_str()".
+	 */
+	std::string tmp(ptr, todo);
+	client.msg_rest.assign(tmp);
+	return SEND_WOULDBLOCK;
+}
+
+/**
  * \brief Send record to all connected clients
  *
  * \param[in] record Record
@@ -261,11 +323,7 @@ void *Server::thread_accept(void *context)
 void Server::ProcessDataRecord(const std::string &record)
 {
 	const char *data = record.c_str();
-	size_t length = strlen(data) + 1;
-	int flags = MSG_NOSIGNAL;
-	if (_non_blocking) {
-		flags |= MSG_DONTWAIT;
-	}
+	ssize_t length = record.size();
 
 	// Are there new clients?
 	if (_acceptor->new_clients_ready) {
@@ -282,38 +340,44 @@ void Server::ProcessDataRecord(const std::string &record)
 	// Send the message to all clients
 	std::vector<client_t>::iterator iter = _clients.begin();
 	while (iter != _clients.end()) {
-		ssize_t todo = length;
-		const char *ptr = data;
-		bool remove_client = false;
+		client_t &client = *iter;
+		enum Send_status ret_val;
 
-		while (todo > 0) {
-			ssize_t now = send(iter->socket, ptr, todo, flags);
+		// Send the rest part of the last partly sent message
+		if (_non_blocking && !client.msg_rest.empty()) {
+			std::string &rest = client.msg_rest;
 
-			if (now == -1) {
-				if (_non_blocking && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-					// Non blocking enabled - skip message
-					// TODO: add warning?
-					break;
-				}
-
-				// Other situations - close connection
-				MSG_INFO(msg_module, "Client disconnected: %s (%s)",
-					get_client_desc(iter->info).c_str(), strerror(errno));
-				remove_client = true;
+			ret_val = msg_send(rest.c_str(), rest.size(), client);
+			switch (ret_val) {
+			case SEND_OK:
+				// The rest of the message successfully sent
+				rest.clear();
 				break;
+			case SEND_WOULDBLOCK:
+				// Skip, next client...
+				++iter;
+				continue;
+			case SEND_FAILED:
+				// Close socket and remove client
+				close(client.socket);
+				_clients.erase(iter); // The iterator has new location...
+				continue;
 			}
-
-			ptr  += now;
-			todo -= now;
 		}
 
-		if (remove_client) {
-			// Close socket and remove client's info
-			close(iter->socket);
-			_clients.erase(iter); // The iterator has new location...
-		} else {
-			// New client
+		// Send new message
+		ret_val = msg_send(data, length, client);
+		switch (ret_val) {
+		case SEND_OK:
+		case SEND_WOULDBLOCK:
+			// Next client
 			++iter;
+			break;
+		case SEND_FAILED:
+			// Close socket and remove client's info
+			close(client.socket);
+			_clients.erase(iter); // The iterator has new location...
+			break;
 		}
 	}
 }
