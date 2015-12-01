@@ -59,6 +59,8 @@
 			<metadata>no</metadata>
 			<tcpFlags>formated</tcpFlags>
 			<timestamp>formated</timestamp>
+			<protocol>formated</protocol>
+
 			<output>
 				<type>print</type>
 			</output>
@@ -100,17 +102,24 @@
 				<varlistentry>
 					<term><command>tcpFlags</command></term>
 					<listitem>
-						<simpara>Convert TCP flags to formated style of dots and letters (formated) or as a number (raw) [default == raw].</simpara>
+						<simpara>Convert TCP flags to formated style of dots and letters (formated) or to a number (raw) [default == raw].</simpara>
 					</listitem>
 				</varlistentry>
 		
 				<varlistentry>
 					<term><command>timestamp</command></term>
 					<listitem>
-						<simpara>Convert all times to formated style (formated) or as a number (unix) [default == unix].</simpara>
+						<simpara>Convert time to formated style (formated) or to a number (unix) [default == unix].</simpara>
 					</listitem>
 				</varlistentry>
-	
+
+				<varlistentry>
+					<term><command>protocol</command></term>
+					<listitem>
+						<simpara>Convert protocol identification to formated style (formated) or to a number (raw) [default == formated].</simpara>
+					</listitem>
+				</varlistentry>
+
 				<varlistentry>
 					<term><command>output</command></term>
 					<listitem>

@@ -61,6 +61,7 @@ Here is an example of configuration in **startup.xml**:
 		<metadata>no</metadata>
 		<tcpFlags>formated</tcpFlags>
 		<timestamp>formated</timestamp>
+		<protocol>formated</protocol>
 
 		<output>
 			<type>print</type>
@@ -82,8 +83,9 @@ Here is an example of configuration in **startup.xml**:
 </destination>
 ```
 * **metadata** - Add record metadata to the output (yes/no) [default == no].
-* **tcpFlags** - Convert TCP flags to formated style of dots and letters (formated) or as a number (raw) [default == raw].
-* **timestamp** - Convert all times to formated style (formated) or as a number (unix) [default == unix].
+* **tcpFlags** - Convert TCP flags to formated style of dots and letters (formated) or to a number (raw) [default == raw].
+* **timestamp** - Convert time to formated style (formated) or to a number (unix) [default == unix].
+* **protocol** - Convert protocol identification to formated style (formated) or to a number (raw) [default == formated].
 * **output** - Specifies JSON data processor. Multiple outputs are supported.
 	* **type** - Output type. Actually only **print**, **send** and **server** are supported.
 * **output:print** - Writes data to the standard output.
