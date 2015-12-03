@@ -52,10 +52,11 @@ class Channel;
  * \brief Class representing profile
  */
 class Profile {
+public:
 	/* Shortcuts */
 	using channelsVec = std::vector<Channel *>;
 	using profilesVec = std::vector<Profile *>;
-public:
+
 	/**
 	 * \brief Constructor
 	 *

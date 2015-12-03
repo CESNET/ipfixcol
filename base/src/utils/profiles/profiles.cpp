@@ -53,6 +53,8 @@ extern "C" {
 
 #include "profiles_internal.h"
 #include <iostream>
+#include <set>
+#include <queue>
 
 /* Ignore BIG_LINES libxml2 option when it is not supported */
 #ifndef XML_PARSE_BIG_LINES
@@ -721,6 +723,53 @@ void **profile_match_data(void *profile, struct ipfix_message *msg, struct metad
 	data.channels[data.channelsCounter] = NULL;
 
 	return data.channels;
+}
+
+/**
+ * Get all profiles in the tree
+ */
+void **profile_get_all_profiles(void *profile)
+{
+	if (!profile) {
+		return NULL;
+	}
+
+	// Find root profile
+	void *tmp_profile = profile;
+	while (tmp_profile) {
+		profile = tmp_profile;
+		tmp_profile = ((Profile *)profile)->getParent();
+	}
+
+	std::set<Profile *> all_profiles;
+	std::queue<Profile *> next;
+	next.push((Profile *) profile);
+
+	// Get all profiles
+	while (!next.empty()) {
+		Profile *item = next.front();
+		next.pop();
+
+		all_profiles.insert(item);
+		Profile::profilesVec sub_prof = ((Profile *) item)->getChildren();
+		for (auto &i : sub_prof) {
+			next.push(i);
+		}
+	}
+
+	// Convert the set to an array
+	Profile **all_array = (Profile **) calloc(all_profiles.size() + 1, sizeof(Profile *));
+	if (!all_array) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
+
+	int index = 0;
+	for (auto &i : all_profiles) {
+		all_array[index++] = i;
+	}
+
+	return (void **) all_array;
 }
 
 /**

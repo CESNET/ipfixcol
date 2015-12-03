@@ -158,6 +158,16 @@ API void *profile_get_channel(void *profile, uint16_t index);
 API void **profile_match_data(void *profile, struct ipfix_message *msg, struct metadata *mdata);
 
 /**
+ * \brief Get all profiles in the tree
+ *
+ * \warning User must free returned array with free()
+ * \param[in] profile Random profile from the tree of profiles.
+ * \return On success returns null-terminated array of all profiles. Otherwise
+ * returns NULL.
+ */
+API void **profile_get_all_profiles(void *profile);
+
+/**
  * \brief Free profile with all it's channels and subprofiles
  *
  * \param[in] profile
