@@ -190,10 +190,10 @@ int element::flush(std::string path)
 
 std::string element::get_part_info()
 {
-	return std::string("\nBegin Column") + \
-		"\nname = " + std::string(this->_name) + \
-		"\ndata_type = " + ibis::TYPESTRING[(int) this->_type] + \
-		"\nEnd Column\n";
+	return std::string("\nBEGIN Column\n") \
+		+ "name=" + std::string(this->_name) + "\n" \
+		+ "data_type=" + ibis::TYPESTRING[(int) this->_type] + "\n" \
+		+ "END Column\n";
 }
 
 el_var_size::el_var_size(int size, uint32_t en, uint16_t id, uint32_t buf_size)
