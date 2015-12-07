@@ -60,6 +60,7 @@ struct json_conf {
         bool tcpFlags;  /**< tcpFlags format  - true = formated, false = RAW  */
         bool timestamp; /**< timestamp format - true = formated, false = UNIX */
         bool protocol;  /**< protocol format  - true = RAW, false = formated  */
+        bool ignoreUnknown; /**< Ignore unknown elements */
 };
 
 class Output

@@ -225,6 +225,7 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 	uint8_t *data_record = (uint8_t*) mdata->record.record;
 
 	/* get all fields */
+	uint16_t added = 0;
 	for (uint16_t count = 0, index = 0; count < templ->field_count; ++count, ++index) {
 		/* Get Enterprise number and ID */
 		id = templ->fields[index].ie.id;
@@ -240,11 +241,16 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 		const ipfix_element_t * element = get_element_by_id(id, enterprise);
 		if (element == NULL) {
 			// Element not found
+			if (config->ignoreUnknown) {
+				offset += length;
+				continue;
+			}
+
 			tmp_name = rawName(enterprise, id);
 			MSG_DEBUG(msg_module, "Unknown element (%s)", tmp_name.c_str());
 		}
 
-		if (count > 0) {
+		if (added > 0) {
 			record += ", ";
 		}
 
@@ -254,32 +260,18 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 
 		switch ((element != NULL) ? element->type : ET_UNASSIGNED) {
 		case ET_UNSIGNED_8:
-			record += translator.toUnsigned(&length, data_record, offset, element, config);
-			break;
 		case ET_UNSIGNED_16:
-			record += translator.toUnsigned(&length, data_record, offset, element, config);
-			break;
 		case ET_UNSIGNED_32:
-			record += translator.toUnsigned(&length, data_record, offset, element, config);
-			break;
 		case ET_UNSIGNED_64:
 			record += translator.toUnsigned(&length, data_record, offset, element, config);
 			break;
 		case ET_SIGNED_8:
-			record += translator.toSigned(&length, data_record, offset);
-			break;
 		case ET_SIGNED_16:
-			record += translator.toSigned(&length, data_record, offset);
-			break;
 		case ET_SIGNED_32:
-			record += translator.toSigned(&length, data_record, offset);
-			break;
 		case ET_SIGNED_64:
 			record += translator.toSigned(&length, data_record, offset);
 			break;
 		case ET_FLOAT_32:
-			record += translator.toFloat(&length, data_record, offset);
-			break;
 		case ET_FLOAT_64:
 			record += translator.toFloat(&length, data_record, offset);
 			break;
@@ -324,6 +316,7 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 		}
 
 		offset += length;
+		added++;
 	}
 	
 	/* Store metadata */
