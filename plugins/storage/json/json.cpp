@@ -55,6 +55,7 @@ IPFIXCOL_API_VERSION;
 #include "Printer.h"
 #include "Sender.h"
 #include "Server.h"
+#include "File.h"
 
 static const char *msg_module = "json_storage";
 
@@ -101,6 +102,8 @@ void process_startup_xml(struct json_conf *conf, char *params)
 			output = new Sender(node);
 		} else if (type == "server") {
 			output = new Server(node);
+		} else if (type == "file") {
+			output = new File(node);
 		} else {
 			throw std::invalid_argument("Unknown output type \"" + type + "\"");
 		}

@@ -20,7 +20,8 @@ ipfixcol_json_output_la_SOURCES = \
 	protocols.h protocols.cpp \
 	Sender.cpp Sender.h \
 	Printer.cpp Printer.h \
-	Server.cpp Server.h
+	Server.cpp Server.h \
+	File.cpp File.h
 
 ipfixcol_json_output_la_LIBADD = pugixml/libpugixml.la
 
