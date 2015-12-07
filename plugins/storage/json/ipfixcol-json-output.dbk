@@ -11,7 +11,7 @@
 			<year>2015</year>
 			<holder>CESNET, z.s.p.o.</holder>
 		</copyright>
-		<date>14 October 2014</date>
+		<date>17 December 2015</date>
 		<authorgroup>
 			<author>
 				<personname>
@@ -19,6 +19,15 @@
 					<surname>Kozubik</surname>
 				</personname>
 				<email>kozubik@cesnet.cz</email>
+				<contrib>developer</contrib>
+			</author>
+
+			<author>
+				<personname>
+					<firstname>Lukas</firstname>
+					<surname>Hutak</surname>
+				</personname>
+				<email>hutak@cesnet.cz</email>
 				<contrib>developer</contrib>
 			</author>
 		</authorgroup>
@@ -60,6 +69,7 @@
 			<tcpFlags>formated</tcpFlags>
 			<timestamp>formated</timestamp>
 			<protocol>formated</protocol>
+			<ignoreUnknown>yes</ignoreUnknown>
 
 			<output>
 				<type>print</type>
@@ -70,6 +80,16 @@
 				<ip>127.0.0.1</ip>
 				<port>4444</port>
 				<protocol>udp</protocol>
+			</output>
+
+			<output>
+				<type>file</type>
+				<path>/tmp/ipfixcol/flow/%Y/%m/%d/</path>
+				<prefix>json.</prefix>
+				<dumpInterval>
+					<timeWindow>300</timeWindow>
+					<timeAlignment>yes</timeAlignment>
+				</dumpInterval>
 			</output>
 
 			<output>
@@ -121,13 +141,20 @@
 				</varlistentry>
 
 				<varlistentry>
+					<term><command>ignoreUnknown</command></term>
+					<listitem>
+						<simpara>Skip elements with unknown semantics (yes/no). Data of unknown elements are formated as unsigned integer (1, 2, 4, 8 bytes length) or binary values. Names will have format 'eXXidYY' where XX is enterprise number and YY is element ID [default == yes].</simpara>
+					</listitem>
+				</varlistentry>
+
+				<varlistentry>
 					<term><command>output</command></term>
 					<listitem>
 						<simpara>JSON data processor. Multiple outputs are supported.</simpara>
 						<varlistentry>
 							<term><command>type</command></term>
 							<listitem>
-								<simpara>Output type. Actually only <command>print</command> and <command>send</command> are supported.</simpara>
+								<simpara>Output type. <command>print</command>, <command>send</command>, <command>file</command> and <command>server</command> are supported.</simpara>
 							</listitem>
 						</varlistentry>
 					</listitem>
@@ -162,6 +189,45 @@
 							<term><command>protocol</command></term>
 							<listitem>
 								<simpara>Connection protocol, one of UDP/TCP/SCTP (default UDP). This field is case insensitive.</simpara>
+							</listitem>
+						</varlistentry>
+					</listitem>
+				</varlistentry>
+
+				<varlistentry>
+					<term><command>output - file</command></term>
+					<listitem>
+						<simpara>Store data to files.</simpara>
+						<varlistentry>
+							<term><command>path</command></term>
+							<listitem>
+								<simpara>The path specifies storage directory for data collected by JSON plugin. Path can contain format specifier for day, month, etc. This allows you to create directory hierarchy based on format specifiers. See <command>strftime</command> for conversion specification.</simpara>
+							</listitem>
+						</varlistentry>
+
+						<varlistentry>
+							<term><command>prefix</command></term>
+							<listitem>
+								<simpara>Specifies name prefix for output files.</simpara>
+							</listitem>
+						</varlistentry>
+
+						<varlistentry>
+							<term><command>dumpInterval</command></term>
+							<listitem>
+								<varlistentry>
+									<term><command>timeWindow</command></term>
+									<listitem>
+										<simpara>Specifies the time interval in seconds to rotate files [default == 300].</simpara>
+									</listitem>
+								</varlistentry>
+
+								<varlistentry>
+									<term><command>timeAlignment</command></term>
+									<listitem>
+										<simpara>Align file rotation with next N minute interval [default == yes].</simpara>
+									</listitem>
+								</varlistentry>
 							</listitem>
 						</varlistentry>
 					</listitem>
