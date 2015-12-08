@@ -24,7 +24,7 @@ rpm: dist $(rpmspec)
 		--define "_topdir `pwd`/$(RPMDIR)";
 
 clean-local: 
-	rm -rf RPMBUILD
+	rm -rf RPMBUILD fbitdump.xml
 
 fbitdump.xml: fbitdump.xml.template
 	sed 's|@pkgdatadir[@]|$(pkgdatadir)|g' $< > $@
