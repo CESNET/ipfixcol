@@ -12,119 +12,6 @@
 #include <errno.h>
 #include <stdbool.h>
 
-//! \define Rounds bytelen to smallest possible multiple of bytesize of boundary type
-#define aligned(bytelen, boundary)\
-	(bytelen/(boundary)+(bytelen%(boundary) > 0 ? 1 : 0))
-
-typedef uint32_t base_t;
-
-#define al4B(bytelen)\
-	(bytelen/sizeof(base_t)+(bytelen%sizeof(base_t) > 0 ? 1 : 0))
-
-
-#define ELNb(d, i) (i/8*sizeof(d[0]))
-#define bIDX(d, i) (i%8*sizeof(d[0]))
-#define GETb(d, i) (d[ELNb(d,i)] & 1LL << bIDX(d,i))
-#define SETb(d, i, m) (d[ELNb(d,i)] = ((d[ELNb(d,i)] & ~(m << bIDX(d,i))) | (-d[ELNb(d,i)] & (m << bIDX(d,i)))) )
-
-typedef struct stack_s{
-	unsigned size;
-	unsigned top;
-	base_t *data;
-}stack_t;
-
-typedef struct stack_ba_s{
-	stack_t stack;
-	base_t* ba;
-}stack_ba_t;
-
-
-stack_t* stack_init(size_t size)
-{
-	stack_t* st = NULL;
-	st = malloc(sizeof(stack_t));
-	if(st != NULL){
-		void* tmp = malloc(al4B(size)*sizeof(base_t));
-		if(tmp != NULL){
-			st->size = al4B(size); //!< number of dwords
-			st->top = 0;
-			st->data = tmp;
-			return st;
-		}
-		free(st);
-		free(tmp);
-	}
-	return NULL;
-}
-
-void stack_del(stack_t* st)
-{
-	free(st->data);
-	free(st);
-}
-
-
-int stack_resize(stack_t* st, int size)
-{
-	unsigned ne = al4B(size);
-	if(st->top < ne){
-		void* tmp = realloc(st->data, ne*sizeof(st->data[0]));
-		if(tmp != NULL){
-			st->data = tmp;
-			st->size = ne;
-			return 0;
-		}
-	}
-	return 1;
-}
-
-int stack_push(stack_t* st, void* data, int length)
-{
-	unsigned ne = al4B(length);
-	if(st->top >= ne && st->top + ne <= st->size){
-		memcpy(st->data+st->top, data, length);
-		st->top += ne; 
-		return 0;
-	} else {
-		while(ne + st->top > st->size){
-			int x = stack_resize(st, st->size*2);
-			if(x){
-				fprintf(stderr, "Failed to allocate %u memory for stack_t\n",st->size*2);
-				return 1;
-			}
-		}
-		memcpy(st->data+st->top, data, length);
-		st->top += ne; 
-		return 0;
-	}
-	return 1;
-}
-
-int stack_pop(stack_t* st, int length)
-{
-	unsigned ne = al4B(length);
-	if(st->top >= ne && st->top + ne <= st->size){
-		st->top -= ne;
-		return 0;
-	}
-	return 1;
-}
-
-int stack_top(stack_t* st, void* data, int length)
-{	
-	unsigned ne = al4B(length);
-	if(st->top >= ne && st->top + ne <= st->size){
-		memcpy(data, st->data+st->top-ne, length);
-		return 0;
-	}
-	return 1;
-}
-
-bool stack_empty(stack_t* st)
-{	
-	return(st->top == 0);
-}
-
 
 static const char* msg_module = "lnfstore_storage";
 
@@ -250,16 +137,13 @@ void store_record(struct metadata* mdata, struct lnfstore_conf *conf)
 	
 	static lnf_rec_t *recp = NULL;
 	static lnf_file_t *lfp = NULL; 
-	static stack_t *smap = NULL;
+	stack_t *smap = conf->pst;
 
 	if( conf->profiles && !mdata->channels ){
 		//Record wont be stored, it does not belong to any channel and profiling is activated
 		return;
 	}
 
-	if(smap == NULL) {
-		smap = stack_init(64*sizeof(prec_t));
-	}
 	if(recp == NULL) {
 		lnf_rec_init(&recp);
 	} else { 
@@ -308,6 +192,7 @@ void store_record(struct metadata* mdata, struct lnfstore_conf *conf)
 		mktime_window(now, conf);
 		if( conf->profiles ){
 			prec_t* item = NULL;
+			//Close all old files
 			for(unsigned x = 0; x < smap->top; x += al4B(sizeof(prec_t))){
 				item = (prec_t*)smap->data + x; 
 				if(item->lfp == NULL)
@@ -323,17 +208,18 @@ void store_record(struct metadata* mdata, struct lnfstore_conf *conf)
     
     if( conf->profiles ){
 		//On stack allocation of bit array
-		int ba[((smap->top/aligned(sizeof(prec_t), smap->data[0]))/(8*sizeof(int)))+1];
-		memset(ba, 0, sizeof(ba));
+		int ba_size = smap->top/(8*sizeof(int))+1;
+		int ba[ba_size];
+		memset(&ba[0], 0, ba_size*sizeof(int));
 		int status = 0;
 		
 		prec_t *item = NULL;
 
 		for( int i = 0; mdata->channels[i] != 0; i++ ){
 			
-			void* rec_prof = channel_get_profile(&mdata->channels[i]);
+			void* rec_prof = channel_get_profile(mdata->channels[i]);
 
-			item = bsearch(rec_prof, smap->data, smap->top/al4B(sizeof(prec_t)),
+			item = bsearch(&rec_prof, smap->data, smap->top/al4B(sizeof(prec_t)),
 					al4B(sizeof(prec_t)), prec_compare);
 			
 			if( item == NULL ){
@@ -364,15 +250,18 @@ void store_record(struct metadata* mdata, struct lnfstore_conf *conf)
 			}
 		}
 		void* profile = NULL;
-		for( int i = 0; mdata->channels[i] != 0; profile = channel_get_profile(&mdata->channels[i++]) ){
+		int i = 0;
+		for(profile = channel_get_profile(mdata->channels[i=0]);
+				mdata->channels[i] != 0;
+				profile = channel_get_profile(mdata->channels[i++]) ){
 
-			item = bsearch(profile, smap->data, smap->top/al4B(sizeof(prec_t)),
+			item = bsearch(&profile, smap->data, smap->top/al4B(sizeof(prec_t)),
 					al4B(sizeof(prec_t)), prec_compare);
 				
 			int index = (((base_t*)item) - smap->data)/al4B(sizeof(prec_t));
 			if( !GETb(ba, index) ){ //And profile is not shadow
 				status = lnf_write(item->lfp, recp);
-				SETb(ba, index, true);
+				SETb(ba, index, 1);
 			}
 		}
 	} else {

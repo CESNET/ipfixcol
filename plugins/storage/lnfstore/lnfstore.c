@@ -6,6 +6,8 @@
 
 #include <libxml/parser.h>
 #include <libxml/xmlmemory.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define xmlStrcmpBool(_xmlStr_, boolVal)( \
 	xmlStrcmp(_xmlStr_, (const xmlChar*)((boolVal)?"yes":"no")) && \
@@ -16,6 +18,7 @@ static const char* msg_module= "lnfstore_interface";
 
 const struct lnfstore_conf def_conf= 
 {
+	NULL,
 	(xmlChar*)"nfdump.",
 	(xmlChar*)"%F%R",
 	(xmlChar*)".\\",
@@ -50,7 +53,7 @@ void process_startup_xml(struct lnfstore_conf *conf, char *params)
                     goto err_xml_val;
                 }
             }else if(!xmlStrcmp(cur->name, (const xmlChar*) "profiles")){
-				conf->compress = !xmlStrcmpBool(nodeStr, true);
+				conf->profiles = !xmlStrcmpBool(nodeStr, true);
 				xmlFree(nodeStr);
 
             }else if(!xmlStrcmp(cur->name, (const xmlChar*) "compress")){
@@ -111,10 +114,15 @@ int storage_init (char *params, void **config)
 		t_vars->dir = NULL;
 		t_vars->suffix = NULL;
 		t_vars->window_start = 0;
+		conf->pst = NULL;	
 		/* Process params */
 		process_startup_xml(conf, params);
 		
 		
+		//! If profiles are to be used, alloc ads for prof. storage
+		if(conf->profiles){
+			conf->pst = stack_init(64*sizeof(base_t));
+		}
 		/* Save configuration */
 		*config = conf;
 
@@ -155,8 +163,101 @@ int storage_close (void **config)
 	xmlFree(conf->ident);
 	xmlFree(conf->storage_path);
 
-
+	stack_del(conf->pst);
 	*config = NULL;
 
 	return 0;
+}
+
+//ADS general stack implementation
+
+stack_t* stack_init(size_t size)
+{
+	stack_t* st = NULL;
+	st = malloc(sizeof(stack_t));
+	if(st != NULL){
+		void* tmp = malloc(al4B(size)*sizeof(base_t));
+		if(tmp != NULL){
+			st->size = al4B(size); //!< number of dwords
+			st->top = 0;
+			st->data = tmp;
+			return st;
+		}
+		free(st);
+		free(tmp);
+	}
+	return NULL;
+}
+
+void stack_del(stack_t* st)
+{
+	free(st->data);
+	free(st);
+}
+
+
+int stack_resize(stack_t* st, int size)
+{
+	unsigned ne = al4B(size);
+	if(st->top < ne){
+		void* tmp = realloc(st->data, ne*sizeof(st->data[0]));
+		if(tmp != NULL){
+			st->data = tmp;
+			st->size = ne;
+			return 0;
+		}
+	}
+	return 1;
+}
+
+int stack_push(stack_t* st, void* data, int length)
+{
+	unsigned ne = al4B(length);
+	if(st->top >= ne && st->top + ne <= st->size){
+		memcpy(st->data+st->top, data, length);
+		st->top += ne; 
+		return 0;
+	} else {
+		while(ne + st->top > st->size){
+			int x = stack_resize(st, st->size*2);
+			if(x){
+				fprintf(stderr, "Failed to allocate %u memory for stack_t\n",st->size*2);
+				return 1;
+			}
+		}
+		memcpy(st->data+st->top, data, length);
+		st->top += ne; 
+		return 0;
+	}
+	return 1;
+}
+
+int stack_pop(stack_t* st, int length)
+{
+	unsigned ne = al4B(length);
+	if(st->top >= ne && st->top + ne <= st->size){
+		st->top -= ne;
+		return 0;
+	}
+	return 1;
+}
+
+int stack_top(stack_t* st, void* data, int length)
+{	
+	unsigned ne = al4B(length);
+	if(st->top >= ne && st->top + ne <= st->size){
+		memcpy(data, st->data+st->top-ne, length);
+		return 0;
+	}
+	return 1;
+}
+
+bool stack_empty(stack_t* st)
+{	
+	return(st->top == 0);
+}
+
+int stack_size(stack_t* st)
+{
+	return(st->top*sizeof(base_t));
 }
