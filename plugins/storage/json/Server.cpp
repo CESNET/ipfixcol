@@ -111,6 +111,7 @@ Server::Server(const pugi::xpath_node &config)
 		int yes = 1;
 		if (setsockopt(serv_fd, SOL_SOCKET, SO_REUSEADDR, &yes,
 				sizeof(int)) == -1) {
+			close(serv_fd);
 			continue;
 		}
 
@@ -360,7 +361,7 @@ void Server::ProcessDataRecord(const std::string &record)
 			case SEND_FAILED:
 				// Close socket and remove client
 				close(client.socket);
-				_clients.erase(iter); // The iterator has new location...
+				iter = _clients.erase(iter); // The iterator has new location...
 				continue;
 			}
 		}
@@ -376,7 +377,7 @@ void Server::ProcessDataRecord(const std::string &record)
 		case SEND_FAILED:
 			// Close socket and remove client's info
 			close(client.socket);
-			_clients.erase(iter); // The iterator has new location...
+			iter = _clients.erase(iter); // The iterator has new location...
 			break;
 		}
 	}

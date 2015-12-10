@@ -101,7 +101,7 @@ public:
 	 * 
      * \return channel's name from startup configuration
      */
-	std::string getName() { return m_name; }
+	const std::string& getName() const { return m_name; }
 	
 	/**
 	 * \brief Get listening channels
@@ -149,7 +149,7 @@ public:
 	 *
 	 * \return path name
 	 */
-	std::string getPathName() { return m_pathName; }
+	const std::string& getPathName() const { return m_pathName; }
 
 	/**
 	 * \brief Match channel with data record (using channel's filter)

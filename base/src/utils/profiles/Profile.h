@@ -110,7 +110,7 @@ public:
 	 *
 	 * \return profile's name from startup configuration
 	 */
-	std::string getName() { return m_name; }
+	const std::string& getName() const { return m_name; }
 	
 	/**
 	 * \brief Get vector of all profile's channels
@@ -145,7 +145,7 @@ public:
 	 *
 	 * \return Directory
 	 */
-	std::string getDirectory() { return m_directory; }
+	const std::string& getDirectory() const { return m_directory; }
 
 	/**
 	 * \brief Set profile's directory
@@ -171,7 +171,7 @@ public:
 	 *
 	 * \return path name
 	 */
-	std::string getPathName() { return m_pathName; }
+	const std::string& getPathName() const { return m_pathName; }
 	
 	/**
 	 * \brief Match profile with data record (== with it's channels)
