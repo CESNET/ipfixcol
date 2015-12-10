@@ -39,6 +39,7 @@
 
 #include <stdexcept>
 #include "Table.h"
+#include "Verbose.h"
 
 namespace fbitdump {
 
@@ -306,7 +307,13 @@ void Table::doQuery()
 		
 		/* Check that we have valid table */
 		if (!this->table) {
-			throw std::runtime_error("Select '"+ this->select + "' with filter '"+ this->usedFilter->getFilter() +"' failed");
+			/*
+			 * throw std::runtime_error("Select '"+ this->select + "' with filter '"+ this->usedFilter->getFilter() +"' failed");
+			 *
+			 * TODO: If this fails do to filter containing columns not present in the table, it is OK. Otherwise, it might be critical.
+			 * It would be best to eliminate such tables beforehand in the future
+			 */
+			MSG_DEBUG("Table", ("Select '"+ this->select + "' with filter '"+ this->usedFilter->getFilter() +"' failed").c_str());
 		}
 
 		/* do order by only on valid result */
