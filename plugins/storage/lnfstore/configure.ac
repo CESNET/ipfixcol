@@ -48,7 +48,7 @@ AC_CONFIG_SRCDIR([lnfstore.c])
 AC_CONFIG_HEADERS([config.h])
 
 # Initialization
-CFLAGS="-Wall"
+CFLAGS="-Wall -std=gnu99"
 
 RELEASE=1
 AC_SUBST(RELEASE)
