@@ -321,8 +321,9 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 	
 	/* Store metadata */
 	if (processMetadata) {
-			record += "}, \"metadata\": {";
+		record += ", \"ipfix.metadata\": {";
 		storeMetadata(mdata);
+		record += "}";
 	}
 	
 	record += "}\n";
