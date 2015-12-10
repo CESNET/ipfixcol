@@ -93,9 +93,9 @@ int ipfix_lnf_map_compare(const void* pkey, const void* pelem)
 	if( (((uint64_t)key->en) << 16 | key->ie) == (((uint64_t)elem->en) << 16 | elem->ie)){
 		return 0;
 	}
-	if( (((uint64_t)key->en) << 16 | key->ie) > (((uint64_t)elem->en) << 16 | elem->ie)){
+	//if( (((uint64_t)key->en) << 16 | key->ie) > (((uint64_t)elem->en) << 16 | elem->ie)){
 		return 1;
-	}
+	//}
 }
 
 
