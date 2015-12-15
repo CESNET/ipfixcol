@@ -1,8 +1,10 @@
 **Future release:**
 
+**Version 0.4.0:**
+
 *  Added parsing of plugin values in bit operations (&, |)
 *  Fixed parsing of filter strings using plugins
-*  Fixed filter problems with unsigned logn values
+*  Fixed filter problems with unsigned long values
 *  Fixed problem with -t parameter
 *  Sorting column is required in output format
 

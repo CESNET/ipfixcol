@@ -39,7 +39,7 @@
 AC_PREREQ([2.60])
 
 # Process this file with autoconf to produce a configure script.
-AC_INIT([fbitconvert], [1.1.1])
+AC_INIT([fbitconvert], [1.1.2])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 AC_CONFIG_SRCDIR([src/fbitconvert.in])
 AC_CONFIG_HEADERS([config.h])
