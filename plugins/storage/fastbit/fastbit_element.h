@@ -243,10 +243,24 @@ private:
 	bool _var_size;
 	uint16_t _true_size;
 	uint8_t _offset;
+
+	char *_sp_buffer;
+	uint32_t _sp_buffer_size;
+	uint32_t _sp_buffer_offset;
 public:
 	el_text(int size = 1, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE);
 
 	virtual uint16_t fill(uint8_t *data);
+
+	/**
+	 * \brief Overloaded flush function to write the sp buffer
+	 *
+	 * Calls parent funtion flush
+	 *
+	 * @param path to write the file to
+	 * @return 0 on success, 1 otherwise
+	 */
+	virtual int flush(std::string path);
 
 protected:
 	int set_type() {
