@@ -183,6 +183,13 @@ public:
 	 * @return string with part information
 	 */
 	virtual std::string get_part_info();
+
+	/**
+	 * \brief Get Name of the element
+	 *
+	 * @return Returns name of the element
+	 */
+	const char* getName() const;
 };
 
 class el_var_size : public element

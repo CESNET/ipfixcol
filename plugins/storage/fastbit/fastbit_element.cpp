@@ -132,6 +132,10 @@ void element::setName(uint32_t en, uint16_t id, int part)
 	}
 }
 
+const char* element::getName() const {
+	return _name;
+}
+
 void element::allocate_buffer(uint32_t count)
 {
 	_buf_max = count;
@@ -661,6 +665,7 @@ el_unknown::el_unknown(int size, uint32_t en, uint16_t id, int part, uint32_t bu
 	(void) buf_size;
 
 	_size = size;
+	_name[0] = '\0';
 
 	/* Size of VAR_IE_LENGTH means variable-sized IE */
 	_var_size = (size == VAR_IE_LENGTH);
