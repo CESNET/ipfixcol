@@ -90,6 +90,8 @@ enum store_type get_type_from_xml(struct fastbit_config *conf, uint32_t en, uint
 class element
 {
 protected:
+	struct fastbit_config *_config;
+
 	int _size;
 	enum ibis::TYPE_T _type;
 	/* row name for this element
@@ -248,9 +250,9 @@ private:
 	uint32_t _sp_buffer_size;
 	uint32_t _sp_buffer_offset;
 public:
-	el_text(int size = 1, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE);
-
+	el_text(int size = 1, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
 	virtual uint16_t fill(uint8_t *data);
+	virtual ~el_text();
 
 	/**
 	 * \brief Overloaded flush function to write the sp buffer
@@ -282,7 +284,7 @@ class el_ipv6 : public element
 public:
 	uint64_t ipv6_value;
 	el_ipv6(int size = 1, uint32_t en = 0, uint16_t id = 0, int part = 0, uint32_t buf_size = RESERVED_SPACE);
-	/* core methods */
+
 	/**
 	 * \brief fill internal element value according to given data
 	 *

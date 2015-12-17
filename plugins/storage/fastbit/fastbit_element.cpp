@@ -286,10 +286,12 @@ int el_float::set_type()
 	return 0;
 }
 
-el_text::el_text(int size, uint32_t en, uint16_t id, uint32_t buf_size):
+el_text::el_text(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct fastbit_config *config):
 	_var_size(false), _true_size(size), _sp_buffer(NULL)
 {
-	_size = 1; // this is size for flush function
+	_config = config;
+
+	_size = 1; // Size for flush function
 	_offset = 0;
 	_filled = 0;
 	_buffer = NULL;
@@ -307,17 +309,19 @@ el_text::el_text(int size, uint32_t en, uint16_t id, uint32_t buf_size):
 
 	allocate_buffer(buf_size);
 
-	/* Allocate the sp buffer */
-	_sp_buffer_size = buf_size;
-	_sp_buffer = (char *) realloc(_sp_buffer, _sp_buffer_size);
-	if (_sp_buffer == NULL) {
-		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
-		exit(-1);
-	}
+	/* Allocate the sp buffer, if enabled in config */
+	if (_config->create_sp_files) {
+		_sp_buffer_size = buf_size;
+		_sp_buffer = (char *) realloc(_sp_buffer, _sp_buffer_size);
+		if (_sp_buffer == NULL) {
+			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+			exit(-1);
+		}
 
-	/* Fill the offset of first element */
-	*(uint64_t *) _sp_buffer = 0;
-	_sp_buffer_offset = 8; /* 8 byte numbers are used to record offset */
+		/* Fill the offset of first element */
+		*(uint64_t *) _sp_buffer = 0;
+		_sp_buffer_offset = 8; /* 8 byte numbers are used to record offset */
+	}
 }
 
 int el_text::append_str(void *data, int size)
@@ -354,19 +358,21 @@ uint16_t el_text::fill(uint8_t *data)
 
 	this->append_str(&(data[_offset]), _true_size);
 
-	/* Check that the sp buffer is big enough */
-	if (_sp_buffer_offset + 8 >= _sp_buffer_size) {
-		_sp_buffer_size *= 2; /* Double the buffer */
-		_sp_buffer = (char *) realloc(_sp_buffer, _sp_buffer_size);
-		if (_sp_buffer == NULL) {
-			perror("realloc blob sp buffer");
-			exit(-1);
+	if (_config->create_sp_files) {
+		/* Check that the sp buffer is big enough */
+		if (_sp_buffer_offset + 8 >= _sp_buffer_size) {
+			_sp_buffer_size *= 2; /* Double the buffer */
+			_sp_buffer = (char *) realloc(_sp_buffer, _sp_buffer_size);
+			if (_sp_buffer == NULL) {
+				perror("realloc blob sp buffer");
+				exit(-1);
+			}
 		}
-	}
 
-	/* Update the sp buffer */
-	*(uint64_t *) (_sp_buffer + _sp_buffer_offset) = (uint64_t) _filled;
-	_sp_buffer_offset += 8;
+		/* Update the sp buffer */
+		*(uint64_t *) (_sp_buffer + _sp_buffer_offset) = (uint64_t) _filled;
+		_sp_buffer_offset += 8;
+	}
 
 	/* Return size of processed data */
 	return _true_size + _offset;
@@ -377,7 +383,8 @@ int el_text::flush(std::string path)
 	FILE *f;
 	size_t check;
 
-	if (_filled > 0 && _sp_buffer != NULL) {
+	/* Flush sp buffer */
+	if (_config->create_sp_files && _filled > 0 && _sp_buffer != NULL) {
 		f = fopen((path + "/" + _name + ".sp").c_str(), "a+");
 		if (f == NULL) {
 			MSG_ERROR(msg_module, "Error while writing data (fopen)");
@@ -407,6 +414,11 @@ int el_text::flush(std::string path)
 	element::flush(path);
 
 	return 0;
+}
+
+el_text::~el_text()
+{
+	free(_sp_buffer);
 }
 
 el_ipv6::el_ipv6(int size, uint32_t en, uint16_t id, int part, uint32_t buf_size)

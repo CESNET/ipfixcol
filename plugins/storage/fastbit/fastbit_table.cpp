@@ -353,7 +353,7 @@ int template_table::parse_template(struct ipfix_template *tmp,struct fastbit_con
 				new_element = new el_float(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 				break;
 			case TEXT:
-				new_element = new el_text(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
+				new_element = new el_text(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
 				break;
 			case BLOB:
 				new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
