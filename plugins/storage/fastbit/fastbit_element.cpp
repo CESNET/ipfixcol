@@ -152,7 +152,7 @@ int element::append(void *data)
 		return 1;
 	}
 
-	memcpy(&(_buffer[size()*_filled]), data, size());
+	memcpy(&(_buffer[size() * _filled]), data, size());
 	_filled++;
 	return 0;
 }
@@ -296,7 +296,7 @@ el_text::el_text(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct f
 	_filled = 0;
 	_buffer = NULL;
 
-	if (size == VAR_IE_LENGTH) { //its element with variable size
+	if (size == VAR_IE_LENGTH) { // Element with variable size
 		_var_size = true;
 	}
 

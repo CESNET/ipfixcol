@@ -61,7 +61,7 @@ extern "C" {
 #include "fastbit_element.h"
 #include "config_struct.h"
 
-class element; //needed because of Circular dependency
+class element; // Needed because of circular dependency
 
 uint64_t get_rows_from_part(const char *);
 
@@ -77,7 +77,7 @@ private:
 	uint16_t _template_id;
 	uint16_t _min_record_size;
 	char _name[10];
-	char _orig_name[10]; /**< saves the _name when renamed due to template collision*/
+	char _orig_name[10]; /**< Saves the _name when renamed due to template collision*/
 	bool _new_dir; /**< Remember that the directory is supposed to be new */
 	char _index;
 	time_t _first_transmission; /**< First transmission of the template. Used to detect changes. */
@@ -85,7 +85,7 @@ private:
 public:
 	/* vector of elements stored in data record (based on template)
 	 * element polymorphs to necessary data type
- 	 */
+	 */
 	std::vector<element *> elements;
 	std::vector<element *>::iterator el_it;
 
@@ -96,10 +96,9 @@ public:
 	int parse_template(struct ipfix_template *tmp,struct fastbit_config *config);
 
 	/**
-	 * \brief parse data_set and store it's data in memory
+	 * \brief Parse data_set and store its data in memory
 	 *
-	 * if memory usage is about to exceed memory limit
-	 * data are flushed to disk.
+	 * If memory usage is about to exceed memory limit, data is flushed to disk.
 	 *
 	 * @param data_set ipfixcol data set
 	 * @param path path to direcotry where should be data flushed
@@ -110,7 +109,7 @@ public:
 	int update_part(std::string path);
 
 	/**
-	 * \brief Checks that specified directory exists and creates it when not
+	 * \brief Checks whether specified directory exists and creates it if not
 	 *
 	 * When new direcotry is expected and it already exists,
 	 * creates new direcotry suffixed with 'a', 'b', 'c', ...
@@ -125,13 +124,12 @@ public:
 	 */
 	int dir_check(std::string path, bool new_dir);
 
-
 	void reset_rows() {
 		_rows_in_window = 0;
 	}
 
 	/**
-	 * \brief flush data to disk and clean memory
+	 * \brief Flush data to disk and clean memory
 	 *
 	 * @param path path to direcotry where should be data flushed
 	 */

@@ -66,7 +66,7 @@ IPFIXCOL_API_VERSION;
 #include "fastbit_element.h"
 #include "FlowWatch.h"
 
-void *reorder_index(void * config)
+void *reorder_index(void *config)
 {
 	struct fastbit_config *conf = static_cast<struct fastbit_config*>(config);
 	ibis::table *index_table;
