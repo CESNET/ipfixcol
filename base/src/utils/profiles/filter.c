@@ -360,7 +360,7 @@ bool filter_fits_prefix(struct filter_treenode *node, struct ipfix_message *msg,
 		uint8_t *addr = data_record_get_field((uint8_t *)record->record, record->templ, node->field->enterprise, node->field->id, &datalen);
 
 		if (!addr) {
-			return node->op == OP_EQUAL;
+			return node->op == OP_NOT_EQUAL;
 		}
 
 		match = filter_compare_prefix(prefix, addr);
@@ -600,12 +600,20 @@ struct filter_value *filter_parse_number(char *number)
 	}
 
 	/* Apply suffix */
-	tmp = strtol(number, NULL, 10) * mult;
+	char *end_ptr = NULL;
+	uint64_t value = strtoul(number, &end_ptr, 10);
+	if (end_ptr != NULL && *end_ptr != '\0' && end_ptr != &number[tmp - 1]) {
+		MSG_ERROR(msg_module, "Cannot convert a number '%s'.", number);
+		free(val);
+		return NULL;
+	}
+
+	value *= mult;
 
 	/* Create value */
 	val->type = VT_NUMBER;
 	val->length = sizeof(uint64_t);
-	val->value = filter_num_to_ptr((uint8_t *) &tmp, val->length);
+	val->value = filter_num_to_ptr((uint8_t *) &value, val->length);
 	return val;
 }
 

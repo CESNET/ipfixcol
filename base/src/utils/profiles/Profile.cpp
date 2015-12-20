@@ -160,8 +160,5 @@ void Profile::match(struct match_data *data)
 {
 	for (auto& channel: m_channels) {
 		channel->match(data);
-		if (data->channels == NULL) {
-			return;
-		}
 	}
 }

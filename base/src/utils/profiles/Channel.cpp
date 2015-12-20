@@ -263,8 +263,5 @@ void Channel::match(struct match_data *data)
 
 	for (auto& child: m_listeners) {
 		child->match(data);
-		if (data->channels == NULL) {
-			return;
-		}
 	}
 }
