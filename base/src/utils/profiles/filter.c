@@ -45,6 +45,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <time.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
@@ -59,6 +60,14 @@
 #include "parser.h"
 
 static const char *msg_module = "profiler";
+
+/* Check if IPv4 is mapped inside IPv6 */
+// If it is possible, replace with standard IN6_IS_ADDR_V4MAPPED()
+# define IS_V4_IN_V6(a) \
+	((((const uint32_t *) (a))[0] == 0)      \
+	&& (((const uint32_t *) (a))[1] == 0)    \
+	&& (((const uint32_t *) (a))[2] == htonl (0xffff)))
+
 
 /* Packet header fields - must correspond with header_field enum and end with NULL */
 static const char *header_fields[] = {
@@ -150,64 +159,98 @@ int filter_init_elements(struct filter_parser_data *pdata)
  */
 bool filter_fits_value(struct filter_treenode *node, struct ipfix_message *msg, struct ipfix_record *record)
 {
-	int cmpres;
-	
+	const uint8_t *recdata = NULL; /* Data field pointer */
+	int datalen = 0;               /* Data field lenght  */
+	uint16_t tmp_val;
+
 	if (node->field->type == FT_HEADER) {
 		/* Header field */
 		struct input_info_network *info = (struct input_info_network*) msg->input_info;
-		
+
 		switch (node->field->id) {
 		case HF_ODID:
-			cmpres = !(msg->pkt_header->observation_domain_id == *((uint32_t *) node->value->value));
+			recdata = (uint8_t *) &msg->pkt_header->observation_domain_id;
+			datalen = (sizeof(msg->pkt_header->observation_domain_id));
 			break;
 		case HF_SRCIP:
-			cmpres = memcmp(&(info->src_addr), node->value->value, info->l3_proto == 4 ? sizeof(info->src_addr.ipv4) : sizeof(info->src_addr.ipv6));
+			if (info->l3_proto == 4) {
+				// IPv4
+				recdata = (uint8_t *) &(info->src_addr.ipv4);
+				datalen = sizeof(info->src_addr.ipv4);
+			} else {
+				if (IS_V4_IN_V6(&info->src_addr.ipv6)) {
+					// IPv4 mapped into IPv6
+					recdata = (uint8_t *) &(info->src_addr.ipv6.s6_addr[12]);
+					datalen = sizeof(info->src_addr.ipv4);
+				} else  {
+					// IPv6
+					recdata = (uint8_t *) &(info->src_addr.ipv6);
+					datalen = sizeof(info->src_addr.ipv6);
+				}
+			}
 			break;
 		case HF_SRCPORT:
-			cmpres = memcmp(&(info->src_port), node->value->value, sizeof(info->src_port));
+			tmp_val = htons(info->src_port);
+			recdata = (uint8_t *) &tmp_val;
+			datalen = sizeof(tmp_val);
 			break;
 		case HF_DSTIP:
-			cmpres = memcmp(&(info->dst_addr), node->value->value, info->l3_proto == 4 ? sizeof(info->dst_addr.ipv4) : sizeof(info->dst_addr.ipv6));
+			if (info->l3_proto == 4) {
+				// IPv4
+				recdata = (uint8_t *) &(info->dst_addr.ipv4);
+				datalen = sizeof(info->dst_addr.ipv4);
+			} else {
+				if (IS_V4_IN_V6(&info->dst_addr.ipv6)) {
+					// IPv4 mapped into IPv6
+					recdata = (uint8_t *) &(info->dst_addr.ipv6.s6_addr[12]);
+					datalen = sizeof(info->dst_addr.ipv4);
+				} else  {
+					// IPv6
+					recdata = (uint8_t *) &(info->dst_addr.ipv6);
+					datalen = sizeof(info->dst_addr.ipv6);
+				}
+			}
 			break;
 		case HF_DSTPORT:
-			cmpres = memcmp(&(info->dst_port), node->value->value, sizeof(info->dst_port));
+			tmp_val = htons(info->dst_port);
+			recdata = (uint8_t *) &tmp_val;
+			datalen = sizeof(tmp_val);
 			break;
 		default:
-			cmpres = 1;
+			MSG_DEBUG(msg_module, "Cannot find header element with ID '%d' "
+				"(not implemented)", node->field->type);
 			break;
 		}
-			
 	} else {
-		/* Data field */
-		int datalen;
-		
 		/* Get data from record */
-		uint8_t *recdata = data_record_get_field(record->record, record->templ, node->field->enterprise, node->field->id, &datalen);
-		if (!recdata) {
-			/* Field not found - if op is '!=' it is success */
-			return node->op == OP_NOT_EQUAL;
-		}
-
-		if (datalen > node->value->length) {
-			MSG_DEBUG(msg_module, "Cannot compare %d bytes with %d bytes", datalen, node->value->length);
-			return node->op == OP_NOT_EQUAL;
-		}
-
-		/*
-		 * Compare values
-		 * values are in network byte order
-		 * node value can be on more bytes than value in data
-		 * e.g:
-		 * value in data is 4 bytes long: 0 0 0 5
-		 * value in node is 8 bytes long: 0 0 0 0 0 0 0 8
-		 *										  ^
-		 * => node value must be offsetted by length difference
-		 * => &(nodeValue[nodeValueLength - dataValueLength]) => &(nodeValue[8 - 4])
-		 */
-
-		cmpres = memcmp(recdata, &(node->value->value[node->value->length - datalen]), datalen);
+		recdata = data_record_get_field(record->record, record->templ,
+			node->field->enterprise, node->field->id, &datalen);
 	}
-	
+
+	if (!recdata) {
+		/* Field not found - if op is '!=' it is success */
+		return node->op == OP_NOT_EQUAL;
+	}
+
+	if (datalen > node->value->length) {
+		MSG_DEBUG(msg_module, "Cannot compare %d bytes with %d bytes", datalen,
+			node->value->length);
+		return node->op == OP_NOT_EQUAL;
+	}
+
+	/*
+	 * Compare values
+	 * values are in network byte order
+	 * node value can be on more bytes than value in data
+	 * e.g:
+	 * value in data is 4 bytes long: 0 0 0 5
+	 * value in node is 8 bytes long: 0 0 0 0 0 0 0 8
+	 *										  ^
+	 * => node value must be offsetted by length difference
+	 * => &(nodeValue[nodeValueLength - dataValueLength]) => &(nodeValue[8 - 4])
+	 */
+	int cmpres;
+	cmpres = memcmp(recdata, &(node->value->value[node->value->length - datalen]), datalen);
 
 	/* Compare values according to op */
 	/* memcmp return 0 if operands are equal, so it must be negated for OP_EQUAL */
@@ -739,8 +782,14 @@ struct filter_value *filter_parse_ipv4(char *addr)
 
 	/* Create value */
 	val->length = sizeof(struct in_addr);
-	val->value = filter_num_to_ptr((uint8_t *) &tmp, val->length);
+	val->value = (uint8_t *) calloc(1, val->length);
+	if (!val->value) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		free(val);
+		return NULL;
+	}
 
+	memcpy(val->value, &tmp, val->length);
 	return val;
 }
 
@@ -768,8 +817,14 @@ struct filter_value *filter_parse_ipv6(char *addr)
 
 	/* Create value */
 	val->length = sizeof(struct in6_addr);
-	val->value = filter_num_to_ptr((uint8_t *) &tmp, val->length);
+	val->value = (uint8_t *) calloc(1, val->length);
+	if (!val->value) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		free(val);
+		return NULL;
+	}
 
+	memcpy(val->value, &tmp, val->length);
 	return val;
 }
 
