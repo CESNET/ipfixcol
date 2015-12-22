@@ -138,7 +138,7 @@ const char *Translator::formatTimestamp(uint64_t tstamp, t_units units, struct j
 	
 		strftime(buffer, 21, "\"%FT%T", tm);
 		/* append miliseconds */
-		sprintf(&(buffer[19]), ".%03u\"", (const unsigned int) msec);
+		sprintf(&(buffer[20]), ".%03u\"", (const unsigned int) msec);
 
 	} else {
 
