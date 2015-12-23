@@ -164,6 +164,7 @@ int storage_close (void **config)
 	xmlFree(conf->storage_path);
 
 	stack_del(conf->pst);
+	
 	*config = NULL;
 
 	return 0;
@@ -191,8 +192,10 @@ stack_t* stack_init(size_t size)
 
 void stack_del(stack_t* st)
 {
-	free(st->data);
-	free(st);
+	if(st != NULL){
+		free(st->data);
+		free(st);
+	}
 }
 
 
