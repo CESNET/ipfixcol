@@ -188,6 +188,12 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 
 	int ret;
 
+	/* Init parser_data */
+	parser_data.profile = NULL;
+	parser_data.doc = NULL;
+	parser_data.scanner = NULL;
+	parser_data.filter = NULL;
+
 	/* Allocate resources */
 	conf = (struct filter_config *) calloc(1, sizeof(struct filter_config));
 	if (!conf) {
@@ -332,7 +338,7 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 	xmlXPathFreeContext(parser_data.context);
 	xmlFreeDoc(parser_data.doc);
 
-	MSG_NOTICE(msg_module, "Initialized");
+	MSG_INFO(msg_module, "Initialized");
 	return 0;
 
 cleanup_err:

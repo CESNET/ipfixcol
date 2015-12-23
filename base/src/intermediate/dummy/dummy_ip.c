@@ -57,7 +57,6 @@ IPFIXCOL_API_VERSION;
 
 static char *msg_module = "dummy Intermediate Process";
 
-
 /* plugin's configuration structure */
 struct dummy_ip_config {
 	char *params;
@@ -83,7 +82,7 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 
 	*config = conf;
 
-	MSG_NOTICE(msg_module, "Successfully initialized");
+	MSG_INFO(msg_module, "Successfully initialized");
 
 	/* plugin successfully initialized */
 	return 0;

@@ -69,10 +69,10 @@ inline void formatNumber(T num, std::ostream &ss, bool plainNumbers, int precisi
 	if (num <= 1000000 || plainNumbers) {
 		ss.precision(precision);
 		ss << num;
-	} else if (num < 1000000000) { /* no too big for M */
+	} else if (num < 1000000000) { /* not too big for M */
 		ss.precision(exp_prec);
 		ss << (float) num/1000000 << " M";
-	} else if (num/1024 < 1000000000) { /* not too big for G */
+	} else if (num < 1000000000000) { /* not too big for G */
 		ss.precision(exp_prec);
 		ss << (float) num/1000000000 << " G";
 	} else { /* big enough for T */

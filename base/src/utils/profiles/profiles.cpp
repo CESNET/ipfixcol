@@ -1,6 +1,7 @@
 /**
  * \file profiles.cpp
  * \author Michal Kozubik <kozubik@cesnet.cz>
+ * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
  * \brief Code for loading profile tree from XML file
  *
  * Copyright (C) 2015 CESNET, z.s.p.o.
@@ -52,6 +53,14 @@ extern "C" {
 
 #include "profiles_internal.h"
 #include <iostream>
+#include <set>
+#include <queue>
+
+/* Ignore BIG_LINES libxml2 option when it is not supported */
+#ifndef XML_PARSE_BIG_LINES
+#define XML_PARSE_BIG_LINES 0
+#endif
+
 
 #define profile_id(_profile_) (_profile_) ? (_profile_)->getName().c_str() : "live"
 #define throw_empty throw std::runtime_error(std::string(""));
@@ -87,6 +96,152 @@ int parse_filter(filter_parser_data* pdata)
 }
 
 /**
+ * \brief Get the uniq node's child node with given name.
+ * \param[in] root Main node
+ * \param[in] name Name of the child
+ * \param[out] result Pointer to the searched child
+ * \warning \p result is filled only when return value (number of matches) == 1
+ * \return Number of matches
+ */
+int xml_find_uniq_element(xmlNodePtr root, const char *name, xmlNodePtr *result)
+{
+	xmlNodePtr uniq_node = NULL;
+	int count = 0;
+
+	for (xmlNodePtr node = root->children; node; node = node->next) {
+		if (xmlStrcmp(node->name, BAD_CAST name)) {
+			continue;
+		}
+
+		uniq_node = node;
+		count++;
+	}
+
+	*result = (count == 1) ? uniq_node : NULL;
+	return count;
+}
+
+/**
+ * \brief Find and parse flow filter in the channel specification
+ * \param[in] root Channel element
+ * \param[in,out] pdata Filter parse aux. structure
+ * \return Pointer to new filter or NULL
+ */
+static filter_profile *channel_parse_filter(xmlNodePtr root,
+	struct filter_parser_data *pdata)
+{
+	filter_profile *filter = NULL;
+	xmlNodePtr filter_node = NULL;
+
+	// Get 'filter' node
+	int cnt;
+	cnt = xml_find_uniq_element(root, "filter", &filter_node);
+	if (cnt < 1 || filter_node == NULL || filter_node->children == NULL) {
+		// Missing or empty "filter" element is also valid
+		MSG_DEBUG(msg_module, "'filter' is not set in the element on line %ld",
+			xmlGetLineNo(root));
+		return NULL;
+	}
+
+	if (cnt > 1) {
+		MSG_ERROR(msg_module, "Multiple definitions of 'filter' in "
+			"the node on line %ld", xmlGetLineNo(root));
+		throw_empty;
+	}
+
+	// Check validity of the node
+	if (!xmlNodeIsText(filter_node->children)) {
+		MSG_ERROR(msg_module, "Filter node is not a text node (line: %ld)",
+			xmlGetLineNo(filter_node));
+		throw_empty;
+	}
+
+	xmlChar *aux_char = xmlNodeGetContent(filter_node);
+	if (!aux_char) {
+		MSG_ERROR(msg_module, "Failed to get the content of 'filter' node "
+			"(line: %ld)", xmlGetLineNo(filter_node));
+		throw_empty;
+	}
+
+	// Create new filter
+	filter = (filter_profile *) calloc(1, sizeof(filter_profile));
+	if (!filter) {
+		MSG_ERROR(msg_module, "Unable to allocate memory");
+		xmlFree(aux_char);
+		throw_empty;
+	}
+
+	pdata->profile = filter;
+	pdata->filter = (char *) aux_char;
+
+	if (parse_filter(pdata) != 0 || pdata->profile == NULL) {
+		MSG_ERROR(msg_module, "Error while parsing filter on line %ld",
+			xmlGetLineNo(filter_node));
+		filter_free_profile(filter);
+		xmlFree(pdata->filter);
+		throw_empty;
+	}
+
+	xmlFree(aux_char);
+	return pdata->profile;
+}
+
+/**
+ * \brief Find and parse the list of source channels
+ * \param[in] root Channel element
+ * \return String with names of channels (comma separated)
+ */
+static std::string channel_parse_source_list(xmlNodePtr root)
+{
+	xmlNodePtr sources_node = NULL;
+	std::string list;
+
+	// Find the node with the list of sources
+	int cnt;
+	cnt = xml_find_uniq_element(root, "sourceList", &sources_node);
+	if (cnt != 1 || sources_node == NULL) {
+		MSG_ERROR(msg_module, "Invalid definition of the element 'sourceList' "
+			"in the channel (line %ld). Expected single element.",
+			xmlGetLineNo(root));
+		throw_empty;
+	}
+
+	// Get names of channels
+	for (xmlNode *node = sources_node->children; node; node = node->next) {
+		if (node->type != XML_ELEMENT_NODE) {
+			// Skip comments...
+			continue;
+		}
+
+		if (xmlStrcmp(node->name, BAD_CAST "source")) {
+			MSG_ERROR(msg_module, "Unexpected element on the line %ld",
+				xmlGetLineNo(node));
+			throw_empty;
+		}
+
+		if (!xmlNodeIsText(node->children)) {
+			MSG_ERROR(msg_module, "The 'source' node is not valid text node "
+				"(line: %ld)", xmlGetLineNo(node));
+			throw_empty;
+		}
+
+		xmlChar *aux_char = xmlNodeGetContent(node->children);
+		if (aux_char == NULL) {
+			continue;
+		}
+
+		if (!list.empty()) {
+			list += ",";
+		}
+
+		list += (const char *) aux_char;
+		xmlFree(aux_char);
+	}
+
+	return list;
+}
+
+/**
  * \brief Process channel's configuration and create new Channel object
  * 
  * \param[in] profile Channel's profile
@@ -94,14 +249,16 @@ int parse_filter(filter_parser_data* pdata)
  * \param[in] pdata Filter parser data
  * \return new Channel object
  */
-Channel *process_channel(Profile *profile, xmlNode *root, struct filter_parser_data *pdata)
+Channel *process_channel(Profile *profile, xmlNode *root,
+	struct filter_parser_data *pdata)
 {
 	/* Get channel ID */
 	xmlChar *aux_char;
 	aux_char = xmlGetProp(root, (const xmlChar *) "name");
 	
 	if (!aux_char) {
-		MSG_ERROR(msg_module, "Profile %s: missing channel name", profile_id(profile));
+		MSG_ERROR(msg_module, "Profile %s: missing channel name (line: %ld)",
+			profile_id(profile), xmlGetLineNo(root));
 		throw_empty;
 	}
 
@@ -113,91 +270,247 @@ Channel *process_channel(Profile *profile, xmlNode *root, struct filter_parser_d
 	/* Initialize parser data */
 	pdata->filter = NULL;
 	
-	/* Iterate through elements */
-	for (xmlNode *node = root->children; node; node = node->next) {
-		if (!xmlStrcmp(node->name, (const xmlChar *) "filter")) {
-			aux_char = xmlNodeGetContent(node->children);
-			if (aux_char == NULL) {
-				continue;
-			}
+	try {
+		/* Find and parse filter */
+		filter_profile *filter = channel_parse_filter(root, pdata);
+		channel->setFilter(filter);
 
-			/* Allocate space for filter */
-			filter_profile *fp = (filter_profile *) calloc(1, sizeof(filter_profile));
-			if (!fp) {
-				MSG_ERROR(msg_module, "Profile %s: channel %s: unable to allocate memory (%s:%d)", profile_id(profile), channel->getName().c_str(), __FILE__, __LINE__);
-				delete channel;
-				throw_empty;
-			}
+		/* Find and process the list of source channels */
+		std::string list = channel_parse_source_list(root);
+		channel->setSources(list);
 
-			pdata->profile = fp;
+	} catch (std::exception &e) {
+		// Delete channel and rethrow current exception
+		delete channel;
+		throw;
+	}
 
-			/* Parse filter */
-			pdata->filter = (char *) aux_char;
-			if (parse_filter(pdata) != 0) {
-				MSG_ERROR(msg_module, "Profile %s: channel %s: error while parsing filter", profile_id(profile), channel->getName().c_str());
-				filter_free_profile(fp);
-				free(pdata->filter);
-				delete channel;
-				throw_empty;
-			}
-			
-			free(aux_char);
-			
-			/* Set filter to channel */
-			channel->setFilter(pdata->profile);
-			
-		} else if (!xmlStrcmp(node->name, (const xmlChar *) "sources")) {
-			/* Channel sources */
-			aux_char = xmlNodeGetContent(node->children);
-			if (aux_char == NULL) {
-				continue;
-			}
-
-			channel->setSources((char *) aux_char);
-			free(aux_char);
-		}
+	/* Check if there is at least one source */
+	if (channel->getProfile()->getParent() && channel->getSources().empty()) {
+		/* Channel does not belong to root profile and source set is empty */
+		MSG_ERROR(msg_module, "Profile %s: channel %s: no data source(s)",
+			profile_id(profile), channel->getName().c_str());
+		delete channel;
+		throw_empty;
 	}
 	
 	return channel;
 }
 
 /**
+ * \brief Find and parse type of a profile
+ * \param[in] root Profile element
+ * \return Type of the profile
+ */
+static enum PROFILE_TYPE profile_parse_type(xmlNodePtr root)
+{
+	xmlNodePtr type_node = NULL;
+	enum PROFILE_TYPE type = PT_UNDEF;
+
+	// Find the node with a type of the profile
+	int cnt;
+	cnt = xml_find_uniq_element(root, "type", &type_node);
+	if (cnt != 1 || type_node == NULL) {
+		MSG_ERROR(msg_module, "Invalid definition of the element 'type' "
+			"in the profile (line %ld). Expected single element.",
+			xmlGetLineNo(root));
+		throw_empty;
+	}
+
+	// Get the text content
+	xmlChar *aux_char = xmlNodeGetContent(type_node->children);
+	if (aux_char == NULL) {
+		MSG_ERROR(msg_module, "The content of 'type' node is not valid "
+			"(line %ld)", xmlGetLineNo(type_node));
+		throw_empty;
+	}
+
+	if (!xmlStrcmp(aux_char, BAD_CAST "normal")) {
+		type = PT_NORMAL;
+	} else if (!xmlStrcmp(aux_char, BAD_CAST "shadow")) {
+		type = PT_SHADOW;
+	} else {
+		MSG_ERROR(msg_module, "The content of 'type' node is not valid type of "
+			"a profile (line %ld)", xmlGetLineNo(type_node));
+		xmlFree(aux_char);
+		throw_empty;
+	}
+
+	xmlFree(aux_char);
+	return type;
+}
+
+/**
+ * \brief Find and parse a directory of a profile
+ * \param[in] root Profile element
+ * \return Path of the directory
+ */
+static std::string profile_parse_directory(xmlNodePtr root)
+{
+	xmlNodePtr dir_node = NULL;
+
+	// Find the node with a directory of the profile
+	int cnt;
+	cnt = xml_find_uniq_element(root, "directory", &dir_node);
+	if (cnt != 1 || dir_node == NULL) {
+		MSG_ERROR(msg_module, "Invalid definition of the element 'directory' "
+			"in the profile (line %ld). Expected single element.",
+			xmlGetLineNo(root));
+		throw_empty;
+	}
+
+	// Get directory
+	xmlChar *aux_char = xmlNodeGetContent(dir_node->children);
+	if (aux_char == NULL) {
+		MSG_ERROR(msg_module, "The content of 'directory' node is not valid "
+			"(line %ld)", xmlGetLineNo(dir_node));
+		throw_empty;
+	}
+
+	std::string result = (const char *) aux_char;
+	xmlFree(aux_char);
+	return result;
+}
+
+/**
+ * \brief Find and parse a list of channels of a profile
+ * \param[in,out] profile Parent profile
+ * \param[in] root Profile XML node
+ * \param[in,out] pdata Filter parser data
+ * \return Number of added channels
+ */
+static int profile_parse_channels(Profile *profile, xmlNodePtr root,
+	struct filter_parser_data *pdata)
+{
+	/* Find the list of channels */
+	int cnt;
+	xmlNodePtr channels_node = NULL;
+
+	cnt = xml_find_uniq_element(root, "channelList", &channels_node);
+	if (cnt != 1 || channels_node == NULL) {
+		MSG_ERROR(msg_module, "Invalid definition of the element 'channelList' "
+			"in the profile (line %ld). Expected single element.",
+			xmlGetLineNo(root));
+		throw_empty;
+	}
+
+	/* Add channels */
+	int count = 0;
+	for (xmlNode *node = channels_node->children; node; node = node->next) {
+		if (node->type != XML_ELEMENT_NODE) {
+			continue;
+		}
+
+		if (xmlStrcmp(node->name, BAD_CAST "channel")) {
+			MSG_ERROR(msg_module, "Unexpected element on the line %ld.",
+				xmlGetLineNo(node));
+			throw_empty;
+		}
+
+		Channel *channel = process_channel(profile, node, pdata);
+		profile->addChannel(channel);
+		count++;
+	}
+
+	/* Check that the profile has at least one channel */
+	if (profile->getChannels().empty()) {
+		MSG_ERROR(msg_module, "List of channels is empty (line %ld)",
+			xmlGetLineNo(channels_node));
+		throw_empty;
+	}
+
+	return count;
+}
+
+// Function prototype, defined later.
+Profile *process_profile(Profile *parent, xmlNode *root,
+	struct filter_parser_data *pdata);
+
+/**
+ * \brief Find and parse a list of subprofiles of a profile
+ * \param[in,out] profile Parent profile
+ * \param[in] root Profile XML node
+ * \param[in,out] pdata Filter parser data
+ * \return Number of added subprofiles
+ */
+static int profile_parse_subprofiles(Profile *profile, xmlNodePtr root,
+	struct filter_parser_data *pdata)
+{
+	/* Find the list of subprofiles */
+	int cnt;
+	xmlNodePtr subprofiles_node = NULL;
+
+	cnt = xml_find_uniq_element(root, "subprofileList", &subprofiles_node);
+	if (cnt > 1) {
+		MSG_ERROR(msg_module, "Invalid definition of the element "
+			"'subprofileList' in the profile (line %ld). Expected none or "
+			"single element.", xmlGetLineNo(root));
+		throw_empty;
+	}
+
+	if (cnt < 1) {
+		// No subprofile is also valid
+		return 0;
+	}
+
+	/* Add subprofiles */
+	int count = 0;
+	for (xmlNode *node = subprofiles_node->children; node; node = node->next) {
+		if (node->type != XML_ELEMENT_NODE) {
+			continue;
+		}
+
+		if (xmlStrcmp(node->name, BAD_CAST "profile")) {
+			MSG_ERROR(msg_module, "Unexpected element on the line %ld.",
+				xmlGetLineNo(node));
+			throw_empty;
+		}
+
+		Profile *child = process_profile(profile, node, pdata);
+		profile->addProfile(child);
+	}
+
+	return count;
+}
+
+/**
  * \brief Process profile's configuration and create new Profile object
  * 
  * \param[in] parent Profile's parent
- * \param[in] root profile xml configuration root
+ * \param[in] root Profile xml configuration root
  * \param[in] pdata Filter parser data
  * \return new Profile object
  */
-Profile *process_profile(Profile *parent, xmlNode *root, struct filter_parser_data *pdata)
+Profile *process_profile(Profile *parent, xmlNode *root,
+	struct filter_parser_data *pdata)
 {
+	/* Get type of the profile */
+	enum PROFILE_TYPE type = profile_parse_type(root);
+
 	/* Get profile ID */
 	xmlChar *aux_char;
-	aux_char = xmlGetProp(root, (const xmlChar *) "name");
-	
+	aux_char = xmlGetProp(root, BAD_CAST "name");
 	if (!aux_char) {
-		throw std::runtime_error("Missing profile name");
+		MSG_ERROR(msg_module, "Subprofile of '%s' profile: missing profile "
+			"name (line %ld)", profile_id(parent), xmlGetLineNo(root));
+		throw_empty;
 	}
-	
-	/* Create new profile */
-	Profile *profile = new Profile((char *) aux_char);
+
+	std::string name = (const char *) aux_char;
 	xmlFree(aux_char);
-	
-	profile->setParent(parent);
-	
-	/* Iterate through elements */
-	for (xmlNode *node = root->children; node; node = node->next) {
-		
-		if (!xmlStrcmp(node->name, (const xmlChar *) "profile")) {
-			/* add sub-profile */
-			Profile *child = process_profile(profile, node, pdata);
-			profile->addProfile(child);
-			
-		} else if (!xmlStrcmp(node->name, (const xmlChar *) "channel")) {
-			/* add channel */
-			Channel *channel = process_channel(profile, node, pdata);
-			profile->addChannel(channel);
-		}
+
+	/* Configure new profile */
+	Profile *profile = new Profile(name, type);
+
+	try {
+		profile->setParent(parent);
+		profile->setDirectory(profile_parse_directory(root));
+		profile_parse_channels(profile, root, pdata);
+		profile_parse_subprofiles(profile, root, pdata);
+ 	} catch (std::exception &e) {
+		// Delete new profile and rethrow current exception
+		delete profile;
+		throw;
 	}
 	
 	return profile;
@@ -236,7 +549,8 @@ Profile *process_profile_xml(const char *filename)
 	}
 
 	/* Load XML configuration */
-	xmlDoc *doc = xmlReadFd(fd, NULL, NULL, XML_PARSE_NOERROR | XML_PARSE_NOWARNING | XML_PARSE_NOBLANKS);
+	xmlDoc *doc = xmlReadFd(fd, NULL, NULL, XML_PARSE_NOERROR |
+		XML_PARSE_NOWARNING | XML_PARSE_NOBLANKS | XML_PARSE_BIG_LINES);
 	if (!doc) {
 		close(fd);
 		MSG_ERROR(msg_module, "Unable to parse configuration file %s", filename);
@@ -274,7 +588,6 @@ Profile *process_profile_xml(const char *filename)
 		xmlFreeDoc(doc);
 		close(fd);
 		free_parser_data(&pdata);
-		MSG_ERROR(msg_module, "%s", e.what());
 		return NULL;
 	}
 
@@ -288,7 +601,6 @@ Profile *process_profile_xml(const char *filename)
 	}	
 
 	rootProfile->updatePathName();
-
 	return rootProfile;
 }
 
@@ -310,6 +622,22 @@ void *profiles_process_xml(const char *path)
 const char *profile_get_name(void *profile)
 {
 	return ((Profile *) profile)->getName().c_str();
+}
+
+/**
+ * Get profile type
+ */
+PROFILE_TYPE profile_get_type(void *profile)
+{
+	return ((Profile *) profile)->getType();
+}
+
+/**
+ * Get profile directory
+ */
+const char *profile_get_directory(void *profile)
+{
+	return ((Profile *) profile)->getDirectory().c_str();
 }
 
 /**
@@ -395,6 +723,53 @@ void **profile_match_data(void *profile, struct ipfix_message *msg, struct metad
 	data.channels[data.channelsCounter] = NULL;
 
 	return data.channels;
+}
+
+/**
+ * Get all profiles in the tree
+ */
+void **profile_get_all_profiles(void *profile)
+{
+	if (!profile) {
+		return NULL;
+	}
+
+	// Find root profile
+	void *tmp_profile = profile;
+	while (tmp_profile) {
+		profile = tmp_profile;
+		tmp_profile = ((Profile *)profile)->getParent();
+	}
+
+	std::set<Profile *> all_profiles;
+	std::queue<Profile *> next;
+	next.push((Profile *) profile);
+
+	// Get all profiles
+	while (!next.empty()) {
+		Profile *item = next.front();
+		next.pop();
+
+		all_profiles.insert(item);
+		Profile::profilesVec sub_prof = ((Profile *) item)->getChildren();
+		for (auto &i : sub_prof) {
+			next.push(i);
+		}
+	}
+
+	// Convert the set to an array
+	Profile **all_array = (Profile **) calloc(all_profiles.size() + 1, sizeof(Profile *));
+	if (!all_array) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
+
+	int index = 0;
+	for (auto &i : all_profiles) {
+		all_array[index++] = i;
+	}
+
+	return (void **) all_array;
 }
 
 /**

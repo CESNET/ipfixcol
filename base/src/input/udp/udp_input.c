@@ -291,13 +291,13 @@ int input_init(char *params, void **config)
 	}
 
 	/* print info */
-	MSG_NOTICE(msg_module, "Input plugin listening on %s, port %s", dst_addr, port);
+	MSG_INFO(msg_module, "Input plugin listening on %s, port %s", dst_addr, port);
 
 	/* and pass it to the collector */
 	*config = (void*) conf;
 
 	/* normal exit, all OK */
-	MSG_NOTICE(msg_module, "Plugin initialization completed successfully");
+	MSG_INFO(msg_module, "Plugin initialization completed successfully");
 
 out:
 	if (default_port == 0 && port != NULL) { /* free when memory was actually allocated */
@@ -426,7 +426,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 
 	/* check whether we found the input_info */
 	if (info_list == NULL) {
-		MSG_NOTICE(msg_module, "New UDP exporter connected (unique port and address)");
+		MSG_INFO(msg_module, "New UDP exporter connected (unique port and address)");
 
 		/* create new input_info */
 		info_list = calloc(1, sizeof(struct input_info_list));
@@ -515,7 +515,7 @@ int input_close(void **config)
 	free(*config);
 	convert_close();
 
-	MSG_NOTICE(msg_module, "All allocated resources have been freed");
+	MSG_INFO(msg_module, "All allocated resources have been freed");
 
 	return 0;
 }

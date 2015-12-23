@@ -1,5 +1,7 @@
 **Future release:**
 
+**Version 0.2.0:**
+
 *  Support for new extensions (id: 26, 27)
 *  Fixed bug where bad template was used when template ID was 256
 *  Fixed bug with processing big files with multiple data blocks

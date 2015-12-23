@@ -112,6 +112,7 @@ class Extension1: public Extension {
 	enum offsets{SRC_IPv4_O = 0,DST_IPv4_O = 4, SRC_IPv6_O = 0, DST_IPv6_O = 16};
 	bool IPv4_;
 public:
+	Extension1();
 	virtual int checkElements(int ids_cnt, uint16_t *ids, Extension **ids_ext);
 	virtual uint16_t fill(uint16_t id, uint16_t size, uint8_t *element_data
 			,char *buffer, struct FlowStats *stat);

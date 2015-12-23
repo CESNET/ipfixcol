@@ -265,7 +265,7 @@ int main(int argc, char *argv[])
 		if (pipe_exists) {
 			MSG_ERROR(msg_module, "active pipe (%s) detected", pipe.c_str());
 			MSG_ERROR(msg_module, "fbitexpire supports only a single instance per pipe");
-			MSG_NOTICE(msg_module, "please restart using different pipe (-p)");
+			MSG_INFO(msg_module, "please restart using different pipe (-p)");
 			return 1;
 		} else if (remove(pipe.c_str()) != 0) {
 			// Remove invalid pipe
@@ -318,7 +318,7 @@ int main(int argc, char *argv[])
 	}
 	
 	if (!depth_set) {
-		MSG_NOTICE(msg_module, "depth not set; using default (%d)", DEFAULT_DEPTH);
+		MSG_INFO(msg_module, "depth not set; using default (%d)", DEFAULT_DEPTH);
 	}
 	
 	std::string basedir{argv[optind]};
@@ -334,7 +334,7 @@ int main(int argc, char *argv[])
 	if (daemonize) {
 		closelog();
 		MSG_SYSLOG_INIT(PACKAGE);
-		MSG_NOTICE(msg_module, "daemonizing...");
+		MSG_INFO(msg_module, "daemonizing...");
 		
 		/* and send all following messages to the syslog */
 		if (daemon (1, 0)) {

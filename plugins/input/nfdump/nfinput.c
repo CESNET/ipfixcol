@@ -69,7 +69,7 @@
 /* API version constant */
 IPFIXCOL_API_VERSION;
 
-static const char *msg_module = "nfdump input";
+static const char *msg_module = "nfdump_input";
 
 #define NO_INPUT_FILE (-2)
 
@@ -604,6 +604,8 @@ int input_close(void **config)
 	free_ext(&(conf->ext));
 	clean_tmp_manager(&(conf->template_mgr));
 	free(conf);
+
+	return 0;
 }
 
 
@@ -870,18 +872,18 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		if (!(*packet)) {
 			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
 			ret_val = INPUT_ERROR;
-		}
+		} else {
 
-		if ((*info)->status == SOURCE_STATUS_NEW) {
-			(*info)->status = SOURCE_STATUS_OPENED;
-			(*info)->odid = ntohl(((struct ipfix_header*) *packet)->observation_domain_id);
-		}
-		if (ret_val == INPUT_CLOSED && processed_records == 0) {
-			(*info)->status = SOURCE_STATUS_CLOSED;
-		}
+			if ((*info)->status == SOURCE_STATUS_NEW) {
+				(*info)->status = SOURCE_STATUS_OPENED;
+				(*info)->odid = ntohl(((struct ipfix_header*) *packet)->observation_domain_id);
+			}
+			if (ret_val == INPUT_CLOSED && processed_records == 0) {
+				(*info)->status = SOURCE_STATUS_CLOSED;
+			}
 
-		*source_status = (*info)->status;
-
+			*source_status = (*info)->status;
+		}
 	} else {
 		*source_status = SOURCE_STATUS_CLOSED;
 	}
@@ -955,13 +957,13 @@ static int prepare_input_file(struct nfinput_config *conf)
 		return -1;
 	}
 
-	MSG_NOTICE(msg_module, "Opening input file: %s", conf->input_files[conf->findex]);
+	MSG_INFO(msg_module, "Opening input file: %s", conf->input_files[conf->findex]);
 	
 	fd = open(conf->input_files[conf->findex], O_RDONLY);
 	if (fd == -1) {
 		/* input file doesn't exist or we don't have read permission */
 		MSG_ERROR(msg_module, "Unable to open input file: %s", conf->input_files[conf->findex]);
-		ret = -1;
+		return -1;
 	}
 
 	/* New file == new input info */
@@ -1010,7 +1012,7 @@ static int close_input_file(struct nfinput_config *conf)
 		return -1;
 	}
 
-	MSG_NOTICE(msg_module, "Input file closed");
+	MSG_INFO(msg_module, "Input file closed");
 	conf->fd = -1;
 	return 0;
 }
@@ -1168,9 +1170,9 @@ int input_init(char *params, void **config)
 	
 	/* print all input files */
 	if (input_files[0] != NULL) {
-		MSG_NOTICE(msg_module, "List of input files:");
+		MSG_INFO(msg_module, "List of input files:");
 		for (i = 0; input_files[i] != NULL; i++) {
-			MSG_NOTICE(msg_module, "\t%s", input_files[i]);
+			MSG_INFO(msg_module, "\t%s", input_files[i]);
 		}
 	}
 

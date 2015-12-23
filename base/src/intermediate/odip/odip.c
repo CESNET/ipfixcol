@@ -111,7 +111,7 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 	conf->tm = template_mgr;
 	
 	*config = conf;
-	MSG_NOTICE(msg_module, "Plugin initialization completed successfully");
+	MSG_INFO(msg_module, "Plugin initialization completed successfully");
 	return 0;
 }
 

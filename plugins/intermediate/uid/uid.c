@@ -335,10 +335,10 @@ int intermediate_process_message(void* config, void* message)
 
 		/* Fill user names */
 		uid_get_user_info(conf, mdata, FIELD_IPV4_SRC, FIELD_IPV6_SRC, flowStart);
-		strncpy(mdata->srcName, conf->name, 32);
+		strncpy(mdata->srcName, conf->name, 31);
 		
 		uid_get_user_info(conf, mdata, FIELD_IPV4_DST, FIELD_IPV6_DST, flowStart);
-		strncpy(mdata->dstName, conf->name, 32);
+		strncpy(mdata->dstName, conf->name, 31);
 	}
 	
 	/* Pass message to the next plugin/Output Manager */

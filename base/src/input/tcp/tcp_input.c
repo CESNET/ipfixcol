@@ -406,7 +406,7 @@ void *input_listen(void *config)
 		} else {
 			inet_ntop(AF_INET6, &address->sin6_addr, src_addr, INET6_ADDRSTRLEN);
 		}
-		MSG_NOTICE(msg_module, "Exporter connected from address %s", src_addr);
+		MSG_INFO(msg_module, "Exporter connected from address %s", src_addr);
 
 		pthread_mutex_unlock(&mutex);
 
@@ -417,7 +417,7 @@ void *input_listen(void *config)
 			break;
 		}
 
-		memcpy(&input_info->info, &conf->info, sizeof(struct input_info_list));
+		memcpy(&input_info->info, &conf->info, sizeof(struct input_info_network));
 
 		/* set status to new connection */
 		input_info->info.status = SOURCE_STATUS_NEW;
@@ -532,7 +532,7 @@ int input_init(char *params, void **config)
 #ifdef TLS_SUPPORT
 		/* check whether we want to enable transport layer security */
 		if (xmlStrEqual(cur_node->name, BAD_CAST "transportLayerSecurity")) {
-			MSG_NOTICE(msg_module, "TLS enabled");
+			MSG_INFO(msg_module, "TLS enabled");
 			conf->tls = 1;   /* TLS enabled */
 			cur_node_parent = cur_node;	
 
@@ -590,9 +590,9 @@ int input_init(char *params, void **config)
 			}
 			strncpy_safe(tmp_val, (char *)cur_node->children->content, tmp_val_len);
 
-			if (xmlStrEqual(cur_node->name, BAD_CAST "localPort")) { /* set local port */
+			if (xmlStrEqual(cur_node->name, BAD_CAST "localPort") && port == NULL) { /* set local port */
 				port = tmp_val;
-			} else if (xmlStrEqual(cur_node->name, BAD_CAST "localIPAddress")) { /* set local address */
+			} else if (xmlStrEqual(cur_node->name, BAD_CAST "localIPAddress") && address == NULL) { /* set local address */
 				address = tmp_val;
 			/* save following configuration to input_info */
 			} else if (xmlStrEqual(cur_node->name, BAD_CAST "templateLifeTime")) {
@@ -773,7 +773,7 @@ int input_init(char *params, void **config)
 	}
 
 	/* print info */
-	MSG_NOTICE(msg_module, "Input plugin listening on %s, port %s", dst_addr, port);
+	MSG_INFO(msg_module, "Input plugin listening on %s, port %s", dst_addr, port);
 
 	/* start listening thread */
 	if (pthread_create(&listen_thread, NULL, &input_listen, (void *) conf) != 0) {
@@ -786,7 +786,7 @@ int input_init(char *params, void **config)
 	*config = (void*) conf;
 
 	/* normal exit, all OK */
-	MSG_NOTICE(msg_module, "Plugin initialization completed successfully");
+	MSG_INFO(msg_module, "Plugin initialization completed successfully");
 
 out:
 	if (def_port == 0 && port != NULL) { /* free when memory was actually allocated*/
@@ -1070,7 +1070,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		(*info)->status = SOURCE_STATUS_CLOSED;
 		*source_status = SOURCE_STATUS_CLOSED;
 
-		MSG_NOTICE(msg_module, "Exporter on address %s closed connection", src_addr);
+		MSG_INFO(msg_module, "Exporter on address %s closed connection", src_addr);
 
 		/* use mutex so that listening thread does not reuse the socket too quickly */
 		pthread_mutex_lock(&mutex);
@@ -1188,7 +1188,7 @@ int input_close(void **config)
 	convert_close();
 	*config = NULL;
 
-	MSG_NOTICE(msg_module, "All allocated resources have been freed");
+	MSG_INFO(msg_module, "All allocated resources have been freed");
 
 	return error;
 }

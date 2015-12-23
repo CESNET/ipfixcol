@@ -190,7 +190,7 @@ void *listen_worker(void *data) {
 		}
 
 		inet_ntop(AF_INET6, &(src_addr6->sin6_addr), printable_ip, INET6_ADDRSTRLEN);
-		MSG_NOTICE(msg_module, "New SCTP association from %s", printable_ip);
+		MSG_INFO(msg_module, "New SCTP association from %s", printable_ip);
 
 		continue;
 
@@ -267,7 +267,7 @@ int input_init(char *params, void **config)
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		goto err_sockaddr6;
 	}
-	memset(sockaddr6_listen, 0, sizeof(DEFAULT_NUMBER_OF_ADDRESSES * sizeof(*(sockaddr6_listen))));
+	memset(sockaddr6_listen, 0, DEFAULT_NUMBER_OF_ADDRESSES * sizeof(*(sockaddr6_listen)));
 	sockaddr6_listen_max = DEFAULT_NUMBER_OF_ADDRESSES;
 
 	/* array for IPv4 listen addresses. this array will later be used with 
@@ -578,13 +578,13 @@ err_sockaddr6_case:
 		inet_ntop(AF_INET, &(sockaddr_listen[0]->sin_addr), dst_addr, INET6_ADDRSTRLEN);
 	}
 	
-	MSG_NOTICE(msg_module, "Input plugin listening on %s, port %u", dst_addr, conf->listen_port);
+	MSG_INFO(msg_module, "Input plugin listening on %s, port %u", dst_addr, conf->listen_port);
 
 	/* pass general information to the collector */
 	*config = (void*) conf;
 
 	/* normal exit, all OK */
-	MSG_NOTICE(msg_module, "Plugin initialization completed successfully");
+	MSG_INFO(msg_module, "Plugin initialization completed successfully");
 
 	/* do some cleanup */
 	xmlFreeDoc(doc);
@@ -748,7 +748,7 @@ wait_for_data:
 		notification_type = *((uint16_t *) *packet);   /* damn bugs! */
 
 		if (notification_type == SCTP_SHUTDOWN_EVENT) {
-			MSG_NOTICE(msg_module, "SCTP input plugin: Exporter disconnected");
+			MSG_INFO(msg_module, "SCTP input plugin: Exporter disconnected");
 
 			/* remove disconnected socket from event poll */
 			ret = epoll_ctl(conf->epollfd, EPOLL_CTL_DEL, socket, NULL);

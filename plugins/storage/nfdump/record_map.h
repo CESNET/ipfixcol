@@ -51,6 +51,10 @@
 
 
 struct FlowStats{
+
+	FlowStats(): bytes(0), packets(0), protocol(0), first_ts(0),
+		first_msec_ts(0), last_ts(0), last_msec_ts(0), flags(0) {}
+
 	uint64_t bytes;
 	uint64_t packets;
 	uint8_t protocol;

@@ -58,25 +58,16 @@
 #define IPV6_LEN 16
 #define MAC_LEN  6
 
-enum element_type {
-    UNKNOWN,
-    PROTOCOL,
-    FLAGS,
-    IPV4,
-    IPV6,
-    MAC,
-    TSTAMP_SEC,
-    TSTAMP_MILLI,
-    TSTAMP_MICRO,
-    TSTAMP_NANO,
-    STRING,
-    RAW
-};
-
-struct ipfix_element {
-    enum element_type type;
-	std::string name;
-};
+/* white spaces needed to replace them by \n otation (\n \t ..) */
+#define SPACE           ' '
+#define TABULATOR       '\t'
+#define NEWLINE         '\n'
+#define QUOTATION       '\"'
+#define REVERSESOLIDUS  '\\'
+#define SOLIDUS         '/'
+#define BACKSPACE       '\b'
+#define FORMFEED        '\f'
+#define RETURN          '\r'
 
 class Storage {
 public:
@@ -99,7 +90,7 @@ public:
      * 
      * @param msg IPFIX message
      */
-	void storeDataSets(const struct ipfix_message *msg);
+	void storeDataSets(const struct ipfix_message *msg, struct json_conf * config);
     
 	/**
 	 * \brief Set metadata processing enabled/disabled
@@ -116,6 +107,8 @@ public:
 	void setPrintOnly(bool enabled) { printOnly = enabled; }
 	
 private:
+
+    Translator translator;          /**< number -> string translator */
     
     /**
      * \brief Get real field length
@@ -150,7 +143,7 @@ private:
      * 
      * @param mdata Data record's metadata
      */
-	void storeDataRecord(struct metadata *mdata);
+	void storeDataRecord(struct metadata *mdata, struct json_conf * config);
 
     /**
 	 * \brief Store metadata
@@ -160,22 +153,10 @@ private:
 	void storeMetadata(struct metadata *mdata);
 	
     /**
-     * \brief Get element by enterprise and id number
-     * 
-     * @param enterprise Enterprise number
-     * @param id element ID
-     */
-	void getElement(uint32_t enterprise, uint16_t id, struct ipfix_element& element);
-    
-    /**
      * \brief Create raw name for unknown elements
      */
     std::string rawName(uint32_t en, uint16_t id) const;
     
-    /**
-     * \brief Load informations about IPFIX elements into the memory
-     */
-    void loadElements();
     
 	/**
 	 * \brief Send JSON data to output processors
@@ -186,15 +167,14 @@ private:
 	bool printOnly{false};
 	uint8_t addr6[IPV6_LEN];
 	uint8_t addrMac[MAC_LEN];
-	uint16_t offset, id, length;
-	uint32_t enterprise;
-    Translator translator;          /**< number -> string translator */
+	uint16_t offset{0}, id{0}, length{0};
+	uint32_t enterprise{0};
 
 	std::vector<Output*> outputs{};
 	std::vector<char> buffer;
 
+	char stringWithEscseq[(65536 * 2)];	/**< String from IPFIXpacket with white spaces replaced by \notations (\n \t ...)  */
 	std::string record;
-	static std::map<uint32_t, std::map<uint16_t, struct ipfix_element> > elements;
 };
 
 #endif	/* STORAGE_H */

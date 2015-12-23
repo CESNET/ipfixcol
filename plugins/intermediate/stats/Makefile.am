@@ -1,5 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4
-AM_CPPFLAGS += -I$(top_srcdir)/headers
+
 pluginsdir = $(datadir)/ipfixcol/plugins
 
 sofile = $(pluginsdir)/ipfixcol-stats-inter.so

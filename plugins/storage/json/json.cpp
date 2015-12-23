@@ -46,21 +46,18 @@ extern "C" {
 IPFIXCOL_API_VERSION;
 }
 
+#include <cstring>
 #include <stdexcept>
-
 #include "pugixml.hpp"
 
 #include "json.h"
 #include "Storage.h"
 #include "Printer.h"
 #include "Sender.h"
+#include "Server.h"
+#include "File.h"
 
 static const char *msg_module = "json_storage";
-
-struct json_conf {
-	bool metadata;
-	Storage *storage;
-};
 
 void process_startup_xml(struct json_conf *conf, char *params) 
 {
@@ -76,7 +73,28 @@ void process_startup_xml(struct json_conf *conf, char *params)
 	
 	/* Check metadata processing */
 	std::string meta = ie.node().child_value("metadata");
-	conf->metadata = (meta == "yes") || (meta == "true") || (meta == "1");
+	conf->metadata = (strcasecmp(meta.c_str(), "yes") == 0 || meta == "1" ||
+		strcasecmp(meta.c_str(), "true") == 0);
+
+	/* Format of TCP flags */
+	std::string tcpFlags = ie.node().child_value("tcpFlags");
+	conf->tcpFlags = (strcasecmp(tcpFlags.c_str(), "formated") == 0);
+
+	/* Format of timestamps */
+	std::string timestamp = ie.node().child_value("timestamp");
+	conf->timestamp = (strcasecmp(timestamp.c_str(), "formated") == 0);
+
+	/* Format of protocols */
+	std::string protocol = ie.node().child_value("protocol");
+	conf->protocol = (strcasecmp(protocol.c_str(), "raw") == 0);
+
+	/* Ignore unknown elements */
+	std::string unknown = ie.node().child_value("ignoreUnknown");
+	conf->ignoreUnknown = true;
+	if (strcasecmp(unknown.c_str(), "false") == 0 || unknown == "0" ||
+			strcasecmp(unknown.c_str(), "no") == 0) {
+		conf->ignoreUnknown = false;
+	}
 
 	/* Process all outputs */
 	pugi::xpath_node_set outputs = doc.select_nodes("/fileWriter/output");
@@ -90,6 +108,10 @@ void process_startup_xml(struct json_conf *conf, char *params)
 			output = new Printer(node);
 		} else if (type == "send") {
 			output = new Sender(node);
+		} else if (type == "server") {
+			output = new Server(node);
+		} else if (type == "file") {
+			output = new File(node);
 		} else {
 			throw std::invalid_argument("Unknown output type \"" + type + "\"");
 		}
@@ -139,8 +161,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	(void) template_mgr;
 	struct json_conf *conf = (struct json_conf *) config;
 	
-	conf->storage->storeDataSets(ipfix_msg);
-	
+	conf->storage->storeDataSets(ipfix_msg, conf);
 	return 0;
 }
 

@@ -71,7 +71,7 @@ void TableManager::aggregate(columnVector aggregateColumns, columnVector summary
 			}
 		}
 	}
-	
+
 	size = this->parts.size();
 	
 	/* filter out parts without summary columns */

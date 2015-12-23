@@ -71,7 +71,7 @@ struct dummy_config {
  */
 int storage_init(char *params, void **config)
 {
-	MSG_NOTICE(msg_module, "Dummy plugin: storage_init called");
+	MSG_INFO(msg_module, "Dummy plugin: storage_init called");
 
 	struct dummy_config *conf;
 	xmlDocPtr doc;
@@ -113,7 +113,7 @@ int storage_init(char *params, void **config)
 		cur = cur->next;
 	}
 
-	MSG_NOTICE(msg_module, "Dummy plugin: delay set to %ius", conf->delay);
+	MSG_INFO(msg_module, "Dummy plugin: delay set to %ius", conf->delay);
 
 	/* we don't need this xml tree anymore */
 	xmlFreeDoc(doc);
@@ -157,7 +157,7 @@ int store_now(const void *config)
  */
 int storage_close(void **config)
 {
-	MSG_NOTICE(msg_module, "Dummy plugin: storage_close called\n");
+	MSG_INFO(msg_module, "Dummy plugin: storage_close called\n");
 
 	free(*config);
 	*config = NULL;

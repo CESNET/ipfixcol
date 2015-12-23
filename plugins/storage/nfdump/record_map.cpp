@@ -69,7 +69,7 @@ void FileHeader::newHeader(FILE *f, struct nfdumpConfig* conf){
 		header_.flags = header_.flags | FLAG_COMPRESSED;
 	}
 	memset(header_.ident,0,IDENTLEN);
-	strcpy(header_.ident,conf->ident.c_str());
+	strncpy(header_.ident,conf->ident.c_str(), IDENTLEN-1);
 	position_ = ftell(f);
 	updateHeader(f);
 }
@@ -531,7 +531,6 @@ uint16_t RecordMap::bufferData(ipfix_data_set *data_set,char *buffer, uint *buff
 	unsigned int data_size,read_data,cur_size;
 	unsigned int flowCount = 0;
 	struct FlowStats fstats;
-	fstats.flags=0;
 	int filled =0; //TODO
 
 	uint8_t *data = data_set->records;

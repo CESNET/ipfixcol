@@ -38,7 +38,7 @@
 
 AC_PREREQ([2.60])
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol-uid-inter], [0.0.2])
+AC_INIT([ipfixcol-uid-inter], [0.0.3])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 AC_GNU_SOURCE
 
@@ -99,11 +99,14 @@ AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar
 
 # Check whether we can find headers dir in relative path (git repository)
 AS_IF([test -d $srcdir/../../../base/headers], 
-	[AM_CFLAGS+=" -I$srcdir/../../../base/headers"]
+	[AM_CPPFLAGS+=" -I$srcdir/../../../base/headers"]
 )
 
+cppflags_save="$CPPFLAGS"
+CPPFLAGS="$CPPFLAGS $AM_CPPFLAGS"
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
-
+CPPFLAGS="$cppflags_save"
+ 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 AC_HEADER_STDBOOL
 AC_C_INLINE
@@ -128,6 +131,7 @@ AC_CHECK_DECL([be64toh], [AC_DEFINE([HAVE_BE64TOH], [1],
 ############################### Set output #####################################
 # Substitute compiler flags
 AC_SUBST([AM_CFLAGS])
+AC_SUBST([AM_CPPFLAGS])
 AC_SUBST([AM_LDFLAGS])
 
 AC_SUBST(RPMBUILD)

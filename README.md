@@ -1,5 +1,8 @@
 #<a name="top"></a>IPFIXcol framework
 
+[![Build Status](https://travis-ci.org/CESNET/ipfixcol.svg?branch=coverity_scan)](https://travis-ci.org/CESNET/ipfixcol)
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/5119/badge.svg)](https://scan.coverity.com/projects/cesnet-ipfixcol)
+
 ## Table of Contents
 1.  [Framework description](#desc)
 2.  [IPFIXcol](#ipfixcol)

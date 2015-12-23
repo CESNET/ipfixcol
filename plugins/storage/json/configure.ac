@@ -38,7 +38,7 @@
 
 AC_PREREQ([2.60])
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol-json-output], [1.0.1])
+AC_INIT([ipfixcol-json-output], [1.1.0])
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([json.cpp])
@@ -86,18 +86,18 @@ AC_CHECK_FILE([/etc/protocols],[PROTOCOLS=yes], [PROTOCOLS=no])
 
 ###################### Check for configure parameters ##########################
 AC_ARG_ENABLE([debug], 
-        AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
-        [AM_CXXFLAGS="$AM_CXXFLAGS -Wextra -g"])
+	AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
+		[AM_CXXFLAGS="$AM_CXXFLAGS -Wextra -g"])
 
 AC_ARG_ENABLE([doc],
-        AC_HELP_STRING([--disable-doc],[disable documentation building]))
+	AC_HELP_STRING([--disable-doc],[disable documentation building]))
 AM_CONDITIONAL([HAVE_DOC], [test "$enable_doc" != "no"],, [$enable_doc=yes])
 ############################ Check for libraries ###############################
+
 libsisodir="$srcdir/../../../base/src/utils/libsiso/"
 my_save_ldflags="$LDFLAGS"
 AS_IF([test -d "$libsisodir.libs"],
-	[AC_MSG_NOTICE([ahoj jsem tu])
-	LDFLAGS="$LDFLAGS -L$libsisodir.libs"
+	[LDFLAGS="$LDFLAGS -L$libsisodir.libs"
 	AC_SEARCH_LIBS([siso_create],[siso], [
 		SISO_LDFLAGS="-L$libsisodir.libs"
 		SISO_CPPFLAGS="-I$libsisodir"
@@ -106,10 +106,13 @@ AS_IF([test -d "$libsisodir.libs"],
 		[HAVE_SISO="no"])],
 	[AC_SEARCH_LIBS([siso_create],[siso], [HAVE_SISO="yes"], [HAVE_SISO="no"]])
 )
-LDFLAGS="$my_save_ldflags"
 AS_IF([test "$HAVE_SISO" = "no"], AC_MSG_ERROR([Required library siso missing]))
 AC_SUBST([SISO_CPPFLAGS])
 AC_SUBST([SISO_LDFLAGS])
+
+AC_CHECK_LIB([pthread], [pthread_create],
+	[CXXFLAGS="$CXXFLAGS -pthread"],
+	AC_MSG_ERROR([Required library pthread missing]))
 
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar.h])
@@ -119,7 +122,10 @@ AS_IF([test -d $srcdir/../../../base/headers],
 	[AM_CPPFLAGS+="-I$srcdir/../../../base/headers"]
 )
 
+cppflags_save="$CPPFLAGS"
+CPPFLAGS="$CPPFLAGS $AM_CPPFLAGS"
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
+CPPFLAGS="$cppflags_save"
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 AC_HEADER_STDBOOL
@@ -139,8 +145,11 @@ AC_CHECK_FUNCS([realloc])
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([floor memmove mkdir strchr strstr strtol strtoul])
 AC_CHECK_DECL([be64toh], [AC_DEFINE([HAVE_BE64TOH], [1],
-                               [Define if macro be64toh exists.])],,
-							   [[#include <endian.h>]])
+	[Define if macro be64toh exists.])],,
+	[[#include <endian.h>]])
+
+# restore LDFLAGS after all other checks
+LDFLAGS="$my_save_ldflags"
 
 ############################### Set output #####################################
 # Substitute compiler flags
@@ -153,8 +162,8 @@ AC_SUBST(XSLTPROC)
 
 # generate output
 AC_CONFIG_FILES([Makefile
-		pugixml/Makefile
-		ipfixcol-json-output.spec])
+	pugixml/Makefile
+	ipfixcol-json-output.spec])
 
 # tools makefiles
 
@@ -166,9 +175,9 @@ AS_IF([test "x$PROTOCOLS" = "xno"], AC_MSG_WARN([Due to missing /etc/protocols y
 AS_IF([test -z "$AWK"], AC_MSG_WARN([Due to missing awk you will not be able to generate protocols.cpp from /etc/protocols]))
 
 AM_COND_IF(HAVE_DOC,
-    [AM_COND_IF(HAVE_XSLTPROC, ,
-        AC_MSG_ERROR([Missing xsltproc - install it or run with --disable-doc])
-    )]
+	[AM_COND_IF(HAVE_XSLTPROC, ,
+		AC_MSG_ERROR([Missing xsltproc - install it or run with --disable-doc])
+	)]
 )
 
 # Print final summary

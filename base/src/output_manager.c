@@ -120,6 +120,11 @@ void remove_input_info(struct input_info *node)
 		aux_node = aux_node->next;
 	}
 
+	/* Node not found, nothiung to dO */
+	if (!aux_node) {
+		return;
+	}
+
 	/* Delete it from the list */
 	if (prev_node == NULL) {
 		input_info_list = aux_node->next;
@@ -385,7 +390,7 @@ static void *output_manager_plugin_thread(void* config)
 
 			/* Add config to data_mngmts structure */
 			output_manager_insert(conf, data_config);
-			MSG_NOTICE(msg_module, "[%u] Data Manager created", odid);
+			MSG_INFO(msg_module, "[%u] Data Manager created", odid);
 		}
 
 		if (msg->source_status == SOURCE_STATUS_NEW) {
@@ -424,7 +429,7 @@ static void *output_manager_plugin_thread(void* config)
 		rbuffer_remove_reference(conf->in_queue, index, 0);
 	}
 
-	MSG_NOTICE(msg_module, "Closing Output Manager thread");
+	MSG_INFO(msg_module, "Closing Output Manager thread");
 
 	return (void *) 0;
 }
@@ -595,12 +600,16 @@ void statistics_print_buffers(struct output_manager_config *conf, FILE *stat_out
 		/* Print info about Output Manager queues */
 		struct data_manager_config *dm = conf->data_managers;
 		if (dm) {
-			MSG_INFO(stat_module, "     Output Manager output queues:");
-			MSG_INFO(stat_module, "         %.4s | %.10s / %.10s", "ODID", "waiting", "total size");
-			
-			while (dm) {
-				MSG_INFO(stat_module, "   %10u %9u / %u", dm->observation_domain_id, dm->store_queue->count, dm->store_queue->size);
-				dm = dm->next;
+			if (conf->manager_mode == OM_SINGLE) {
+				MSG_INFO(stat_module, "     Output Manager output queue: %u / %u", dm->store_queue->count, dm->store_queue->size);
+			} else {
+				MSG_INFO(stat_module, "     Output Manager output queues:");
+				MSG_INFO(stat_module, "         %.4s | %.10s / %.10s", "ODID", "waiting", "total size");
+				
+				while (dm) {
+					MSG_INFO(stat_module, "   %10u %9u / %u", dm->observation_domain_id, dm->store_queue->count, dm->store_queue->size);
+					dm = dm->next;
+				}
 			}
 		}
 	}
@@ -858,9 +867,9 @@ int output_manager_create(configurator *plugins_config, int stat_interval, bool 
 	conf->perman_odid_merge = odid_merge;
 
 	if (conf->manager_mode == OM_SINGLE) {
-		MSG_NOTICE(msg_module, "Configuring Output Manager in single manager mode");
+		MSG_INFO(msg_module, "Configuring Output Manager in single manager mode");
 	} else if (conf->manager_mode == OM_MULTIPLE) {
-		MSG_NOTICE(msg_module, "Configuring Output Manager in multiple manager mode");
+		MSG_INFO(msg_module, "Configuring Output Manager in multiple manager mode");
 	} else {
 		/* Unknown mode */
 	}
@@ -998,9 +1007,9 @@ int output_manager_set_mode(enum om_mode mode)
 	conf->manager_mode = mode;
 
 	if (mode == OM_SINGLE) {
-		MSG_NOTICE(msg_module, "Switching Output Manager to single manager mode");
+		MSG_INFO(msg_module, "Switching Output Manager to single manager mode");
 	} else if (mode == OM_MULTIPLE) {
-		MSG_NOTICE(msg_module, "Switching Output Manager to multiple manager mode");
+		MSG_INFO(msg_module, "Switching Output Manager to multiple manager mode");
 	} else {
 		/* Unknown mode */
 	}

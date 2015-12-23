@@ -1,9 +1,15 @@
 **Future release:**
 
+**Version 0.9.0:**
+
+* Many bug fixes
+* New ipfix_elements API
+* sFlow support is disable by default
 * Fixed forwarding of UDP templates
 * Unlimited number of incoming TCP connections
-* Fixed statistics rpo multiple inputs with same ODID
+* Fixed statistics for multiple inputs with same ODID
 * Fixed incorrect message when API version does not match
+* Added option for single data manager (all ODIDs to single storage plugin)
 
 **Version 0.8.1:**
 

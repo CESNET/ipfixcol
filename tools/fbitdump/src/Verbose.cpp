@@ -46,7 +46,6 @@
 /* Default is to print only errors */
 int verbose = ICMSG_ERROR;
 
-
 void icmsg_print(const char *type, const char *module, const char *format, ...)
 {
 	std::cout << type << ": ";

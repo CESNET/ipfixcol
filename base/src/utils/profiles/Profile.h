@@ -43,6 +43,7 @@
 #include <string>
 #include <vector>
 
+#include <ipfixcol/profiles.h>
 #include "profiles_internal.h"
 
 class Channel;
@@ -51,16 +52,18 @@ class Channel;
  * \brief Class representing profile
  */
 class Profile {
+public:
 	/* Shortcuts */
 	using channelsVec = std::vector<Channel *>;
 	using profilesVec = std::vector<Profile *>;
-public:
+
 	/**
 	 * \brief Constructor
 	 *
 	 * \param[in] name profile name
+	 * \param[in] type profile type
 	 */
-	Profile(std::string name);
+	Profile(std::string name, enum PROFILE_TYPE type);
 	
 	/**
 	 * \brief Destructor
@@ -107,7 +110,7 @@ public:
 	 *
 	 * \return profile's name from startup configuration
 	 */
-	std::string getName() { return m_name; }
+	const std::string& getName() const { return m_name; }
 	
 	/**
 	 * \brief Get vector of all profile's channels
@@ -138,6 +141,27 @@ public:
 	void setParent(Profile *parent) { m_parent = parent; }
 
 	/**
+	 * \brief Get profile's directory
+	 *
+	 * \return Directory
+	 */
+	const std::string& getDirectory() const { return m_directory; }
+
+	/**
+	 * \brief Set profile's directory
+	 *
+	 * \param[in] dir Directory
+	 */
+	void setDirectory(std::string dir) { m_directory = dir; }
+
+	/**
+	 * \brief Get profile's type
+	 *
+	 * \return Type of the profile
+	 */
+	enum PROFILE_TYPE getType() { return m_type; }
+
+	/**
 	 * \brief Update path name from ancestors
 	 */
 	void updatePathName();
@@ -147,7 +171,7 @@ public:
 	 *
 	 * \return path name
 	 */
-	std::string getPathName() { return m_pathName; }
+	const std::string& getPathName() const { return m_pathName; }
 	
 	/**
 	 * \brief Match profile with data record (== with it's channels)
@@ -166,6 +190,10 @@ private:
 	profile_id_t m_id{};		/**< Profile ID */
 	std::string m_pathName{};	/**< rootName/../parentName/myName */
 	std::string m_name{};		/**< Profile name */
+
+	enum PROFILE_TYPE m_type;	/**< Profily type */
+	std::string m_directory{};	/**< Directory of profile */
+
 	profilesVec m_children{};	/**< Children */
 	channelsVec m_channels{};	/**< Channels */
 	

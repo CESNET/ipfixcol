@@ -44,6 +44,15 @@
 #include "storage.h"
 
 /**
+ * \brief Type of a profile
+ */
+enum PROFILE_TYPE {
+	PT_UNDEF,
+	PT_NORMAL,  /**< Real profile - store data           */
+	PT_SHADOW   /**< Shadow profile - do not store data  */
+};
+
+/**
  * \brief Process xml file with profiles configuration
  *
  * \param[in] file path to the xml file
@@ -66,6 +75,22 @@ API const char *profiles_get_xml_path();
  * \return profile name
  */
 API const char *profile_get_name(void *profile);
+
+/**
+ * \brief Get profile type
+ *
+ * \param[in] profile
+ * \return profile type
+ */
+API enum PROFILE_TYPE profile_get_type(void *profile);
+
+/**
+ * \brief Get profile directory
+ *
+ * \param[in] profile
+ * \return profile directory
+ */
+API const char *profile_get_directory(void *profile);
 
 /**
  * \brief Get profile path
@@ -131,6 +156,16 @@ API void *profile_get_channel(void *profile, uint16_t index);
  * \return list of matching channels
  */
 API void **profile_match_data(void *profile, struct ipfix_message *msg, struct metadata *mdata);
+
+/**
+ * \brief Get all profiles in the tree
+ *
+ * \warning User must free returned array with free()
+ * \param[in] profile Random profile from the tree of profiles.
+ * \return On success returns null-terminated array of all profiles. Otherwise
+ * returns NULL.
+ */
+API void **profile_get_all_profiles(void *profile);
 
 /**
  * \brief Free profile with all it's channels and subprofiles

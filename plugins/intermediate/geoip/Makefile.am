@@ -1,6 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CFLAGS += -I$(top_srcdir)/headers
 pluginsdir = $(datadir)/ipfixcol/plugins
 
 sofile = $(pluginsdir)/ipfixcol-geoip-inter.so

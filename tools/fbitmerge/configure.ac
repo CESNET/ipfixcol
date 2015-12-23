@@ -39,7 +39,7 @@
 AC_PREREQ([2.60])
 
 # Process this file with autoconf to produce a configure script.
-AC_INIT([fbitmerge], [0.1.5])
+AC_INIT([fbitmerge], [0.1.6])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 AC_CONFIG_SRCDIR([src/fbitmerge.cpp])
 AC_CONFIG_HEADERS([config.h])
