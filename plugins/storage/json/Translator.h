@@ -116,7 +116,6 @@ public:
      * \brief Format TCP flags 16bits
      * 
      * @param flags
-     * @param length length of flags
      * @return formatted flags
      */
 	const char *formatFlags16(uint16_t flags);
