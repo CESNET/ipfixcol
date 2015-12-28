@@ -10,7 +10,8 @@ ipfixcol_lnfstore_output_la_LDFLAGS = -module -avoid-version -shared
 ipfixcol_lnfstore_output_la_SOURCES = \
 	lnfstore.c lnfstore.h \
 	storage.c storage.h \
-	translator.c translator.h
+	translator.c translator.h \
+	bitset.c bitset.h
 
 plugins_LTLIBRARIES = ipfixcol-lnfstore-output.la
 

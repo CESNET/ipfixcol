@@ -1,8 +1,7 @@
 /**
- * \file storage.h
- * \author Imrich Stoffa <xstoff02@stud.fit.vutbr.cz>
+ * \file bitset.c
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
- * \brief Storage management (header file)
+ * \brief Bitset (source file)
  *
  * Copyright (C) 2015 CESNET, z.s.p.o.
  *
@@ -38,16 +37,45 @@
  *
  */
 
-#ifndef LS_STORAGE_H
-#define LS_STORAGE_H
+#include <stdlib.h>
+#include <string.h>
+#include "bitset.h"
 
-#include <ipfixcol.h>
-#include "lnfstore.h"
+// Create a new bitset
+bitset_t *bitset_create(int size)
+{
+	bitset_t *set = (bitset_t *) calloc(1, sizeof(bitset_t));
+	if (!set) {
+		return NULL;
+	}
 
-// Store a record
-void store_record(const struct metadata* mdata, struct lnfstore_conf *conf);
+	set->size = (size / BITSET_BITS) + 1;
+	set->array = (bitset_type_t *) calloc(set->size, sizeof(bitset_type_t));
+	if (!set->array) {
+		free(set);
+		return NULL;
+	}
 
-// Close all output files
-void close_storage_files(struct lnfstore_conf *conf);
+	return set;
+}
 
-#endif //LS_STORAGE_H
+// Destroy a bitset
+void bitset_destroy(bitset_t *set)
+{
+	if (!set) {
+		return;
+	}
+
+	free(set->array);
+	free(set);
+}
+
+// Clear a bitset
+void bitset_clear(bitset_t *set)
+{
+	if (!set) {
+		return;
+	}
+
+	memset(set->array, 0, set->size * sizeof(bitset_type_t));
+}
