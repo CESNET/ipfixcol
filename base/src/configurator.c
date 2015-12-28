@@ -1226,8 +1226,9 @@ int config_reconf(configurator *config)
 		xmlFreeDoc(config->new_doc);
 		return 1;
 	}
-	
+
 	config->profiles_file = config_get_new_profiles_file(config);
+	bool require_profiles = (config->profiles_file != NULL);
 
 	/* Process changes */
 	ret = config_process_new_startup(config, new_startup);
@@ -1250,6 +1251,12 @@ int config_reconf(configurator *config)
 		}
 	}
 	
+	/* If profiles are in configuration,  */
+	if (ret == 0 && require_profiles && config_get_current_profiles(config) == NULL) {
+		/* Failure can affect only first configuration! */
+		ret = 1;
+	}
+
 	/* Free resources */
 	free_startup(new_startup);
 	
