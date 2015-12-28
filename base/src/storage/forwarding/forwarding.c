@@ -318,7 +318,8 @@ bool forwarding_init_conf(forwarding *conf, xmlDoc *doc, xmlNodePtr root)
 
 		/* Cases handled by load_default_values; avoid warnings in next if-statement */
 		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "defaultPort")
-				|| !xmlStrcasecmp(cur->name, (const xmlChar *) "protocol")) {
+				|| !xmlStrcasecmp(cur->name, (const xmlChar *) "protocol")
+				|| cur->type == XML_COMMENT_NODE) {
 			/* Do nothing */
 
 		/* Report unknown elements */
