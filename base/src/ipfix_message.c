@@ -475,90 +475,107 @@ struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint
 }
 
 /**
- * \brief Get offset of data record's field
+ * \brief Get offset of next field instance in data record. For variable-length
+ * fields, the returned offset does not include the field's length indicators (i.e.,
+ * the first byte, or the first three bytes, of the field).
  *
  * \param[in] data_record Data record
- * \param[in] template Data record's template
+ * \param[in] templ Data record's template
+ * \param[in] enterprise Enterprise number
+ * \param[in] id Field ID
+ * \param[in] from_offset Offset to start at (default: -1)
+ * \param[out] data_length Field length
+ * \return Field offset
+ */
+int data_record_field_next_offset(uint8_t *data_record, struct ipfix_template *templ,
+        uint32_t enterprise, uint16_t id, int from_offset, int *data_length)
+{
+    uint16_t ie_id;
+    uint32_t enterprise_id;
+    int count, offset = 0, index, length, prev_offset;
+    struct ipfix_template_row *row = NULL;
+
+    if (!(templ->data_length & 0x80000000)) {
+        /* Data record with no variable length field */
+        row = template_get_field(templ, enterprise, id, &offset);
+        if (!row) {
+            return -1;
+        }
+
+        if (data_length) {
+            *data_length = row->length;
+        }
+
+        return offset;
+    }
+
+    /* Data record with variable length field(s) */
+    for (count = index = 0; count < templ->field_count; count++, index++) {
+        ie_id = templ->fields[index].ie.id;
+        length = templ->fields[index].ie.length;
+        enterprise_id = 0;
+
+        if (ie_id >> 15) {
+            /* Enterprise Number */
+            ie_id &= 0x7FFF;
+            enterprise_id = templ->fields[++index].enterprise_number;
+        }
+
+        prev_offset = offset;
+
+        switch (length) {
+            case (1):
+            case (2):
+            case (4):
+            case (8):
+                offset += length;
+                break;
+            default:
+                if (length == VAR_IE_LENGTH) {
+                    length = *((uint8_t *) (data_record + offset));
+                    offset += 1;
+
+                    if (length == 255) {
+                        length = ntohs(*((uint16_t *) (data_record + offset)));
+                        offset += 2;
+                    }
+
+                    prev_offset = offset;
+                    offset += length;
+                } else {
+                    offset += length;
+                }
+
+                break;
+        }
+
+        /* Field found */
+        if (id == ie_id && enterprise == enterprise_id && prev_offset > from_offset) {
+            if (data_length) {
+                *data_length = length;
+            }
+
+            return prev_offset;
+        }
+    }
+
+    /* Field not found */
+    return -1;
+}
+
+/**
+ * \brief Get offset of field in data record
+ *
+ * \param[in] data_record Data record
+ * \param[in] templ Data record's template
  * \param[in] enterprise Enterprise number
  * \param[in] id Field ID
  * \param[out] data_length Field length
  * \return Field offset
  */
-int data_record_field_offset(uint8_t *data_record, struct ipfix_template *template, uint32_t enterprise, uint16_t id, int *data_length)
+int data_record_field_offset(uint8_t *data_record, struct ipfix_template *templ, uint32_t enterprise, uint16_t id, int *data_length)
 {
-	uint16_t ie_id;
-	uint32_t enterprise_id;
-	int count, offset = 0, index, length, prevoffset;
-	struct ipfix_template_row *row = NULL;
-
-	if (!(template->data_length & 0x80000000)) {
-		/* Data record with no variable length field */
-		row = template_get_field(template, enterprise, id, &offset);
-		if (!row) {
-			return -1;
-		}
-
-		if (data_length) {
-			*data_length = row->length;
-		}
-
-		return offset;
-	}
-
-	/* Data record with variable length field(s) */
-	for (count = index = 0; count < template->field_count; count++, index++) {
-		length = template->fields[index].ie.length;
-		ie_id = template->fields[index].ie.id;
-		enterprise_id = 0;
-
-		if (ie_id >> 15) {
-			/* Enterprise Number */
-			ie_id &= 0x7FFF;
-			enterprise_id = template->fields[++index].enterprise_number;
-		}
-
-		prevoffset = offset;
-
-		switch (length) {
-			case (1):
-			case (2):
-			case (4):
-			case (8):
-				offset += length;
-				break;
-			default:
-				if (length == VAR_IE_LENGTH) {
-					/* Variable length */
-					length = *((uint8_t *) (data_record+offset));
-					offset += 1;
-
-					if (length == 255) {
-						length = ntohs(*((uint16_t *) (data_record+offset)));
-						offset += 2;
-					}
-
-					prevoffset = offset;
-					offset += length;
-				} else {
-					offset += length;
-				}
-
-				break;
-		}
-
-		/* Field found */
-		if (id == ie_id && enterprise == enterprise_id) {
-			if (data_length) {
-				*data_length = length;
-			}
-
-			return prevoffset;
-		}
-
-	}
-
-	/* Field not found */
-	return -1;
+    return data_record_field_next_offset(data_record, templ, enterprise, id, -1, data_length);
 }
 
 /**
