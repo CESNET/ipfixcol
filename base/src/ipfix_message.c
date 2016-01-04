@@ -424,6 +424,41 @@ struct ipfix_template_row *fields_get_field(uint8_t *fields, int cnt, uint32_t e
 }
 
 /**
+ * \brief Count the number of occurrences of the specified field
+ * \param[in] rec Template record
+ * \param[in] enterprise Field enterprise ID
+ * \param[in] id Field ID
+ * \return Number of field occurrences
+ */
+int template_record_count_field_occurences(struct ipfix_template_record *rec,
+        uint32_t enterprise, uint16_t id)
+{
+    int field_count = 0;
+    uint16_t total_field_count = ntohs(rec->count);
+    struct ipfix_template_row *row = (struct ipfix_template_row *) rec->fields;
+
+    int i;
+    for (i = 0; i < total_field_count; ++i, ++row) {
+        uint16_t rid = ntohs(row->id);
+        uint32_t ren = 0;
+
+        /* Get field ID and enterprise number */
+        if (rid >> 15) {
+            rid = rid & 0x7FFF;
+            ++row;
+            ren = ntohl(*((uint32_t *) row));
+        }
+
+        /* Check field contents */
+        if (rid == id && ren == enterprise) {
+            ++field_count;
+        }
+    }
+
+    return field_count;
+}
+
+/**
  * \brief Get template record field
  */
 struct ipfix_template_row *template_record_get_field(struct ipfix_template_record *rec, uint32_t enterprise, uint16_t id, int *data_offset)

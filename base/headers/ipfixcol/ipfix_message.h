@@ -172,6 +172,15 @@ API void data_record_set_field(uint8_t *record, struct ipfix_template *templ, ui
 API void data_set_set_field(struct ipfix_data_set *set, struct ipfix_template *templ, uint32_t enterprise, uint16_t id, uint8_t *value);
 
 /**
+ * \brief Count the number of occurrences of the specified field
+ * \param[in] rec Template record
+ * \param[in] enterprise Field enterprise ID
+ * \param[in] id Field ID
+ * \return Number of field occurrences
+ */
+API int template_record_count_field_occurences(struct ipfix_template_record *rec, uint32_t enterprise, uint16_t id);
+
+/**
  * \brief Get template record field
  *
  * \param[in] rec Template record
