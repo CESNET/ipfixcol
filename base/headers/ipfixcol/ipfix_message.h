@@ -175,7 +175,7 @@ API void data_set_set_field(struct ipfix_data_set *set, struct ipfix_template *t
  * \brief Get template record field
  *
  * \param[in] rec Template record
- * * \param[in] enterprise Enterprise number
+ * \param[in] enterprise Enterprise number
  * \param[in] id  field id
  * \param[out] data_offset offset data record specified by this template record
  * \return pointer to inserted field
@@ -267,8 +267,6 @@ API void message_free_metadata(struct ipfix_message *msg);
  */
 API struct metadata *message_copy_metadata(struct ipfix_message *src);
 
-
 #endif /* IPFIX_MESSAGE_H_ */
 
 /**@}*/
-

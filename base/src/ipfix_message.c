@@ -236,7 +236,7 @@ int message_set_data(uint8_t *dest, uint8_t *source, int len)
 uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template *tmplt)
 {
 	if (!tmplt) {
-		/* we don't have template for this data set */
+		/* We don't have a template for this data set */
 		return 0;
 	}
 
@@ -248,7 +248,6 @@ uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template
 
 	index = count;
 
-	/* go over all fields */
 	while (count != tmplt->field_count) {
 		id = tmplt->fields[index].ie.id;
 		length = tmplt->fields[index].ie.length;
@@ -303,13 +302,11 @@ uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_templat
 	}
 
 	min_record_length = tmplt->data_length;
-	offset = 0;
-
-	offset += 4;  /* size of the header */
+	offset = sizeof(struct ipfix_set_header);
 
 	if (min_record_length & 0x8000) {
 		/* oops, record contains fields with variable length */
-		min_record_length = min_record_length & 0x7fff; /* size of the fields, variable fields excluded  */
+		min_record_length = min_record_length & 0x7fff; /* Size of the fields, excluding variable-length fields */
 	}
 
 	while ((int) ntohs(data_set->header.length) - (int) offset - (int) min_record_length >= 0) {
@@ -321,7 +318,6 @@ uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_templat
 
 	return records;
 }
-
 
 /**
  * \brief Create empty IPFIX message
@@ -350,7 +346,6 @@ struct ipfix_message *message_create_empty()
 
 	return message;
 }
-
 
 /**
  * \brief Dispose IPFIX message
@@ -384,7 +379,7 @@ int message_free(struct ipfix_message *msg)
  * \param[in] fields template (record) fields
  * \param[in] cnt number of fields
  * \param[in] enterprise enterprise field number
- * \param[in] id  field id
+ * \param[in] id field id
  * \param[out] data_offset offset data record specified by this template
  * \param[in] netw Flag indicating network byte order (template record)
  * \return pointer to row in fields
@@ -411,7 +406,7 @@ struct ipfix_template_row *fields_get_field(uint8_t *fields, int cnt, uint32_t e
 			ren = (netw) ? ntohl(*((uint32_t *) row)) : *((uint32_t *) row);
 		}
 		
-		/* Check informations */
+		/* Check field contents */
 		if (rid == id && ren == enterprise) {
 			if (ren != 0) {
 				--row;
@@ -419,7 +414,7 @@ struct ipfix_template_row *fields_get_field(uint8_t *fields, int cnt, uint32_t e
 			return row;
 		}
 
-		/* increase data offset */
+		/* Increase data offset */
 		if (data_offset) {
 			*data_offset += len;
 		}
@@ -643,8 +638,8 @@ int data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_templ
 	uint32_t offset = 4;
 
 	if (min_record_length & 0x80000000) {
-		/* record contains fields with variable length */
-		min_record_length = min_record_length & 0x7fff; /* size of the fields, variable fields excluded  */
+		/* Record contains fields with variable length */
+		min_record_length = min_record_length & 0x7fff; /* Size of the fields, excluding variable-length fields */
 	}
 
 	while ((int) set_len - (int) offset - (int) min_record_length >= 0) {
@@ -706,8 +701,8 @@ void data_set_set_field(struct ipfix_data_set *data_set, struct ipfix_template *
 	uint32_t offset = 4;
 
 	if (min_record_length & 0x8000) {
-		/* record contains fields with variable length */
-		min_record_length = min_record_length & 0x7fff; /* size of the fields, variable fields excluded  */
+		/* Record contains fields with variable length */
+		min_record_length = min_record_length & 0x7fff; /* Size of the fields, excluding variable-length fields */
 	}
 
 	while ((int) setlen - (int) offset - (int) min_record_length >= 0) {
