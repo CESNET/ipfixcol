@@ -257,10 +257,8 @@ uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template
 			++index;
 		}
 
-		if (length != VAR_IE_LENGTH) {
-			offset += length;
-		} else {
-			/* variable length */
+		if (length == VAR_IE_LENGTH) {
+			/* Variable length */
 			length = read8(data_record+offset);
 			offset += 1;
 
@@ -269,6 +267,8 @@ uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template
 				offset += 2;
 			}
 
+			offset += length;
+		} else {
 			offset += length;
 		}
 
@@ -527,10 +527,8 @@ int data_record_field_offset(uint8_t *data_record, struct ipfix_template *templa
 				offset += length;
 				break;
 			default:
-				if (length != VAR_IE_LENGTH) {
-					offset += length;
-				} else {
-					/* variable length */
+				if (length == VAR_IE_LENGTH) {
+					/* Variable length */
 					length = *((uint8_t *) (data_record+offset));
 					offset += 1;
 
@@ -540,6 +538,8 @@ int data_record_field_offset(uint8_t *data_record, struct ipfix_template *templa
 					}
 
 					prevoffset = offset;
+					offset += length;
+				} else {
 					offset += length;
 				}
 
@@ -640,18 +640,18 @@ uint16_t data_record_length(uint8_t *data_record, struct ipfix_template *templat
 			offset += length;
 			break;
 		default:
-			if (length != VAR_IE_LENGTH) {
-				offset += length;
-			} else {
-				/* variable length */
-				length = *((uint8_t *) (data_record+offset));
+			if (length == VAR_IE_LENGTH) {
+				/* Variable length */
+				length = *((uint8_t *) (data_record + offset));
 				offset += 1;
 
 				if (length == 255) {
-					length = ntohs(*((uint16_t *) (data_record+offset)));
+					length = ntohs(*((uint16_t *) (data_record + offset)));
 					offset += 2;
 				}
 
+				offset += length;
+			} else {
 				offset += length;
 			}
 			break;
