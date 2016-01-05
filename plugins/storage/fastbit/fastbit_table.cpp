@@ -372,9 +372,7 @@ int template_table::parse_template(struct ipfix_template *tmp,struct fastbit_con
 				MSG_DEBUG(msg_module, "Received UNKNOWN element (size: %u)",field->ie.length);
 				if (field->ie.length < 9){
 					new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
-				} else if (field->ie.length == VAR_IE_LENGTH){ /* Variable size element */
-					new_element = new el_var_size(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
-				} else { /* TODO blob etc. */
+				} else {
 					new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 				}
 
