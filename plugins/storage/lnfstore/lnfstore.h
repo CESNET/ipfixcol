@@ -1,67 +1,94 @@
+/**
+ * \file lnfstore.h
+ * \author Imrich Stoffa <xstoff02@stud.fit.vutbr.cz>
+ * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
+ * \brief lnfstore plugin interface (header file)
+ *
+ * Copyright (C) 2015 CESNET, z.s.p.o.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is, and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
 #ifndef LS_LNFSTORE_H 
 #define LS_LNFSTORE_H
 
 #include <libxml/xmlstring.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <string.h>
-#include <time.h>
+#include <libnf.h>
 
-#define readui8(_ptr_)(*((uint8_t*)(_ptr_)))
-#define readui16(_ptr_)(*((uint16_t*)(_ptr_)))
-#define readui32(_ptr_)(*((uint32_t*)(_ptr_)))
-#define readui64(_ptr_)(*((uint64_t*)(_ptr_)))
+#include "bitset.h"
 
-typedef uint32_t base_t;
-struct time_vars
-{	
-	char* dir;
-	char* suffix;
-	time_t window_start;	
+/**
+ * \brief Structure for configuration parsed from XML
+ */
+struct conf_params {
+	char *storage_path;              /**< Storage directory (template)    */
+	char *file_prefix;               /**< File prefix                     */
+	char *file_suffix;               /**< File suffix (template)          */
+	char *file_ident;                /**< Internal file identification    */
+
+	uint32_t window_time;            /**< Time windows size               */
+	bool window_align;               /**< Enable/disable window alignment */
+	bool compress;                   /**< Enable/disable LZO compression  */
+
+	bool profiles;                   /**< Use profile metadata            */
 };
 
-typedef struct stack_s{
-	unsigned size;
-	unsigned top;
-	base_t *data;
-}stack_t;
+// Size of conversion buffer
+#define BUFF_SIZE (65535)
 
+/** \brief Profile identification */
+typedef struct profile_file_s {
+	void *address;
+	lnf_file_t *file;
+} profile_file_t;
+
+/**
+ * \brief Configuration of the plugin instantion
+ */
 struct lnfstore_conf
 {
-	stack_t* pst;
-	xmlChar* prefix;
-	xmlChar* suffix_mask;
-	xmlChar* storage_path;
-	xmlChar* ident;
-	struct time_vars* t_vars;
-	unsigned long time_window;
-	bool align;
-	bool compress;
-	bool profiles;	
+	struct conf_params *params;      /**< Configuration from XML file     */
+
+	uint8_t buffer[BUFF_SIZE];       /**< Buffer for record conversion    */
+	lnf_rec_t *rec_ptr;              /**< Converted record */
+	time_t window_start;             /**< Start of current window         */
+
+	lnf_file_t *file_ptr;            /**< Storage (for no profiler mode)  */
+
+	profile_file_t *profiles_ptr;    /**< Storages (for profile mode)     */
+	int profiles_size;               /**< Size of the array               */
+	bitset_t *bitset;                /**< Aux bitset                      */
 };
-
-//! \define Rounds bytelen to smallest possible multiple of bytesize of boundary type
-#define aligned(bytelen, boundary)\
-	(bytelen/(boundary)+(bytelen%(boundary) > 0 ? 1 : 0))
-
-
-#define al4B(bytelen)\
-	(bytelen/sizeof(base_t)+(bytelen%sizeof(base_t) > 0 ? 1 : 0))
-
-
-#define ELNb(d, i) (i/8*sizeof(d[0]))
-#define bIDX(d, i) (i%8*sizeof(d[0]))
-#define GETb(d, i) (d[ELNb(d,i)] & 1LL << bIDX(d,i))
-#define SETb(d, i, m) (d[ELNb(d,i)] = ((d[ELNb(d,i)] & ~(1 << bIDX(d,i))) | (-m & (1 << bIDX(d,i)))) )
-
-
-stack_t* stack_init(size_t size);
-void stack_del(stack_t* st);
-int stack_resize(stack_t* st, int size);
-int stack_push(stack_t* st, void* data, int length);
-int stack_pop(stack_t* st, int length);
-int stack_top(stack_t* st, void* data, int length);
-bool stack_empty(stack_t* st);
-int stack_size(stack_t* st);
 
 #endif //LS_LNFSTORE_H

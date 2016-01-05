@@ -46,11 +46,11 @@
 #define IDENTLEN	128
 #define IDENTNONE	"none"
 
-#define NF_EOF		 	 0
-#define NF_ERROR		-1
-#define NF_CORRUPT		-2
+#define NF_EOF		0
+#define NF_ERROR	-1
+#define NF_CORRUPT	-2
 
-#define NF_DUMPFILE         "nfcapd.current"
+#define NF_DUMPFILE     "nfcapd.current"
 
 /* 
  * output buffer max size, before writing data to the file 
@@ -230,11 +230,11 @@ typedef struct catalog_s {
 typedef struct nffile_s {
 	file_header_t		*file_header;	// file header
 	data_block_header_t	*block_header;	// buffer
-	void				*buff_ptr;		// pointer into buffer for read/write blocks/records
+	void                    *buff_ptr;      // pointer into buffer for read/write blocks/records
 	stat_record_t 		*stat_record;	// flow stat record
-	catalog_t			*catalog;		// file catalog
-	int					_compress;		// data compressed flag
-	int					fd;				// file descriptor
+	catalog_t		*catalog;	// file catalog
+	int			_compress;	// data compressed flag
+	int			fd;		// file descriptor
 } nffile_t;
 
 /* 

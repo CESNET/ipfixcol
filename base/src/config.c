@@ -617,7 +617,7 @@ struct plugin_xml_conf_list* get_intermediate_plugins(xmlDocPtr config, char *in
 	/* Loop over all nodes and skip comments */
 	while (node != NULL) {
 		/* Skip processing this node in case it's a comment */
-		if (node->type == XML_COMMENT_NODE) {
+		if (node->type == XML_COMMENT_NODE || node->type == XML_TEXT_NODE) {
 			node = node->next;
 			continue;
 		}

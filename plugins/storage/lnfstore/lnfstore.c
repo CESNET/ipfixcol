@@ -1,144 +1,299 @@
+/**
+ * \file lnfstore.c
+ * \author Imrich Stoffa <xstoff02@stud.fit.vutbr.cz>
+ * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
+ * \brief lnfstore plugin interface (source file)
+ *
+ * Copyright (C) 2015 CESNET, z.s.p.o.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is, and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
 #include "lnfstore.h"
 #include "storage.h"
 #include <ipfixcol.h>
-	IPFIXCOL_API_VERSION
-
-
 #include <libxml/parser.h>
 #include <libxml/xmlmemory.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define xmlStrcmpBool(_xmlStr_, boolVal)( \
-	xmlStrcmp(_xmlStr_, (const xmlChar*)((boolVal)?"yes":"no")) && \
-	xmlStrcmp(_xmlStr_, (const xmlChar*)((boolVal)?"true":"false")) && \
-	xmlStrcmp(_xmlStr_, (const xmlChar*)((boolVal)?"1":"0")) )
+// API version constant
+IPFIXCOL_API_VERSION;
 
-static const char* msg_module= "lnfstore_interface";
+// Module identification
+static const char* msg_module= "lnfstore";
 
-const struct lnfstore_conf def_conf= 
+/**
+ * \brief Compare value of the node with string boolen value
+ * \param[in] doc XML document
+ * \param[in] node XML node
+ * \param[in] bool_val type of expected bool value
+ * \return If value is same as expected, returns non-zero value. Otherwise
+ * returns 0.
+ */
+int xml_cmp_bool(xmlDocPtr doc, const xmlNodePtr node, bool bool_val)
 {
-	NULL,
-	(xmlChar*)"nfdump.",
-	(xmlChar*)"%F%R",
-	(xmlChar*)".\\",
-	(xmlChar*)"",
-	NULL,
-	300,
-	true,
-	false,
-	false,
-};
+	int ret_val;
+	xmlChar *val = xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
 
-void process_startup_xml(struct lnfstore_conf *conf, char *params)
-{
-        xmlDocPtr doc;
-        xmlNodePtr cur, cur_sub;
-		
-        doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
+	ret_val = xmlStrcasecmp(val, (const xmlChar *) (bool_val ? "yes" : "no")) &&
+		xmlStrcasecmp(val, (const xmlChar *) (bool_val ? "true" : "false")) &&
+		xmlStrcasecmp(val, (const xmlChar *) (bool_val ? "1" : "0"));
 
-        cur = xmlDocGetRootElement(doc);
-
-        if(xmlStrcmp(cur->name, (const xmlChar*) "fileWriter")){
-            goto err_xml;
-        }
-
-        cur = cur->xmlChildrenNode;
-        while(cur != NULL){
-			xmlChar* nodeStr = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
-
-            if(!xmlStrcmp(cur->name, (const xmlChar*) "fileFormat")){
-                if(xmlStrcmp(nodeStr, (const xmlChar*) "lnfstore") != 0){
-					xmlFree(nodeStr);
-                    goto err_xml_val;
-                }
-            }else if(!xmlStrcmp(cur->name, (const xmlChar*) "profiles")){
-				conf->profiles = !xmlStrcmpBool(nodeStr, true);
-				xmlFree(nodeStr);
-
-            }else if(!xmlStrcmp(cur->name, (const xmlChar*) "compress")){
-				conf->compress = !xmlStrcmpBool(nodeStr, true);
-				xmlFree(nodeStr);
-
-            }else if(!xmlStrcmp(cur->name, (const xmlChar*) "storagePath")){
-				conf->storage_path = nodeStr;
-
-            }else if(!xmlStrcmp(cur->name, (const xmlChar*) "prefix")){
-				conf->prefix = nodeStr;
-
-            }else if(!xmlStrcmp(cur->name, (const xmlChar*) "suffixMask")){
-				conf->suffix_mask = nodeStr;
-
-            }else if(!xmlStrcmp(cur->name, (const xmlChar*) "identificatorField")){
-				conf->ident = nodeStr;
-
-            }else if(!xmlStrcmp(cur->name, (const xmlChar*) "dumpInterval")){
-				
-				char* endptr;
-
-                cur_sub = cur->xmlChildrenNode;
-                while(cur_sub != NULL){
-					xmlChar* nodeStr = xmlNodeListGetString(doc, cur_sub->xmlChildrenNode, 1);
-                    if(!xmlStrcmp(cur_sub->name, (const xmlChar*) "timeWindow")){
-						long window = strtol((const char*)nodeStr, &endptr, 10);
-						if(*endptr != 0){
-							//conversion failed
-							conf->time_window = def_conf.time_window;
-						}
-						conf->time_window = window;
-
-					}else if(!xmlStrcmp(cur_sub->name, (const xmlChar*) "align")){
-							conf->align = !xmlStrcmpBool(nodeStr, true);
-					}
-					xmlFree(nodeStr);
-					cur_sub = cur_sub->next;
-                }
-			}
-			cur = cur->next;
-		}
-err_xml:
-err_xml_val:
-	xmlFree(doc);
+	xmlFree(val);
+	return !ret_val;
 }
 
+/**
+ * \brief Convert a value of the node to a number
+ * \param[in] doc XML document
+ * \param[in] node XML node
+ * \param[out] out Result
+ * \return On success return 0, Otherwise return non-zero value.
+ */
+int xml_convert_number(xmlDocPtr doc, const xmlNodePtr node, uint32_t *out)
+{
+	xmlChar *val = xmlNodeListGetString(doc, node->xmlChildrenNode, 1);
 
-/* plugin inicialization */
-int storage_init (char *params, void **config)
-{	
+	char *end_ptr = NULL;
+	uint32_t result = strtoul((char *) val, &end_ptr, 10);
 
-		/* Create configuration */
-        struct lnfstore_conf *conf = malloc(sizeof(struct lnfstore_conf));
-		struct time_vars *t_vars = malloc(sizeof(struct time_vars));	
+	if (end_ptr != NULL && *end_ptr != '\0') {
+		// Conversion failed
+		xmlFree(val);
+		return 1;
+	}
 
-		conf->t_vars = t_vars;
-		t_vars->dir = NULL;
-		t_vars->suffix = NULL;
-		t_vars->window_start = 0;
-		conf->pst = NULL;	
-		/* Process params */
-		process_startup_xml(conf, params);
-		
-		
-		//! If profiles are to be used, alloc ads for prof. storage
-		if(conf->profiles){
-			conf->pst = stack_init(64*sizeof(base_t));
-		}
-		/* Save configuration */
-		*config = conf;
-
-	
-	MSG_DEBUG(msg_module, "initialized");
+	xmlFree(val);
+	*out = result;
 	return 0;
 }
 
+/**
+ * \brief Destroy parsed plugin configuration
+ * \param[in,out] cnf Structure with parsed parameters
+ */
+void destroy_parsed_params(struct conf_params *cnf)
+{
+	if (cnf) {
+		if (cnf->storage_path) {
+			free(cnf->storage_path);
+		}
+		if (cnf->file_prefix) {
+			free(cnf->file_prefix);
+		}
+		if (cnf->file_suffix) {
+			free(cnf->file_suffix);
+		}
+		if (cnf->file_ident) {
+			free(cnf->file_ident);
+		}
 
+		free(cnf);
+	}
+}
+
+/**
+ * \brief Parse plugin configuration
+ * \param[in] params XML configuration
+ * \return On success returns pointer to the parsed configuration. Otherwise
+ * retuns NULL.
+ */
+struct conf_params *process_startup_xml(const char *params)
+{
+	xmlDocPtr doc;
+	xmlNodePtr cur, cur_sub;
+
+	struct conf_params *cnf = calloc(1, sizeof(struct conf_params));
+	if (!cnf) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
+			__FILE__, __LINE__);
+		return NULL;
+	}
+
+	// Try to parse plugin configuration
+	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
+	if (doc == NULL) {
+		MSG_ERROR(msg_module, "Plugin configuration not parsed successfully");
+		free(cnf);
+		return NULL;
+	}
+
+	cur = xmlDocGetRootElement(doc);
+	if (cur == NULL) {
+		MSG_ERROR(msg_module, "Empty configuration");
+		goto err_xml;
+	}
+
+	if(xmlStrcmp(cur->name, (const xmlChar*) "fileWriter")){
+		MSG_ERROR(msg_module, "Root node != fileWriter");
+		goto err_xml;
+	}
+
+	// Process the configuration elements
+	cur = cur->xmlChildrenNode;
+	while(cur != NULL){
+		// Skip this node in case it's a comment or plain text node
+		if (cur->type == XML_COMMENT_NODE || cur->type == XML_TEXT_NODE) {
+			cur = cur->next;
+			continue;
+		}
+
+		// Check conf
+		if (!xmlStrcmp(cur->name, (const xmlChar*) "fileFormat")) {
+			// fileFormat - Skip...
+		} else if (!xmlStrcmp(cur->name, (const xmlChar*) "profiles")) {
+			// Enable/disable profiler
+			cnf->profiles = xml_cmp_bool(doc, cur, true);
+		} else if (!xmlStrcmp(cur->name, (const xmlChar*) "compress")) {
+			// Enable/disable compression
+			cnf->compress = xml_cmp_bool(doc, cur, true);
+		} else if (!xmlStrcmp(cur->name, (const xmlChar*) "storagePath")) {
+			// Get storage path
+			cnf->storage_path = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+		} else if (!xmlStrcmp(cur->name, (const xmlChar*) "prefix")) {
+			// Get file prefix
+			cnf->file_prefix = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+		} else if (!xmlStrcmp(cur->name, (const xmlChar*) "suffixMask")) {
+			// Get file suffix
+			cnf->file_suffix = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+		} else if (!xmlStrcmp(cur->name, (const xmlChar*) "identificatorField")) {
+			// Get internal file identification
+			cnf->file_ident = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+		} else if (!xmlStrcmp(cur->name, (const xmlChar*) "dumpInterval")) {
+			// Dump interval subsection
+			cur_sub = cur->xmlChildrenNode;
+
+			while (cur_sub != NULL) {
+				if (!xmlStrcmp(cur_sub->name, (const xmlChar*) "timeWindow")) {
+					// Parse windows size
+					if (xml_convert_number(doc, cur_sub, &cnf->window_time) != 0) {
+						MSG_ERROR(msg_module, "Failed to parse the value of "
+							"\"timeWindow\" node");
+						goto err_xml;
+					}
+				} else if (!xmlStrcmp(cur_sub->name, (const xmlChar*) "align")) {
+					// Parse window alignment
+					cnf->window_align = !xml_cmp_bool(doc, cur_sub, false);
+				}
+
+				cur_sub = cur_sub->next;
+			}
+		} else {
+			MSG_WARNING(msg_module, "Unknown element \"%s\" in configuration "
+				"skipped.", cur->name);
+		}
+
+		// Next element
+		cur = cur->next;
+	}
+
+	// Check if all required elements is filled
+	if (!cnf->file_prefix) {
+		MSG_ERROR(msg_module, "File prefix is not set.");
+		goto err_xml;
+	}
+
+	if (!cnf->file_suffix) {
+		MSG_ERROR(msg_module, "File suffix is not set.");
+		goto err_xml;
+	}
+
+	if (!cnf->profiles && !cnf->storage_path) {
+		MSG_ERROR(msg_module, "Storage path is not set.");
+		goto err_xml;
+	}
+
+	if (cnf->window_time == 0) {
+		MSG_WARNING(msg_module, "Time windows is not set. Using default value"
+			"(300 seconds).");
+	}
+
+	xmlFreeDoc(doc);
+	return cnf;
+
+err_xml:
+	destroy_parsed_params(cnf);
+	xmlFreeDoc(doc);
+	return NULL;
+}
+
+// Storage plugin initialization function.
+int storage_init (char *params, void **config)
+{	
+	// Process XML configuration
+	struct conf_params *parsed_params = process_startup_xml(params);
+	if (!parsed_params) {
+		return 1;
+	}
+
+	// Create new plugin configuration
+	struct lnfstore_conf *conf = calloc(1, sizeof(struct lnfstore_conf));
+	if (!conf) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
+			__FILE__, __LINE__);
+		destroy_parsed_params(parsed_params);
+		return 1;
+	}
+
+	conf->params = parsed_params;
+
+	// Init a record
+	if (lnf_rec_init(&conf->rec_ptr) != LNF_OK) {
+		MSG_ERROR(msg_module, "Failed to initialize structure for conversion "
+			"of records");
+		destroy_parsed_params(parsed_params);
+		free(conf);
+		return 1;
+	}
+
+	/* Save configuration */
+	*config = conf;
+
+	MSG_DEBUG(msg_module, "initialized...");
+	return 0;
+}
+
+/*
+ * Pass IPFIX data with supplemental structures from ipfixcol core into
+ * the storage plugin.
+ */
 int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	const struct ipfix_template_mgr *template_mgr)
 {
 	(void) template_mgr;
 	struct lnfstore_conf *conf = (struct lnfstore_conf *) config;
 	
-	for(int i = 0; i < ipfix_msg->data_records_count; i++)
+	for (int i = 0; i < ipfix_msg->data_records_count; i++)
 	{
 		store_record(&(ipfix_msg->metadata[i]), conf);
 	}
@@ -146,118 +301,34 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	return 0;
 }
 
+// Announce willing to store currently processing data
 int store_now (const void *config)
 {
 	(void) config;
 	return 0;
 }
 
+// Storage plugin "destructor"
 int storage_close (void **config)
 {
-	MSG_DEBUG(msg_module, "CLOSING");
+	MSG_DEBUG(msg_module, "closing...");
 	struct lnfstore_conf *conf = (struct lnfstore_conf *) *config;
 	
 	/* Destroy configuration */
-	xmlFree(conf->prefix);
-	xmlFree(conf->suffix_mask);
-	xmlFree(conf->ident);
-	xmlFree(conf->storage_path);
+	lnf_rec_free(conf->rec_ptr);
+	close_storage_files(conf);
 
-	stack_del(conf->pst);
+	if (conf->profiles_ptr) {
+		free(conf->profiles_ptr);
+	}
+
+	if (conf->bitset) {
+		bitset_destroy(conf->bitset);
+	}
+
+	destroy_parsed_params(conf->params);
+
+	free(conf);
 	*config = NULL;
-
 	return 0;
-}
-
-//ADS general stack implementation
-
-stack_t* stack_init(size_t size)
-{
-	stack_t* st = NULL;
-	st = malloc(sizeof(stack_t));
-	if(st != NULL){
-		void* tmp = malloc(al4B(size)*sizeof(base_t));
-		if(tmp != NULL){
-			st->size = al4B(size); //!< number of dwords
-			st->top = 0;
-			st->data = tmp;
-			return st;
-		}
-		free(st);
-		free(tmp);
-	}
-	return NULL;
-}
-
-void stack_del(stack_t* st)
-{
-	free(st->data);
-	free(st);
-}
-
-
-int stack_resize(stack_t* st, int size)
-{
-	unsigned ne = al4B(size);
-	if(st->top < ne){
-		void* tmp = realloc(st->data, ne*sizeof(st->data[0]));
-		if(tmp != NULL){
-			st->data = tmp;
-			st->size = ne;
-			return 0;
-		}
-	}
-	return 1;
-}
-
-int stack_push(stack_t* st, void* data, int length)
-{
-	unsigned ne = al4B(length);
-	if(st->top >= ne && st->top + ne <= st->size){
-		memcpy(st->data+st->top, data, length);
-		st->top += ne; 
-		return 0;
-	} else {
-		while(ne + st->top > st->size){
-			int x = stack_resize(st, st->size*2);
-			if(x){
-				fprintf(stderr, "Failed to allocate %u memory for stack_t\n",st->size*2);
-				return 1;
-			}
-		}
-		memcpy(st->data+st->top, data, length);
-		st->top += ne; 
-		return 0;
-	}
-	return 1;
-}
-
-int stack_pop(stack_t* st, int length)
-{
-	unsigned ne = al4B(length);
-	if(st->top >= ne && st->top + ne <= st->size){
-		st->top -= ne;
-		return 0;
-	}
-	return 1;
-}
-
-int stack_top(stack_t* st, void* data, int length)
-{	
-	unsigned ne = al4B(length);
-	if(st->top >= ne && st->top + ne <= st->size){
-		memcpy(data, st->data+st->top-ne, length);
-		return 0;
-	}
-	return 1;
-}
-
-bool stack_empty(stack_t* st)
-{	
-	return(st->top == 0);
-}
-
-int stack_size(stack_t* st)
-{
-	return(st->top*sizeof(base_t));
 }
