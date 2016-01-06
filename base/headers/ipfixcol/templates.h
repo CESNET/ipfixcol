@@ -102,27 +102,23 @@ enum offset_fields {
  * All data in this structure are in host byte order
  */
 struct ipfix_template {
-	uint16_t original_id;			 /** Original template ID */
-	uint32_t references;		 /** Number of packets referencing to this template */
+	uint16_t original_id;        /** Original template ID */
+	uint32_t references;         /** Number of packets referencing to this template */
 	struct ipfix_template *next; /** Pointer to older template with the same template id */
-
-	uint8_t template_type;       /**Type of Template - TM_TEMPLATE = Template,
-	                              * TM_OPTIONS_TEMPLATE = Options Template */
-	time_t first_transmission;	 /** Time of first transmission of Template,
-								   UDP only */
-	time_t last_transmission;    /**Time of last transmission of Template,
-	                              * UDP only */
-	uint32_t last_message;		 /** Message number of last update,
-	 	 	 	 	 	 	 	  * UDP only */
-	uint16_t template_id;        /**Template ID given by collector */
-	uint16_t field_count;        /**Number of fields in Template Record */
-	uint16_t scope_field_count;  /**Number of scope fields */
-	uint16_t template_length;    /**Length of the template. This is size
+	uint8_t template_type;       /** Type of Template - TM_TEMPLATE = Template,
+	                              *  TM_OPTIONS_TEMPLATE = Options Template */
+	time_t first_transmission;   /** Time of first transmission of Template, UDP only */
+	time_t last_transmission;    /** Time of last transmission of Template, UDP only */
+	uint32_t last_message;       /** Message number of last update, UDP only */
+	uint16_t template_id;        /** Template ID given by collector */
+	uint16_t field_count;        /** Number of fields in Template Record */
+	uint16_t scope_field_count;  /** Number of scope fields */
+	uint16_t template_length;    /** Length of the template. This is size
 	                              * of the template structure and actual template
 	                              * fields.
 	                              * sizeof(struct ipfix_template) - sizeof(template_ie)
 	                              * + length of the template fields */
-	uint32_t data_length;        /**Length of the data record specified
+	uint32_t data_length;        /** Length of the data record specified
 	                              * by this template. If the most significant
 	                              * bit is set to 1, then there is at least
 	                              * one Information Element with variable length.
@@ -131,7 +127,7 @@ struct ipfix_template {
 	                              * calculated somehow else. For more information,
 	                              * see section 7 in RFC 5101. */
 	int offsets[OF_COUNT];
-	template_ie fields[1];       /**Template fields */
+	template_ie fields[1];       /** Template fields */
 };
 
 /**
@@ -166,7 +162,6 @@ struct ipfix_template_mgr_record {
 	struct ipfix_template_mgr_record *next; /** pointer to next record in template manager's list */
 };
 
-
 /**
  * \brief Function for creating new template
  *
@@ -179,7 +174,6 @@ struct ipfix_template_mgr_record {
  * \return Pointer to new ipfix_template on success, NULL otherwise
  */
 API struct ipfix_template *tm_create_template(void *tmp, int max_len, int type, uint32_t odid);
-
 
 /**
  * \brief Function for adding new templates.
@@ -195,7 +189,6 @@ API struct ipfix_template *tm_create_template(void *tmp, int max_len, int type, 
  */
 API struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm,
                                           void *tmp, int max_len, int type, struct ipfix_template_key *key);
-
 
 /**
  * \brief Insert existing template into Template Manager
@@ -220,7 +213,6 @@ API struct ipfix_template *tm_insert_template(struct ipfix_template_mgr *tm, str
  */
 API struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm,
                                           void *tmp, int max_len, int type, struct ipfix_template_key *key);
-
 /**
  * \brief Function for specific Template lookup.
  *
@@ -311,50 +303,50 @@ API void tm_destroy(struct ipfix_template_mgr *tm);
 /**
  * \brief Make ipfix_template_key from ODID, crc and template id
  * 
- * @param odid Observation Domain ID
- * @param crc  CRC from source IP and source port
- * @param tid  Template ID
- * @return pointer to ipfix_template_key
+ * \param[in] odid Observation Domain ID
+ * \param[in] crc  CRC from source IP and source port
+ * \param[in] tid  Template ID
+ * \return pointer to ipfix_template_key
  */
 API struct ipfix_template_key *tm_key_create(uint32_t odid, uint32_t crc, uint32_t tid);
 
 /**
  * \brief Change Template ID in template_key
  *
- * @param key Template identifier in Template Manager
- * @param tid New Template ID
- * @return pointer to changed ipfix_template_key
+ * \param[in] key Template identifier in Template Manager
+ * \param[in] tid New Template ID
+ * \return pointer to changed ipfix_template_key
  */
 API struct ipfix_template_key *tm_key_change_template_id(struct ipfix_template_key *key, uint32_t tid);
 
 /**
  * \brief Destroy ipfix_template_key structure
  * 
- * @param key IPFIX template key
+ * \param[in] key IPFIX template key
  */
 API void tm_key_destroy(struct ipfix_template_key *key);
 
 /**
  * \brief Get template record length
  *
- * @param templ Template record
- * @param max_len Maximum length of the template record. Typically length
+ * \param[in] templ Template record
+ * \param[in] max_len Maximum length of the template record. Typically length
  * to the end of the Template Set.
  * @param type Type of the Template Record. TM_TEMPLATE = Template,
  * TM_OPTIONS_TEMPLATE = Options Template.
- * @param data_length Length of the data record specified by this template record
+ * \param[out] data_length Length of the data record specified by this template record
+ * \return Template record length
  */
 API uint16_t tm_template_record_length(struct ipfix_template_record *templ, int max_len, int type, uint32_t *data_length);
 
 /**
  * \brief Compare 2 template records
  *
- * @param first First template record
- * @param second Second template record
- * @return non-zero if templates are equal
+ * \param[in] first First template record
+ * \param[in] second Second template record
+ * \return Non-zero if templates are equal
  */
 API int tm_compare_template_records(struct ipfix_template_record *first, struct ipfix_template_record *second);
-
 
 API extern struct ipfix_template_mgr *template_mgr;
 #endif /* IPFIXCOL_TEMPLATES_H_ */
