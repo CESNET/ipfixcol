@@ -68,6 +68,7 @@
 				<prefix>ic</prefix>
 			</namingStrategy>
 			<onTheFlyIndexes>yes</onTheFlyIndexes>
+			<createSpFiles>no</createSpFiles>
 			<reorder>no</reorder>
 			<indexes>
 				<element enterprise = "0" id = "12"/>
@@ -86,10 +87,10 @@
 					<command>path</command>
 				</term>
 				<listitem>
-					<simpara>the path element specifies storage direcotry for data
+					<simpara>the path element specifies storage directory for data
 						collected by fastbit plugin. Path can contain
-						format tokens for day, month, obervation id ect. This allows you to
-						create direcotry hierarchy basedon format tokens.
+						format tokens for day, month, obervation ID etc. This allows you to
+						create directory hierarchy basedon format tokens.
 					</simpara>
 
 					<variablelist>
@@ -355,7 +356,15 @@
 					<simpara>This tells plugin to create indexes for stored data
 						(yes/no). Elements for indexing can be specified so indexes are build only for those elements
 						(see example startup.xml in this manpage). If there are no specified elements and
-						<command>onTheFlyIndexes</command> is set to "yes" than indexes are build for ALL elements</simpara>
+						<command>onTheFlyIndexes</command> is set to "yes" than indexes are built for ALL elements</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>createSpFiles</command>
+				</term>
+				<listitem>
+					<simpara>If enabled, the plugin will create .sp files for TEXT columns. These columns are typically created on-the-fly when performing queries on TEXT columns. However, under certain circumstances, like read-only file systems, these files may not be created on-the-fly. If this setting is set to "yes", the required .sp files are created as soon as the data is stored.</simpara>
 				</listitem>
 			</varlistentry>
 			<varlistentry>
@@ -366,7 +375,7 @@
 					<simpara>This tells plugin to reorder for stored data (yes/no).
 					Reorder is based on cardinality so queries on reordered data should
 					be faster and data indexes smaller. </simpara>
-					<simpara>Warning: The reordering does not work on string and blob columns.</simpara>
+					<simpara>Warning: Reordering does not work on string and blob columns.</simpara>
 				</listitem>
 			</varlistentry>
 		</variablelist>
