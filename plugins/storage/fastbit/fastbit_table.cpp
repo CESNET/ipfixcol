@@ -55,12 +55,12 @@ uint64_t get_rows_from_part(const char *part_path)
 	size_t pos;
 
 	std::ifstream part_file(part_path);
-	if (!part_file.is_open()){
+	if (!part_file.is_open()) {
 		return rows;
 	}
 
 	while (getline(part_file, line, '\n')) {
-		if ((pos = line.find(ROW_LINE)) != std::string::npos){
+		if ((pos = line.find(ROW_LINE)) != std::string::npos) {
 			str_row = line.substr(pos + strlen(ROW_LINE));
 			rows = strtoul(str_row.c_str(), NULL, 0);
 		}
@@ -79,7 +79,7 @@ template_table::template_table(uint16_t template_id, uint32_t buff_size): _rows_
 	_min_record_size = 0;
 	_new_dir = true;
 
-	if (buff_size == 0){
+	if (buff_size == 0) {
 		buff_size = RESERVED_SPACE;
 	}
 
@@ -104,7 +104,7 @@ int template_table::update_part(std::string path)
 	rows_in_part = get_rows_from_part((path + "/-part.txt").c_str());
 
 	f = fopen((path + "/-part.txt").c_str(), "w");
-	if (f == NULL){
+	if (f == NULL) {
 		MSG_ERROR(msg_module, "Cannot open file '-part.txt'");
 		return 1;
 	}
@@ -127,7 +127,7 @@ int template_table::update_part(std::string path)
 	ss << "END HEADER\n";
 
 	/* Insert row info */
-	for (el_it = elements.begin(); el_it != elements.end(); ++el_it){
+	for (el_it = elements.begin(); el_it != elements.end(); ++el_it) {
 		ss << (*el_it)->get_part_info();
 	}
 
@@ -185,7 +185,7 @@ int template_table::dir_check(std::string path, bool new_dir)
 			this->dir_check(path.substr(0,pos), false);
 
 			/* Try to create the dir again */
-			if (mkdir(path.c_str(), 0777) != 0){
+			if (mkdir(path.c_str(), 0777) != 0) {
 				MSG_ERROR(msg_module, "Cannot create directory '%s'", path.c_str());
 				return 2;
 			}
@@ -293,7 +293,7 @@ void template_table::flush(std::string path)
 	}
 }
 
-int template_table::parse_template(struct ipfix_template *tmp,struct fastbit_config *config)
+int template_table::parse_template(struct ipfix_template *tmp, struct fastbit_config *config)
 {
 	int i;
 	uint32_t en = 0; /* enterprise number (0 = IANA elements) */
@@ -302,13 +302,13 @@ int template_table::parse_template(struct ipfix_template *tmp,struct fastbit_con
 	element *new_element;
 
 	/* Is there anything to parse? */
-	if (tmp == NULL){
+	if (tmp == NULL) {
 		MSG_WARNING(msg_module, "Received data without template; skipping data...");
 		return 1;
 	}
 
 	/* We don't want to parse option tables ect., so check it */
-	if (tmp->template_type != TM_TEMPLATE){
+	if (tmp->template_type != TM_TEMPLATE) {
 		MSG_WARNING(msg_module, "Received Options Template; skipping data...");
 		return 1; 
 	}
@@ -319,9 +319,9 @@ int template_table::parse_template(struct ipfix_template *tmp,struct fastbit_con
 	_first_transmission = tmp->first_transmission;
 
 	/* Find elements */
-	for (i = 0; i < tmp->field_count + en_offset; i++){
+	for (i = 0; i < tmp->field_count + en_offset; i++) {
 		field = &(tmp->fields[i]);
-		if (field->ie.length == VAR_IE_LENGTH){
+		if (field->ie.length == VAR_IE_LENGTH) {
 			_min_record_size += 1;
 		} else {
 			_min_record_size += field->ie.length;
@@ -329,13 +329,13 @@ int template_table::parse_template(struct ipfix_template *tmp,struct fastbit_con
 		
 		/* Is this an enterprise element? */
 		en = 0;
-		if (field->ie.id & 0x8000){
+		if (field->ie.id & 0x8000) {
 			i++;
 			en_offset++;
 			en = tmp->fields[i].enterprise_number;
 		}
 
-		switch(get_type_from_xml(config, en, field->ie.id & 0x7FFF)){
+		switch(get_type_from_xml(config, en, field->ie.id & 0x7FFF)) {
 			case UINT:
 				new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 				break;
@@ -362,7 +362,7 @@ int template_table::parse_template(struct ipfix_template *tmp,struct fastbit_con
 				new_element = new el_float(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 				break;
 			case TEXT:
-				new_element = new el_text(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
+				new_element = new el_text(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
 				break;
 			case BLOB:
 				new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
@@ -370,7 +370,7 @@ int template_table::parse_template(struct ipfix_template *tmp,struct fastbit_con
 			case UNKNOWN:
 			default:
 				MSG_DEBUG(msg_module, "Received UNKNOWN element (size: %u)",field->ie.length);
-				if (field->ie.length < 9){
+				if (field->ie.length < 9) {
 					new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 				} else {
 					new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
@@ -379,7 +379,7 @@ int template_table::parse_template(struct ipfix_template *tmp,struct fastbit_con
 				break;
 		}
 
-		if (!new_element){
+		if (!new_element) {
 			MSG_ERROR(msg_module, "Something is wrong with template elements...");
 			return 1;
 		}
