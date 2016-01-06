@@ -79,7 +79,6 @@ API struct ipfix_message *message_create_from_mem(void *msg, int len, struct inp
  */
 API struct ipfix_message *message_create_clone(struct ipfix_message *msg);
 
-
 /**
  * \brief Create empty IPFIX message
  *
@@ -97,7 +96,6 @@ API struct ipfix_message *message_create_empty();
  */
 API int message_get_data(uint8_t **dest, uint8_t *source, int len);
 
-
 /**
  * \brief Set data to IPFIX message.
  *
@@ -108,7 +106,6 @@ API int message_get_data(uint8_t **dest, uint8_t *source, int len);
  */
 API int message_set_data(uint8_t *dest, uint8_t *source, int len);
 
-
 /**
  * \brief Get pointers to start of the Data Records in specific Data Set
  *
@@ -118,7 +115,6 @@ API int message_set_data(uint8_t *dest, uint8_t *source, int len);
  */
 API uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_template *tmplt);
 
-
 /**
  * \brief Get offset where next data record starts
  *
@@ -127,7 +123,6 @@ API uint8_t **get_data_records(struct ipfix_data_set *data_set, struct ipfix_tem
  * \return offset of next data record in data set
  */
 API uint16_t get_next_data_record_offset(uint8_t *data_record, struct ipfix_template *tmplt);
-
 
 /**
  * \brief Dispose IPFIX message
@@ -172,10 +167,19 @@ API void data_record_set_field(uint8_t *record, struct ipfix_template *templ, ui
 API void data_set_set_field(struct ipfix_data_set *set, struct ipfix_template *templ, uint32_t enterprise, uint16_t id, uint8_t *value);
 
 /**
+ * \brief Count the number of occurrences of the specified field
+ * \param[in] rec Template record
+ * \param[in] enterprise Field enterprise ID
+ * \param[in] id Field ID
+ * \return Number of field occurrences
+ */
+API int template_record_count_field_occurences(struct ipfix_template_record *rec, uint32_t enterprise, uint16_t id);
+
+/**
  * \brief Get template record field
  *
  * \param[in] rec Template record
- * * \param[in] enterprise Enterprise number
+ * \param[in] enterprise Enterprise number
  * \param[in] id  field id
  * \param[out] data_offset offset data record specified by this template record
  * \return pointer to inserted field
@@ -192,6 +196,34 @@ API struct ipfix_template_row *template_record_get_field(struct ipfix_template_r
  * \return pointer to inserted field
  */
 API struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint32_t enterprise, uint16_t id, int *data_offset);
+
+/**
+ * \brief Get offset of next field instance in data record. For variable-length
+ * fields, the returned offset does not include the field's length indicators (i.e.,
+ * the first byte, or the first three bytes, of the field).
+ *
+ * \param[in] data_record Data record
+ * \param[in] template Data record's template
+ * \param[in] enterprise Enterprise number
+ * \param[in] id Field ID
+ * \param[in] from_offset Offset to start at (default: -1)
+ * \param[out] data_length Field length
+ * \return Field offset
+ */
+API int data_record_field_next_offset(uint8_t *data_record, struct ipfix_template *templ,
+        uint32_t enterprise, uint16_t id, int from_offset, int *data_length);
+
+/**
+ * \brief Get offset of field in data record
+ *
+ * \param[in] data_record Data record
+ * \param[in] template Data record's template
+ * \param[in] enterprise Enterprise number
+ * \param[in] id Field ID
+ * \param[out] data_length Field length
+ * \return Field offset
+ */
+API int data_record_field_offset(uint8_t *data_record, struct ipfix_template *templ, uint32_t enterprise, uint16_t id, int *data_length);
 
 /**
  * \brief Compute data record's length
@@ -267,8 +299,6 @@ API void message_free_metadata(struct ipfix_message *msg);
  */
 API struct metadata *message_copy_metadata(struct ipfix_message *src);
 
-
 #endif /* IPFIX_MESSAGE_H_ */
 
 /**@}*/
-

@@ -844,7 +844,7 @@ int template_contains_field(struct ipfix_template *templ, uint16_t field)
 	}
 
 	if (hit) {
-		return (!variable_length) ? total_length : 0;
+		return (variable_length) ? 0 : total_length;
 	}
 
 	/* Field could not be found in specific template */
@@ -1001,6 +1001,7 @@ int tm_compare_template_records(struct ipfix_template_record *first, struct ipfi
 	if (first->count != second->count) {
 		return 0;
 	}
+
 	uint16_t *field1 = (uint16_t *) first->fields;
 	uint16_t *field2 = (uint16_t *) second->fields;
 
