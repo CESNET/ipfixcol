@@ -66,7 +66,7 @@ IPFIXCOL_API_VERSION;
 #include "fastbit_element.h"
 #include "FlowWatch.h"
 
-void *reorder_index(void * config)
+void *reorder_index(void *config)
 {
 	struct fastbit_config *conf = static_cast<struct fastbit_config*>(config);
 	ibis::table *index_table;
@@ -217,7 +217,7 @@ int process_startup_xml(char *params, struct fastbit_config* c)
 {
 	struct tm *timeinfo;
 	char formated_time[17];
-	std::string path, time_window, record_limit, name_type, name_prefix, indexes, test, time_alignment;
+	std::string path, time_window, record_limit, name_type, name_prefix, indexes, create_sp_files, test, time_alignment;
 	pugi::xml_document doc;
 	doc.load(params);
 
@@ -241,6 +241,12 @@ int process_startup_xml(char *params, struct fastbit_config* c)
 		indexes = ie.node().child_value("onTheFlyIndexes");
 		if (indexes == "yes") {
 			c->indexes = 1;
+		}
+
+		c->create_sp_files = 0;
+		create_sp_files = ie.node().child_value("createSpFiles");
+		if (create_sp_files == "yes") {
+			c->create_sp_files = 1;
 		}
 
 		c->reorder = 0;

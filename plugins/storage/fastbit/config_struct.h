@@ -102,8 +102,12 @@ struct fastbit_config{
 	int reorder;
 
 	/* specifies if indexes should be build during storage.
-	 * 0 = no indexes, 1 = index all, 2 = index only marked elements*/
+	 * 0 = no indexes, 1 = index all, 2 = index only marked elements */
 	int indexes;
+
+	/* specifices whether .sp files should be created.
+	 * 0 = don't create .sp files, 1 = create .sp files */
+	int create_sp_files;
 
 	/* size of buffer (number of values)*/
 	int buff_size;
