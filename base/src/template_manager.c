@@ -933,6 +933,76 @@ int template_get_field_offset(struct ipfix_template *templ, uint16_t eid, uint16
 }
 
 /**
+ * \brief Get length of a field as specified by the corresponding template.
+ *
+ * \param[in] templ Template
+ * \param[in] eid Enterprise ID (zero in case the field is not enterprise-specific)
+ * \param[in] fid Field ID
+ * \return For variable-length fields, 65535 is returned, while the 'real' length
+ * is returned for other fields. A negative value is returned if the specified field
+ * could not be found.
+ */
+int template_get_field_length(struct ipfix_template *templ, uint16_t eid, uint16_t fid)
+{
+	uint16_t fields = 0;
+	uint8_t *p;
+
+	if (!templ) {
+		return -1;
+	}
+
+	/* Set most specific bit to 1, to indicate enterprise field */
+	if (eid > 0) {
+		fid = fid | 0x8000;
+	}
+
+	if (templ->template_type == TM_OPTIONS_TEMPLATE) {
+		p = (uint8_t *) ((struct ipfix_options_template_record *) templ)->fields;
+	} else {
+		p = (uint8_t *) templ->fields;
+	}
+
+	uint32_t enterprise_id;
+	uint16_t ie_id;
+	uint16_t field_length;
+
+	while (fields < templ->field_count) {
+		ie_id = *((uint16_t *) p);
+		field_length = *((uint16_t *) (p + 2));
+
+		if (ie_id == fid) {
+			/* In case we are not dealing with an enterprise-specific field, we
+			 * can stop and return, since we found the field. Otherwise, we have
+			 * to check whether the enterprise IDs match.
+			 */
+			if (eid == 0) {
+				return field_length;
+			}
+		}
+
+		/* Move to next field (may be enterprise ID) */
+		p += 4;
+
+		/* Check whether field is enterprise-specific */
+		if (eid > 0 && ie_id == fid) {
+			enterprise_id = *((uint32_t *) p);
+
+			if (enterprise_id == eid) {
+				return field_length;
+			}
+
+			/* Move to next field */
+			p += 4;
+		}
+
+		fields += 1;
+	}
+
+	/* Field could not be found in specific template */
+	return -1;
+}
+
+/**
  * \brief Make ipfix_template_key from ODID, crc and template id
  * 
  * @param odid Observation Domain ID

@@ -280,6 +280,18 @@ API int template_contains_field(struct ipfix_template *templ, uint16_t field);
 API int template_get_field_offset(struct ipfix_template *templ, uint16_t eid, uint16_t fid);
 
 /**
+ * \brief Get length of a field as specified by the corresponding template.
+ *
+ * \param[in] templ Template
+ * \param[in] eid Enterprise ID (zero in case the field is not enterprise-specific)
+ * \param[in] fid Field ID
+ * \return For variable-length fields, 65535 is returned, while the 'real' length
+ * is returned for other fields. A negative value is returned if the specified field
+ * could not be found.
+ */
+API int template_get_field_length(struct ipfix_template *templ, uint16_t eid, uint16_t fid);
+
+/**
  * \brief Increment number of references to template
  *
  * \param[in] templ template
