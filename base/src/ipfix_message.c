@@ -431,31 +431,31 @@ struct ipfix_template_row *fields_get_field(uint8_t *fields, int cnt, uint32_t e
  * \return Number of field occurrences
  */
 int template_record_count_field_occurences(struct ipfix_template_record *rec,
-        uint32_t enterprise, uint16_t id)
+		uint32_t enterprise, uint16_t id)
 {
-    int field_count = 0;
-    uint16_t total_field_count = ntohs(rec->count);
-    struct ipfix_template_row *row = (struct ipfix_template_row *) rec->fields;
+	int field_count = 0;
+	uint16_t total_field_count = ntohs(rec->count);
+	struct ipfix_template_row *row = (struct ipfix_template_row *) rec->fields;
 
-    int i;
-    for (i = 0; i < total_field_count; ++i, ++row) {
-        uint16_t rid = ntohs(row->id);
-        uint32_t ren = 0;
+	int i;
+	for (i = 0; i < total_field_count; ++i, ++row) {
+		uint16_t rid = ntohs(row->id);
+		uint32_t ren = 0;
 
-        /* Get field ID and enterprise number */
-        if (rid >> 15) {
-            rid = rid & 0x7FFF;
-            ++row;
-            ren = ntohl(*((uint32_t *) row));
-        }
+		/* Get field ID and enterprise number */
+		if (rid >> 15) {
+			rid = rid & 0x7FFF;
+			++row;
+			ren = ntohl(*((uint32_t *) row));
+		}
 
-        /* Check field contents */
-        if (rid == id && ren == enterprise) {
-            ++field_count;
-        }
-    }
+		/* Check field contents */
+		if (rid == id && ren == enterprise) {
+			++field_count;
+		}
+	}
 
-    return field_count;
+	return field_count;
 }
 
 /**
@@ -488,79 +488,79 @@ struct ipfix_template_row *template_get_field(struct ipfix_template *templ, uint
  * \return Field offset
  */
 int data_record_field_next_offset(uint8_t *data_record, struct ipfix_template *templ,
-        uint32_t enterprise, uint16_t id, int from_offset, int *data_length)
+		uint32_t enterprise, uint16_t id, int from_offset, int *data_length)
 {
-    uint16_t ie_id;
-    uint32_t enterprise_id;
-    int count, offset = 0, index, length, prev_offset;
-    struct ipfix_template_row *row = NULL;
+	uint16_t ie_id;
+	uint32_t enterprise_id;
+	int count, offset = 0, index, length, prev_offset;
+	struct ipfix_template_row *row = NULL;
 
-    if (!(templ->data_length & 0x80000000)) {
-        /* Data record with no variable length field */
-        row = template_get_field(templ, enterprise, id, &offset);
-        if (!row) {
-            return -1;
-        }
+	if (!(templ->data_length & 0x80000000)) {
+		/* Data record with no variable length field */
+		row = template_get_field(templ, enterprise, id, &offset);
+		if (!row) {
+			return -1;
+		}
 
-        if (data_length) {
-            *data_length = row->length;
-        }
+		if (data_length) {
+			*data_length = row->length;
+		}
 
-        return offset;
-    }
+		return offset;
+	}
 
-    /* Data record with variable length field(s) */
-    for (count = index = 0; count < templ->field_count; count++, index++) {
-        ie_id = templ->fields[index].ie.id;
-        length = templ->fields[index].ie.length;
-        enterprise_id = 0;
+	/* Data record with variable length field(s) */
+	for (count = index = 0; count < templ->field_count; count++, index++) {
+		ie_id = templ->fields[index].ie.id;
+		length = templ->fields[index].ie.length;
+		enterprise_id = 0;
 
-        if (ie_id >> 15) {
-            /* Enterprise Number */
-            ie_id &= 0x7FFF;
-            enterprise_id = templ->fields[++index].enterprise_number;
-        }
+		if (ie_id >> 15) {
+			/* Enterprise Number */
+			ie_id &= 0x7FFF;
+			enterprise_id = templ->fields[++index].enterprise_number;
+		}
 
-        prev_offset = offset;
+		prev_offset = offset;
 
-        switch (length) {
-            case (1):
-            case (2):
-            case (4):
-            case (8):
-                offset += length;
-                break;
-            default:
-                if (length == VAR_IE_LENGTH) {
-                    length = *((uint8_t *) (data_record + offset));
-                    offset += 1;
+		switch (length) {
+			case (1):
+			case (2):
+			case (4):
+			case (8):
+				offset += length;
+				break;
+			default:
+				if (length == VAR_IE_LENGTH) {
+					length = *((uint8_t *) (data_record + offset));
+					offset += 1;
 
-                    if (length == 255) {
-                        length = ntohs(*((uint16_t *) (data_record + offset)));
-                        offset += 2;
-                    }
+					if (length == 255) {
+						length = ntohs(*((uint16_t *) (data_record + offset)));
+						offset += 2;
+					}
 
-                    prev_offset = offset;
-                    offset += length;
-                } else {
-                    offset += length;
-                }
+					prev_offset = offset;
+					offset += length;
+				} else {
+					offset += length;
+				}
 
-                break;
-        }
+				break;
+		}
 
-        /* Field found */
-        if (id == ie_id && enterprise == enterprise_id && prev_offset > from_offset) {
-            if (data_length) {
-                *data_length = length;
-            }
+		/* Field found */
+		if (id == ie_id && enterprise == enterprise_id && prev_offset > from_offset) {
+			if (data_length) {
+				*data_length = length;
+			}
 
-            return prev_offset;
-        }
-    }
+			return prev_offset;
+		}
+	}
 
-    /* Field not found */
-    return -1;
+	/* Field not found */
+	return -1;
 }
 
 /**
@@ -575,7 +575,7 @@ int data_record_field_next_offset(uint8_t *data_record, struct ipfix_template *t
  */
 int data_record_field_offset(uint8_t *data_record, struct ipfix_template *templ, uint32_t enterprise, uint16_t id, int *data_length)
 {
-    return data_record_field_next_offset(data_record, templ, enterprise, id, -1, data_length);
+	return data_record_field_next_offset(data_record, templ, enterprise, id, -1, data_length);
 }
 
 /**
