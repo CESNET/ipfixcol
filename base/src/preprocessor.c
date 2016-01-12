@@ -607,21 +607,29 @@ void preprocessor_parse_msg(void* packet, int len, struct input_info* input_info
 		/* Process templates and correct sequence number */
 		preprocessor_process_templates(msg);
 
-		/* Get sequence number for current ODID
-		 * More inputs can have the same ODID so we need to keep that separately */
+		/* Get sequence number for current ODID. More inputs can have the same ODID, so we
+		 * need to keep that separately.
+		 */
 		seqn = odid_info_get_sequence_number(ntohl(msg->pkt_header->observation_domain_id));
 
-		/* If we have a message with data records (the only one that updates sequence number), check the numbers */
-		if (msg->input_info->sequence_number != ntohl(msg->pkt_header->sequence_number) && msg->data_records_count > 0) {
-			if (!skip_seq_err) {
-				MSG_WARNING(msg_module, "[%u] Sequence number error; expected %u, got %u", input_info->odid, msg->input_info->sequence_number, ntohl(msg->pkt_header->sequence_number));
+		/* If we have a message with data records (the only one that updates sequence number), check
+		 * the sequence numbers.
+		 */
+		uint32_t pkt_header_seq_number = ntohl(msg->pkt_header->sequence_number);
+		if (msg->input_info->sequence_number != pkt_header_seq_number && msg->data_records_count > 0) {
+			/* Only print a warning message if this is not the first message, since the first
+			 * message always triggers an alert (sequence number is then compared to zero).
+			 */
+			if (!skip_seq_err && msg->input_info->packets > 0) {
+				MSG_WARNING(msg_module, "[%u] Sequence number error; expected %u, got %u",
+						input_info->odid, msg->input_info->sequence_number, pkt_header_seq_number);
 			}
 
 			/* Add number of seen data records to ODID sequence number to maintain consistency */
-			*seqn += ntohl(msg->pkt_header->sequence_number) - msg->input_info->sequence_number;
+			*seqn += pkt_header_seq_number - msg->input_info->sequence_number;
 
 			/* Update sequence number of the source to get in sync again */
-			msg->input_info->sequence_number = ntohl(msg->pkt_header->sequence_number);
+			msg->input_info->sequence_number = pkt_header_seq_number;
 		}
 
 		/* The message should have sequence number of the ODID from now on */
@@ -638,7 +646,8 @@ void preprocessor_parse_msg(void* packet, int len, struct input_info* input_info
 
 	/* Send data to the first intermediate plugin */
 	if (rbuffer_write(preprocessor_out_queue, msg, 1) != 0) {
-		MSG_WARNING(msg_module, "[%u] Unable to write into Data Manager input queue; skipping data...", input_info->odid);
+		MSG_WARNING(msg_module, "[%u] Unable to write into Data Manager input queue; skipping data...",
+				input_info->odid);
 		message_free(msg);
 		packet = NULL;
 	}
