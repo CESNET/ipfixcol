@@ -1,7 +1,7 @@
 extern "C" {
 #include <ipfixcol/storage.h>
 #include <ipfixcol/verbose.h>
-#include <ipfixcol/storage.h>
+}
 	
 #include <libxml/parser.h>
 #include <string.h>
@@ -13,7 +13,6 @@ extern "C" {
 #include <errno.h>
 #include <stdio.h>
 #include <ctype.h>
-}
 
 #include <string>
 #include <map>

@@ -39,8 +39,9 @@
 
 extern "C" {
 #include <ipfixcol.h>
-#include <endian.h>
 }
+
+#include <endian.h>
 
 #include "fastbit_element.h"
 #include "fastbit_table.h"

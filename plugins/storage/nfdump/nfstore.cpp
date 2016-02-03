@@ -41,6 +41,11 @@
 extern "C" {
 #include <ipfixcol/storage.h>
 #include <ipfixcol/verbose.h>
+
+/* API version constant */
+IPFIXCOL_API_VERSION;
+}
+
 #include <pthread.h>
 #include <semaphore.h>
 #include <netinet/in.h>
@@ -49,10 +54,7 @@ extern "C" {
 #include <time.h>
 #include <sys/stat.h>
 #include <errno.h>
-
-/* API version constant */
-IPFIXCOL_API_VERSION;
-}
+#include <lzo/lzoconf.h>
 
 #include <map>
 #include <iostream>
@@ -63,14 +65,8 @@ IPFIXCOL_API_VERSION;
 #include <iostream>
 
 #include "pugixml.hpp"
-
 #include "config_struct.h"
 #include "nfstore.h"
-
-extern "C" {
-#include <lzo/lzoconf.h>
-}
-
 
 std::string DirHierarchy(struct nfdumpConfig *config, uint32_t oid){
 	struct tm * timeinfo;

@@ -40,16 +40,17 @@
 extern "C" {
 #include <ipfixcol/storage.h>
 #include <ipfixcol/verbose.h>
+
+/* API version constant */
+IPFIXCOL_API_VERSION;
+}
+
 #include <pthread.h>
 #include <semaphore.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-
-/* API version constant */
-IPFIXCOL_API_VERSION;
-}
 
 #include <map>
 #include <iostream>

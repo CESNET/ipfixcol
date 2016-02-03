@@ -38,16 +38,16 @@
  *
  */
 
-#include <libxml2/libxml/xpath.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
 extern "C" {
 #include "parser.h"
 #include "scanner.h"
 #include <ipfixcol/profiles.h>
 }
+
+#include <libxml2/libxml/xpath.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "Profile.h"
 #include "Channel.h"

@@ -53,10 +53,8 @@ extern "C" {
 #include "nfstore.h"
 #include "nffile.h"
 
-extern "C" {
 #include <lzo/lzoconf.h>
 #include <lzo/lzo1x.h>
-}
 
 static lzo_align_t __LZO_MMODEL wrkmem[LZO1X_1_MEM_COMPRESS];
 

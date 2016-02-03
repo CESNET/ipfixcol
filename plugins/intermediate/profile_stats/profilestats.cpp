@@ -38,17 +38,18 @@
  */
 
 extern "C" {
-#include <libxml2/libxml/xpath.h>
-#include <libxml2/libxml/parser.h>
-#include <libxml2/libxml/tree.h>
 #include <ipfixcol.h>
 #include <ipfixcol/profiles.h>
-#include <rrd.h>
-#include <sys/stat.h>
 
 /* API version constant */
 IPFIXCOL_API_VERSION;
 }
+
+#include <rrd.h>
+#include <sys/stat.h>
+#include <libxml2/libxml/xpath.h>
+#include <libxml2/libxml/parser.h>
+#include <libxml2/libxml/tree.h>
 
 #include "stats.h"
 
