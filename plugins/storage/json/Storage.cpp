@@ -44,14 +44,14 @@
 extern "C" {
 #include <ipfixcol.h>
 #include <ipfixcol/profiles.h>
-#include <string.h>
 //#include <ipfix_element.h>
 }
+
+#include <string.h>
 
 #include "Storage.h"
 #include <stdexcept>
 #include <sstream>
-
 #include <iostream>
 #include <iomanip>
 #include <map>

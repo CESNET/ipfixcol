@@ -2,6 +2,10 @@ extern "C" {
 #include <ipfixcol/storage.h>
 #include <ipfixcol/verbose.h>
 
+/* API version constant */
+IPFIXCOL_API_VERSION;
+}
+
 #include <libxml/parser.h>
 #include <string.h>
 #include <time.h>
@@ -10,10 +14,6 @@ extern "C" {
 #include <pthread.h>
 #include <limits.h>
 #include <errno.h>
-
-/* API version constant */
-IPFIXCOL_API_VERSION;
-}
 
 #include "ipfixcol_fastbit.h"
 #include "configuration.h"
