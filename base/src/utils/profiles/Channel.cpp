@@ -81,6 +81,7 @@ Channel::~Channel()
 {
 	/* Delete filter */
 	if (m_filter) {
+        //TODO uvolennie filtra ffdelete/destroy
 		filter_free_profile(m_filter);
 	}
 }
@@ -220,6 +221,7 @@ void Channel::updatePathName()
  */
 void Channel::match(ipfix_message* msg, metadata* mdata, std::vector<Channel *>& channels)
 {
+//TODO: v ramci match filter_fits_node sa nahradi za ffeval+-
 	if (m_filter && !filter_fits_node(m_filter->root, msg, &(mdata->record))) {
 		return;
 	}
@@ -235,6 +237,7 @@ void Channel::match(ipfix_message* msg, metadata* mdata, std::vector<Channel *>&
 
 void Channel::match(struct match_data *data)
 {
+//TODO: nahrada
 	if (m_filter && !filter_fits_node(m_filter->root, data->msg, &(data->mdata->record))) {
 		return;
 	}

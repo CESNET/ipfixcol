@@ -77,6 +77,7 @@ extern "C" int yyparse (struct filter_parser_data *data);
  * \return 0 on success
  */
 int parse_filter(filter_parser_data* pdata)
+//TODO : nahradi sa za novy fc
 {
 	int ret = 0;
 	
@@ -105,6 +106,7 @@ int parse_filter(filter_parser_data* pdata)
  * \return Number of matches
  */
 int xml_find_uniq_element(xmlNodePtr root, const char *name, xmlNodePtr *result)
+//TODO : Nahradi sa za API get_element_by_id -- xml_find_uniq_element sa maže
 {
 	xmlNodePtr uniq_node = NULL;
 	int count = 0;
@@ -164,7 +166,7 @@ static filter_profile *channel_parse_filter(xmlNodePtr root,
 		throw_empty;
 	}
 
-	// Create new filter
+        // Create new filter, nahradi sa za api
 	filter = (filter_profile *) calloc(1, sizeof(filter_profile));
 	if (!filter) {
 		MSG_ERROR(msg_module, "Unable to allocate memory");
@@ -182,7 +184,7 @@ static filter_profile *channel_parse_filter(xmlNodePtr root,
 		xmlFree(pdata->filter);
 		throw_empty;
 	}
-
+        // koniec nahrady za api
 	xmlFree(aux_char);
 	return pdata->profile;
 }
