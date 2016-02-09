@@ -54,8 +54,8 @@
 #include <netinet/sctp.h>
 #endif
 
-
 #define OPTSTRING "hi:d:p:t:n:s:S:"
+#define DEFAULT_IP "127.0.0.1"
 #define DEFAULT_PORT "4739"
 #define DEFAULT_TYPE "UDP"
 #define INFINITY_LOOPS (-1)
@@ -79,7 +79,7 @@ void usage()
 	printf("Usage: ipfixsend [options]\n");
 	printf("  -h         Show this help\n");
 	printf("  -i path    IPFIX input file\n");
-	printf("  -d ip      Destination IP address\n");
+	printf("  -d ip      Destination IP address (default: %s)\n", DEFAULT_IP);
 	printf("  -p port    Destination port number (default: %s)\n", DEFAULT_PORT);
 	printf("  -t type    Connection type (UDP, TCP or SCTP) (default: UDP)\n");
 	printf("  -n num     How many times the file should be sent (default: infinity)\n");
@@ -99,18 +99,24 @@ void handler(int signal)
 /**
  * \brief Main function
  */
-int main(int argc, char** argv) 
+int main(int argc, char** argv)
 {
-	char *ip = NULL, *input = NULL, *speed = NULL, *type = DEFAULT_TYPE, *port = NULL;
-	int c, loops = INFINITY_LOOPS;
+	char *ip =   DEFAULT_IP;
+	char *port = DEFAULT_PORT;
+	char *type = DEFAULT_TYPE;
+
+	char *input = NULL;
+	char *speed = NULL;
+	int loops =   INFINITY_LOOPS;
 	int packets_s = 0;
-	
+
 	if (argc == 1) {
 		usage();
 		return 0;
 	}
-	
+
 	/* Parse parameters */
+	int c;
 	while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
 		switch (c) {
 		case 'h':
@@ -138,56 +144,55 @@ int main(int argc, char** argv)
 			packets_s = atoi(optarg);
 			break;
 		default:
-			fprintf(stderr, "Unknown option\n");
+			fprintf(stderr, "Unknown option.\n");
 			return 1;
 		}
 	}
-	
+
 	/* Check whether everything is set */
 	CHECK_SET(input, "Input file");
-	CHECK_SET(ip,    "IP address");
-
 	signal(SIGINT, handler);
-	
+
 	/* Get collector's address */
 	sisoconf *sender = siso_create();
 	if (!sender) {
 		fprintf(stderr, "Memory allocation error\n");
 		return 1;
 	}
-	
+
 	/* Load packets from file */
 	char **packets = read_packets(input);
 	if (!packets) {
-		return 1;
-	}
-	
-	/* Create connection */
-	int ret = siso_create_connection(sender, ip, port, type);
-	if (ret != SISO_OK) {
-		fprintf(stderr, "%s\n", siso_get_last_err(sender));
 		siso_destroy(sender);
 		return 1;
 	}
-	
+
+	/* Create connection */
+	int ret = siso_create_connection(sender, ip, port, type);
+	if (ret != SISO_OK) {
+		fprintf(stderr, "Network error: %s\n", siso_get_last_err(sender));
+		siso_destroy(sender);
+		free_packets(packets);
+		return 1;
+	}
+
 	/* Set max. speed */
 	if (speed) {
 		siso_set_speed_str(sender, speed);
 	}
-	
+
 	/* Send packets */
 	int i;
 	for (i = 0; stop == 0 && (loops == INFINITY_LOOPS || i < loops); ++i) {
 		ret = send_packets(sender, packets, packets_s);
 		if (ret != SISO_OK) {
-			fprintf(stderr, "%s\n", siso_get_last_err(sender));
+			fprintf(stderr, "Network error: %s\n", siso_get_last_err(sender));
 			break;
 		}
 	}
-		
-	/* Free resources*/
+
+	/* Free resources */
 	free_packets(packets);
-	
 	siso_destroy(sender);
 	return 0;
 }

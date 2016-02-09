@@ -73,7 +73,7 @@ void sender_stop()
 /**
  * \brief Send packet
  */
-inline int send_packet(sisoconf *sender, char *packet)
+int send_packet(sisoconf *sender, char *packet)
 {
 	return siso_send(sender, packet, (int) ntohs(((struct ipfix_header *) packet)->length));
 }

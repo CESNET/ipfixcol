@@ -94,7 +94,7 @@ char *read_packet(int fd, int *status)
 {
     int pkt_len;
     
-    /* Allocate space for header*/
+    /* Allocate space for header */
     char *pkt = calloc(1, IPFIX_HEADER_LENGTH);
     if (!pkt) {
         ERR_MEM;
@@ -105,8 +105,9 @@ char *read_packet(int fd, int *status)
     /* Read header */
     pkt_len = read_header(pkt, fd);
 	if (pkt_len == 0) {
+		free(pkt);
 		*status = READ_EOF;
-		return pkt;
+		return NULL;
 	} else if (pkt_len < 0) {
         free(pkt);
 		*status = READ_ERROR;
