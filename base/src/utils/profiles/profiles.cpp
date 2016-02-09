@@ -2,6 +2,7 @@
  * \file profiles.cpp
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
+ * \author Imrich Štoffa <xstoff02@stud.fit.vutbr.cz>
  * \brief Code for loading profile tree from XML file
  *
  * Copyright (C) 2015 CESNET, z.s.p.o.
@@ -68,31 +69,28 @@ extern "C" {
 
 static const char *msg_module = "profile_tree";
 
-extern "C" int yyparse (struct filter_parser_data *data);
-
 /**
  * \brief Parse filter string
  * 
  * \param[in] pdata parser data
  * \return 0 on success
  */
-int parse_filter(filter_parser_data* pdata)
+int parse_filter(filter_profile* pdata, char* filter_str)
 {
-	int ret = 0;
-	
-	/* Prepare scanner */
-	yylex_init(&(pdata->scanner));
-	YY_BUFFER_STATE bp = yy_scan_string(pdata->filter, pdata->scanner);
-	yy_switch_to_buffer(bp, pdata->scanner);
+        //vytvorenie options - lookup fc data-callback fc
+        //TODO: solve buffer initialization
+        ff_options_t* opts = NULL;
+        int ret = 0;
 
-	/* Parse filter */
-	ret = yyparse(pdata);
-	
-	/* Clear scanner */
-	yy_flush_buffer(bp, pdata->scanner);
-	yy_delete_buffer(bp, pdata->scanner);
-	yylex_destroy(pdata->scanner);
-	
+        if (ff_options_init(&opts) == FF_ERR_NOMEM) {
+            return 1;
+        }
+
+        if (ff_init(&pdata->filter, filter_str, opts) != FF_OK) {
+            ret = 1;
+        }
+
+        ff_options_free(opts);
 	return ret;
 }
 
@@ -128,10 +126,9 @@ int xml_find_uniq_element(xmlNodePtr root, const char *name, xmlNodePtr *result)
  * \param[in,out] pdata Filter parse aux. structure
  * \return Pointer to new filter or NULL
  */
-static filter_profile *channel_parse_filter(xmlNodePtr root,
-	struct filter_parser_data *pdata)
+static filter_profile *channel_parse_filter(xmlNodePtr root)
 {
-	filter_profile *filter = NULL;
+        filter_profile *pdata = NULL;
 	xmlNodePtr filter_node = NULL;
 
 	// Get 'filter' node
@@ -164,27 +161,22 @@ static filter_profile *channel_parse_filter(xmlNodePtr root,
 		throw_empty;
 	}
 
-	// Create new filter
-	filter = (filter_profile *) calloc(1, sizeof(filter_profile));
-	if (!filter) {
+        pdata = (filter_profile *) calloc(1, sizeof(filter_profile));
+        if (!pdata) {
 		MSG_ERROR(msg_module, "Unable to allocate memory");
 		xmlFree(aux_char);
 		throw_empty;
 	}
 
-	pdata->profile = filter;
-	pdata->filter = (char *) aux_char;
-
-	if (parse_filter(pdata) != 0 || pdata->profile == NULL) {
+        if (parse_filter(pdata, (char *)aux_char) != 0) {
 		MSG_ERROR(msg_module, "Error while parsing filter on line %ld",
-			xmlGetLineNo(filter_node));
-		filter_free_profile(filter);
-		xmlFree(pdata->filter);
+                        xmlGetLineNo(filter_node));
+                filter_free_profile(pdata);
+                xmlFree(aux_char);
 		throw_empty;
 	}
-
-	xmlFree(aux_char);
-	return pdata->profile;
+        xmlFree(aux_char);
+        return filter;
 }
 
 /**
@@ -250,8 +242,7 @@ static std::string channel_parse_source_list(xmlNodePtr root)
  * \param[in] pdata Filter parser data
  * \return new Channel object
  */
-Channel *process_channel(Profile *profile, xmlNode *root,
-	struct filter_parser_data *pdata)
+Channel *process_channel(Profile *profile, xmlNode *root)
 {
 	/* Get channel ID */
 	xmlChar *aux_char;
@@ -273,7 +264,7 @@ Channel *process_channel(Profile *profile, xmlNode *root,
 	
 	try {
 		/* Find and parse filter */
-		filter_profile *filter = channel_parse_filter(root, pdata);
+                filter_profile *filter = channel_parse_filter(root);
 		channel->setFilter(filter);
 
 		/* Find and process the list of source channels */
@@ -380,8 +371,7 @@ static std::string profile_parse_directory(xmlNodePtr root)
  * \param[in,out] pdata Filter parser data
  * \return Number of added channels
  */
-static int profile_parse_channels(Profile *profile, xmlNodePtr root,
-	struct filter_parser_data *pdata)
+static int profile_parse_channels(Profile *profile, xmlNodePtr root)
 {
 	/* Find the list of channels */
 	int cnt;
@@ -408,7 +398,7 @@ static int profile_parse_channels(Profile *profile, xmlNodePtr root,
 			throw_empty;
 		}
 
-		Channel *channel = process_channel(profile, node, pdata);
+                Channel *channel = process_channel(profile, node);
 		profile->addChannel(channel);
 		count++;
 	}
@@ -424,8 +414,7 @@ static int profile_parse_channels(Profile *profile, xmlNodePtr root,
 }
 
 // Function prototype, defined later.
-Profile *process_profile(Profile *parent, xmlNode *root,
-	struct filter_parser_data *pdata);
+Profile *process_profile(Profile *parent, xmlNode *root);
 
 /**
  * \brief Find and parse a list of subprofiles of a profile
@@ -434,8 +423,7 @@ Profile *process_profile(Profile *parent, xmlNode *root,
  * \param[in,out] pdata Filter parser data
  * \return Number of added subprofiles
  */
-static int profile_parse_subprofiles(Profile *profile, xmlNodePtr root,
-	struct filter_parser_data *pdata)
+static int profile_parse_subprofiles(Profile *profile, xmlNodePtr root)
 {
 	/* Find the list of subprofiles */
 	int cnt;
@@ -467,7 +455,7 @@ static int profile_parse_subprofiles(Profile *profile, xmlNodePtr root,
 			throw_empty;
 		}
 
-		Profile *child = process_profile(profile, node, pdata);
+                Profile *child = process_profile(profile, node);
 		profile->addProfile(child);
 	}
 
@@ -482,8 +470,7 @@ static int profile_parse_subprofiles(Profile *profile, xmlNodePtr root,
  * \param[in] pdata Filter parser data
  * \return new Profile object
  */
-Profile *process_profile(Profile *parent, xmlNode *root,
-	struct filter_parser_data *pdata)
+Profile *process_profile(Profile *parent, xmlNode *root)
 {
 	/* Get type of the profile */
 	enum PROFILE_TYPE type = profile_parse_type(root);
@@ -506,8 +493,8 @@ Profile *process_profile(Profile *parent, xmlNode *root,
 	try {
 		profile->setParent(parent);
 		profile->setDirectory(profile_parse_directory(root));
-		profile_parse_channels(profile, root, pdata);
-		profile_parse_subprofiles(profile, root, pdata);
+                profile_parse_channels(profile, root);
+                profile_parse_subprofiles(profile, root);
  	} catch (std::exception &e) {
 		// Delete new profile and rethrow current exception
 		delete profile;
@@ -517,20 +504,6 @@ Profile *process_profile(Profile *parent, xmlNode *root,
 	return profile;
 }
 
-/**
- * \brief Free parser data (context and document)
- * 
- * \param[in] pdata parser data
- */
-void free_parser_data(struct filter_parser_data *pdata)
-{
-	if (pdata->context) {
-		xmlXPathFreeContext(pdata->context);
-	}
-	if (pdata->doc) {
-		xmlFreeDoc(pdata->doc);
-	}
-}
 
 /**
  * \brief Process profile tree xml configuration
@@ -540,8 +513,6 @@ void free_parser_data(struct filter_parser_data *pdata)
  */
 Profile *process_profile_xml(const char *filename)
 {	
-	struct filter_parser_data pdata;
-
 	/* Open file */
 	int fd = open(filename, O_RDONLY);
 	if (fd == -1) {
@@ -566,9 +537,6 @@ Profile *process_profile_xml(const char *filename)
 		return NULL;
 	}
 	
-	/* Initialize IPFIX elements */
-	filter_init_elements(&pdata);
-	
 	Profile *rootProfile{NULL};
 
 	try {
@@ -582,19 +550,17 @@ Profile *process_profile_xml(const char *filename)
 			}
 
 			if (!xmlStrcmp(node->name, (const xmlChar *) "profile")) {
-				rootProfile = process_profile(NULL, node, &pdata);
+                                rootProfile = process_profile(NULL, node);
 			}
 		}
 	} catch (std::exception &e) {
 		xmlFreeDoc(doc);
 		close(fd);
-		free_parser_data(&pdata);
 		return NULL;
 	}
 
 	close(fd);
 	xmlFreeDoc(doc);
-	free_parser_data(&pdata);
 
 	if (!rootProfile) {
 		MSG_ERROR(msg_module, "No profile found in profile tree configuration");
@@ -707,7 +673,7 @@ void **profile_match_data(void *profile, struct ipfix_message *msg, struct metad
 	data.channelsMax = 0;
 
 	/* Find matching channels */
-	p->match(&data);
+        p->match(&data);
 	if (data.channels == NULL || data.channelsCounter == 0) {
 		return NULL;
 	}

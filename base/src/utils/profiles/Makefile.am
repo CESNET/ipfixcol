@@ -7,17 +7,19 @@ libprofiles_a_SOURCES = \
 	Channel.cpp Channel.h \
 	profiles.cpp profiles_internal.h \
 	Profile.cpp Profile.h \
-	filter.c filter.h \
-	parser.c parser.h \
-	scanner.c scanner.h
+        filter_wrapper.c filter_wrapper.h \
+        ffilter.c ffilter.h \
+        ffilter_gram.c ffilter_gram.h \
+        ffilter_lex.h ffilter_lex.c
 
-CLEANFILES = parser.h parser.c scanner.h scanner.c
-BUILT_SOURCES = parser.h parser.c scanner.h scanner.c
+CLEANFILES = ffilter_gram.c ffilter_gram.h ffilter_lex.h ffilter_lex.c
+BUILT_SOURCES = ffilter_gram.c ffilter_gram.h ffilter_lex.h ffilter_lex.c
 
-parser.h parser.c: parser.y
-	$(BISON) --defines=parser.h -o parser.c $<
 
-scanner.h scanner.c: scanner.l
-	$(FLEX) -o scanner.c --header-file=scanner.h $<
+ffilter_gram.h ffilter_gram.c: ffilter_gram.y
+        $(BISON) --defines=ffilter_gram.h -o ffilter_gram.c $<
 
-EXTRA_DIST = parser.y scanner.l
+ffilter_lex.h ffilter_lex.c: ffilter_lex.l
+        $(FLEX) -o ffilter_lex.c --header-file=ffilter_lex.h $<
+
+EXTRA_DIST = ffilter_gram.y ffilter_lex.l

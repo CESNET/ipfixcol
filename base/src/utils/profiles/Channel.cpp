@@ -81,7 +81,7 @@ Channel::~Channel()
 {
 	/* Delete filter */
 	if (m_filter) {
-		filter_free_profile(m_filter);
+            filter_free_profile(m_filter);
 	}
 }
 
@@ -200,7 +200,7 @@ void Channel::setProfile(Profile* profile)
  */
 void Channel::setFilter(filter_profile* filter)
 {
-	m_filter = filter;
+        m_filter = filter;
 }
 
 /**
@@ -220,8 +220,8 @@ void Channel::updatePathName()
  */
 void Channel::match(ipfix_message* msg, metadata* mdata, std::vector<Channel *>& channels)
 {
-	if (m_filter && !filter_fits_node(m_filter->root, msg, &(mdata->record))) {
-		return;
+        if (m_filter && 0 >= filter_eval_node(m_filter, msg, &(mdata->record))) {
+                return;
 	}
 	
 	/* Mark channel into metadata */
@@ -235,7 +235,7 @@ void Channel::match(ipfix_message* msg, metadata* mdata, std::vector<Channel *>&
 
 void Channel::match(struct match_data *data)
 {
-	if (m_filter && !filter_fits_node(m_filter->root, data->msg, &(data->mdata->record))) {
+        if (m_filter && 0 >= filter_eval_node(m_filter, data->msg, &(data->mdata->record))) {
 		return;
 	}
 
