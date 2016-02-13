@@ -176,7 +176,7 @@ static filter_profile *channel_parse_filter(xmlNodePtr root)
 		throw_empty;
 	}
         xmlFree(aux_char);
-        return filter;
+        return pdata;
 }
 
 /**
@@ -673,7 +673,7 @@ void **profile_match_data(void *profile, struct ipfix_message *msg, struct metad
 	data.channelsMax = 0;
 
 	/* Find matching channels */
-        p->match(&data);
+	p->match(&data);
 	if (data.channels == NULL || data.channelsCounter == 0) {
 		return NULL;
 	}

@@ -553,7 +553,7 @@ ff_error_t ff_init(ff_t **pfilter, const char *expr, ff_options_t *options) {
 int ff_eval(ff_t *filter, void *rec) {
 
 	/* call eval node on root node */
-	return ff_eval_node(filter, filter->root, rec);
+        return ff_eval_node(filter, filter->root, rec);
 
 }
 
