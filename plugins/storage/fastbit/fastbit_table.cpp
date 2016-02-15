@@ -45,7 +45,7 @@ extern "C" {
 
 #include "fastbit_table.h"
 
-#define ROW_LINE "Number_of_rows ="
+#define ROW_LINE "Number_of_rows="
 
 uint64_t get_rows_from_part(const char *part_path)
 {
