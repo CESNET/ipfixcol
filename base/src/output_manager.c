@@ -49,6 +49,7 @@
 #include <inttypes.h>
 #include <glob.h>
 #include <libgen.h>
+#include <time.h>
 
 #include "configurator.h"
 #include "data_manager.h"
@@ -727,15 +728,18 @@ static void *statistics_thread(void* config)
 		node = node->next;
 	}
 	
-	/* Catch SIGUSR1 */
-	signal(SIGUSR1, sig_handler);
-	
 	/* Set thread name */
 	prctl(PR_SET_NAME, "ipfixcol:stats", 0, 0, 0);
 	
 	FILE *stat_out_file = NULL;
 	while (conf->stat_interval && !conf->stats.done) { /* stats.done can be set by Output Manager */
-		sleep(conf->stat_interval);
+		/* Sleep */
+		struct timespec tv;
+		tv.tv_sec = conf->stat_interval;
+		tv.tv_nsec = 0;
+
+		/* Reconfiguration (SIGUSR1) cause sleep interruption */
+		while (nanosleep(&tv, &tv) == -1 && errno == EINTR && !conf->stats.done);
 		
 		/* Compute time */
 		time_now = time(NULL);
