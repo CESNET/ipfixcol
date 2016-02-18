@@ -19,7 +19,6 @@
 
 */
 
-%option outfile="lex.yy.c"
 %option prefix="ff2_"
 %option reentrant bison-bridge
 %option noyywrap 

@@ -1,7 +1,7 @@
 /**
- * \file profiles/filter.c
- * \author Michal Kozubik <kozubik@cesnet.cz>
- * \brief Intermediate plugin for IPFIX data filtering
+ * \file profiles/filter_wrapper.c
+ * \author Imrich Štoffa <xstoff02@stud.fit.vutbr.cz>
+ * \brief Wrapper of future intermediate plugin for IPFIX data filtering
  *
  * Copyright (C) 2015 CESNET, z.s.p.o.
  *
@@ -39,113 +39,263 @@
 
 #define _XOPEN_SOURCE
 
-#include <arpa/inet.h>
-#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 
 #include <ipfixcol.h>
+#include <stdint.h>
 
 #include "filter_wrapper.h"
+#include "ffilter.h"
+
+#define toGenEnId(gen, en, id) (((uint64_t)gen & 0xffff) << 48 | ((uint64_t)en & 0xffffffff) << 16 | (uint64_t)id)
+#define toEnId(en, id) (((uint64_t)en & 0xffffffff) << 16 | (uint64_t)id)
 
 static const char *msg_module = "profiler";
 
-/* Check if IPv4 is mapped inside IPv6 */
-// If it is possible, replace with standard IN6_IS_ADDR_V4MAPPED()
-# define IS_V4_IN_V6(a) \
-	((((const uint32_t *) (a))[0] == 0)      \
-	&& (((const uint32_t *) (a))[1] == 0)    \
-	&& (((const uint32_t *) (a))[2] == htonl (0xffff)))
+enum generic_ip_id{
+	gen_nogeneric = 0,
+	gen_ip = 1,
+	gen_head_if,
+	gen_aggregated
+/*	gen_srcip,
+	gen_dstip,
+	gen_nexthopip,
+	gen_bgpnexthop,
+	gen_iprouter,
+	gen_xlateip,
+	gen_xlatesrcip,
+	gen_xlatedstip,
+*/
+};
 
-#define toEnId (en, id) (uint64_t(en) << 16 | id )
+void loadEnId(uint64_t from, uint16_t *gen, uint32_t* en, uint16_t* id)
+{
+	*gen = (uint16_t)(from >> 48);
+	*en = (uint32_t)(from >> 16);
+	*id = (uint16_t)(from);
 
-void loadEnId(uint64_t from, uint32_t* en, uint16_t* id){
-        *en = from >> 16;
-        *id = from & 0xffff;
         return;
 }
 
-typedef struct nff_item_s {
-        const char* name;
-        uint64_t en_id;
-        struct pair_item*; //Provides link to additional info for paired elements
-}nff_item_t;
+//Pair field MUST be followed by adjacent fields, map is NULL terminated
+struct nff_item_s nff_ipff_map[]={
 
-typedef struct nff_pair_s {
-        //const char* name;
-        const char* p1;
-        const char* p2;
-        uint64_t p1_en_id;
-        uint64_t p2_en_id;
-}nff_pair_t;
+	//IP records, ip address is general, implicitly set to ipv6
+	{"proto", toEnId(0, 4)},
 
-struct nff_pair_s nff_pair_map[]{
-        { "srcip", "dstip", toEnId(0, 27), toEnId(0, 12)},
-        { "srcport","dstport", toEnId(0, 7), toEnId(0, 11)},
-        //{ , , , },
+	{"ip", FPAIR},
+		{"srcip", toGenEnId(gen_ip, 0, 8)},
+		{"dstip", toGenEnId(gen_ip, 0, 12)},
+	//synonym of IP
+	{"host", FPAIR},
+		{"srcip", toGenEnId(gen_ip, 0, 8)},
+		{"dstip", toGenEnId(gen_ip, 0, 12)},
+/*
+	//direct specific mapping
+	{"ipv4", FPAIR},
+		{"srcipv4", toEnId(0, 8)},
+		{"dstipv4", toEnId(0, 12)},
+	{"ipv6", FPAIR},
+		{"srcipv6", toEnId(0, 27)},
+		{"dstipv6", toEnId(0, 28)},
+*/
+/*
+	{"if", FPAIR},
+		{"inif", toGenEnId(gen_head_if, 0, 1)},
+		{"outif", toGenEnId(gen_head_if, 0, 2)},
+*/
+	{"port", FPAIR},
+		{"srcport", toEnId(0, 7)},
+		{"dstport", toEnId(0, 11)},
+
+	{"icmp-type", toEnId(0, 176)},
+	{"icmp-code", toEnId(0, 177)},
+
+	{"engine-type", toEnId(0, 38)},
+	{"engine-id", toEnId(0, 39)},
+/*	{"sysid", toEnId(0, 177)},
+*/
+	{"icmp-type", toEnId(0, 176)},
+	{"icmp-code", toEnId(0, 177)},
+
+	{"srcas", toEnId(0, 16)},
+	{"dstas", toEnId(0, 17)},
+	{"prevas", toEnId(0, 128)}, //maps  to BGPNEXTADJACENTAS
+	{"nextas", toEnId(0, 129)}, //similar as above
+
+	{"mask", FPAIR},
+		{"srcmask", toGenEnId(gen_ip, 0, 9)},
+		{"dstmask", toGenEnId(gen_ip, 0, 13)},
+
+	{"vlan", FPAIR},
+		{"srcvlan", toEnId(0, 58)},
+		{"dstvlan", toEnId(0, 59)},
+
+	{"flags", toEnId(0, 6)},
+
+	{"nextip", toGenEnId(gen_ip, 0, 15)},
+
+	{"bgpnextip", toEnId(0, 18)},
+
+	{"routerip", toEnId(0, 130)},
+/*
+	{"mac", FPAIR},
+		{"insrcmac", toEnId(0, 56)},
+		{"outdstmac", toEnId(0, 57)},
+
+	{"amac", FPAIR},
+		{"outsrcmac", toEnId(0, 80)},
+		{"indstmac", toEnId(0, 81)},
+
+	{"inmac", FPAIR},
+		{"insrcmac", toEnId(0, 56)},
+		{"indstmac", toEnId(0, 81)},
+
+	{"outmac", FPAIR},
+		{"outsrcmac", toEnId(0, 80)},
+		{"outdstmac", toEnId(0, 57)},
+*/
+	{"mplslabel1", toEnId(0, 70)},
+	{"mplslabel2", toEnId(0, 71)},
+	{"mplslabel3", toEnId(0, 72)},
+	{"mplslabel4", toEnId(0, 73)},
+	{"mplslabel5", toEnId(0, 74)},
+	{"mplslabel6", toEnId(0, 75)},
+	{"mplslabel7", toEnId(0, 76)},
+	{"mplslabel8", toEnId(0, 77)},
+	{"mplslabel9", toEnId(0, 78)},
+	{"mplslabel10", toEnId(0, 79)},
+
+	{"packets", toEnId(0, 2)},
+
+	{"bytes", toEnId(0, 1)},
+
+	{"flows", toEnId(0, 3)},
+
+	{"tos", toEnId(0, 5)},
+	{"dsttos", toEnId(0, 55)},
+
+
+	{"pps", toGenEnId(gen_aggregated, 0, 5)},
+
+	{"duration", toGenEnId(gen_aggregated, 0, 55)},
+
+	{"bps", toGenEnId(gen_aggregated, 0, 6)},
+
+	{"bpp", toGenEnId(gen_aggregated, 0, 6)},
+
+	{"asaevent", toEnId(0, 230)},
+	{"asaxevent", toEnId(0, 233)},
+
+	{"xip", FPAIR},
+		{"xsrcip", toGenEnId(gen_ip, 0, 225)},
+		{"xdstip", toGenEnId(gen_ip, 0, 226)},
+
+	{"xport", FPAIR},
+		{"xsrcport", toEnId(0, 227)},
+		{"xdstport", toEnId(0, 228)},
+
+	{"natevent", toEnId(0, 230)},
+
+/*
+	{"nip", FPAIR},
+		{"nsrcip", toGenEnId(gen_ip, 0, 225)},
+		{"ndstip", toGenEnId(gen_ip, 0, 226)},
+
+	{"nport", FPAIR},
+		{"nsrcport", toEnId(0, 227)},
+		{"ndstport", toEnId(0, 228)},
+*/
+
+	{"vrfid", FPAIR},
+		{"ingressvrfid", toEnId(0, 234)},
+		{"egressvrfid", toEnId(0, 235)},
+
+	{"tstart", toEnId(0, 22)},
+	{"tend", toEnId(0, 21)},
+
+	{ NULL, -1},
 };
 
-struct nff_item_s nff_ipff_map[]{
-        {"bytes", toEnId(0, 1), NULL},
-        {"ip", -1, &nff_pair_map[0]},
-        {"packets", toEnId(0, 2), NULL},
-        {"port", -1, &nff_pair_map[1]},
-        { NULL, -1, NULL },
-        //{ , , },
-};
-
-int nff_item_comp(nff_item_t* key, nff_item_t* elem)
-{
-        return strcmp(key->name, elem->name);
+int specify_ipv(uint16_t *i){
+	switch(*i)
+	{
+	//srcip
+	case 8: *i = 27; break;
+	case 27: *i = 8; break;
+	//dstip
+	case 12: *i = 28; break;
+	case 28: *i = 12; break;
+	//mask
+	case 9: *i = 13; break;
+	case 13: *i = 9; break;
+	//nexthopip
+	case 15: *i = 62; break;
+	case 62: *i = 15; break;
+	//bgpnexthop
+	case 18: *i = 63; break;
+	case 63: *i = 18; break;
+	//iprouter
+	case 130: *i = 131; break;
+	case 131: *i = 130; break;
+	//xlatesrcip
+	case 225: *i = 281; break;
+	case 281: *i = 225; break;
+	//xlatedstip
+	case 226: *i = 282; break;
+	case 282: *i = 226; break;
+	default:
+		return 0;
+	}
+	return 1;
 }
-
 
 /* callback from ffilter to lookup field */
 ff_error_t ipf_ff_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lvalue) {
 
-        /* fieldstr is set - try to find field id and relevant _fget function */
+	/* fieldstr is set - try to find field id and relevant _fget function */
 
-        //zkus se zatím zaměřit na "bytes", "packets", "ip" (src/dst), "port" (src/dst)... pak to kdyžtak rozšíříme.. ok?
-        if ( fieldstr != NULL ) {
+	if (fieldstr != NULL) {
 
                 nff_item_t* item = NULL;
-                ipfix_element_result_t elem;
-                //if((item = bsearch(&filedstr, &nff_pair_map, 4, sizeof(nff_pair_t), nff_item_comp)) == NULL){
-                for(x = 0; nff_ipff_map[x].name != NULL; x++){
+		ipfix_element_t* elem;
+		//if((item = bsearch(&fieldstr, &nff_pair_map, 4, sizeof(nff_pair_t), nff_item_comp)) == NULL){
+		for(int x = 0; nff_ipff_map[x].name != NULL; x++){
                         if(!strcmp(fieldstr, nff_ipff_map[x].name)){
-                            item = &nff_ipff_map[x];
-                            break;
+				item = &nff_ipff_map[x];
+				break;
                         }
                 }
                 if(item == NULL){
                         //potrebujem prekodovat nazov pola na en a id
-                        elem = element_get_by_name(filedstr, false);
-                        if (elem.result == NULL){
+			const ipfix_element_result_t elemr = get_element_by_name(fieldstr, false);
+			if (elemr.result == NULL){
                                 return FF_ERR_UNKN;
                         }
 
-                        lvalue->id.index = toEnId(elem.result->en, elem.result->id);
-                        lvalue->id2.index = NULL;
-
+			lvalue->id.index = toEnId(elemr.result->en, elemr.result->id);
+			lvalue->id2.index = 0;
+			elem = &elemr.result;
                 } else {
-                        lvalue->id2.index = NULL;
+			lvalue->id2.index = 0;
 
-                        if(item->pair_item == NULL){
+			if(item->en_id != FPAIR){
                                 //no pair values
                                 lvalue->id.index = item->en_id;
                         } else {
                                 //mark lvalue so pair items are used
-                                lvalue->id.index = item->pair_item->p1_en_id;
-                                lvalue->id2.index = item->pair_item->p2_en_id;
+				lvalue->id.index = (item+1)->en_id;
+				lvalue->id2.index = (item+2)->en_id;
                         }
-                        elem = element_get_by_id(lvalue->id.index >> 16, lvalue->id.index & 0xffff);
+			elem = get_element_by_id(lvalue->id.index >> 16, lvalue->id.index & 0xffff);
                 }
 
                 //Rozhodni datovy typ pre filter
-                switch(elem->result.type){
+		//TODO: solve conflicting types
+		switch(elem->type){
 
                         case ET_OCTET_ARRAY:
                         case ET_UNSIGNED_8:
@@ -178,12 +328,12 @@ ff_error_t ipf_ff_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *l
                                 break;
 
                         case ET_DATE_TIME_MILLISECONDS:
-                                lvalue->type = FF_TYPE_TIMESTAMP;
+				lvalue->type = FF_TYPE_TIMESTAMP;
                                 break;
                         case ET_DATE_TIME_SECONDS:
                         case ET_DATE_TIME_MICROSECONDS:
                         case ET_DATE_TIME_NANOSECONDS:
-                                return FF_UNSUP_ERR;
+				return FF_ERR_UNSUP;
                                 break;
 
                         case ET_IPV4_ADDRESS:
@@ -210,12 +360,24 @@ ff_error_t ipf_ff_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *da
         //assuming rec is struct ipfix_message
         struct ipfix_record* ipf_rec = rec;
         uint32_t en;
-        uint16_t id;
+	uint16_t ie_id;
+	uint16_t generic_set;
         int len;
-        loadEnId(id.index, &en, &id);
+	loadEnId(id.index, &generic_set, &en, &ie_id);
 
-        data = data_record_get_field(ipf_rec->record, ipf_rec->templ, en, id, &len);
+	if(generic_set == gen_head_if){
+		//dig through header data
+		//proceed directly to return
+	}else if(generic_set == gen_aggregated){
+		//godlike code to handle this mess
+	}
 
+	data = data_record_get_field(ipf_rec->record, ipf_rec->templ, en, ie_id, &len);
+	if (data == NULL && generic_set == gen_ip) {
+		if (specify_ipv(&ie_id)) {
+			data = data_record_get_field(ipf_rec->record, ipf_rec->templ, en, ie_id, &len);
+		}
+	}
         if(data == NULL){
             return FF_ERR_OTHER;
         }
@@ -232,13 +394,12 @@ ff_error_t ipf_ff_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *da
  * \param[in] record IPFIX data record
  * \return 1 if data record's field fits -1 on error
  */
-int filter_eval_node(filter_profile *pdata, struct ipfix_message *msg, struct ipfix_record *record)
+int filter_eval_node(struct filter_profile *pdata, struct ipfix_message *msg, struct ipfix_record *record)
 {
         return ff_eval(pdata->filter, record->record);
 }
 
-//TODO: verify that this is correct
-void filter_free_profile(filter_profile *profile){
+void filter_free_profile(struct filter_profile *profile){
         ff_free(profile->filter);
         free(profile);
 }

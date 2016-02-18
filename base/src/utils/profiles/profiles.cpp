@@ -40,8 +40,6 @@
  */
 
 extern "C" {
-#include "parser.h"
-#include "scanner.h"
 #include <ipfixcol/profiles.h>
 }
 
@@ -49,9 +47,11 @@ extern "C" {
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include "Profile.h"
 #include "Channel.h"
+
 
 #include "profiles_internal.h"
 #include <iostream>
@@ -259,9 +259,7 @@ Channel *process_channel(Profile *profile, xmlNode *root)
 	xmlFree(aux_char);
 	channel->setProfile(profile);
 
-	/* Initialize parser data */
-	pdata->filter = NULL;
-	
+	/*Create filter*/
 	try {
 		/* Find and parse filter */
                 filter_profile *filter = channel_parse_filter(root);

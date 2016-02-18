@@ -1,7 +1,7 @@
 /**
- * \file filter/filter.h
- * \author Michal Kozubik <kozubik@cesnet.cz>
- * \brief Intermediate plugin for IPFIX data filtering
+ * \file profiles/filter_wrapper.c
+ * \author Imrich Štoffa <xstoff02@stud.fit.vutbr.cz>
+ * \brief Wrapper of future intermediate plugin for IPFIX data filtering
  *
  * Copyright (C) 2015 CESNET, z.s.p.o.
  *
@@ -42,7 +42,10 @@
 #define FILTER_H_
 
 #include <ipfixcol.h>
+#include "ffilter.h"
+#include <stdint.h>
 
+#define FPAIR ~0LL
 /**
  * \brief Profile structure
  * 
@@ -53,6 +56,13 @@ struct filter_profile {
     void* buffer;
 };
 
+typedef struct nff_item_s {
+	const char* name;
+	uint64_t en_id;
+}nff_item_t;
+
+
+int specify_ipv(uint16_t *i);
 
 /**
  * \brief Match filter with IPFIX record
@@ -62,7 +72,7 @@ struct filter_profile {
  * \param[in] data IPFIX data record
  * \return 1 when node fits, -1 on error
  */
-int filter_eval_node(filter_profile *pdata, struct ipfix_message *msg, struct ipfix_record *record);
+int filter_eval_node(struct filter_profile *pdata, struct ipfix_message *msg, struct ipfix_record *record);
 
 /**
  * \brief Free profile's data
