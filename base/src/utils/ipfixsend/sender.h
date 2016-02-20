@@ -44,14 +44,24 @@
 #include <siso.h>
 
 /**
- * \brief Send all packets from array
+ * \brief Send all packets from array with speed limitation
  * 
- * @param sender sisoconf object
- * @param packets Packets array
- * @param packets_s packets/s limit
- * @return SISO_OK on success
+ * \param[in] sender sisoconf object
+ * \param[in] packets Packets array
+ * \param[in] packets_s packets/s limit
+ * \return SISO_OK on success
  */
-int send_packets(sisoconf *sender, char **packets, int packets_s);
+int send_packets_limit(sisoconf *sender, char **packets, int packets_s);
+
+/**
+ * \brief Send all packets from array with real-time simulation
+ *
+ * \param[in] sender sisoconf object
+ * \param[in] packets Packets array
+ * \param[in] speed Speed-up compared to real-time (multiples)
+ * \return SISO_OK on success
+ */
+int send_packets_realtime(sisoconf *sender, char **packets, double speed);
 
 /**
  * \brief Stop sending data

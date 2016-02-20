@@ -54,7 +54,7 @@
 #include <netinet/sctp.h>
 #endif
 
-#define OPTSTRING "hi:d:p:t:n:s:S:"
+#define OPTSTRING "hi:d:p:t:n:s:S:R:"
 #define DEFAULT_IP "127.0.0.1"
 #define DEFAULT_PORT "4739"
 #define DEFAULT_TYPE "UDP"
@@ -86,6 +86,8 @@ void usage()
 	printf("  -s speed   Maximum data sending speed/s\n");
 	printf("             Supported suffixes: B (default), K, M, G\n");
 	printf("  -S packets Speed limit in packets/s\n");
+	printf("  -R num     Real-time sending\n");
+	printf("             Allow speed-up sending 'num' times (realtime: 1.0)\n");
 	printf("\n");
 }
 
@@ -109,6 +111,7 @@ int main(int argc, char** argv)
 	char *speed = NULL;
 	int loops =   INFINITY_LOOPS;
 	int packets_s = 0;
+	double realtime_s = 0.0;
 
 	if (argc == 1) {
 		usage();
@@ -143,10 +146,35 @@ int main(int argc, char** argv)
 		case 'S':
 			packets_s = atoi(optarg);
 			break;
+		case 'R':
+			realtime_s = atof(optarg);
+			break;
 		default:
 			fprintf(stderr, "Unknown option.\n");
 			return 1;
 		}
+	}
+
+	/* Parameters check */
+	if (loops < 0 && loops != INFINITY_LOOPS) {
+		fprintf(stderr, "Invalid value of replay loops\n");
+		return 1;
+	}
+
+	if (packets_s < 0) {
+		fprintf(stderr, "Invalid value of the packet speed limitation.\n");
+		return 1;
+	}
+
+	if (realtime_s < 0.0) {
+		fprintf(stderr, "Invalid value of the real-time sending.\n");
+		return 1;
+	}
+
+	if ((speed != NULL || packets_s != 0) && realtime_s > 0) {
+		fprintf(stderr, "Combination of real-time sending and speed limitation "
+			"is not permitted.\n");
+		return 1;
 	}
 
 	/* Check whether everything is set */
@@ -183,8 +211,15 @@ int main(int argc, char** argv)
 
 	/* Send packets */
 	int i;
-	for (i = 0; stop == 0 && (loops == INFINITY_LOOPS || i < loops); ++i) {
-		ret = send_packets(sender, packets, packets_s);
+	for (i = 0; !stop && (loops == INFINITY_LOOPS || i < loops); ++i) {
+		if (realtime_s > 0.0) {
+			// Real-time sending
+			ret = send_packets_realtime(sender, packets, realtime_s);
+		} else {
+			// Speed limitation sending
+			ret = send_packets_limit(sender, packets, packets_s);
+		}
+
 		if (ret != SISO_OK) {
 			fprintf(stderr, "Network error: %s\n", siso_get_last_err(sender));
 			break;
