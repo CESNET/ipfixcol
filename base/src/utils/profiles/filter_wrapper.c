@@ -368,8 +368,10 @@ ff_error_t ipf_ff_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *da
 	if(generic_set == gen_head_if){
 		//dig through header data
 		//proceed directly to return
+		return FF_ERR_OTHER;
 	}else if(generic_set == gen_aggregated){
 		//godlike code to handle this mess
+		return FF_ERR_OTHER;
 	}
 
 	data = data_record_get_field(ipf_rec->record, ipf_rec->templ, en, ie_id, &len);
