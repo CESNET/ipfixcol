@@ -121,6 +121,12 @@ AC_CHECK_FUNCS([malloc])
 AC_CHECK_FUNCS([realloc])
 AC_CHECK_FUNCS([memset])
 
+
+
+# Add sysconfdir
+AC_DEFINE_DIR(DATAROOTDIR, [datarootdir], [Path to data files])
+
+
 ############################### Set output #####################################
 
 AC_SUBST(RPMBUILD)
