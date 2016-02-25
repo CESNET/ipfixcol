@@ -95,7 +95,8 @@ const char *Translator::formatIPv6(uint8_t* addr)
  */
 const char *Translator::formatMac(uint8_t* addr)
 {	
-	snprintf(buffer, BUFF_SIZE, "\"%02x:%02x:%02x:%02x:%02x:%02x\"", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+	snprintf(buffer, BUFF_SIZE, "%02x:%02x:%02x:%02x:%02x:%02x",
+		addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 	return buffer;
 }
 

@@ -288,6 +288,9 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 			break;
 		case ET_MAC_ADDRESS:
 			READ_BYTE_ARR(addrMac, data_record + offset, MAC_LEN);
+			record += '"';
+			record += translator.formatMac(addrMac);
+			record += '"';
 			break;
 		case ET_DATE_TIME_SECONDS:
 			record += translator.formatTimestamp(read64(data_record + offset), t_units::SEC, config);
