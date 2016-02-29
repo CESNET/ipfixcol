@@ -59,7 +59,7 @@ extern "C" {
 #include "fastbit.h"
 #include "config_struct.h"
 
-const int IE_NAME_LENGTH = 16;
+const int IE_NAME_LENGTH = 32;
 const int TYPE_NAME_LENGTH = 10;
 
 class template_table; //Needed becouse of Circular dependency

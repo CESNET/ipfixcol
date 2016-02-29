@@ -127,9 +127,9 @@ void element::byte_reorder(uint8_t *dst, uint8_t *src, int srcSize, int dstSize)
 void element::setName(uint32_t en, uint16_t id, int part)
 {
 	if (part == -1) { /* default */
-		sprintf(_name, "e%iid%hi", en, id);
+		sprintf(_name, "e%uid%hu", en, id);
 	} else {
-		sprintf(_name, "e%iid%hip%i", en, id, part);
+		sprintf(_name, "e%uid%hup%i", en, id, part);
 	}
 }
 
