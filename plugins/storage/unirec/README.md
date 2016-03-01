@@ -56,6 +56,8 @@ Example configuration in **startup.xml** could look like this (this is only part
         <flushTimeout>10000000</flushTimeout>
         <!-- TRAP interface buffer switch. 1 is for ON -->
         <bufferSwitch>1</bufferSwitch>
+        <!-- Set merge method (joinflows or manager). Default is manager -->
+        <ODIDGetMethod>manager</ODIDGetMethod>
         <!-- TRAP interface UniRec template -->
         <format>DST_IP,SRC_IP,BYTES,DST_PORT,SRC_PORT,PROTOCOL</format>
       </interface>
@@ -72,9 +74,12 @@ Order in which to write these fields follows these rules:
 2.  If two fields have same size, they need to be sorted alphabetically.
 3.  Dynamic fields come last and are sorted alphabetically.
 
-To work correctly UniRec plugin needs **joinflows intermediate plugin** (described [here](../../../base/README.md)) to merge IPFIX messages with different Observation Domain ID (ODID) into one storage plugin instance. 
+Only one instance of UniRec plugin can run at any given time. This means that UniRec plugin needs merged data at its input. To accomplish this, one and only one of the following method MUST be used:
 
-Simple configuration of **joinflows** plugin that will do this:
+1.  Using single data manager (-M switch when starting ipfixcol) [Default and preferred]
+2.  Set up **joinflows intermediate plugin** (described [here](../../../base/README.md))
+
+Example of simple configuration of **joinflows** plugin:
 
 ```xml
 <!-- Intermediate plugins list -->
@@ -92,7 +97,7 @@ Simple configuration of **joinflows** plugin that will do this:
 </intermediatePlugins>
 ```
 
-This will merge all IPFIX messages with different ODID and send them to UniRec plugin. Number '63' must be different than any ODID that can possibly arrive to IPFIX collector. 
+This will merge all IPFIX messages with different ODID and send them to UniRec plugin. Number '63' must be different than any ODID that can possibly arrive to IPFIX collector.
 
 
 ####<a name="confuni"></a> UniRec configuration file
