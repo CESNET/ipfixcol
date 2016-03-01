@@ -250,6 +250,9 @@ struct plugin_xml_conf_list* get_storage_plugins(xmlNodePtr collector_node, xmlD
 	if (xpath_obj_expproc == NULL || xmlXPathNodeSetIsEmpty(xpath_obj_expproc->nodesetval)) {
 		MSG_ERROR(msg_module, "No exportingProcess defined in user configuration");
 		goto cleanup;
+	} else if (xpath_obj_expproc->nodesetval->nodeNr > 1) {
+		MSG_ERROR(msg_module, "Multiple exportingProcess nodes are not supported. Use multiple destinations.");
+		goto cleanup;
 	}
 	/* and then check them for searching names */
 	for (i = 0; i < xpath_obj_expprocnames->nodesetval->nodeNr; i++) {
