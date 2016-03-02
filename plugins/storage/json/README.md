@@ -63,6 +63,7 @@ Here is an example of configuration in **startup.xml**:
 		<timestamp>formated</timestamp>
 		<protocol>formated</protocol>
 		<ignoreUnknown>yes</ignoreUnknown>
+		<nonPrintableChar>yes</nonPrintableChar>
 
 		<output>
 			<type>print</type>
@@ -88,7 +89,7 @@ Here is an example of configuration in **startup.xml**:
 		<output>
 			<type>server</type>
 			<port>4800</port>
-			<blocking>yes</blocking>
+			<blocking>no</blocking>
 		</output>
 	</fileWriter>
 </destination>
@@ -98,6 +99,8 @@ Here is an example of configuration in **startup.xml**:
 * **timestamp** - Convert time to formated style (formated) or to a number (unix) [default == unix].
 * **protocol** - Convert protocol identification to formated style (formated) or to a number (raw) [default == formated].
 * **ignoreUnknown** - Skip elements with unknown semantics (yes/no). Data of unknown elements are formated as unsigned integer (1, 2, 4, 8 bytes length) or binary values. Names will have format 'eXXidYY' where XX is enterprise number and YY is element ID [default == yes].
+* **nonPrintableChar** - Convert non-printable characters (control characters, tab, newline, etc.) from IPFIX fields with data type of a string. (yes/no) [default == yes].
+
 * **output** - Specifies JSON data processor. Multiple outputs are supported.
 	* **type** - Output type. **print**, **send**, **file** and **server** are supported.
 * **output : print** - Writes data to the standard output.

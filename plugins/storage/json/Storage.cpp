@@ -1,6 +1,7 @@
 /**
  * \file Storage.cpp
  * \author Michal Kozubik <kozubik@cesnet.cz>
+ * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Class for JSON storage plugin
  *
  * Copyright (C) 2015 CESNET, z.s.p.o.
@@ -38,7 +39,8 @@
  */
 
 /**
- * @todo We are not sure if conversion for type BOOLEAN is in little or big endian -> how to translate it to json. It is necessary to solve it.
+ * \todo We are not sure if conversion for type BOOLEAN is in little
+ * or big endian -> how to translate it to json. It is necessary to solve it.
  */
 
 extern "C" {
@@ -54,7 +56,6 @@ extern "C" {
 #include <sstream>
 #include <iostream>
 #include <iomanip>
-#include <map>
 
 static const char *msg_module = "json_storage";
 
@@ -72,7 +73,7 @@ Storage::Storage()
 {
 	/* Allocate space for buffers */
 	record.reserve(4096);
-	buffer.reserve(BUFF_SIZE);
+	buffer.reserve(4096);
 }
 
 Storage::~Storage()
@@ -123,44 +124,6 @@ uint16_t Storage::realLength(uint16_t length, uint8_t *data_record, uint16_t &of
 	}
 	
 	return length;
-}
-
-/**
- * \brief Read string field
- */
-void Storage::readString(uint16_t& length, uint8_t *data_record, uint16_t &offset)
-{
-	/* Get string length */
-	length = realLength(length, data_record, offset);
-	
-	/* Read string and replace white spaces by \notation (\n, \t, ...) */
-	unsigned long int index  = 0;
-	unsigned long int index2 = 0;
-	const char * pointer = (const char *)(data_record + offset);
-
-	stringWithEscseq[index2++] = '"';
-
-	for(index = 0; index != length; index++) {	
-
-		switch(pointer[index]) {
-
-		case TABULATOR:		stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = 't'; break;
-		case NEWLINE:		stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = 'n'; break;
-		case QUOTATION:		stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = '\"'; break;
-		case REVERSESOLIDUS:	stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = '\\'; break;
-		case SOLIDUS:		stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = '/'; break;
-		case BACKSPACE:		stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = 'b'; break;
-		case FORMFEED:		stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = 'f'; break;
-		case RETURN:		stringWithEscseq[index2++] = '\\'; stringWithEscseq[index2++] = 'r'; break;
-		default:		stringWithEscseq[index2++] = pointer[index]; break;
-
-		}
-		
-	}
-
-	stringWithEscseq[index2++] = '"';
-	stringWithEscseq[index2] = '\0';
-	record.append((const char *) stringWithEscseq);
 }
 
 /**
@@ -242,7 +205,7 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 		if (element == NULL) {
 			// Element not found
 			if (config->ignoreUnknown) {
-				offset += length;
+				offset += realLength(length, data_record, offset);
 				continue;
 			}
 
@@ -263,7 +226,8 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 		case ET_UNSIGNED_16:
 		case ET_UNSIGNED_32:
 		case ET_UNSIGNED_64:
-			record += translator.toUnsigned(&length, data_record, offset, element, config);
+			record += translator.toUnsigned(&length, data_record, offset,
+				element, config);
 			break;
 		case ET_SIGNED_8:
 		case ET_SIGNED_16:
@@ -293,19 +257,25 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 			record += '"';
 			break;
 		case ET_DATE_TIME_SECONDS:
-			record += translator.formatTimestamp(read64(data_record + offset), t_units::SEC, config);
+			record += translator.formatTimestamp(read64(data_record + offset),
+				t_units::SEC, config);
 			break;
 		case ET_DATE_TIME_MILLISECONDS:
-			record += translator.formatTimestamp(read64(data_record + offset), t_units::MILLISEC, config);
+			record += translator.formatTimestamp(read64(data_record + offset),
+				t_units::MILLISEC, config);
 			break;
 		case ET_DATE_TIME_MICROSECONDS:
-			translator.formatTimestamp(read64(data_record + offset), t_units::MICROSEC, config);
+			record += translator.formatTimestamp(read64(data_record + offset),
+				t_units::MICROSEC, config);
 			break;
 		case ET_DATE_TIME_NANOSECONDS:
-			translator.formatTimestamp(read64(data_record + offset), t_units::NANOSEC, config);
+			record += translator.formatTimestamp(read64(data_record + offset),
+				t_units::NANOSEC, config);
 			break;
 		case ET_STRING:
-			readString(length, data_record, offset);
+			length = realLength(length, data_record, offset);
+			record += translator.escapeString(length, data_record + offset,
+				config);
 			break;
 		case ET_BOOLEAN:
 			readRawData(length, data_record, offset);
