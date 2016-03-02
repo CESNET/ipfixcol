@@ -142,8 +142,7 @@ const char *Translator::formatTimestamp(uint64_t tstamp, t_units units, struct j
 		sprintf(&(buffer[20]), ".%03u\"", (const unsigned int) msec);
 
 	} else {
-
-		sprintf(buffer, "%lu", tstamp);
+		sprintf(buffer, "%lu", be64toh(tstamp));
 	}	
 
 	return buffer;
