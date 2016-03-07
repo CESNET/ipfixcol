@@ -707,26 +707,6 @@ wait_for_data:
 		goto out;
 	}
 
-	if (msg_length < IPFIX_HEADER_LENGTH) {
-		MSG_WARNING(msg_module, "Packet header is incomplete; skipping message...", msg_length);
-		return INPUT_INTR;
-	}
-
-	/* Convert packet from Netflow v5/v9/sflow to IPFIX format */
-	if (htons(((struct ipfix_header *) (*packet))->version) != IPFIX_VERSION) {
-		if (convert_packet(packet, &msg_length, MSG_MAX_LENGTH, NULL) != 0) {
-			MSG_WARNING(msg_module, "Message conversion error; skipping message...");
-			return INPUT_INTR;
-		}
-	}
-
-	/* Check if lengths are the same */
-	if (msg_length < htons(((struct ipfix_header *) *packet)->length)) {
-		MSG_WARNING(msg_module, "Packet is incomplete; skipping message...");
-		return INPUT_INTR;
-	} else if (msg_length > htons(((struct ipfix_header *) *packet)->length)) {
-		msg_length = htons(((struct ipfix_header *) *packet)->length);
-	}
 
 #if 0
 	fprintf(stderr, "********************************************\n");
@@ -763,10 +743,33 @@ wait_for_data:
 			return INPUT_CLOSED;
 		} else {
 			MSG_WARNING(msg_module, "Unsupported SCTP event occured");
-			goto wait_for_data;
 		}
+		/* event is processed, get real data */
+		goto wait_for_data;
 	} else if (!(flags & MSG_EOR)) {
 		MSG_WARNING(msg_module, "SCTP input plugin: message is too long");
+	}
+
+	/* Process data */
+	if (msg_length < IPFIX_HEADER_LENGTH) {
+		MSG_WARNING(msg_module, "Packet header is incomplete; skipping message...", msg_length);
+		return INPUT_INTR;
+	}
+
+	/* Convert packet from Netflow v5/v9/sflow to IPFIX format */
+	if (htons(((struct ipfix_header *) (*packet))->version) != IPFIX_VERSION) {
+		if (convert_packet(packet, &msg_length, MSG_MAX_LENGTH, NULL) != 0) {
+			MSG_WARNING(msg_module, "Message conversion error; skipping message...");
+			return INPUT_INTR;
+		}
+	}
+
+	/* Check if lengths are the same */
+	if (msg_length < htons(((struct ipfix_header *) *packet)->length)) {
+		MSG_WARNING(msg_module, "Packet is incomplete; skipping message...");
+		return INPUT_INTR;
+	} else if (msg_length > htons(((struct ipfix_header *) *packet)->length)) {
+		msg_length = htons(((struct ipfix_header *) *packet)->length);
 	}
 
 	/* Set source status */
