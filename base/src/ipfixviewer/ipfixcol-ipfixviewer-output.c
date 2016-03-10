@@ -374,7 +374,7 @@ static uint16_t print_data_record(uint8_t *data_record, struct ipfix_template *t
 			offset += 4;
 			break;
 		case (8):
-			printf("Value: %#lx\n", read64(data_record+offset));
+			printf("Value: %#" PRIx64 "\n", read64(data_record+offset));
 			offset += 8;
 			break;
 		default:

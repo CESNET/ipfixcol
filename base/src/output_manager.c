@@ -785,11 +785,11 @@ static void *statistics_thread(void* config)
 			delta_lost_data_records = aux_node->input_info->sequence_number - aux_node->input_info->data_records - aux_node->last_lost_data_records;
 
 			if (print_stat_to_file) {
-				fprintf(stat_out_file, "%s_%u=%lu\n", "PACKETS",
+				fprintf(stat_out_file, "%s_%u=%" PRIu64 "\n", "PACKETS",
 						aux_node->input_info->odid, aux_node->input_info->packets);
-				fprintf(stat_out_file, "%s_%u=%lu\n", "DATA_REC",
+				fprintf(stat_out_file, "%s_%u=%" PRIu64 "\n", "DATA_REC",
 						aux_node->input_info->odid, aux_node->input_info->data_records);
-				fprintf(stat_out_file, "%s_%u=%lu\n", "LOST_DATA_REC",
+				fprintf(stat_out_file, "%s_%u=%" PRIu64 "\n", "LOST_DATA_REC",
 						aux_node->input_info->odid, aux_node->input_info->sequence_number - aux_node->input_info->data_records);
 				fprintf(stat_out_file, "%s_%u=%u\n", "PACKETS_SEC",
 						aux_node->input_info->odid, delta_packets / conf->stat_interval);
