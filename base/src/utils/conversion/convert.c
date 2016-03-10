@@ -525,7 +525,8 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
 {
 	struct ipfix_set_header *tmp;
 	uint8_t *pkt;
-	uint16_t id, len, num, shifted, first_offset, last_offset;
+	uint16_t id, len, num, shifted;
+	int32_t first_offset, last_offset;
 	int i;
 
 	tmp = dataSet;
@@ -558,6 +559,11 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
 	shifted = 0;
 	first_offset = templates.templ[posIndex];
 	last_offset = first_offset + BYTES_4;
+
+	/* If there is nothing to insert, return */
+	if (first_offset == -1) {
+		return 0;
+	}
 
 	for (i = num - 1; i >= 0; i--) {
 		/* Resize each timestamp in each data record to 64 bit */
