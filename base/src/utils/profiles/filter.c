@@ -622,23 +622,23 @@ struct filter_value *filter_parse_number(char *number)
 
 	/* Check suffix */
 	uint64_t tmp = strlen(number);
-	long mult = 1;
+	uint64_t mult = 1;
 	switch (number[tmp - 1]) {
 	case 'k':
 	case 'K':
-		mult = 1000;
+		mult = 1000ul;
 		break;
 	case 'm':
 	case 'M':
-		mult = 1000000;
+		mult = 1000000ul;
 		break;
 	case 'g':
 	case 'G':
-		mult = 1000000000;
+		mult = 1000000000ul;
 		break;
 	case 't':
 	case 'T':
-		mult = 1000000000000;
+		mult = 1000000000000ul;
 		break;
 	}
 
