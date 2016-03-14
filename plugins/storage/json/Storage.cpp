@@ -97,7 +97,7 @@ void Storage::sendData() const
  * \brief Store data sets
  */
 void Storage::storeDataSets(const ipfix_message* ipfix_msg, struct json_conf * config)
-{	
+{
 	/* Iterate through all data records */
 	for (int i = 0; i < ipfix_msg->data_records_count; ++i) {
 		storeDataRecord(&(ipfix_msg->metadata[i]), config);
@@ -178,7 +178,7 @@ std::string Storage::rawName(uint32_t en, uint16_t id) const
  */
 void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 {
-	std::string tmp_name;
+	static std::string tmp_name;
 
 	offset = 0;
 	record.clear();
