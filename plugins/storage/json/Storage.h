@@ -143,7 +143,7 @@ private:
     /**
      * \brief Create raw name for unknown elements
      */
-    std::string rawName(uint32_t en, uint16_t id) const;
+    const char* rawName(uint32_t en, uint16_t id) const;
     
     
 	/**
