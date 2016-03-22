@@ -620,7 +620,8 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 
 		/* Empty set; only set header was added */
 		if (proc.length == 4) {
-			proc.offset = proc.length;
+			/* Do not add empty set header, just return the pointer before it */
+			proc.offset -= 4;
 			continue;
 		}
 
@@ -640,7 +641,8 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 
 		/* Empty set; only set header was added */
 		if (proc.length == 4) {
-			proc.offset = proc.length;
+			/* Do not add empty set header, just return the pointer before it */
+			proc.offset -= 4;
 			continue;
 		}
 
