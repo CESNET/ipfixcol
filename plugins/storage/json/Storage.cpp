@@ -170,10 +170,10 @@ void Storage::readRawData(uint16_t &length, uint8_t* data_record, uint16_t &offs
  */
 const char* Storage::rawName(uint32_t en, uint16_t id) const
 {
-	static std::ostringstream ss;
-	ss.clear();
-	ss << "e" << en << "id" << id;
-	return ss.str().c_str();
+	/* Max length is 1("e")+10(en)+2("id")+5(id)+1(\0) */
+	static char buf[32];
+	snprintf(buf, 32, "e%" PRIu32 "id%" PRIu16, en, id);
+	return buf;
 }
 
 /**

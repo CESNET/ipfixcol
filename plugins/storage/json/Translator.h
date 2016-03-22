@@ -191,8 +191,8 @@ private:
 	char *buffer;
 
 	struct tm *tm{};
-	time_t timesec;
-	uint64_t msec;
+	time_t timesec{};
+	uint64_t msec{};
 };
 
 #endif	/* TRANSLATOR_H */
