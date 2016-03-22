@@ -1130,20 +1130,24 @@ struct filter_value *filter_parse_ipv4(char *addr)
 		return NULL;
 	}
 
-	val->type = VT_NUMBER;
-
-	struct in_addr tmp;
-
-	/* Convert address */
-	if (inet_pton(AF_INET, addr, &tmp) != 1) {
-		MSG_ERROR(msg_module, "Cannot parse IP address %s", addr);
+	uint8_t *value = malloc(sizeof(uint32_t));
+	if (!value) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
 		free(val);
 		return NULL;
-	}
+	}	
 
-	/* Create value */
-	val->length = sizeof(struct in_addr);
-	val->value = filter_num_to_ptr((uint8_t *) &tmp, val->length);
+	val->type = VT_NUMBER;
+	val->length = sizeof(uint32_t);
+	val->value = value;
+
+	/* Convert address */
+	if (inet_pton(AF_INET, addr, (struct in_addr*) value) != 1) {
+		MSG_ERROR(msg_module, "Cannot parse IP address %s", addr);
+		free(val);
+		free(value);
+		return NULL;
+	}
 
 	return val;
 }
@@ -1159,20 +1163,23 @@ struct filter_value *filter_parse_ipv6(char *addr)
 		return NULL;
 	}
 
-	val->type = VT_NUMBER;
+	uint8_t *value = malloc(2*sizeof(uint64_t));
+	if (!value) {
+		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+		free(val);
+		return NULL;
+	}	
 
-	struct in6_addr tmp;
+	val->type = VT_NUMBER;
+	val->length = 2*sizeof(uint64_t);
+	val->value = value;
 
 	/* Convert address */
-	if (inet_pton(AF_INET6, addr, &tmp) != 1) {
+	if (inet_pton(AF_INET6, addr, (struct in6_addr*) value) != 1) {
 		MSG_ERROR(msg_module, "Cannot parse IP address %s", addr);
 		free(val);
 		return NULL;
 	}
-
-	/* Create value */
-	val->length = sizeof(struct in6_addr);
-	val->value = filter_num_to_ptr((uint8_t *) &tmp, val->length);
 
 	return val;
 }
