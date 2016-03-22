@@ -139,9 +139,7 @@ bool dbslot::change_dir(const char *dir)
 	exported_flows = 0;
 	stored_flows = 0;
 
-	if (this->dir) {
-		free(this->dir);
-	}
+	free(this->dir);
 	this->dir = strdup(dir);
 
 	for (table = tables.begin(); table != tables.end(); table++) {

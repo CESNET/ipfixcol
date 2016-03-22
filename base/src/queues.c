@@ -154,10 +154,14 @@ int rbuffer_write(struct ring_buffer* rbuffer, struct ipfix_message* record, uin
 	rbuffer->write_offset = (rbuffer->write_offset + 1) % rbuffer->size;
 	rbuffer->count++;
 
+	/* Set exit code to variable */
+	int ret = EXIT_SUCCESS;
+
 	/* I did change of rbuffer->count so inform about it other threads (read threads) */
 	if (pthread_cond_signal(&(rbuffer->cond)) != 0) {
 		MSG_ERROR(msg_module, "Condition signal failed (%s:%d)", __FILE__, __LINE__);
-		return EXIT_FAILURE;
+		/* Do not return yet, we need to unlock first */
+		ret = EXIT_FAILURE;
 	}
 
 	if (pthread_mutex_unlock(&(rbuffer->mutex)) != 0) {
@@ -165,7 +169,7 @@ int rbuffer_write(struct ring_buffer* rbuffer, struct ipfix_message* record, uin
 		return EXIT_FAILURE;
 	}
 
-	return EXIT_SUCCESS;
+	return ret;
 }
 
 /**

@@ -301,6 +301,7 @@ el_text::el_text(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct f
 	_filled = 0;
 	_buffer = NULL;
 	_sp_buffer = NULL;
+	_sp_buffer_size = 0;
 	_sp_buffer_offset = 0;
 
 	if (size == VAR_IE_LENGTH) { // Element with variable size
