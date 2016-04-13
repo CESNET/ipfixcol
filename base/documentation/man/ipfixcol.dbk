@@ -53,6 +53,7 @@
             <arg>-dhVs</arg>
             <arg>-v level</arg>
             <arg>-S time</arg>
+            <arg>-p file</arg>
         </cmdsynopsis>
     </refsynopsisdiv>
 
@@ -146,6 +147,15 @@
 				<listitem>
 					<simpara>
 						Print proccessing statistics every <replaceable class="parameter">time</replaceable> seconds.
+					</simpara>
+				</listitem>
+			</varlistentry>
+
+                        <varlistentry>
+				<term>-p <replaceable class="parameter">file</replaceable></term>
+				<listitem>
+					<simpara>
+						Path to the pidfile. Without this option, no pidfile is created.
 					</simpara>
 				</listitem>
 			</varlistentry>
