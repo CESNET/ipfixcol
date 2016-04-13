@@ -80,7 +80,7 @@
  */
 
 /** Acceptable command-line parameters (normal) */
-#define OPTSTRING "c:dhv:Vsr:i:S:e:M"
+#define OPTSTRING "c:dhv:Vsr:i:S:e:Mp:"
 
 /** Acceptable command-line parameters (long) */
 struct option long_opts[] = {
@@ -137,6 +137,7 @@ void help ()
 	printf ("  -r        Ring buffer size (default: 8192)\n");
 	printf ("  -S num    Print statistics every \"num\" seconds\n");
 	printf ("  -M        Enable single data manager (all ODIDs have common storage plugins)\n");
+	printf ("  -p file   Path to the pidfile. Without this option, no pidfile is created.\n");
 	printf ("\n");
 }
 
@@ -159,6 +160,28 @@ void term_signal_handler (int sig)
 	}
 }
 
+/**
+ * \brief Write PID in a string representation to the file.
+ */
+int write_pid(const char *path, int append, pid_t pid)
+{
+	const char *mode = append ? "a" : "w";
+	FILE *pidfile = fopen(path, mode);
+
+	if (pidfile == NULL) {
+		MSG_ERROR(msg_module, "Cannot open pidfile \"%s\": %s", path, strerror(errno));
+		return 1;
+	}
+
+	fprintf(pidfile, "%d\n", pid);
+
+	if (fclose(pidfile) == EOF) {
+		MSG_ERROR(msg_module, "Cannot close pidfile \"%s\": %s", path, strerror(errno));
+	}
+
+	return 0;
+}
+
 int main (int argc, char* argv[])
 {
 	int c, i, retval = 0, get_retval, proc_count = 0;
@@ -173,6 +196,7 @@ int main (int argc, char* argv[])
 	xmlXPathObjectPtr collectors = NULL;
 	int ring_buffer_size = 8192;
 	bool output_odid_merge = false;
+	char *pidfile_path = NULL;
 
 	/* parse command line parameters */
 	while ((c = getopt_long(argc, argv, OPTSTRING, long_opts, NULL)) != -1) {
@@ -229,6 +253,9 @@ int main (int argc, char* argv[])
 			break;
 		case 'M':
 			output_odid_merge = true;
+			break;
+		case 'p':
+			pidfile_path = optarg;
 			break;
 
 		default:
@@ -294,6 +321,14 @@ int main (int argc, char* argv[])
 		MSG_ERROR(msg_module, "No collector process configured");
 		goto cleanup_err;
 	}
+
+	/* Open pidfile, write parent process PID, close pidfile. */
+	if (pidfile_path && write_pid(pidfile_path, 0, getpid()) == 0) {
+		MSG_INFO(msg_module, "Writing PID(s) to file \"%s\"", pidfile_path);
+	} else {
+		MSG_INFO(msg_module, "No pidfile will be created");
+	}
+
 	
 	/* create separate process for each <collectingProcess> */
 	for (i = (collectors->nodesetval->nodeNr - 1); i >= 0; i--) {
@@ -305,6 +340,7 @@ int main (int argc, char* argv[])
 			pid = fork();
 			if (pid > 0) { /* parent process waits for collector 0 */
 				proc_count++;
+				if (pidfile_path && write_pid(pidfile_path, 1, pid));
 				continue;
 			} else if (pid < 0) { /* error occured, fork failed */
 				MSG_ERROR(msg_module, "Forking collector process failed (%s); skipping collector '%d'", strerror(errno), i);
@@ -312,6 +348,7 @@ int main (int argc, char* argv[])
 			}
 			/* else child - just continue to handle plugins */
 			config->proc_id = i;
+			pidfile_path = NULL;
 			
 			MSG_INFO(msg_module, "[%d] New collector process started", config->proc_id);
 		}
@@ -427,6 +464,11 @@ cleanup:
 	/* Close all plugins */
 	if (config) {
 		config_destroy(config);
+	}
+
+	/* Unlink pidfile by parent process. */
+	if (pidfile_path && unlink(pidfile_path) != 0) {
+		MSG_ERROR(msg_module, "Cannot unlink pidfile \"%s\": %s", pidfile_path, strerror(errno));
 	}
 	
 	/* wait for child processes */

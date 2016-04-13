@@ -110,7 +110,7 @@
 				<varlistentry>
 					<term><command>storagePath</command></term>
 					<listitem>
-						<simpara>The path element specifies the storage directory for data collected by the lnfstore plugin.</simpara>
+						<simpara>The path element specifies the storage directory for data collected by the lnfstore plugin. Path may contain special character sequences, each of which is introduced by a "%" character and terminated by some other character. Each of this sequences is substituted by its value. Currenly supported special characters: %h = hostname.</simpara>
 					</listitem>
 				</varlistentry>
 
