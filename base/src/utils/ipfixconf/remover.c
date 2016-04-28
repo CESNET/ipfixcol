@@ -61,7 +61,7 @@ int remove_pl(conf_info_t *info, char *tag, char *nametag)
 	plug = get_plugin(info, tag, nametag, info->name);
 	
 	if (plug == NULL) {
-		fprintf(stderr, "Plugin '%s' does not exists!\n", info->name);
+		fprintf(stderr, "Plugin '%s' does not exist!\n", info->name);
 		return 0;
 	}
 	
