@@ -195,7 +195,7 @@ const std::string Printer::printValue(const Column *col, const Cursor *cur) cons
 	std::string valueStr;
 
 	if (!col->getSemantics().empty() && (col->getSemantics() != "flows") && (col->format != NULL)) {
-		plugin_arg_t arg = {.type = val->type, .val = (const plugin_arg_val *) val->value};
+		plugin_arg_t arg = {.type = val->type, .val = (const plugin_arg_val *) val->value, .text = val->string.c_str()};
 		col->format(&arg, (int) this->conf.getPlainNumbers(col->getSemantics()), plugin_buffer, col->pluginConf);
 		valueStr.append(plugin_buffer);
 	} else {
