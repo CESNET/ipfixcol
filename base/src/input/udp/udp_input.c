@@ -404,21 +404,24 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		len = htons(((struct ipfix_header *) *packet)->length);
 	}
 
-	/* go through input_info_list */
+	/* Loop over input_info_list */
 	for (info_list = conf->info_list; info_list != NULL; info_list = info_list->next) {
-		/* ports must match */
+		/* Ports must match */
 		if (info_list->info.src_port == ntohs(((struct sockaddr_in*) &address)->sin_port)) {
-			/* compare addresses, dependent on IP protocol version*/
-			if (info_list->info.l3_proto == 4) {
-				if (info_list->info.src_addr.ipv4.s_addr == ((struct sockaddr_in*) &address)->sin_addr.s_addr) {
-					break;
-				}
-			} else {
-				if (info_list->info.src_addr.ipv6.s6_addr32[0] == address.sin6_addr.s6_addr32[0]
-						&& info_list->info.src_addr.ipv6.s6_addr32[1] == address.sin6_addr.s6_addr32[1]
-						&& info_list->info.src_addr.ipv6.s6_addr32[2] == address.sin6_addr.s6_addr32[2]
-						&& info_list->info.src_addr.ipv6.s6_addr32[3] == address.sin6_addr.s6_addr32[3]) {
-					break;
+			/* ODIDs must match */
+			if (info_list->info.odid == ntohl(((struct ipfix_header *) *packet)->observation_domain_id)) {
+				/* Compare addresses, dependent on IP protocol version*/
+				if (info_list->info.l3_proto == 4) {
+					if (info_list->info.src_addr.ipv4.s_addr == ((struct sockaddr_in*) &address)->sin_addr.s_addr) {
+						break;
+					}
+				} else {
+					if (info_list->info.src_addr.ipv6.s6_addr32[0] == address.sin6_addr.s6_addr32[0]
+							&& info_list->info.src_addr.ipv6.s6_addr32[1] == address.sin6_addr.s6_addr32[1]
+							&& info_list->info.src_addr.ipv6.s6_addr32[2] == address.sin6_addr.s6_addr32[2]
+							&& info_list->info.src_addr.ipv6.s6_addr32[3] == address.sin6_addr.s6_addr32[3]) {
+						break;
+					}
 				}
 			}
 		}
@@ -426,7 +429,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 
 	/* check whether we found the input_info */
 	if (info_list == NULL) {
-		MSG_INFO(msg_module, "New UDP exporter connected (unique port and address)");
+		MSG_INFO(msg_module, "New UDP exporter connected (unique adress, port, ODID)");
 
 		/* create new input_info */
 		info_list = calloc(1, sizeof(struct input_info_list));
