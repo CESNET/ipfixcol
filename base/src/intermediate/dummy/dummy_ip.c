@@ -94,10 +94,13 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
  */
 int intermediate_process_message(void *config, void *message)
 {
-	struct dummy_ip_config * conf;
-	conf = (struct dummy_ip_config *) config;
+	struct dummy_ip_config *conf;
+	struct ipfix_message *msg;
 
-	MSG_DEBUG(msg_module, "got IPFIX message!");
+	conf = (struct dummy_ip_config *) config;
+	msg = (struct ipfix_message *) message;
+
+	MSG_DEBUG(msg_module, "[%u] Received IPFIX message", msg->input_info->odid);
 
 	pass_message(conf->ip_config, message);
 
