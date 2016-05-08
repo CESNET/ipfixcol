@@ -55,7 +55,7 @@
 /* API version constant */
 IPFIXCOL_API_VERSION;
 
-static char *msg_module = "dummy Intermediate Process";
+static char *msg_module = "dummy intermediate process";
 
 /* plugin's configuration structure */
 struct dummy_ip_config {
