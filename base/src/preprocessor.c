@@ -577,7 +577,7 @@ void preprocessor_parse_msg(void* packet, int len, struct input_info* input_info
 		odid_info_remove_source(input_info->odid);
 	} else {
 		if (input_info == NULL) {
-			MSG_WARNING(msg_module, "Invalid parameters in preprocessor_parse_msg()");
+			MSG_WARNING(msg_module, "Invalid parameters in preprocessor_parse_msg");
 
 			if (packet) {
 				free(packet);

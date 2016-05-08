@@ -328,7 +328,6 @@ int main (int argc, char* argv[])
 	} else {
 		MSG_INFO(msg_module, "No pidfile will be created");
 	}
-
 	
 	/* create separate process for each <collectingProcess> */
 	for (i = (collectors->nodesetval->nodeNr - 1); i >= 0; i--) {
