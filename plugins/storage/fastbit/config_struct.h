@@ -54,7 +54,7 @@ extern "C" {
 
 class template_table;
 
-struct fastbit_config{
+struct fastbit_config {
 	/*ob_dom stores data buffers based on received templates
 	 * (observation ids -> template id -> template data */
 	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom;
