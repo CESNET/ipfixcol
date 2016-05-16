@@ -489,7 +489,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 		/* Should we create new window?  */
 		if (conf->records_window != 0 && rcnt > conf->records_window) {
 			/* Flush data for all ODID */
-			for (dom_id = ob_dom->begin(); dom_id!=ob_dom->end();dom_id++) {
+			for (dom_id = ob_dom->begin(); dom_id!=ob_dom->end(); dom_id++) {
 				flush_data(conf, (*dom_id).first, (*dom_id).second, false);
 			}
 

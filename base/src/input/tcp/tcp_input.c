@@ -433,7 +433,7 @@ void *input_listen(void *config)
 		} else {
 			/* copy src IPv6 address */
 			int i;
-			for (i=0; i<4; i++) {
+			for (i = 0; i < 4; i++) {
 				input_info->info.src_addr.ipv6.s6_addr32[i] = address->sin6_addr.s6_addr32[i];
 			}
 
