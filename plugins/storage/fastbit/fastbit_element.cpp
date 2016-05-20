@@ -124,7 +124,7 @@ void element::byte_reorder(uint8_t *dst, uint8_t *src, int srcSize, int dstSize)
 	}
 }
 
-void element::setName(uint32_t en, uint16_t id, int part)
+void element::set_name(uint32_t en, uint16_t id, int part)
 {
 	if (part == -1) { /* default */
 		sprintf(_name, "e%uid%hu", en, id);
@@ -209,7 +209,7 @@ el_var_size::el_var_size(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 	_filled = 0;
 	_buffer = NULL;
 
-	setName(en, id);
+	set_name(en, id);
 	this->set_type();
 }
 
@@ -241,7 +241,7 @@ el_float::el_float(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 	_filled = 0;
 	_buffer = NULL;
 
-	setName(en, id);
+	set_name(en, id);
 	this->set_type();
 
 	if (buf_size == 0) {
@@ -308,7 +308,7 @@ el_text::el_text(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct f
 		_var_size = true;
 	}
 
-	setName(en, id);
+	set_name(en, id);
 	this->set_type();
 
 	if (buf_size == 0) {
@@ -436,7 +436,7 @@ el_ipv6::el_ipv6(int size, uint32_t en, uint16_t id, int part, uint32_t buf_size
 	_filled = 0;
 	_buffer = NULL;
 
-	setName(en, id, part);
+	set_name(en, id, part);
 	this->set_type();
 
 	if (buf_size == 0) {
@@ -474,7 +474,7 @@ el_blob::el_blob(int size, uint32_t en, uint16_t id, uint32_t buf_size):
 		_var_size = true;
 	}
 
-	setName(en, id);
+	set_name(en, id);
 	this->set_type();
 
 	if (buf_size == 0) {
@@ -596,7 +596,7 @@ el_uint::el_uint(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 	_filled = 0;
 	_buffer = NULL;
 
-	setName(en, id);
+	set_name(en, id);
 	this->set_type();
 
 	if (buf_size == 0) {
@@ -727,7 +727,7 @@ el_sint::el_sint(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 	_filled = 0;
 	_buffer = NULL;
 
-	setName(en, id);
+	set_name(en, id);
 	this->set_type();
 
 	if (buf_size == 0) {

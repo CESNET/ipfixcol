@@ -120,7 +120,7 @@ protected:
 	 * @param id ID of information element
 	 * @param part Number of part (used for IPv6)
 	 */
-	void setName(uint32_t en, uint16_t id, int part = -1);
+	void set_name(uint32_t en, uint16_t id, int part = -1);
 
 	/**
 	 * \brief Copy data and change byte order
