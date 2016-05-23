@@ -137,6 +137,7 @@ struct plugin_conf {
 	uint16_t sock_addresses_max;
 	struct input_info_list *info_list; /**< list of information structures
 										* passed to collector */
+	struct input_info_list *used_info_list; /**< list of old input infos to be deleted */
 	int info_to_remove; /**< Number of closed input info structures */
 #ifdef TLS_SUPPORT
 	uint8_t tls;                  /**< TLS enabled? 0 = no, 1 = yes */
@@ -381,6 +382,11 @@ void remove_input_info(struct plugin_conf *conf, struct input_info_list *info)
 				/* Removing the first element from list */
 				conf->info_list = info->next;
 			}
+
+			/* Add to list of input_infos to be deleted */
+			info->next = conf->used_info_list;
+			conf->used_info_list = info;
+			break;
 		}
 
 		/* Remember previous element */
@@ -1310,14 +1316,14 @@ int input_close(void **config)
 
 	destroy_sock_addresses(conf);
 
-	/* free input_info list */
-	while (conf->info_list) {
-		info_list = conf->info_list->next;
+	/* free used input_info list */
+	while (conf->used_info_list) {
+		info_list = conf->used_info_list->next;
 #ifdef TLS_SUPPORT
-		X509_free(conf->info_list->exporter_cert);
+		X509_free(conf->used_info_list->exporter_cert);
 #endif
-		free(conf->info_list);
-		conf->info_list = info_list;
+		free(conf->used_info_list);
+		conf->used_info_list = info_list;
 	}
 
 	/* free configuration strings */
