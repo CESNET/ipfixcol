@@ -139,6 +139,8 @@ const char* element::getName() const {
 
 void element::allocate_buffer(uint32_t count)
 {
+	printf("element allocate buffer called %s\n", _name);
+
 	_buf_max = count;
 	_buffer = (char *) realloc(_buffer, _size * count);
 	if (_buffer == NULL) {
@@ -148,6 +150,7 @@ void element::allocate_buffer(uint32_t count)
 
 void element::free_buffer()
 {
+	printf("element free buffer called %s\n", _name);
 	free(_buffer);
 }
 
@@ -484,7 +487,7 @@ el_blob::el_blob(int size, uint32_t en, uint16_t id, uint32_t buf_size):
 	allocate_buffer(buf_size);
 
 	/* Allocate the sp buffer */
-	_sp_buffer_size = buf_size;
+	_sp_buffer_size = buf_size + 8; /* We need at least the 8 bytes */
 	_sp_buffer = (char *) realloc(_sp_buffer, _sp_buffer_size);
 	if (_sp_buffer == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
@@ -749,15 +752,10 @@ el_unknown::el_unknown(int size, uint32_t en, uint16_t id, int part, uint32_t bu
 
 	/* Size of VAR_IE_LENGTH means variable-sized IE */
 	_var_size = (size == VAR_IE_LENGTH);
-}
 
-void el_unknown::allocate_buffer(uint32_t count)
-{
-	(void) count;
+	/* Init buffer so that element::free_buffer is happy */
+	_buffer = NULL;
 }
-
-void el_unknown::free_buffer()
-{}
 
 int el_unknown::append(void *data)
 {
