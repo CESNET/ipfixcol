@@ -139,8 +139,6 @@ const char* element::getName() const {
 
 void element::allocate_buffer(uint32_t count)
 {
-	printf("element allocate buffer called %s\n", _name);
-
 	_buf_max = count;
 	_buffer = (char *) realloc(_buffer, _size * count);
 	if (_buffer == NULL) {
@@ -150,7 +148,6 @@ void element::allocate_buffer(uint32_t count)
 
 void element::free_buffer()
 {
-	printf("element free buffer called %s\n", _name);
 	free(_buffer);
 }
 
