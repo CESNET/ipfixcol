@@ -261,7 +261,7 @@ int process_startup_xml(char *params, struct fastbit_config* c)
 			}
 
 			/* Make sure IPv6 elements are indexed */
-			if (IPv6 == get_type_from_xml(c, strtoul(en.c_str(), NULL, 0), strtoul(id.c_str(), NULL, 0))) {
+			if (IPV6 == get_type_from_xml(c, strtoul(en.c_str(), NULL, 0), strtoul(id.c_str(), NULL, 0))) {
 				c->index_en_id->push_back("e" + en + "id" + id + "p0");
 				c->index_en_id->push_back("e" + en + "id" + id + "p1");
 			} else {
