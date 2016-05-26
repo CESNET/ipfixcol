@@ -95,6 +95,25 @@ static char *msg_module = "TCP input";
 /**
  * \struct input_info_list
  * \brief  List structure for input info
+ *
+ * Input info list structures are used as follows.
+ * There is a template input_info_network structure stored in plugin_conf. This 
+ * structure is filled during init and used to initialize new input info 
+ * structures for new connections. 
+ *
+ * When connection is accepted, new input_info_list
+ * is created and added to global list. This input info does not have ODID filled yet.
+ * After data is received for this input info (based on source address and port),
+ * ODID is filled in. Any other ODID from this source will create new input info as
+ * a copy of the existing one with new ODID and zeroed counters.
+ *
+ * When input is closed, one of the input infos is selected and returned together
+ * with INPUT_CLOSED code. Others for the same source have their status changed to CLOSED
+ * and are returned in subsequent calls to get_packet.
+ *
+ * When input is closed without any data being received, it is not reported to
+ * the rest of the collector, but it is silently discarded.
+ *
  */
 struct input_info_list {
 	struct input_info_network info;
@@ -116,8 +135,10 @@ struct plugin_conf {
 	int fd_max; /**< max file descriptor number */
 	struct sockaddr_in6 **sock_addresses; /*< array of addresses indexed by sockets */
 	uint16_t sock_addresses_max;
-	struct input_info_list *info_list; /**< list of infromation structures
+	struct input_info_list *info_list; /**< list of information structures
 										* passed to collector */
+	struct input_info_list *used_info_list; /**< list of old input infos to be deleted */
+	int info_to_remove; /**< Number of closed input info structures */
 #ifdef TLS_SUPPORT
 	uint8_t tls;                  /**< TLS enabled? 0 = no, 1 = yes */
 	SSL_CTX *ctx;                 /**< CTX structure */
@@ -272,6 +293,108 @@ void destroy_sock_addresses(struct plugin_conf *conf)
 }
 
 /**
+ * \brief Creates input info list strucutre based on an existing input_info
+ *
+ * Adds new input_info_list to the list held in plugin configuration
+ * Address or src_info argument should be used to set source address
+ * 
+ * \param conf Plugin configuration
+ * \param src_info Input info to use as source for the new one. Use info from conf if NULL
+ * \param address Address structure to use for input_info. Can be NULL
+ * \return New input_info_list structure
+ */
+struct input_info_list *create_input_info(struct plugin_conf *conf,
+	struct input_info_list *src_info, struct sockaddr_in6 *address)
+{	
+	struct input_info_list *input_info = NULL;
+	struct input_info_network *src_info_net = NULL;
+
+	/* Use default info (new connection) or given info to create new one */
+	if (src_info == NULL) {
+		src_info_net = &conf->info;
+	} else {
+		src_info_net = &src_info->info;
+	}
+
+	/* Create new input_info for this connection */
+	input_info = calloc(1, sizeof(struct input_info_list));
+	if (input_info == NULL) {
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
+
+	memcpy(&input_info->info, src_info_net, sizeof(struct input_info_network));
+
+	/* Set status to new connection */
+	input_info->info.status = SOURCE_STATUS_NEW;
+
+	/* Reset counters */
+	input_info->info.sequence_number = 0;
+	input_info->info.packets = 0;
+	input_info->info.data_records = 0;
+
+	/* Add to list */
+	input_info->next = conf->info_list;
+	conf->info_list = input_info;
+
+	/* When no address is given, do not setup address and ports */
+	if (address == NULL) {
+		return input_info;
+	}
+
+	/* Copy address and port */
+	if (address->sin6_family == AF_INET) {
+		/* Copy src IPv4 address */
+		input_info->info.src_addr.ipv4.s_addr =
+				((struct sockaddr_in*) address)->sin_addr.s_addr;
+		/* Copy port */
+		input_info->info.src_port = ntohs(((struct sockaddr_in*)  address)->sin_port);
+	} else {
+		/* Copy src IPv6 address */
+		int i;
+		for (i = 0; i < 4; i++) {
+			input_info->info.src_addr.ipv6.s6_addr32[i] = address->sin6_addr.s6_addr32[i];
+		}
+
+		/* Copy port */
+		input_info->info.src_port = ntohs(address->sin6_port);
+	}
+
+	return input_info;
+}
+
+/**
+ * \brief Removes given input info from global list
+ *
+ * \param conf Plugin configuration
+ * \param info Input info list structure to be removed
+ */
+void remove_input_info(struct plugin_conf *conf, struct input_info_list *info)
+{
+	struct input_info_list *info_list = NULL, *info_list_prev = NULL;
+
+	for (info_list = conf->info_list; info_list != NULL; info_list = info_list->next) {
+		if (info_list == info) {
+			if (info_list_prev) {
+				/* Removing ith element from list, i>1 */
+				info_list_prev->next = info->next;
+			} else {
+				/* Removing the first element from list */
+				conf->info_list = info->next;
+			}
+
+			/* Add to list of input_infos to be deleted */
+			info->next = conf->used_info_list;
+			conf->used_info_list = info;
+			break;
+		}
+
+		/* Remember previous element */
+		info_list_prev = info_list;
+	}
+}
+
+/**
  * \brief Funtion that listens for new connetions
  *
  * Runs in a thread and adds new connections to plugin_conf->master set
@@ -410,35 +533,11 @@ void *input_listen(void *config)
 
 		pthread_mutex_unlock(&mutex);
 
-		/* create new input_info for this connection */
-		input_info = calloc(1, sizeof(struct input_info_list));
-		if (input_info == NULL) {
-			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		/* Create new input_info for this connection */
+		input_info = create_input_info(conf, NULL, address);
+		if (!input_info) {
+			/* Failed to create input info, listen for new connection */
 			break;
-		}
-
-		memcpy(&input_info->info, &conf->info, sizeof(struct input_info_network));
-
-		/* set status to new connection */
-		input_info->info.status = SOURCE_STATUS_NEW;
-
-		/* copy address and port */
-		if (address->sin6_family == AF_INET) {
-			/* copy src IPv4 address */
-			input_info->info.src_addr.ipv4.s_addr =
-					((struct sockaddr_in*) address)->sin_addr.s_addr;
-
-			/* copy port */
-			input_info->info.src_port = ntohs(((struct sockaddr_in*)  address)->sin_port);
-		} else {
-			/* copy src IPv6 address */
-			int i;
-			for (i = 0; i < 4; i++) {
-				input_info->info.src_addr.ipv6.s6_addr32[i] = address->sin6_addr.s6_addr32[i];
-			}
-
-			/* copy port */
-			input_info->info.src_port = ntohs(address->sin6_port);
 		}
 
 #ifdef TLS_SUPPORT
@@ -446,10 +545,6 @@ void *input_listen(void *config)
 		input_info->collector_cert = conf->server_cert_file;
 		input_info->exporter_cert = peer_cert;
 #endif
-
-		/* add to list */
-		input_info->next = conf->info_list;
-		conf->info_list = input_info;
 
 		/* unset the address so that we do not free it incidentally */
 		address = NULL;
@@ -742,6 +837,7 @@ int input_init(char *params, void **config)
 #endif  /* TLS */
 
 	/* fill in general information */
+	conf->info_to_remove = 0;
 	conf->info.type = SOURCE_TYPE_TCP;
 	conf->info.dst_port = atoi(port);
 	if (addrinfo->ai_family == AF_INET) { /* IPv4 */
@@ -844,6 +940,37 @@ out:
 }
 
 /**
+ * \brief Checks whether input_info matches the given address
+ *
+ * Compares L3 protocol, IP addresses and source port. ODID is not checked.
+ *
+ * \param[in] input_info structure to compare
+ * \param[in] address structure to compare
+ * \return 0 if input_info matches the address, 1 otherwise
+ */
+int compare_input_info(struct input_info_list *info_list, struct sockaddr_in6 *address)
+{
+	/* ports must match */
+	if (info_list->info.src_port == ntohs(((struct sockaddr_in*) address)->sin_port)) {
+		/* Compare addresses, dependent on IP protocol version*/
+		if (info_list->info.l3_proto == 4) {
+			if (info_list->info.src_addr.ipv4.s_addr == ((struct sockaddr_in*) address)->sin_addr.s_addr) {
+				return 0;
+			}
+		} else {
+			if (info_list->info.src_addr.ipv6.s6_addr32[0] == address->sin6_addr.s6_addr32[0] &&
+					info_list->info.src_addr.ipv6.s6_addr32[1] == address->sin6_addr.s6_addr32[1] &&
+					info_list->info.src_addr.ipv6.s6_addr32[2] == address->sin6_addr.s6_addr32[2] &&
+					info_list->info.src_addr.ipv6.s6_addr32[3] == address->sin6_addr.s6_addr32[3]) {
+				return 0;
+			}
+		}
+	}
+
+	return 1;
+}
+
+/**
  * \brief Pass input data from the input plugin into the ipfixcol core.
  *
  * IP addresses are passed as returned by recvfrom and getsockname,
@@ -867,11 +994,27 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 	struct sockaddr_in6 *address;
 	struct plugin_conf *conf = config;
 	int retval = 0, sock;
-	struct input_info_list *info_list;
+	struct input_info_list *info_list, *tmp_list = NULL;
 #ifdef TLS_SUPPORT
 	int i;
 	SSL *ssl = NULL;        /* SSL structure for active socket */
 #endif
+
+	/* Handle closed connections first */
+	if (conf->info_to_remove > 0) {
+		/* Find first info to be removed and remove it */
+		for (info_list = conf->info_list; info_list != NULL; info_list = info_list->next) {
+			if (info_list->info.status == SOURCE_STATUS_CLOSED) {
+				*info = (struct input_info*) &info_list->info;
+				*source_status = SOURCE_STATUS_CLOSED;
+				remove_input_info(conf, info_list);
+				return INPUT_CLOSED;
+			}
+		}
+
+		/* One less info to be removed */
+		conf->info_to_remove--;
+	}
 
 	/* allocate memory for packet, if needed */
 	if (*packet == NULL) {
@@ -1012,40 +1155,45 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 
 	/* go through input_info_list */
 	for (info_list = conf->info_list; info_list != NULL; info_list = info_list->next) {
-		/* ports must match */
-		if (info_list->info.src_port == ntohs(((struct sockaddr_in*) address)->sin_port)) {
-			/* compare addresses, dependent on IP protocol version*/
-			if (info_list->info.l3_proto == 4) {
-				if (info_list->info.src_addr.ipv4.s_addr == ((struct sockaddr_in*) address)->sin_addr.s_addr) {
-					break;
-				}
+		if (compare_input_info(info_list, address) == 0) {
+			if (info_list->info.status == SOURCE_STATUS_NEW) {
+				/* First ODID for this connection, no ODID yet. Use it */
+				break;
 			} else {
-				if (info_list->info.src_addr.ipv6.s6_addr32[0] == address->sin6_addr.s6_addr32[0] &&
-						info_list->info.src_addr.ipv6.s6_addr32[1] == address->sin6_addr.s6_addr32[1] &&
-						info_list->info.src_addr.ipv6.s6_addr32[2] == address->sin6_addr.s6_addr32[2] &&
-						info_list->info.src_addr.ipv6.s6_addr32[3] == address->sin6_addr.s6_addr32[3]) {
+				/* Remember the match and use it for new ODID */
+				tmp_list = info_list;
+
+				/* ODIDs must match or connection must be closing*/
+				if (len == 0 ||
+					(len > 0 && info_list->info.odid == ntohl(((struct ipfix_header *) *packet)->observation_domain_id))) {
 					break;
 				}
 			}
 		}
 	}
 
-	/* check whether we found the input_info */
+	/* Handle new ODIDs for existing source */
+	if (info_list == NULL && tmp_list != NULL) {
+		info_list = create_input_info(conf, tmp_list, NULL);
+	}
+
+	/* Check whether we have the input_info */
 	if (info_list == NULL) {
 		MSG_WARNING(msg_module, "input_info not found, passing packet with NULL input info");
 	} else {
 		/* Set source status */
 		*source_status = info_list->info.status;
-		if (info_list->info.status == SOURCE_STATUS_NEW) {
+		/* Get ODID for opened connection */
+		if (len > 0 && info_list->info.status == SOURCE_STATUS_NEW) {
 			info_list->info.status = SOURCE_STATUS_OPENED;
 			info_list->info.odid = ntohl(((struct ipfix_header *) *packet)->observation_domain_id);
 		}
 	}
 
-	/* pass info to the collector */
+	/* Pass info to the collector */
 	*info = (struct input_info*) &info_list->info;
 
-	/* check whether socket closed */
+	/* Check whether socket closed */
 	if (len == 0) {
 #ifdef TLS_SUPPORT
 		if (conf->tls) {
@@ -1053,31 +1201,53 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 				MSG_WARNING(msg_module, "SSL shutdown is incomplete");
 			}
 
-			/* send "close notify" shutdown alert back to the peer */
+			/* Send "close notify" shutdown alert back to the peer */
 			retval = SSL_shutdown(ssl);
 			if (retval == -1) {
 				MSG_ERROR(msg_module, "Fatal error occured during TLS close notify");
 			}
 		}
 #endif
-		/* print info */
+		/* Print info */
 		if (conf->info.l3_proto == 4) {
 			inet_ntop(AF_INET, (void *)&((struct sockaddr_in*) conf->sock_addresses[sock])->sin_addr, src_addr, INET6_ADDRSTRLEN);
 		} else {
 			inet_ntop(AF_INET6, &conf->sock_addresses[sock]->sin6_addr, src_addr, INET6_ADDRSTRLEN);
 		}
-
-		(*info)->status = SOURCE_STATUS_CLOSED;
-		*source_status = SOURCE_STATUS_CLOSED;
-
 		MSG_INFO(msg_module, "Exporter on address %s closed connection", src_addr);
 
-		/* use mutex so that listening thread does not reuse the socket too quickly */
+		/* Set source status */
+		*source_status = SOURCE_STATUS_CLOSED;
+
+		/* Remove current input_info from list */
+		remove_input_info(conf, info_list);
+
+		/* Set status of all other input_infos from this source
+		 * The current one is not affected, it is removed from the list */
+		for (tmp_list = conf->info_list; tmp_list != NULL; tmp_list = tmp_list->next) {
+			if (compare_input_info(tmp_list, address) == 0) {
+				tmp_list->info.status = SOURCE_STATUS_CLOSED;
+				conf->info_to_remove++;
+			}
+		}
+
+		/* Use mutex so that listening thread does not reuse the socket too quickly */
 		pthread_mutex_lock(&mutex);
 		close(sock);
 		FD_CLR(sock, &conf->master);
 		remove_sock_address(conf, sock);
 		pthread_mutex_unlock(&mutex);
+
+		/* Do not send input_info for closing sources with no data. ODID is not filled in that case */
+		if ((*info)->status == SOURCE_STATUS_NEW) {
+			/* No messages point to this input_info, free here */
+			free(info_list);
+			*info = NULL;
+			return INPUT_INTR;
+		}
+
+		/* Set current input_info status to closed */
+		(*info)->status = SOURCE_STATUS_CLOSED;
 
 		return INPUT_CLOSED;
 	}
@@ -1146,14 +1316,14 @@ int input_close(void **config)
 
 	destroy_sock_addresses(conf);
 
-	/* free input_info list */
-	while (conf->info_list) {
-		info_list = conf->info_list->next;
+	/* free used input_info list */
+	while (conf->used_info_list) {
+		info_list = conf->used_info_list->next;
 #ifdef TLS_SUPPORT
-		X509_free(conf->info_list->exporter_cert);
+		X509_free(conf->used_info_list->exporter_cert);
 #endif
-		free(conf->info_list);
-		conf->info_list = info_list;
+		free(conf->used_info_list);
+		conf->used_info_list = info_list;
 	}
 
 	/* free configuration strings */

@@ -339,7 +339,9 @@ int main (int argc, char* argv[])
 			pid = fork();
 			if (pid > 0) { /* parent process waits for collector 0 */
 				proc_count++;
-				if (pidfile_path && write_pid(pidfile_path, 1, pid));
+				if (pidfile_path) {
+					write_pid(pidfile_path, 1, pid);
+				}
 				continue;
 			} else if (pid < 0) { /* error occured, fork failed */
 				MSG_ERROR(msg_module, "Forking collector process failed (%s); skipping collector '%d'", strerror(errno), i);

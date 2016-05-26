@@ -148,7 +148,7 @@ protected:
 	/**
 	 * \brief Free memory for buffer
 	 */
-	virtual void free_buffer();
+	void free_buffer();
 
 	/**
 	 * \brief Append data to the buffer
@@ -396,18 +396,6 @@ class el_unknown : public element
 {
 protected:
 	bool _var_size;
-
-	/**
-	 * \brief allocate memory for buffer
-	 *
-	 * @param count Number of elements that the buffer should hold
-	 */
-	void allocate_buffer(uint32_t count);
-
-	/**
-	 * \brief free memory for buffer
-	 */
-	virtual void free_buffer();
 
 	/**
 	 * \brief Append data to the buffer
