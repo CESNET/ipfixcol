@@ -225,7 +225,7 @@ int template_table::store(ipfix_data_set *data_set, std::string path, bool new_d
 		this->_new_dir = true;
 	}
 
-	/* Count how many records does data_set contain */
+	/* Count how many records data_set contains */
 	uint16_t data_size = (ntohs(data_set->header.length) - (sizeof(struct ipfix_set_header)));
 	uint16_t read_data = 0;
 	while (read_data < data_size) {
@@ -296,7 +296,7 @@ void template_table::flush(std::string path)
 int template_table::parse_template(struct ipfix_template *tmp, struct fastbit_config *config)
 {
 	int i;
-	uint32_t en = 0; /* enterprise number (0 = IANA elements) */
+	uint32_t en = 0; /* Enterprise number (0 = IANA elements) */
 	int en_offset = 0;
 	template_ie *field;
 	element *new_element;
@@ -315,7 +315,7 @@ int template_table::parse_template(struct ipfix_template *tmp, struct fastbit_co
 
 	_template_id = tmp->template_id;
 
-	/* Save the time of the template transmission */
+	/* Save template transmission time */
 	_first_transmission = tmp->first_transmission;
 
 	/* Find elements */
@@ -387,7 +387,7 @@ int template_table::parse_template(struct ipfix_template *tmp, struct fastbit_co
 		/* Check that this element does not already exist */
 		for (element *e : elements) {
 			if (strncmp(new_element->getName(), e->getName(), IE_NAME_LENGTH) == 0) {
-				/* This element already exists, replace it with unknown */
+				/* This element already exists; replace it with UNKNOWN type */
 				delete new_element;
 				new_element = new el_unknown(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
 				break;

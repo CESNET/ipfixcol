@@ -218,7 +218,8 @@ int process_startup_xml(char *params, struct fastbit_config* c)
 {
 	struct tm *timeinfo;
 	char formated_time[17];
-	std::string path, time_window, record_limit, name_type, name_prefix, indexes, create_sp_files, test, time_alignment;
+	std::string path, time_window, record_limit, name_type, name_prefix,
+			indexes, reorder, create_sp_files, test, template_field_lengths, time_alignment;
 	pugi::xml_document doc;
 	doc.load(params);
 
@@ -480,7 +481,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 		/* Should we create new window?  */
 		if (conf->records_window != 0 && rcnt > conf->records_window) {
 			/* Flush data for all ODID */
-			for (dom_id = ob_dom->begin(); dom_id!=ob_dom->end(); dom_id++) {
+			for (dom_id = ob_dom->begin(); dom_id != ob_dom->end(); dom_id++) {
 				flush_data(conf, (*dom_id).first, (*dom_id).second, false);
 			}
 
