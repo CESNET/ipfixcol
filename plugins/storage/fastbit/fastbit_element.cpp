@@ -250,13 +250,17 @@ std::string element::get_part_info()
 		+ "END Column\n";
 }
 
-el_var_size::el_var_size(int size, uint32_t en, uint16_t id, uint32_t buf_size)
+el_var_size::el_var_size(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct fastbit_config *config)
 {
 	(void) buf_size;
-	data = NULL;
+
+	_config = config;
+	_en = en;
+	_id = id;
 	_size = size;
 	_filled = 0;
 	_buffer = NULL;
+	data = NULL;
 
 	set_name(en, id);
 	this->set_type();
@@ -284,8 +288,11 @@ int el_var_size::set_type()
 	return 0;
 }
 
-el_float::el_float(int size, uint32_t en, uint16_t id, uint32_t buf_size)
+el_float::el_float(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct fastbit_config *config)
 {
+	_config = config;
+	_en = en;
+	_id = id;
 	_size = size;
 	_filled = 0;
 	_buffer = NULL;
@@ -344,8 +351,9 @@ el_text::el_text(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct f
 	_var_size(false), _true_size(size), _sp_buffer(NULL)
 {
 	_config = config;
-
-	_size = 1; // Size for flush function
+	_en = en;
+	_id = id;
+	_size = 1; /* Size for flush function */
 	_offset = 0;
 	_filled = 0;
 	_buffer = NULL;
@@ -478,12 +486,15 @@ el_text::~el_text()
 	free(_sp_buffer);
 }
 
-el_ipv6::el_ipv6(int size, uint32_t en, uint16_t id, int part, uint32_t buf_size)
+el_ipv6::el_ipv6(int size, uint32_t en, uint16_t id, int part, uint32_t buf_size, struct fastbit_config *config)
 {
-	ipv6_value = 0;
+	_config = config;
+	_en = en;
+	_id = id;
 	_size = size;
 	_filled = 0;
 	_buffer = NULL;
+	ipv6_value = 0;
 
 	set_name(en, id, part);
 	this->set_type();
@@ -510,10 +521,12 @@ int el_ipv6::set_type()
 	return 0;
 }
 
-el_blob::el_blob(int size, uint32_t en, uint16_t id, uint32_t buf_size):
+el_blob::el_blob(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct fastbit_config *config):
 	_var_size(false), _true_size(size), _sp_buffer(NULL)
 {
-	/* Set variables defined in parent */
+	_config = config;
+	_en = en;
+	_id = id;
 	_size = 1; /* This is size for flush function */
 	_buffer = NULL;
 	_filled = 0;
@@ -638,8 +651,11 @@ el_blob::~el_blob()
 	free(_sp_buffer);
 }
 
-el_uint::el_uint(int size, uint32_t en, uint16_t id, uint32_t buf_size)
+el_uint::el_uint(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct fastbit_config *config)
 {
+	_config = config;
+	_en = en;
+	_id = id;
 	_real_size = size;
 	_size = 0;
 	_filled = 0;
@@ -769,8 +785,11 @@ int el_sint::set_type()
 	return 0;
 }
 
-el_sint::el_sint(int size, uint32_t en, uint16_t id, uint32_t buf_size)
+el_sint::el_sint(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct fastbit_config *config)
 {
+	_config = config;
+	_en = en;
+	_id = id;
 	_real_size = size;
 	_size = 0;
 	_filled = 0;
@@ -786,12 +805,14 @@ el_sint::el_sint(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 	allocate_buffer(buf_size);
 }
 
-el_unknown::el_unknown(int size, uint32_t en, uint16_t id, int part, uint32_t buf_size)
+el_unknown::el_unknown(int size, uint32_t en, uint16_t id, int part, uint32_t buf_size, struct fastbit_config *config)
 {
-	(void) en;
-	(void) id;
 	(void) part;
 	(void) buf_size;
+
+	_config = config;
+	_en = en;
+	_id = id;
 
 	_size = size;
 	_name[0] = '\0';

@@ -337,43 +337,45 @@ int template_table::parse_template(struct ipfix_template *tmp, struct fastbit_co
 
 		switch(get_type_from_xml(config, en, field->ie.id & 0x7FFF)) {
 			case UINT:
-				new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
+				new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
 				break;
-			case IPv6:
-				/* IPv6 address are 128b in size, so we have to split them over two 64b rows
-				 * Adding p0 p1 sufixes to row name...
+			case IPV6:
+				/* IPv6 address are 128b in size, so we have to split them over two 64b rows. As such,
+				 * we add 'p0' and 'p1' sufixes to row name...
 				 */
+
 				/* Check size from template */
 				if (field->ie.length != 16) {
-					MSG_WARNING(msg_module, "Element e%iid%i has type 'IPv6' but size '%i'; skipping...", en, field->ie.id & 0x7FFF, field->ie.length);
+					MSG_WARNING(msg_module, "Element e%iid%i has type 'IPV6' but size '%i'; skipping...",
+							en, field->ie.id & 0x7FFF, field->ie.length);
 					new_element = new el_unknown(field->ie.length);
 					break;
 				}
 
-				new_element = new el_ipv6(sizeof(uint64_t), en, field->ie.id & 0x7FFF, 0, _buff_size);
+				new_element = new el_ipv6(sizeof(uint64_t), en, field->ie.id & 0x7FFF, 0, _buff_size, config);
 				elements.push_back(new_element);
 
-				new_element = new el_ipv6(sizeof(uint64_t), en, field->ie.id & 0x7FFF, 1, _buff_size);
+				new_element = new el_ipv6(sizeof(uint64_t), en, field->ie.id & 0x7FFF, 1, _buff_size, config);
 				break;
-			case INT: 
-				new_element = new el_sint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
+			case INT:
+				new_element = new el_sint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
 				break;
 			case FLOAT:
-				new_element = new el_float(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
+				new_element = new el_float(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
 				break;
 			case TEXT:
 				new_element = new el_text(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
 				break;
 			case BLOB:
-				new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
+				new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
 				break;
 			case UNKNOWN:
 			default:
 				MSG_DEBUG(msg_module, "Received UNKNOWN element (size: %u)",field->ie.length);
 				if (field->ie.length < 9) {
-					new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
+					new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
 				} else {
-					new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
+					new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
 				}
 
 				break;
@@ -389,7 +391,7 @@ int template_table::parse_template(struct ipfix_template *tmp, struct fastbit_co
 			if (strncmp(new_element->getName(), e->getName(), IE_NAME_LENGTH) == 0) {
 				/* This element already exists; replace it with UNKNOWN type */
 				delete new_element;
-				new_element = new el_unknown(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size);
+				new_element = new el_unknown(field->ie.length, en, field->ie.id & 0x7FFF, 0, _buff_size, config);
 				break;
 			}
 		}

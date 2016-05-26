@@ -92,6 +92,8 @@ class element
 protected:
 	struct fastbit_config *_config;
 
+	uint32_t _en; /* Enterprise number */
+	uint16_t _id; /* Field ID */
 	int _size;
 	enum ibis::TYPE_T _type;
 
@@ -197,8 +199,9 @@ class el_var_size : public element
 {
 public:
 	void *data;
-	el_var_size(int size = 0, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE);
-	/* core methods */
+	el_var_size(int size = 0, uint32_t en = 0, uint16_t id = 0,
+			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
+
 	/**
 	 * \brief Fill internal element value according to given data
 	 *
@@ -291,7 +294,8 @@ class el_ipv6 : public element
 {
 public:
 	uint64_t ipv6_value;
-	el_ipv6(int size = 1, uint32_t en = 0, uint16_t id = 0, int part = 0, uint32_t buf_size = RESERVED_SPACE);
+	el_ipv6(int size = 1, uint32_t en = 0, uint16_t id = 0, int part = 0,
+			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
 
 	/**
 	 * \brief fill internal element value according to given data
@@ -313,7 +317,9 @@ protected:
 class el_blob : public element
 {
 public:
-	el_blob(int size = 1, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE);
+	el_blob(int size = 1, uint32_t en = 0, uint16_t id = 0,
+			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
+
 	virtual uint16_t fill(uint8_t *data);
 	virtual ~el_blob();
 
@@ -353,8 +359,9 @@ typedef union uinteger_union
 class el_uint : public element
 {
 public:
-	el_uint(int size = 1, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE);
-	/* core methods */
+	el_uint(int size = 1, uint32_t en = 0, uint16_t id = 0,
+			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
+
 	/**
 	 * \brief fill internal element value according to given data
 	 *
@@ -378,7 +385,8 @@ protected:
 class el_sint : public el_uint
 {
 public:
-	el_sint(int size = 1, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE);
+	el_sint(int size = 1, uint32_t en = 0, uint16_t id = 0,
+			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
 
 protected:
 	int set_type();
@@ -409,7 +417,8 @@ protected:
 	int append(void *data);
 
 public:
-	el_unknown(int size = 0, uint32_t en = 0, uint16_t id = 0, int part = 0, uint32_t buf_size = 0);
+	el_unknown(int size = 0, uint32_t en = 0, uint16_t id = 0, int part = 0,
+			uint32_t buf_size = 0, struct fastbit_config *config = NULL);
 
 	/**
 	 * \brief fill internal element value according to given data
