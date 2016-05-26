@@ -67,6 +67,11 @@ struct fastbit_config {
 	 */
 	std::map<uint32_t, std::map<uint16_t, enum store_type>> *elements_types;
 
+	/* Element lengths from ipfix-elements.xml is loaded into elements_lengths
+	 * (Enterprise ID -> element ID -> element storage type)
+	 */
+	std::map<uint32_t, std::map<uint16_t, int>> *elements_lengths;
+
 	/* Stores elements that should be indexed */
 	std::vector<std::string> *index_en_id;
 

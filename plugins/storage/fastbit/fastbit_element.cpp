@@ -54,6 +54,7 @@ int load_types_from_xml(struct fastbit_config *conf)
 	pugi::xml_parse_result result;
 	uint32_t en;
 	uint16_t id;
+	int len;
 	enum store_type type;
 	std::string str_value;
 
@@ -109,6 +110,39 @@ int load_types_from_xml(struct fastbit_config *conf)
 		}
 
 		(*conf->elements_types)[en][id] = type;
+
+		/* Obtain field length */
+		if (str_value == "unsigned64" \
+				or str_value == "dateTimeMilliseconds" \
+				or str_value == "dateTimeMicroseconds" \
+				or str_value == "dateTimeNanoseconds" \
+				or str_value == "macAddress" \
+				or str_value == "float64" \
+				or str_value == "signed64") {
+			len = 8;
+		} else if (str_value == "unsigned32" \
+				or str_value == "dateTimeSeconds" \
+				or str_value == "ipv4Address" \
+				or str_value == "boolean" \
+				or str_value == "float32" \
+				or str_value == "signed32") {
+			len = 4;
+		} else if (str_value == "unsigned16" \
+				or str_value == "signed16") {
+			len = 2;
+		} else if (str_value == "unsigned8" \
+				or str_value == "signed8") {
+			len = 1;
+		} else if (str_value == "ipv6Address" \
+				or str_value == "string" \
+				or str_value == "octetArray" \
+				or str_value == "basicList" \
+				or str_value == "subTemplateList" \
+				or str_value == "subTemplateMultiList") {
+			len = -1;
+		}
+
+		(*conf->elements_lengths)[en][id] = len;
 	}
 
 	return 0;

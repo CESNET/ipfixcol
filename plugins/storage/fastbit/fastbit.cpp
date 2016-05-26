@@ -360,6 +360,12 @@ int storage_init(char *params, void **config)
 		return 1;
 	}
 
+	c->elements_lengths = new std::map<uint32_t, std::map<uint16_t, int>>;
+	if (c->elements_lengths == NULL) {
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		return 1;
+	}
+
 	c->index_en_id = new std::vector<std::string>;
 	if (c->index_en_id == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
@@ -570,6 +576,7 @@ int storage_close(void **config)
 	delete conf->dirs;
 	delete conf->flowWatch;
 	delete conf->elements_types;
+	delete conf->elements_lengths;
 	delete conf;
 	return 0;
 }
