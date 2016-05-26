@@ -700,35 +700,34 @@ uint16_t el_uint::fill(uint8_t *data) {
 
 int el_uint::set_type()
 {
-	switch(_real_size) {
-	case 1:
-		/* ubyte */
-		_type = ibis::UBYTE;
-		_size = 1;
-		break;
-	case 2:
-		/* ushort */
-		_type = ibis::USHORT;
-		_size = 2;
-		break;
-	case 3:
-	case 4:
-		/* uint */
-		_type = ibis::UINT;
-		_size = 4;
-		break;
-	case 5:
-	case 6:
-	case 7:
-	case 8:
-		/* ulong */
-		_type = ibis::ULONG;
-		_size = 8;
-		break;
-	default:
-		MSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
-		return 1;
-		break;
+	int target_size = (_config->use_template_field_lengths) ?
+			_real_size : (*_config->elements_lengths)[_en][_id];
+
+	switch(target_size) {
+		case 1:
+			_type = ibis::UBYTE;
+			_size = 1;
+			break;
+		case 2:
+			_type = ibis::USHORT;
+			_size = 2;
+			break;
+		case 3:
+		case 4:
+			_type = ibis::UINT;
+			_size = 4;
+			break;
+		case 5:
+		case 6:
+		case 7:
+		case 8:
+			_type = ibis::ULONG;
+			_size = 8;
+			break;
+		default:
+			MSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
+			return 1;
+			break;
 	}
 
 	return 0;

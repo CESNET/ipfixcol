@@ -118,6 +118,9 @@ struct fastbit_config {
 	/* Specifices whether .sp files should be created */
 	bool create_sp_files;
 
+	/* Specifies whether field lengths should be taken from template or ipfix-elements.xml */
+	bool use_template_field_lengths;
+
 	/* size of buffer (number of values)*/
 	int buff_size;
 

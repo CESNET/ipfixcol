@@ -248,6 +248,9 @@ int process_startup_xml(char *params, struct fastbit_config* c)
 		reorder = ie.node().child_value("reorder");
 		c->reorder = (reorder == "yes");
 
+		template_field_lengths = ie.node().child_value("useTemplateFieldLengths");
+		c->use_template_field_lengths = (!ie.node().child("useTemplateFieldLengths") || template_field_lengths == "yes");
+
 		pugi::xpath_node_set index_e = doc.select_nodes("fileWriter/indexes/element");
 		for (pugi::xpath_node_set::const_iterator it = index_e.begin(); it != index_e.end(); ++it) {
 			pugi::xpath_node node = *it;

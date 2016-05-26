@@ -361,10 +361,18 @@
 			</varlistentry>
 			<varlistentry>
 				<term>
-					<command>createSpFiles</command>
+					<command>createSpFiles (no)</command>
 				</term>
 				<listitem>
 					<simpara>If enabled, the plugin will create .sp files for TEXT columns. These columns are typically created on-the-fly when performing queries on TEXT columns. However, under certain circumstances, like read-only file systems, these files may not be created on-the-fly. If this setting is set to "yes", the required .sp files are created as soon as the data is stored.</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>useTemplateFieldLengths (yes)</command>
+				</term>
+				<listitem>
+					<simpara>If enabled, the plugin will store the data in columns based on the field lengths indicated in IPFIX templates. Otherwise, the columns are based on field lengths implied by the IPFIX field specification in ipfix-elements.xml.</simpara>
 				</listitem>
 			</varlistentry>
 			<varlistentry>
