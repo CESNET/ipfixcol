@@ -113,7 +113,7 @@ void *reorder_index(void *config)
 	return NULL;
 }
 
-std::string dir_hierarchy(struct fastbit_config *config, uint32_t oid)
+std::string dir_hierarchy(struct fastbit_config *config, uint32_t odid)
 {
 	struct tm *timeinfo;
 	const int ft_size = 1000;
@@ -126,7 +126,7 @@ std::string dir_hierarchy(struct fastbit_config *config, uint32_t oid)
 
 	timeinfo = localtime(&(config->last_flush));
 
-	ss << oid;
+	ss << odid;
 	domain_id = ss.str();
 
 	strftime(formated_time, ft_size, (config->sys_dir).c_str(), timeinfo);
@@ -405,7 +405,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	static int rcnt = 0;
 
 	uint16_t template_id;
-	uint32_t oid = 0;
+	uint32_t odid = 0;
 
 	int rcFlows = 0;
 	uint64_t rcFlowsSum = 0;
@@ -415,14 +415,14 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	time_t rawtime;
 	int i;
 
-	oid = ntohl(ipfix_msg->pkt_header->observation_domain_id);
-	if ((dom_id = ob_dom->find(oid)) == ob_dom->end()) {
-		MSG_DEBUG(msg_module, "Received new ODID: %u", oid);
+	odid = ntohl(ipfix_msg->pkt_header->observation_domain_id);
+	if ((dom_id = ob_dom->find(odid)) == ob_dom->end()) {
+		MSG_DEBUG(msg_module, "Received new ODID: %u", odid);
 		std::map<uint16_t, template_table*> *new_dom_id = new std::map<uint16_t, template_table*>;
-		ob_dom->insert(std::make_pair(oid, new_dom_id));
-		dom_id = ob_dom->find(oid);
+		ob_dom->insert(std::make_pair(odid, new_dom_id));
+		dom_id = ob_dom->find(odid);
 
-		(*conf->flowWatch)[oid] = FlowWatch();
+		(*conf->flowWatch)[odid] = FlowWatch();
 	}
 
 	templates = (*dom_id).second;
@@ -463,7 +463,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 				old_templates->insert(std::pair<uint16_t, template_table*>(table->first, table->second));
 
 				/* Flush data */
-				flush_data(conf, oid, old_templates, false);
+				flush_data(conf, odid, old_templates, false);
 
 				/* Remove rewritten template */
 				delete table->second;
@@ -496,7 +496,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 
 			time(&(conf->last_flush));
 			update_window_name(conf);
-			dir = dir_hierarchy(conf, oid);
+			dir = dir_hierarchy(conf, odid);
 			rcnt = 0;
 			conf->new_dir = true;
 		}
@@ -515,7 +515,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 				}
 
 				update_window_name(conf);
-				dir = dir_hierarchy(conf, oid);
+				dir = dir_hierarchy(conf, odid);
 				rcnt = 0;
 				conf->new_dir = true;
 			}
@@ -537,10 +537,10 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	conf->new_dir = false;
 
 	if (rcFlowsSum) {
-		conf->flowWatch->at(oid).addFlows(rcFlowsSum);
+		conf->flowWatch->at(odid).addFlows(rcFlowsSum);
 	}
 
-	conf->flowWatch->at(oid).updateSQ(ntohl(ipfix_msg->pkt_header->sequence_number));
+	conf->flowWatch->at(odid).updateSQ(ntohl(ipfix_msg->pkt_header->sequence_number));
 	return 0;
 }
 
