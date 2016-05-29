@@ -407,7 +407,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	uint16_t template_id;
 	uint32_t odid = 0;
 
-	int rcFlows = 0;
+	int rc_flows = 0;
 	uint64_t rcFlowsSum = 0;
 
 	std::string dir;
@@ -522,10 +522,10 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 		}
 
 		/* Store this data record */
-		rcFlows = (*table).second->store(ipfix_msg->data_couple[i].data_set, dir, conf->new_dir);
-		if (rcFlows >= 0) {
-			rcFlowsSum += rcFlows;
-			rcnt += rcFlows;
+		rc_flows = (*table).second->store(ipfix_msg->data_couple[i].data_set, dir, conf->new_dir);
+		if (rc_flows >= 0) {
+			rcFlowsSum += rc_flows;
+			rcnt += rc_flows;
 		} else {
 			/* No need for showing error message here, since it is already done 
 			 * by store() in case of an error */
