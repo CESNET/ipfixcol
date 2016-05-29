@@ -119,7 +119,7 @@ std::string dir_hierarchy(struct fastbit_config *config, uint32_t odid)
 	const int ft_size = 1000;
 	char formated_time[ft_size];
 	std::string dir;
-	size_t o_loc = 0; /* ODID location in string */
+	size_t pos = 0; /* Substring position in path string */
 
 	std::stringstream ss;
 	std::string domain_id;
@@ -132,8 +132,8 @@ std::string dir_hierarchy(struct fastbit_config *config, uint32_t odid)
 	strftime(formated_time, ft_size, (config->sys_dir).c_str(), timeinfo);
 
 	dir = std::string(formated_time);
-	while ((o_loc = dir.find("%o", o_loc)) != std::string::npos) {
-		dir.replace(o_loc, 2, domain_id);
+	while ((pos = dir.find("%o", pos)) != std::string::npos) {
+		dir.replace(pos, 2, domain_id);
 	}
 
 	dir += config->window_dir;
