@@ -408,7 +408,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	uint32_t odid = 0;
 
 	int rc_flows = 0;
-	uint64_t rcFlowsSum = 0;
+	uint64_t rc_flows_sum = 0;
 
 	std::string dir;
 	std::string domain_name;
@@ -524,7 +524,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 		/* Store this data record */
 		rc_flows = (*table).second->store(ipfix_msg->data_couple[i].data_set, dir, conf->new_dir);
 		if (rc_flows >= 0) {
-			rcFlowsSum += rc_flows;
+			rc_flows_sum += rc_flows;
 			rcnt += rc_flows;
 		} else {
 			/* No need for showing error message here, since it is already done 
@@ -536,8 +536,8 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	/* We've told all tables that the directory has changed */
 	conf->new_dir = false;
 
-	if (rcFlowsSum) {
-		conf->flowWatch->at(odid).addFlows(rcFlowsSum);
+	if (rc_flows_sum) {
+		conf->flowWatch->at(odid).addFlows(rc_flows_sum);
 	}
 
 	conf->flowWatch->at(odid).updateSQ(ntohl(ipfix_msg->pkt_header->sequence_number));
