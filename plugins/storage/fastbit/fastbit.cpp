@@ -321,7 +321,7 @@ int process_startup_xml(char *params, struct fastbit_config* c)
 		}
 
 		if (sem_init(&(c->sem), 0, 1)) {
-			MSG_ERROR(msg_module, "Error semaphore init");
+			MSG_ERROR(msg_module, "Semaphore initialization error");
 			return 1;
 		}
 	} else {
