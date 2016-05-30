@@ -79,7 +79,7 @@ void *reorder_index(void *config)
 	for (unsigned int i = 0; i < conf->dirs->size(); i++) {
 		dir = (*conf->dirs)[i];
 		/* Reorder partitions */
-		if (conf->reorder == 1) {
+		if (conf->reorder) {
 			MSG_DEBUG(msg_module, "Reordering: %s",dir.c_str());
 			reorder_part = new ibis::part(dir.c_str(), NULL, false);
 			reorder_part->reorder(); /* TODO return value */
@@ -218,7 +218,8 @@ int process_startup_xml(char *params, struct fastbit_config* c)
 {
 	struct tm *timeinfo;
 	char formated_time[17];
-	std::string path, time_window, record_limit, name_type, name_prefix, indexes, create_sp_files, test, time_alignment;
+	std::string path, time_window, record_limit, name_type, name_prefix,
+			indexes, reorder, create_sp_files, test, template_field_lengths, time_alignment;
 	pugi::xml_document doc;
 	doc.load(params);
 
@@ -238,23 +239,17 @@ int process_startup_xml(char *params, struct fastbit_config* c)
 			c->sys_dir = path;
 		}
 
-		c->indexes = 0;
 		indexes = ie.node().child_value("onTheFlyIndexes");
-		if (indexes == "yes") {
-			c->indexes = 1;
-		}
+		c->indexes = (indexes == "yes");
 
-		c->create_sp_files = 0;
 		create_sp_files = ie.node().child_value("createSpFiles");
-		if (create_sp_files == "yes") {
-			c->create_sp_files = 1;
-		}
+		c->create_sp_files = (create_sp_files == "yes");
 
-		c->reorder = 0;
-		indexes = ie.node().child_value("reorder");
-		if (indexes == "yes") {
-			c->reorder = 1;
-		}
+		reorder = ie.node().child_value("reorder");
+		c->reorder = (reorder == "yes");
+
+		template_field_lengths = ie.node().child_value("useTemplateFieldLengths");
+		c->use_template_field_lengths = (!ie.node().child("useTemplateFieldLengths") || template_field_lengths == "yes");
 
 		pugi::xpath_node_set index_e = doc.select_nodes("fileWriter/indexes/element");
 		for (pugi::xpath_node_set::const_iterator it = index_e.begin(); it != index_e.end(); ++it) {
@@ -270,7 +265,7 @@ int process_startup_xml(char *params, struct fastbit_config* c)
 			}
 
 			/* Make sure IPv6 elements are indexed */
-			if (IPv6 == get_type_from_xml(c, strtoul(en.c_str(), NULL, 0), strtoul(id.c_str(), NULL, 0))) {
+			if (IPV6 == get_type_from_xml(c, strtoul(en.c_str(), NULL, 0), strtoul(id.c_str(), NULL, 0))) {
 				c->index_en_id->push_back("e" + en + "id" + id + "p0");
 				c->index_en_id->push_back("e" + en + "id" + id + "p1");
 			} else {
@@ -364,6 +359,12 @@ int storage_init(char *params, void **config)
 
 	c->elements_types = new	std::map<uint32_t, std::map<uint16_t, enum store_type>>;
 	if (c->elements_types == NULL) {
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
+		return 1;
+	}
+
+	c->elements_lengths = new std::map<uint32_t, std::map<uint16_t, int>>;
+	if (c->elements_lengths == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return 1;
 	}
@@ -489,7 +490,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 		/* Should we create new window?  */
 		if (conf->records_window != 0 && rcnt > conf->records_window) {
 			/* Flush data for all ODID */
-			for (dom_id = ob_dom->begin(); dom_id!=ob_dom->end(); dom_id++) {
+			for (dom_id = ob_dom->begin(); dom_id != ob_dom->end(); dom_id++) {
 				flush_data(conf, (*dom_id).first, (*dom_id).second, false);
 			}
 
@@ -578,6 +579,7 @@ int storage_close(void **config)
 	delete conf->dirs;
 	delete conf->flowWatch;
 	delete conf->elements_types;
+	delete conf->elements_lengths;
 	delete conf;
 	return 0;
 }

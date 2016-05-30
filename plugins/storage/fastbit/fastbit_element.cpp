@@ -54,6 +54,7 @@ int load_types_from_xml(struct fastbit_config *conf)
 	pugi::xml_parse_result result;
 	uint32_t en;
 	uint16_t id;
+	int len;
 	enum store_type type;
 	std::string str_value;
 
@@ -72,28 +73,76 @@ int load_types_from_xml(struct fastbit_config *conf)
 		en = strtoul(str_value.c_str(), NULL, 0);
 		str_value = it->node().child_value("id");
 		id = strtoul(str_value.c_str(), NULL, 0);
-
 		str_value = it->node().child_value("dataType");
 
-		if (str_value == "unsigned8" or str_value == "unsigned16" or str_value == "unsigned32" or str_value == "unsigned64" or \
-				str_value == "dateTimeSeconds" or str_value == "dateTimeMilliseconds" or str_value == "dateTimeMicroseconds" or \
-				str_value == "dateTimeNanoseconds" or str_value == "ipv4Address" or str_value == "macAddress" or str_value == "boolean") {
+		/* Obtain field type */
+		if (str_value == "boolean" \
+				or str_value == "dateTimeSeconds" \
+				or str_value == "dateTimeMicroseconds" \
+				or str_value == "dateTimeMilliseconds" \
+				or str_value == "dateTimeNanoseconds" \
+				or str_value == "ipv4Address" \
+				or str_value == "macAddress" \
+				or str_value == "unsigned8" \
+				or str_value == "unsigned16" \
+				or str_value == "unsigned32" \
+				or str_value == "unsigned64") {
 			type = UINT;
-		} else if (str_value == "signed8" or str_value == "signed16" or str_value == "signed32" or str_value == "signed64") {
+		} else if (str_value == "signed8" \
+				or str_value == "signed16" \
+				or str_value == "signed32" \
+				or str_value == "signed64") {
 			type = INT;
 		} else if (str_value == "ipv6Address") {
-			type = IPv6;
-		} else if (str_value == "float32" or str_value == "float64") {
+			type = IPV6;
+		} else if (str_value == "float32" \
+			or str_value == "float64") {
 			type = FLOAT;
 		} else if (str_value == "string") {
 			type = TEXT;
-		} else if (str_value == "octetArray" or str_value == "basicList" or str_value == "subTemplateList" or str_value== "subTemplateMultiList") {
+		} else if (str_value == "octetArray" \
+				or str_value == "basicList" \
+				or str_value == "subTemplateList" \
+				or str_value== "subTemplateMultiList") {
 			type = BLOB;
 		} else {
 			type = UNKNOWN;
 		}
 
 		(*conf->elements_types)[en][id] = type;
+
+		/* Obtain field length */
+		if (str_value == "unsigned64" \
+				or str_value == "dateTimeMilliseconds" \
+				or str_value == "dateTimeMicroseconds" \
+				or str_value == "dateTimeNanoseconds" \
+				or str_value == "macAddress" \
+				or str_value == "float64" \
+				or str_value == "signed64") {
+			len = 8;
+		} else if (str_value == "unsigned32" \
+				or str_value == "dateTimeSeconds" \
+				or str_value == "ipv4Address" \
+				or str_value == "boolean" \
+				or str_value == "float32" \
+				or str_value == "signed32") {
+			len = 4;
+		} else if (str_value == "unsigned16" \
+				or str_value == "signed16") {
+			len = 2;
+		} else if (str_value == "unsigned8" \
+				or str_value == "signed8") {
+			len = 1;
+		} else if (str_value == "ipv6Address" \
+				or str_value == "string" \
+				or str_value == "octetArray" \
+				or str_value == "basicList" \
+				or str_value == "subTemplateList" \
+				or str_value == "subTemplateMultiList") {
+			len = -1;
+		}
+
+		(*conf->elements_lengths)[en][id] = len;
 	}
 
 	return 0;
@@ -124,7 +173,7 @@ void element::byte_reorder(uint8_t *dst, uint8_t *src, int srcSize, int dstSize)
 	}
 }
 
-void element::setName(uint32_t en, uint16_t id, int part)
+void element::set_name(uint32_t en, uint16_t id, int part)
 {
 	if (part == -1) { /* default */
 		sprintf(_name, "e%uid%hu", en, id);
@@ -169,19 +218,19 @@ int element::flush(std::string path)
 	if (_filled > 0) {
 		f = fopen((path + "/" + _name).c_str(), "a+");
 		if (f == NULL) {
-			fprintf(stderr, "Error while writing data (fopen)\n");
+			MSG_ERROR(msg_module, "Error while writing data (fopen)");
 			return 1;
 		}
 
 		if (_buffer == NULL) {
-			fprintf(stderr, "Error while writing data (buffer)\n");
+			MSG_ERROR(msg_module, "Error while writing data (buffer)");
 			fclose(f);
 			return 1;
 		}
 
 		check = fwrite(_buffer, size(), _filled, f);
 		if (check != (size_t) _filled) {
-			fprintf(stderr, "Error while writing data (fwrite)\n");
+			MSG_ERROR(msg_module, "Error while writing data (fwrite)");
 			fclose(f);
 			return 1;
 		}
@@ -201,15 +250,19 @@ std::string element::get_part_info()
 		+ "END Column\n";
 }
 
-el_var_size::el_var_size(int size, uint32_t en, uint16_t id, uint32_t buf_size)
+el_var_size::el_var_size(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct fastbit_config *config)
 {
 	(void) buf_size;
-	data = NULL;
+
+	_config = config;
+	_en = en;
+	_id = id;
 	_size = size;
 	_filled = 0;
 	_buffer = NULL;
+	data = NULL;
 
-	setName(en, id);
+	set_name(en, id);
 	this->set_type();
 }
 
@@ -235,13 +288,16 @@ int el_var_size::set_type()
 	return 0;
 }
 
-el_float::el_float(int size, uint32_t en, uint16_t id, uint32_t buf_size)
+el_float::el_float(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct fastbit_config *config)
 {
+	_config = config;
+	_en = en;
+	_id = id;
 	_size = size;
 	_filled = 0;
 	_buffer = NULL;
 
-	setName(en, id);
+	set_name(en, id);
 	this->set_type();
 
 	if (buf_size == 0) {
@@ -256,12 +312,12 @@ uint16_t el_float::fill(uint8_t *data)
 	switch(_size) {
 	case 4:
 		/* float32 */
-		*((uint32_t*)&(float_value.float32)) = ntohl(*((uint32_t*) data));
+		*((uint32_t*) &(float_value.float32)) = ntohl(*((uint32_t*) data));
 		this->append(&(float_value.float32));
 		break;
 	case 8:
 		/* float64 */
-		*((uint64_t*)&(float_value.float64)) = be64toh(*((uint64_t*) data));
+		*((uint64_t*) &(float_value.float64)) = be64toh(*((uint64_t*) data));
 		this->append(&(float_value.float64));
 		break;
 	default:
@@ -295,8 +351,9 @@ el_text::el_text(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct f
 	_var_size(false), _true_size(size), _sp_buffer(NULL)
 {
 	_config = config;
-
-	_size = 1; // Size for flush function
+	_en = en;
+	_id = id;
+	_size = 1; /* Size for flush function */
 	_offset = 0;
 	_filled = 0;
 	_buffer = NULL;
@@ -304,11 +361,11 @@ el_text::el_text(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct f
 	_sp_buffer_size = 0;
 	_sp_buffer_offset = 0;
 
-	if (size == VAR_IE_LENGTH) { // Element with variable size
+	if (size == VAR_IE_LENGTH) { /* Element with variable size */
 		_var_size = true;
 	}
 
-	setName(en, id);
+	set_name(en, id);
 	this->set_type();
 
 	if (buf_size == 0) {
@@ -317,7 +374,7 @@ el_text::el_text(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct f
 
 	allocate_buffer(buf_size);
 
-	/* Allocate the sp buffer, if enabled in config */
+	/* Allocate sp buffer, if enabled in config */
 	if (_config->create_sp_files) {
 		_sp_buffer_size = buf_size;
 		_sp_buffer = (char *) realloc(_sp_buffer, _sp_buffer_size);
@@ -335,7 +392,7 @@ el_text::el_text(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct f
 int el_text::append_str(void *data, int size)
 {
 	/* Check buffer space */
-	if (_filled + size + 1 >= _buf_max) { // 1 = terminating zero
+	if (_filled + size + 1 >= _buf_max) { /* 1 = terminating zero */
 		_buf_max = _buf_max + (100 * size) + 1; // TODO
 		_buffer = (char *) realloc(_buffer, _size * _buf_max);
 	}
@@ -367,7 +424,7 @@ uint16_t el_text::fill(uint8_t *data)
 	this->append_str(&(data[_offset]), _true_size);
 
 	if (_config->create_sp_files) {
-		/* Check that the sp buffer is big enough */
+		/* Check whether sp buffer is large enough */
 		if (_sp_buffer_offset + 8 >= _sp_buffer_size) {
 			_sp_buffer_size *= 2; /* Double the buffer */
 			_sp_buffer = (char *) realloc(_sp_buffer, _sp_buffer_size);
@@ -377,7 +434,7 @@ uint16_t el_text::fill(uint8_t *data)
 			}
 		}
 
-		/* Update the sp buffer */
+		/* Update sp buffer */
 		*(uint64_t *) (_sp_buffer + _sp_buffer_offset) = (uint64_t) _filled;
 		_sp_buffer_offset += 8;
 	}
@@ -429,14 +486,17 @@ el_text::~el_text()
 	free(_sp_buffer);
 }
 
-el_ipv6::el_ipv6(int size, uint32_t en, uint16_t id, int part, uint32_t buf_size)
+el_ipv6::el_ipv6(int size, uint32_t en, uint16_t id, int part, uint32_t buf_size, struct fastbit_config *config)
 {
-	ipv6_value = 0;
+	_config = config;
+	_en = en;
+	_id = id;
 	_size = size;
 	_filled = 0;
 	_buffer = NULL;
+	ipv6_value = 0;
 
-	setName(en, id, part);
+	set_name(en, id, part);
 	this->set_type();
 
 	if (buf_size == 0) {
@@ -461,10 +521,12 @@ int el_ipv6::set_type()
 	return 0;
 }
 
-el_blob::el_blob(int size, uint32_t en, uint16_t id, uint32_t buf_size):
+el_blob::el_blob(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct fastbit_config *config):
 	_var_size(false), _true_size(size), _sp_buffer(NULL)
 {
-	/* Set variables defined in parent */
+	_config = config;
+	_en = en;
+	_id = id;
 	_size = 1; /* This is size for flush function */
 	_buffer = NULL;
 	_filled = 0;
@@ -474,7 +536,7 @@ el_blob::el_blob(int size, uint32_t en, uint16_t id, uint32_t buf_size):
 		_var_size = true;
 	}
 
-	setName(en, id);
+	set_name(en, id);
 	this->set_type();
 
 	if (buf_size == 0) {
@@ -483,7 +545,7 @@ el_blob::el_blob(int size, uint32_t en, uint16_t id, uint32_t buf_size):
 
 	allocate_buffer(buf_size);
 
-	/* Allocate the sp buffer */
+	/* Allocate sp buffer */
 	_sp_buffer_size = buf_size + 8; /* We need at least the 8 bytes */
 	_sp_buffer = (char *) realloc(_sp_buffer, _sp_buffer_size);
 	if (_sp_buffer == NULL) {
@@ -516,7 +578,7 @@ uint16_t el_blob::fill(uint8_t *data)
 	}
 
 	if (_filled + _true_size >= _buf_max) {
-		_buf_max += 100 * _true_size; // TODO find some better constant
+		_buf_max += 100 * _true_size; /* TODO find some better constant */
 		_buffer = (char *) realloc(_buffer, _buf_max);
 		if (_buffer == NULL) {
 			perror("realloc blob buffer");
@@ -529,9 +591,9 @@ uint16_t el_blob::fill(uint8_t *data)
 	/* Update the number of filled bytes */
 	_filled += _true_size;
 
-	/* Check that the sp buffer is big enough */
+	/* Check whether sp buffer is large enough */
 	if (_sp_buffer_offset + 8 >= _sp_buffer_size) {
-		_sp_buffer_size *= 2; /* Double the buffer */
+		_sp_buffer_size *= 2; /* Double buffer size */
 		_sp_buffer = (char *) realloc(_sp_buffer, _sp_buffer_size);
 		if (_sp_buffer == NULL) {
 			perror("realloc blob sp buffer");
@@ -539,7 +601,7 @@ uint16_t el_blob::fill(uint8_t *data)
 		}
 	}
 
-	/* Update the sp buffer */
+	/* Update sp buffer */
 	*(uint64_t *) (_sp_buffer + _sp_buffer_offset) = (uint64_t) _filled;
 	_sp_buffer_offset += 8;
 
@@ -589,18 +651,21 @@ el_blob::~el_blob()
 	free(_sp_buffer);
 }
 
-el_uint::el_uint(int size, uint32_t en, uint16_t id, uint32_t buf_size)
+el_uint::el_uint(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct fastbit_config *config)
 {
+	_config = config;
+	_en = en;
+	_id = id;
 	_real_size = size;
 	_size = 0;
 	_filled = 0;
 	_buffer = NULL;
 
-	setName(en, id);
+	set_name(en, id);
 	this->set_type();
 
 	if (buf_size == 0) {
-		 buf_size = RESERVED_SPACE;
+		buf_size = RESERVED_SPACE;
 	}
 
 	allocate_buffer(buf_size);
@@ -608,6 +673,7 @@ el_uint::el_uint(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 
 uint16_t el_uint::fill(uint8_t *data) {
 	uint_value.ulong = 0;
+
 	switch(_real_size) {
 	case 1:
 		/* ubyte */
@@ -620,7 +686,7 @@ uint16_t el_uint::fill(uint8_t *data) {
 		this->append(&(uint_value.ushort));
 		break;
 	case 3:
-		byte_reorder((uint8_t *) &(uint_value.uint),data,_real_size, sizeof(uint));
+		byte_reorder((uint8_t *) &(uint_value.uint), data, _real_size, sizeof(uint));
 		this->append(&(uint_value.uint));
 		break;
 	case 4:
@@ -631,7 +697,7 @@ uint16_t el_uint::fill(uint8_t *data) {
 	case 5:
 	case 6:
 	case 7:
-		byte_reorder((uint8_t *) &(uint_value.ulong),data,_real_size, sizeof(ulong));
+		byte_reorder((uint8_t *) &(uint_value.ulong), data, _real_size, sizeof(ulong));
 		this->append(&(uint_value.ulong));
 		break;
 	case 8:
@@ -650,35 +716,34 @@ uint16_t el_uint::fill(uint8_t *data) {
 
 int el_uint::set_type()
 {
-	switch(_real_size) {
-	case 1:
-		/* ubyte */
-		_type = ibis::UBYTE;
-		_size = 1;
-		break;
-	case 2:
-		/* ushort */
-		_type = ibis::USHORT;
-		_size = 2;
-		break;
-	case 3:
-	case 4:
-		/* uint */
-		_type = ibis::UINT;
-		_size = 4;
-		break;
-	case 5:
-	case 6:
-	case 7:
-	case 8:
-		/* ulong */
-		_type = ibis::ULONG;
-		_size = 8;
-		break;
-	default:
-		MSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
-		return 1;
-		break;
+	int target_size = (_config->use_template_field_lengths) ?
+			_real_size : (*_config->elements_lengths)[_en][_id];
+
+	switch(target_size) {
+		case 1:
+			_type = ibis::UBYTE;
+			_size = 1;
+			break;
+		case 2:
+			_type = ibis::USHORT;
+			_size = 2;
+			break;
+		case 3:
+		case 4:
+			_type = ibis::UINT;
+			_size = 4;
+			break;
+		case 5:
+		case 6:
+		case 7:
+		case 8:
+			_type = ibis::ULONG;
+			_size = 8;
+			break;
+		default:
+			MSG_ERROR(msg_module, "Invalid element size (%s - %u)", _name, _size);
+			return 1;
+			break;
 	}
 
 	return 0;
@@ -720,14 +785,17 @@ int el_sint::set_type()
 	return 0;
 }
 
-el_sint::el_sint(int size, uint32_t en, uint16_t id, uint32_t buf_size)
+el_sint::el_sint(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct fastbit_config *config)
 {
+	_config = config;
+	_en = en;
+	_id = id;
 	_real_size = size;
 	_size = 0;
 	_filled = 0;
 	_buffer = NULL;
 
-	setName(en, id);
+	set_name(en, id);
 	this->set_type();
 
 	if (buf_size == 0) {
@@ -737,12 +805,14 @@ el_sint::el_sint(int size, uint32_t en, uint16_t id, uint32_t buf_size)
 	allocate_buffer(buf_size);
 }
 
-el_unknown::el_unknown(int size, uint32_t en, uint16_t id, int part, uint32_t buf_size)
+el_unknown::el_unknown(int size, uint32_t en, uint16_t id, int part, uint32_t buf_size, struct fastbit_config *config)
 {
-	(void) en;
-	(void) id;
 	(void) part;
 	(void) buf_size;
+
+	_config = config;
+	_en = en;
+	_id = id;
 
 	_size = size;
 	_name[0] = '\0';

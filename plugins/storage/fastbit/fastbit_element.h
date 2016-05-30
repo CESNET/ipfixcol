@@ -92,11 +92,14 @@ class element
 protected:
 	struct fastbit_config *_config;
 
+	uint32_t _en; /* Enterprise number */
+	uint16_t _id; /* Field ID */
 	int _size;
 	enum ibis::TYPE_T _type;
-	/* row name for this element
-	   combination of id and enterprise number
-	   exp: e0id16, e20id50.... */
+
+	/* Row name for this element, consisting of enterprise number and field id
+	 * Example: e0id16, e20id50, ...
+	 */
 	char _name[IE_NAME_LENGTH];
 
 	uint32_t _filled;  /* number of items are stored in buffer */
@@ -113,21 +116,20 @@ protected:
 	/**
 	 * \brief Set element name
 	 *
-	 * Element name is based on enterprise id and element id.
-	 * (e.g e0id5, e5id10 )
+	 * Element names are based on enterprise ID and element ID.
+	 * Examples: e0id5, e5id10, ...
 	 *
-	 * @param en Enterprise number of element
-	 * @param id ID of information element
+	 * @param en Enterprise ID
+	 * @param id Field ID
 	 * @param part Number of part (used for IPv6)
 	 */
-	void setName(uint32_t en, uint16_t id, int part = -1);
+	void set_name(uint32_t en, uint16_t id, int part = -1);
 
 	/**
 	 * \brief Copy data and change byte order
 	 *
 	 * This method simply copy data from src to dst
 	 * in oposite byte order.
-	 *
 	 *
 	 * @param dst pointer to destination memory where data should be writen (the memory MUST be preallocated)
 	 * @param src pointer to source data for byte reorder
@@ -137,14 +139,14 @@ protected:
 	void byte_reorder(uint8_t *dst, uint8_t *src, int size, int offset = 0);
 
 	/**
-	 * \brief allocate memory for buffer
+	 * \brief Allocate memory for buffer
 	 *
 	 * @param count Number of elements that the buffer should hold
 	 */
 	void allocate_buffer(uint32_t count);
 
 	/**
-	 * \brief free memory for buffer
+	 * \brief Free memory for buffer
 	 */
 	void free_buffer();
 
@@ -158,9 +160,8 @@ protected:
 public:
 	virtual ~element() { free_buffer(); };
 
-	/* core methods */
 	/**
-	 * \brief fill internal element value according to given data
+	 * \brief Fill internal element value according to given data
 	 *
 	 * This method transforms data from ipfix record to internal
 	 * value usable by fastbit. Number of bytes to read is specified by _size
@@ -198,10 +199,11 @@ class el_var_size : public element
 {
 public:
 	void *data;
-	el_var_size(int size = 0, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE);
-	/* core methods */
+	el_var_size(int size = 0, uint32_t en = 0, uint16_t id = 0,
+			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
+
 	/**
-	 * \brief fill internal element value according to given data
+	 * \brief Fill internal element value according to given data
 	 *
 	 * This method transforms data from ipfix record to internal
 	 * value usable by fastbit. Number of bytes to read is specified by _size
@@ -227,10 +229,11 @@ class el_float : public element
 {
 public:
 	float_u float_value;
-	el_float(int size = 1, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE);
-	/* core methods */
+	el_float(int size = 1, uint32_t en = 0, uint16_t id = 0,
+			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
+
 	/**
-	 * \brief fill internal element value according to given data
+	 * \brief Fill internal element value according to given data
 	 *
 	 * This method transforms data from ipfix record to internal
 	 * value usable by fastbit. Number of bytes to read is specified by _size
@@ -257,13 +260,14 @@ private:
 	uint32_t _sp_buffer_size;
 	uint32_t _sp_buffer_offset;
 public:
-	el_text(int size = 1, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
+	el_text(int size = 1, uint32_t en = 0, uint16_t id = 0,
+			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
+
 	virtual uint16_t fill(uint8_t *data);
 	virtual ~el_text();
 
 	/**
-	 * \brief Overloaded flush function to write the sp buffer
-	 *
+	 * \brief Overloaded flush function to write the sp buffer.
 	 * Calls parent funtion flush
 	 *
 	 * @param path to write the file to
@@ -290,7 +294,8 @@ class el_ipv6 : public element
 {
 public:
 	uint64_t ipv6_value;
-	el_ipv6(int size = 1, uint32_t en = 0, uint16_t id = 0, int part = 0, uint32_t buf_size = RESERVED_SPACE);
+	el_ipv6(int size = 1, uint32_t en = 0, uint16_t id = 0, int part = 0,
+			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
 
 	/**
 	 * \brief fill internal element value according to given data
@@ -312,7 +317,9 @@ protected:
 class el_blob : public element
 {
 public:
-	el_blob(int size = 1, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE);
+	el_blob(int size = 1, uint32_t en = 0, uint16_t id = 0,
+			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
+
 	virtual uint16_t fill(uint8_t *data);
 	virtual ~el_blob();
 
@@ -352,8 +359,9 @@ typedef union uinteger_union
 class el_uint : public element
 {
 public:
-	el_uint(int size = 1, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE);
-	/* core methods */
+	el_uint(int size = 1, uint32_t en = 0, uint16_t id = 0,
+			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
+
 	/**
 	 * \brief fill internal element value according to given data
 	 *
@@ -369,7 +377,7 @@ public:
 
 protected:
 	uint_u uint_value;
-	uint16_t _real_size; /**< Element Size that was sent (can differ from storage _size) */
+	uint16_t _real_size; /* Element size that was sent in template; may differ from storage _size */
 
 	int set_type();
 };
@@ -377,7 +385,8 @@ protected:
 class el_sint : public el_uint
 {
 public:
-	el_sint(int size = 1, uint32_t en = 0, uint16_t id = 0, uint32_t buf_size = RESERVED_SPACE);
+	el_sint(int size = 1, uint32_t en = 0, uint16_t id = 0,
+			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
 
 protected:
 	int set_type();
@@ -396,9 +405,9 @@ protected:
 	int append(void *data);
 
 public:
-	el_unknown(int size = 0, uint32_t en = 0, uint16_t id = 0, int part = 0, uint32_t buf_size = 0);
+	el_unknown(int size = 0, uint32_t en = 0, uint16_t id = 0, int part = 0,
+			uint32_t buf_size = 0, struct fastbit_config *config = NULL);
 
-	/* core methods */
 	/**
 	 * \brief fill internal element value according to given data
 	 *
