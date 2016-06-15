@@ -412,7 +412,6 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 
 	std::string dir;
 	std::string domain_name;
-	time_t rawtime;
 	int i;
 
 	odid = ntohl(ipfix_msg->pkt_header->observation_domain_id);
@@ -502,6 +501,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 		}
 
 		if (conf->time_window != 0) {
+			time_t rawtime;
 			time(&rawtime);
 			if (difftime(rawtime,conf->last_flush) > conf->time_window) {
 				/* Flush data for all ODID */
