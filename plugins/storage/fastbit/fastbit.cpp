@@ -183,7 +183,16 @@ void flush_all_data(struct fastbit_config *conf, std::map<uint16_t, template_tab
 	}
 }
 
-void flush_data(struct fastbit_config *conf, uint32_t odid, std::map<uint16_t,template_table*> *templates, bool close)
+/**
+ * \brief Flushes the data for the specified exporter and ODID
+ *
+ * @param conf Plugin configuration data structure
+ * @param exporter_ip_addr_crc CRC32 of exporter IP address
+ * @param odid Observation domain ID
+ * @param templates Template data structure
+ * @param close Indicates whether plugin/thread should be closed after flushing all data
+ */
+void flush_data(struct fastbit_config *conf, uint32_t odid, std::map<uint16_t, template_table*> *templates, bool close)
 {
 	std::string dir;
 	std::map<uint16_t, template_table*>::iterator table;
@@ -457,7 +466,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 
 		template_id = ipfix_msg->data_couple[i].data_template->template_id;
 
-		/* if there is unknown template parse it and add it to template map */
+		/* If template (ID) is unknown, add it to the template map */
 		if ((table = templates->find(template_id)) == templates->end()) {
 			MSG_DEBUG(msg_module, "Received new template: %hu", template_id);
 			template_table *table_tmp = new template_table(template_id, conf->buff_size);
@@ -496,14 +505,14 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 				/* Add the new template */
 				template_table *table_tmp = new template_table(template_id, conf->buff_size);
 				if (table_tmp->parse_template(ipfix_msg->data_couple[i].data_template, conf) != 0) {
-					/* Template cannot be parsed, skip data set */
+					/* Template cannot be parsed; skip data set */
 					delete table_tmp;
 					continue;
 				}
 
 				templates->insert(std::pair<uint16_t, template_table*>(template_id, table_tmp));
 				table = templates->find(template_id);
-				/* New template was created, it creates new directory if necessary */
+				/* New template was created; create new directory if necessary */
 			}
 		}
 
