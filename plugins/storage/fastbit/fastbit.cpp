@@ -162,6 +162,27 @@ void update_window_name(struct fastbit_config *conf)
 	}
 }
 
+/**
+ * \brief Flushes the data for *all* exporters and ODIDs
+ *
+ * @param conf Plugin configuration data structure
+ * @param templates Template data structure
+ * @param close Indicates whether plugin/thread should be closed after flushing all data
+ */
+void flush_all_data(struct fastbit_config *conf, std::map<uint16_t, template_table*> *templates, bool close)
+{
+	std::map<uint32_t, std::map<uint32_t, std::map<uint16_t, template_table*>*>*> *template_info = conf->template_info;
+	std::map<uint32_t, std::map<uint32_t, std::map<uint16_t, template_table*>*>*>::iterator exporter_it;
+	std::map<uint32_t, std::map<uint16_t, template_table*>*>::iterator odid_it;
+
+	/* Iterate over all exporters and ODIDs and flush data */
+	for (exporter_it = template_info->begin(); exporter_it != >template_info->end(); ++exporter_it) {
+		for (odid_it = exporter_it->second->begin(); odid_it != >exporter_it->second->end(); ++odid_it) {
+			flush_data(conf, exporter_it->first, odid_it->first, templates, close);
+		}
+	}
+}
+
 void flush_data(struct fastbit_config *conf, uint32_t odid, std::map<uint16_t,template_table*> *templates, bool close)
 {
 	std::string dir;
