@@ -506,40 +506,33 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 				/* New template was created, it creates new directory if necessary */
 			}
 		}
-		
-		/* Should we create new window?  */
-		if (conf->records_window != 0 && rcnt > conf->records_window) {
-			/* Flush data for all ODID */
+
+		/* Check whether data has to be flushed before storing data record */
+		bool flush_records = conf->records_window > 0 && rcnt > conf->records_window;
+		bool flush_time = conf->time_window > 0;
+
+		if (flush_records || flush_time) {
+			/* Flush data for all exporters and ODIDs */
 			for (dom_id = ob_dom->begin(); dom_id != ob_dom->end(); dom_id++) {
 				flush_data(conf, (*dom_id).first, (*dom_id).second, false);
 			}
 
-			time(&(conf->last_flush));
+			/* Time management differs to flush policy (records vs. time) */
+			if (flush_records) {
+				time_t rawtime;
+				time(&rawtime);
+				conf->last_flush = conf->last_flush + conf->time_window;
+				while (difftime(rawtime, conf->last_flush) > conf->time_window) {
+					conf->last_flush = conf->last_flush + conf->time_window;
+				}
+			} else if (flush_time) {
+				time(&(conf->last_flush));
+			}
+
 			update_window_name(conf);
 			dir = dir_hierarchy(conf, odid);
 			rcnt = 0;
 			conf->new_dir = true;
-		}
-
-		if (conf->time_window != 0) {
-			time_t rawtime;
-			time(&rawtime);
-			if (difftime(rawtime,conf->last_flush) > conf->time_window) {
-				/* Flush data for all ODID */
-				for (dom_id = ob_dom->begin(); dom_id != ob_dom->end(); dom_id++) {
-					flush_data(conf, (*dom_id).first, (*dom_id).second, false);
-				}
-
-				conf->last_flush = conf->last_flush + conf->time_window;
-				while (difftime(rawtime,conf->last_flush) > conf->time_window) {
-					conf->last_flush = conf->last_flush + conf->time_window;
-				}
-
-				update_window_name(conf);
-				dir = dir_hierarchy(conf, odid);
-				rcnt = 0;
-				conf->new_dir = true;
-			}
 		}
 
 		/* Store this data record */
