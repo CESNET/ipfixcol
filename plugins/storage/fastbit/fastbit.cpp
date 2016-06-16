@@ -245,7 +245,7 @@ void *reorder_index(void *config)
 	return NULL;
 }
 
-std::string dir_hierarchy(struct fastbit_config *config, uint32_t odid)
+std::string dir_hierarchy(struct fastbit_config *config, std::string exporter_ip_addr, uint32_t odid)
 {
 	struct tm *timeinfo;
 	const int ft_size = 1000;
@@ -264,6 +264,10 @@ std::string dir_hierarchy(struct fastbit_config *config, uint32_t odid)
 	strftime(formated_time, ft_size, (config->sys_dir).c_str(), timeinfo);
 
 	path = std::string(formated_time);
+	while ((pos = path.find("%e", pos)) != std::string::npos) {
+		path.replace(pos, 2, exporter_ip_addr);
+	}
+
 	while ((pos = path.find("%o", pos)) != std::string::npos) {
 		path.replace(pos, 2, domain_id);
 	}
