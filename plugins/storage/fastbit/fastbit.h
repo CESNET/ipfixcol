@@ -42,7 +42,7 @@
 
 /* Get defines from configure */
 #ifdef HAVE_CONFIG_H
-# include <config.h>
+    #include <config.h>
 #endif
 
 /* We need be64toh macro */

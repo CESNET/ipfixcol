@@ -41,11 +41,11 @@
 #define FASTBIT_ELEMENT
 
 extern "C" {
-#include <ipfixcol.h>
-#include <netinet/in.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
+	#include <ipfixcol.h>
+	#include <netinet/in.h>
+	#include <stdio.h>
+	#include <stdlib.h>
+	#include <time.h>
 }
 
 #include <map>
