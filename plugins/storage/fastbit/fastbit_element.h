@@ -54,8 +54,6 @@ extern "C" {
 
 #include <fastbit/ibis.h>
 
-#include "pugixml.hpp"
-
 #include "fastbit.h"
 #include "config_struct.h"
 
