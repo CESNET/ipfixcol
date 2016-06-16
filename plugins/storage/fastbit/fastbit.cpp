@@ -95,8 +95,8 @@ void *reorder_index(void *config)
 		} else if (conf->indexes == 2) { /* Build selected indexes */
 			index_table = ibis::table::create(dir.c_str());
 			ibis_columns = index_table->columnNames();
-			for (unsigned int i=0; i < conf->index_en_id->size(); i++) {
-				for (unsigned int j=0; j < ibis_columns.size(); j++) {
+			for (unsigned int i = 0; i < conf->index_en_id->size(); i++) {
+				for (unsigned int j = 0; j < ibis_columns.size(); j++) {
 					if ((*conf->index_en_id)[i] == std::string(ibis_columns[j])) {
 						MSG_DEBUG(msg_module, "Creating indexes: %s%s", dir.c_str(), (*conf->index_en_id)[i].c_str());
 						index_table->buildIndex(ibis_columns[j]);
@@ -226,19 +226,16 @@ void flush_data(struct fastbit_config *conf, uint32_t odid, std::map<uint16_t, t
 	}
 	sem_post(&(conf->sem));
 
-	s = pthread_create(&index_thread, NULL, reorder_index, conf);
-	if (s != 0) {
+	if ((s = pthread_create(&index_thread, NULL, reorder_index, conf)) != 0) {
 		MSG_ERROR(msg_module, "pthread_create");
 	}
 
 	if (close) {
-		s = pthread_join(index_thread, NULL);
-		if (s != 0) {
+		if ((s = pthread_join(index_thread, NULL)) != 0) {
 			MSG_ERROR(msg_module, "pthread_join");
 		}
 	} else {
-		s = pthread_detach(index_thread);
-		if (s != 0) {
+		if ((s = pthread_detach(index_thread)) != 0) {
 			MSG_ERROR(msg_module, "pthread_detach");
 		}
 	}
@@ -254,7 +251,7 @@ int process_startup_xml(char *params, struct fastbit_config* c)
 	doc.load(params);
 
 	if (doc) {
-		/* Load element types from xml */
+		/* Load element types from XML */
 		if (load_types_from_xml(c) != 0) {
 			return 1;
 		}
