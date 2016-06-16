@@ -57,9 +57,8 @@ extern "C" {
 #include <fastbit/ibis.h>
 
 #include "fastbit_element.h"
-#include "config_struct.h"
 
-class element; // Needed because of circular dependency
+class element; /* Needed because of circular dependency */
 
 uint64_t get_rows_from_part(const char *);
 
