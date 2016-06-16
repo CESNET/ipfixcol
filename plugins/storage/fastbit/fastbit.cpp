@@ -67,6 +67,19 @@ extern "C" {
 #include "fastbit_element.h"
 #include "FlowWatch.h"
 
+void ipv6_addr_non_canonical(char *str, const struct in6_addr *addr)
+{
+	sprintf(str, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+			addr->s6_addr[0], addr->s6_addr[1],
+			addr->s6_addr[2], addr->s6_addr[3],
+			addr->s6_addr[4], addr->s6_addr[5],
+			addr->s6_addr[6], addr->s6_addr[7],
+			addr->s6_addr[8], addr->s6_addr[9],
+			addr->s6_addr[10], addr->s6_addr[11],
+			addr->s6_addr[12], addr->s6_addr[13],
+			addr->s6_addr[14], addr->s6_addr[15]);
+}
+
 /**
  * \brief Load elements types from xml to configure structure
  *
