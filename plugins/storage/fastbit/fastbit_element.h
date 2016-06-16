@@ -57,6 +57,8 @@ extern "C" {
 #include "fastbit.h"
 #include "config_struct.h"
 
+#define NFv9_CONVERSION_ENTERPRISE_NUMBER (~((uint32_t) 0))
+
 const int IE_NAME_LENGTH = 32;
 const int TYPE_NAME_LENGTH = 10;
 

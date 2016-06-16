@@ -46,8 +46,6 @@ extern "C" {
 #include "fastbit_element.h"
 #include "fastbit_table.h"
 
-#define NFv9_CONVERSION_ENTERPRISE_NUMBER (~((uint32_t) 0))
-
 void element::byte_reorder(uint8_t *dst, uint8_t *src, int srcSize, int dstSize)
 {
 	(void) dstSize;
