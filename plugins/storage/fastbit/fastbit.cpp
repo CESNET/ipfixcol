@@ -373,6 +373,26 @@ void flush_data(struct fastbit_config *conf, uint32_t odid, std::map<uint16_t, t
 	}
 }
 
+/**
+ * \brief Flushes the data for *all* exporters and ODIDs
+ *
+ * @param conf Plugin configuration data structure
+ * @param close Indicates whether plugin/thread should be closed after flushing all data
+ */
+void flush_all_data(struct fastbit_config *conf, bool close)
+{
+	std::map<uint32_t, std::map<uint32_t, od_info>*> *od_infos = conf->od_infos;
+	std::map<uint32_t, std::map<uint32_t, od_info>*>::iterator exporter_it;
+	std::map<uint32_t, od_info>::iterator odid_it;
+
+	/* Iterate over all exporters and ODIDs and flush data */
+	for (exporter_it = od_infos->begin(); exporter_it != od_infos->end(); ++exporter_it) {
+		for (odid_it = exporter_it->second->begin(); odid_it != exporter_it->second->end(); ++odid_it) {
+			flush_data(conf, exporter_it->first, odid_it->first, &(odid_it->second.template_info), close);
+		}
+	}
+}
+
 int process_startup_xml(char *params, struct fastbit_config* c)
 {
 	struct tm *timeinfo;
