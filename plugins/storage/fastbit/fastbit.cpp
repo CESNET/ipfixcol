@@ -38,11 +38,11 @@
  */
 
 extern "C" {
-#include <ipfixcol/storage.h>
-#include <ipfixcol/verbose.h>
+	#include <ipfixcol/storage.h>
+	#include <ipfixcol/verbose.h>
 
-/* API version constant */
-IPFIXCOL_API_VERSION;
+	/* API version constant */
+	IPFIXCOL_API_VERSION;
 }
 
 #include <pthread.h>
