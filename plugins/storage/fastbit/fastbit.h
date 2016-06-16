@@ -66,4 +66,24 @@ enum name_type { TIME, INCREMENTAL, PREFIX };
 /* this enum specifies types of elements */
 enum store_type { UINT, INT, BLOB, TEXT, FLOAT, IPV6, UNKNOWN };
 
+/**
+ * \brief Load elements types from xml to configure structure
+ *
+ * This function reads ipfix-elements.xml
+ * and stores elements data type in configuration structure
+ *
+ * @param conf fastbit storage plug-in configuration structure
+ */
+int load_types_from_xml(struct fastbit_config *conf);
+
+/**
+ * \brief Search for element type in configure structure
+ *
+ * @param conf fastbit storage plug-in configuration structure
+ * @param en Enterprise number of element
+ * @param id ID of information element
+ * @return element type
+ */
+enum store_type get_type_from_xml(struct fastbit_config *conf, uint32_t en, uint16_t id);
+
 #endif /* FASTBIT_H_ */
