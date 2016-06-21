@@ -51,13 +51,13 @@ class FlowWatch {
 	uint64_t lastSQ_;
 	uint64_t recvFlows_;
 	uint64_t lastFlows_; /**< Number of flows in the last packet */
-	bool reseted;
+	bool reset;
 public:
 	void updateSQ(uint64_t sq);
 	void addFlows(uint64_t recFlows);
 	uint64_t exportedFlows();
 	uint64_t receivedFlows();
-	void reset();
+	void reset_state();
 	int write(std::string dir);
 	FlowWatch();
 	virtual ~FlowWatch();

@@ -46,16 +46,12 @@
 
 FlowWatch::FlowWatch()
 {
-	recvFlows_ = 0;
-	lastFlows_ = 0;
-	lastSQ_ = 0;
-	firstSQ_ = 0;
-	reseted = true;
+	reset_state();
 }
 
-void FlowWatch::reset()
+void FlowWatch::reset_state()
 {
-	reseted = true;
+	reset = true;
 	recvFlows_ = 0;
 	lastFlows_ = 0;
 	lastSQ_ = 0;
@@ -64,14 +60,14 @@ void FlowWatch::reset()
 
 void FlowWatch::updateSQ(uint64_t SQ)
 {
-	if (reseted == true) {
+	if (reset == true) {
 		firstSQ_ = lastSQ_ = SQ;
-		reseted = false;
+		reset = false;
 	} else {
 		if (SQ < firstSQ_) {
 			/* Detect SQ reset (modulo 2^32) */
 			if (firstSQ_ > SQ_TOP_LIMIT && SQ < SQ_BOT_LIMIT) {
-				/* Is this first packet with reseted SQ? */
+				/* Is this first packet with reset SQ? */
 				if (lastSQ_ < SQ_BOT_LIMIT) {
 					if (lastSQ_ < SQ) {
 						lastSQ_ = SQ;
