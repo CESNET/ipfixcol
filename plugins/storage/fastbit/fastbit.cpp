@@ -73,7 +73,7 @@ void *reorder_index(void *config)
 	ibis::table *index_table;
 	std::string dir;
 	ibis::part *reorder_part;
-	ibis::table::stringList ibis_columns;
+	ibis::table::stringArray ibis_columns;
 	sem_wait(&(conf->sem));
 
 	for (unsigned int i = 0; i < conf->dirs->size(); i++) {
