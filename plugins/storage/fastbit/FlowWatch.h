@@ -46,17 +46,17 @@
 #define SQ_MAX std::numeric_limits<uint64_t>::max()
 
 class FlowWatch {
-	enum {SQ_BOT_LIMIT=1431655765, SQ_TOP_LIMIT=2863311530 };
-	uint64_t firstSQ_;
-	uint64_t lastSQ_;
-	uint64_t recvFlows_;
-	uint64_t lastFlows_; /**< Number of flows in the last packet */
+	enum { SQ_BOT_LIMIT=1431655765, SQ_TOP_LIMIT=2863311530 };
+	uint64_t first_seq_no;
+	uint64_t last_seq_no;
+	uint64_t recv_flows;
+	uint64_t prev_recv_flows; /**< Number of flows in previous message */
 	bool reset;
 public:
-	void updateSQ(uint64_t sq);
-	void addFlows(uint64_t recFlows);
-	uint64_t exportedFlows();
-	uint64_t receivedFlows();
+	void update_seq_no(uint64_t sq);
+	void add_flows(uint64_t recFlows);
+	uint64_t exported_flows();
+	uint64_t received_flows();
 	void reset_state();
 	int write(std::string dir);
 	FlowWatch();
