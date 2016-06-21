@@ -94,6 +94,9 @@ AM_CXXFLAGS="$AM_CXXFLAGS $CXXSTD"
 AC_SEARCH_LIBS([fastbit_init], [fastbit],,
     	AC_MSG_ERROR([Required library fastbit missing]))
 
+PKG_CHECK_MODULES([LIBFASTBIT], [fastbit >= 2.0.3.2],,
+		AC_MSG_ERROR([Fastbit library version is too low (< 2.0.3.2)]))
+
 ### dynamic linker ###
 AC_SEARCH_LIBS([dlopen], [dl],,
         AC_MSG_ERROR([Required library dl missing]))

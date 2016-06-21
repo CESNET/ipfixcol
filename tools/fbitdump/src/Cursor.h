@@ -95,7 +95,7 @@ public:
 private:
 	Table &table;                      /**< Table of the cursor */
 	ibis::table::cursor *cursor;       /**< Ibis cursor to wrap */
-	ibis::table::typeList columnTypes; /**< Column types of the table */
+	ibis::table::typeArray columnTypes; /**< Column types of the table */
 };
 
 } /* end of namespace fbitdump */
