@@ -42,8 +42,10 @@
 
 /* Get defines from configure */
 #ifdef HAVE_CONFIG_H
-    #include <config.h>
+	#include <config.h>
 #endif
+
+#include "FlowWatch.h"
 
 /* We need be64toh macro */
 #ifndef HAVE_BE64TOH
@@ -65,6 +67,28 @@ enum name_type { TIME, INCREMENTAL, PREFIX };
 
 /* Element storage types */
 enum store_type { UINT, INT, BLOB, TEXT, FLOAT, IPV6, UNKNOWN };
+
+/* fastbit_table.h relies on the enums defined in this file, which
+ * is why we include fastbit_table.h after defining the enums
+ */
+#include "fastbit_table.h"
+
+class template_table;
+
+/* Data structure for holding information about observation domain (OD) */
+struct od_info {
+	/* template_table by template ID */
+	std::map<uint16_t, template_table*> template_info;
+
+	/* String representation of exporter IP address in non-canonical */
+	std::string exporter_ip_addr;
+
+	/* Directory for storing data for this observation domain */
+	std::string path;
+
+	/* FlowWatch for monitoring statistics */
+	FlowWatch flow_watch;
+};
 
 /**
  * \brief Load elements types from xml to configure structure

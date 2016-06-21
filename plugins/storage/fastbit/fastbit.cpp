@@ -65,7 +65,7 @@ extern "C" {
 #include "fastbit.h"
 #include "fastbit_table.h"
 #include "fastbit_element.h"
-#include "FlowWatch.h"
+#include "config_struct.h"
 
 void ipv6_addr_non_canonical(char *str, const struct in6_addr *addr)
 {
@@ -219,6 +219,7 @@ void *reorder_index(void *config)
 	std::string dir;
 	ibis::part *reorder_part;
 	ibis::table::stringArray ibis_columns;
+
 	sem_wait(&(conf->sem));
 
 	for (unsigned int i = 0; i < conf->dirs->size(); i++) {
@@ -258,31 +259,28 @@ void *reorder_index(void *config)
 	return NULL;
 }
 
-std::string dir_hierarchy(struct fastbit_config *config, std::string exporter_ip_addr, uint32_t odid)
+std::string generate_path(struct fastbit_config *config, std::string exporter_ip_addr, uint32_t odid)
 {
-	struct tm *timeinfo;
+	struct tm *timeinfo = localtime(&(config->last_flush));
 	const int ft_size = 1000;
 	char formated_time[ft_size];
 	std::string path;
-	size_t pos = 0; /* Substring position in path string */
 
 	std::stringstream ss;
-	std::string domain_id;
-
-	timeinfo = localtime(&(config->last_flush));
-
 	ss << odid;
-	domain_id = ss.str();
+	std::string odid_str = ss.str();
 
 	strftime(formated_time, ft_size, (config->sys_dir).c_str(), timeinfo);
-
 	path = std::string(formated_time);
-	while ((pos = path.find("%e", pos)) != std::string::npos) {
+
+	size_t pos = 0;
+	while ((pos = path.find("%E", pos)) != std::string::npos) {
 		path.replace(pos, 2, exporter_ip_addr);
 	}
 
+	pos = 0;
 	while ((pos = path.find("%o", pos)) != std::string::npos) {
-		path.replace(pos, 2, domain_id);
+		path.replace(pos, 2, odid_str);
 	}
 
 	path += config->window_dir;
@@ -291,44 +289,22 @@ std::string dir_hierarchy(struct fastbit_config *config, std::string exporter_ip
 
 void update_window_name(struct fastbit_config *conf)
 {
-	std::stringstream ss;
 	static int flushed = 1;
-	struct tm * timeinfo;
-	char formated_time[17];
 
 	/* Change window directory name */
 	if (conf->dump_name == PREFIX) {
 		conf->window_dir = conf->prefix + "/";
 	} else if (conf->dump_name == INCREMENTAL) {
+		std::stringstream ss;
 		ss << std::setw(12) << std::setfill('0') << flushed;
 		conf->window_dir = conf->prefix + ss.str() + "/";
 		ss.str("");
 		flushed++;
 	} else {
-		timeinfo = localtime(&(conf->last_flush));
+		char formated_time[17];
+		struct tm *timeinfo = localtime(&(conf->last_flush));
 		strftime(formated_time, 17, "%Y%m%d%H%M%S", timeinfo);
 		conf->window_dir = conf->prefix + std::string(formated_time) + "/";
-	}
-}
-
-/**
- * \brief Flushes the data for *all* exporters and ODIDs
- *
- * @param conf Plugin configuration data structure
- * @param templates Template data structure
- * @param close Indicates whether plugin/thread should be closed after flushing all data
- */
-void flush_all_data(struct fastbit_config *conf, std::map<uint16_t, template_table*> *templates, bool close)
-{
-	std::map<uint32_t, std::map<uint32_t, std::map<uint16_t, template_table*>*>*> *template_info = conf->template_info;
-	std::map<uint32_t, std::map<uint32_t, std::map<uint16_t, template_table*>*>*>::iterator exporter_it;
-	std::map<uint32_t, std::map<uint16_t, template_table*>*>::iterator odid_it;
-
-	/* Iterate over all exporters and ODIDs and flush data */
-	for (exporter_it = template_info->begin(); exporter_it != >template_info->end(); ++exporter_it) {
-		for (odid_it = exporter_it->second->begin(); odid_it != >exporter_it->second->end(); ++odid_it) {
-			flush_data(conf, exporter_it->first, odid_it->first, templates, close);
-		}
 	}
 }
 
@@ -338,40 +314,53 @@ void flush_all_data(struct fastbit_config *conf, std::map<uint16_t, template_tab
  * @param conf Plugin configuration data structure
  * @param exporter_ip_addr_crc CRC32 of exporter IP address
  * @param odid Observation domain ID
- * @param templates Template data structure
  * @param close Indicates whether plugin/thread should be closed after flushing all data
  */
-void flush_data(struct fastbit_config *conf, uint32_t odid, std::map<uint16_t, template_table*> *templates, bool close)
+void flush_data(struct fastbit_config *conf, uint32_t exporter_ip_addr_crc, uint32_t odid,
+		std::map<uint16_t,template_table*> *templates, bool close)
 {
-	std::string dir;
 	std::map<uint16_t, template_table*>::iterator table;
 	int s;
-	pthread_t index_thread;
 	std::stringstream ss;
+	pthread_t index_thread;
 
-	MSG_DEBUG(msg_module, "Flushing data to disk");
+	std::map<uint32_t, std::map<uint32_t, od_info>*>::iterator exporter_it;
+	std::map<uint32_t, od_info>::iterator odid_it;
+
+	/* Check whether exporter is listed in data structure */
+	if ((exporter_it = conf->od_infos->find(exporter_ip_addr_crc)) == conf->od_infos->end()) {
+		MSG_ERROR(msg_module, "Could not find exporter in od_infos; aborting...");
+		return;
+	}
+
+	/* Check whether ODID is listed in data structure (under exporter) */
+	if ((odid_it = exporter_it->second->find(odid)) == exporter_it->second->end()) {
+		MSG_ERROR(msg_module, "Could not find ODID %u in od_infos; aborting...", odid);
+		return;
+	}
+
+	std::string path = odid_it->second.path;
 
 	sem_wait(&(conf->sem));
 	{
 		conf->dirs->clear();
 
-		MSG_DEBUG(msg_module, "ODID [%u]: Exported: %u Collected: %u", odid,
-				conf->flowWatch->at(odid).exportedFlows(),
-				conf->flowWatch->at(odid).receivedFlows());
-
-		dir = dir_hierarchy(conf, odid);
+		MSG_DEBUG(msg_module, "Flushing data to disk (exporter: %s, ODID: %u)",
+				odid_it->second.exporter_ip_addr.c_str(), odid);
+		MSG_DEBUG(msg_module, "    > Exported: %u", odid_it->second.flow_watch.received_flows());
+		MSG_DEBUG(msg_module, "    > Received: %u", odid_it->second.flow_watch.exported_flows());
 
 		for (table = templates->begin(); table != templates->end(); table++) {
-			conf->dirs->push_back(dir + ((*table).second)->name() + "/");
-			(*table).second->flush(dir);
+			conf->dirs->push_back(path + ((*table).second)->name() + "/");
+			(*table).second->flush(path);
 			(*table).second->reset_rows();
 		}
 
-		if (conf->flowWatch->at(odid).write(dir) == -1) {
-			MSG_ERROR(msg_module, "Unable to write flows stats: %s", dir.c_str());
+		if (odid_it->second.flow_watch.write(path) == -1) {
+			MSG_ERROR(msg_module, "Unable to write flow statistics: %s", path.c_str());
 		}
 
-		conf->flowWatch->at(odid).reset();
+		odid_it->second.flow_watch.reset_state();
 	}
 	sem_post(&(conf->sem));
 
@@ -541,14 +530,8 @@ int storage_init(char *params, void **config)
 	}
 
 	c = (struct fastbit_config*) *config;
-	c->ob_dom = new std::map<uint32_t, std::map<uint16_t, template_table*> *>;
-	if (c->ob_dom == NULL) {
-		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
-		return 1;
-	}
-
-	c->flowWatch = new std::map<uint32_t, FlowWatch>;
-	if (c->flowWatch == NULL) {
+	c->od_infos = new std::map<uint32_t, std::map<uint32_t, struct od_info>*>;
+	if (c->od_infos == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return 1;
 	}
@@ -590,40 +573,65 @@ int storage_init(char *params, void **config)
 
 extern "C"
 int store_packet(void *config, const struct ipfix_message *ipfix_msg,
-		const struct ipfix_template_mgr *template_mgr) {
+		const struct ipfix_template_mgr *template_mgr)
+{
 	(void) template_mgr;
 	std::map<uint16_t, template_table*>::iterator table;
 	struct fastbit_config *conf = (struct fastbit_config *) config;
 	std::map<uint16_t, template_table*> *templates = NULL;
 	std::map<uint16_t, template_table*> *old_templates = NULL; /* Templates to be removed */
-	std::map<uint32_t, std::map<uint16_t, template_table*> *> *ob_dom = conf->ob_dom;
-	std::map<uint32_t, std::map<uint16_t, template_table*> *>::iterator dom_id;
+
+	std::map<uint32_t, std::map<uint32_t, od_info>*> *od_infos = conf->od_infos;
+	std::map<uint32_t, std::map<uint32_t, od_info>*>::iterator exporter_it;
+	std::map<uint32_t, od_info>::iterator odid_it;
+
 	static int rcnt = 0;
 
 	uint16_t template_id;
-	uint32_t odid = 0;
+	uint32_t odid = ntohl(ipfix_msg->pkt_header->observation_domain_id);
+	struct input_info_network *input = (struct input_info_network *) ipfix_msg->input_info;
 
 	int rc_flows = 0;
 	uint64_t rc_flows_sum = 0;
 
-	std::string dir;
-	std::string domain_name;
-	int i;
-
-	odid = ntohl(ipfix_msg->pkt_header->observation_domain_id);
-	if ((dom_id = ob_dom->find(odid)) == ob_dom->end()) {
-		MSG_DEBUG(msg_module, "Received new ODID: %u", odid);
-		std::map<uint16_t, template_table*> *new_dom_id = new std::map<uint16_t, template_table*>;
-		ob_dom->insert(std::make_pair(odid, new_dom_id));
-		dom_id = ob_dom->find(odid);
-
-		(*conf->flowWatch)[odid] = FlowWatch();
+	char exporter_ip_addr[INET6_ADDRSTRLEN];
+	if (input->l3_proto == 6) { /* IPv6 */
+		ipv6_addr_non_canonical(exporter_ip_addr, &(input->src_addr.ipv6));
+	} else { /* IPv4 */
+		inet_ntop(AF_INET, &(input->src_addr.ipv4.s_addr), exporter_ip_addr, INET_ADDRSTRLEN);
 	}
 
-	templates = (*dom_id).second;
-	dir = dir_hierarchy(conf, (*dom_id).first);
+	/* Calculate CRC32 over IP address, to have a constant 'key' length for IPv4
+	 * and IPv6 addresses */
+	uint32_t exporter_ip_addr_crc = 512;
 
-	/* Message from ipfixcol have maximum of MSG_MAX_DATA_COUPLES data records */
+	/* Find exporter in od_infos data structure */
+	if ((exporter_it = od_infos->find(exporter_ip_addr_crc)) == od_infos->end()) {
+		MSG_INFO(msg_module, "Received data for new exporter: %s", exporter_ip_addr);
+
+		/* Add new exporter to data structure */
+		std::map<uint32_t, od_info> *new_exporter = new std::map<uint32_t, od_info>;
+		od_infos->insert(std::make_pair(exporter_ip_addr_crc, new_exporter));
+		exporter_it = od_infos->find(exporter_ip_addr_crc);
+	}
+
+	/* Find ODID in template_info data structure (under exporter) */
+	if ((odid_it = exporter_it->second->find(odid)) == exporter_it->second->end()) {
+		MSG_INFO(msg_module, "Received new ODID for exporter %s: %u", exporter_ip_addr, odid);
+
+		/* Add new ODID to data structure (under exporter) */
+		od_info new_odid;
+		new_odid.exporter_ip_addr = exporter_ip_addr;
+		new_odid.path = generate_path(conf, exporter_ip_addr, odid);
+
+		exporter_it->second->insert(std::make_pair(odid, new_odid));
+		odid_it = exporter_it->second->find(odid);
+	}
+
+	templates = &(odid_it->second.template_info);
+
+	/* Process all datasets in message */
+	int i;
 	for (i = 0 ; i < MSG_MAX_DATA_COUPLES && ipfix_msg->data_couple[i].data_set; i++) {	
 		if (ipfix_msg->data_couple[i].data_template == NULL) {
 			/* Skip data couples without templates */
@@ -647,7 +655,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 		} else {
 			/* Check template time. On reception of a new template it is crucial to rewrite the old one. */
 			if (ipfix_msg->data_couple[i].data_template->first_transmission > table->second->get_first_transmission()) {
-				MSG_DEBUG(msg_module, "Received new template with already used Template ID: %hu", template_id);
+				MSG_DEBUG(msg_module, "Received new template with already used template ID: %hu", template_id);
 
 				/* Init map for old template if necessary */
 				if (old_templates == NULL) {
@@ -658,7 +666,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 				old_templates->insert(std::pair<uint16_t, template_table*>(table->first, table->second));
 
 				/* Flush data */
-				flush_data(conf, odid, old_templates, false);
+				flush_data(conf, exporter_ip_addr_crc, odid, old_templates, false);
 
 				/* Remove rewritten template */
 				delete table->second;
@@ -684,34 +692,36 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 
 		/* Check whether data has to be flushed before storing data record */
 		bool flush_records = conf->records_window > 0 && rcnt > conf->records_window;
-		bool flush_time = conf->time_window > 0;
+		bool flush_time = false;
+		time_t now;
+		if (conf->time_window > 0) {
+			time(&now);
+			flush_time = difftime(now, conf->last_flush) > conf->time_window;
+		}
 
 		if (flush_records || flush_time) {
 			/* Flush data for all exporters and ODIDs */
-			for (dom_id = ob_dom->begin(); dom_id != ob_dom->end(); dom_id++) {
-				flush_data(conf, (*dom_id).first, (*dom_id).second, false);
-			}
+			flush_all_data(conf, false);
 
-			/* Time management differs to flush policy (records vs. time) */
+			/* Time management differs between flush policies (records vs. time) */
 			if (flush_records) {
-				time_t rawtime;
-				time(&rawtime);
-				conf->last_flush = conf->last_flush + conf->time_window;
-				while (difftime(rawtime, conf->last_flush) > conf->time_window) {
+				time(&(conf->last_flush));
+			} else if (flush_time) {
+				while (difftime(now, conf->last_flush) > conf->time_window) {
 					conf->last_flush = conf->last_flush + conf->time_window;
 				}
-			} else if (flush_time) {
-				time(&(conf->last_flush));
 			}
 
+			/* Update window name and path */
 			update_window_name(conf);
-			dir = dir_hierarchy(conf, odid);
+			odid_it->second.path = generate_path(conf, exporter_ip_addr, (*odid_it).first);
+
 			rcnt = 0;
 			conf->new_dir = true;
 		}
 
 		/* Store this data record */
-		rc_flows = (*table).second->store(ipfix_msg->data_couple[i].data_set, dir, conf->new_dir);
+		rc_flows = (*table).second->store(ipfix_msg->data_couple[i].data_set, odid_it->second.path, conf->new_dir);
 		if (rc_flows >= 0) {
 			rc_flows_sum += rc_flows;
 			rcnt += rc_flows;
@@ -726,10 +736,10 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	conf->new_dir = false;
 
 	if (rc_flows_sum) {
-		conf->flowWatch->at(odid).addFlows(rc_flows_sum);
+		odid_it->second.flow_watch.add_flows(rc_flows_sum);
 	}
 
-	conf->flowWatch->at(odid).updateSQ(ntohl(ipfix_msg->pkt_header->sequence_number));
+	odid_it->second.flow_watch.update_seq_no(ntohl(ipfix_msg->pkt_header->sequence_number));
 	return 0;
 }
 
@@ -744,29 +754,33 @@ extern "C"
 int storage_close(void **config)
 {
 	struct fastbit_config *conf = (struct fastbit_config *) (*config);
-	std::map<uint16_t, template_table*>::iterator table;
+
+	std::map<uint32_t, std::map<uint32_t, od_info>*> *od_infos = conf->od_infos;
+	std::map<uint32_t, std::map<uint32_t, od_info>*>::iterator exporter_it;
+	std::map<uint32_t, od_info>::iterator odid_it;
+
 	std::map<uint16_t, template_table*> *templates;
-	std::map<uint32_t, std::map<uint16_t, template_table*> *> *ob_dom = conf->ob_dom;
-	std::map<uint32_t, std::map<uint16_t, template_table*> *>::iterator dom_id;
+	std::map<uint16_t, template_table*>::iterator table;
 
-	/* Flush data, remove templates */
-	for (dom_id = ob_dom->begin(); dom_id != ob_dom->end(); dom_id++) {
-		/* Flush data */
-		templates = (*dom_id).second;
-		flush_data(conf, (*dom_id).first, templates, true);
+	/* Iterate over all exporters and ODIDs, flush data and release templates */
+	for (exporter_it = od_infos->begin(); exporter_it != od_infos->end(); ++exporter_it) {
+		for (odid_it = exporter_it->second->begin(); odid_it != exporter_it->second->end(); ++odid_it) {
+			templates = &(odid_it->second.template_info);
+			flush_data(conf, exporter_it->first, odid_it->first, templates, true);
 
-		/* Free templates */
-		for (table = templates->begin(); table != templates->end(); table++) {
-			delete (*table).second;
+			/* Free templates */
+			for (table = templates->begin(); table != templates->end(); table++) {
+				delete (*table).second;
+			}
 		}
-		delete (*dom_id).second;
+
+		delete (*exporter_it).second;
 	}
 
 	/* Free config structure */
-	delete ob_dom;
+	delete od_infos;
 	delete conf->index_en_id;
 	delete conf->dirs;
-	delete conf->flowWatch;
 	delete conf->elements_types;
 	delete conf->elements_lengths;
 	delete conf;

@@ -52,6 +52,7 @@ class FlowWatch {
 	uint64_t recv_flows;
 	uint64_t prev_recv_flows; /**< Number of flows in previous message */
 	bool reset;
+
 public:
 	void update_seq_no(uint64_t sq);
 	void add_flows(uint64_t recFlows);

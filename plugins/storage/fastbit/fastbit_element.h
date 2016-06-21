@@ -62,8 +62,6 @@ extern "C" {
 const int IE_NAME_LENGTH = 32;
 const int TYPE_NAME_LENGTH = 10;
 
-class template_table; //Needed becouse of Circular dependency
-
 /**
  * \brief Class wrapper for information elements
  */
