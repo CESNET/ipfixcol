@@ -49,7 +49,7 @@ class FlowWatch {
 	enum {SQ_BOT_LIMIT=1431655765, SQ_TOP_LIMIT=2863311530 };
 	uint64_t firstSQ_;
 	uint64_t lastSQ_;
-	uint64_t recFlows_;
+	uint64_t recvFlows_;
 	uint64_t lastFlows_; /**< Number of flows in the last packet */
 	bool reseted;
 public:

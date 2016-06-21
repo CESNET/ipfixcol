@@ -46,7 +46,7 @@
 
 FlowWatch::FlowWatch()
 {
-	recFlows_ = 0;
+	recvFlows_ = 0;
 	lastFlows_ = 0;
 	lastSQ_ = 0;
 	firstSQ_ = 0;
@@ -56,7 +56,7 @@ FlowWatch::FlowWatch()
 void FlowWatch::reset()
 {
 	reseted = true;
-	recFlows_ = 0;
+	recvFlows_ = 0;
 	lastFlows_ = 0;
 	lastSQ_ = 0;
 	firstSQ_ = 0;
@@ -97,7 +97,7 @@ void FlowWatch::updateSQ(uint64_t SQ)
 void FlowWatch::addFlows(uint64_t recFlows)
 {
 	lastFlows_ = recFlows;
-	recFlows_ += recFlows;
+	recvFlows_ += recFlows;
 }
 
 uint64_t FlowWatch::exportedFlows()
@@ -115,7 +115,7 @@ uint64_t FlowWatch::exportedFlows()
 
 uint64_t FlowWatch::receivedFlows()
 {
-	return recFlows_;
+	return recvFlows_;
 }
 
 int FlowWatch::write(std::string dir)
