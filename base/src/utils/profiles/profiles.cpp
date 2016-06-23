@@ -58,6 +58,8 @@ extern "C" {
 #include <set>
 #include <queue>
 
+#include <filter_wrapper.h>
+
 /* Ignore BIG_LINES libxml2 option when it is not supported */
 #ifndef XML_PARSE_BIG_LINES
 #define XML_PARSE_BIG_LINES 0
@@ -71,26 +73,29 @@ static const char *msg_module = "profile_tree";
 
 /**
  * \brief Parse filter string
- * 
+ *
  * \param[in] pdata parser data
  * \return 0 on success
  */
 int parse_filter(filter_profile* pdata, char* filter_str)
 {
-        //vytvorenie options - lookup fc data-callback fc
-        //TODO: solve buffer initialization
-        ff_options_t* opts = NULL;
-        int ret = 0;
+	//vytvorenie options - lookup fc data-callback fc
+	//TODO: solve buffer initialization
+	ff_options_t* opts = NULL;
+	int ret = 0;
 
-        if (ff_options_init(&opts) == FF_ERR_NOMEM) {
-            return 1;
-        }
+	if (ff_options_init(&opts) == FF_ERR_NOMEM) {
+	    return 1;
+	}
 
-        if (ff_init(&pdata->filter, filter_str, opts) != FF_OK) {
-            ret = 1;
-        }
+	opts->ff_lookup_func = ipf_ff_lookup_func;
+	opts->ff_data_func = ipf_ff_data_func;
 
-        ff_options_free(opts);
+	if (ff_init(&pdata->filter, filter_str, opts) != FF_OK) {
+		ret = 1;
+	}
+
+	ff_options_free(opts);
 	return ret;
 }
 
@@ -128,7 +133,7 @@ int xml_find_uniq_element(xmlNodePtr root, const char *name, xmlNodePtr *result)
  */
 static filter_profile *channel_parse_filter(xmlNodePtr root)
 {
-        filter_profile *pdata = NULL;
+	filter_profile *pdata = NULL;
 	xmlNodePtr filter_node = NULL;
 
 	// Get 'filter' node
@@ -161,22 +166,22 @@ static filter_profile *channel_parse_filter(xmlNodePtr root)
 		throw_empty;
 	}
 
-        pdata = (filter_profile *) calloc(1, sizeof(filter_profile));
-        if (!pdata) {
+	pdata = (filter_profile *) calloc(1, sizeof(filter_profile));
+	if (!pdata) {
 		MSG_ERROR(msg_module, "Unable to allocate memory");
 		xmlFree(aux_char);
 		throw_empty;
 	}
 
-        if (parse_filter(pdata, (char *)aux_char) != 0) {
+	if (parse_filter(pdata, (char *)aux_char) != 0) {
 		MSG_ERROR(msg_module, "Error while parsing filter on line %ld",
-                        xmlGetLineNo(filter_node));
-                filter_free_profile(pdata);
-                xmlFree(aux_char);
+			xmlGetLineNo(filter_node));
+		filter_free_profile(pdata);
+		xmlFree(aux_char);
 		throw_empty;
 	}
-        xmlFree(aux_char);
-        return pdata;
+	xmlFree(aux_char);
+	return pdata;
 }
 
 /**
@@ -236,7 +241,7 @@ static std::string channel_parse_source_list(xmlNodePtr root)
 
 /**
  * \brief Process channel's configuration and create new Channel object
- * 
+ *
  * \param[in] profile Channel's profile
  * \param[in] root channel xml configuration root
  * \param[in] pdata Filter parser data
@@ -247,7 +252,7 @@ Channel *process_channel(Profile *profile, xmlNode *root)
 	/* Get channel ID */
 	xmlChar *aux_char;
 	aux_char = xmlGetProp(root, (const xmlChar *) "name");
-	
+
 	if (!aux_char) {
 		MSG_ERROR(msg_module, "Profile %s: missing channel name (line: %ld)",
 			profile_id(profile), xmlGetLineNo(root));
@@ -262,7 +267,7 @@ Channel *process_channel(Profile *profile, xmlNode *root)
 	/*Create filter*/
 	try {
 		/* Find and parse filter */
-                filter_profile *filter = channel_parse_filter(root);
+		filter_profile *filter = channel_parse_filter(root);
 		channel->setFilter(filter);
 
 		/* Find and process the list of source channels */
@@ -283,7 +288,7 @@ Channel *process_channel(Profile *profile, xmlNode *root)
 		delete channel;
 		throw_empty;
 	}
-	
+
 	return channel;
 }
 
@@ -396,7 +401,7 @@ static int profile_parse_channels(Profile *profile, xmlNodePtr root)
 			throw_empty;
 		}
 
-                Channel *channel = process_channel(profile, node);
+		Channel *channel = process_channel(profile, node);
 		profile->addChannel(channel);
 		count++;
 	}
@@ -453,7 +458,7 @@ static int profile_parse_subprofiles(Profile *profile, xmlNodePtr root)
 			throw_empty;
 		}
 
-                Profile *child = process_profile(profile, node);
+		Profile *child = process_profile(profile, node);
 		profile->addProfile(child);
 	}
 
@@ -462,7 +467,7 @@ static int profile_parse_subprofiles(Profile *profile, xmlNodePtr root)
 
 /**
  * \brief Process profile's configuration and create new Profile object
- * 
+ *
  * \param[in] parent Profile's parent
  * \param[in] root Profile xml configuration root
  * \param[in] pdata Filter parser data
@@ -491,26 +496,26 @@ Profile *process_profile(Profile *parent, xmlNode *root)
 	try {
 		profile->setParent(parent);
 		profile->setDirectory(profile_parse_directory(root));
-                profile_parse_channels(profile, root);
-                profile_parse_subprofiles(profile, root);
- 	} catch (std::exception &e) {
+		profile_parse_channels(profile, root);
+		profile_parse_subprofiles(profile, root);
+	} catch (std::exception &e) {
 		// Delete new profile and rethrow current exception
 		delete profile;
 		throw;
 	}
-	
+
 	return profile;
 }
 
 
 /**
  * \brief Process profile tree xml configuration
- * 
+ *
  * \param[in] filename XML configuration file
  * \return Pointer to root profile
  */
 Profile *process_profile_xml(const char *filename)
-{	
+{
 	/* Open file */
 	int fd = open(filename, O_RDONLY);
 	if (fd == -1) {
@@ -526,7 +531,7 @@ Profile *process_profile_xml(const char *filename)
 		MSG_ERROR(msg_module, "Unable to parse configuration file %s", filename);
 		return NULL;
 	}
-	
+
 	xmlNode *root = xmlDocGetRootElement(doc);
 	if (!root) {
 		xmlFreeDoc(doc);
@@ -534,7 +539,7 @@ Profile *process_profile_xml(const char *filename)
 		MSG_ERROR(msg_module, "Unable to get root element from file %s", filename);
 		return NULL;
 	}
-	
+
 	Profile *rootProfile{NULL};
 
 	try {
@@ -548,7 +553,7 @@ Profile *process_profile_xml(const char *filename)
 			}
 
 			if (!xmlStrcmp(node->name, (const xmlChar *) "profile")) {
-                                rootProfile = process_profile(NULL, node);
+				rootProfile = process_profile(NULL, node);
 			}
 		}
 	} catch (std::exception &e) {
@@ -563,7 +568,7 @@ Profile *process_profile_xml(const char *filename)
 	if (!rootProfile) {
 		MSG_ERROR(msg_module, "No profile found in profile tree configuration");
 		return NULL;
-	}	
+	}
 
 	rootProfile->updatePathName();
 	return rootProfile;

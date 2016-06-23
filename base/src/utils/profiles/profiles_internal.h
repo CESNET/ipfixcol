@@ -38,7 +38,7 @@
  */
 
 #ifndef PROFILER_H
-#define	PROFILER_H
+#define PROFILER_H
 
 extern "C" {
 #include <ipfixcol.h>

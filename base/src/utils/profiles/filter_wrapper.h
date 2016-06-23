@@ -64,6 +64,10 @@ typedef struct nff_item_s {
 
 int specify_ipv(uint16_t *i);
 
+ff_error_t ipf_ff_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lvalue);
+
+ff_error_t ipf_ff_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data, size_t *size);
+
 /**
  * \brief Match filter with IPFIX record
  * 

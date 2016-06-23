@@ -19,7 +19,7 @@
 #include <stdint.h>
 #endif
 
-#include "ffilter_internal.h" 
+#include "ffilter_internal.h"
 #include "ffilter_gram.h"
 
 
@@ -68,7 +68,7 @@ int str_to_uint(char *str, int type, char **res, int *vsize) {
 
 	*res = ptr;
 
-	return 1;	
+	return 1;
 }
 
 /* convert string into uint64_t */
@@ -116,7 +116,7 @@ int str_to_int(char *str, int type, char **res, int *vsize) {
 
 	*res = ptr;
 
-	return 1;	
+	return 1;
 }
 
 /* convert string into lnf_ip_t */
@@ -131,7 +131,7 @@ int str_to_addr(ff_t *filter, char *str, char **res, int *numbits) {
 	if (ptr == NULL) {
 		return 0;
 	}
-	
+
 	memset(ptr, 0x0, sizeof(ff_ip_t));
 
 	*numbits = 0;
@@ -192,9 +192,9 @@ ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter,char *fieldstr, ff_oper_t 
 
 	/* fieldstr is set - trie to find field id and relevant _fget function */
 	//if ( fieldstr != NULL ) {
-	//	field = lnf_fld_parse(fieldstr, NULL, NULL); 
+	//	field = lnf_fld_parse(fieldstr, NULL, NULL);
 	//	if (field == LNF_FLD_ZERO_) {
-	//		lnf_seterror("Unknown or unsupported field %s", fieldstr); 
+	//		lnf_seterror("Unknown or unsupported field %s", fieldstr);
 	//		return NULL;
 	//	}
 	//}
@@ -256,7 +256,7 @@ ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter,char *fieldstr, ff_oper_t 
 				}
 //				*(uint64_t *)node->value = htonll(*(uint64_t *)node->value);
 				break;
-	
+
 	}
 
 	node->left = NULL;
@@ -300,8 +300,8 @@ int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec) {
 	left = 0;
 
 	/* go deeper into tree */
-	if (node->left != NULL ) { 
-		left = ff_eval_node(filter, node->left, rec); 
+	if (node->left != NULL ) {
+		left = ff_eval_node(filter, node->left, rec);
 
 		/* do not evaluate if the result is obvious */
 		if (node->oper == FF_OP_NOT)              { return !left; };
@@ -309,8 +309,8 @@ int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec) {
 		if (node->oper == FF_OP_AND && left == 0) { return 0; };
 	}
 
-	if (node->right != NULL ) { 
-		right = ff_eval_node(filter, node->right, rec); 
+	if (node->right != NULL ) {
+		right = ff_eval_node(filter, node->right, rec);
 
 		switch (node->oper) {
 			case FF_OP_NOT: return !right; break;
@@ -332,21 +332,21 @@ int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec) {
 	switch (node->type) {
 		case FF_TYPE_UINT64: res = *(uint64_t *)&buf - *(uint64_t *)node->value; break;
 		case FF_TYPE_UINT32: res = *(uint32_t *)&buf - *(uint32_t *)node->value; break;
-		case FF_TYPE_UINT16: res = *(uint16_t *)&buf - *(uint16_t *)node->value; break; 
+		case FF_TYPE_UINT16: res = *(uint16_t *)&buf - *(uint16_t *)node->value; break;
 		case FF_TYPE_UINT8:  res = *(uint8_t *)&buf - *(uint8_t *)node->value; break;
 		case FF_TYPE_DOUBLE: res = *(double *)&buf - *(double *)node->value; break;
 		case FF_TYPE_STRING: res = strcmp((char *)&buf, node->value); break;
 //		case FF_TYPE_UNSIGNED_BIG: {
 					/* for FF_TYPE_UNSIGED firt convert into uint64_t and then compare */
-//					uint64_t tmp = 0; 
+//					uint64_t tmp = 0;
 
 //					if (size > node->vsize) { return -1; }		/* too big integer */
 
 					/* copy size bytes of the value to the top of tmp */
 //					memcpy(&tmp, buf + (size - node->vsize), size);
 
-//					res = memcmp(&tmp, node->value, size); 
-				
+//					res = memcmp(&tmp, node->value, size);
+
 //					break;
 //				}
 		case FF_TYPE_UNSIGNED_BIG: {
@@ -367,7 +367,7 @@ int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec) {
 						case sizeof(uint64_t):
 							res = htonll(*(uint16_t*)buf) < *(uint64_t*)(node->value);
 							break;
-						default: 
+						default:
 							res = -1;
 							break;
 					}
@@ -392,7 +392,7 @@ int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec) {
 						case sizeof(uint64_t):
 							res = *(uint16_t*)buf < *(uint64_t*)(node->value);
 							break;
-						default: 
+						default:
 							res = -1;
 							break;
 				}
@@ -417,7 +417,7 @@ int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec) {
 						case sizeof(int64_t):
 							res = htonll(*(int16_t*)buf) < *(int64_t*)(node->value);
 							break;
-						default: 
+						default:
 							res = -1;
 							break;
 					}
@@ -442,7 +442,7 @@ int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec) {
 						case sizeof(int64_t):
 							res = *(int16_t*)buf < *(int64_t*)(node->value);
 							break;
-						default: 
+						default:
 							res = -1;
 							break;
 				}
@@ -456,9 +456,9 @@ int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec) {
 
 	/* simple comparsion */
 	switch (node->oper) {
-		case FF_OP_NOT: 
-		case FF_OP_OR:  
-		case FF_OP_AND: return -1 ; break; 
+		case FF_OP_NOT:
+		case FF_OP_OR:
+		case FF_OP_AND: return -1 ; break;
 		case FF_OP_EQ:  return res == 0; break;
 		case FF_OP_NE:  return res != 0; break;
 		case FF_OP_GT:  return res > 0; break;
@@ -480,7 +480,7 @@ ff_error_t ff_options_init(ff_options_t **poptions) {
 	}
 
 	*poptions = options;
-	
+
 	return FF_OK;
 
 }
@@ -496,10 +496,11 @@ ff_error_t ff_options_free(ff_options_t *options) {
 }
 
 
+//TODO: options sends program control to oblivion, find out why.
+//Maybe options init are missing
 
 ff_error_t ff_init(ff_t **pfilter, const char *expr, ff_options_t *options) {
 
-//    lnf_filter_t *filter;
 	yyscan_t scanner;
 	YY_BUFFER_STATE buf;
 	int parse_ret;
@@ -518,19 +519,16 @@ ff_error_t ff_init(ff_t **pfilter, const char *expr, ff_options_t *options) {
 	if (options == NULL) {
 		free(filter);
 		return FF_ERR_OTHER;
-		
+
 	}
 	memcpy(&filter->options, options, sizeof(ff_options_t));
 
 	ff_set_error(filter, "No Error.");
 
 	ff2_lex_init(&scanner);
-    buf = ff2__scan_string(expr, scanner);
-    parse_ret = ff2_parse(scanner, filter);
+	buf = ff2__scan_string(expr, scanner);
+	parse_ret = ff2_parse(scanner, filter);
 
-//   if (buf != NULL) {
-//        v2__delete_buffer(buf, scanner);
-//    }
 
 	ff2_lex_destroy(scanner);
 
@@ -542,7 +540,7 @@ ff_error_t ff_init(ff_t **pfilter, const char *expr, ff_options_t *options) {
 
 	*pfilter = filter;
 
-    return FF_OK;
+	return FF_OK;
 }
 
 /* matches the record agains filter */
@@ -550,7 +548,7 @@ ff_error_t ff_init(ff_t **pfilter, const char *expr, ff_options_t *options) {
 int ff_eval(ff_t *filter, void *rec) {
 
 	/* call eval node on root node */
-        return ff_eval_node(filter, filter->root, rec);
+	return ff_eval_node(filter, filter->root, rec);
 
 }
 

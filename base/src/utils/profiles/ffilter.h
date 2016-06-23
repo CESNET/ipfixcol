@@ -148,8 +148,6 @@ typedef struct ff_s {
 } ff_t;
 
 
-
-
 ff_error_t ff_options_init(ff_options_t **ff_options);
 ff_error_t ff_options_free(ff_options_t *ff_options);
 
