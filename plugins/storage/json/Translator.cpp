@@ -73,6 +73,19 @@ const char *Translator::formatFlags8(uint8_t flags)
 }
 
 /**
+ * \brief Constructor
+ */
+Translator::Translator()
+{
+	buffer = new char[Translator::BUFF_SIZE];
+}
+
+Translator::~Translator()
+{
+	delete[] buffer;
+}
+
+/**
  * \brief Format IPv6
  */
 const char *Translator::formatIPv4(uint32_t addr)
@@ -95,7 +108,8 @@ const char *Translator::formatIPv6(uint8_t* addr)
  */
 const char *Translator::formatMac(uint8_t* addr)
 {	
-	snprintf(buffer, BUFF_SIZE, "\"%02x:%02x:%02x:%02x:%02x:%02x\"", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+	snprintf(buffer, BUFF_SIZE, "%02x:%02x:%02x:%02x:%02x:%02x",
+		addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 	return buffer;
 }
 
@@ -113,7 +127,6 @@ const char *Translator::formatProtocol(uint8_t proto)
  */
 const char *Translator::formatTimestamp(uint64_t tstamp, t_units units, struct json_conf * config)
 {	
-
 	if(config->timestamp) {
 		tstamp = be64toh(tstamp);
 	
@@ -139,10 +152,9 @@ const char *Translator::formatTimestamp(uint64_t tstamp, t_units units, struct j
 		strftime(buffer, 21, "\"%FT%T", tm);
 		/* append miliseconds */
 		sprintf(&(buffer[20]), ".%03u\"", (const unsigned int) msec);
-
 	} else {
-
-		sprintf(buffer, "%lu", tstamp);
+		tstamp = be64toh(tstamp);
+		sprintf(buffer, "%" PRIu64 , tstamp);
 	}	
 
 	return buffer;
@@ -151,7 +163,8 @@ const char *Translator::formatTimestamp(uint64_t tstamp, t_units units, struct j
 /**
  * \brief Conversion of unsigned int
  */
-const char *Translator::toUnsigned(uint16_t *length, uint8_t *data_record, uint16_t offset, const ipfix_element_t * element, struct json_conf * config)
+const char *Translator::toUnsigned(uint16_t *length, uint8_t *data_record,
+	uint16_t offset, const ipfix_element_t * element, struct json_conf * config)
 {
 	if(*length == BYTE1) {
 		// 1 byte
@@ -226,3 +239,79 @@ const char *Translator::toFloat(uint16_t *length, uint8_t *data_record, uint16_t
 
 	return buffer;
 }
+
+/**
+ * \brief Convert string to JSON format
+ */
+const char *Translator::escapeString(uint16_t length, const uint8_t *field,
+	const json_conf *config)
+{
+	uint32_t idx_output = 0;
+
+	#define ESCAPE_CHAR(ch) { \
+		buffer[idx_output++] = '\\'; \
+		buffer[idx_output++] = ch; \
+	}
+
+	// Beggining of the string
+	buffer[idx_output++] = '"';
+
+	for (uint32_t i = 0; i < length; ++i) {
+		/*
+		 * Based on RFC 4627 (Section: 2.5. Strings):
+		 * Control characters (i.e. 0x00 - 0x1F), '"' and  '\' must be escaped
+		 * using "\"", "\\" or "\uXXXX" where "XXXX" is hexa value.
+		 */
+		if (field[i] > 0x1F && field[i] != '"' && field[i] != '\\') {
+			// Copy to the output buffer
+			buffer[idx_output++] = field[i];
+			continue;
+		}
+
+		// Copy as escaped character
+		switch(field[i]) {
+		case '\\': // Reverse solidus
+			ESCAPE_CHAR('\\');
+			continue;
+		case '\"': // Quotation
+			ESCAPE_CHAR('\"');
+			continue;
+		default:
+			break;
+		}
+
+		if (config->whiteSpaces == false) {
+			// Skip white space characters
+			continue;
+		}
+
+		switch(field[i]) {
+		case '\t': // Tabulator
+			ESCAPE_CHAR('t');
+			break;
+		case '\n': // New line
+			ESCAPE_CHAR('n');
+			break;
+		case '\b': // Backspace
+			ESCAPE_CHAR('b');
+			break;
+		case '\f': // Form feed
+			ESCAPE_CHAR('f');
+			break;
+		case '\r': // Return
+			ESCAPE_CHAR('r');
+			break;
+		default: // "\uXXXX"
+			snprintf(&buffer[idx_output], 7, "\\u00%02x", field[i]);
+			idx_output += 6;
+			break;
+		}
+	}
+	#undef ESCAPE_CHAR
+
+	// End of the string
+	buffer[idx_output++] = '"';
+	buffer[idx_output] = '\0';
+	return buffer;
+}
+

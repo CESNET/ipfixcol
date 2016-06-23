@@ -363,8 +363,13 @@ void add_template(struct ipfix_message *ipfix_msg, struct ipfix_template * templ
 			break;
 		}
 	}
-//	MSG_ERROR(msg_module, "set len %d templ %d", htons(ipfix_msg->templ_set[i]->header.length), template->template_length);
-	ipfix_msg->pkt_header->length = htons(ntohs(ipfix_msg->pkt_header->length) + ntohs(ipfix_msg->templ_set[i]->header.length));
+
+	/* Check for success */
+	if (i == MSG_MAX_TEMPL_SETS) {
+		MSG_ERROR(msg_module, "Cannot add new template to IPFIX message, too many template sets");
+	} else {
+		ipfix_msg->pkt_header->length = htons(ntohs(ipfix_msg->pkt_header->length) + ntohs(ipfix_msg->templ_set[i]->header.length));
+	}
 }
 
 /**
@@ -1047,8 +1052,6 @@ int next_file(struct nfinput_config *conf)
 			return ret;
 		}
 	}
-
-	return NO_INPUT_FILE;
 }
 
 /**

@@ -71,7 +71,7 @@ struct dummy_config {
  */
 int storage_init(char *params, void **config)
 {
-	MSG_INFO(msg_module, "Dummy plugin: storage_init called");
+	MSG_INFO(msg_module, "storage_init called");
 
 	struct dummy_config *conf;
 	xmlDocPtr doc;
@@ -113,7 +113,7 @@ int storage_init(char *params, void **config)
 		cur = cur->next;
 	}
 
-	MSG_INFO(msg_module, "Dummy plugin: delay set to %ius", conf->delay);
+	MSG_INFO(msg_module, "Delay set to %ius", conf->delay);
 
 	/* we don't need this xml tree anymore */
 	xmlFreeDoc(doc);
@@ -133,9 +133,11 @@ int storage_init(char *params, void **config)
 int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	 const struct ipfix_template_mgr *template_mgr)
 {
-	(void) ipfix_msg;
 	(void) template_mgr;
 	struct dummy_config *conf = (struct dummy_config*) config;
+
+	MSG_DEBUG(msg_module, "[%u] Received IPFIX message", ipfix_msg->input_info->odid);
+
 	usleep(conf->delay);
 	return 0;
 }
@@ -157,7 +159,7 @@ int store_now(const void *config)
  */
 int storage_close(void **config)
 {
-	MSG_INFO(msg_module, "Dummy plugin: storage_close called\n");
+	MSG_INFO(msg_module, "storage_close called\n");
 
 	free(*config);
 	*config = NULL;

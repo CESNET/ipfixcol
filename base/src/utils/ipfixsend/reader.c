@@ -70,7 +70,8 @@ void free_packets(char **packets)
  * 
  * @param buff read buffer
  * @param fd input file
- * @return packet length
+ * @return On success returns packet length. On end of file returns READ_EOR.
+ * Otherwise returns negative value.
  */
 int read_header(char *buff, int fd)
 {
@@ -82,9 +83,15 @@ int read_header(char *buff, int fd)
         return -1;
     }
     
-    len = htons(((struct ipfix_header *) buff)->length);
+	const struct ipfix_header *header = (struct ipfix_header *) buff;
+
+	// Check header version
+	if (ntohs(header->version) != IPFIX_VERSION) {
+		fprintf(stderr, "Invalid version of packet header.\n");
+		return -1;
+	}
     
-    return len;
+	return htons(header->length);
 }
 
 /**
@@ -94,7 +101,7 @@ char *read_packet(int fd, int *status)
 {
     int pkt_len;
     
-    /* Allocate space for header*/
+    /* Allocate space for header */
     char *pkt = calloc(1, IPFIX_HEADER_LENGTH);
     if (!pkt) {
         ERR_MEM;
@@ -105,8 +112,9 @@ char *read_packet(int fd, int *status)
     /* Read header */
     pkt_len = read_header(pkt, fd);
 	if (pkt_len == 0) {
+		free(pkt);
 		*status = READ_EOF;
-		return pkt;
+		return NULL;
 	} else if (pkt_len < 0) {
         free(pkt);
 		*status = READ_ERROR;

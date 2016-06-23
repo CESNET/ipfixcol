@@ -485,7 +485,7 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 		return tm_record_add_template(tmr, template, max_len, type, odid);
 	}
 	
-	/* save IDs */
+	/* Save IDs */
 	uint16_t templ_id = tmr->templates[i]->template_id;
 	
 	/* Create new template */
@@ -496,7 +496,7 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 	if (tm_compare_templates(new_tmpl, tmr->templates[i]) == 0) {
 		/* Templates are the same, no need to update */
 		free(new_tmpl);
-		MSG_DEBUG(msg_module, "[%u] Received the same template as last time, not replacing", odid);
+		MSG_DEBUG(msg_module, "[%u] Received the same template as last time; not replacing", odid);
 		return tmr->templates[i];
 	}
 
@@ -505,12 +505,12 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 	if (tmr->templates[i]->references == 0) {
 		if (tmr->templates[i]->next == NULL) {
 			/* No previous template */
-			/* remove the old template */
-//			MSG_DEBUG(msg_module, "No references and no previous template - removing, ID %d", id);
+			/* Remove the old template */
 			if (tm_record_remove_template(tmr, id) != 0) {
 				MSG_WARNING(msg_module, "[%u] Cannot remove template %i", odid, id);
 			}
-			/* create a new one */
+
+			/* Create a new one */
 			MSG_DEBUG(msg_module, "Creating new template... %d", id);
 			new_tmpl = tm_record_insert_template(tmr, new_tmpl);
 			if (new_tmpl) {
@@ -525,10 +525,10 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 			tmr->templates[i] = new;
 		}
 	} else {
-		MSG_DEBUG(msg_module, "[%u] Template %d cannot be removed (%u references), but it will be marked as 'old'", odid, id, tmr->templates[i]->references);
+		MSG_DEBUG(msg_module, "[%u] Template %d cannot be removed (%u reference(s)), but it will be marked as 'old'", odid, id, tmr->templates[i]->references);
 	}
 
-	/* Inserting new template */
+	/* Insert new template */
 	new_tmpl->next = tmr->templates[i];
 	tmr->templates[i] = new_tmpl;
 

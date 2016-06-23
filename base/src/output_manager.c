@@ -49,6 +49,7 @@
 #include <inttypes.h>
 #include <glob.h>
 #include <libgen.h>
+#include <time.h>
 
 #include "configurator.h"
 #include "data_manager.h"
@@ -727,15 +728,18 @@ static void *statistics_thread(void* config)
 		node = node->next;
 	}
 	
-	/* Catch SIGUSR1 */
-	signal(SIGUSR1, sig_handler);
-	
 	/* Set thread name */
 	prctl(PR_SET_NAME, "ipfixcol:stats", 0, 0, 0);
 	
 	FILE *stat_out_file = NULL;
 	while (conf->stat_interval && !conf->stats.done) { /* stats.done can be set by Output Manager */
-		sleep(conf->stat_interval);
+		/* Sleep */
+		struct timespec tv;
+		tv.tv_sec = conf->stat_interval;
+		tv.tv_nsec = 0;
+
+		/* Reconfiguration (SIGUSR1) cause sleep interruption */
+		while (nanosleep(&tv, &tv) == -1 && errno == EINTR && !conf->stats.done);
 		
 		/* Compute time */
 		time_now = time(NULL);
@@ -781,11 +785,11 @@ static void *statistics_thread(void* config)
 			delta_lost_data_records = aux_node->input_info->sequence_number - aux_node->input_info->data_records - aux_node->last_lost_data_records;
 
 			if (print_stat_to_file) {
-				fprintf(stat_out_file, "%s_%u=%lu\n", "PACKETS",
+				fprintf(stat_out_file, "%s_%u=%" PRIu64 "\n", "PACKETS",
 						aux_node->input_info->odid, aux_node->input_info->packets);
-				fprintf(stat_out_file, "%s_%u=%lu\n", "DATA_REC",
+				fprintf(stat_out_file, "%s_%u=%" PRIu64 "\n", "DATA_REC",
 						aux_node->input_info->odid, aux_node->input_info->data_records);
-				fprintf(stat_out_file, "%s_%u=%lu\n", "LOST_DATA_REC",
+				fprintf(stat_out_file, "%s_%u=%" PRIu64 "\n", "LOST_DATA_REC",
 						aux_node->input_info->odid, aux_node->input_info->sequence_number - aux_node->input_info->data_records);
 				fprintf(stat_out_file, "%s_%u=%u\n", "PACKETS_SEC",
 						aux_node->input_info->odid, delta_packets / conf->stat_interval);

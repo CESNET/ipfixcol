@@ -87,7 +87,7 @@ AC_CHECK_FILE([/etc/protocols],[PROTOCOLS=yes], [PROTOCOLS=no])
 ###################### Check for configure parameters ##########################
 AC_ARG_ENABLE([debug], 
 	AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
-		[AM_CXXFLAGS="$AM_CXXFLAGS -Wextra -g"])
+		[AM_CXXFLAGS="$AM_CXXFLAGS -Wextra -g -O0"])
 
 AC_ARG_ENABLE([doc],
 	AC_HELP_STRING([--disable-doc],[disable documentation building]))

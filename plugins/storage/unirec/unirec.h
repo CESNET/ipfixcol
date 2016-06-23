@@ -46,52 +46,64 @@
 
 
 #define INIT_DYNAMIC_ARR_SIZE 8
+#define INIT_STATIC_AND_DYNAMIC_ARR_SIZE 64
 #define INIT_OUTPUT_BUFFER_SIZE 1024
 #define MAX_DYNAMIC_FIELD_SIZE 512
 #define FIELDS_HT_ROW_FIELDSCOUNT_MULTIPLAYER 8
 #define FIELDS_HT_KEYSIZE 8 // ipfix id + en + padding in bytes (2 + 4 + 2)
 #define FIELDS_HT_STASH_SIZE 4
 
+#define UNIREC_DATA_TYPES_COUNT 15 ///< Count of UniRec data types
+#define UNIREC_DEFAULT_LENGTH_OF_DATA_FORMAT 1024 /// Length of string of a template
 
 #define DEFAULT_TIMEOUT 0 /**< No waiting */
-#define UNIREC_ELEMENTS_FILE "/usr/share/ipfixcol/unirec-elements.txt"
+
+// Path to unirec elements config file
+const char *UNIREC_ELEMENTS_FILE = DATAROOTDIR "/ipfixcol/unirec-elements.txt";
 
 enum unirecFieldEnum {
-	UNIREC_FIELD_OTHER,
-	UNIREC_FIELD_IP,
-	UNIREC_FIELD_PACKET,
-	UNIREC_FIELD_TS,
-	UNIREC_FIELD_DBF,
-	UNIREC_FIELD_LBF
+   UNIREC_FIELD_OTHER,
+   UNIREC_FIELD_IP,
+   UNIREC_FIELD_PACKET,
+   UNIREC_FIELD_TS,
+   UNIREC_FIELD_DBF,
+   UNIREC_FIELD_LBF
+};
+
+
+enum ODID_get_methods {
+   ODID_JOINFLOWS_METHOD,
+   ODID_MANAGER_METHOD
 };
 
 typedef struct ipfixElement {
-	uint16_t id;
-	uint32_t en;
+   uint16_t id;
+   uint32_t en;
 } ipfixElement;
 
 typedef struct unirecField {
-	char *name;
-	int ur_id;
-	int8_t type;			/**< Used for faster processing, possible value are in `unirefFieldEnum` */
-	int8_t size;
-	int8_t required;
-	int8_t *required_ar;		/**< Array of interfaces numbers where this element is required */
-	int8_t *included_ar;		/**< Array of interfaces numbers where this element is included */
-	uint16_t *offset_ar;
-	struct unirecField *next;
-	struct unirecField *nextIfc;
-	void *value;				/**< Pointer to value of the field */
-	uint16_t valueSize;			/**< Size of the value */
-	uint8_t valueFilled;		/**< Is the value filled? */
+   char *name;
+   int ur_id;
+   int8_t type;			/**< Used for faster processing, possible value are in `unirefFieldEnum` */
+   int8_t unirec_type;		/**< Used for generating data format string */
+   int8_t size;
+   int8_t required;
+   int8_t *required_ar;		/**< Array of interfaces numbers where this element is required */
+   int8_t *included_ar;		/**< Array of interfaces numbers where this element is included */
+   uint16_t *offset_ar;
+   struct unirecField *next;
+   struct unirecField *nextIfc;
+   void *value;				/**< Pointer to value of the field */
+   uint16_t valueSize;			/**< Size of the value */
+   uint8_t valueFilled;		/**< Is the value filled? */
 
 
 
 
-	/**< Number of ipfix elements */
-	int ipfixCount;
-	/**< https://tools.ietf.org/html/rfc5101#section-3.2 with masked size and EN for IANA elements */
-	ipfixElement ipfix[1];
+   /**< Number of ipfix elements */
+   int ipfixCount;
+   /**< https://tools.ietf.org/html/rfc5101#section-3.2 with masked size and EN for IANA elements */
+   ipfixElement ipfix[1];
 } unirecField;
 
 
@@ -101,29 +113,30 @@ typedef struct unirecField {
  * \brief UniRec storage plugin specific "config" structure
  */
 typedef struct ifc_config {
-	int				number;	/**< Number of output interface */
-	char				*format;
-	int				timeout; /**< Timeout of write operation on TRAP interface.
-										  Time in microseconds or 0 for no waiting or
-										  -1 for unlimited waiting.*/
-	
-	unirecField			*fields;
-	char 				*buffer;	/**< UniRec ouput buffer */
-	int				bufferSize;		/**< UniRec ouput buffer size */
-	int 				bufferDynSize;
-	int				bufferAllocSize;
-	int				dynamicPartOffset;	/**< Offset of current position in dynamic part of record (sum of dynamic field sizes) */
-	int				bufferOffset;
-	uint8_t				requiredCount;	/**< Count of all required Unirec fields */
-	uint8_t				requiredFilled;	/**< Count of filled required Unirec fields */
-	uint16_t 			bufferStaticSize;
-	uint8_t 			dynamic;
-	uint16_t 			dynCount;
-	uint16_t 			dynArAlloc;
-	unirecField 			**dynAr;
+   int				number;	/**< Number of output interface */
+   char				*format;
+   char				*unirec_data_format;
+   int				timeout; /**< Timeout of write operation on TRAP interface.
+                                Time in microseconds or 0 for no waiting or
+                                -1 for unlimited waiting.*/
 
-	unirecField			*special_field_odid; /**< Pointer to special field ODID */
-	unirecField			*special_field_link_bit_field; /**< Pointer to special field LINK_BIT_FIELD */
+   unirecField			*fields;
+   char 				*buffer;	/**< UniRec ouput buffer */
+   int				bufferSize;		/**< UniRec ouput buffer size */
+   int 				bufferDynSize;
+   int				bufferAllocSize;
+   int				dynamicPartOffset;	/**< Offset of current position in dynamic part of record (sum of dynamic field sizes) */
+   int				bufferOffset;
+   uint8_t				requiredCount;	/**< Count of all required Unirec fields */
+   uint8_t				requiredFilled;	/**< Count of filled required Unirec fields */
+   uint16_t 			bufferStaticSize;
+   uint8_t 			dynamic;
+   uint16_t 			dynCount;
+   uint16_t 			dynArAlloc;
+   unirecField 			**dynAr;
+
+   unirecField			*special_field_odid; /**< Pointer to special field ODID */
+   unirecField			*special_field_link_bit_field; /**< Pointer to special field LINK_BIT_FIELD */
 } ifc_config;
 
 /**
@@ -132,17 +145,19 @@ typedef struct ifc_config {
  * \brief Main UniRec storage plugin config structure
  */
 typedef struct unirec_config {
-	int ifc_count;		/**< Interface count */
-	unirecField *fields;	/**< Array of Unirec fields from every interfaces */
-	ifc_config *ifc;	/**< Array of interface config structures */
-	trap_ctx_t *trap_ctx_ptr;
+   int ifc_count;		/**< Interface count */
+   unirecField *fields;	/**< Array of Unirec fields from every interfaces */
+   ifc_config *ifc;	/**< Array of interface config structures */
+   trap_ctx_t *trap_ctx_ptr;
         uint8_t trap_init;
-	trap_ifc_spec_t ifc_spec;
+   trap_ifc_spec_t ifc_spec;
         char *ifc_buff_switch;
-	uint64_t *ifc_buff_timeout;
-	uint16_t odid;
-	uint8_t SF_DATA;
-	fht_table_t *ht_fields;
+   uint64_t *ifc_buff_timeout;
+   uint16_t odid;
+    unirecField *LBF_field;
+    uint8_t ODID_get_method;
+   uint8_t SF_DATA;
+   fht_table_t *ht_fields;
 } unirec_config;
 
 

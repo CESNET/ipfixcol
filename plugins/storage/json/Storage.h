@@ -42,7 +42,6 @@
 
 #define __STDC_FORMAT_MACROS
 #include <ipfixcol/storage.h>
-#include <map>
 #include <siso.h>
 
 #include "json.h"
@@ -57,17 +56,6 @@
 
 #define IPV6_LEN 16
 #define MAC_LEN  6
-
-/* white spaces needed to replace them by \n otation (\n \t ..) */
-#define SPACE           ' '
-#define TABULATOR       '\t'
-#define NEWLINE         '\n'
-#define QUOTATION       '\"'
-#define REVERSESOLIDUS  '\\'
-#define SOLIDUS         '/'
-#define BACKSPACE       '\b'
-#define FORMFEED        '\f'
-#define RETURN          '\r'
 
 class Storage {
 public:
@@ -155,7 +143,7 @@ private:
     /**
      * \brief Create raw name for unknown elements
      */
-    std::string rawName(uint32_t en, uint16_t id) const;
+    const char* rawName(uint32_t en, uint16_t id) const;
     
     
 	/**
@@ -172,8 +160,6 @@ private:
 
 	std::vector<Output*> outputs{};
 	std::vector<char> buffer;
-
-	char stringWithEscseq[(65536 * 2)];	/**< String from IPFIXpacket with white spaces replaced by \notations (\n \t ...)  */
 	std::string record;
 };
 

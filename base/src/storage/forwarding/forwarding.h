@@ -18,6 +18,7 @@ struct forwarding_template_record {
 	uint32_t last_sent;
 	uint32_t packets;
 	int type, length;
+	uint32_t odid;
 	struct ipfix_template_record *record;
 };
 
@@ -36,6 +37,7 @@ typedef struct forwarding_config {
 struct forwarding_process {
 	uint8_t *msg;
 	int offset, type, length;
+	uint32_t odid;
 	forwarding *conf;
 };
 

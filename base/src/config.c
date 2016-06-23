@@ -230,7 +230,11 @@ struct plugin_xml_conf_list* get_storage_plugins(xmlNodePtr collector_node, xmlD
 	if (xpath_obj_expprocnames == NULL || xmlXPathNodeSetIsEmpty(xpath_obj_expprocnames->nodesetval)) {
 		MSG_ERROR(msg_module, "No exportingProcess defined for collectingProcess");
 		goto cleanup;
+	} else if (xpath_obj_expprocnames->nodesetval->nodeNr > 1) {
+		MSG_ERROR(msg_module, "Multiple exportingProcess nodes are not supported. Use multiple destinations.");
+		goto cleanup;
 	}
+
 
 	/* create xpath evaluation context of user configuration */
 	if ((config_ctxt = xmlXPathNewContext(config)) == NULL) {

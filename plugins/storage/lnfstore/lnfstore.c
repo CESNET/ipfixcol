@@ -45,6 +45,8 @@
 #include <libxml/xmlmemory.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <unistd.h> //gethostname()
 
 // API version constant
 IPFIXCOL_API_VERSION;
@@ -123,6 +125,67 @@ void destroy_parsed_params(struct conf_params *cnf)
 }
 
 /**
+ * \brief Formats the path string according to the format specification
+ * \param[in] original path with special character sequences
+ * \return NULL on error, pointer to newly created path otherwise
+ */
+char *path_preprocessor(const char *original)
+{
+	char tmp[PATH_MAX];
+	char *last_path = tmp;
+	char *perc_sign;
+	char *new; //new path
+
+
+	if (original == NULL) {
+		return NULL;
+	} else if (strlen(original) > PATH_MAX - 1) {
+		MSG_ERROR(msg_module, "%s \"%s\"", strerror(ENAMETOOLONG), original);
+		return NULL;
+	} else {
+		strcpy(tmp, original);
+	}
+
+	new = calloc(PATH_MAX, sizeof (char));
+	if (new == NULL) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)", __FILE__, __LINE__);
+		return NULL;
+	}
+
+	/* last_path == tmp */
+	perc_sign = strchr(last_path, '%'); //find first percent sign
+	while (perc_sign != NULL) {
+		*perc_sign = '\0';
+		strcat(new, last_path); //copy original path till percent sign
+
+		perc_sign++; //move pointer to escaped character
+		switch (*perc_sign) {
+		case 'h':
+			errno = 0;
+			gethostname(new + strlen(new), PATH_MAX - strlen(new));
+			if (errno != 0) {
+				MSG_ERROR(msg_module, "%s \"%s\"", strerror(ENAMETOOLONG), original);
+				free(new);
+				return NULL;
+			}
+			break;
+		default:
+			MSG_ERROR(msg_module, "unknown escape sequence \"%s\"", original);
+			free(new);
+			return NULL;
+		}
+
+		last_path = perc_sign + 1; //ptr to next regular character
+		perc_sign = strchr(last_path, '%');
+	}
+
+	strcat(new, last_path); //copy rest of the original path
+
+
+	return new;
+}
+
+/**
  * \brief Parse plugin configuration
  * \param[in] params XML configuration
  * \return On success returns pointer to the parsed configuration. Otherwise
@@ -179,7 +242,9 @@ struct conf_params *process_startup_xml(const char *params)
 			cnf->compress = xml_cmp_bool(doc, cur, true);
 		} else if (!xmlStrcmp(cur->name, (const xmlChar*) "storagePath")) {
 			// Get storage path
-			cnf->storage_path = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+			xmlChar *original = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+			cnf->storage_path = path_preprocessor((const char *)original);
+			xmlFree(original);
 		} else if (!xmlStrcmp(cur->name, (const xmlChar*) "prefix")) {
 			// Get file prefix
 			cnf->file_prefix = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);

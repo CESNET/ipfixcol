@@ -59,15 +59,17 @@ static const char *msg_module = "forwarding storage";
  * \param[in] conf Plugin configuration
  * \param[in] tid Template ID
  * \param[in] type Template type
+ * \param[in] odid ODID of the source of the template
  * \return Index on success, -1 otherwise
  */
-int forwarding_get_record_index(forwarding *conf, uint16_t tid, int type)
+int forwarding_get_record_index(forwarding *conf, uint16_t tid, int type, uint32_t odid)
 {
 	int i, c;
 	for (i = 0, c = 0; i < conf->records_max && c < conf->records_cnt; ++i) {
 		if (conf->records[i] != NULL) {
 			c++;
-			if (conf->records[i]->record->template_id == tid && conf->records[i]->type == type) {
+			if (conf->records[i]->record->template_id == tid && conf->records[i]->type == type && 
+				conf->records[i]->odid == odid) {
 				return i;
 			}
 		}
@@ -81,11 +83,12 @@ int forwarding_get_record_index(forwarding *conf, uint16_t tid, int type)
  * \param[in] conf Plugin configuration
  * \param[in] tid Template ID
  * \param[in] type Template type
+ * \param[in] odid ODID of the source of the template
  * \return Pointer to template
  */
-struct forwarding_template_record *forwarding_get_record(forwarding *conf, uint16_t tid, int type)
+struct forwarding_template_record *forwarding_get_record(forwarding *conf, uint16_t tid, int type, uint32_t odid)
 {
-	int i = forwarding_get_record_index(conf, tid, type);
+	int i = forwarding_get_record_index(conf, tid, type, odid);
 	if (i < 0) {
 		return NULL;
 	}
@@ -97,10 +100,11 @@ struct forwarding_template_record *forwarding_get_record(forwarding *conf, uint1
  * \param[in] conf Plugin configuration
  * \param[in] tid Template ID
  * \param[in] type Template type
+ * \param[in] odid ODID of the source of the template
  */
-void forwarding_remove_record(forwarding *conf, uint32_t tid, int type)
+void forwarding_remove_record(forwarding *conf, uint32_t tid, int type, uint32_t odid)
 {
-	int i = forwarding_get_record_index(conf, tid, type);
+	int i = forwarding_get_record_index(conf, tid, type, odid);
 	if (i >= 0) {
 		free(conf->records[i]);
 		conf->records[i] = NULL;
@@ -114,12 +118,15 @@ void forwarding_remove_record(forwarding *conf, uint32_t tid, int type)
  * \param[in] record New template record
  * \param[in] type Template type
  * \param[in] len Template records length
+ * \param[in] odid ODID of the source of the template
  * \return Pointer to inserted template record
  */
-struct forwarding_template_record *forwarding_add_record(forwarding *conf, struct ipfix_template_record *record, int type, int len)
+struct forwarding_template_record *forwarding_add_record(forwarding *conf, 
+	struct ipfix_template_record *record, int type, int len, uint32_t odid)
 {
 	int i;
-	MSG_DEBUG(msg_module, "Adding %s ID %d", (type == TM_TEMPLATE) ? "template" : "options template", ntohs(record->template_id));
+	MSG_DEBUG(msg_module, "[%u] Adding %s ID %d", odid, (type == TM_TEMPLATE) ? "template" : "options template",
+		ntohs(record->template_id));
 	if (conf->records_cnt == conf->records_max) {
 		/* Array is full, need more memory */
 		conf->records_max += 32;
@@ -147,6 +154,7 @@ struct forwarding_template_record *forwarding_add_record(forwarding *conf, struc
 			conf->records[i]->record = record;
 			conf->records[i]->type = type;
 			conf->records[i]->length = len;
+			conf->records[i]->odid = odid;
 			conf->records_cnt++;
 			return conf->records[i];
 		}
@@ -513,12 +521,13 @@ int forwarding_udp_sent(forwarding *conf, struct forwarding_template_record *rec
  * \param[in] rec Template record
  * \param[in] len Template record's length
  * \param[in] type Template type
+ * \param[in] odid ODID of the source
  * \return 0 if it wasnt sent
  */
-int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, int len, int type)
+int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, int len, int type, uint32_t odid)
 {
 	struct forwarding_template_record *aux_record;
-	int i = forwarding_get_record_index(conf, rec->template_id, type);
+	int i = forwarding_get_record_index(conf, rec->template_id, type, odid);
 
 	if (i >= 0) {
 		if (tm_compare_template_records(conf->records[i]->record, rec)) {
@@ -526,7 +535,7 @@ int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, 
 			return 1;
 		}
 		/* Stored record is old, update it */
-		forwarding_remove_record(conf, conf->records[i]->record->template_id, type);
+		forwarding_remove_record(conf, conf->records[i]->record->template_id, type, odid);
 	}
 
 	/* Store new record */
@@ -537,7 +546,7 @@ int forwarding_record_sent(forwarding *conf, struct ipfix_template_record *rec, 
 	}
 
 	memmove(stored, rec, len);
-	aux_record = forwarding_add_record(conf, stored, type, len);
+	aux_record = forwarding_add_record(conf, stored, type, len, odid);
 	if (aux_record) {
 		aux_record->last_sent = time(NULL);
 	}
@@ -578,7 +587,7 @@ void forwarding_process_template(uint8_t *rec, int rec_len, void *data)
 	struct forwarding_process *proc = (struct forwarding_process *) data;
 	/* Do not copy the template when it was already sent.
 	 * UDP templates are added based on their lifetime elsewhere */
-	if (forwarding_record_sent(proc->conf, (struct ipfix_template_record *) rec, rec_len, proc->type)) {
+	if (forwarding_record_sent(proc->conf, (struct ipfix_template_record *) rec, rec_len, proc->type, proc->odid)) {
 		return;
 	}
 
@@ -606,6 +615,7 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 
 	proc.conf = conf;
 	proc.msg = new_msg;
+	proc.odid = msg->input_info->odid;
 	proc.offset = IPFIX_HEADER_LENGTH;
 
 	/* Copy unsent templates to new message */
@@ -620,7 +630,8 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 
 		/* Empty set; only set header was added */
 		if (proc.length == 4) {
-			proc.offset = proc.length;
+			/* Do not add empty set header, just return the pointer before it */
+			proc.offset -= 4;
 			continue;
 		}
 
@@ -640,7 +651,8 @@ int forwarding_remove_sent_templates(forwarding *conf, const struct ipfix_messag
 
 		/* Empty set; only set header was added */
 		if (proc.length == 4) {
-			proc.offset = proc.length;
+			/* Do not add empty set header, just return the pointer before it */
+			proc.offset -= 4;
 			continue;
 		}
 
@@ -692,7 +704,7 @@ int forwarding_update_templates(forwarding *conf, const struct ipfix_message *ms
 			continue;
 		}
 		tid = ntohs(msg->data_couple[i].data_template->template_id);
-		rec = forwarding_get_record(conf, tid, msg->data_couple[i].data_template->template_type);
+		rec = forwarding_get_record(conf, tid, msg->data_couple[i].data_template->template_type, msg->input_info->odid);
 		if (!rec) {
 			/* Data without template */
 			continue;
