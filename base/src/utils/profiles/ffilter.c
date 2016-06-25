@@ -199,19 +199,14 @@ ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter,char *fieldstr, ff_oper_t 
 	//	}
 	//}
 
-	node = malloc(sizeof(ff_node_t));
 
-	if (node == NULL) {
-		return NULL;
-	}
+	node = ff_new_node(scanner, filter, NULL, oper, NULL);
 
-	//node->type = lnf_fld_type(field);
 	node->type = lvalue.type;
-	//node->field = field;
 	node->field = lvalue.id;
-	node->oper = oper;
 
 	/* determine field type and assign data to lvalue */
+
 	switch (node->type) {
 	//switch (lnf_fld_type(field)) {
 
@@ -262,7 +257,25 @@ ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter,char *fieldstr, ff_oper_t 
 	node->left = NULL;
 	node->right = NULL;
 
-	return node;
+	if (lvalue.id2.index == 0) {
+
+		return node;
+
+	} else {
+
+		ff_node_t *root, *nodeR;
+		//Setup nodes in or configuration for pair fields (src/dst etc.)
+
+		nodeR = ff_new_node(scanner, filter, NULL, oper, NULL);
+		root = ff_new_node(scanner, filter, node, FF_OP_OR, nodeR);
+
+		*nodeR = *node;
+		nodeR->field = lvalue.id2;
+
+
+		return root;
+
+	}
 }
 
 /* add node entry into expr tree */
@@ -327,8 +340,6 @@ int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec) {
 		return -1;
 	}
 
-//	lnf_rec_fget((lnf_rec_t *)rec, node->field, &buf);
-
 	switch (node->type) {
 		case FF_TYPE_UINT64: res = *(uint64_t *)&buf - *(uint64_t *)node->value; break;
 		case FF_TYPE_UINT32: res = *(uint32_t *)&buf - *(uint32_t *)node->value; break;
@@ -353,19 +364,18 @@ int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec) {
 
 					if (size > node->vsize) { return -1; }		/* too big integer */
 
-					/* copy size bytes of the value to the top of tmp */
 					switch (size) {
 						case sizeof(uint8_t):
-							res = *(uint8_t*)buf < *(uint64_t*)(node->value);
+							res = *(uint8_t*)buf - *(uint64_t*)(node->value);
 							break;
 						case sizeof(uint16_t):
-							res = htons(*(uint16_t*)buf) < *(uint64_t*)(node->value);
+							res = htons(*(uint16_t*)buf) - *(uint64_t*)(node->value);
 							break;
 						case sizeof(uint32_t):
-							res = htonl(*(uint16_t*)buf) < *(uint64_t*)(node->value);
+							res = htonl(*(uint32_t*)buf) - *(uint64_t*)(node->value);
 							break;
 						case sizeof(uint64_t):
-							res = htonll(*(uint16_t*)buf) < *(uint64_t*)(node->value);
+							res = htonll(*(uint64_t*)buf) - *(uint64_t*)(node->value);
 							break;
 						default:
 							res = -1;
@@ -378,19 +388,18 @@ int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec) {
 
 					if (size > node->vsize) { return -1; }		/* too big integer */
 
-					/* copy size bytes of the value to the top of tmp */
 					switch (size) {
 						case sizeof(uint8_t):
-							res = *(uint8_t*)buf < *(uint64_t*)(node->value);
+							res = *(uint8_t*)buf - *(uint64_t*)(node->value);
 							break;
 						case sizeof(uint16_t):
-							res = *(uint16_t*)buf < *(uint64_t*)(node->value);
+							res = *(uint16_t*)buf - *(uint64_t*)(node->value);
 							break;
 						case sizeof(uint32_t):
-							res = *(uint16_t*)buf < *(uint64_t*)(node->value);
+							res = *(uint32_t*)buf - *(uint64_t*)(node->value);
 							break;
 						case sizeof(uint64_t):
-							res = *(uint16_t*)buf < *(uint64_t*)(node->value);
+							res = *(uint64_t*)buf - *(uint64_t*)(node->value);
 							break;
 						default:
 							res = -1;
@@ -406,16 +415,16 @@ int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec) {
 					/* copy size bytes of the value to the top of tmp */
 					switch (size) {
 						case sizeof(int8_t):
-							res = *(int8_t*)buf < *(int64_t*)(node->value);
+							res = *(int8_t*)buf - *(int64_t*)(node->value);
 							break;
 						case sizeof(int16_t):
-							res = htons(*(int16_t*)buf) < *(int64_t*)(node->value);
+							res = htons(*(int16_t*)buf) - *(int64_t*)(node->value);
 							break;
 						case sizeof(int32_t):
-							res = htonl(*(int16_t*)buf) < *(int64_t*)(node->value);
+							res = htonl(*(int32_t*)buf) - *(int64_t*)(node->value);
 							break;
 						case sizeof(int64_t):
-							res = htonll(*(int16_t*)buf) < *(int64_t*)(node->value);
+							res = htonll(*(int64_t*)buf) - *(int64_t*)(node->value);
 							break;
 						default:
 							res = -1;
@@ -431,16 +440,16 @@ int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec) {
 					/* copy size bytes of the value to the top of tmp */
 					switch (size) {
 						case sizeof(int8_t):
-							res = *(int8_t*)buf < *(int64_t*)(node->value);
+							res = *(int8_t*)buf - *(int64_t*)(node->value);
 							break;
 						case sizeof(int16_t):
-							res = *(int16_t*)buf < *(int64_t*)(node->value);
+							res = *(int16_t*)buf - *(int64_t*)(node->value);
 							break;
 						case sizeof(int32_t):
-							res = *(int16_t*)buf < *(int64_t*)(node->value);
+							res = *(int32_t*)buf - *(int64_t*)(node->value);
 							break;
 						case sizeof(int64_t):
-							res = *(int16_t*)buf < *(int64_t*)(node->value);
+							res = *(int64_t*)buf - *(int64_t*)(node->value);
 							break;
 						default:
 							res = -1;

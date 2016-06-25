@@ -48,12 +48,12 @@
 #define FPAIR ~0LL
 /**
  * \brief Profile structure
- * 
+ *
  * Each filter string is representing one filter profile
  */
 struct filter_profile {
-    ff_t* filter;
-    void* buffer;
+	ff_t* filter;
+	void* buffer;
 };
 
 typedef struct nff_item_s {
@@ -61,16 +61,24 @@ typedef struct nff_item_s {
 	uint64_t en_id;
 }nff_item_t;
 
+/**
+ * \brief Structure of ipfix message and record pointers
+ * Used to pass ipfix_message and record as one argument
+ * Needed due to char* parameter in ff_data_func_t type
+ */
+typedef struct nff_msg_rec_s {
+	struct ipfix_message* msg;
+	struct ipfix_record* rec;
+}nff_msg_rec_t;
 
 int specify_ipv(uint16_t *i);
 
 ff_error_t ipf_ff_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lvalue);
 
 ff_error_t ipf_ff_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data, size_t *size);
-
 /**
  * \brief Match filter with IPFIX record
- * 
+ *
  * \param[in] node filter node
  * \param[in] msg IPFIX message (filter may contain field from message header)
  * \param[in] data IPFIX data record
@@ -80,7 +88,7 @@ int filter_eval_node(struct filter_profile *pdata, struct ipfix_message *msg, st
 
 /**
  * \brief Free profile's data
- * 
+ *
  * \param[in] profile Profile
  */
 void filter_free_profile(struct filter_profile *profile);

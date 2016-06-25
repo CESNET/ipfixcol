@@ -50,15 +50,18 @@
 #include "filter_wrapper.h"
 #include "ffilter.h"
 
-#define toGenEnId(gen, en, id) (((uint64_t)gen & 0xffff) << 48 | ((uint64_t)en & 0xffffffff) << 16 | (uint64_t)id)
-#define toEnId(en, id) (((uint64_t)en & 0xffffffff) << 16 | (uint64_t)id)
+#define toGenEnId(gen, en, id) (((uint64_t)gen & 0xffff) << 48 |\
+				((uint64_t)en & 0xffffffff) << 16 |\
+				 (uint16_t)id)
+#define toEnId(en, id) (((uint64_t)en & 0xffffffff) << 16 |\
+			 (uint16_t)id)
 
 static const char *msg_module = "profiler";
 
 enum generic_ip_id{
 	gen_nogeneric = 0,
 	gen_ip = 1,
-	gen_head_if,
+	gen_header_element,
 	gen_aggregated
 /*	gen_srcip,
 	gen_dstip,
@@ -71,18 +74,25 @@ enum generic_ip_id{
 */
 };
 
-void loadEnId(uint64_t from, uint16_t *gen, uint32_t* en, uint16_t* id)
+void unpackEnId(uint64_t from, uint16_t *gen, uint32_t* en, uint16_t* id)
 {
 	*gen = (uint16_t)(from >> 48);
 	*en = (uint32_t)(from >> 16);
 	*id = (uint16_t)(from);
 
-        return;
+	return;
 }
 
-//Pair field MUST be followed by adjacent fields, map is NULL terminated
+//
+//This map of strings and ids determines which (hopefuly) synonyms of nfdump filter keywords are supported
+/**
+ * \struct nff_item_s
+ * \brief Data structure that holds extra keywords and their numerical synonyms (some with extra flags)
+ * Pair field MUST be followed by adjacent fields, map is NULL terminated !
+ */
 struct nff_item_s nff_ipff_map[]={
 
+	//TODO: Add mask elements src/dstIPvXPrefixLength to srcmask/dstmask
 	//IP records, ip address is general, implicitly set to ipv6
 	{"proto", toEnId(0, 4)},
 
@@ -93,6 +103,10 @@ struct nff_item_s nff_ipff_map[]={
 	{"host", FPAIR},
 		{"srcip", toGenEnId(gen_ip, 0, 8)},
 		{"dstip", toGenEnId(gen_ip, 0, 12)},
+	{"mask", FPAIR},
+		{"srcmask", toEnId(0,9)},
+		{"dstmask", toEnId(0,13)},
+
 /*
 	//direct specific mapping
 	{"ipv4", FPAIR},
@@ -102,11 +116,11 @@ struct nff_item_s nff_ipff_map[]={
 		{"srcipv6", toEnId(0, 27)},
 		{"dstipv6", toEnId(0, 28)},
 */
-/*
+
 	{"if", FPAIR},
-		{"inif", toGenEnId(gen_head_if, 0, 1)},
-		{"outif", toGenEnId(gen_head_if, 0, 2)},
-*/
+		{"inif", toGenEnId(gen_header_element, 0, 1)},
+		{"outif", toGenEnId(gen_header_element, 0, 2)},
+
 	{"port", FPAIR},
 		{"srcport", toEnId(0, 7)},
 		{"dstport", toEnId(0, 11)},
@@ -220,6 +234,12 @@ struct nff_item_s nff_ipff_map[]={
 	{ NULL, -1},
 };
 
+/**
+ * \brief specify_ipv switches information_element to equivalent from ipv4
+ * to ipv6 and vice versa
+ * \param i
+ * \return Nonzero on success
+ */
 int specify_ipv(uint16_t *i){
 	switch(*i)
 	{
@@ -229,9 +249,12 @@ int specify_ipv(uint16_t *i){
 	//dstip
 	case 12: *i = 28; break;
 	case 28: *i = 12; break;
-	//mask
-	case 9: *i = 13; break;
-	case 13: *i = 9; break;
+	//srcmask
+	case 9: *i = 29; break;
+	case 29: *i = 9; break;
+	//dstmask
+	case 13: *i = 30; break;
+	case 30: *i = 13; break;
 	//nexthopip
 	case 15: *i = 62; break;
 	case 62: *i = 15; break;
@@ -260,112 +283,119 @@ ff_error_t ipf_ff_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *l
 
 	if (fieldstr != NULL) {
 
-                nff_item_t* item = NULL;
-		ipfix_element_t* elem;
+		nff_item_t* item = NULL;
+		const ipfix_element_t * elem;
 		//if((item = bsearch(&fieldstr, &nff_pair_map, 4, sizeof(nff_pair_t), nff_item_comp)) == NULL){
 		for(int x = 0; nff_ipff_map[x].name != NULL; x++){
-                        if(!strcmp(fieldstr, nff_ipff_map[x].name)){
+			if(!strcmp(fieldstr, nff_ipff_map[x].name)){
 				item = &nff_ipff_map[x];
 				break;
-                        }
-                }
-                if(item == NULL){
-                        //potrebujem prekodovat nazov pola na en a id
+			}
+		}
+		if(item == NULL){
+			//potrebujem prekodovat nazov pola na en a id
 			const ipfix_element_result_t elemr = get_element_by_name(fieldstr, false);
 			if (elemr.result == NULL){
-                                return FF_ERR_UNKN;
-                        }
+				return FF_ERR_UNKN;
+			}
 
 			lvalue->id.index = toEnId(elemr.result->en, elemr.result->id);
 			lvalue->id2.index = 0;
-			elem = &elemr.result;
-                } else {
+			elem = elemr.result;
+		} else {
 			lvalue->id2.index = 0;
 
 			if(item->en_id != FPAIR){
-                                //no pair values
-                                lvalue->id.index = item->en_id;
-                        } else {
-                                //mark lvalue so pair items are used
+				//no pair values
+				lvalue->id.index = item->en_id;
+			} else {
+				//mark lvalue so pair items are used
 				lvalue->id.index = (item+1)->en_id;
 				lvalue->id2.index = (item+2)->en_id;
-                        }
-			elem = get_element_by_id(lvalue->id.index >> 16, lvalue->id.index & 0xffff);
-                }
+			}
 
-                //Rozhodni datovy typ pre filter
+			uint16_t gen, id;
+			uint32_t enterprise;
+			unpackEnId(lvalue->id.index, &gen, &enterprise, &id);
+
+			elem = get_element_by_id(id, enterprise);
+		}
+
+		//Rozhodni datovy typ pre filter
 		//TODO: solve conflicting types
 		switch(elem->type){
 
-                        case ET_OCTET_ARRAY:
-                        case ET_UNSIGNED_8:
-                        case ET_UNSIGNED_16:
-                        case ET_UNSIGNED_32:
-                        case ET_UNSIGNED_64:
-                                lvalue->type = FF_TYPE_UNSIGNED_BIG;
-                                break;
+			case ET_UNSIGNED_8:
+			case ET_UNSIGNED_16:
+			case ET_UNSIGNED_32:
+			case ET_UNSIGNED_64:
+				lvalue->type = FF_TYPE_UNSIGNED_BIG;
+				break;
 
-                        case ET_SIGNED_8:
-                        case ET_SIGNED_16:
-                        case ET_SIGNED_32:
-                        case ET_SIGNED_64:
-                                lvalue->type = FF_TYPE_SIGNED_BIG;
-                                break;
+			case ET_SIGNED_8:
+			case ET_SIGNED_16:
+			case ET_SIGNED_32:
+			case ET_SIGNED_64:
+				lvalue->type = FF_TYPE_SIGNED_BIG;
+				break;
 
-                        case ET_FLOAT_32:
-                                return FF_ERR_UNSUP;
-                                break;
-                        case ET_FLOAT_64:
-                                lvalue->type = FF_TYPE_DOUBLE;
-                                break;
-
-                        case ET_MAC_ADDRESS:
-                                lvalue->type = FF_TYPE_MAC;
-                                break;
-
-                        case ET_STRING:
-                                lvalue->type = FF_TYPE_STRING;
-                                break;
-
-                        case ET_DATE_TIME_MILLISECONDS:
-				lvalue->type = FF_TYPE_TIMESTAMP;
-                                break;
-                        case ET_DATE_TIME_SECONDS:
-                        case ET_DATE_TIME_MICROSECONDS:
-                        case ET_DATE_TIME_NANOSECONDS:
+			case ET_FLOAT_32:
 				return FF_ERR_UNSUP;
-                                break;
+				break;
+			case ET_FLOAT_64:
+				lvalue->type = FF_TYPE_DOUBLE;
+				break;
 
-                        case ET_IPV4_ADDRESS:
-                        case ET_IPV6_ADDRESS:
-                                lvalue->type = FF_TYPE_ADDR;
-                                break;
+			case ET_MAC_ADDRESS:
+				lvalue->type = FF_TYPE_MAC;
+				break;
 
-                        case ET_BASIC_LIST:
-                        case ET_SUB_TEMPLATE_LIST:
-                        case ET_SUB_TEMPLATE_MULTILIST:
-                        case ET_BOOLEAN:
-                        case ET_UNASSIGNED:
-                        default:
-                                return FF_ERR_UNSUP;
-                }
-                return FF_OK;
-        }
-        return FF_ERR_OTHER;
+			case ET_STRING:
+				lvalue->type = FF_TYPE_STRING;
+				break;
+
+			case ET_DATE_TIME_MILLISECONDS:
+				lvalue->type = FF_TYPE_TIMESTAMP;
+				break;
+			case ET_DATE_TIME_SECONDS:
+			case ET_DATE_TIME_MICROSECONDS:
+			case ET_DATE_TIME_NANOSECONDS:
+				return FF_ERR_UNSUP;
+				break;
+
+			case ET_IPV4_ADDRESS:
+			case ET_IPV6_ADDRESS:
+				lvalue->type = FF_TYPE_ADDR;
+				break;
+
+			case ET_OCTET_ARRAY:
+			case ET_BASIC_LIST:
+			case ET_SUB_TEMPLATE_LIST:
+			case ET_SUB_TEMPLATE_MULTILIST:
+			case ET_BOOLEAN:
+			case ET_UNASSIGNED:
+			default:
+				return FF_ERR_UNSUP;
+		}
+		return FF_OK;
+	}
+	return FF_ERR_OTHER;
 }
 
 
 /* getting data callback */
 ff_error_t ipf_ff_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data, size_t *size) {
-        //assuming rec is struct ipfix_message
-        struct ipfix_record* ipf_rec = rec;
-        uint32_t en;
+	//assuming rec is struct ipfix_message
+	struct nff_msg_rec_s* msg_pair = rec;
+	int len;
+	char *ipf_field;
+
+	uint32_t en;
 	uint16_t ie_id;
 	uint16_t generic_set;
-        int len;
-	loadEnId(id.index, &generic_set, &en, &ie_id);
+	unpackEnId(id.index, &generic_set, &en, &ie_id);
 
-	if(generic_set == gen_head_if){
+	if(generic_set == gen_header_element){
 		//dig through header data
 		//proceed directly to return
 		return FF_ERR_OTHER;
@@ -374,18 +404,20 @@ ff_error_t ipf_ff_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *da
 		return FF_ERR_OTHER;
 	}
 
-	data = data_record_get_field(ipf_rec->record, ipf_rec->templ, en, ie_id, &len);
-	if (data == NULL && generic_set == gen_ip) {
+	ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, en, ie_id, &len);
+	if (ipf_field == NULL && generic_set == gen_ip) {
 		if (specify_ipv(&ie_id)) {
-			data = data_record_get_field(ipf_rec->record, ipf_rec->templ, en, ie_id, &len);
+			ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, en, ie_id, &len);
 		}
 	}
-        if(data == NULL){
-            return FF_ERR_OTHER;
-        }
+	if(ipf_field == NULL){
+		return FF_ERR_OTHER;
+	}
 
-        *size = len;
-        return FF_OK;
+	memcpy(data, ipf_field, len);
+
+	*size = len;
+	return FF_OK;
 }
 
 /**
@@ -398,10 +430,15 @@ ff_error_t ipf_ff_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *da
  */
 int filter_eval_node(struct filter_profile *pdata, struct ipfix_message *msg, struct ipfix_record *record)
 {
-        return ff_eval(pdata->filter, record->record);
+	struct nff_msg_rec_s pack;
+	pack.msg = msg;
+	pack.rec = record;
+	/* Necesarry to pass both msg and record to ff_eval, passed structure that contains both*/
+	return ff_eval(pdata->filter, &pack);
 }
 
-void filter_free_profile(struct filter_profile *profile){
-        ff_free(profile->filter);
-        free(profile);
+void filter_free_profile(struct filter_profile *profile)
+{
+	ff_free(profile->filter);
+	free(profile);
 }
