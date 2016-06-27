@@ -58,20 +58,15 @@
 
 static const char *msg_module = "profiler";
 
-enum generic_ip_id{
-	gen_nogeneric = 0,
-	gen_ip = 1,
-	gen_header_element,
-	gen_aggregated
-/*	gen_srcip,
-	gen_dstip,
-	gen_nexthopip,
-	gen_bgpnexthop,
-	gen_iprouter,
-	gen_xlateip,
-	gen_xlatesrcip,
-	gen_xlatedstip,
-*/
+enum nff_control_e {
+	CTL_NA = 0,
+	CTL_V4V6IP = 1,
+	CTL_SRCDSTMAC,
+	CTL_INOUTMAC,
+	CTL_MDATA_ITEM,
+	CTL_CALCULATED_ITEM,
+
+	//CTL_EQ_MASKED
 };
 
 void unpackEnId(uint64_t from, uint16_t *gen, uint32_t* en, uint16_t* id)
@@ -85,11 +80,7 @@ void unpackEnId(uint64_t from, uint16_t *gen, uint32_t* en, uint16_t* id)
 
 //
 //This map of strings and ids determines which (hopefuly) synonyms of nfdump filter keywords are supported
-/**
- * \struct nff_item_s
- * \brief Data structure that holds extra keywords and their numerical synonyms (some with extra flags)
- * Pair field MUST be followed by adjacent fields, map is NULL terminated !
- */
+
 struct nff_item_s nff_ipff_map[]={
 
 	//TODO: Add mask elements src/dstIPvXPrefixLength to srcmask/dstmask
@@ -97,12 +88,12 @@ struct nff_item_s nff_ipff_map[]={
 	{"proto", toEnId(0, 4)},
 
 	{"ip", FPAIR},
-		{"srcip", toGenEnId(gen_ip, 0, 8)},
-		{"dstip", toGenEnId(gen_ip, 0, 12)},
+		{"srcip", toGenEnId(CTL_V4V6IP, 0, 8)},
+		{"dstip", toGenEnId(CTL_V4V6IP, 0, 12)},
 	//synonym of IP
 	{"host", FPAIR},
-		{"srcip", toGenEnId(gen_ip, 0, 8)},
-		{"dstip", toGenEnId(gen_ip, 0, 12)},
+		{"srcip", toGenEnId(CTL_V4V6IP, 0, 8)},
+		{"dstip", toGenEnId(CTL_V4V6IP, 0, 12)},
 	{"mask", FPAIR},
 		{"srcmask", toEnId(0,9)},
 		{"dstmask", toEnId(0,13)},
@@ -118,8 +109,8 @@ struct nff_item_s nff_ipff_map[]={
 */
 
 	{"if", FPAIR},
-		{"inif", toGenEnId(gen_header_element, 0, 1)},
-		{"outif", toGenEnId(gen_header_element, 0, 2)},
+		{"inif", toEnId(0, 10)},
+		{"outif", toEnId(0, 14)},
 
 	{"port", FPAIR},
 		{"srcport", toEnId(0, 7)},
@@ -135,14 +126,20 @@ struct nff_item_s nff_ipff_map[]={
 	{"icmp-type", toEnId(0, 176)},
 	{"icmp-code", toEnId(0, 177)},
 
-	{"srcas", toEnId(0, 16)},
+	{"as", FPAIR},
+		{"srcas", toGenEnId(CTL_MDATA_ITEM, 0, 0)},
+		{"dstas", toGenEnId(CTL_MDATA_ITEM, 0, 0)},
+		{"prevas", toGenEnId(CTL_MDATA_ITEM, 0, 0)},
+		{"nextas", toGenEnId(CTL_MDATA_ITEM, 0, 0)},
+
+/*	{"srcas", toEnId(0, 16)},
 	{"dstas", toEnId(0, 17)},
 	{"prevas", toEnId(0, 128)}, //maps  to BGPNEXTADJACENTAS
 	{"nextas", toEnId(0, 129)}, //similar as above
-
+*/
 	{"mask", FPAIR},
-		{"srcmask", toGenEnId(gen_ip, 0, 9)},
-		{"dstmask", toGenEnId(gen_ip, 0, 13)},
+		{"srcmask", toGenEnId(CTL_V4V6IP, 0, 9)},
+		{"dstmask", toGenEnId(CTL_V4V6IP, 0, 13)},
 
 	{"vlan", FPAIR},
 		{"srcvlan", toEnId(0, 58)},
@@ -150,7 +147,7 @@ struct nff_item_s nff_ipff_map[]={
 
 	{"flags", toEnId(0, 6)},
 
-	{"nextip", toGenEnId(gen_ip, 0, 15)},
+	{"nextip", toGenEnId(CTL_V4V6IP, 0, 15)},
 
 	{"bgpnextip", toEnId(0, 18)},
 
@@ -193,20 +190,20 @@ struct nff_item_s nff_ipff_map[]={
 	{"dsttos", toEnId(0, 55)},
 
 
-	{"pps", toGenEnId(gen_aggregated, 0, 5)},
+	{"pps", toGenEnId(CTL_CALCULATED_ITEM, 0, 5)},
 
-	{"duration", toGenEnId(gen_aggregated, 0, 55)},
+	{"duration", toGenEnId(CTL_CALCULATED_ITEM, 0, 55)},
 
-	{"bps", toGenEnId(gen_aggregated, 0, 6)},
+	{"bps", toGenEnId(CTL_CALCULATED_ITEM, 0, 6)},
 
-	{"bpp", toGenEnId(gen_aggregated, 0, 6)},
+	{"bpp", toGenEnId(CTL_CALCULATED_ITEM, 0, 6)},
 
 	{"asaevent", toEnId(0, 230)},
 	{"asaxevent", toEnId(0, 233)},
 
 	{"xip", FPAIR},
-		{"xsrcip", toGenEnId(gen_ip, 0, 225)},
-		{"xdstip", toGenEnId(gen_ip, 0, 226)},
+		{"xsrcip", toGenEnId(CTL_V4V6IP, 0, 225)},
+		{"xdstip", toGenEnId(CTL_V4V6IP, 0, 226)},
 
 	{"xport", FPAIR},
 		{"xsrcport", toEnId(0, 227)},
@@ -216,8 +213,8 @@ struct nff_item_s nff_ipff_map[]={
 
 /*
 	{"nip", FPAIR},
-		{"nsrcip", toGenEnId(gen_ip, 0, 225)},
-		{"ndstip", toGenEnId(gen_ip, 0, 226)},
+		{"nsrcip", toGenEnId(CTL_V4V6IP, 0, 225)},
+		{"ndstip", toGenEnId(CTL_V4V6IP, 0, 226)},
 
 	{"nport", FPAIR},
 		{"nsrcport", toEnId(0, 227)},
@@ -240,7 +237,8 @@ struct nff_item_s nff_ipff_map[]={
  * \param i
  * \return Nonzero on success
  */
-int specify_ipv(uint16_t *i){
+int specify_ipv(uint16_t *i)
+{
 	switch(*i)
 	{
 	//srcip
@@ -277,7 +275,8 @@ int specify_ipv(uint16_t *i){
 }
 
 /* callback from ffilter to lookup field */
-ff_error_t ipf_ff_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lvalue) {
+ff_error_t ipf_ff_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lvalue)
+{
 
 	/* fieldstr is set - try to find field id and relevant _fget function */
 
@@ -384,7 +383,8 @@ ff_error_t ipf_ff_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *l
 
 
 /* getting data callback */
-ff_error_t ipf_ff_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data, size_t *size) {
+ff_error_t ipf_ff_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data, size_t *size)
+{
 	//assuming rec is struct ipfix_message
 	struct nff_msg_rec_s* msg_pair = rec;
 	int len;
@@ -395,23 +395,24 @@ ff_error_t ipf_ff_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *da
 	uint16_t generic_set;
 	unpackEnId(id.index, &generic_set, &en, &ie_id);
 
-	if(generic_set == gen_header_element){
+	if (generic_set == CTL_MDATA_ITEM) {
 		//dig through header data
 		//proceed directly to return
 		return FF_ERR_OTHER;
-	}else if(generic_set == gen_aggregated){
+	} else if (generic_set == CTL_CALCULATED_ITEM) {
 		//godlike code to handle this mess
 		return FF_ERR_OTHER;
-	}
+	} else {
 
-	ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, en, ie_id, &len);
-	if (ipf_field == NULL && generic_set == gen_ip) {
-		if (specify_ipv(&ie_id)) {
-			ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, en, ie_id, &len);
+		ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, en, ie_id, &len);
+		if (ipf_field == NULL && generic_set == CTL_V4V6IP) {
+			if (specify_ipv(&ie_id)) {
+				ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, en, ie_id, &len);
+			}
 		}
-	}
-	if(ipf_field == NULL){
-		return FF_ERR_OTHER;
+		if(ipf_field == NULL){
+			return FF_ERR_OTHER;
+		}
 	}
 
 	memcpy(data, ipf_field, len);

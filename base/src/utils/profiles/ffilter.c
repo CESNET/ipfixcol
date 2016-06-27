@@ -175,6 +175,7 @@ const char* ff_error(ff_t *filter, const char *buf, int buflen) {
 ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter,char *fieldstr, ff_oper_t oper, char *valstr) {
 	//int field;
 	ff_node_t *node;
+	ff_node_t *root, *nodeR;
 	ff_lvalue_t lvalue;
 
 
@@ -201,6 +202,9 @@ ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter,char *fieldstr, ff_oper_t 
 
 
 	node = ff_new_node(scanner, filter, NULL, oper, NULL);
+	if (node == NULL) {
+		return NULL;
+	}
 
 	node->type = lvalue.type;
 	node->field = lvalue.id;
@@ -258,24 +262,37 @@ ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter,char *fieldstr, ff_oper_t 
 	node->right = NULL;
 
 	if (lvalue.id2.index == 0) {
-
 		return node;
-
 	} else {
-
-		ff_node_t *root, *nodeR;
 		//Setup nodes in or configuration for pair fields (src/dst etc.)
 
 		nodeR = ff_new_node(scanner, filter, NULL, oper, NULL);
+		if (nodeR == NULL){
+			goto err_free1;
+		}
 		root = ff_new_node(scanner, filter, node, FF_OP_OR, nodeR);
+		if (nodeR == NULL){
+			goto err_free2;
+		}
 
 		*nodeR = *node;
 		nodeR->field = lvalue.id2;
 
+		nodeR->value = malloc(nodeR->vsize);
+		if (nodeR->value == NULL) {
+			goto err_free3;
+		}
 
 		return root;
-
 	}
+
+err_free3:
+	ff_free_node(root);
+err_free2:
+	ff_free_node(nodeR);
+err_free1:
+	ff_free_node(node);
+	return NULL;
 }
 
 /* add node entry into expr tree */
@@ -347,131 +364,131 @@ int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec) {
 		case FF_TYPE_UINT8:  res = *(uint8_t *)&buf - *(uint8_t *)node->value; break;
 		case FF_TYPE_DOUBLE: res = *(double *)&buf - *(double *)node->value; break;
 		case FF_TYPE_STRING: res = strcmp((char *)&buf, node->value); break;
-//		case FF_TYPE_UNSIGNED_BIG: {
-					/* for FF_TYPE_UNSIGED firt convert into uint64_t and then compare */
-//					uint64_t tmp = 0;
-
-//					if (size > node->vsize) { return -1; }		/* too big integer */
-
-					/* copy size bytes of the value to the top of tmp */
-//					memcpy(&tmp, buf + (size - node->vsize), size);
-
-//					res = memcmp(&tmp, node->value, size);
-
-//					break;
-//				}
 		case FF_TYPE_UNSIGNED_BIG: {
 
-					if (size > node->vsize) { return -1; }		/* too big integer */
+			if (size > node->vsize) { return -1; }		/* too big integer */
 
-					switch (size) {
-						case sizeof(uint8_t):
-							res = *(uint8_t*)buf - *(uint64_t*)(node->value);
-							break;
-						case sizeof(uint16_t):
-							res = htons(*(uint16_t*)buf) - *(uint64_t*)(node->value);
-							break;
-						case sizeof(uint32_t):
-							res = htonl(*(uint32_t*)buf) - *(uint64_t*)(node->value);
-							break;
-						case sizeof(uint64_t):
-							res = htonll(*(uint64_t*)buf) - *(uint64_t*)(node->value);
-							break;
-						default:
-							res = -1;
-							break;
-					}
-					break;
-				}
+			switch (size) {
+			case sizeof(uint8_t):
+				res = *(uint8_t*)buf - *(uint64_t*)(node->value);
+				break;
+			case sizeof(uint16_t):
+				res = htons(*(uint16_t*)buf) - *(uint64_t*)(node->value);
+				break;
+			case sizeof(uint32_t):
+				res = htonl(*(uint32_t*)buf) - *(uint64_t*)(node->value);
+				break;
+			case sizeof(uint64_t):
+				res = htonll(*(uint64_t*)buf) - *(uint64_t*)(node->value);
+				break;
+			default:
+				res = -1;
+				break;
+			}
+			break;
+		}
 
 		case FF_TYPE_UNSIGNED: {
 
-					if (size > node->vsize) { return -1; }		/* too big integer */
+			if (size > node->vsize) { return -1; }		/* too big integer */
 
-					switch (size) {
-						case sizeof(uint8_t):
-							res = *(uint8_t*)buf - *(uint64_t*)(node->value);
-							break;
-						case sizeof(uint16_t):
-							res = *(uint16_t*)buf - *(uint64_t*)(node->value);
-							break;
-						case sizeof(uint32_t):
-							res = *(uint32_t*)buf - *(uint64_t*)(node->value);
-							break;
-						case sizeof(uint64_t):
-							res = *(uint64_t*)buf - *(uint64_t*)(node->value);
-							break;
-						default:
-							res = -1;
-							break;
-				}
-
+			switch (size) {
+			case sizeof(uint8_t):
+				res = *(uint8_t*)buf - *(uint64_t*)(node->value);
+				break;
+			case sizeof(uint16_t):
+				res = *(uint16_t*)buf - *(uint64_t*)(node->value);
+				break;
+			case sizeof(uint32_t):
+				res = *(uint32_t*)buf - *(uint64_t*)(node->value);
+				break;
+			case sizeof(uint64_t):
+				res = *(uint64_t*)buf - *(uint64_t*)(node->value);
+				break;
+			default:
+				res = -1;
 				break;
 			}
+
+			break;
+		}
 		case FF_TYPE_SIGNED_BIG: {
 
-					if (size > node->vsize) { return -1; }		/* too big integer */
+			if (size > node->vsize) { return -1; }		/* too big integer */
 
-					/* copy size bytes of the value to the top of tmp */
-					switch (size) {
-						case sizeof(int8_t):
-							res = *(int8_t*)buf - *(int64_t*)(node->value);
-							break;
-						case sizeof(int16_t):
-							res = htons(*(int16_t*)buf) - *(int64_t*)(node->value);
-							break;
-						case sizeof(int32_t):
-							res = htonl(*(int32_t*)buf) - *(int64_t*)(node->value);
-							break;
-						case sizeof(int64_t):
-							res = htonll(*(int64_t*)buf) - *(int64_t*)(node->value);
-							break;
-						default:
-							res = -1;
-							break;
-					}
-					break;
-				}
+			/* copy size bytes of the value to the top of tmp */
+			switch (size) {
+			case sizeof(int8_t):
+				res = *(int8_t*)buf - *(int64_t*)(node->value);
+				break;
+			case sizeof(int16_t):
+				res = htons(*(int16_t*)buf) - *(int64_t*)(node->value);
+				break;
+			case sizeof(int32_t):
+				res = htonl(*(int32_t*)buf) - *(int64_t*)(node->value);
+				break;
+			case sizeof(int64_t):
+				res = htonll(*(int64_t*)buf) - *(int64_t*)(node->value);
+				break;
+			default:
+				res = -1;
+				break;
+			}
+			break;
+		}
 
 		case FF_TYPE_SIGNED: {
 
-					if (size > node->vsize) { return -1; }		/* too big integer */
+			if (size > node->vsize) { return -1; }		/* too big integer */
 
-					/* copy size bytes of the value to the top of tmp */
-					switch (size) {
-						case sizeof(int8_t):
-							res = *(int8_t*)buf - *(int64_t*)(node->value);
-							break;
-						case sizeof(int16_t):
-							res = *(int16_t*)buf - *(int64_t*)(node->value);
-							break;
-						case sizeof(int32_t):
-							res = *(int32_t*)buf - *(int64_t*)(node->value);
-							break;
-						case sizeof(int64_t):
-							res = *(int64_t*)buf - *(int64_t*)(node->value);
-							break;
-						default:
-							res = -1;
-							break;
-				}
-
+			/* copy size bytes of the value to the top of tmp */
+			switch (size) {
+			case sizeof(int8_t):
+				res = *(int8_t*)buf - *(int64_t*)(node->value);
+				break;
+			case sizeof(int16_t):
+				res = *(int16_t*)buf - *(int64_t*)(node->value);
+				break;
+			case sizeof(int32_t):
+				res = *(int32_t*)buf - *(int64_t*)(node->value);
+				break;
+			case sizeof(int64_t):
+				res = *(int64_t*)buf - *(int64_t*)(node->value);
+				break;
+			default:
+				res = -1;
 				break;
 			}
 
+			break;
+		}
 
-		default: res = memcmp(buf, node->value, node->vsize); break;
+		case FF_TYPE_ADDR: {
+
+			switch (size) {
+			case sizeof(ff_ip_t):
+				res = memcmp(buf, node->value, node->vsize);
+				break;
+			case sizeof(ff_ip_t)/4:
+				res = memcmp(buf, &(((ff_ip_t *)node->value)->data[3]), node->vsize/4);
+				break;
+			default: return -1;
+			}
+
+			break;
+		}
+	default: res = memcmp(buf, node->value, node->vsize); break;
 	}
 
 	/* simple comparsion */
 	switch (node->oper) {
-		case FF_OP_NOT:
-		case FF_OP_OR:
-		case FF_OP_AND: return -1 ; break;
-		case FF_OP_EQ:  return res == 0; break;
-		case FF_OP_NE:  return res != 0; break;
-		case FF_OP_GT:  return res > 0; break;
-		case FF_OP_LT:  return res < 0; break;
+	case FF_OP_NOT:
+	case FF_OP_OR:
+	case FF_OP_AND: return -1 ; break;
+	case FF_OP_EQ:  return res == 0; break;
+	case FF_OP_NE:  return res != 0; break;
+	case FF_OP_GT:  return res > 0; break;
+	case FF_OP_LT:  return res < 0; break;
 	}
 
 	return -1;
@@ -504,9 +521,6 @@ ff_error_t ff_options_free(ff_options_t *options) {
 
 }
 
-
-//TODO: options sends program control to oblivion, find out why.
-//Maybe options init are missing
 
 ff_error_t ff_init(ff_t **pfilter, const char *expr, ff_options_t *options) {
 
@@ -561,12 +575,30 @@ int ff_eval(ff_t *filter, void *rec) {
 
 }
 
+void ff_free_node(ff_node_t* node) {
+
+	if (node->left != NULL) {
+		ff_free_node(node->left);
+	}
+	if (node->right != NULL) {
+		ff_free_node(node->left);
+	}
+
+	free(node->value);
+	free(node);
+}
+
 /* release all resources allocated by filter */
 ff_error_t ff_free(ff_t *filter) {
 
 	/* !!! memory clenaup */
 
 	if (filter != NULL) {
+
+		if (filter->root != NULL) {
+			ff_free_node(filter->root);
+		}
+
 		free(filter);
 	}
 
