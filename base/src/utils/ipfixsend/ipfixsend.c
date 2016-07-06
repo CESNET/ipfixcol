@@ -43,6 +43,7 @@
 #include <string.h>
 #include <ipfixcol.h>
 #include <signal.h>
+#include <stdbool.h>
 
 #include <siso.h>
 
@@ -54,7 +55,7 @@
 #include <netinet/sctp.h>
 #endif
 
-#define OPTSTRING "hi:d:p:t:n:s:S:R:"
+#define OPTSTRING "hi:d:p:t:n:s:S:R:O:"
 #define DEFAULT_IP "127.0.0.1"
 #define DEFAULT_PORT "4739"
 #define DEFAULT_TYPE "UDP"
@@ -83,6 +84,7 @@ void usage()
 	printf("  -p port    Destination port number (default: %s)\n", DEFAULT_PORT);
 	printf("  -t type    Connection type (UDP, TCP or SCTP) (default: UDP)\n");
 	printf("  -n num     How many times the file should be sent (default: infinity)\n");
+	printf("  -O num     Change ODID (Observation Domain ID) of all packets\n");
 	printf("  -s speed   Maximum data sending speed/s\n");
 	printf("             Supported suffixes: B (default), K, M, G\n");
 	printf("  -S packets Speed limit in packets/s\n");
@@ -103,15 +105,18 @@ void handler(int signal)
  */
 int main(int argc, char** argv)
 {
-	char *ip =   DEFAULT_IP;
-	char *port = DEFAULT_PORT;
-	char *type = DEFAULT_TYPE;
+	char   *ip =   DEFAULT_IP;
+	char   *port = DEFAULT_PORT;
+	char   *type = DEFAULT_TYPE;
 
-	char *input = NULL;
-	char *speed = NULL;
-	int loops =   INFINITY_LOOPS;
-	int packets_s = 0;
-	double realtime_s = 0.0;
+	char   *input = NULL;
+	char   *speed = NULL;
+	int     loops =   INFINITY_LOOPS;
+	int     packets_s = 0;
+	double  realtime_s = 0.0;
+
+	bool    odid_change = false;
+	long    odid_value = 0;
 
 	if (argc == 1) {
 		usage();
@@ -149,6 +154,10 @@ int main(int argc, char** argv)
 		case 'R':
 			realtime_s = atof(optarg);
 			break;
+		case 'O':
+			odid_change = true;
+			odid_value = atol(optarg);
+			break;
 		default:
 			fprintf(stderr, "Unknown option.\n");
 			return 1;
@@ -177,6 +186,12 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
+	if (odid_change && (odid_value < 0 || odid_value > UINT32_MAX)) {
+		fprintf(stderr, "Invalid ODID value. Must be in range "
+			"(0 .. %" PRIu32 ")\n", UINT32_MAX);
+		return 1;
+	}
+
 	/* Check whether everything is set */
 	CHECK_SET(input, "Input file");
 	signal(SIGINT, handler);
@@ -193,6 +208,14 @@ int main(int argc, char** argv)
 	if (!packets) {
 		siso_destroy(sender);
 		return 1;
+	}
+
+	/* Change ODID */
+	if (odid_change) {
+		for (size_t i = 0; packets[i]; ++i) {
+			struct ipfix_header *header = (struct ipfix_header *) packets[i];
+			header->observation_domain_id = htonl((uint32_t) odid_value);
+		}
 	}
 
 	/* Create connection */
