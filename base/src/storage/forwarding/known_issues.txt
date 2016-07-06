@@ -1,0 +1,8 @@
+- Issue: Template Withdrawals
+  Due to the design of the collector, the plugin is unable to remove old
+  templates and send template withdrawals to connected destinations, when
+  a source of flows (i.e. an exporter) is disconnected.
+  The plugin doesn't get information about source disconnection. Current
+  implementation is almost prepared for receiving information about disconnected
+  clients, but support from the collector is required.
+  (see commented parts in forwarding.c)
