@@ -85,11 +85,12 @@ int parse_filter(filter_profile* pdata, char* filter_str)
 	int ret = 0;
 
 	if (ff_options_init(&opts) == FF_ERR_NOMEM) {
-	    return 1;
+		return 1;
 	}
 
 	opts->ff_lookup_func = ipf_ff_lookup_func;
 	opts->ff_data_func = ipf_ff_data_func;
+	opts->ff_translate_func = ipf_ff_translate_func;
 
 	if (ff_init(&pdata->filter, filter_str, opts) != FF_OK) {
 		ret = 1;

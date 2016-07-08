@@ -43,6 +43,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 #include <ipfixcol.h>
 #include <stdint.h>
@@ -62,11 +63,18 @@ enum nff_control_e {
 	CTL_NA = 0,
 	CTL_V4V6IP = 1,
 	CTL_SRCDSTMAC,
-	CTL_INOUTMAC,
+	//CTL_INOUTMAC,
 	CTL_MDATA_ITEM,
 	CTL_CALCULATED_ITEM,
 
 	//CTL_EQ_MASKED
+};
+
+enum nff_calculated_e {
+	CALC_PPS = 1,
+	CALC_DURATION,
+	CALC_BPS,
+	CALC_BPP
 };
 
 void unpackEnId(uint64_t from, uint16_t *gen, uint32_t* en, uint16_t* id)
@@ -78,10 +86,8 @@ void unpackEnId(uint64_t from, uint16_t *gen, uint32_t* en, uint16_t* id)
 	return;
 }
 
-//
-//This map of strings and ids determines which (hopefuly) synonyms of nfdump filter keywords are supported
-
-struct nff_item_s nff_ipff_map[]={
+/* This map of strings and ids determines which (hopefully) synonyms of nfdump filter keywords are supported */
+static struct nff_item_s nff_ipff_map[]={
 
 	//TODO: Add mask elements src/dstIPvXPrefixLength to srcmask/dstmask
 	//IP records, ip address is general, implicitly set to ipv6
@@ -94,9 +100,10 @@ struct nff_item_s nff_ipff_map[]={
 	{"host", FPAIR},
 		{"srcip", toGenEnId(CTL_V4V6IP, 0, 8)},
 		{"dstip", toGenEnId(CTL_V4V6IP, 0, 12)},
+
 	{"mask", FPAIR},
-		{"srcmask", toEnId(0,9)},
-		{"dstmask", toEnId(0,13)},
+		{"srcmask", toGenEnId(CTL_V4V6IP, 0, 9)},
+		{"dstmask", toGenEnId(CTL_V4V6IP, 0, 13)},
 
 /*
 	//direct specific mapping
@@ -127,19 +134,17 @@ struct nff_item_s nff_ipff_map[]={
 	{"icmp-code", toEnId(0, 177)},
 
 	{"as", FPAIR},
-		{"srcas", toGenEnId(CTL_MDATA_ITEM, 0, 0)},
-		{"dstas", toGenEnId(CTL_MDATA_ITEM, 0, 0)},
-		{"prevas", toGenEnId(CTL_MDATA_ITEM, 0, 0)},
-		{"nextas", toGenEnId(CTL_MDATA_ITEM, 0, 0)},
-
-/*	{"srcas", toEnId(0, 16)},
-	{"dstas", toEnId(0, 17)},
-	{"prevas", toEnId(0, 128)}, //maps  to BGPNEXTADJACENTAS
-	{"nextas", toEnId(0, 129)}, //similar as above
+		/*{"srcas", toGenEnId(CTL_MDATA_ITEM, 0, 1)},
+		{"dstas", toGenEnId(CTL_MDATA_ITEM, 0, 2)},
+		{"prevas", toGenEnId(CTL_MDATA_ITEM, 0, 1)},
+		{"nextas", toGenEnId(CTL_MDATA_ITEM, 0, 2)},
 */
-	{"mask", FPAIR},
-		{"srcmask", toGenEnId(CTL_V4V6IP, 0, 9)},
-		{"dstmask", toGenEnId(CTL_V4V6IP, 0, 13)},
+		{"srcas", toEnId(0, 16)},
+		{"dstas", toEnId(0, 17)},
+
+	{"nextas", toEnId(0, 128)}, //maps  to BGPNEXTADJACENTAS
+	{"prevas", toEnId(0, 129)}, //similar as above
+
 
 	{"vlan", FPAIR},
 		{"srcvlan", toEnId(0, 58)},
@@ -152,23 +157,19 @@ struct nff_item_s nff_ipff_map[]={
 	{"bgpnextip", toEnId(0, 18)},
 
 	{"routerip", toEnId(0, 130)},
-/*
-	{"mac", FPAIR},
-		{"insrcmac", toEnId(0, 56)},
-		{"outdstmac", toEnId(0, 57)},
 
-	{"amac", FPAIR},
-		{"outsrcmac", toEnId(0, 80)},
-		{"indstmac", toEnId(0, 81)},
+	{"mac", FPAIR},
+		{"srcmac", toEnId(0, 56)},
+		{"dstmac", toEnId(0, 80)},
 
 	{"inmac", FPAIR},
-		{"insrcmac", toEnId(0, 56)},
-		{"indstmac", toEnId(0, 81)},
+		{"insrcmac", toEnId(0, 57)},
+		{"indstmac", toEnId(0, 80)},
 
 	{"outmac", FPAIR},
-		{"outsrcmac", toEnId(0, 80)},
-		{"outdstmac", toEnId(0, 57)},
-*/
+		{"outsrcmac", toEnId(0, 56)},
+		{"outdstmac", toEnId(0, 81)},
+
 	{"mplslabel1", toEnId(0, 70)},
 	{"mplslabel2", toEnId(0, 71)},
 	{"mplslabel3", toEnId(0, 72)},
@@ -190,13 +191,13 @@ struct nff_item_s nff_ipff_map[]={
 	{"dsttos", toEnId(0, 55)},
 
 
-	{"pps", toGenEnId(CTL_CALCULATED_ITEM, 0, 5)},
+	{"pps", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_PPS)},
 
-	{"duration", toGenEnId(CTL_CALCULATED_ITEM, 0, 55)},
+	{"duration", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_DURATION)},
 
-	{"bps", toGenEnId(CTL_CALCULATED_ITEM, 0, 6)},
+	{"bps", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_BPS)},
 
-	{"bpp", toGenEnId(CTL_CALCULATED_ITEM, 0, 6)},
+	{"bpp", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_BPP)},
 
 	{"asaevent", toEnId(0, 230)},
 	{"asaxevent", toEnId(0, 233)},
@@ -225,18 +226,30 @@ struct nff_item_s nff_ipff_map[]={
 		{"ingressvrfid", toEnId(0, 234)},
 		{"egressvrfid", toEnId(0, 235)},
 
-	{"tstart", toEnId(0, 22)},
-	{"tend", toEnId(0, 21)},
+	{"tstart", toEnId(0, 152)},
+	{"tend", toEnId(0, 153)},
 
-	{ NULL, -1},
+	{ NULL, ~0U},
 };
 
-/**
- * \brief specify_ipv switches information_element to equivalent from ipv4
- * to ipv6 and vice versa
- * \param i
- * \return Nonzero on success
- */
+static struct nff_item_s nff_proto_id_map[]={
+	{ "tcp",	6 },
+	{ "udp",	17 },
+	{ "rdp",	27 },
+	{ "sctp",	132 },
+	{ NULL, 	~0U }
+};
+
+static struct nff_item_s nff_port_map[]={
+	{ "ftp-data",	20 },
+	{ "ftp",	21 },
+	{ "ssh",	22 },
+	{ "telnet",	23 },
+	{ "http",	80 },
+	{ "https",	443 },
+	{ NULL, 	~0U }
+};
+
 int specify_ipv(uint16_t *i)
 {
 	switch(*i)
@@ -273,6 +286,7 @@ int specify_ipv(uint16_t *i)
 	}
 	return 1;
 }
+
 
 /* callback from ffilter to lookup field */
 ff_error_t ipf_ff_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lvalue)
@@ -388,6 +402,7 @@ ff_error_t ipf_ff_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *da
 	//assuming rec is struct ipfix_message
 	struct nff_msg_rec_s* msg_pair = rec;
 	int len;
+	uint64_t tmp;
 	char *ipf_field;
 
 	uint32_t en;
@@ -396,12 +411,48 @@ ff_error_t ipf_ff_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *da
 	unpackEnId(id.index, &generic_set, &en, &ie_id);
 
 	if (generic_set == CTL_MDATA_ITEM) {
-		//dig through header data
+		//Filtration by metadata not used for now
+		switch (ie_id) {
+		case 1:
+			ipf_field = &(((struct metadata *)msg_pair->rec)->srcAS);
+			len = sizeof(((struct metadata *)msg_pair->rec)->srcAS);
+			break;
+		case 2:
+			ipf_field = &(((struct metadata *)msg_pair->rec)->dstAS);
+			len = sizeof(((struct metadata *)msg_pair->rec)->dstAS);
+			break;
+		default:
 		//proceed directly to return
-		return FF_ERR_OTHER;
+			return FF_ERR_OTHER;
+		}
 	} else if (generic_set == CTL_CALCULATED_ITEM) {
-		//godlike code to handle this mess
-		return FF_ERR_OTHER;
+	//TODO: After datatype - length conversion tools are ready finish
+		uint64_t tmp2;
+
+		switch (ie_id) {
+//		case calc_pps:
+//			tmp = data_record_get_duration((msg_pair->rec)->record, (msg_pair->rec)->templ);
+//			ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, 0, 2, &len);
+//			memcpy(&tmp2, ipf_field, len);
+//			tmp2 = ntohll(tmp2);
+//			tmp = htonll(ntohll(tmp)/tmp2);
+//			break;
+//		case calc_duration:
+//			tmp = data_record_get_duration((msg_pair->rec)->record, (msg_pair->rec)->templ);
+//			/*difference of 153 and 152 ie*/
+//			len = sizeof(tmp);
+//			break;
+//		case calc_bps:
+//			tmp = data_record_get_duration((msg_pair->rec)->record, (msg_pair->rec)->templ);
+//			data_record_get_field(/*get bits ie 1*/);
+//			break;
+//		case calc_bpp:
+//			data_record_get_field(/*get bits ie 1*/);
+//			data_record_get_field(/*get packets ie 2*/);
+//			break;
+		default:
+			return FF_ERR_OTHER;
+		}
 	} else {
 
 		ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, en, ie_id, &len);
@@ -421,14 +472,88 @@ ff_error_t ipf_ff_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *da
 	return FF_OK;
 }
 
-/**
- * \brief Check whether value in data record fits with node expression
- *
- * \param[in] node Filter tree node
- * \param[in] msg IPFIX message (filter may contain field from message header)
- * \param[in] record IPFIX data record
- * \return 1 if data record's field fits -1 on error
- */
+ff_error_t ipf_ff_translate_func(ff_t *filter, const char *valstr, ff_lvalue_t *lvalue, uint64_t *val)
+{
+	struct nff_item_s *dict = NULL;
+	char *tcp_ctl_bits = "FSRPAUECNX";
+	char *hit = NULL;
+
+	uint32_t en;
+	uint16_t ie_id;
+	uint16_t generic_set;
+	unpackEnId(lvalue->id.index, &generic_set, &en, &ie_id);
+
+	if (en != 0 || valstr == NULL || val == NULL) {
+		return FF_ERR_OTHER;
+	}
+
+	int x;
+	*val ^= *val;
+
+	switch (ie_id) {
+	default:
+		return FF_ERR_UNSUP;
+		break;
+	case 4:
+		dict = &nff_proto_id_map[0];
+		break;
+	case 6:
+		if (strlen(valstr)>9) {
+			return FF_ERR_OTHER;
+		}
+
+		for (x = 0; x < strlen(valstr); x++) {
+			if ((hit = strchr(tcp_ctl_bits, valstr[x])) == NULL) {
+				return FF_ERR_OTHER;
+			}
+			*val |= 1 << (hit - tcp_ctl_bits);
+			/* If X was in string all set all flags */
+			if (*hit == 'X') {
+				(*val)--;
+			}
+		}
+
+		return FF_OK;
+		break;
+	case 7:
+	case 11:
+		dict = &nff_port_map[0];
+		break;
+	}
+
+
+	nff_item_t *item = NULL;
+	const ipfix_element_t *elem;
+
+	for (int x = 0; dict[x].name != NULL; x++) {
+		if (!strcasecmp(valstr, dict[x].name)) {
+			item = &dict[x];
+			break;
+		}
+	}
+
+	if (item != NULL) {
+		*val = item->data;
+		return FF_OK;
+	}
+
+	return FF_ERR_OTHER;
+}
+
+//TODO: finish flow duration calculation function
+int64_t data_record_get_duration(struct ipfix_record* data, struct ipfix_template *templ)
+{
+//	int len;
+//	char *tend, *tstart;
+
+//	tend = data_record_get_field(data, templ, 0, 153, &len);
+//	tstart = data_record_get_field(data, templ, 0, 152, &len);
+
+	return 0;
+
+}
+
+/*Evaulate node*/
 int filter_eval_node(struct filter_profile *pdata, struct ipfix_message *msg, struct ipfix_record *record)
 {
 	struct nff_msg_rec_s pack;
@@ -438,6 +563,7 @@ int filter_eval_node(struct filter_profile *pdata, struct ipfix_message *msg, st
 	return ff_eval(pdata->filter, &pack);
 }
 
+/*Memory release function*/
 void filter_free_profile(struct filter_profile *profile)
 {
 	ff_free(profile->filter);

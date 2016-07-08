@@ -64,7 +64,10 @@ struct filter_profile {
  */
 typedef struct nff_item_s {
 	const char* name;
-	uint64_t en_id;
+	union {
+		uint64_t en_id;
+		uint64_t data;
+	};
 }nff_item_t;
 
 /**
@@ -77,18 +80,26 @@ typedef struct nff_msg_rec_s {
 	struct ipfix_record* rec;
 }nff_msg_rec_t;
 
+/**
+ * \brief specify_ipv switches information_element to equivalent from ipv4
+ * to ipv6 and vice versa
+ * \param i Element Id
+ * \return Nonzero on success
+ */
 int specify_ipv(uint16_t *i);
 
 ff_error_t ipf_ff_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lvalue);
 
 ff_error_t ipf_ff_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data, size_t *size);
 
+ff_error_t ipf_ff_translate_func(ff_t *filter, const char *valstr, ff_lvalue_t *lvalue, uint64_t* val);
+
 /**
  * \brief Match filter with IPFIX record
  *
- * \param[in] node filter node
+ * \param[in] pdata filter node
  * \param[in] msg IPFIX message (filter may contain field from message header)
- * \param[in] data IPFIX data record
+ * \param[in] record IPFIX data record
  * \return 1 when node fits, -1 on error
  */
 int filter_eval_node(struct filter_profile *pdata, struct ipfix_message *msg, struct ipfix_record *record);
