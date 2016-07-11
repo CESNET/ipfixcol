@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry
+        xmlns="http://docbook.org/ns/docbook"
+        xmlns:xlink="http://www.w3.org/1999/xlink"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+        http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+        version="5.0" xml:lang="en">
+        <info>
+                <copyright>
+                        <year>2016</year>
+                        <holder>CESNET, z.s.p.o.</holder>
+                </copyright>
+                <date>29 Jun 2016</date>
+                <authorgroup>
+                        <author>
+                                <personname>
+                                        <firstname>Jan</firstname>
+                                        <surname>Wrona</surname>
+                                </personname>
+                                <email>wrona@cesnet.cz</email>
+                                <contrib>developer</contrib>
+                        </author>
+                </authorgroup>
+                <orgname>The Liberouter Project</orgname>
+        </info>
+
+        <refmeta>
+                <refentrytitle>ipfixcol-udp-cpg-input</refentrytitle>
+                <manvolnum>1</manvolnum>
+                <refmiscinfo otherclass="manual" class="manual">UDP-CPG input plugin for IPFIXcol.</refmiscinfo>
+        </refmeta>
+
+        <refnamediv>
+                <refname>ipfixcol-udp-cpg-input</refname>
+                <refpurpose>UDP-CPG input plugin for IPFIXcol.</refpurpose>
+        </refnamediv>
+
+        <refsect1>
+                <title>Description</title>
+                <simpara>
+                        The <command>ipfixcol-udp-cpg-input.so</command> is input plugin for ipfixcol (ipfix collector).
+                </simpara>
+                <simpara>
+                        This plugin is inteded to be used in the environment of the high-availability cluster, where several instances of the IPFIXcol are running in the active/passive mode.
+                        It works the same way as standard UDP input plugin, on top of that it uses closed process group to share template and option template sets with other IPFIXcol instances.
+                        Without this feature, passive instances wouldn't receive templates and after active instance failure, new active instance would have to wait for periodic template sets.
+                        That would mean data loss.
+                </simpara>
+        </refsect1>
+
+        <refsect1>
+                <title>Configuration</title>
+                <simpara>
+                        The collector must be configured to use UDP-CPG plugin in startup.xml configuration.
+                        The configuration specifies which plugins are used by the collector to process data and provides configuration for the plugins themselves.
+                        All configuration parameters for the UDP plugin can be also used for the UDP-CPG with the same semantics.
+                        Only one parameter is new, the optional CPGName parameter.
+                </simpara>
+                <para>
+                        <variablelist>
+                                <varlistentry>
+                                        <term><command>CPGName</command></term>
+                                        <listitem>
+                                                <simpara>
+                                                        (optional) Name of the closed process group to use.
+                                                        Any string is valid, but something like "ipfixcol" is the best option.
+                                                        Without this parameter, no CPG is used and the plugin works as a standard UDP plugin.
+                                                </simpara>
+                                        </listitem>
+                                </varlistentry>
+                        </variablelist>
+                </para>
+
+                <simpara>
+                        <filename>startup.xml</filename> UDP-CPG example:
+                </simpara>
+                <programlisting>
+<![CDATA[
+<collectingProcess>
+        <name>UDP-CPG collector</name>
+        <udp-cpgCollector>
+                <name>Listening port 4739</name>
+                <localPort>4739</localPort>
+                <CPGName>ipfixcol</CPGName>
+        </udp-cpgCollector>
+        <exportingProcess>forwarding export</exportingProcess>
+</collectingProcess>
+]]>
+        </programlisting>
+        </refsect1>
+</refentry>
