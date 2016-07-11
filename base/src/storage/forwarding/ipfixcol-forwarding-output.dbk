@@ -11,14 +11,14 @@
 			<year>2015</year>
 			<holder>CESNET, z.s.p.o.</holder>
 		</copyright>
-		<date>15 July 2014</date>
+		<date>6 July 2016</date>
 		<authorgroup>
 			<author>
 				<personname>
-					<firstname>Michal</firstname>
-					<surname>Kozubik</surname>
+					<firstname>Lukas</firstname>
+					<surname>Hutak</surname>
 				</personname>
-				<email>kozubik@cesnet.cz</email>
+				<email>lukas.hutak@cesnet.cz</email>
 				<contrib>developer</contrib>
 			</author>
 		</authorgroup>
@@ -38,15 +38,24 @@
 	
 	<refsect1>
 		<title>Description</title>
-		<simpara>The <command>ipfixcol-forwarding-output.so</command> is storage plugin for ipfixcol (ipfix collector).</simpara>
-		<simpara>Plugin sends data over the network.</simpara>
+		<simpara>
+		The <command>ipfixcol-forwarding-output.so</command> is output plugin for IPFIXcol (IPFIX collector).
+		</simpara>
+		<simpara>
+		The plugin distributes IPFIX packets over the network to one or more destinations using TCP protocol and non-blocking sockets. As a destination can be used another instance of IPFIXcol or any other collector. Every packet can be distributed to all destinations or forwarded to one of destinations using Round Robin distribution model. 
+		</simpara>
+		<simpara>
+		The plugin preserves Observation Domain ID (ODID) of all packets. If more (independent) metering processes (i.e. sources of IPFIX packets) use the same ODID, the plugin remap identification numbers of templates of packets to prevent misinterpretation of IPFIX records. It is very <emphasis>important</emphasis> to avoid using different types and configurations of flow sampling by the metering processes as the packets are mixed. (Flow sampling is not recommended).
+		</simpara>
+		<simpara>
+		If a destination collector is disconnected, the plugin will periodically try to reconnect and other destinations will not be affected. If a destination collector is connected, but unable to receive more packets due to the load, some noncritical packets (i.e. packets without definitions of templates) for this destination will not be delivered. When using Round Robin distribution model and a packet cannot be delivered to a destination, the packet will be send to next destination in order to prevent packet lost. The packet will be lost only when all destinations are busy or disconnected.
+		</simpara>
 	</refsect1>
 
 	<refsect1>
 		<title>Configuration</title>
 		<simpara>There are two configuration XML files for ipfixcol that affects plugin usage.
-		First one is internal configuration XML (<filename>/etc/ipfixcol/internalcfg.xml</filename>) where are list of all available plugins for the collecor. 
-		To use forwarding output plugin, make sure it is properly specified in the configuration XMLs.
+		First one is internal configuration XML (<filename>/etc/ipfixcol/internalcfg.xml</filename>) where are list of all available plugins for the collecor. To use forwarding output plugin, make sure it is properly specified in the configuration XMLs.
 		</simpara>
 		<simpara><filename>internalcfg.xml</filename> forwarding example</simpara>
 		<programlisting>
@@ -72,14 +81,7 @@
 			<fileFormat>forwarding</fileFormat>
 
 			<distribution>RoundRobin</distribution>
-
 			<defaultPort>4739</defaultPort>
-			<protocol>tcp</protocol>
-
-			<templateLifeTime>1800</templateLifeTime>
-			<optionsTemplateLifeTime>1800</optionsTemplateLifeTime>
-			<templateLifePacket>2048</templateLifePacket>
-			<optionsTemplateLifePacket>2048</optionsTemplateLifePacket>
 
 			<destination>
 				<ip>192.168.0.1</ip>
@@ -103,7 +105,7 @@
 					<command>distribution</command>
 				</term>
 				<listitem>
-					<simpara>Distribution type when more than 1 destination specified. Supported types are <command>RoundRobin</command> and <command>all</command>. Default type is <command>all</command>.
+					<simpara>Distribution model of IPFIX packets. Supported types are <emphasis>RoundRobin</emphasis> (each packet will be delivered to one of destinations) and <emphasis>all</emphasis> (each packet will be delivered to all destination). Default type is <emphasis>all</emphasis>.
 					</simpara>
 				</listitem>
 			</varlistentry>
@@ -113,55 +115,6 @@
 				</term>
 				<listitem>
 					<simpara>Default port number. It can be overriden by <command>port</command> tag in <command>destination</command>.
-					</simpara>
-				</listitem>
-			</varlistentry>
-			<varlistentry>
-				<term>
-					<command>protocol</command>
-				</term>
-				<listitem>
-					<simpara>Connection type for all destinations
-					</simpara>
-				</listitem>
-			</varlistentry>
-
-			<varlistentry>
-				<term>
-					<command>templateLifeTime</command>
-				</term>
-				<listitem>
-					<simpara>Life time in seconds for UDP templates. Optional.
-					</simpara>
-				</listitem>
-			</varlistentry>
-
-			<varlistentry>
-				<term>
-					<command>optionsTemplateLifeTime</command>
-				</term>
-				<listitem>
-					<simpara>Life time in seconds for UDP option templates. Optional.
-					</simpara>
-				</listitem>
-			</varlistentry>
-
-			<varlistentry>
-				<term>
-					<command>templateLifePacket</command>
-				</term>
-				<listitem>
-					<simpara>Life time in packets for UDP templates. Optional.
-					</simpara>
-				</listitem>
-			</varlistentry>
-
-			<varlistentry>
-				<term>
-					<command>optionsTemplateLifePacket</command>
-				</term>
-				<listitem>
-					<simpara>Life time in packets for UDP option templates. Optional.
 					</simpara>
 				</listitem>
 			</varlistentry>
@@ -187,6 +140,15 @@
 						<simpara>Destination port number</simpara>
 					</varlistentry>
 
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>reconnectionPeriod</command>
+				</term>
+				<listitem>
+					<simpara>The time (in milliseconds) between attempts to reconnect disconnected destinations. [default == 1000].
+					</simpara>
 				</listitem>
 			</varlistentry>
 
