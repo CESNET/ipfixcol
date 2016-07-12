@@ -125,6 +125,10 @@ struct ff_s;
 typedef ff_error_t (*ff_lookup_func_t) (struct ff_s *, const char *, ff_lvalue_t *);
 typedef ff_error_t (*ff_data_func_t) (struct ff_s*, void *, ff_extern_id_t, char*, size_t *);
 
+typedef ff_error_t (*ff_translate_func_t) (struct ff_s *, const char *, ff_lvalue_t *, uint64_t *);
+
+//typedef ff_error_t (*ff__func_t) (struct ff_s*, void *, ff_extern_id_t, char*, size_t *);
+
 
 /** \brief Options  */
 typedef struct ff_options_s {
@@ -133,7 +137,8 @@ typedef struct ff_options_s {
 	ff_lookup_func_t ff_lookup_func;
 	/** Value comparation function */
 	ff_data_func_t ff_data_func;
-
+	/** Literal constants translation function eg. TCP->6 */
+	ff_translate_func_t ff_translate_func;
 } ff_options_t;
 
 

@@ -13,6 +13,7 @@ typedef enum {
 	FF_OP_NE,
 	FF_OP_LT,
 	FF_OP_GT,
+	FF_OP_IN,
 } ff_oper_t;
 
 /* node of syntax tree */
@@ -35,8 +36,8 @@ typedef struct ff_node_s {
 #   define ntohll(n)    (n)
 #   define htonll(n)    (n)
 #else
-#   define ntohll(n)    (((uint64_t)ntohl(n)) << 32) + ntohl((n) >> 32)
-#   define htonll(n)    (((uint64_t)htonl(n)) << 32) + htonl((n) >> 32)
+#   define ntohll(n)    (((uint64_t)ntohl(n)) << 32) | ntohl(((uint64_t)(n)) >> 32)
+#   define htonll(n)    (((uint64_t)htonl(n)) << 32) | htonl(((uint64_t)(n)) >> 32)
 #endif
 #define HAVE_HTONLL 1
 #endif
@@ -58,8 +59,6 @@ YY_BUFFER_STATE ff_yy_scan_string(const char *str, yyscan_t yyscanner);
 int ff_yyparse(yyscan_t yyscanner, ff_t *filter);
 //int lnf_filter_yylex(YYSTYPE *yylval, void *scanner);
 
-
-
 /* error function for scanner */
 void yyerror(yyscan_t yyscanner, ff_t *filter, char *);
 
@@ -75,6 +74,8 @@ ff_node_t* ff_new_node(yyscan_t scanner, ff_t *filter, ff_node_t* left, ff_oper_
 /* evaluate filter */
 int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec);
 
+/*release memory allocated by nodes*/
+void ff_free_node(ff_node_t* node);
 
 /* lex bison prototypes */
 int ff2_get_column(yyscan_t yyscanner);
