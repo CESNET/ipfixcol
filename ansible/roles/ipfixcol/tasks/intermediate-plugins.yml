@@ -1,0 +1,47 @@
+# Intermediate plugins
+
+# geoip
+- name: Build GeoIP intermediate plugin
+  command: >
+    {{ item }}
+    chdir={{ build.dir }}/plugins/intermediate/geoip
+    creates=/usr/local/share/ipfixcol/plugins/ipfixcol-geoip-inter.so
+  with_items: "{{ build.cmds }}"
+  tags: geoip
+
+# profiler
+- name: Build profiler intermediate plugin
+  command: >
+    {{ item }}
+    chdir={{ build.dir }}/plugins/intermediate/profiler
+    creates=/usr/local/share/ipfixcol/plugins/ipfixcol-profiler-inter.so
+  with_items: "{{ build.cmds }}"
+  tags: profiler
+
+
+# profile_stats
+- name: Build profile_stats intermediate plugin
+  command: >
+    {{ item }}
+    chdir={{ build.dir }}/plugins/intermediate/profile_stats
+    creates=/usr/local/share/ipfixcol/plugins/ipfixcol-profilestats-inter.so
+  with_items: "{{ build.cmds }}"
+  tags: profile_stats
+
+# stats
+- name: Build stats intermediate plugin
+  command: >
+    {{ item }}
+    chdir={{ build.dir }}/plugins/intermediate/stats
+    creates=/usr/local/share/ipfixcol/plugins/ipfixcol-stats-inter.so
+  with_items: "{{ build.cmds }}"
+  tags: stats
+
+# uid
+- name: Build uid intermediate plugin
+  command: >
+    {{ item }}
+    chdir={{ build.dir }}/plugins/intermediate/uid
+    creates=/usr/local/share/ipfixcol/plugins/ipfixcol-uid-inter.so
+  with_items: "{{ build.cmds }}"
+  tags: uid

@@ -1,0 +1,3 @@
+- hosts: ipfixcol-hosts
+  roles:
+    - ipfixcol

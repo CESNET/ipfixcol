@@ -1,0 +1,12 @@
+# IPFIXcol build
+- name: Clone IPFIXcol git
+  git: repo={{ build.git }} dest={{ build.dir }} version={{ build.branch }}
+
+- name: Build IPFIXcol base
+  command: >
+    {{ item }}
+    chdir={{ build.dir }}/base/
+    creates=/usr/local/bin/ipfixcol
+  with_items:
+    - "{{ build.cmds }}"
+    - ldconfig
