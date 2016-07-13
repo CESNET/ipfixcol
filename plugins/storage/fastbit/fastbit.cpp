@@ -451,8 +451,18 @@ int process_startup_xml(char *params, struct fastbit_config* c)
 				}
 			}
 
+			/* Check whether enterprise and field IDs are valid */
+			int en_int = strtoi(en.c_str(), 10);
+			int id_int = strtoi(id.c_str(), 10);
+			if (en_int == INT_MAX || id_int == INT_MAX) {
+				MSG_ERROR(msg_module, "Invalid enterprise or field ID (enterprise ID: %s, field ID: %s)",
+						en.c_str(), id.c_str());
+				return 1;
+			}
+
 			/* Make sure IPv6 elements are indexed */
-			if (IPV6 == get_type_from_xml(c, strtoul(en.c_str(), NULL, 0), strtoul(id.c_str(), NULL, 0))) {
+			const ipfix_element_t *element = get_element_by_id(id_int, en_int);
+			if (element && element->type == ET_IPV6_ADDRESS) {
 				c->index_en_id->push_back("e" + en + "id" + id + "p0");
 				c->index_en_id->push_back("e" + en + "id" + id + "p1");
 			} else {

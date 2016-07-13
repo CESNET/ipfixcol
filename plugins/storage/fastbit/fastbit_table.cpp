@@ -335,18 +335,37 @@ int template_table::parse_template(struct ipfix_template *tmp, struct fastbit_co
 			en = tmp->fields[i].enterprise_number;
 		}
 
-		switch(get_type_from_xml(config, en, field->ie.id & 0x7FFF)) {
-			case UINT:
+		/* Look up field type or set to UNASSIGNED if field is not known yet */
+		const ipfix_element_t *ipfix_elem = get_element_by_id(field->ie.id & 0x7FFF, en);
+		int field_type;
+		if (ipfix_elem) {
+			field_type = ipfix_elem->type;
+		} else {
+			field_type = ET_UNASSIGNED;
+		}
+
+		switch (field_type) {
+			case ET_BOOLEAN:
+			case ET_DATE_TIME_SECONDS:
+			case ET_DATE_TIME_MILLISECONDS:
+			case ET_DATE_TIME_MICROSECONDS:
+			case ET_DATE_TIME_NANOSECONDS:
+			case ET_IPV4_ADDRESS:
+			case ET_MAC_ADDRESS:
+			case ET_UNSIGNED_8:
+			case ET_UNSIGNED_16:
+			case ET_UNSIGNED_32:
+			case ET_UNSIGNED_64:
 				new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
 				break;
-			case IPV6:
+			case ET_IPV6_ADDRESS:
 				/* IPv6 address are 128b in size, so we have to split them over two 64b rows. As such,
 				 * we add 'p0' and 'p1' sufixes to row name...
 				 */
 
 				/* Check size from template */
 				if (field->ie.length != 16) {
-					MSG_WARNING(msg_module, "Element e%iid%i has type 'IPV6' but size '%i'; skipping...",
+					MSG_WARNING(msg_module, "Element e%iid%i has type 'IPV6_ADDRESS' but size '%i'; skipping...",
 							en, field->ie.id & 0x7FFF, field->ie.length);
 					new_element = new el_unknown(field->ie.length);
 					break;
@@ -357,19 +376,25 @@ int template_table::parse_template(struct ipfix_template *tmp, struct fastbit_co
 
 				new_element = new el_ipv6(sizeof(uint64_t), en, field->ie.id & 0x7FFF, 1, _buff_size, config);
 				break;
-			case INT:
+			case ET_SIGNED_8:
+			case ET_SIGNED_16:
+			case ET_SIGNED_32:
+			case ET_SIGNED_64:
 				new_element = new el_sint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
 				break;
-			case FLOAT:
+			case ET_FLOAT_32:
+			case ET_FLOAT_64:
 				new_element = new el_float(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
 				break;
-			case TEXT:
+			case ET_STRING:
 				new_element = new el_text(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
 				break;
-			case BLOB:
+			case ET_OCTET_ARRAY:
+			case ET_BASIC_LIST:
+			case ET_SUB_TEMPLATE_LIST:
+			case ET_SUB_TEMPLATE_MULTILIST:
 				new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
 				break;
-			case UNKNOWN:
 			default:
 				MSG_DEBUG(msg_module, "Received UNKNOWN element (size: %u)",field->ie.length);
 				if (field->ie.length < 9) {
