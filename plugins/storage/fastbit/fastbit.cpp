@@ -81,6 +81,56 @@ void ipv6_addr_non_canonical(char *str, const struct in6_addr *addr)
 }
 
 /**
+ * \brief Returns the length of an element, based on its type
+ *
+ * @param type Element type
+ *
+ */
+int get_len_from_type(ELEMENT_TYPE type)
+{
+    int len;
+
+    switch (type) {
+        case ET_DATE_TIME_MILLISECONDS:
+        case ET_DATE_TIME_MICROSECONDS:
+        case ET_DATE_TIME_NANOSECONDS:
+        case ET_MAC_ADDRESS:
+        case ET_FLOAT_64:
+        case ET_SIGNED_64:
+        case ET_UNSIGNED_64:
+            len = 8;
+            break;
+        case ET_BOOLEAN:
+        case ET_DATE_TIME_SECONDS:
+        case ET_FLOAT_32:
+        case ET_IPV4_ADDRESS:
+        case ET_SIGNED_32:
+        case ET_UNSIGNED_32:
+            len = 4;
+            break;
+        case ET_SIGNED_16:
+        case ET_UNSIGNED_16:
+            len = 2;
+            break;
+        case ET_SIGNED_8:
+        case ET_UNSIGNED_8:
+            len = 1;
+            break;
+        case ET_IPV6_ADDRESS:
+        case ET_STRING:
+        case ET_OCTET_ARRAY:
+        case ET_BASIC_LIST:
+        case ET_SUB_TEMPLATE_LIST:
+        case ET_SUB_TEMPLATE_MULTILIST:
+        default:
+            len = -1;
+            break;
+    }
+
+    return len;
+}
+
+/**
  * \brief Load elements types from xml to configure structure
  *
  * This function reads ipfix-elements.xml
@@ -148,7 +198,7 @@ int load_types_from_xml(struct fastbit_config *conf)
 			len = -1;
 		}
 
-		(*conf->elements_lengths)[en][id] = len;
+		// (*conf->elements_lengths)[en][id] = len;
 	}
 
 	return 0;
@@ -490,12 +540,6 @@ int storage_init(char *params, void **config)
 		return 1;
 	}
 
-	c->elements_lengths = new std::map<uint32_t, std::map<uint16_t, int>>;
-	if (c->elements_lengths == NULL) {
-		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
-		return 1;
-	}
-
 	c->index_en_id = new std::vector<std::string>;
 	if (c->index_en_id == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
@@ -729,7 +773,6 @@ int storage_close(void **config)
 	delete od_infos;
 	delete conf->index_en_id;
 	delete conf->dirs;
-	delete conf->elements_lengths;
 	delete conf;
 	return 0;
 }

@@ -598,8 +598,14 @@ uint16_t el_uint::fill(uint8_t *data) {
 
 int el_uint::set_type()
 {
-	int target_size = (_config->use_template_field_lengths) ?
-			_real_size : (*_config->elements_lengths)[_en][_id];
+	int target_size;
+	const ipfix_element_t *ipfix_elem = get_element_by_id(_id, _en);
+
+	if (_config->use_template_field_lengths || !ipfix_elem) {
+		target_size = _real_size;
+	} else {
+		target_size = get_len_from_type(ipfix_elem->type);
+	}
 
 	switch (target_size) {
 		case 1:

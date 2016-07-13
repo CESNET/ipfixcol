@@ -91,6 +91,14 @@ struct od_info {
 };
 
 /**
+ * \brief Returns the length of an element, based on its type
+ *
+ * @param type Element type
+ *
+ */
+int get_len_from_type(ELEMENT_TYPE type);
+
+/**
  * \brief Load elements types from xml to configure structure
  *
  * This function reads ipfix-elements.xml
