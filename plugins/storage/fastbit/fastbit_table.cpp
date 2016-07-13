@@ -395,8 +395,9 @@ int template_table::parse_template(struct ipfix_template *tmp, struct fastbit_co
 				new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
 				break;
 			default:
-				MSG_DEBUG(msg_module, "Received UNKNOWN element (size: %u)",field->ie.length);
-				if (field->ie.length < 9) {
+				MSG_DEBUG(msg_module, "Received UNKNOWN element (e%uid%u, size: %u)",
+						en, field->ie.id & 0x7FFF, field->ie.length);
+				if (field->ie.length <= 8) {
 					new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
 				} else {
 					new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
