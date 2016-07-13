@@ -297,6 +297,7 @@ int template_table::parse_template(struct ipfix_template *tmp, struct fastbit_co
 {
 	int i;
 	uint32_t en = 0; /* Enterprise number (0 = IANA elements) */
+	uint16_t id;
 	int en_offset = 0;
 	template_ie *field;
 	element *new_element;
@@ -326,6 +327,8 @@ int template_table::parse_template(struct ipfix_template *tmp, struct fastbit_co
 		} else {
 			_min_record_size += field->ie.length;
 		}
+
+		id = field->ie.id & 0x7FFF;
 		
 		/* Is this an enterprise element? */
 		en = 0;
@@ -336,7 +339,7 @@ int template_table::parse_template(struct ipfix_template *tmp, struct fastbit_co
 		}
 
 		/* Look up field type or set to UNASSIGNED if field is not known yet */
-		const ipfix_element_t *ipfix_elem = get_element_by_id(field->ie.id & 0x7FFF, en);
+		const ipfix_element_t *ipfix_elem = get_element_by_id(id, en);
 		int field_type;
 		if (ipfix_elem) {
 			field_type = ipfix_elem->type;
@@ -356,7 +359,7 @@ int template_table::parse_template(struct ipfix_template *tmp, struct fastbit_co
 			case ET_UNSIGNED_16:
 			case ET_UNSIGNED_32:
 			case ET_UNSIGNED_64:
-				new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
+				new_element = new el_uint(field->ie.length, en, id, _buff_size, config);
 				break;
 			case ET_IPV6_ADDRESS:
 				/* IPv6 address are 128b in size, so we have to split them over two 64b rows. As such,
@@ -365,42 +368,41 @@ int template_table::parse_template(struct ipfix_template *tmp, struct fastbit_co
 				/* Check size from template */
 				if (field->ie.length != 16) {
 					MSG_WARNING(msg_module, "Element e%iid%i has type 'IPV6_ADDRESS' but size '%i'; skipping...",
-							en, field->ie.id & 0x7FFF, field->ie.length);
+							en, id, field->ie.length);
 					new_element = new el_unknown(field->ie.length);
 					break;
 				}
 
-				new_element = new el_ipv6(sizeof(uint64_t), en, field->ie.id & 0x7FFF, 0, _buff_size, config);
+				new_element = new el_ipv6(sizeof(uint64_t), en, id, 0, _buff_size, config);
 				elements.push_back(new_element);
 
-				new_element = new el_ipv6(sizeof(uint64_t), en, field->ie.id & 0x7FFF, 1, _buff_size, config);
+				new_element = new el_ipv6(sizeof(uint64_t), en, id, 1, _buff_size, config);
 				break;
 			case ET_SIGNED_8:
 			case ET_SIGNED_16:
 			case ET_SIGNED_32:
 			case ET_SIGNED_64:
-				new_element = new el_sint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
+				new_element = new el_sint(field->ie.length, en, id, _buff_size, config);
 				break;
 			case ET_FLOAT_32:
 			case ET_FLOAT_64:
-				new_element = new el_float(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
+				new_element = new el_float(field->ie.length, en, id, _buff_size, config);
 				break;
 			case ET_STRING:
-				new_element = new el_text(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
+				new_element = new el_text(field->ie.length, en, id, _buff_size, config);
 				break;
 			case ET_OCTET_ARRAY:
 			case ET_BASIC_LIST:
 			case ET_SUB_TEMPLATE_LIST:
 			case ET_SUB_TEMPLATE_MULTILIST:
-				new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
+				new_element = new el_blob(field->ie.length, en, id, _buff_size, config);
 				break;
 			default:
-				MSG_DEBUG(msg_module, "Received UNKNOWN element (e%uid%u, size: %u)",
-						en, field->ie.id & 0x7FFF, field->ie.length);
-				if (field->ie.length <= 8) {
-					new_element = new el_uint(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
+				MSG_DEBUG(msg_module, "Received UNKNOWN element (size: %u)",field->ie.length);
+				if (field->ie.length < 9) {
+					new_element = new el_uint(field->ie.length, en, id, _buff_size, config);
 				} else {
-					new_element = new el_blob(field->ie.length, en, field->ie.id & 0x7FFF, _buff_size, config);
+					new_element = new el_blob(field->ie.length, en, id, _buff_size, config);
 				}
 
 				break;
@@ -416,7 +418,7 @@ int template_table::parse_template(struct ipfix_template *tmp, struct fastbit_co
 			if (strncmp(new_element->getName(), e->getName(), IE_NAME_LENGTH) == 0) {
 				/* This element already exists; replace it with UNKNOWN type */
 				delete new_element;
-				new_element = new el_unknown(field->ie.length, en, field->ie.id & 0x7FFF, 0, _buff_size, config);
+				new_element = new el_unknown(field->ie.length, en, id, 0, _buff_size, config);
 				break;
 			}
 		}
