@@ -434,14 +434,16 @@ int process_startup_xml(char *params, struct fastbit_config* c)
 		c->reorder = (reorder == "yes");
 
 		template_field_lengths = ie.node().child_value("useTemplateFieldLengths");
-		c->use_template_field_lengths = (!ie.node().child("useTemplateFieldLengths") || template_field_lengths == "yes");
+		c->use_template_field_lengths =
+				(!ie.node().child("useTemplateFieldLengths") || template_field_lengths == "yes");
 
 		pugi::xpath_node_set index_e = doc.select_nodes("fileWriter/indexes/element");
 		for (pugi::xpath_node_set::const_iterator it = index_e.begin(); it != index_e.end(); ++it) {
 			pugi::xpath_node node = *it;
 			std::string en = "0";
 			std::string id = "0";
-			for (pugi::xml_attribute_iterator ait = node.node().attributes_begin(); ait != node.node().attributes_end(); ++ait) {
+			for (pugi::xml_attribute_iterator ait = node.node().attributes_begin();
+					ait != node.node().attributes_end(); ++ait) {
 				if (std::string(ait->name()) == "enterprise") {
 					en = ait->value();
 				} else if (std::string(ait->name()) == "id") {
