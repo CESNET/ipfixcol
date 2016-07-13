@@ -130,80 +130,6 @@ int get_len_from_type(ELEMENT_TYPE type)
     return len;
 }
 
-/**
- * \brief Load elements types from xml to configure structure
- *
- * This function reads ipfix-elements.xml
- * and stores elements data type in configuration structure
- *
- * @param conf fastbit storage plug-in configuration structure
- */
-int load_types_from_xml(struct fastbit_config *conf)
-{
-	pugi::xml_document doc;
-	pugi::xml_parse_result result;
-	uint32_t en;
-	uint16_t id;
-	int len;
-	std::string str_value;
-
-	result = doc.load_file(ipfix_elements);
-
-	/* Check for errors */
-	if (!result) {
-		MSG_ERROR(msg_module, "Error while parsing '%s': %s", ipfix_elements, result.description());
-		return -1;
-	}
-
-	pugi::xpath_node_set elements = doc.select_nodes("/ipfix-elements/element");
-	for (pugi::xpath_node_set::const_iterator it = elements.begin(); it != elements.end(); ++it)
-	{
-		str_value = it->node().child_value("enterprise");
-		en = strtoul(str_value.c_str(), NULL, 0);
-
-		str_value = it->node().child_value("id");
-		id = strtoul(str_value.c_str(), NULL, 0);
-
-		/* Obtain field type */
-		str_value = it->node().child_value("dataType");
-
-		/* Obtain field length */
-		if (str_value == "unsigned64" \
-				or str_value == "dateTimeMilliseconds" \
-				or str_value == "dateTimeMicroseconds" \
-				or str_value == "dateTimeNanoseconds" \
-				or str_value == "macAddress" \
-				or str_value == "float64" \
-				or str_value == "signed64") {
-			len = 8;
-		} else if (str_value == "unsigned32" \
-				or str_value == "dateTimeSeconds" \
-				or str_value == "ipv4Address" \
-				or str_value == "boolean" \
-				or str_value == "float32" \
-				or str_value == "signed32") {
-			len = 4;
-		} else if (str_value == "unsigned16" \
-				or str_value == "signed16") {
-			len = 2;
-		} else if (str_value == "unsigned8" \
-				or str_value == "signed8") {
-			len = 1;
-		} else if (str_value == "ipv6Address" \
-				or str_value == "string" \
-				or str_value == "octetArray" \
-				or str_value == "basicList" \
-				or str_value == "subTemplateList" \
-				or str_value == "subTemplateMultiList") {
-			len = -1;
-		}
-
-		// (*conf->elements_lengths)[en][id] = len;
-	}
-
-	return 0;
-}
-
 void *reorder_index(void *config)
 {
 	struct fastbit_config *conf = static_cast<struct fastbit_config*>(config);
@@ -401,11 +327,6 @@ int process_startup_xml(char *params, struct fastbit_config *c)
 	doc.load(params);
 
 	if (doc) {
-		/* Load element types from XML */
-		if (load_types_from_xml(c) != 0) {
-			return 1;
-		}
-
 		pugi::xpath_node ie = doc.select_single_node("fileWriter");
 		path = ie.node().child_value("path");
 

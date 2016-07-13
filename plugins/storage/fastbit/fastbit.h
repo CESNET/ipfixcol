@@ -98,14 +98,4 @@ struct od_info {
  */
 int get_len_from_type(ELEMENT_TYPE type);
 
-/**
- * \brief Load elements types from xml to configure structure
- *
- * This function reads ipfix-elements.xml
- * and stores elements data type in configuration structure
- *
- * @param conf fastbit storage plug-in configuration structure
- */
-int load_types_from_xml(struct fastbit_config *conf);
-
 #endif /* FASTBIT_H_ */
