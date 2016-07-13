@@ -49,28 +49,14 @@ extern "C" {
 #include <vector>
 
 #include "fastbit.h"
-#include "fastbit_table.h"
-#include "FlowWatch.h"
-
-class template_table;
 
 struct fastbit_config {
-	/* Stores data buffers based on received templates
-	 * (observation IDs -> template ID -> template data)
+	/* Stores information on templates per flow data source (identified by
+	 * exporter IP address and ODID).
 	 */
-	std::map<uint32_t, std::map<uint16_t, template_table*>*> *ob_dom;
-
-	std::map<uint32_t, FlowWatch> *flowWatch;
-
-	/* Element types from ipfix-elements.xml is loaded into elements_types
-	 * (Enterprise ID -> element ID -> element storage type)
-	 */
-	std::map<uint32_t, std::map<uint16_t, enum store_type>> *elements_types;
-
-	/* Element lengths from ipfix-elements.xml is loaded into elements_lengths
-	 * (Enterprise ID -> element ID -> element storage type)
-	 */
-	std::map<uint32_t, std::map<uint16_t, int>> *elements_lengths;
+	std::map<uint32_t, /* CRC32 of IP address */
+			std::map<uint32_t, /* ODID */
+					struct od_info>*> *od_infos;
 
 	/* Stores elements that should be indexed */
 	std::vector<std::string> *index_en_id;

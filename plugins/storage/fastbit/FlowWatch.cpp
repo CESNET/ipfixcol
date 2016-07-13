@@ -46,76 +46,72 @@
 
 FlowWatch::FlowWatch()
 {
-	recFlows_ = 0;
-	lastFlows_ = 0;
-	lastSQ_ = 0;
-	firstSQ_ = 0;
-	reseted = true;
+	reset_state();
 }
 
-void FlowWatch::reset()
+void FlowWatch::reset_state()
 {
-	reseted = true;
-	recFlows_ = 0;
-	lastFlows_ = 0;
-	lastSQ_ = 0;
-	firstSQ_ = 0;
+	reset = true;
+	recv_flows = 0;
+	prev_recv_flows = 0;
+	last_seq_no = 0;
+	first_seq_no = 0;
 }
 
-void FlowWatch::updateSQ(uint64_t SQ)
+void FlowWatch::update_seq_no(uint64_t SQ)
 {
-	if (reseted == true) {
-		firstSQ_ = lastSQ_ = SQ;
-		reseted = false;
+	if (reset == true) {
+		first_seq_no = last_seq_no = SQ;
+		reset = false;
 	} else {
-		if (SQ < firstSQ_) {
+		if (SQ < first_seq_no) {
 			/* Detect SQ reset (modulo 2^32) */
-			if (firstSQ_ > SQ_TOP_LIMIT && SQ < SQ_BOT_LIMIT) {
-				/* Is this first packet with reseted SQ? */
-				if (lastSQ_ < SQ_BOT_LIMIT) {
-					if (lastSQ_ < SQ) {
-						lastSQ_ = SQ;
+			if (first_seq_no > SQ_TOP_LIMIT && SQ < SQ_BOT_LIMIT) {
+				/* Is this first packet with reset SQ? */
+				if (last_seq_no < SQ_BOT_LIMIT) {
+					if (last_seq_no < SQ) {
+						last_seq_no = SQ;
 					}
 				} else {
-					lastSQ_ = SQ;
+					last_seq_no = SQ;
 				}
 			}
 
 			/* First packet or out of order packet with lesser SQ */
-			firstSQ_ = SQ;
+			first_seq_no = SQ;
 		}
-		if (SQ > lastSQ_) {
-			if(lastSQ_ < SQ_BOT_LIMIT && SQ > SQ_TOP_LIMIT){
+		if (SQ > last_seq_no) {
+			if(last_seq_no < SQ_BOT_LIMIT && SQ > SQ_TOP_LIMIT){
 				/* Do nothing; out of order packet with SQ num before SQ reset */
 			} else {
-				lastSQ_ = SQ;
+				last_seq_no = SQ;
 			}
 		}
 	}
 }
 
-void FlowWatch::addFlows(uint64_t recFlows)
+void FlowWatch::add_flows(uint64_t recFlows)
 {
-	lastFlows_ = recFlows;
-	recFlows_ += recFlows;
+	prev_recv_flows = recFlows;
+	recv_flows += recFlows;
 }
 
-uint64_t FlowWatch::exportedFlows()
+uint64_t FlowWatch::exported_flows()
 {
 	uint expFlows;
-	if (lastSQ_ < firstSQ_) {
-		expFlows = SQ_MAX - firstSQ_;
-		expFlows += lastSQ_;
+	if (last_seq_no < first_seq_no) {
+		expFlows = SQ_MAX - first_seq_no;
+		expFlows += last_seq_no;
 	} else {
-		expFlows = lastSQ_ - firstSQ_;
+		expFlows = last_seq_no - first_seq_no;
 	}
 
-	return expFlows + lastFlows_;
+	return expFlows + prev_recv_flows;
 }
 
-uint64_t FlowWatch::receivedFlows()
+uint64_t FlowWatch::received_flows()
 {
-	return recFlows_;
+	return recv_flows;
 }
 
 int FlowWatch::write(std::string dir)
@@ -151,8 +147,8 @@ int FlowWatch::write(std::string dir)
 	/* Write updated stats */
 	statFile.open(fileName.c_str(), std::ios_base::trunc | std::ios_base::out);
 
-	exported += exportedFlows();
-	received += receivedFlows();
+	exported += exported_flows();
+	received += received_flows();
 
 	if (statFile.is_open()) {
 		statFile << "Exported flow records: " << exported << std::endl;

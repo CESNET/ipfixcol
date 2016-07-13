@@ -46,124 +46,6 @@ extern "C" {
 #include "fastbit_element.h"
 #include "fastbit_table.h"
 
-#define NFv9_CONVERSION_ENTERPRISE_NUMBER (~((uint32_t) 0))
-
-int load_types_from_xml(struct fastbit_config *conf)
-{
-	pugi::xml_document doc;
-	pugi::xml_parse_result result;
-	uint32_t en;
-	uint16_t id;
-	int len;
-	enum store_type type;
-	std::string str_value;
-
-	result = doc.load_file(ipfix_elements);
-
-	/* Check for errors */
-	if (!result) {
-		MSG_ERROR(msg_module, "Error while parsing '%s': %s", ipfix_elements, result.description());
-		return -1;
-	}
-
-	pugi::xpath_node_set elements = doc.select_nodes("/ipfix-elements/element");
-	for (pugi::xpath_node_set::const_iterator it = elements.begin(); it != elements.end(); ++it)
-	{
-		str_value = it->node().child_value("enterprise");
-		en = strtoul(str_value.c_str(), NULL, 0);
-		str_value = it->node().child_value("id");
-		id = strtoul(str_value.c_str(), NULL, 0);
-		str_value = it->node().child_value("dataType");
-
-		/* Obtain field type */
-		if (str_value == "boolean" \
-				or str_value == "dateTimeSeconds" \
-				or str_value == "dateTimeMicroseconds" \
-				or str_value == "dateTimeMilliseconds" \
-				or str_value == "dateTimeNanoseconds" \
-				or str_value == "ipv4Address" \
-				or str_value == "macAddress" \
-				or str_value == "unsigned8" \
-				or str_value == "unsigned16" \
-				or str_value == "unsigned32" \
-				or str_value == "unsigned64") {
-			type = UINT;
-		} else if (str_value == "signed8" \
-				or str_value == "signed16" \
-				or str_value == "signed32" \
-				or str_value == "signed64") {
-			type = INT;
-		} else if (str_value == "ipv6Address") {
-			type = IPV6;
-		} else if (str_value == "float32" \
-			or str_value == "float64") {
-			type = FLOAT;
-		} else if (str_value == "string") {
-			type = TEXT;
-		} else if (str_value == "octetArray" \
-				or str_value == "basicList" \
-				or str_value == "subTemplateList" \
-				or str_value== "subTemplateMultiList") {
-			type = BLOB;
-		} else {
-			type = UNKNOWN;
-		}
-
-		(*conf->elements_types)[en][id] = type;
-
-		/* Obtain field length */
-		if (str_value == "unsigned64" \
-				or str_value == "dateTimeMilliseconds" \
-				or str_value == "dateTimeMicroseconds" \
-				or str_value == "dateTimeNanoseconds" \
-				or str_value == "macAddress" \
-				or str_value == "float64" \
-				or str_value == "signed64") {
-			len = 8;
-		} else if (str_value == "unsigned32" \
-				or str_value == "dateTimeSeconds" \
-				or str_value == "ipv4Address" \
-				or str_value == "boolean" \
-				or str_value == "float32" \
-				or str_value == "signed32") {
-			len = 4;
-		} else if (str_value == "unsigned16" \
-				or str_value == "signed16") {
-			len = 2;
-		} else if (str_value == "unsigned8" \
-				or str_value == "signed8") {
-			len = 1;
-		} else if (str_value == "ipv6Address" \
-				or str_value == "string" \
-				or str_value == "octetArray" \
-				or str_value == "basicList" \
-				or str_value == "subTemplateList" \
-				or str_value == "subTemplateMultiList") {
-			len = -1;
-		}
-
-		(*conf->elements_lengths)[en][id] = len;
-	}
-
-	return 0;
-}
-
-enum store_type get_type_from_xml(struct fastbit_config *conf, uint32_t en, uint16_t id)
-{
-	/* Check whether a type has been determined for the specified element */
-	if ((*conf->elements_types).count(en) == 0 || (*conf->elements_types)[en].count(id) == 0) {
-		if (en == NFv9_CONVERSION_ENTERPRISE_NUMBER) {
-			MSG_WARNING(msg_module, "No specification for e%uid%u found in '%s' (enterprise number converted from NFv9)", en, id, ipfix_elements);
-		} else {
-			MSG_WARNING(msg_module, "No specification for e%uid%u found in '%s'", en, id, ipfix_elements);
-		}
-
-		return UNKNOWN;
-	}
-
-	return (*conf->elements_types)[en][id];
-}
-
 void element::byte_reorder(uint8_t *dst, uint8_t *src, int srcSize, int dstSize)
 {
 	(void) dstSize;
@@ -309,7 +191,7 @@ el_float::el_float(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct
 
 uint16_t el_float::fill(uint8_t *data)
 {
-	switch(_size) {
+	switch (_size) {
 	case 4:
 		/* float32 */
 		*((uint32_t*) &(float_value.float32)) = ntohl(*((uint32_t*) data));
@@ -330,7 +212,7 @@ uint16_t el_float::fill(uint8_t *data)
 
 int el_float::set_type()
 {
-	switch(_size) {
+	switch (_size) {
 	case 4:
 		/* float32 */
 		_type = ibis::FLOAT;
@@ -674,7 +556,7 @@ el_uint::el_uint(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct f
 uint16_t el_uint::fill(uint8_t *data) {
 	uint_value.ulong = 0;
 
-	switch(_real_size) {
+	switch (_real_size) {
 	case 1:
 		/* ubyte */
 		uint_value.ubyte = data[0];
@@ -716,10 +598,16 @@ uint16_t el_uint::fill(uint8_t *data) {
 
 int el_uint::set_type()
 {
-	int target_size = (_config->use_template_field_lengths) ?
-			_real_size : (*_config->elements_lengths)[_en][_id];
+	int target_size;
+	const ipfix_element_t *ipfix_elem = get_element_by_id(_id, _en);
 
-	switch(target_size) {
+	if (_config->use_template_field_lengths || !ipfix_elem) {
+		target_size = _real_size;
+	} else {
+		target_size = get_len_from_type(ipfix_elem->type);
+	}
+
+	switch (target_size) {
 		case 1:
 			_type = ibis::UBYTE;
 			_size = 1;
@@ -751,7 +639,7 @@ int el_uint::set_type()
 
 int el_sint::set_type()
 {
-	switch(_real_size) {
+	switch (_real_size) {
 	case 1:
 		/* ubyte */
 		_type = ibis::BYTE;
