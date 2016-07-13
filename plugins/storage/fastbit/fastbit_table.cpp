@@ -360,8 +360,7 @@ int template_table::parse_template(struct ipfix_template *tmp, struct fastbit_co
 				break;
 			case ET_IPV6_ADDRESS:
 				/* IPv6 address are 128b in size, so we have to split them over two 64b rows. As such,
-				 * we add 'p0' and 'p1' sufixes to row name...
-				 */
+				 * we add 'p0' and 'p1' suffixes to row name... */
 
 				/* Check size from template */
 				if (field->ie.length != 16) {

@@ -191,7 +191,7 @@ el_float::el_float(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct
 
 uint16_t el_float::fill(uint8_t *data)
 {
-	switch(_size) {
+	switch (_size) {
 	case 4:
 		/* float32 */
 		*((uint32_t*) &(float_value.float32)) = ntohl(*((uint32_t*) data));
@@ -212,7 +212,7 @@ uint16_t el_float::fill(uint8_t *data)
 
 int el_float::set_type()
 {
-	switch(_size) {
+	switch (_size) {
 	case 4:
 		/* float32 */
 		_type = ibis::FLOAT;
@@ -556,7 +556,7 @@ el_uint::el_uint(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct f
 uint16_t el_uint::fill(uint8_t *data) {
 	uint_value.ulong = 0;
 
-	switch(_real_size) {
+	switch (_real_size) {
 	case 1:
 		/* ubyte */
 		uint_value.ubyte = data[0];
@@ -601,7 +601,7 @@ int el_uint::set_type()
 	int target_size = (_config->use_template_field_lengths) ?
 			_real_size : (*_config->elements_lengths)[_en][_id];
 
-	switch(target_size) {
+	switch (target_size) {
 		case 1:
 			_type = ibis::UBYTE;
 			_size = 1;
@@ -633,7 +633,7 @@ int el_uint::set_type()
 
 int el_sint::set_type()
 {
-	switch(_real_size) {
+	switch (_real_size) {
 	case 1:
 		/* ubyte */
 		_type = ibis::BYTE;

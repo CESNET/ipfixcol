@@ -226,7 +226,7 @@ void *reorder_index(void *config)
 		dir = (*conf->dirs)[i];
 		/* Reorder partitions */
 		if (conf->reorder) {
-			MSG_DEBUG(msg_module, "Reordering: %s",dir.c_str());
+			MSG_DEBUG(msg_module, "Reordering: %s", dir.c_str());
 			reorder_part = new ibis::part(dir.c_str(), NULL, false);
 			reorder_part->reorder(); /* TODO return value */
 			delete reorder_part;
@@ -399,7 +399,7 @@ void flush_all_data(struct fastbit_config *conf, bool close)
 	}
 }
 
-int process_startup_xml(char *params, struct fastbit_config* c)
+int process_startup_xml(char *params, struct fastbit_config *c)
 {
 	struct tm *timeinfo;
 	char formated_time[17];
