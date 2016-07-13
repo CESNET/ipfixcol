@@ -95,7 +95,6 @@ int load_types_from_xml(struct fastbit_config *conf)
 	uint32_t en;
 	uint16_t id;
 	int len;
-	enum store_type type;
 	std::string str_value;
 
 	result = doc.load_file(ipfix_elements);
@@ -111,45 +110,12 @@ int load_types_from_xml(struct fastbit_config *conf)
 	{
 		str_value = it->node().child_value("enterprise");
 		en = strtoul(str_value.c_str(), NULL, 0);
+
 		str_value = it->node().child_value("id");
 		id = strtoul(str_value.c_str(), NULL, 0);
-		str_value = it->node().child_value("dataType");
 
 		/* Obtain field type */
-		if (str_value == "boolean" \
-				or str_value == "dateTimeSeconds" \
-				or str_value == "dateTimeMicroseconds" \
-				or str_value == "dateTimeMilliseconds" \
-				or str_value == "dateTimeNanoseconds" \
-				or str_value == "ipv4Address" \
-				or str_value == "macAddress" \
-				or str_value == "unsigned8" \
-				or str_value == "unsigned16" \
-				or str_value == "unsigned32" \
-				or str_value == "unsigned64") {
-			type = UINT;
-		} else if (str_value == "signed8" \
-				or str_value == "signed16" \
-				or str_value == "signed32" \
-				or str_value == "signed64") {
-			type = INT;
-		} else if (str_value == "ipv6Address") {
-			type = IPV6;
-		} else if (str_value == "float32" \
-			or str_value == "float64") {
-			type = FLOAT;
-		} else if (str_value == "string") {
-			type = TEXT;
-		} else if (str_value == "octetArray" \
-				or str_value == "basicList" \
-				or str_value == "subTemplateList" \
-				or str_value== "subTemplateMultiList") {
-			type = BLOB;
-		} else {
-			type = UNKNOWN;
-		}
-
-		(*conf->elements_types)[en][id] = type;
+		str_value = it->node().child_value("dataType");
 
 		/* Obtain field length */
 		if (str_value == "unsigned64" \
@@ -524,12 +490,6 @@ int storage_init(char *params, void **config)
 		return 1;
 	}
 
-	c->elements_types = new	std::map<uint32_t, std::map<uint16_t, enum store_type>>;
-	if (c->elements_types == NULL) {
-		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
-		return 1;
-	}
-
 	c->elements_lengths = new std::map<uint32_t, std::map<uint16_t, int>>;
 	if (c->elements_lengths == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
@@ -769,7 +729,6 @@ int storage_close(void **config)
 	delete od_infos;
 	delete conf->index_en_id;
 	delete conf->dirs;
-	delete conf->elements_types;
 	delete conf->elements_lengths;
 	delete conf;
 	return 0;
