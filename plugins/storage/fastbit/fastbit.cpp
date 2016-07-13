@@ -188,30 +188,6 @@ int load_types_from_xml(struct fastbit_config *conf)
 	return 0;
 }
 
-/**
- * \brief Search for element type in configure structure
- *
- * @param conf fastbit storage plug-in configuration structure
- * @param en Enterprise number of element
- * @param id ID of information element
- * @return element type
- */
-enum store_type get_type_from_xml(struct fastbit_config *conf, uint32_t en, uint16_t id)
-{
-	/* Check whether a type has been determined for the specified element */
-	if ((*conf->elements_types).count(en) == 0 || (*conf->elements_types)[en].count(id) == 0) {
-		if (en == NFv9_CONVERSION_ENTERPRISE_NUMBER) {
-			MSG_WARNING(msg_module, "No specification for e%uid%u found in '%s' (enterprise number converted from NFv9)", en, id, ipfix_elements);
-		} else {
-			MSG_WARNING(msg_module, "No specification for e%uid%u found in '%s'", en, id, ipfix_elements);
-		}
-
-		return UNKNOWN;
-	}
-
-	return (*conf->elements_types)[en][id];
-}
-
 void *reorder_index(void *config)
 {
 	struct fastbit_config *conf = static_cast<struct fastbit_config*>(config);

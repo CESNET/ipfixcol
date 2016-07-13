@@ -100,14 +100,4 @@ struct od_info {
  */
 int load_types_from_xml(struct fastbit_config *conf);
 
-/**
- * \brief Search for element type in configure structure
- *
- * @param conf fastbit storage plug-in configuration structure
- * @param en Enterprise number of element
- * @param id ID of information element
- * @return element type
- */
-enum store_type get_type_from_xml(struct fastbit_config *conf, uint32_t en, uint16_t id);
-
 #endif /* FASTBIT_H_ */
