@@ -37,16 +37,17 @@ uint64_t get_unit(char *unit)
 	switch (*unit) {
 		case 'k':
 		case 'K':
-			return 1000;
+			return FF_SCALING_FACTOR;
+		case 'm':
 		case 'M':
-			return 1000000;
+			return FF_SCALING_FACTOR * FF_SCALING_FACTOR;
 		case 'g':
 		case 'G':
-			return 1000000000;
+			return FF_SCALING_FACTOR * FF_SCALING_FACTOR * FF_SCALING_FACTOR;
 		case 'T':
-			return 1000000000000UL;
+			return FF_SCALING_FACTOR * FF_SCALING_FACTOR * FF_SCALING_FACTOR * FF_SCALING_FACTOR;
 		case 'E':
-			return 1000000000000000UL;
+			return FF_SCALING_FACTOR * FF_SCALING_FACTOR * FF_SCALING_FACTOR * FF_SCALING_FACTOR * FF_SCALING_FACTOR;
 		default:
 			return 0;
 	}
@@ -257,6 +258,71 @@ int str_to_addr(ff_t *filter, char *str, char **res, int *numbits)
 	return 0;
 }
 
+ff_error_t ff_type_cast(yyscan_t *scanner, ff_t *filter, char *valstr, ff_node_t* node){
+
+	/* determine field type and assign data to lvalue */
+	switch (node->type) {
+		//switch (lnf_fld_type(field)) {
+
+		case FF_TYPE_UINT64:
+		case FF_TYPE_UINT32:
+		case FF_TYPE_UINT16:
+		case FF_TYPE_UINT8:
+			if (str_to_uint(valstr, node->type, &node->value, &node->vsize) == 0) {
+				ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
+				return FF_ERR_OTHER;
+			}
+			break;
+		case FF_TYPE_INT64:
+		case FF_TYPE_INT32:
+		case FF_TYPE_INT16:
+		case FF_TYPE_INT8:
+			if (str_to_int(valstr, node->type, &node->value, &node->vsize) == 0) {
+				ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
+
+				return FF_ERR_OTHER;
+			}
+			break;
+		case FF_TYPE_ADDR:
+			if (str_to_addr(filter, valstr, &node->value, &node->numbits) == 0) {
+				return FF_ERR_OTHER;
+			}
+			node->vsize = sizeof(ff_ip_t);
+			break;
+
+		case FF_TYPE_UNSIGNED_BIG:
+			/* unsigned with undefined data size (internally mapped to uint64_t in network order) */
+		case FF_TYPE_UNSIGNED:
+			if (str_to_uint(valstr, FF_TYPE_UINT64, &node->value, &node->vsize) == 0) {
+				node->value = malloc(sizeof(uint64_t));
+				node->vsize = sizeof(uint64_t);
+				if (node->value == NULL || filter->options.ff_translate_func == NULL) {
+					ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
+					return FF_ERR_OTHER;
+				} else if (filter->options.ff_translate_func(filter, valstr, node->field,
+									     node->value) != FF_OK) {
+					ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
+					return FF_ERR_OTHER;
+				}
+			}
+//				*(uint64_t *)node->value = htonll(*(uint64_t *)node->value);
+			break;
+		case FF_TYPE_SIGNED_BIG:
+		case FF_TYPE_SIGNED:
+			if (str_to_uint(valstr, FF_TYPE_INT64, &node->value, &node->vsize) == 0) {
+				ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
+				return FF_ERR_OTHER;
+			}
+//				*(uint64_t *)node->value = htonll(*(uint64_t *)node->value);
+			break;
+
+		default:
+			return FF_ERR_OTHER;
+	}
+	return FF_OK;
+}
+
+
 /* set error to error buffer */
 /* set error string */
 void ff_set_error(ff_t *filter, char *format, ...) {
@@ -275,10 +341,37 @@ const char* ff_error(ff_t *filter, const char *buf, int buflen) {
 
 }
 
+//TODO: suppport more ids
+ff_node_t* ff_branch_node(ff_node_t *node, ff_oper_t oper, ff_lvalue_t* lvalue) {
 
+	ff_node_t *nodeR = ff_new_node(NULL, NULL, NULL, oper, NULL);
+	if (nodeR == NULL){
+		return NULL;
+	}
+	ff_node_t *root = ff_new_node(NULL, NULL, node,
+				      lvalue->options == -1 ? FF_OP_OR : lvalue->options, nodeR);
+	if (root == NULL) {
+		free(nodeR);
+		return NULL;
+	}
+
+	*nodeR = *node;
+	nodeR->field = lvalue->id2;
+
+	nodeR->value = malloc(nodeR->vsize);
+	memcpy(nodeR->value, node->value, nodeR->vsize);
+
+	if (nodeR->value == NULL) {
+		free(nodeR);
+		free(root);
+		return NULL;
+	}
+	return root;
+}
 
 /* add leaf entry into expr tree */
-ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter,char *fieldstr, ff_oper_t oper, char *valstr) {
+//TODO: Free allocated memory for more ids in lvalue
+ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter, char *fieldstr, ff_oper_t oper, char *valstr) {
 	//int field;
 	ff_node_t *node;
 	ff_node_t *root, *nodeR;
@@ -287,11 +380,27 @@ ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter,char *fieldstr, ff_oper_t 
 
 	/* callback to fetch field type and additional info */
 	if (filter->options.ff_lookup_func == NULL) {
-		ff_set_error(filter, "Filter lookup function not defined for %s", fieldstr);
+		ff_set_error(filter, "Filter lookup function not defined");
 		return NULL;
 	}
 
 	memset(&lvalue, 0x0, sizeof(ff_lvalue_t));
+	lvalue.num = 0;
+	lvalue.more = NULL;
+
+	switch (*fieldstr) {
+		case '|':
+			lvalue.options = FF_OP_OR;
+			fieldstr++;
+			break;
+		case '&':
+			lvalue.options = FF_OP_AND;
+			fieldstr++;
+			break;
+		default:
+			lvalue.options = -1;
+	}
+
 	if (filter->options.ff_lookup_func(filter, fieldstr, &lvalue) != FF_OK) {
 		ff_set_error(filter, "Can't lookup field type for %s", fieldstr);
 		return NULL;
@@ -305,96 +414,35 @@ ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter,char *fieldstr, ff_oper_t 
 	node->type = lvalue.type;
 	node->field = lvalue.id;
 
-	/* determine field type and assign data to lvalue */
-	switch (node->type) {
-	//switch (lnf_fld_type(field)) {
+	if (oper == FF_OP_IN) {
+		//Htab nieje moc dobre riesenie
+		//node->value = ff_htab_from_node(node, (ff_node_t*)valstr);
+		node->value = valstr;
+		return node;
+	}
 
-		case FF_TYPE_UINT64:
-		case FF_TYPE_UINT32:
-		case FF_TYPE_UINT16:
-		case FF_TYPE_UINT8:
-				if (str_to_uint(valstr, node->type, &node->value, &node->vsize) == 0) {
-					ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
-					return NULL;
-				}
-				break;
-		case FF_TYPE_INT64:
-		case FF_TYPE_INT32:
-		case FF_TYPE_INT16:
-		case FF_TYPE_INT8:
-				if (str_to_int(valstr, node->type, &node->value, &node->vsize) == 0) {
-					ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
-
-					return NULL;
-				}
-				break;
-		case FF_TYPE_ADDR:
-				if (str_to_addr(filter, valstr, &node->value, &node->numbits) == 0) {
-					return NULL;
-				}
-				node->vsize = sizeof(ff_ip_t);
-				break;
-
-		case FF_TYPE_UNSIGNED_BIG:
-			/* unsigned with undefined data size (internally mapped to uint64_t in network order) */
-		case FF_TYPE_UNSIGNED:
-				if (str_to_uint(valstr, FF_TYPE_UINT64, &node->value, &node->vsize) == 0) {
-					node->value = malloc(sizeof(uint64_t));
-					if(node->value == NULL || filter->options.ff_translate_func(filter, valstr, &lvalue, node->value) != FF_OK) {
-						ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
-						return NULL;
-					}
-				}
-//				*(uint64_t *)node->value = htonll(*(uint64_t *)node->value);
-				break;
-		case FF_TYPE_SIGNED_BIG:
-		case FF_TYPE_SIGNED:
-				if (str_to_uint(valstr, FF_TYPE_INT64, &node->value, &node->vsize) == 0) {
-					ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
-					return NULL;
-				}
-//				*(uint64_t *)node->value = htonll(*(uint64_t *)node->value);
-				break;
-
+	if(ff_type_cast(scanner, filter, valstr, node) != FF_OK) {
+		return NULL;
 	}
 
 	node->left = NULL;
 	node->right = NULL;
 
 	if (lvalue.id2.index == 0) {
+		if (lvalue.options != -1) {
+			free(node);
+			return NULL;
+		}
 		return node;
 	} else {
 		//Setup nodes in or configuration for pair fields (src/dst etc.)
-
-		nodeR = ff_new_node(scanner, filter, NULL, oper, NULL);
-		if (nodeR == NULL){
-			goto err_free1;
+		ff_node_t* new_leaf = ff_branch_node(node, oper, &lvalue);
+		if (new_leaf == NULL) {
+			free(lvalue.more);
+			free(node);
 		}
-		root = ff_new_node(scanner, filter, node, FF_OP_OR, nodeR);
-		if (root == NULL){
-			goto err_free2;
-		}
-
-		*nodeR = *node;
-		nodeR->field = lvalue.id2;
-
-		nodeR->value = malloc(nodeR->vsize);
-		memcpy(nodeR->value, node->value, nodeR->vsize);
-
-		if (nodeR->value == NULL) {
-			goto err_free3;
-		}
-
-		return root;
+		return new_leaf;
 	}
-
-err_free3:
-	ff_free_node(root);
-err_free2:
-	ff_free_node(nodeR);
-err_free1:
-	ff_free_node(node);
-	return NULL;
 }
 
 /* add node entry into expr tree */
@@ -414,6 +462,28 @@ ff_node_t* ff_new_node(yyscan_t scanner, ff_t *filter, ff_node_t* left, ff_oper_
 
 	node->left = left;
 	node->right = right;
+
+	return node;
+}
+
+/* add new item to tree */
+ff_node_t* ff_new_mval(yyscan_t scanner, ff_t *filter, char *valstr, ff_oper_t oper, ff_node_t* nptr) {
+
+	ff_node_t *node;
+
+	node = malloc(sizeof(ff_node_t));
+
+	if (node == NULL) {
+		return NULL;
+	}
+
+	node->vsize = strlen(valstr);
+	node->value = strdup(valstr);
+	node->type = FF_TYPE_STRING;
+	node->oper = oper;
+
+	node->left = NULL;
+	node->right = nptr;
 
 	return node;
 }
@@ -756,10 +826,10 @@ void ff_free_node(ff_node_t* node) {
 	free(node->value);
 
 	free(node);
+
 }
 
 /* release all resources allocated by filter */
-/* This is causing double free for some reason */
 ff_error_t ff_free(ff_t *filter) {
 
 	/* !!! memory cleanup */

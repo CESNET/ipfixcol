@@ -62,10 +62,9 @@ static const char *msg_module = "profiler";
 enum nff_control_e {
 	CTL_NA = 0,
 	CTL_V4V6IP = 1,
-	CTL_SRCDSTMAC,
-	//CTL_INOUTMAC,
 	CTL_MDATA_ITEM,
 	CTL_CALCULATED_ITEM,
+	CTL_FPAIR,
 
 	//CTL_EQ_MASKED
 };
@@ -93,39 +92,39 @@ static struct nff_item_s nff_ipff_map[]={
 	//IP records, ip address is general, implicitly set to ipv6
 	{"proto", toEnId(0, 4)},
 
-	{"ip", FPAIR},
-		{"srcip", toGenEnId(CTL_V4V6IP, 0, 8)},
-		{"dstip", toGenEnId(CTL_V4V6IP, 0, 12)},
+	{"ip", toGenEnId(CTL_FPAIR, 1, 2)},
+		{"src ip", toGenEnId(CTL_V4V6IP, 0, 8)},
+		{"dst ip", toGenEnId(CTL_V4V6IP, 0, 12)},
 
-	{"net", FPAIR},
-		{"srcip", toGenEnId(CTL_V4V6IP, 0, 8)},
-		{"dstip", toGenEnId(CTL_V4V6IP, 0, 12)},
+	{"net", toGenEnId(CTL_FPAIR, 1, 2)},
+		{"src net", toGenEnId(CTL_V4V6IP, 0, 8)},
+		{"dst net", toGenEnId(CTL_V4V6IP, 0, 12)},
 	//synonym of IP
-	{"host", FPAIR},
-		{"srcip", toGenEnId(CTL_V4V6IP, 0, 8)},
-		{"dstip", toGenEnId(CTL_V4V6IP, 0, 12)},
+	{"host", toGenEnId(CTL_FPAIR, 1, 2)},
+		{"src host", toGenEnId(CTL_V4V6IP, 0, 8)},
+		{"dst host", toGenEnId(CTL_V4V6IP, 0, 12)},
 
-	{"mask", FPAIR},
-		{"srcmask", toGenEnId(CTL_V4V6IP, 0, 9)},
-		{"dstmask", toGenEnId(CTL_V4V6IP, 0, 13)},
+	{"mask", toGenEnId(CTL_FPAIR, 1, 2)},
+		{"src mask", toGenEnId(CTL_V4V6IP, 0, 9)},
+		{"dst mask", toGenEnId(CTL_V4V6IP, 0, 13)},
 
 /*
 	//direct specific mapping
-	{"ipv4", FPAIR},
+	{"ipv4", toGenEnId(CTL_FPAIR, 1, 2)},
 		{"srcipv4", toEnId(0, 8)},
 		{"dstipv4", toEnId(0, 12)},
-	{"ipv6", FPAIR},
+	{"ipv6", toGenEnId(CTL_FPAIR, 1, 2)},
 		{"srcipv6", toEnId(0, 27)},
 		{"dstipv6", toEnId(0, 28)},
 */
 
-	{"if", FPAIR},
-		{"inif", toEnId(0, 10)},
-		{"outif", toEnId(0, 14)},
+	{"if", toGenEnId(CTL_FPAIR, 1, 2)},
+		{"in if", toEnId(0, 10)},
+		{"out if", toEnId(0, 14)},
 
-	{"port", FPAIR},
-		{"srcport", toEnId(0, 7)},
-		{"dstport", toEnId(0, 11)},
+	{"port", toGenEnId(CTL_FPAIR, 1, 2)},
+		{"src port", toEnId(0, 7)},
+		{"dst port", toEnId(0, 11)},
 
 	{"icmp-type", toEnId(0, 176)},
 	{"icmp-code", toEnId(0, 177)},
@@ -137,42 +136,40 @@ static struct nff_item_s nff_ipff_map[]={
 	{"icmp-type", toEnId(0, 176)},
 	{"icmp-code", toEnId(0, 177)},
 
-	{"as", FPAIR},
+	{"as", toGenEnId(CTL_FPAIR, 1, 2)},
 		/*{"srcas", toGenEnId(CTL_MDATA_ITEM, 0, 1)},
 		{"dstas", toGenEnId(CTL_MDATA_ITEM, 0, 2)},
 		{"prevas", toGenEnId(CTL_MDATA_ITEM, 0, 1)},
 		{"nextas", toGenEnId(CTL_MDATA_ITEM, 0, 2)},
 */
-		{"srcas", toEnId(0, 16)},
-		{"dstas", toEnId(0, 17)},
+		{"src as", toEnId(0, 16)},
+		{"dst as", toEnId(0, 17)},
 
-	{"nextas", toEnId(0, 128)}, //maps  to BGPNEXTADJACENTAS
-	{"prevas", toEnId(0, 129)}, //similar as above
+	{"next as", toEnId(0, 128)}, //maps  to BGPNEXTADJACENTAS
+	{"prev as", toEnId(0, 129)}, //similar as above
 
 
-	{"vlan", FPAIR},
-		{"srcvlan", toEnId(0, 58)},
-		{"dstvlan", toEnId(0, 59)},
+	{"vlan", toGenEnId(CTL_FPAIR, 1, 2)},
+		{"src vlan", toEnId(0, 58)},
+		{"dst vlan", toEnId(0, 59)},
 
 	{"flags", toEnId(0, 6)},
 
-	{"nextip", toGenEnId(CTL_V4V6IP, 0, 15)},
+	{"next ip", toGenEnId(CTL_V4V6IP, 0, 15)},
 
-	{"bgpnextip", toEnId(0, 18)},
+	{"bgpnext ip", toEnId(0, 18)},
 
-	{"routerip", toEnId(0, 130)},
+	{"router ip", toEnId(0, 130)},
 
-	{"mac", FPAIR},
-		{"srcmac", toEnId(0, 56)},
-		{"dstmac", toEnId(0, 80)},
-
-	{"inmac", FPAIR},
-		{"insrcmac", toEnId(0, 57)},
-		{"indstmac", toEnId(0, 80)},
-
-	{"outmac", FPAIR},
-		{"outsrcmac", toEnId(0, 56)},
-		{"outdstmac", toEnId(0, 81)},
+	{"mac", toGenEnId(CTL_FPAIR, 1, 2)},
+	{"in mac", toGenEnId(CTL_FPAIR, 4, 5)},
+	{"out mac", toGenEnId(CTL_FPAIR, 5, 6)},
+	{"src mac", toGenEnId(CTL_FPAIR, 2, 4)},
+	{"dst mac", toGenEnId(CTL_FPAIR, 2, 4)},
+		{"in src mac", toEnId(0, 56)},
+		{"in dst mac", toEnId(0, 80)},
+		{"out src mac", toEnId(0, 81)},
+		{"out dst mac", toEnId(0, 57)},
 
 	{"mplslabel1", toEnId(0, 70)},
 	{"mplslabel2", toEnId(0, 71)},
@@ -192,7 +189,8 @@ static struct nff_item_s nff_ipff_map[]={
 	{"flows", toEnId(0, 3)},
 
 	{"tos", toEnId(0, 5)},
-	{"dsttos", toEnId(0, 55)},
+	{"src tos", toEnId(0, 5)},
+	{"dst tos", toEnId(0, 55)},
 
 
 	{"pps", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_PPS)},
@@ -203,32 +201,32 @@ static struct nff_item_s nff_ipff_map[]={
 
 	{"bpp", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_BPP)},
 
-	{"asaevent", toEnId(0, 230)},
-	{"asaxevent", toEnId(0, 233)},
+	{"asa event", toEnId(0, 230)},
+	{"asa xevent", toEnId(0, 233)},
 
-	{"xip", FPAIR},
-		{"xsrcip", toGenEnId(CTL_V4V6IP, 0, 225)},
-		{"xdstip", toGenEnId(CTL_V4V6IP, 0, 226)},
+	{"xip", toGenEnId(CTL_FPAIR, 1, 2)},
+		{"src xip", toGenEnId(CTL_V4V6IP, 0, 225)},
+		{"dst xip", toGenEnId(CTL_V4V6IP, 0, 226)},
 
-	{"xport", FPAIR},
-		{"xsrcport", toEnId(0, 227)},
-		{"xdstport", toEnId(0, 228)},
+	{"xport", toGenEnId(CTL_FPAIR, 1, 2)},
+		{"src xport", toEnId(0, 227)},
+		{"dst xport", toEnId(0, 228)},
 
-	{"natevent", toEnId(0, 230)},
+	{"nat event", toEnId(0, 230)},
 
 /*
-	{"nip", FPAIR},
+	{"nip", toGenEnId(CTL_FPAIR, 1, 2)},
 		{"nsrcip", toGenEnId(CTL_V4V6IP, 0, 225)},
 		{"ndstip", toGenEnId(CTL_V4V6IP, 0, 226)},
 
-	{"nport", FPAIR},
+	{"nport", toGenEnId(CTL_FPAIR, 1, 2)},
 		{"nsrcport", toEnId(0, 227)},
 		{"ndstport", toEnId(0, 228)},
 */
 
-	{"vrfid", FPAIR},
-		{"ingressvrfid", toEnId(0, 234)},
-		{"egressvrfid", toEnId(0, 235)},
+	{"vrfid", toGenEnId(CTL_FPAIR, 1, 2)},
+		{"ingress vrfid", toEnId(0, 234)},
+		{"egress vrfid", toEnId(0, 235)},
 
 	{"tstart", toEnId(0, 152)},
 	{"tend", toEnId(0, 153)},
@@ -248,7 +246,7 @@ static struct nff_item_s nff_proto_id_map[]={
 	{ "CBT",	7 },
 	{ "EGP",	8 },
 	{ "IGP",	9 },
-	{ "BBN-RCC-MON"	10 },
+	{ "BBN-RCC-MON",	10 },
 	{ "NVP-II",	11 },
 	{ "PUP",	12 },
 	{ "ARGUS", 	13 },
@@ -454,6 +452,41 @@ int specify_ipv(uint16_t *i)
 	return 1;
 }
 
+int get_external_ids(nff_item_t *item, ff_lvalue_t *lvalue)
+{
+	uint16_t gen, of2;
+	uint32_t of1;
+	unpackEnId(item->en_id, &gen, &of1, &of2);
+
+	int ids = 0;
+
+	if (gen == CTL_FPAIR) {
+		ids += get_external_ids(item+of1, lvalue);
+		ids += get_external_ids(item+of2, lvalue);
+		return ids;
+	}
+
+	ids++;
+	if (lvalue->id.index == 0) {
+		lvalue->id.index = item->en_id;
+		return ids;
+	} else if (lvalue->id2.index == 0) {
+		lvalue->id2.index = item->en_id;
+		return ids;
+	}
+
+	if (lvalue->num == 0) {
+		lvalue->num ++;
+		lvalue->more = malloc(lvalue->num * sizeof(ff_extern_id_t));
+	} else {
+		lvalue->num++;
+		lvalue->more = realloc(lvalue->more, lvalue->num * sizeof(ff_extern_id_t));
+	}
+	lvalue->more[lvalue->num - 1].index = item->en_id;
+
+	return ids;
+}
+
 
 /* callback from ffilter to lookup field */
 ff_error_t ipf_ff_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lvalue)
@@ -485,17 +518,11 @@ ff_error_t ipf_ff_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *l
 		} else {
 			lvalue->id2.index = 0;
 
-			if(item->en_id != FPAIR){
-				//no pair values
-				lvalue->id.index = item->en_id;
-			} else {
-				//mark lvalue so pair items are used
-				lvalue->id.index = (item+1)->en_id;
-				lvalue->id2.index = (item+2)->en_id;
-			}
-
 			uint16_t gen, id;
 			uint32_t enterprise;
+
+			get_external_ids(item, lvalue);
+
 			unpackEnId(lvalue->id.index, &gen, &enterprise, &id);
 
 			elem = get_element_by_id(id, enterprise);
@@ -530,6 +557,7 @@ ff_error_t ipf_ff_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *l
 				lvalue->type = FF_TYPE_MAC;
 				break;
 
+			case ET_OCTET_ARRAY:
 			case ET_STRING:
 				lvalue->type = FF_TYPE_STRING;
 				break;
@@ -537,6 +565,7 @@ ff_error_t ipf_ff_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *l
 			case ET_DATE_TIME_MILLISECONDS:
 				lvalue->type = FF_TYPE_TIMESTAMP;
 				break;
+
 			case ET_DATE_TIME_SECONDS:
 			case ET_DATE_TIME_MICROSECONDS:
 			case ET_DATE_TIME_NANOSECONDS:
@@ -548,7 +577,6 @@ ff_error_t ipf_ff_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *l
 				lvalue->type = FF_TYPE_ADDR;
 				break;
 
-			case ET_OCTET_ARRAY:
 			case ET_BASIC_LIST:
 			case ET_SUB_TEMPLATE_LIST:
 			case ET_SUB_TEMPLATE_MULTILIST:
@@ -639,16 +667,16 @@ ff_error_t ipf_ff_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *da
 	return FF_OK;
 }
 
-ff_error_t ipf_ff_translate_func(ff_t *filter, const char *valstr, ff_lvalue_t *lvalue, uint64_t *val)
+ff_error_t ipf_ff_translate_func(ff_t *filter, const char *valstr, ff_extern_id_t id, uint64_t *val)
 {
 	struct nff_item_s *dict = NULL;
-	char *tcp_ctl_bits = "FSRPAUXECN";
+	char *tcp_ctl_bits = "FSRPAUECNX";
 	char *hit = NULL;
 
 	uint32_t en;
 	uint16_t ie_id;
 	uint16_t generic_set;
-	unpackEnId(lvalue->id.index, &generic_set, &en, &ie_id);
+	unpackEnId(id.index, &generic_set, &en, &ie_id);
 
 	if (en != 0 || valstr == NULL || val == NULL) {
 		return FF_ERR_OTHER;
@@ -723,13 +751,13 @@ int64_t data_record_get_duration(struct ipfix_record* data, struct ipfix_templat
 
 }
 
-/*Evaulate node*/
+/* Evaulate node */
 int filter_eval_node(struct filter_profile *pdata, struct ipfix_message *msg, struct ipfix_record *record)
 {
 	struct nff_msg_rec_s pack;
 	pack.msg = msg;
 	pack.rec = record;
-	/* Necesarry to pass both msg and record to ff_eval, passed structure that contains both*/
+	/* Necesarry to pass both msg and record to ff_eval, passed structure that contains both */
 	return ff_eval(pdata->filter, &pack);
 }
 

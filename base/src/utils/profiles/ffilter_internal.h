@@ -6,9 +6,10 @@
 
 /* supported operations */
 typedef enum {
-	FF_OP_NOT,
+	FF_OP_NOT = 1,
 	FF_OP_OR,
 	FF_OP_AND,
+	FF_OP_BITAND,
 	FF_OP_EQ,
 	FF_OP_NE,
 	FF_OP_LT,
@@ -63,18 +64,22 @@ int ff_yyparse(yyscan_t yyscanner, ff_t *filter);
 void yyerror(yyscan_t yyscanner, ff_t *filter, char *);
 
 /* conversion from string to numeric/bit value */
+uint64_t get_unit(char *unit);
+int64_t strtoll_unit(char *num, char**endptr);
 int str_to_uint(char *str, int type, char **res, int *vsize);
 int str_to_int(char *str, int type, char **res, int *vsize);
 int str_to_addr(ff_t *filter, char *str, char **res, int *numbits);
 
+
 /* add new node into parse tree */
+ff_node_t* ff_new_mval(yyscan_t scanner, ff_t *filter, char *valstr, ff_oper_t oper,  ff_node_t* nextptr);
 ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter, char *fieldstr, ff_oper_t oper, char *valstr);
 ff_node_t* ff_new_node(yyscan_t scanner, ff_t *filter, ff_node_t* left, ff_oper_t oper, ff_node_t* right);
 
 /* evaluate filter */
 int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec);
 
-/*release memory allocated by nodes*/
+/* release memory allocated by nodes */
 void ff_free_node(ff_node_t* node);
 
 /* lex bison prototypes */
