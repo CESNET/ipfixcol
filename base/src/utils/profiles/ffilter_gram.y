@@ -57,6 +57,7 @@
 %token LP RP
 %token LPS RPS IN
 %token <string> STRING DIR BIDIR_AND BIDIR_OR DIR_DIR_MAC
+%token BAD_TOKEN
 
 %type <string> field value
 %type <node> expr filter list

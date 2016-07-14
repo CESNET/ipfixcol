@@ -88,7 +88,6 @@ void unpackEnId(uint64_t from, uint16_t *gen, uint32_t* en, uint16_t* id)
 /* This map of strings and ids determines which (hopefully) synonyms of nfdump filter keywords are supported */
 static struct nff_item_s nff_ipff_map[]={
 
-	//TODO: Add mask elements src/dstIPvXPrefixLength to srcmask/dstmask
 	//IP records, ip address is general, implicitly set to ipv6
 	{"proto", toEnId(0, 4)},
 
@@ -419,31 +418,31 @@ int specify_ipv(uint16_t *i)
 {
 	switch(*i)
 	{
-	//srcip
+	//src ip
 	case 8: *i = 27; break;
 	case 27: *i = 8; break;
-	//dstip
+	//dst ip
 	case 12: *i = 28; break;
 	case 28: *i = 12; break;
-	//srcmask
+	//src mask
 	case 9: *i = 29; break;
 	case 29: *i = 9; break;
-	//dstmask
+	//dst mask
 	case 13: *i = 30; break;
 	case 30: *i = 13; break;
-	//nexthopip
+	//nexthop ip
 	case 15: *i = 62; break;
 	case 62: *i = 15; break;
-	//bgpnexthop
+	//bgpnext ip
 	case 18: *i = 63; break;
 	case 63: *i = 18; break;
-	//iprouter
+	//router ip
 	case 130: *i = 131; break;
 	case 131: *i = 130; break;
-	//xlatesrcip
+	//src xlate ip
 	case 225: *i = 281; break;
 	case 281: *i = 225; break;
-	//xlatedstip
+	//dst xlate ip
 	case 226: *i = 282; break;
 	case 282: *i = 226; break;
 	default:
@@ -487,7 +486,6 @@ int get_external_ids(nff_item_t *item, ff_lvalue_t *lvalue)
 /* callback from ffilter to lookup field */
 ff_error_t ipf_ff_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lvalue)
 {
-
 	/* fieldstr is set - try to find field id and relevant _fget function */
 
 	if (fieldstr != NULL) {
