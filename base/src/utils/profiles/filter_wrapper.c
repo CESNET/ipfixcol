@@ -475,13 +475,9 @@ int get_external_ids(nff_item_t *item, ff_lvalue_t *lvalue)
 		return ids;
 	}
 
-	if (lvalue->num == 0) {
-		lvalue->num ++;
-		lvalue->more = malloc(lvalue->num * sizeof(ff_extern_id_t));
-	} else {
-		lvalue->num++;
-		lvalue->more = realloc(lvalue->more, lvalue->num * sizeof(ff_extern_id_t));
-	}
+	lvalue->num++;
+	lvalue->more = realloc(lvalue->more, lvalue->num * sizeof(ff_extern_id_t));
+
 	lvalue->more[lvalue->num - 1].index = item->en_id;
 
 	return ids;
@@ -764,5 +760,9 @@ int filter_eval_node(struct filter_profile *pdata, struct ipfix_message *msg, st
 /*Memory release function*/
 void filter_free_profile(struct filter_profile *profile)
 {
-	ff_free(profile->filter);
+	if (profile != NULL) {
+		ff_free(profile->filter);
+		free(profile->buffer);
+	}
+	free(profile);
 }

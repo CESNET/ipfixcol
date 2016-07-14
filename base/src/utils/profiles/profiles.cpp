@@ -80,7 +80,6 @@ static const char *msg_module = "profile_tree";
 int parse_filter(filter_profile* pdata, char* filter_str)
 {
 	//vytvorenie options - lookup fc data-callback fc
-	//TODO: solve buffer initialization
 	ff_options_t* opts = NULL;
 	int ret = 0;
 
@@ -92,6 +91,7 @@ int parse_filter(filter_profile* pdata, char* filter_str)
 	opts->ff_data_func = ipf_ff_data_func;
 	opts->ff_translate_func = ipf_ff_translate_func;
 
+	pdata->buffer = NULL;
 	if (ff_init(&pdata->filter, filter_str, opts) != FF_OK) {
 		ret = 1;
 	}

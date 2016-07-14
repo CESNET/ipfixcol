@@ -75,7 +75,7 @@ filter:
 field:
 	STRING 			{ strncpy($$, $1, FF_MAX_STRING - 1); }
 	| DIR STRING		{ snprintf($$, FF_MAX_STRING - 1, "%s %s", $1, $2); }
-	| BIDIR_OR STRING		{ snprintf($$, FF_MAX_STRING - 1, "%c%s", '|', $2); }
+	| BIDIR_OR STRING	{ snprintf($$, FF_MAX_STRING - 1, "%c%s", '|', $2); }
 	| BIDIR_AND STRING	{ snprintf($$, FF_MAX_STRING - 1, "%c%s", '&', $2); }
 	| DIR_DIR_MAC STRING	{ snprintf($$, FF_MAX_STRING - 1, "%s %s", $1, $2); }
 	;
@@ -95,7 +95,7 @@ expr:
 	| field LT value	{ $$ = ff_new_leaf(scanner, filter, $1, FF_OP_LT, $3); if ($$ == NULL) { YYABORT; } }
 	| field GT value	{ $$ = ff_new_leaf(scanner, filter, $1, FF_OP_GT, $3); if ($$ == NULL) { YYABORT; } }
 
-	| field IN list	{ $$ = ff_new_leaf(scanner, filter, $1, FF_OP_IN, $3); if ($$ == NULL) { YYABORT; } }
+	| field IN list		{ $$ = ff_new_leaf(scanner, filter, $1, FF_OP_IN, $3); if ($$ == NULL) { YYABORT; } }
 	;
 
 list:

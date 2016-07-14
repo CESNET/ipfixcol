@@ -240,6 +240,8 @@ int str_to_addr(ff_t *filter, char *str, char **res, int *numbits)
 		ip = realloc(ip_str, strlen(ip_str)+8);
 		strcat(ip, suffix);
 
+		free(suffix);
+
 	}
 
 	if (inet_pton(AF_INET, ip, &((*ptr).data[3]))) {
@@ -258,7 +260,7 @@ int str_to_addr(ff_t *filter, char *str, char **res, int *numbits)
 	return 0;
 }
 
-ff_error_t ff_type_cast(yyscan_t *scanner, ff_t *filter, char *valstr, ff_node_t* node){
+ff_error_t ff_type_cast(yyscan_t *scanner, ff_t *filter, char *valstr, ff_node_t* node) {
 
 	/* determine field type and assign data to lvalue */
 	switch (node->type) {
@@ -294,13 +296,16 @@ ff_error_t ff_type_cast(yyscan_t *scanner, ff_t *filter, char *valstr, ff_node_t
 			/* unsigned with undefined data size (internally mapped to uint64_t in network order) */
 		case FF_TYPE_UNSIGNED:
 			if (str_to_uint(valstr, FF_TYPE_UINT64, &node->value, &node->vsize) == 0) {
-				node->value = malloc(sizeof(uint64_t));
+				node->value = calloc(1, sizeof(uint64_t));
 				node->vsize = sizeof(uint64_t);
 				if (node->value == NULL || filter->options.ff_translate_func == NULL) {
+					node->vsize = 0;
 					ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
 					return FF_ERR_OTHER;
 				} else if (filter->options.ff_translate_func(filter, valstr, node->field,
-									     node->value) != FF_OK) {
+									     (uint64_t *)node->value) != FF_OK) {
+					free(node->value);
+					node->vsize = 0;
 					ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
 					return FF_ERR_OTHER;
 				}
@@ -351,7 +356,7 @@ ff_node_t* ff_branch_node(ff_node_t *node, ff_oper_t oper, ff_lvalue_t* lvalue) 
 	ff_node_t *root = ff_new_node(NULL, NULL, node,
 				      lvalue->options == -1 ? FF_OP_OR : lvalue->options, nodeR);
 	if (root == NULL) {
-		free(nodeR);
+		ff_free_node(nodeR);
 		return NULL;
 	}
 
@@ -362,21 +367,21 @@ ff_node_t* ff_branch_node(ff_node_t *node, ff_oper_t oper, ff_lvalue_t* lvalue) 
 	memcpy(nodeR->value, node->value, nodeR->vsize);
 
 	if (nodeR->value == NULL) {
-		free(nodeR);
-		free(root);
+		ff_free_node(nodeR);
+		ff_free_node(root);
 		return NULL;
 	}
 	return root;
 }
 
 /* add leaf entry into expr tree */
-//TODO: Free allocated memory for more ids in lvalue
 ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter, char *fieldstr, ff_oper_t oper, char *valstr) {
 	//int field;
 	ff_node_t *node;
-	ff_node_t *root, *nodeR;
+	ff_node_t *retval;
 	ff_lvalue_t lvalue;
 
+	retval = NULL;
 
 	/* callback to fetch field type and additional info */
 	if (filter->options.ff_lookup_func == NULL) {
@@ -401,48 +406,60 @@ ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter, char *fieldstr, ff_oper_t
 			lvalue.options = -1;
 	}
 
-	if (filter->options.ff_lookup_func(filter, fieldstr, &lvalue) != FF_OK) {
-		ff_set_error(filter, "Can't lookup field type for %s", fieldstr);
-		return NULL;
-	}
+	do { /* Mem guard block, break on error, let me know if this is silly solution */
+		if (filter->options.ff_lookup_func(filter, fieldstr, &lvalue) != FF_OK) {
 
-	node = ff_new_node(scanner, filter, NULL, oper, NULL);
-	if (node == NULL) {
-		return NULL;
-	}
-
-	node->type = lvalue.type;
-	node->field = lvalue.id;
-
-	if (oper == FF_OP_IN) {
-		//Htab nieje moc dobre riesenie
-		//node->value = ff_htab_from_node(node, (ff_node_t*)valstr);
-		node->value = valstr;
-		return node;
-	}
-
-	if(ff_type_cast(scanner, filter, valstr, node) != FF_OK) {
-		return NULL;
-	}
-
-	node->left = NULL;
-	node->right = NULL;
-
-	if (lvalue.id2.index == 0) {
-		if (lvalue.options != -1) {
-			free(node);
-			return NULL;
+			ff_set_error(filter, "Can't lookup field type for %s", fieldstr);
+			retval = NULL;
+			break;
 		}
-		return node;
-	} else {
-		//Setup nodes in or configuration for pair fields (src/dst etc.)
-		ff_node_t* new_leaf = ff_branch_node(node, oper, &lvalue);
-		if (new_leaf == NULL) {
+
+		node = ff_new_node(scanner, filter, NULL, oper, NULL);
+		if (node == NULL) {
+			retval = NULL;
+			break;
+		}
+
+		node->type = lvalue.type;
+		node->field = lvalue.id;
+
+		if (oper == FF_OP_IN) {
+			//Htab nieje moc dobre riesenie
+			//node->value = ff_htab_from_node(node, (ff_node_t*)valstr);
+			node->value = valstr;
+			retval = node;
+			break;
+		}
+
+		if(ff_type_cast(scanner, filter, valstr, node) != FF_OK) {
+			retval = NULL;
+			ff_free_node(node);
+			break;
+		}
+
+		node->left = NULL;
+		node->right = NULL;
+
+		if (lvalue.id2.index == 0) {
 			free(lvalue.more);
-			free(node);
+			if (lvalue.options != -1) {
+				ff_free_node(node);
+				retval = NULL;
+			}
+			retval = node;
+		} else {
+			//Setup nodes in or configuration for pair fields (src/dst etc.)
+			ff_node_t* new_root = ff_branch_node(node, oper, &lvalue);
+			if (new_root == NULL) {
+				ff_free_node(node);
+				break;
+			}
+			retval = new_root;
 		}
-		return new_leaf;
-	}
+	} while (0);
+
+	free(lvalue.more);
+	return retval;
 }
 
 /* add node entry into expr tree */
@@ -821,12 +838,13 @@ void ff_free_node(ff_node_t* node) {
 	}
 
 	ff_free_node(node->left);
-	ff_free_node(node->left);
+	ff_free_node(node->right);
 
-	free(node->value);
+	if(node->vsize > 0) {
+		free(node->value);
+	}
 
 	free(node);
-
 }
 
 /* release all resources allocated by filter */
@@ -836,8 +854,8 @@ ff_error_t ff_free(ff_t *filter) {
 
 	if (filter != NULL) {
 		ff_free_node(filter->root);
-		free(filter);
 	}
+	free(filter);
 
 	return FF_OK;
 

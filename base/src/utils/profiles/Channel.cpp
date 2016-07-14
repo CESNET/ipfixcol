@@ -80,9 +80,7 @@ Channel::Channel(std::string name)
 Channel::~Channel()
 {
 	/* Delete filter */
-	if (m_filter) {
-	    filter_free_profile(m_filter);
-	}
+	filter_free_profile(m_filter);
 }
 
 /**
