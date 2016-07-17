@@ -23,7 +23,7 @@
     \brief netflow fiter implementation - C interface
 */
 #ifndef _FLOW_FILTER_H_
-#define _FLOW_FILTER_H_
+#define _FLOW_FILTER_H_//
 
 #include <stdint.h>
 #include <stddef.h>
@@ -33,7 +33,7 @@
 
 
 typedef struct ff_ip_s { uint32_t data[4]; } ff_ip_t; /*!< IPv4/IPv6 address */
-
+typedef struct ff_net_s { ff_ip_t ip; ff_ip_t mask; } ff_net_t;
 
 /*! \brief Supported data types */
 typedef enum {
@@ -126,7 +126,7 @@ struct ff_s;
 typedef ff_error_t (*ff_lookup_func_t) (struct ff_s *, const char *, ff_lvalue_t *);
 typedef ff_error_t (*ff_data_func_t) (struct ff_s*, void *, ff_extern_id_t, char*, size_t *);
 
-typedef ff_error_t (*ff_translate_func_t) (struct ff_s *, const char *, ff_extern_id_t, uint64_t *);
+typedef ff_error_t (*ff_rval_map_func_t) (struct ff_s *, const char *, ff_extern_id_t, uint64_t *);
 
 //typedef ff_error_t (*ff__func_t) (struct ff_s*, void *, ff_extern_id_t, char*, size_t *);
 
@@ -139,7 +139,7 @@ typedef struct ff_options_s {
 	/** Value comparation function */
 	ff_data_func_t ff_data_func;
 	/** Literal constants translation function eg. TCP->6 */
-	ff_translate_func_t ff_translate_func;
+	ff_rval_map_func_t ff_rval_map_func;
 } ff_options_t;
 
 

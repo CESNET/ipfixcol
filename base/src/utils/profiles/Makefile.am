@@ -22,6 +22,7 @@ ffilter_gram.h ffilter_gram.c: ffilter_gram.y
 
 #TODO : fix ffilter_lex.c rule //What does not work ?
 ffilter_lex.c ffilter_lex.h: ffilter_lex.l
-	$(FLEX) -o ffilter_lex.c --header-file=ffilter_lex.h  $<
+	$(FLEX) --header-file=ffilter_lex.h --outfile=ffilter_lex.c $<
+	@test -f lex.yy.c && mv lex.yy.c ffilter_lex.c
 
 EXTRA_DIST = ffilter_gram.y ffilter_lex.l

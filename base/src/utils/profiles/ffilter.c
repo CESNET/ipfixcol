@@ -187,20 +187,24 @@ int str_to_int(char *str, int type, char **res, int *vsize)
 //TODO: Solve masked addresses (maybe add one more ip addr as mask so eval wold be & together ip and mask then eval
 int str_to_addr(ff_t *filter, char *str, char **res, int *numbits)
 {
-	ff_ip_t *ptr;
+	ff_net_t *ptr;
 
-	ptr = malloc(sizeof(ff_ip_t));
+	ptr = malloc(sizeof(ff_net_t));
 
 	if (ptr == NULL) {
 		return 0;
 	}
 
 	char *saveptr;
+
 	char *ip_str = strdup(str);
 	char *ip;
 	char *mask;
+	char suffix[8] = "";
 
-	memset(ptr, 0x0, sizeof(ff_ip_t));
+	int ip_ver = 4;
+
+	memset(ptr, 0x0, sizeof(ff_net_t));
 
 	*numbits = 0;
 
@@ -209,48 +213,93 @@ int str_to_addr(ff_t *filter, char *str, char **res, int *numbits)
 	ip = strtok_r(ip_str, "\\/", &saveptr);
 	mask = strtok_r(NULL, "\\/", &saveptr);
 
-	/* IPv4 only */
+	/* Try to guess ip Version */
+	if (strchr(ip_str, ':')) {
+		ip_ver = 6;
+	}
+
 	if (mask != NULL) {
 		*numbits = strtoul(mask, &saveptr, 10);
-		if (*saveptr){
+		if (*saveptr) {
 			return 1;
 		}
 
-		int req_oct = (*numbits - 1) / 8 + 1;
-
-		/* If string passes this filter, it has enough octets, rest ist concatenated */
+		int req_oct;
+		int octet;
 		char *ip_dup = strdup(ip_str);
-		int octet = 0;
-		for (ip = strtok_r(ip_dup, ".", &saveptr); octet < req_oct; octet++ ) {
-			if (ip == NULL) {
-				free(ip_str);
+		/* Using shifts to right instead of division */
+		switch (ip_ver) {
+		case 4:
+			if (*numbits > 32) { *numbits = 32; }
+			/* If string passes this filter, it has enough octets, rest ist concatenated */
+			req_oct = (*numbits >> 3) + ((*numbits & 0b111) > 0); //Get number of reqired octets
+			octet = 0;
+			/* Check for required octets, note that inet_pton does the job */
+			for (ip = strtok_r(ip_dup, ".", &saveptr); ip != NULL; octet++) {
+				ip = strtok_r(NULL, ".", &saveptr);
+			}
+			if (octet < req_oct) {
 				free(ip_dup);
+				free(ip_str);
 				return 0;
 			}
 
-			ip = strtok_r(NULL, ".", &saveptr);
+			/* Concat missing octets */
+			for (suffix[0] = 0; octet < 4; octet++) {
+				strcat(suffix, ".0");
+			}
+			ip = realloc(ip_str, strlen(ip_str) + 8 * sizeof(char));
+			if (ip) {
+				strcat(ip, suffix);
+			} else { return 0; }
+
+			uint32_t mask = ~0U;
+			ptr->mask.data[3] = htonl(~(mask >> (*numbits)));
+			break;
+		case 6:
+			if (*numbits > 128) { *numbits = 128; }
+			/* For now hope for the best and except ipv6 in xxxx:etc::0 padded form */
+			req_oct = (*numbits >> 5) + ((*numbits & 0b11111) > 0); //Get number of reqired octets
+			octet = 0;
+			/* Check for required octets, note that inet_pton does the job */
+
+			for (ip = strtok_r(ip_dup, ":", &saveptr); ip != NULL; octet++) {
+				ip = strtok_r(NULL, ":", &saveptr);
+			}
+			if (octet < req_oct && strstr(ip_str,"::") == NULL) {
+				free(ip_dup);
+				free(ip_str);
+				return 0;
+			}
+
+			int x;
+			for (x = 0; x < (*numbits >> 5); x++) {
+				ptr->mask.data[x] = ~0U;
+			}
+			if (x < 4) {
+				uint32_t mask = ~0U;
+				ptr->mask.data[x] = htonl(~(mask >> (*numbits & 0b11111)));
+			}
+			break;
 		}
 		free(ip_dup);
-
-		char *suffix = malloc(8);
-		suffix[0] = 0;
-		for (; req_oct < 4; req_oct++) {
-			strcat(suffix, ".0");
-		}
-		ip = realloc(ip_str, strlen(ip_str)+8);
-		strcat(ip, suffix);
-
-		free(suffix);
-
+	} else {
+		/* Mask was not given -> compare whole ip */
+		memset(&ptr->mask, ~0, sizeof(ff_ip_t));
 	}
 
-	if (inet_pton(AF_INET, ip, &((*ptr).data[3]))) {
-		free(ip);
+	if (inet_pton(AF_INET, ip_str, &(ptr->ip.data[3]))) {
+		ptr->mask.data[0] = ptr->mask.data[1] = ptr->mask.data[2] = 0;
+		ptr->ip.data[3] &= ptr->mask.data[3];
+		free(ip_str);
 		return 1;
 	}
 
-	if (inet_pton(AF_INET6, ip, ptr)) {
-		free(ip);
+	if (inet_pton(AF_INET6, ip_str, &ptr->ip)) {
+		for (int x = 0; x < 4; x++) {
+			ptr->ip.data[x] &= ptr->mask.data[x];
+		}
+		free(ip_str);
 		return 1;
 	}
 
@@ -264,65 +313,72 @@ ff_error_t ff_type_cast(yyscan_t *scanner, ff_t *filter, char *valstr, ff_node_t
 
 	/* determine field type and assign data to lvalue */
 	switch (node->type) {
-		//switch (lnf_fld_type(field)) {
-
-		case FF_TYPE_UINT64:
-		case FF_TYPE_UINT32:
-		case FF_TYPE_UINT16:
-		case FF_TYPE_UINT8:
-			if (str_to_uint(valstr, node->type, &node->value, &node->vsize) == 0) {
-				ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
-				return FF_ERR_OTHER;
-			}
-			break;
-		case FF_TYPE_INT64:
-		case FF_TYPE_INT32:
-		case FF_TYPE_INT16:
-		case FF_TYPE_INT8:
-			if (str_to_int(valstr, node->type, &node->value, &node->vsize) == 0) {
-				ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
-
-				return FF_ERR_OTHER;
-			}
-			break;
-		case FF_TYPE_ADDR:
-			if (str_to_addr(filter, valstr, &node->value, &node->numbits) == 0) {
-				return FF_ERR_OTHER;
-			}
-			node->vsize = sizeof(ff_ip_t);
-			break;
-
-		case FF_TYPE_UNSIGNED_BIG:
-			/* unsigned with undefined data size (internally mapped to uint64_t in network order) */
-		case FF_TYPE_UNSIGNED:
-			if (str_to_uint(valstr, FF_TYPE_UINT64, &node->value, &node->vsize) == 0) {
-				node->value = calloc(1, sizeof(uint64_t));
-				node->vsize = sizeof(uint64_t);
-				if (node->value == NULL || filter->options.ff_translate_func == NULL) {
-					node->vsize = 0;
-					ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
-					return FF_ERR_OTHER;
-				} else if (filter->options.ff_translate_func(filter, valstr, node->field,
-									     (uint64_t *)node->value) != FF_OK) {
-					free(node->value);
-					node->vsize = 0;
-					ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
-					return FF_ERR_OTHER;
-				}
-			}
-//				*(uint64_t *)node->value = htonll(*(uint64_t *)node->value);
-			break;
-		case FF_TYPE_SIGNED_BIG:
-		case FF_TYPE_SIGNED:
-			if (str_to_uint(valstr, FF_TYPE_INT64, &node->value, &node->vsize) == 0) {
-				ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
-				return FF_ERR_OTHER;
-			}
-//				*(uint64_t *)node->value = htonll(*(uint64_t *)node->value);
-			break;
-
-		default:
+	case FF_TYPE_UINT64:
+	case FF_TYPE_UINT32:
+	case FF_TYPE_UINT16:
+	case FF_TYPE_UINT8:
+		if (str_to_uint(valstr, node->type, &node->value, &node->vsize) == 0) {
+			ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
 			return FF_ERR_OTHER;
+		}
+		break;
+	case FF_TYPE_INT64:
+	case FF_TYPE_INT32:
+	case FF_TYPE_INT16:
+	case FF_TYPE_INT8:
+		if (str_to_int(valstr, node->type, &node->value, &node->vsize) == 0) {
+			ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
+
+			return FF_ERR_OTHER;
+		}
+		break;
+	case FF_TYPE_ADDR:
+		if (str_to_addr(filter, valstr, &node->value, &node->numbits) == 0) {
+			return FF_ERR_OTHER;
+		}
+		node->vsize = sizeof(ff_net_t);
+		break;
+
+		/* unsigned with undefined data size (internally mapped to uint64_t in network order) */
+	case FF_TYPE_UNSIGNED_BIG:
+	case FF_TYPE_UNSIGNED:
+		if (str_to_uint(valstr, FF_TYPE_UINT64, &node->value, &node->vsize) == 0) {
+			node->value = calloc(1, sizeof(uint64_t));
+			node->vsize = sizeof(uint64_t);
+			if (node->value == NULL || filter->options.ff_rval_map_func == NULL) {
+				node->vsize = 0;
+				ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
+				return FF_ERR_OTHER;
+			} else if (filter->options.ff_rval_map_func(filter, valstr, node->field,
+								    (uint64_t *) node->value) != FF_OK) {
+				free(node->value);
+				node->vsize = 0;
+				ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
+				return FF_ERR_OTHER;
+			}
+		}
+		break;
+	case FF_TYPE_SIGNED_BIG:
+	case FF_TYPE_SIGNED:
+		if (str_to_uint(valstr, FF_TYPE_INT64, &node->value, &node->vsize) == 0) {
+			ff_set_error(filter, "Can't convert '%s' into numeric value", valstr);
+			return FF_ERR_OTHER;
+		}
+		break;
+	case FF_TYPE_STRING:
+		if ((node->value = strdup(valstr)) != NULL) {
+			node->vsize = strlen(valstr);
+			break;
+		}
+		return FF_ERR_NOMEM;
+	case FF_TYPE_MAC:
+		/*if (str_to_mac(valstr, &node->value) == 0){
+			return FF_ERR_OTHER;
+		}
+	case FF_TYPE_TIMESTAMP:
+		*/
+	default:
+		return FF_ERR_OTHER;
 	}
 	return FF_OK;
 }
@@ -374,7 +430,7 @@ ff_node_t* ff_branch_node(ff_node_t *node, ff_oper_t oper, ff_lvalue_t* lvalue) 
 	return root;
 }
 
-/* add leaf entry into expr tree */
+/* Add leaf entry into expr tree */
 ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter, char *fieldstr, ff_oper_t oper, char *valstr) {
 	//int field;
 	ff_node_t *node;
@@ -394,16 +450,16 @@ ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter, char *fieldstr, ff_oper_t
 	lvalue.more = NULL;
 
 	switch (*fieldstr) {
-		case '|':
-			lvalue.options = FF_OP_OR;
-			fieldstr++;
-			break;
-		case '&':
-			lvalue.options = FF_OP_AND;
-			fieldstr++;
-			break;
-		default:
-			lvalue.options = -1;
+	case '|':
+		lvalue.options = FF_OP_OR;
+		fieldstr++;
+		break;
+	case '&':
+		lvalue.options = FF_OP_AND;
+		fieldstr++;
+		break;
+	default:
+		lvalue.options = -1;
 	}
 
 	do { /* Mem guard block, break on error, let me know if this is silly solution */
@@ -532,10 +588,10 @@ int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec) {
 		right = ff_eval_node(filter, node->right, rec);
 
 		switch (node->oper) {
-			case FF_OP_NOT: return !right; break;
-			case FF_OP_OR:  return left || right; break;
-			case FF_OP_AND: return left && right; break;
-			default: break;
+		case FF_OP_NOT: return !right; break;
+		case FF_OP_OR:  return left || right; break;
+		case FF_OP_AND: return left && right; break;
+		default: break;
 		}
 	}
 
@@ -552,186 +608,115 @@ int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec) {
 		switch (node->type) {
 		case FF_TYPE_UNSIGNED_BIG:
 			switch (size) {
-				case sizeof(uint16_t):
-					res = (ntohs(*(uint16_t *) buf) & *(uint16_t *)node->value) ^
-					      *(uint16_t *) node->value;
-					break;
-				case sizeof(uint8_t):
-					res = ((*(uint8_t *) buf) & *(uint8_t *)node->value) ^
-					      *(uint8_t *)node->value;
-					break;
-				default:
-					return -1;
+			case sizeof(uint16_t):
+				res = (ntohs(*(uint16_t *) buf) & *(uint16_t *) node->value) ^
+				      *(uint16_t *) node->value;
+				break;
+			case sizeof(uint8_t):
+				res = ((*(uint8_t *) buf) & *(uint8_t *) node->value) ^
+				      *(uint8_t *) node->value;
+				break;
+			default:
+				return -1;
 			}
 			break;
 		case FF_TYPE_UNSIGNED:
 			switch (size) {
-				case sizeof(uint16_t):
-					res = ((*(uint16_t *) buf) & *(uint16_t *) node->value) ^
-					      *(uint16_t *) node->value;
-					break;
-				case sizeof(uint8_t):
-					res = ((*(uint8_t *) buf) & *(uint8_t *) node->value) ^
-					      *(uint8_t *) node->value;
-					break;
-				default:
-					return -1;
+			case sizeof(uint16_t):
+				res = ((*(uint16_t *) buf) & *(uint16_t *) node->value) ^
+				      *(uint16_t *) node->value;
+				break;
+			case sizeof(uint8_t):
+				res = ((*(uint8_t *) buf) & *(uint8_t *) node->value) ^
+				      *(uint8_t *) node->value;
+				break;
+			default:
+				return -1;
 			}
 			break;
 
 			default: return -1;
 		}
-		return res == 0 ;
+		return res == 0;
 	}
 
 	switch (node->type) {
-		case FF_TYPE_UINT64: res = *(uint64_t *)&buf - *(uint64_t *)node->value; break;
-		case FF_TYPE_UINT32: res = *(uint32_t *)&buf - *(uint32_t *)node->value; break;
-		case FF_TYPE_UINT16: res = *(uint16_t *)&buf - *(uint16_t *)node->value; break;
-		case FF_TYPE_UINT8:  res = *(uint8_t *)&buf - *(uint8_t *)node->value; break;
-		case FF_TYPE_DOUBLE: res = *(double *)&buf - *(double *)node->value; break;
-		case FF_TYPE_STRING: res = strcmp((char *)&buf, node->value); break;
-		case FF_TYPE_UNSIGNED_BIG: {
-
-			if (size > node->vsize) { return -1; }		/* too big integer */
-
-			switch (size) {
-			case sizeof(uint8_t):
-				res = *(uint8_t*)buf - *(uint64_t*)(node->value);
-				break;
-			case sizeof(uint16_t):
-				res = htons(*(uint16_t*)buf) - *(uint64_t*)(node->value);
-				break;
-			case sizeof(uint32_t):
-				res = htonl(*(uint32_t*)buf) - *(uint64_t*)(node->value);
-				break;
-			case sizeof(uint64_t):
-				res = htonll(*(uint64_t*)buf) - *(uint64_t*)(node->value);
-				break;
-			default:
-				res = -1;
-				break;
+	case FF_TYPE_INT64:
+	case FF_TYPE_UINT64: res = *(uint64_t *)&buf - *(uint64_t *)node->value; break;
+	case FF_TYPE_INT32:
+	case FF_TYPE_UINT32: res = *(uint32_t *)&buf - *(uint32_t *)node->value; break;
+	case FF_TYPE_INT16:
+	case FF_TYPE_UINT16: res = *(uint16_t *)&buf - *(uint16_t *)node->value; break;
+	case FF_TYPE_INT8:
+	case FF_TYPE_UINT8:  res = *(uint8_t *)&buf - *(uint8_t *)node->value; break;
+	case FF_TYPE_DOUBLE: res = *(double *)&buf - *(double *)node->value; break;
+	case FF_TYPE_STRING: res = strcmp((char *)&buf, node->value); break;
+	case FF_TYPE_UNSIGNED_BIG:
+		if (size > node->vsize) { return -1; }		/* too big integer */
+		switch (size) {
+		case sizeof(uint8_t): res = *(uint8_t*)buf - *(uint64_t*)(node->value); break;
+		case sizeof(uint16_t): res = ntohs(*(uint16_t*)buf) - *(uint64_t*)(node->value); break;
+		case sizeof(uint32_t): res = ntohl(*(uint32_t*)buf) - *(uint64_t*)(node->value); break;
+		case sizeof(uint64_t): res = ntohll(*(uint64_t*)buf) - *(uint64_t*)(node->value); break;
+		default: res = -1;
+		}
+		break;
+	case FF_TYPE_UNSIGNED:
+		if (size > node->vsize) { return -1; }		/* too big integer */
+		switch (size) {
+		case sizeof(uint8_t): res = *(uint8_t*)buf - *(uint64_t*)(node->value); break;
+		case sizeof(uint16_t): res = *(uint16_t*)buf - *(uint64_t*)(node->value); break;
+		case sizeof(uint32_t): res = *(uint32_t*)buf - *(uint64_t*)(node->value); break;
+		case sizeof(uint64_t): res = *(uint64_t*)buf - *(uint64_t*)(node->value); break;
+		default: res = -1;
+		}
+		break;
+	case FF_TYPE_SIGNED_BIG:
+		if (size > node->vsize) { return -1; }		/* too big integer */
+		switch (size) {
+		case sizeof(int8_t): res = *(int8_t*)buf - *(int64_t*)(node->value); break;
+		case sizeof(int16_t): res = ntohs(*(int16_t*)buf) - *(int64_t*)(node->value); break;
+		case sizeof(int32_t): res = ntohl(*(int32_t*)buf) - *(int64_t*)(node->value); break;
+		case sizeof(int64_t): res = ntohll(*(int64_t*)buf) - *(int64_t*)(node->value); break;
+		default: res = -1;
+		}
+		break;
+	case FF_TYPE_SIGNED:
+		if (size > node->vsize) { return -1; }		/* too big integer */
+		switch (size) {
+		case sizeof(int8_t): res = *(int8_t*)buf - *(int64_t*)(node->value); break;
+		case sizeof(int16_t): res = *(int16_t*)buf - *(int64_t*)(node->value); break;
+		case sizeof(int32_t): res = *(int32_t*)buf - *(int64_t*)(node->value); break;
+		case sizeof(int64_t): res = *(int64_t*)buf - *(int64_t*)(node->value); break;
+		default: res = -1;
+		}
+		break;
+	/* Compare 32bit ip to 128bit encapsulated ip */
+	case FF_TYPE_ADDR:
+		/* Compare masked ip addresses*/
+		switch (size) {
+		case sizeof(ff_ip_t):
+			//Try comparation in xmm / or check if vectorised after optimizations
+			res = 0;
+			for (int x = 0; x < 4; x++) {
+				/* Does not work for comparation GT LT some adaptation might work*/
+				res = res | (((*(ff_ip_t *)buf).data[x] &
+					((ff_net_t *)node->value)->mask.data[x]) -
+					((ff_net_t *)node->value)->ip.data[x]);
 			}
 			break;
-		}
-
-		case FF_TYPE_UNSIGNED: {
-
-			if (size > node->vsize) { return -1; }		/* too big integer */
-
-			switch (size) {
-			case sizeof(uint8_t):
-				res = *(uint8_t*)buf - *(uint64_t*)(node->value);
-				break;
-			case sizeof(uint16_t):
-				res = *(uint16_t*)buf - *(uint64_t*)(node->value);
-				break;
-			case sizeof(uint32_t):
-				res = *(uint32_t*)buf - *(uint64_t*)(node->value);
-				break;
-			case sizeof(uint64_t):
-				res = *(uint64_t*)buf - *(uint64_t*)(node->value);
-				break;
-			default:
-				res = -1;
-				break;
-			}
-
-			break;
-		}
-
-		case FF_TYPE_SIGNED_BIG: {
-
-			if (size > node->vsize) { return -1; }		/* too big integer */
-
-			/* copy size bytes of the value to the top of tmp */
-			switch (size) {
-			case sizeof(int8_t):
-				res = *(int8_t*)buf - *(int64_t*)(node->value);
-				break;
-			case sizeof(int16_t):
-				res = htons(*(int16_t*)buf) - *(int64_t*)(node->value);
-				break;
-			case sizeof(int32_t):
-				res = htonl(*(int32_t*)buf) - *(int64_t*)(node->value);
-				break;
-			case sizeof(int64_t):
-				res = htonll(*(int64_t*)buf) - *(int64_t*)(node->value);
-				break;
-			default:
-				res = -1;
-				break;
+		case sizeof(uint32_t):
+			res = (((*(uint32_t *)buf) &
+				((ff_net_t *)node->value)->mask.data[3]) -
+			      	((ff_net_t *)node->value)->ip.data[3]);
+			/* Eval fails if no bits are compared */
+			if (!((ff_net_t *)node->value)->mask.data[3]) {
+				return -1;
 			}
 			break;
+		default: res = -1;
 		}
-
-		case FF_TYPE_SIGNED: {
-
-			if (size > node->vsize) { return -1; }		/* too big integer */
-
-			/* copy size bytes of the value to the top of tmp */
-			switch (size) {
-			case sizeof(int8_t):
-				res = *(int8_t*)buf - *(int64_t*)(node->value);
-				break;
-			case sizeof(int16_t):
-				res = *(int16_t*)buf - *(int64_t*)(node->value);
-				break;
-			case sizeof(int32_t):
-				res = *(int32_t*)buf - *(int64_t*)(node->value);
-				break;
-			case sizeof(int64_t):
-				res = *(int64_t*)buf - *(int64_t*)(node->value);
-				break;
-			default:
-				res = -1;
-				break;
-			}
-
-			break;
-		}
-		/* Compare 32bit ip to 128bit encapsulated ip */
-		case FF_TYPE_ADDR: {
-
-			/* Compare ip addresses by full length comparation*/
-			char *node_data;
-			int cmp_bytes_n;
-			uint8_t mask = ~0;
-
-			if (!node->numbits) {
-				switch (size) {
-					case sizeof(ff_ip_t):
-						res = memcmp(buf, node->value, node->vsize);
-						break;
-					case sizeof(ff_ip_t) >> 2:
-						res = memcmp(buf, &(((ff_ip_t *) node->value)->data[3]), node->vsize >> 2);
-						break;
-					default:
-						return -1;
-				}
-			/* Compare masked ip addresses or ranges of addresses */
-			} else if (node->oper == FF_OP_EQ){
-				switch (size) {
-					case sizeof(ff_ip_t):
-						node_data = node->value;
-						break;
-					case sizeof(ff_ip_t) >> 2:
-						node_data = &(((ff_ip_t *) node->value)->data[3]);
-						break;
-					default:
-						return -1;
-				}
-
-				cmp_bytes_n = node->numbits >> 3; // div 8
-				mask = ~(mask >> (node->numbits & 0b111));
-
-				res = memcmp(node_data, buf, cmp_bytes_n);
-
-				res += (node_data[cmp_bytes_n] & mask) ^ (buf[cmp_bytes_n] & mask);
-			}
-			break;
-		}
-
+	break;
 	default: res = memcmp(buf, node->value, node->vsize); break;
 	}
 

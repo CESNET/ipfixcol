@@ -87,9 +87,9 @@ int parse_filter(filter_profile* pdata, char* filter_str)
 		return 1;
 	}
 
-	opts->ff_lookup_func = ipf_ff_lookup_func;
-	opts->ff_data_func = ipf_ff_data_func;
-	opts->ff_translate_func = ipf_ff_translate_func;
+	opts->ff_lookup_func = ipf_lookup_func;
+	opts->ff_data_func = ipf_data_func;
+	opts->ff_rval_map_func = ipf_rval_map_func;
 
 	pdata->buffer = NULL;
 	if (ff_init(&pdata->filter, filter_str, opts) != FF_OK) {
