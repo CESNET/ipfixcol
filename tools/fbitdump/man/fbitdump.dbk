@@ -158,8 +158,7 @@
 				<term>-t <replaceable class="parameter">timewin</replaceable></term>
 				<listitem>
 					<simpara>Process only flows, which fall in the time window <replaceable class="parameter">timewin</replaceable>, 
-					where timewin is YYYY/MM/dd.hh:mm:ss[-YYYY/MM/dd.hh:mm:ss]. 
-					Any parts of the time spec may be omitted e.g YYYY/MM/dd expands to YYYY/MM/dd.00:00:00-infinity and processes all flow from a given day onwards. </simpara>
+					where timewin is YYYY/MM/dd.hh:mm:ss[-YYYY/MM/dd.hh:mm:ss].</simpara>
 				</listitem>
 			</varlistentry>
 			

@@ -38,26 +38,27 @@
 
 AC_PREREQ([2.60])
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol-postgres-output], [1.1.6])
+AC_INIT([ipfixcol-udp-cpg-input], [0.1.0])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 LT_PREREQ([2.2])
 LT_INIT([dlopen disable-static])
 
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_SRCDIR([postgres_output.c])
+AC_CONFIG_SRCDIR([udp_cpg.c])
 AC_CONFIG_HEADERS([config.h])
 
 # Initialization
-CFLAGS="-Wall"
+AM_CFLAGS="-Wall -O2 -std=gnu99"
 
 RELEASE=1
 AC_SUBST(RELEASE)
 
-# Set user name and email for packaging purposes 
+# Set user name and email for packaging purposes
 LBR_SET_CREDENTIALS
 LBR_SET_DISTRO([redhat])
 
 ############################ Check for programs ################################
+AC_PROG_CC
 
 # Check for rpmbuil
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
@@ -66,69 +67,57 @@ AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
 LBR_CHECK_XSLTPROC
 
 # Check for standard programs
-AC_PROG_CC
+AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
 ############################ Check for libraries ###############################
-
-### LibXML2 ###
-AC_CHECK_LIB([xml2], [main],
-    [LIBS="`xml2-config --libs` $LIBS"
-    CFLAGS="`xml2-config --cflags` $CFLAGS"],
-    AC_MSG_ERROR([Libxml2 not found ]))
-
-
-AC_SEARCH_LIBS([PQconnectdb], [pq],,
-    	AC_MSG_ERROR([Required library postgres missing]))
+### Corosync's closed process group (CPG) ###
+AC_CHECK_LIB([cpg], [cpg_initialize], , AC_MSG_ERROR([Required library CPG missing]))
 
 ###################### Check for configure parameters ##########################
-AC_ARG_ENABLE([debug], 
+AC_ARG_ENABLE([debug],
         AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
         [CFLAGS="$CFLAGS -Wextra -g"])
 
 AC_ARG_ENABLE([doc],
         AC_HELP_STRING([--disable-doc],[disable documentation building]))
 AM_CONDITIONAL([HAVE_DOC], [test "$enable_doc" != "no"])
-       
+
 ######################### Checks for header files ##############################
-AC_CHECK_HEADERS([arpa/inet.h inttypes.h string.h unistd.h])
+AC_CHECK_HEADERS([netdb.h netinet/in.h stdint.h stdlib.h string.h sys/socket.h unistd.h])
 
 # Check whether we can find headers dir in relative path (git repository)
-AS_IF([test -d $srcdir/../../../base/headers], 
+AS_IF([test -d $srcdir/../../../base/headers],
 	[CPPFLAGS="$CPPFLAGS -I$srcdir/../../../base/headers"]
 )
 
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
-if test "$DISTRO" = "suse"; then 
-	AC_CHECK_HEADER([pgsql/libpq-fe.h], ,[AC_MSG_ERROR([libpq-fe.h header not found. Please install postgresql-devel package.])])
-	CFLAGS="$CFLAGS -I/usr/include/pgsql" 
-elif test "$DISTRO" = "debian"; then
-	AC_CHECK_HEADER([postgresql/libpq-fe.h], ,[AC_MSG_ERROR([libpq-fe.h header not found. Please install libpq-dev package.])])
-	CFLAGS="$CFLAGS -I/usr/include/postgresql"
-else
-	AC_CHECK_HEADER([libpq-fe.h], ,[AC_MSG_ERROR([libpq-fe.h header not found. Please install postgresql-devel package.])])
-fi
-
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
+AC_HEADER_STDBOOL
 AC_C_INLINE
-AC_TYPE_INT16_T
 AC_TYPE_INT32_T
-AC_TYPE_INT64_T
-AC_TYPE_INT8_T
 AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
 AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 AC_TYPE_UINT8_T
+AC_CHECK_TYPES([ptrdiff_t])
 
 ######################## Checks for library functions ##########################
-AC_CHECK_FUNCS([malloc])
-AC_CHECK_FUNCS([realloc])
-AC_CHECK_FUNCS([memset])
+AC_FUNC_ERROR_AT_LINE
+AC_FUNC_MALLOC
+AC_CHECK_FUNCS([memset select socket strerror])
 
 ############################### Set output #####################################
+### LibXML2 ###
+AC_CHECK_LIB([xml2], [main],
+    [LIBS="`xml2-config --libs` $LIBS"
+    CFLAGS="`xml2-config --cflags` $CFLAGS"],
+    AC_MSG_ERROR([Libxml2 not found ]))
+
 
 AC_SUBST(RPMBUILD)
 if test -z "$RPMBUILD"; then
@@ -140,12 +129,12 @@ if test -z "$XSLTPROC"; then
 	AC_MSG_WARN([Due to missing xsltproc you will not able to generate MAN pages.])
 fi
 
+# substitute automake CFLAGS and CPPFLAGS variables
+AC_SUBST([AM_CPPFLAGS])
+AC_SUBST([AM_CFLAGS])
+
 # generate output
-AC_CONFIG_FILES([Makefile
-				ipfixcol-postgres-output.spec])
-
-# tools makefiles
-
+AC_CONFIG_FILES([Makefile ipfixcol-udp-cpg-input.spec])
 AC_OUTPUT
 
 AS_IF([test -z "$RPMBUILD"], AC_MSG_WARN([Due to missing rpmbuild you will not able to generate RPM package.]))
@@ -161,7 +150,7 @@ echo "
   $PACKAGE_NAME version $PACKAGE_VERSION
   Prefix........: $prefix
   Distribution..: $DISTRO
-  C++ Compiler..: $CXX $CXXFLAGS $CPPFLAGS
+  C Compiler....: $CC $AM_CFLAGS $CFLAGS $AM_CPPFLAGS $CPPFLAGS
   Linker........: $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
   Build doc.....: ${enable_doc:-yes}

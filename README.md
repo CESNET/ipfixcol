@@ -123,6 +123,10 @@ When project is separated from the structure, it needs to have the headers insta
 
 IPFIXcol can be used with Docker. See [Docker howto](docker).
 
+##<a name="ansible"></a> Ansible
+
+IPFIXcol can also be installed using Ansible orchestration. See [Ansible howto](ansible).
+
 ##<a name="rpm"></a> RPM
 Each part of framework supports building rpm packages by running
 
