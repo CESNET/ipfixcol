@@ -1,6 +1,7 @@
 /**
  * \file profilestats.cpp
  * \author Michal Kozubik <kozubik@cesnet.cz>
+ * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief intermediate plugin for IPFIXcol
  *
  * Copyright (C) 2015 CESNET, z.s.p.o.
@@ -41,8 +42,8 @@ extern "C" {
 #include <ipfixcol.h>
 #include <ipfixcol/profiles.h>
 
-/* API version constant */
-IPFIXCOL_API_VERSION;
+// API version constant
+IPFIXCOL_API_VERSION
 }
 
 #include <rrd.h>
@@ -58,52 +59,120 @@ IPFIXCOL_API_VERSION;
 #include <vector>
 #include <stdexcept>
 
-/* Identifier for verbose macros */
+// Identifier for verbose macros
 static const char *msg_module = "profilestats";
 
-/* some auxiliary functions for extracting data of exact length */
+// Some auxiliary functions for extracting data of exact length
 #define read8(ptr) (*((uint8_t *) (ptr)))
 #define read16(ptr) (*((uint16_t *) (ptr)))
 #define read32(ptr) (*((uint32_t *) (ptr)))
 #define read64(ptr) (*((uint64_t *) (ptr)))
 
-static std::vector<const char*> templ_fields = {
-	"flows",	"flows_tcp", "flows_udp", "flows_icmp", "flows_other",
-	"packets",	"packets_tcp", "packets_udp", "packets_icmp", "packets_other",
-	"traffic",	"traffic_tcp", "traffic_udp", "traffic_icmp", "traffic_other",
-				"packets_max", "packets_avg", "packets_dev",
-	"traffic_min", "traffic_max", "traffic_avg", "traffic_dev"
+/**
+ * \brief Maximum update interval of RRD (in seconds)
+ */
+#define UPDATE_INT_MAX (3600)
+
+/**
+ * \brief Minimum update interval of RRD (in seconds)
+ */
+#define UPDATE_INT_MIN (5)
+
+/**
+ * \brief Type of RRD data source
+ */
+enum RRD_DATA_SOURCE_TYPE {
+	RRD_DST_GAUGE = 0,
+	RRD_DST_COUNTER,
+	RRD_DST_DCOUNTER,
+	RRD_DST_DERIVE,
+	RRD_DST_DDERIVE,
+	RRD_DST_ABSOLUTE,
+	RRD_DST_COMPUTE
+};
+
+// String alternative of the enum above
+static const char *rrd_dst_str[] = {
+	"GAUGE",
+	"COUNTER",
+	"DCOUNTER",
+	"DERIVE",
+	"DDERIVE",
+	"ABSOLUTE",
+	"COMPUTE"
 };
 
 /**
- * Statistic field
+ * \brief Definition of a RRD source
+ */
+struct rrd_field {
+	const char           *name; /**< Name of the source      */
+	RRD_DATA_SOURCE_TYPE  type; /**< Type of the source      */
+};
+
+/**
+ * \brief Names and types of RRD Data sources
+ */
+const static std::vector<rrd_field> templ_fields = {
+	// Flows
+	{"flows",            RRD_DST_ABSOLUTE},
+	{"flows_tcp",        RRD_DST_ABSOLUTE},
+	{"flows_udp",        RRD_DST_ABSOLUTE},
+	{"flows_icmp",       RRD_DST_ABSOLUTE},
+	{"flows_other",      RRD_DST_ABSOLUTE},
+	// Packets
+	{"packets",          RRD_DST_ABSOLUTE},
+	{"packets_tcp",      RRD_DST_ABSOLUTE},
+	{"packets_udp",      RRD_DST_ABSOLUTE},
+	{"packets_icmp",     RRD_DST_ABSOLUTE},
+	{"packets_other",    RRD_DST_ABSOLUTE},
+	// Traffic
+	{"traffic",          RRD_DST_ABSOLUTE},
+	{"traffic_tcp",      RRD_DST_ABSOLUTE},
+	{"traffic_udp",      RRD_DST_ABSOLUTE},
+	{"traffic_icmp",     RRD_DST_ABSOLUTE},
+	{"traffic_other",    RRD_DST_ABSOLUTE},
+	// Others
+	{"packets_max",      RRD_DST_GAUGE},
+	{"packets_avg",      RRD_DST_GAUGE},
+	{"traffic_max",      RRD_DST_GAUGE},
+	{"traffic_avg",      RRD_DST_GAUGE}
+};
+
+/**
+ * Statistic fields
  */
 struct stats_field {
-	uint64_t sum[PROTOCOLS_PER_GROUP];	/**< Summary fields */
-	uint64_t max;	/**< Max value */
-	uint64_t min;	/**< Min value */
-	uint64_t avg;	/**< Average value */
-	uint64_t dev;	/**< Standard deviation */
+	uint64_t sum[PROTOCOLS_PER_GROUP];  /**< Summary fields                 */
+	uint64_t max;                       /**< Max value                      */
+	uint64_t avg;                       /**< Average value                  */
 };
 
 /**
  * Stats data per profile/channel
  */
 struct stats_data {
-	uint64_t last;		/**< Last RRD update */
-	std::string file;	/**< Path to RRD file */
-	stats_field fields[GROUPS];	/**< Stats fields */
+	uint64_t    last_rrd_update;  /**< Last RRD update (unix timestamp)     */
+	uint32_t    last_update_id;   /**< Identification of the last update    */
+	std::string file;             /**< Path to RRD file                     */
+	stats_field fields[GROUPS];   /**< Stats fields                         */
 };
 
 /**
  * Plugin configuration
  */
 struct plugin_conf {
-	std::string path;	/**< Path to RRD data */
-	uint32_t interval;	/**< Update interval */
-	void *ip_config;	/**< Internal process configuration */
-	std::string templ;	/**< RRD template */
-	std::map<std::string, stats_data*> stats;	/**< Stats data */
+	/** Internal process configuration                 */
+	void *ip_config;
+	/** Update interval (in seconds)                   */
+	uint32_t interval;
+	/**< RRD template for database update              */
+	std::string templ;
+	/**< Stats data for a profile                      */
+	std::map<std::string, stats_data*> stats;
+
+	/** Sequence number for update identification      */
+	uint32_t update_id;
 };
 
 /**
@@ -116,7 +185,7 @@ void process_startup_xml(plugin_conf *conf, char *params)
 {	
 	xmlChar *aux_char;
 	
-	/* Load XML configuration */
+	// Load XML configuration
 	xmlDoc *doc = xmlParseDoc(BAD_CAST params);
 	if (!doc) {
 		throw std::invalid_argument("Cannot parse config xml");
@@ -127,55 +196,45 @@ void process_startup_xml(plugin_conf *conf, char *params)
 		throw std::invalid_argument("Cannot get document root element!");
 	}
 	
-	/* Set default interval */
+	// Set default interval
 	conf->interval = DEFAULT_INTERVAL;
 
-	/* Iterate throught all elements */
+	// Iterate throught all elements
 	for (xmlNode *node = root->children; node; node = node->next) {
 		if (node->type != XML_ELEMENT_NODE) {
 			continue;
 		}
 
-		if (!xmlStrcmp(node->name, (const xmlChar *) "path")) {
-			aux_char = xmlNodeListGetString(doc, node->children, 1);
-			conf->path = std::string((char *)aux_char);
-			xmlFree(aux_char);
-		} else if (!xmlStrcmp(node->name, (const xmlChar *) "interval")) {
-			/* Statistics interval */
+		if (!xmlStrcmp(node->name, (const xmlChar *) "interval")) {
+			// Statistics interval
 			aux_char = xmlNodeListGetString(doc, node->children, 1);
 			conf->interval = atoi((const char *) aux_char);
 			xmlFree(aux_char);
 		}
 	}
 
-	/* Check if we have path to RRD folder */
-	if (conf->path.empty()) {
-		xmlFreeDoc(doc);
-		throw std::invalid_argument("Path to RRD files must be set!");
-	}
-	
-	/* Sanitize path */
-	if (conf->path[conf->path.length() - 1] != '/') {
-		conf->path += "/";
-	}
-
-	/* Free resources */
+	// Free resources
 	xmlFreeDoc(doc);
+
+	if (conf->interval < UPDATE_INT_MIN || conf->interval > UPDATE_INT_MAX) {
+		throw std::invalid_argument("Interval is out of range (5 .. 3600)");
+	}
 }
 
 /**
  * \brief Plugin initialization
  *
- * \param[in] params xml configuration
- * \param[in] ip_config	intermediate process config
- * \param[in] ip_id	intermediate process ID for template manager
- * \param[in] template_mgr template manager
- * \param[out] config config storage
+ * \param[in] params xml   Configuration
+ * \param[in] ip_config    Intermediate process config
+ * \param[in] ip_id        Intermediate process ID for template manager
+ * \param[in] template_mgr Template manager
+ * \param[out] config      Config storage
  * \return 0 on success
  */
-int intermediate_init(char* params, void* ip_config, uint32_t ip_id, ipfix_template_mgr* template_mgr, void** config)
+int intermediate_init(char* params, void* ip_config, uint32_t ip_id,
+	ipfix_template_mgr* template_mgr, void** config)
 {	
-	/* Suppress compiler warning */
+	// Suppress compiler warnings
 	(void) ip_id; (void) template_mgr;
 	
 	if (!params) {
@@ -184,23 +243,24 @@ int intermediate_init(char* params, void* ip_config, uint32_t ip_id, ipfix_templ
 	}
 	
 	try {
-		/* Create configuration */
+		// Create configuration
 		plugin_conf *conf = new plugin_conf;
+		conf->update_id = 0;
 		
-		/* Process params */
+		// Process params
 		process_startup_xml(conf, params);
 
-		/* Create template */
+		// Create template
 		conf->templ = "";
 		for (uint16_t i = 0; i < templ_fields.size(); ++i) {
 			if (i > 0) {
 				conf->templ += ":";
 			}
 
-			conf->templ += templ_fields[i];
+			conf->templ += templ_fields[i].name;
 		}
 
-		/* Save configuration */
+		// Save configuration
 		conf->ip_config = ip_config;
 		*config = conf;
 		
@@ -216,19 +276,16 @@ int intermediate_init(char* params, void* ip_config, uint32_t ip_id, ipfix_templ
 
 /**
  * \brief Create folder from file path
- *
- * \param[in] file path to the RRD stats file
+ * \param[in] file Path to the RRD stats file
  */
 void stats_create_folder_from_file(std::string file)
 {
 	std::string::size_type lastSlash = file.find_last_of('/');
-
 	if (lastSlash == std::string::npos) {
 		return;
 	}
 
 	std::string command = "mkdir -p \"" + file.substr(0, lastSlash) + "\"";
-
 	system(command.c_str());
 }
 
@@ -241,10 +298,11 @@ void stats_create_folder_from_file(std::string file)
  */
 stats_data *stats_rrd_create(plugin_conf *conf, std::string file)
 {
-	/* Create stats counters */
+	// Create stats counters
 	stats_data *stats = new stats_data;
 	stats->file = file;
-	stats->last = time(NULL);
+	stats->last_rrd_update = time(NULL);
+	stats->last_update_id = 0;
 
 	for (int group = 0; group < GROUPS; ++group) {
 		for (int field = 0; field < PROTOCOLS_PER_GROUP; ++field) {
@@ -252,66 +310,101 @@ stats_data *stats_rrd_create(plugin_conf *conf, std::string file)
 		}
 
 		stats->fields[group].avg = 0;
-		stats->fields[group].min = 0;
 		stats->fields[group].max = 0;
-		stats->fields[group].dev = 0;
 	}
 
-	/* Create file */
+	// Create a file
 	struct stat sts;
 	if (!(stat(file.c_str(), &sts) == -1 && errno == ENOENT)) {
-		/* File already exists */
+		// File already exists
 		return stats;
 	}
 
-	/* Create folder for file */
+	// Create folder for file
 	stats_create_folder_from_file(file);
 
-	char buffer[64];
+	const size_t buffer_size = 128;
+	char buffer[buffer_size];
 
-	/* Create arguments field */
+	// Create arguments field
 	std::vector<std::string> argv{};
 
-	/* Create file */
+	// Create the file
 	argv.push_back("create");
 	argv.push_back(file);;
 
 	/*
 	 * Set start time
-	 * time is decreased by 1 because immediately after RRD creation
-	 * update is called and rrd library requires at least 1 time
+	 * Time is decreased by 1 because immediately after RRD creation
+	 * update is called and RRD library requires at least 1 time
 	 * unit between updates
 	 */
-	snprintf(buffer, 64, "--start=%lld", (long long) time(NULL) - 1);
+	snprintf(buffer, buffer_size, "--start=%lld", (long long) time(NULL) - 1);
 	argv.push_back(buffer);
 
-	/* Set interval */
-	snprintf(buffer, 64, "--step=%d", conf->interval);
+	// Set interval
+	snprintf(buffer, buffer_size, "--step=%d", conf->interval);
 	argv.push_back(buffer);
 
-	/* Add all fields */
-	for (auto field: templ_fields) {
-		snprintf(buffer, 64, "DS:%s:ABSOLUTE:%u:U:U", field, conf->interval * 2); /* datasource definition, wait 2x the interval for data */
+	// Add all fields
+	for (const auto &field: templ_fields) {
+		/*
+		 * DS = Data Source definition,
+		 * Heartbeat interval defines the maximum number of seconds that may
+		 *   pass between two updates of this data source before the value of
+		 *   the data source is assumed to be *UNKNOWN*
+		 */
+		const char *name = field.name;
+		const char *type = rrd_dst_str[field.type];
+		const unsigned heartbeat = 2 * conf->interval;
+
+		snprintf(buffer, buffer_size, "DS:%s:%s:%u:0:U", name, type, heartbeat);
 		argv.push_back(buffer);
 	}
 
-	/* Add statistics */
-	argv.push_back("RRA:AVERAGE:0.5:1:51840"); /* 1 x 5min =  5 min samples 6 * 30 * 288 = 51840 => 6 * 30 days */
-	argv.push_back("RRA:AVERAGE:0.5:6:8640"); /* 6 x 5min = 30 min samples 6 * 30 *  48 = 8640  => 6 * 30 day */
-	argv.push_back("RRA:AVERAGE:0.5:24:2160"); /* 24 x 5min = 2 hour samples 6 * 30 *  12 = 2160  => 6 * 30 days */
-	argv.push_back("RRA:AVERAGE:0.5:288:1825"); /* 288 x 5min = 1 day samples 5 * 365 *   1 = 1825  => 5 * 365 days */
-	argv.push_back("RRA:MAX:0.5:1:51840");
-	argv.push_back("RRA:MAX:0.5:6:8640");
-	argv.push_back("RRA:MAX:0.5:24:2160");
-	argv.push_back("RRA:MAX:0.5:288:1825");
+	/*
+	 * Add statistics i.e. Round Robin Archives (RRA)
+	 * For example: 5 minute update interval (300 seconds):
+	 *   1 x 5m =  5 min samples, 6 *  30 * 288 (per day) = 51840 (6 * 30 days)
+	 *   6 x 5m = 30 min samples, 6 *  30 *  48 (per day) = 8640  (6 * 30 days)
+	 *  24 x 5m = 2 hour samples, 6 *  30 *  12 (per day) = 2160  (6 * 30 days)
+	 * 288 x 5m = 1 day samples,  5 * 365 *   1 (per day) = 1825  (5 * 365 days)
+	 */
+	// FIXME: add to the configuration (long/short term)
+	const unsigned history_long  = 5 * 365;   // days (5 years)
+	const unsigned history_short = 3 * 30;    // days (approx. quarter a year)
+	const unsigned secs_per_day = 24 * 60 * 60;
+	const unsigned samples_per_day = secs_per_day / conf->interval;
 
-	/* Create C style argv */
+	const unsigned total_rec_history_short = samples_per_day * history_short;
+
+	const char *fmt_avg = "RRA:AVERAGE:0.5:%u:%u";
+	const char *fmt_max = "RRA:MAX:0.5:%u:%u";
+
+	snprintf(buffer, buffer_size, fmt_avg, 1U, total_rec_history_short);
+	argv.push_back(buffer); // For 5 minute example: "RRA:AVERAGE:0.5:1:51840"
+	snprintf(buffer, buffer_size, fmt_avg, 6U, total_rec_history_short / 6U);
+	argv.push_back(buffer); // For 5 minute example: "RRA:AVERAGE:0.5:6:8640"
+	snprintf(buffer, buffer_size, fmt_avg, 24U, total_rec_history_short / 24U);
+	argv.push_back(buffer); // For 5 minute exmmple: "RRA:AVERAGE:0.5:24:2160"
+	snprintf(buffer, buffer_size, fmt_avg, samples_per_day, history_long);
+	argv.push_back(buffer); // For 5 minute exmmple: "RRA:AVERAGE:0.5:288:1825"
+	snprintf(buffer, buffer_size, fmt_max, 1U, total_rec_history_short);
+	argv.push_back(buffer); // For 5 minute example: "RRA:MAX:0.5:1:51840"
+	snprintf(buffer, buffer_size, fmt_max, 6U, total_rec_history_short / 6U);
+	argv.push_back(buffer); // For 5 minute example: "RRA:MAX:0.5:6:8640"
+	snprintf(buffer, buffer_size, fmt_max, 24U, total_rec_history_short / 24U);
+	argv.push_back(buffer); // For 5 minute exmmple: "RRA:MAX:0.5:24:2160"
+	snprintf(buffer, buffer_size, fmt_max, samples_per_day, history_long);
+	argv.push_back(buffer); // For 5 minute exmmple: "RRA:MAX:0.5:288:1825"
+
+	// Create C style argv
 	const char **c_argv = new const char*[argv.size()];
 	for (u_int16_t i = 0; i < argv.size(); ++i) {
 		c_argv[i] = argv[i].c_str();
 	}
 
-	/* Create RRD database */
+	// Create RRD database
 	if (rrd_create(argv.size(), (char **) c_argv)) {
 		MSG_ERROR(msg_module, "Create RRD DB Error: %s", rrd_get_error());
 		rrd_clear_error();
@@ -324,42 +417,46 @@ stats_data *stats_rrd_create(plugin_conf *conf, std::string file)
 
 /**
  * \brief Convert stats counters to string
- *			!! Also resets counters !!
- *
- * \param[in] last	update time
- * \param[in] fields stats fields
- * \return counters converted to string
+ * \warning Also resets all counters
+ * \param[in] last	 Update time (unix timestamp)
+ * \param[in] fields Stats fields
+ * \return Counters converted to string
  */
 std::string stats_counters_to_string(uint64_t last, stats_field fields[GROUPS])
 {
 	std::stringstream ss;
 
-	/* Add update time */
+	// Add update time
 	ss << last;
 
-	/* Compute average */
-	for (int group = 0; group < GROUPS; ++group) {
-		fields[group].avg = fields[group].sum[ST_TOTAL] / fields[FLOWS].sum[ST_TOTAL];
+	// Compute averages
+	const uint64_t total_flows = fields[FLOWS].sum[ST_TOTAL];
+	for (int group = 1; group < GROUPS; ++group) {
+		if (total_flows == 0) {
+			fields[group].avg = 0;
+		} else {
+			fields[group].avg = fields[group].sum[ST_TOTAL] / total_flows;
+		}
 	}
 
-	/* Add sum statistics */
+	// Add sum statistics
 	for (int group = 0; group < GROUPS; ++group) {
 		for (int proto = 0; proto < PROTOCOLS_PER_GROUP; ++proto) {
 			ss << ":" << fields[group].sum[proto];
 		}
 	}
 
-	/* Add rest */
-	ss << ":" << fields[PACKETS].max << ":" << fields[PACKETS].avg << ":" << fields[PACKETS].dev;
-	ss << ":" << fields[TRAFFIC].min << ":" << fields[TRAFFIC].max << ":" << fields[TRAFFIC].avg << ":" << fields[TRAFFIC].dev;
+	// Add rest
+	ss << ":" << fields[PACKETS].max << ":" << fields[PACKETS].avg;
+	ss << ":" << fields[TRAFFIC].max << ":" << fields[TRAFFIC].avg;
 
-	/* Reset values */
+	// Reset values
 	for (int group = 0; group < GROUPS; ++group) {
 		for (int proto = 0; proto < PROTOCOLS_PER_GROUP; ++proto) {
 			fields[group].sum[proto] = 0;
 		}
 
-		fields[group].min = fields[group].max = fields[group].avg = fields[group].dev = 0;
+		fields[group].max = fields[group].avg = 0;
 	}
 
 	return ss.str();
@@ -375,24 +472,24 @@ void stats_update(stats_data *stats, std::string templ)
 {
 	std::vector<std::string> argv;
 
-	/* Set RRD file */
+	// Set RRD file
 	argv.push_back("update");
 	argv.push_back(stats->file);
 
-	/* Set template */
+	// Set template
 	argv.push_back("--template");
 	argv.push_back(templ);
 
-	/* Add counters */
-	argv.push_back(stats_counters_to_string(stats->last, stats->fields));
+	// Add counters
+	argv.push_back(stats_counters_to_string(stats->last_rrd_update, stats->fields));
 
-	/* Create C style argv */
+	// Create C style argv
 	const char **c_argv = new const char*[argv.size()];
 	for (u_int16_t i = 0; i < argv.size(); ++i) {
 		c_argv[i] = argv[i].c_str();
 	}
 
-	/* Update database */
+	// Update database
 	if (rrd_update(argv.size(), (char **) c_argv)) {
 		MSG_ERROR(msg_module, "RRD Insert Error: %s", rrd_get_error());
 		rrd_clear_error();
@@ -409,11 +506,12 @@ void stats_update(stats_data *stats, std::string templ)
  */
 enum st_protocol stats_get_proto(ipfix_record *rec)
 {
-	/* Get protocolIdentifier */
-	uint8_t *data = data_record_get_field((uint8_t*) rec->record, rec->templ, 0, PROTOCOL_ID, NULL);
+	// Get "protocolIdentifier"
+	uint8_t *data = data_record_get_field((uint8_t*) rec->record, rec->templ,
+		0, PROTOCOL_ID, NULL);
 	int ipfix_proto = data ? (*((uint8_t *) (data))) : 0;
 
-	/* Decode value */
+	// Decode value
 	switch (ipfix_proto) {
 	case IG_UDP:	return ST_UDP;
 	case IG_TCP:	return ST_TCP;
@@ -423,7 +521,7 @@ enum st_protocol stats_get_proto(ipfix_record *rec)
 }
 
 /**
- * \brief Get field value
+ * \brief Get a field value
  *
  * \param[in] rec Data record
  * \param[in] field_id	Field ID
@@ -432,14 +530,15 @@ enum st_protocol stats_get_proto(ipfix_record *rec)
 uint64_t stats_field_val(ipfix_record *rec, int field_id)
 {
 	int dataSize = 0;
-	uint8_t *data = data_record_get_field((uint8_t*) rec->record, rec->templ, 0, field_id, &dataSize);
+	uint8_t *data = data_record_get_field((uint8_t*) rec->record, rec->templ,
+		0, field_id, &dataSize);
 
-	/* Field not found */
+	// Field not found
 	if (!data) {
 		return 0;
 	}
 
-	/* Convert value to host byte order */
+	// Convert value to host byte order
 	switch (dataSize) {
 	case 1: return read8(data);
 	case 2: return ntohs(read16(data));
@@ -457,7 +556,8 @@ uint64_t stats_field_val(ipfix_record *rec, int field_id)
  * \param[in] packets packet counter
  * \param[in] traffic traffic counter
  */
-void stats_update_one_proto_fields(stats_field *fields, int proto, uint64_t packets, uint64_t traffic)
+void stats_update_one_proto_fields(stats_field *fields, int proto,
+	uint64_t packets, uint64_t traffic)
 {
 	fields[PACKETS].sum[proto] += packets;
 	fields[TRAFFIC].sum[proto] += traffic;
@@ -470,34 +570,33 @@ void stats_update_one_proto_fields(stats_field *fields, int proto, uint64_t pack
 	if (fields[TRAFFIC].max < traffic) {
 		fields[TRAFFIC].max = traffic;
 	}
-
-	if (fields[PACKETS].min == 0 || fields[PACKETS].min > packets) {
-		fields[PACKETS].min = 0;
-	}
-
-	if (fields[TRAFFIC].min == 0 || fields[TRAFFIC].min > packets) {
-		fields[TRAFFIC].min = 0;
-	}
-
-	// TODO: .dev
 }
 
 /**
  * \brief Update stats counters
  *
- * \param[in] stats stats data
- * \param[in] mdata Data record's metadata
+ * \param[in] stats     Statistics
+ * \param[in] mdata     Data record's metadata
+ * \param[in] update_id Update ID (prevention of multiple updates from the same
+ *   record)
  */
-void stats_update_counters(stats_data *stats, metadata *mdata)
+void stats_update_counters(stats_data *stats, metadata *mdata, uint32_t update_id)
 {
-	/* Get stats values  */
+	if (stats->last_update_id == update_id) {
+		// Already updated
+		return;
+	}
+
+	stats->last_update_id = update_id;
+
+	// Get stats values
 	uint64_t packets = stats_field_val(&(mdata->record), PACKETS_ID);
 	uint64_t traffic = stats_field_val(&(mdata->record), TRAFFIC_ID);
 
-	/* Decode protocol */
+	// Decode protocol
 	enum st_protocol proto = stats_get_proto(&(mdata->record));
 
-	/* Update total stats */
+	// Update total stats
 	stats_update_one_proto_fields(stats->fields, ST_TOTAL, packets, traffic);
 	stats_update_one_proto_fields(stats->fields, proto, packets, traffic);
 }
@@ -510,32 +609,45 @@ void stats_update_counters(stats_data *stats, metadata *mdata)
  */
 void stats_flush_counters(plugin_conf *conf, bool force = false)
 {
-	/* Update stats */
+	// Update stats
 	uint64_t now = time(NULL);
 	for (auto st: conf->stats) {
-		/* Some pointers can be NULL after unsuccessfull creation */
+		// Some pointers can be NULL after unsuccessfull creation
 		if (!st.second) {
 			continue;
 		}
 
-		if (force || ((st.second->last / conf->interval + 1) * conf->interval <= now)) {
-			MSG_DEBUG(msg_module, "Updading statistics for: %s", st.second->file.c_str());
+		uint64_t next_window; // Start of the next window
+		next_window = (st.second->last_rrd_update / conf->interval) + 1;
+		next_window *= conf->interval;
+
+		if (force || next_window <= now) {
+			MSG_DEBUG(msg_module, "Updating statistics for: %s",
+				st.second->file.c_str());
 			stats_update(st.second, conf->templ);
-			st.second->last = now;
+			st.second->last_rrd_update = now;
 		}
 	}
 }
 
+/**
+ * \brief Get a statistic record for a RRD
+ *
+ * If the record doesn't exist, create a new one.
+ * \param[in,out] conf Plugin configuration
+ * \param[in]     file Path to the RRD
+ * \return On success returns pointer to the record. Otherwise returns NULL.
+ */
 stats_data *stats_get_rrd(plugin_conf *conf, std::string file)
 {
-	std::string fullPath = conf->path + file + ".rrd";
+	std::string fullPath = file + ".rrd";
 	stats_data *stats = conf->stats[fullPath];
 
 	if (stats) {
 		return stats;
 	}
 
-	/* Create new RRD file */
+	// Create new RRD file
 	stats = stats_rrd_create(conf, fullPath);
 	conf->stats[fullPath] = stats;
 
@@ -545,7 +657,7 @@ stats_data *stats_get_rrd(plugin_conf *conf, std::string file)
 /**
  * \brief Process IPFIX message
  *
- * \param[in] config plugin configuration
+ * \param[in] config  Plugin configuration
  * \param[in] message IPFIX message
  * \return 0 on success
  */
@@ -554,21 +666,23 @@ int intermediate_process_message(void* config, void* message)
 	plugin_conf *conf = reinterpret_cast<plugin_conf *>(config);
 	struct ipfix_message *msg = reinterpret_cast<struct ipfix_message *>(message);
 
-	/* Catch closing message */
+	// Catch closing message
 	if (msg->source_status == SOURCE_STATUS_CLOSED) {
 		pass_message(conf->ip_config, msg);
 		return 0;
 	}
 
-	/* Update counters */
+	// Update counters
 	stats_flush_counters(conf);
 
-	/* Process message */
+	// Process message
 	stats_data *profileStats, *channelStats;
+	std::string profile_dir,   channel_dir;
 
-	/* Go through all data records */
+	// Go through all data records
 	for (uint16_t i = 0; i < msg->data_records_count; ++i) {
 		struct metadata *mdata = &(msg->metadata[i]);
+		conf->update_id++;
 
 		if (!mdata || !mdata->channels) {
 			continue;
@@ -578,15 +692,21 @@ int intermediate_process_message(void* config, void* message)
 			void *channel = mdata->channels[ch];
 			void *profile = channel_get_profile(channel);
 
-			profileStats = stats_get_rrd(conf, std::string(profile_get_path(profile)) + profile_get_name(profile));
-			channelStats = stats_get_rrd(conf, std::string(channel_get_path(channel)) + channel_get_name(channel));
+			profile_dir = profile_get_directory(profile);
+			profile_dir += "/rrd/";
+			channel_dir = profile_dir + "channels/";
+
+			profileStats = stats_get_rrd(conf, profile_dir +
+				profile_get_name(profile));
+			channelStats = stats_get_rrd(conf, channel_dir +
+				channel_get_name(channel));
 
 			if (profileStats) {
-				stats_update_counters(profileStats, mdata);
+				stats_update_counters(profileStats, mdata, conf->update_id);
 			}
 
 			if (channelStats) {
-				stats_update_counters(channelStats, mdata);
+				stats_update_counters(channelStats, mdata, conf->update_id);
 			}
 		}
 	}
@@ -598,7 +718,7 @@ int intermediate_process_message(void* config, void* message)
 /**
  * \brief Close intermediate plugin
  *
- * \param[in] config plugin configuration
+ * \param[in] config Plugin configuration
  * \return 0 on success
  */
 int intermediate_close(void *config)
@@ -606,10 +726,19 @@ int intermediate_close(void *config)
 	MSG_DEBUG(msg_module, "CLOSING");
 	plugin_conf *conf = static_cast<plugin_conf*>(config);
 	
-	/* Force update counters */
+	// Force update counters
 	stats_flush_counters(conf, true);
 
-	/* Destroy configuration */
+	// Destroy configuration
+	for (auto &stat : conf->stats) {
+		stats_data *ptr = stat.second;
+		if (!ptr) {
+			continue;
+		}
+
+		delete ptr;
+	}
+
 	delete conf;
 
 	return 0;
