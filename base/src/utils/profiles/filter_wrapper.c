@@ -60,13 +60,12 @@
 static const char *msg_module = "profiler";
 
 enum nff_control_e {
-	CTL_NA = 0,
-	CTL_V4V6IP = 1,
-	CTL_MDATA_ITEM,
-	CTL_CALCULATED_ITEM,
-	CTL_FPAIR,
-
-	//CTL_EQ_MASKED
+	CTL_NA = 0x00,
+	CTL_V4V6IP = 0x01,
+	CTL_MDATA_ITEM = 0x02,
+	CTL_CALCULATED_ITEM = 0x04,
+	CTL_FLAGS = 0x08,
+	CTL_FPAIR = 0x8000,
 };
 
 enum nff_calculated_e {
@@ -151,8 +150,8 @@ static struct nff_item_s nff_ipff_map[]={
 	{"vlan", toGenEnId(CTL_FPAIR, 1, 2)},
 		{"src vlan", toEnId(0, 58)},
 		{"dst vlan", toEnId(0, 59)},
-
-	{"flags", toEnId(0, 6)},
+	/* Mark this to be evaluated like flag */
+	{"flags", toGenEnId(CTL_FLAGS, 0, 6)},
 
 	{"next ip", toGenEnId(CTL_V4V6IP, 0, 15)},
 
@@ -451,7 +450,7 @@ int specify_ipv(uint16_t *i)
 	return 1;
 }
 
-int get_external_ids(nff_item_t *item, ff_lvalue_t *lvalue)
+int set_external_ids(nff_item_t *item, ff_lvalue_t *lvalue)
 {
 	uint16_t gen, of2;
 	uint32_t of1;
@@ -459,13 +458,19 @@ int get_external_ids(nff_item_t *item, ff_lvalue_t *lvalue)
 
 	int ids = 0;
 
-	if (gen == CTL_FPAIR) {
-		ids += get_external_ids(item+of1, lvalue);
-		ids += get_external_ids(item+of2, lvalue);
+	if (gen & CTL_FPAIR) {
+		ids += set_external_ids(item+of1, lvalue);
+		ids += set_external_ids(item+of2, lvalue);
+		lvalue->options |= FFOPTS_MULTINODE;
 		return ids;
 	}
 
 	ids++;
+
+	if (gen & CTL_FLAGS) {
+		lvalue->options |= FFOPTS_FLAGS;
+	}
+
 	if (lvalue->id.index == 0) {
 		lvalue->id.index = item->en_id;
 		return ids;
@@ -515,11 +520,12 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
 			uint16_t gen, id;
 			uint32_t enterprise;
 
-			get_external_ids(item, lvalue);
+			set_external_ids(item, lvalue);
 
 			unpackEnId(lvalue->id.index, &gen, &enterprise, &id);
 
 			elem = get_element_by_id(id, enterprise);
+
 		}
 
 		//Rozhodni datovy typ pre filter
@@ -542,7 +548,6 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
 
 			case ET_FLOAT_32:
 				return FF_ERR_UNSUP;
-				break;
 			case ET_FLOAT_64:
 				lvalue->type = FF_TYPE_DOUBLE;
 				break;
@@ -564,7 +569,6 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
 			case ET_DATE_TIME_MICROSECONDS:
 			case ET_DATE_TIME_NANOSECONDS:
 				return FF_ERR_UNSUP;
-				break;
 
 			case ET_IPV4_ADDRESS:
 			case ET_IPV6_ADDRESS:
@@ -599,7 +603,7 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 	uint16_t generic_set;
 	unpackEnId(id.index, &generic_set, &en, &ie_id);
 
-	if (generic_set == CTL_MDATA_ITEM) {
+	if (generic_set & CTL_MDATA_ITEM) {
 		//Filtration by metadata not used for now
 		switch (ie_id) {
 		case 1:
@@ -614,7 +618,7 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 		//proceed directly to return
 			return FF_ERR_OTHER;
 		}
-	} else if (generic_set == CTL_CALCULATED_ITEM) {
+	} else if (generic_set & CTL_CALCULATED_ITEM) {
 	//TODO: After datatype - length conversion tools are ready finish
 		uint64_t tmp2;
 
@@ -645,7 +649,7 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 	} else {
 
 		ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, en, ie_id, &len);
-		if (ipf_field == NULL && generic_set == CTL_V4V6IP) {
+		if (ipf_field == NULL && generic_set & CTL_V4V6IP) {
 			if (specify_ipv(&ie_id)) {
 				ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, en, ie_id, &len);
 			}
@@ -698,7 +702,7 @@ ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_extern_id_t id
 				return FF_ERR_OTHER;
 			}
 			*val |= 1 << (hit - tcp_ctl_bits);
-			/* If X was in string all set all flags */
+			/* If X was in string set all flags */
 			if (*hit == 'X') {
 				*val = 1 << (hit - tcp_ctl_bits);
 				(*val)--;

@@ -45,8 +45,6 @@
 #include "ffilter.h"
 #include <stdint.h>
 
-#define FPAIR ~0LL
-
 /**
  * \brief Profile structure
  *
