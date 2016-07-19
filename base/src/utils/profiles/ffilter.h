@@ -1,7 +1,7 @@
-/* 
+/*
 
- Copyright (c) 2015, Tomas Podermanski, Lukas Hutak 
-    
+ Copyright (c) 2015, Tomas Podermanski, Lukas Hutak
+
  This file is part of libnf.net project.
 
  Libnf is free software: you can redistribute it and/or modify
@@ -88,6 +88,10 @@ typedef enum {
 	FF_ERR_OTHER_MSG  = -0xF,
 } ff_error_t;
 
+typedef enum {
+	FFOPTS_MULTINODE = 0x01,
+	FFOPTS_FLAGS = 0x02,
+} ff_opts_t;
 
 /*! \brief External identification of value */
 typedef union {
@@ -110,7 +114,7 @@ typedef struct ff_lvalue_s {
 
 	// POZN: velikost datoveho typu nemuze byt garantovana IPFIXcolem a muze
 	//       se lisit v zavislosti na velikostech dat posilanych exporterem
-	//       -> velikost dat si bude muset zjistit komparacni funkce a podle 
+	//       -> velikost dat si bude muset zjistit komparacni funkce a podle
 	//       toho se bude muset zachovat
 } ff_lvalue_t;
 
@@ -133,7 +137,7 @@ typedef ff_error_t (*ff_rval_map_func_t) (struct ff_s *, const char *, ff_extern
 
 /** \brief Options  */
 typedef struct ff_options_s {
-	
+
 	/** Element lookup function */
 	ff_lookup_func_t ff_lookup_func;
 	/** Value comparation function */
@@ -145,7 +149,7 @@ typedef struct ff_options_s {
 
 /** \brief Filter instance */
 typedef struct ff_s {
-	
+
 	ff_options_t	options;
 
 	void *root;

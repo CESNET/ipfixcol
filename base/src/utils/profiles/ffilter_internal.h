@@ -9,11 +9,11 @@ typedef enum {
 	FF_OP_NOT = 1,
 	FF_OP_OR,
 	FF_OP_AND,
-	FF_OP_BITAND,
 	FF_OP_EQ,
 	FF_OP_NE,
 	FF_OP_LT,
 	FF_OP_GT,
+	FF_OP_ISSET,
 	FF_OP_IN,
 } ff_oper_t;
 
@@ -92,5 +92,5 @@ int ff2_lex_destroy(yyscan_t yyscanner);
 
 
 
-#endif 
+#endif
 

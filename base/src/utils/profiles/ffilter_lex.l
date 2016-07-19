@@ -1,7 +1,7 @@
-/* 
+/*
 
  Copyright (c) 2013-2015, Tomas Podermanski
-    
+
  This file is part of libnf.net project.
 
  Libnf is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 %option outfile="lex.yy.c"
 %option prefix="ff2_"
 %option reentrant bison-bridge
-%option noyywrap 
+%option noyywrap
 %option nounput
 %option noinput
 
@@ -46,18 +46,19 @@ and|"&&"		{ return AND; }
 or|"||"			{ return OR; }
 not|"!"			{ return NOT; }
 
-"in ["          { return IN; }
+"in ["			{ return IN; }
 
 "="|"=="|eq		{ return EQ; }
 ">"|gt			{ return GT; }
-"<"|lt		    { return LT; }
-"("			    { return LP; }
-")"			    { return RP; }
-"["			    { return LPS; }
-"]"			    { return RPS; }
+"<"|lt			{ return LT; }
+"&"			{ return ISSET; }
+"("			{ return LP; }
+")"			{ return RP; }
+"["			{ return LPS; }
+"]"			{ return RPS; }
 
 "next"{ws}+"ip"	{
-                    // Grammar exceptions
+		    // Grammar exceptions
 					strncpy(yylval->string, "next ip", FF_MAX_STRING - 1);
 					return STRING;
 				}
