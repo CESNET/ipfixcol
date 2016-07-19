@@ -149,6 +149,22 @@
 						</varlistentry>
 						<varlistentry>
 							<term>
+								<command>%e</command>
+							</term>
+							<listitem>
+								<simpara>Day of the month, space-padded. Example: 1</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
+								<command>%E</command>
+							</term>
+							<listitem>
+								<simpara>Exporter IP address (IPv6), in non-canonical form. Example: 00000000000000000000ffffc0a80064</simpara>
+							</listitem>
+						</varlistentry>
+						<varlistentry>
+							<term>
 								<command>%H</command>
 							</term>
 							<listitem>
@@ -193,7 +209,7 @@
 								<command>%o</command>
 							</term>
 							<listitem>
-								<simpara>Observation Domain Id. Example: 1</simpara>
+								<simpara>Observation Domain ID. Example: 1</simpara>
 							</listitem>
 						</varlistentry>
 						<varlistentry>
