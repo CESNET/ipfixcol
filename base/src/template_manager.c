@@ -204,7 +204,7 @@ static int tm_fill_template(struct ipfix_template *template, void *template_reco
 
 	int i;
 	for (i = 0; i < OF_COUNT; ++i) {
-		template->offsets[i] = -1;
+		template->offsets[i].offset = -1;
 	}
 
 	return 0;

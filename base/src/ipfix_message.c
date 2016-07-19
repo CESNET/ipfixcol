@@ -594,24 +594,24 @@ uint8_t *data_record_get_field(uint8_t *record, struct ipfix_template *templ, ui
 		}
 
 		/* If offset is already known, use it */
-		if (offset_id != OF_COUNT && templ->offsets[offset_id] > 0) {
+		if (offset_id != OF_COUNT && templ->offsets[offset_id].offset > 0) {
 			if (data_length) {
-				*data_length = offsets[offset_id].length;
+				*data_length = templ->offsets[offset_id].bytes;
 			}
 
-			return (uint8_t *) record + templ->offsets[offset_id];
+			return (uint8_t *) record + templ->offsets[offset_id].offset;
 		}
 	}
 
 	int offset = data_record_field_offset(record, templ, enterprise, id, data_length);
-
 	if (offset < 0) {
 		return NULL;
 	}
 
-	/* Store offset for future lookup */
-	if (offset_id != OF_COUNT) {
-		templ->offsets[offset_id] = offset;
+	/* Store offset for future lookup (safe only for templates without variable length) */
+	if (offset_id != OF_COUNT && data_length != NULL && !(templ->data_length & 0x80000000)) {
+		templ->offsets[offset_id].offset = offset;
+		templ->offsets[offset_id].bytes = *data_length;
 	}
 
 	return (uint8_t *) record + offset;
