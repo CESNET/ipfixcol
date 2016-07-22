@@ -20,7 +20,7 @@
 */
 
 /*! \file ff_filter.h
-    \brief netflow fiter implementation - C interface
+	\brief netflow fiter implementation - C interface
 */
 #ifndef _FLOW_FILTER_H_
 #define _FLOW_FILTER_H_//
@@ -30,10 +30,10 @@
 
 #define FF_MAX_STRING  1024
 #define FF_SCALING_FACTOR  1000LL
+#define FF_MULTINODE_MAX 4
 
 
 typedef struct ff_ip_s { uint32_t data[4]; } ff_ip_t; /*!< IPv4/IPv6 address */
-typedef struct ff_net_s { ff_ip_t ip; ff_ip_t mask; } ff_net_t;
 
 /*! \brief Supported data types */
 typedef enum {
@@ -58,7 +58,7 @@ typedef enum {
 	FF_TYPE_UINT64,
 #define FF_TYPE_INT8_T int8_t
 	FF_TYPE_INT8,				/* 1Byte unsigned - fixed size */
-#define FF_TYPE_INT16_T int8_t
+#define FF_TYPE_INT16_T int16_t
 	FF_TYPE_INT16,
 #define FF_TYPE_INT32_T int32_t
 	FF_TYPE_INT32,
@@ -93,23 +93,18 @@ typedef enum {
 	FFOPTS_FLAGS = 0x02,
 } ff_opts_t;
 
-/*! \brief External identification of value */
+/** \brief External identification of value */
 typedef union {
 	uint64_t index;       /**< Index mapping      */
 	const void *ptr;      /**< Direct mapping     */
 } ff_extern_id_t;
-
-
 
 /** \brief Identification of left value */
 typedef struct ff_lvalue_s {
 	/** Type of left value */
 	ff_type_t type;
 	/** External identification */
-	ff_extern_id_t id;
-	ff_extern_id_t id2;	/* for pair/extra fields  */
-	ff_extern_id_t *more;
-	int num;
+	ff_extern_id_t id[FF_MULTINODE_MAX];
 	int options;
 
 	// POZN: velikost datoveho typu nemuze byt garantovana IPFIXcolem a muze
@@ -122,15 +117,15 @@ typedef struct ff_lvalue_s {
 //typedef struct ff_s ff_t;
 struct ff_s;
 
-/** \brief Function pointer on element lookup function
+/** \typedef Prototype of function pointer on element lookup function
  *
- * - first: Name of the element
- * - returns: lvalue identification
+ * \param[in] ff_s Filter pointer
+ * \param[in] string Name of element to identify
+ * \return lvalue identification
  */
 typedef ff_error_t (*ff_lookup_func_t) (struct ff_s *, const char *, ff_lvalue_t *);
 typedef ff_error_t (*ff_data_func_t) (struct ff_s*, void *, ff_extern_id_t, char*, size_t *);
-
-typedef ff_error_t (*ff_rval_map_func_t) (struct ff_s *, const char *, ff_extern_id_t, uint64_t *);
+typedef ff_error_t (*ff_rval_map_func_t) (struct ff_s *, const char *, ff_type_t, ff_extern_id_t, char*, size_t* );
 
 //typedef ff_error_t (*ff__func_t) (struct ff_s*, void *, ff_extern_id_t, char*, size_t *);
 

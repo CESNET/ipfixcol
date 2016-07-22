@@ -58,16 +58,16 @@ not|"!"			{ return NOT; }
 "]"			{ return RPS; }
 
 "next"{ws}+"ip"	{
-		    // Grammar exceptions
-					strncpy(yylval->string, "next ip", FF_MAX_STRING - 1);
+			// Grammar exceptions
+					strncpy(yylval->string, "nextip", FF_MAX_STRING - 1);
 					return STRING;
 				}
 "bgpnext"{ws}+"ip"	{
-					strncpy(yylval->string, "bgpnext ip", FF_MAX_STRING - 1);
+					strncpy(yylval->string, "bgpnextip", FF_MAX_STRING - 1);
 					return STRING;
 				}
 "router"{ws}+"ip"	{
-					strncpy(yylval->string, "router ip", FF_MAX_STRING - 1);
+					strncpy(yylval->string, "routerip", FF_MAX_STRING - 1);
 					return STRING;
 				}
 
@@ -77,6 +77,8 @@ not|"!"			{ return NOT; }
 "in src"|"in dst"|"out src"|"out dst"  { strncpy(yylval->string, yytext, FF_MAX_STRING - 1); return DIR_DIR_MAC; }
 src|prev|in|ingress                 { strncpy(yylval->string, yytext, FF_MAX_STRING - 1); return DIR; }
 dst|next|out|egress                 { strncpy(yylval->string, yytext, FF_MAX_STRING - 1); return DIR; }
+
+any 				{ return ANY; }
 
 ({letter}|{digit})+	{
 					strncpy(yylval->string, yytext, FF_MAX_STRING - 1);

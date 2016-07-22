@@ -90,7 +90,7 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
 
 ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data, size_t *size);
 
-ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_extern_id_t id, uint64_t* val);
+ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, ff_extern_id_t id, char *data, size_t *size);
 
 /**
  * \brief Match filter with IPFIX record
@@ -104,7 +104,6 @@ int filter_eval_node(struct filter_profile *pdata, struct ipfix_message *msg, st
 
 /**
  * \brief Free profile's data
- *
  * \param[in] profile Profile
  */
 void filter_free_profile(struct filter_profile *profile);

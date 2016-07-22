@@ -4,25 +4,29 @@
 
 #include <ffilter.h>
 
+typedef struct ff_net_s { ff_ip_t ip; ff_ip_t mask; } ff_net_t;
+
 /* supported operations */
 typedef enum {
 	FF_OP_NOT = 1,
 	FF_OP_OR,
 	FF_OP_AND,
+	FF_OP_NOOP,
 	FF_OP_EQ,
-	FF_OP_NE,
 	FF_OP_LT,
 	FF_OP_GT,
 	FF_OP_ISSET,
 	FF_OP_IN,
+	FF_OP_YES,
 } ff_oper_t;
+
 
 /* node of syntax tree */
 typedef struct ff_node_s {
 	//int field;                  /* field ID */
 	ff_extern_id_t field;        /* field ID */
 	char *value;                /*buffer allocated for data */
-	int vsize;                  /* size of data in lvalue */
+	size_t vsize;                  /* size of data in lvalue */
 	int type;                   /* data type for lvalue */
 	int numbits;                /* number of bits for IP adres */
 	ff_oper_t oper;            /* operation */
@@ -64,14 +68,16 @@ int ff_yyparse(yyscan_t yyscanner, ff_t *filter);
 void yyerror(yyscan_t yyscanner, ff_t *filter, char *);
 
 /* conversion from string to numeric/bit value */
-uint64_t get_unit(char *unit);
+int64_t get_unit(char *unit);
 int64_t strtoll_unit(char *num, char**endptr);
+uint64_t strtoul_unit(char *num, char**endptr);
 int str_to_uint(char *str, int type, char **res, int *vsize);
 int str_to_int(char *str, int type, char **res, int *vsize);
+int str_to_mac(char *str, char **res, int *vsize);
 int str_to_addr(ff_t *filter, char *str, char **res, int *numbits);
 
-
 /* add new node into parse tree */
+ff_node_t* ff_duplicate_node(ff_node_t* original);
 ff_node_t* ff_new_mval(yyscan_t scanner, ff_t *filter, char *valstr, ff_oper_t oper,  ff_node_t* nextptr);
 ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter, char *fieldstr, ff_oper_t oper, char *valstr);
 ff_node_t* ff_new_node(yyscan_t scanner, ff_t *filter, ff_node_t* left, ff_oper_t oper, ff_node_t* right);

@@ -87,10 +87,16 @@ void unpackEnId(uint64_t from, uint16_t *gen, uint32_t* en, uint16_t* id)
 /* This map of strings and ids determines which (hopefully) synonyms of nfdump filter keywords are supported */
 static struct nff_item_s nff_ipff_map[]={
 
-	//IP records, ip address is general, implicitly set to ipv6
+	/* items contains name as inputted to filter and mapping to iana ipfix enterprise and element_id */
 	{"proto", toEnId(0, 4)},
 
+	/* for functionality reasons there are extra flags in mapping part CTL_FPAIR
+	 * stands for item that maps to two other elements and mapping contain
+	 * offsets relative to itself where taget items lie in map*/
 	{"ip", toGenEnId(CTL_FPAIR, 1, 2)},
+
+	/* CTL_V4V6IP flag allows filter to try to swtch to another equivalent field
+	 * when IPv4 item is not present in flow */
 		{"src ip", toGenEnId(CTL_V4V6IP, 0, 8)},
 		{"dst ip", toGenEnId(CTL_V4V6IP, 0, 12)},
 
@@ -135,7 +141,7 @@ static struct nff_item_s nff_ipff_map[]={
 	{"icmp-code", toEnId(0, 177)},
 
 	{"as", toGenEnId(CTL_FPAIR, 1, 2)},
-		/*{"srcas", toGenEnId(CTL_MDATA_ITEM, 0, 1)},
+/*		{"srcas", toGenEnId(CTL_MDATA_ITEM, 0, 1)},
 		{"dstas", toGenEnId(CTL_MDATA_ITEM, 0, 2)},
 		{"prevas", toGenEnId(CTL_MDATA_ITEM, 0, 1)},
 		{"nextas", toGenEnId(CTL_MDATA_ITEM, 0, 2)},
@@ -150,14 +156,15 @@ static struct nff_item_s nff_ipff_map[]={
 	{"vlan", toGenEnId(CTL_FPAIR, 1, 2)},
 		{"src vlan", toEnId(0, 58)},
 		{"dst vlan", toEnId(0, 59)},
-	/* Mark this to be evaluated like flag */
+	/* CTL_FLAGS Marks this to be evaluated like flag in case no operator
+	 * is supplied */
 	{"flags", toGenEnId(CTL_FLAGS, 0, 6)},
 
-	{"next ip", toGenEnId(CTL_V4V6IP, 0, 15)},
+	{"nextip", toGenEnId(CTL_V4V6IP, 0, 15)},
 
-	{"bgpnext ip", toEnId(0, 18)},
+	{"bgpnextip", toEnId(0, 18)},
 
-	{"router ip", toEnId(0, 130)},
+	{"routerip", toEnId(0, 130)},
 
 	{"mac", toGenEnId(CTL_FPAIR, 1, 2)},
 	{"in mac", toGenEnId(CTL_FPAIR, 4, 5)},
@@ -190,7 +197,9 @@ static struct nff_item_s nff_ipff_map[]={
 	{"src tos", toEnId(0, 5)},
 	{"dst tos", toEnId(0, 55)},
 
-
+	/* CTL_CALCULATED_ITEM marks specific elements, enumerated ie_id mappings
+	 * are for calculated virtual fields */
+	 //TODO: EDIT data function
 	{"pps", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_PPS)},
 
 	{"duration", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_DURATION)},
@@ -212,15 +221,13 @@ static struct nff_item_s nff_ipff_map[]={
 
 	{"nat event", toEnId(0, 230)},
 
-/*
 	{"nip", toGenEnId(CTL_FPAIR, 1, 2)},
-		{"nsrcip", toGenEnId(CTL_V4V6IP, 0, 225)},
-		{"ndstip", toGenEnId(CTL_V4V6IP, 0, 226)},
+		{"src nip", toGenEnId(CTL_V4V6IP, 0, 225)},
+		{"dst nip", toGenEnId(CTL_V4V6IP, 0, 226)},
 
 	{"nport", toGenEnId(CTL_FPAIR, 1, 2)},
-		{"nsrcport", toEnId(0, 227)},
-		{"ndstport", toEnId(0, 228)},
-*/
+		{"src nport", toEnId(0, 227)},
+		{"dst nport", toEnId(0, 228)},
 
 	{"vrfid", toGenEnId(CTL_FPAIR, 1, 2)},
 		{"ingress vrfid", toEnId(0, 234)},
@@ -229,7 +236,8 @@ static struct nff_item_s nff_ipff_map[]={
 	{"tstart", toEnId(0, 152)},
 	{"tend", toEnId(0, 153)},
 
-	{ NULL, ~0U},
+	/* Array is null terminated */
+	{ NULL, 0U},
 };
 
 /* IANA protocol list */
@@ -374,7 +382,7 @@ static struct nff_item_s nff_proto_id_map[]={
 	{ "Shim6",	140 },
 	{ "WESP",	141 },
 	{ "ROHC",	142 },
-	{ NULL, 	~0U }
+	{ NULL, 	0U }
 };
 
 /* IANA assigned port names */
@@ -410,7 +418,7 @@ static struct nff_item_s nff_port_map[]={
 	{ "mpm-snd",	46 },
 	{ "http",	80 },
 	{ "https",	443 },
-	{ NULL, 	~0U }
+	{ NULL, 	0U }
 };
 
 int specify_ipv(uint16_t *i)
@@ -450,6 +458,12 @@ int specify_ipv(uint16_t *i)
 	return 1;
 }
 
+/**
+ * \brief set_external_ids
+ * \param[in] item
+ * \param lvalue
+ * \return number of ids set
+ */
 int set_external_ids(nff_item_t *item, ff_lvalue_t *lvalue)
 {
 	uint16_t gen, of2;
@@ -465,24 +479,16 @@ int set_external_ids(nff_item_t *item, ff_lvalue_t *lvalue)
 		return ids;
 	}
 
-	ids++;
-
 	if (gen & CTL_FLAGS) {
 		lvalue->options |= FFOPTS_FLAGS;
 	}
 
-	if (lvalue->id.index == 0) {
-		lvalue->id.index = item->en_id;
-		return ids;
-	} else if (lvalue->id2.index == 0) {
-		lvalue->id2.index = item->en_id;
-		return ids;
+	while(ids < FF_MULTINODE_MAX && lvalue->id[ids].index) {
+		ids++;
 	}
-
-	lvalue->num++;
-	lvalue->more = realloc(lvalue->more, lvalue->num * sizeof(ff_extern_id_t));
-
-	lvalue->more[lvalue->num - 1].index = item->en_id;
+	if (ids < FF_MULTINODE_MAX) {
+		lvalue->id[ids].index = item->en_id;
+	}
 
 	return ids;
 }
@@ -511,18 +517,18 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
 				return FF_ERR_UNKN;
 			}
 
-			lvalue->id.index = toEnId(elemr.result->en, elemr.result->id);
-			lvalue->id2.index = 0;
+			lvalue->id[0].index = toEnId(elemr.result->en, elemr.result->id);
+			lvalue->id[1].index = 0;
 			elem = elemr.result;
 		} else {
-			lvalue->id2.index = 0;
+			lvalue->id[1].index = 0;
 
 			uint16_t gen, id;
 			uint32_t enterprise;
 
 			set_external_ids(item, lvalue);
 
-			unpackEnId(lvalue->id.index, &gen, &enterprise, &id);
+			unpackEnId(lvalue->id[0].index, &gen, &enterprise, &id);
 
 			elem = get_element_by_id(id, enterprise);
 
@@ -665,72 +671,78 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 	return FF_OK;
 }
 
-ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_extern_id_t id, uint64_t *val)
+ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, ff_extern_id_t id, char *buf, size_t *size)
 {
 	struct nff_item_s *dict = NULL;
 	char *tcp_ctl_bits = "FSRPAUECNX";
 	char *hit = NULL;
+	*size = 0;
 
 	uint32_t en;
 	uint16_t ie_id;
 	uint16_t generic_set;
 	unpackEnId(id.index, &generic_set, &en, &ie_id);
 
-	if (en != 0 || valstr == NULL || val == NULL) {
+	if (en != 0 || valstr == NULL) {
 		return FF_ERR_OTHER;
 	}
 
 	int x;
-	*val ^= *val;
+	if (type == FF_TYPE_UNSIGNED_BIG) {
 
-	switch (ie_id) {
-	default:
-		return FF_ERR_UNSUP;
-		break;
-	case 4:
-		dict = &nff_proto_id_map[0];
-		break;
+		*size = sizeof(uint64_t);
+		uint64_t val;
 
-	/* Translate tcpControlFlags */
-	case 6:
-		if (strlen(valstr)>9) {
-			return FF_ERR_OTHER;
-		}
+		switch (ie_id) {
+		default:
+			return FF_ERR_UNSUP;
+			break;
+		case 4:
+			dict = &nff_proto_id_map[0];
+			break;
 
-		for (x = 0; x < strlen(valstr); x++) {
-			if ((hit = strchr(tcp_ctl_bits, valstr[x])) == NULL) {
+			/* Translate tcpControlFlags */
+		case 6:
+			if (strlen(valstr)>9) {
 				return FF_ERR_OTHER;
 			}
-			*val |= 1 << (hit - tcp_ctl_bits);
-			/* If X was in string set all flags */
-			if (*hit == 'X') {
-				*val = 1 << (hit - tcp_ctl_bits);
-				(*val)--;
+
+			for (x = 0; x < strlen(valstr); x++) {
+				if ((hit = strchr(tcp_ctl_bits, valstr[x])) == NULL) {
+					return FF_ERR_OTHER;
+				}
+				val |= 1 << (hit - tcp_ctl_bits);
+				/* If X was in string set all flags */
+				if (*hit == 'X') {
+					val = 1 << (hit - tcp_ctl_bits);
+					val--;
+				}
+			}
+			memcpy(buf, &val, sizeof(val));
+			return FF_OK;
+			break;
+		case 7:
+		case 11:
+			dict = &nff_port_map[0];
+			break;
+		}
+
+
+		nff_item_t *item = NULL;
+		const ipfix_element_t *elem;
+
+		for (int x = 0; dict[x].name != NULL; x++) {
+			if (!strcasecmp(valstr, dict[x].name)) {
+				item = &dict[x];
+				break;
 			}
 		}
 
-		return FF_OK;
-		break;
-	case 7:
-	case 11:
-		dict = &nff_port_map[0];
-		break;
-	}
-
-
-	nff_item_t *item = NULL;
-	const ipfix_element_t *elem;
-
-	for (int x = 0; dict[x].name != NULL; x++) {
-		if (!strcasecmp(valstr, dict[x].name)) {
-			item = &dict[x];
-			break;
+		if (item != NULL) {
+			memcpy(buf, &item->data, sizeof(item->data));
+			*size = sizeof(item->data);
+			return FF_OK;
 		}
-	}
-
-	if (item != NULL) {
-		*val = item->data;
-		return FF_OK;
 	}
 
 	return FF_ERR_OTHER;
@@ -759,7 +771,7 @@ int filter_eval_node(struct filter_profile *pdata, struct ipfix_message *msg, st
 	return ff_eval(pdata->filter, &pack);
 }
 
-/*Memory release function*/
+/* Memory release function */
 void filter_free_profile(struct filter_profile *profile)
 {
 	if (profile != NULL) {
