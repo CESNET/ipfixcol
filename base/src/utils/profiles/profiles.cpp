@@ -370,6 +370,23 @@ static std::string profile_parse_directory(xmlNodePtr root)
 
 	std::string result = (const char *) aux_char;
 	xmlFree(aux_char);
+
+	if (result.empty()) {
+		MSG_ERROR(msg_module, "The content of the 'directory' is missing "
+			"(line %ld).", xmlGetLineNo(dir_node));
+		throw_empty;
+	}
+
+	if (result.front() != '/') {
+		MSG_ERROR(msg_module, "The 'directory' must be an absolute path "
+			"(line %ld).", xmlGetLineNo(dir_node));
+		throw_empty;
+	}
+
+	if (result.back() != '/') {
+		result += '/';
+	}
+
 	return result;
 }
 
