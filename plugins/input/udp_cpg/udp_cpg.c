@@ -110,7 +110,7 @@ struct plugin_conf {
  * \brief User-defined context for CPG callbacks
  */
 struct cpg_context {
-	struct sockaddr_storage *address; /**< either struct sockaddr_in or struct sockaddr_in6 */
+	struct sockaddr_in6 *address; /**< either struct sockaddr_in or struct sockaddr_in6 */
 	char *packet; /**< packet buffer */
 	ssize_t *msg_len; /**< packet length */
 	int have_packet; /**< packet received flag */
@@ -133,6 +133,8 @@ struct cpg_context {
 static void cpg_deliver_callback(cpg_handle_t handle, const struct cpg_name *group_name, uint32_t nodeid,
 		uint32_t pid, void *msg, size_t msg_len)
 {
+	(void)group_name;
+	(void)pid;
 	cs_error_t ret;
 	unsigned int local_nodeid;
 	struct cpg_context *context;
@@ -158,9 +160,9 @@ static void cpg_deliver_callback(cpg_handle_t handle, const struct cpg_name *gro
 	}
 
 	/* Copy sockaddr from the begining of the buffer. */
-	memcpy(context->address, msg, sizeof (struct sockaddr_storage));
-	msg += sizeof (struct sockaddr_storage);
-	msg_len -= sizeof (struct sockaddr_storage);
+	memcpy(context->address, msg, sizeof (*context->address));
+	msg += sizeof (*context->address);
+	msg_len -= sizeof (*context->address);
 
 	/* Copy IPFIX header. */
 	memcpy(context->packet, msg, IPFIX_HEADER_LENGTH);
@@ -196,10 +198,9 @@ static void cpg_deliver_callback(cpg_handle_t handle, const struct cpg_name *gro
  * return 0.
  *
  * \param[in] packet IPFIX packet data.
- * \param[in] len IPFIX packet data length.
  * \return 0 when no template or option template set in packet, 1 otherwise
  */
-static int cpg_have_template_or_option(char *packet, ssize_t len)
+static int cpg_have_template_or_option(char *packet)
 {
 	struct ipfix_header *ipfix_header = (struct ipfix_header *)packet;
 	uint16_t ipfix_len = ntohs(ipfix_header->length);
@@ -528,7 +529,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 	int retval;
 	int cpg_fd = 0; //this is not stdin
 	fd_set readfds;
-	struct cpg_context cpg_context = { (struct sockaddr_storage *)&address, *packet, &len, 0 };
+	struct cpg_context cpg_context = {&address, *packet, &len, 0 };
 
 	if (conf->cpg_group_name.length > 0) {
 		/* Set user context. */
@@ -608,11 +609,11 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 			 * If there is at least one, send packet and sockaddr to all groups.
 			 * Data sets are ommited on receiving side.
 			 */
-			if (conf->cpg_group_name.length > 0 && cpg_have_template_or_option(*packet, len)) {
+			if (conf->cpg_group_name.length > 0 && cpg_have_template_or_option(*packet)) {
 				struct iovec iovec[2];
 
 				iovec[0].iov_base = &address;
-				iovec[0].iov_len = sizeof (struct sockaddr_storage);
+				iovec[0].iov_len = sizeof (address);
 				iovec[1].iov_base = *packet;
 				iovec[1].iov_len = len;
 
