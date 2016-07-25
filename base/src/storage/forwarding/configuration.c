@@ -142,7 +142,7 @@ static enum DIST_MODE config_parse_distr(const char *str)
 static int config_parse_def_values(struct parser_context *ctx)
 {
 	xmlDoc *doc = ctx->doc;
-	xmlNode *cur = ctx->node;
+	xmlNode *cur = ctx->node->children;
 	struct plugin_config *cfg = ctx->cfg;
 
 	while (cur) {
