@@ -57,7 +57,12 @@
 #define toEnId(en, id) (((uint64_t)en & 0xffffffff) << 16 |\
 			 (uint16_t)id)
 
-static const char *msg_module = "profiler";
+static const char *msg_module = "ipx_filter";
+
+struct ipx_filter {
+	ff_t *filter;
+	void* buffer;
+};
 
 enum nff_control_e {
 	CTL_NA = 0x00,
@@ -421,6 +426,13 @@ static struct nff_item_s nff_port_map[]={
 	{ NULL, 	0U }
 };
 
+/**
+ * \brief specify_ipv switches information_element to equivalent from ipv4
+ * to ipv6 and vice versa
+ *
+ * \param i Element Id
+ * \return Nonzero on success
+ */
 int specify_ipv(uint16_t *i)
 {
 	switch(*i)
@@ -761,22 +773,72 @@ int64_t data_record_get_duration(struct ipfix_record* data, struct ipfix_templat
 
 }
 
-/* Evaulate node */
-int filter_eval_node(struct filter_profile *pdata, struct ipfix_message *msg, struct ipfix_record *record)
+/* Constructor */
+ipx_filter_t *ipx_filter_create()
+{
+	ipx_filter_t *filter = NULL;
+
+	if ((filter = calloc(1, sizeof(ipx_filter_t))) == NULL){
+		return NULL;
+	}
+
+	if ((filter->buffer = malloc(FF_MAX_STRING * sizeof(char))) == NULL) {
+		free(filter);
+		return NULL;
+	}
+
+	return filter;
+}
+
+/* Memory release function */
+void ipx_filter_free(ipx_filter_t *filter)
+{
+	if (filter != NULL) {
+		ff_free(filter->filter);
+		free(filter->buffer);
+	}
+	free(filter);
+}
+
+int ipx_filter_parse(ipx_filter_t *filter, char* filter_str)
+{
+	//vytvorenie options - lookup fc data-callback fc
+	int retval = 0;
+	ff_options_t *opts = NULL;
+
+	if (ff_options_init(&opts) == FF_ERR_NOMEM) {
+		//TODO: NO MEM ERROR
+		return 1;
+	}
+
+	opts->ff_lookup_func = ipf_lookup_func;
+	opts->ff_data_func = ipf_data_func;
+	opts->ff_rval_map_func = ipf_rval_map_func;
+
+	if (ff_init(&filter->filter, filter_str, opts) != FF_OK) {
+		//TODO: SHOW POINT OF ERROR secure readable output
+		retval = 1;
+	}
+
+	ff_options_free(opts);
+
+	return retval;
+}
+
+/* Evaulate expresion tree */
+int ipx_filter_eval(ipx_filter_t *filter, struct ipfix_message *msg, struct ipfix_record *record)
 {
 	struct nff_msg_rec_s pack;
 	pack.msg = msg;
 	pack.rec = record;
 	/* Necesarry to pass both msg and record to ff_eval, passed structure that contains both */
-	return ff_eval(pdata->filter, &pack);
+	return ff_eval(filter->filter, &pack);
 }
 
-/* Memory release function */
-void filter_free_profile(struct filter_profile *profile)
+char *ipx_filter_get_error(ipx_filter_t *filter)
 {
-	if (profile != NULL) {
-		ff_free(profile->filter);
-		free(profile->buffer);
-	}
-	free(profile);
+	ff_error(filter->filter, (char *)filter->buffer, FF_MAX_STRING);
+	((char *)filter->buffer)[FF_MAX_STRING-1] = 0;
+
+	return (char *)filter->buffer;
 }

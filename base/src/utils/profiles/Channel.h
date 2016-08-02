@@ -80,7 +80,7 @@ public:
 	 * 
      * \param[in] filter filter
      */
-	void setFilter(filter_profile *filter);
+	void setFilter(ipx_filter_t *filter);
 
 	/**
 	 * \brief Get channel's ID
@@ -167,7 +167,7 @@ private:
 	std::string m_name;			/**< Channel name */
 	std::string m_pathName;		/**< path name */
 
-	filter_profile *m_filter{};	/**< Filter */
+	ipx_filter_t *m_filter{};	/**< Filter */
 	Profile *m_profile{};		/**< Profile */
 
 	channelsSet m_listeners{};	/**< Listening channels */

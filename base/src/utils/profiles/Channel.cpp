@@ -80,7 +80,7 @@ Channel::Channel(std::string name)
 Channel::~Channel()
 {
 	/* Delete filter */
-	filter_free_profile(m_filter);
+	ipx_filter_free(m_filter);
 }
 
 /**
@@ -196,7 +196,7 @@ void Channel::setProfile(Profile* profile)
 /**
  * Set channel filter
  */
-void Channel::setFilter(filter_profile* filter)
+void Channel::setFilter(ipx_filter_t* filter)
 {
 	m_filter = filter;
 }
@@ -218,7 +218,7 @@ void Channel::updatePathName()
  */
 void Channel::match(ipfix_message* msg, metadata* mdata, std::vector<Channel *>& channels)
 {
-	if (m_filter && 0 >= filter_eval_node(m_filter, msg, &(mdata->record))) {
+	if (m_filter && 0 >= ipx_filter_eval(m_filter, msg, &(mdata->record))) {
 		return;
 	}
 
@@ -236,7 +236,7 @@ void Channel::match(ipfix_message* msg, metadata* mdata, std::vector<Channel *>&
  */
 void Channel::match(struct match_data *data)
 {
-	if (m_filter && 0 >= filter_eval_node(m_filter, data->msg, &(data->mdata->record))) {
+	if (m_filter && 0 >= ipx_filter_eval(m_filter, data->msg, &(data->mdata->record))) {
 		return;
 	}
 

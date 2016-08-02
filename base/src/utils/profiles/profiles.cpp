@@ -72,35 +72,6 @@ extern "C" {
 static const char *msg_module = "profile_tree";
 
 /**
- * \brief Parse filter string
- *
- * \param[in] pdata parser data
- * \return 0 on success
- */
-int parse_filter(filter_profile* pdata, char* filter_str)
-{
-	//vytvorenie options - lookup fc data-callback fc
-	ff_options_t* opts = NULL;
-	int ret = 0;
-
-	if (ff_options_init(&opts) == FF_ERR_NOMEM) {
-		return 1;
-	}
-
-	opts->ff_lookup_func = ipf_lookup_func;
-	opts->ff_data_func = ipf_data_func;
-	opts->ff_rval_map_func = ipf_rval_map_func;
-
-	pdata->buffer = NULL;
-	if (ff_init(&pdata->filter, filter_str, opts) != FF_OK) {
-		ret = 1;
-	}
-
-	ff_options_free(opts);
-	return ret;
-}
-
-/**
  * \brief Get the uniq node's child node with given name.
  * \param[in] root Main node
  * \param[in] name Name of the child
@@ -132,9 +103,9 @@ int xml_find_uniq_element(xmlNodePtr root, const char *name, xmlNodePtr *result)
  * \param[in,out] pdata Filter parse aux. structure
  * \return Pointer to new filter or NULL
  */
-static filter_profile *channel_parse_filter(xmlNodePtr root)
+static ipx_filter_t *channel_parse_filter(xmlNodePtr root)
 {
-	filter_profile *pdata = NULL;
+	ipx_filter_t *pdata = NULL;
 	xmlNodePtr filter_node = NULL;
 
 	// Get 'filter' node
@@ -167,17 +138,17 @@ static filter_profile *channel_parse_filter(xmlNodePtr root)
 		throw_empty;
 	}
 
-	pdata = (filter_profile *) calloc(1, sizeof(filter_profile));
+	pdata = ipx_filter_create();
 	if (!pdata) {
-		MSG_ERROR(msg_module, "Unable to allocate memory");
+		MSG_ERROR(msg_module, "Unable to create filter due to memory");
 		xmlFree(aux_char);
 		throw_empty;
 	}
 
-	if (parse_filter(pdata, (char *)aux_char) != 0) {
-		MSG_ERROR(msg_module, "Error while parsing filter on line %ld",
-			xmlGetLineNo(filter_node));
-		filter_free_profile(pdata);
+	if (ipx_filter_parse(pdata, (char *)aux_char) != 0) {
+		MSG_ERROR(msg_module, "Error while parsing filter on line %ld, %s",
+			xmlGetLineNo(filter_node), ipx_filter_get_error(pdata));
+		ipx_filter_free(pdata);
 		xmlFree(aux_char);
 		throw_empty;
 	}
@@ -268,7 +239,7 @@ Channel *process_channel(Profile *profile, xmlNode *root)
 	/*Create filter*/
 	try {
 		/* Find and parse filter */
-		filter_profile *filter = channel_parse_filter(root);
+		ipx_filter_t *filter = channel_parse_filter(root);
 		channel->setFilter(filter);
 
 		/* Find and process the list of source channels */

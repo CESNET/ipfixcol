@@ -50,14 +50,12 @@
  *
  * Each filter string is representing one filter profile
  */
-struct filter_profile {
-	ff_t* filter;
-	void* buffer;
-};
+typedef struct ipx_filter ipx_filter_t;
 
 /**
  * \struct nff_item_s
  * \brief Data structure that holds extra keywords and their numerical synonyms (some with extra flags)
+ *
  * Pair field MUST be followed by adjacent fields, map is NULL terminated !
  */
 typedef struct nff_item_s {
@@ -70,27 +68,37 @@ typedef struct nff_item_s {
 
 /**
  * \brief Structure of ipfix message and record pointers
+ *
  * Used to pass ipfix_message and record as one argument
  * Needed due to char* parameter in ff_data_func_t type
  */
 typedef struct nff_msg_rec_s {
 	struct ipfix_message* msg;
 	struct ipfix_record* rec;
-}nff_msg_rec_t;
+} nff_msg_rec_t;
 
 /**
- * \brief specify_ipv switches information_element to equivalent from ipv4
- * to ipv6 and vice versa
- * \param i Element Id
- * \return Nonzero on success
+ * \brief Filter object constructor
+ *
+ * \return Pointer to initialised structure, NULL otherwise;
  */
-int specify_ipv(uint16_t *i);
+ipx_filter_t *ipx_filter_create();
 
-ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lvalue);
+/**
+ * \brief Free profile's data
+ *
+ * \param[in] profile Profile
+ */
+void ipx_filter_free(ipx_filter_t *filter);
 
-ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data, size_t *size);
-
-ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, ff_extern_id_t id, char *data, size_t *size);
+/**
+ * \breif Compile filter expression and create profile structure
+ *
+ * \param pdata
+ * \param filter_str
+ * \return
+ */
+int ipx_filter_parse(ipx_filter_t *filter, char* filter_str);
 
 /**
  * \brief Match filter with IPFIX record
@@ -100,14 +108,14 @@ ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, f
  * \param[in] record IPFIX data record
  * \return 1 when node fits, 0 otherwise
  */
-int filter_eval_node(struct filter_profile *pdata, struct ipfix_message *msg, struct ipfix_record *record);
+int ipx_filter_eval(ipx_filter_t *filter, struct ipfix_message *msg, struct ipfix_record *record);
 
 /**
- * \brief Free profile's data
- * \param[in] profile Profile
+ * \brief Copy last ff_filter error to ipx_filter internal buffer
+ *
+ * \param filter Filter context
+ * \return Pointer to error string
  */
-void filter_free_profile(struct filter_profile *profile);
-
-void filter_pase_profile(struct filter_profile **profile);
+char *ipx_filter_get_error(ipx_filter_t *filter);
 
 #endif /* FILTER_H_ */
