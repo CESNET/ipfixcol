@@ -46,7 +46,9 @@ and|"&&"		{ return AND; }
 or|"||"			{ return OR; }
 not|"!"			{ return NOT; }
 
-"in ["			{ return IN; }
+exist           { return EXIST; }
+
+"in"{ws}+"["	{ return IN; }
 
 "="|"=="|eq		{ return EQ; }
 ">"|gt			{ return GT; }

@@ -98,7 +98,7 @@ ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, f
  * \param[in] pdata filter node
  * \param[in] msg IPFIX message (filter may contain field from message header)
  * \param[in] record IPFIX data record
- * \return 1 when node fits, -1 on error
+ * \return 1 when node fits, 0 otherwise
  */
 int filter_eval_node(struct filter_profile *pdata, struct ipfix_message *msg, struct ipfix_record *record);
 
@@ -108,5 +108,6 @@ int filter_eval_node(struct filter_profile *pdata, struct ipfix_message *msg, st
  */
 void filter_free_profile(struct filter_profile *profile);
 
+void filter_pase_profile(struct filter_profile **profile);
 
 #endif /* FILTER_H_ */

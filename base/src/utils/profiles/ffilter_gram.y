@@ -52,7 +52,7 @@
 	void		*node;
 };
 
-%token AND OR NOT ANY
+%token AND OR NOT ANY EXIST
 %token EQ LT GT ISSET
 %token LP RP
 %token LPS RPS IN
@@ -88,11 +88,12 @@ value:
 
 expr:
 	ANY                 { $$ = ff_new_node(scanner, filter, NULL, FF_OP_YES, NULL); if ($$ == NULL) { YYABORT; }; }
-	|NOT expr           { $$ = ff_new_node(scanner, filter, NULL, FF_OP_NOT, $2); if ($$ == NULL) { YYABORT; }; }
+	| NOT expr          { $$ = ff_new_node(scanner, filter, NULL, FF_OP_NOT, $2); if ($$ == NULL) { YYABORT; }; }
 	| expr AND expr     { $$ = ff_new_node(scanner, filter, $1, FF_OP_AND, $3); if ($$ == NULL) { YYABORT; }; }
 	| expr OR expr      { $$ = ff_new_node(scanner, filter, $1, FF_OP_OR, $3); if ($$ == NULL) { YYABORT; }; }
 	| LP expr RP        { $$ = $2; }
 	| field value       { $$ = ff_new_leaf(scanner, filter, $1, FF_OP_NOOP, $2); if ($$ == NULL) { YYABORT; } }
+	| EXIST field       { $$ = ff_new_leaf(scanner, filter, $2, FF_OP_EXIST, ""); if ($$ == NULL) { YYABORT; } }
 	| field ISSET value { $$ = ff_new_leaf(scanner, filter, $1, FF_OP_ISSET, $3); if ($$ == NULL) { YYABORT; } }
 	| field EQ value    { $$ = ff_new_leaf(scanner, filter, $1, FF_OP_EQ, $3); if ($$ == NULL) { YYABORT; } }
 	| field LT value    { $$ = ff_new_leaf(scanner, filter, $1, FF_OP_LT, $3); if ($$ == NULL) { YYABORT; } }

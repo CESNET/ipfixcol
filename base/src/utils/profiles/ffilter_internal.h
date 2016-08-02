@@ -18,18 +18,18 @@ typedef enum {
 	FF_OP_ISSET,
 	FF_OP_IN,
 	FF_OP_YES,
+	FF_OP_EXIST
 } ff_oper_t;
 
 
 /* node of syntax tree */
 typedef struct ff_node_s {
-	//int field;                  /* field ID */
-	ff_extern_id_t field;        /* field ID */
-	char *value;                /*buffer allocated for data */
-	size_t vsize;                  /* size of data in lvalue */
-	int type;                   /* data type for lvalue */
-	int numbits;                /* number of bits for IP adres */
-	ff_oper_t oper;            /* operation */
+	ff_extern_id_t field;         /* field ID */
+	char *value;                  /*buffer allocated for data */
+	size_t vsize;                 /* size of data in lvalue */
+	int type;                     /* data type for lvalue */
+	int numbits;                  /* number of bits for IP adres */
+	ff_oper_t oper;               /* operation */
 
 	struct ff_node_s *left;
 	struct ff_node_s *right;
