@@ -59,11 +59,6 @@
 
 static const char *msg_module = "ipx_filter";
 
-struct ipx_filter {
-	ff_t *filter;
-	void* buffer;
-};
-
 enum nff_control_e {
 	CTL_NA = 0x00,
 	CTL_V4V6IP = 0x01,
@@ -79,6 +74,36 @@ enum nff_calculated_e {
 	CALC_BPS,
 	CALC_BPP
 };
+
+struct ipx_filter {
+	ff_t *filter;	//internal filter representation
+	void* buffer;	//buffer
+};
+
+/**
+ * \brief Structure of ipfix message and record pointers
+ *
+ * Used to pass ipfix_message and record as one argument
+ * Needed due to char* parameter in ff_data_func_t type
+ */
+typedef struct nff_msg_rec_s {
+	struct ipfix_message* msg;
+	struct ipfix_record* rec;
+} nff_msg_rec_t;
+
+/**
+ * \struct nff_item_s
+ * \brief Data structure that holds extra keywords and their numerical synonyms (some with extra flags)
+ *
+ * Pair field MUST be followed by adjacent fields, map is NULL terminated !
+ */
+typedef struct nff_item_s {
+	const char* name;
+	union {
+		uint64_t en_id;
+		uint64_t data;
+	};
+}nff_item_t;
 
 void unpackEnId(uint64_t from, uint16_t *gen, uint32_t* en, uint16_t* id)
 {
@@ -509,101 +534,96 @@ int set_external_ids(nff_item_t *item, ff_lvalue_t *lvalue)
 /* callback from ffilter to lookup field */
 ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lvalue)
 {
-	/* fieldstr is set - try to find field id and relevant _fget function */
-
-	if (fieldstr != NULL) {
-
-		nff_item_t* item = NULL;
-		const ipfix_element_t * elem;
-		//if((item = bsearch(&fieldstr, &nff_pair_map, 4, sizeof(nff_pair_t), nff_item_comp)) == NULL){
-		for(int x = 0; nff_ipff_map[x].name != NULL; x++){
-			if(!strcmp(fieldstr, nff_ipff_map[x].name)){
-				item = &nff_ipff_map[x];
-				break;
-			}
+	/* fieldstr is set - try to find field id and relevant function */
+	nff_item_t* item = NULL;
+	const ipfix_element_t * elem;
+	for(int x = 0; nff_ipff_map[x].name != NULL; x++){
+		if(!strcmp(fieldstr, nff_ipff_map[x].name)){
+			item = &nff_ipff_map[x];
+			break;
 		}
-		if(item == NULL){
-			//potrebujem prekodovat nazov pola na en a id
-			const ipfix_element_result_t elemr = get_element_by_name(fieldstr, false);
-			if (elemr.result == NULL){
-				return FF_ERR_UNKN;
-			}
-
-			lvalue->id[0].index = toEnId(elemr.result->en, elemr.result->id);
-			lvalue->id[1].index = 0;
-			elem = elemr.result;
-		} else {
-			lvalue->id[1].index = 0;
-
-			uint16_t gen, id;
-			uint32_t enterprise;
-
-			set_external_ids(item, lvalue);
-
-			unpackEnId(lvalue->id[0].index, &gen, &enterprise, &id);
-
-			elem = get_element_by_id(id, enterprise);
-
-		}
-
-		//Rozhodni datovy typ pre filter
-		//TODO: solve conflicting types
-		switch(elem->type){
-
-			case ET_UNSIGNED_8:
-			case ET_UNSIGNED_16:
-			case ET_UNSIGNED_32:
-			case ET_UNSIGNED_64:
-				lvalue->type = FF_TYPE_UNSIGNED_BIG;
-				break;
-
-			case ET_SIGNED_8:
-			case ET_SIGNED_16:
-			case ET_SIGNED_32:
-			case ET_SIGNED_64:
-				lvalue->type = FF_TYPE_SIGNED_BIG;
-				break;
-
-			case ET_FLOAT_32:
-				return FF_ERR_UNSUP;
-			case ET_FLOAT_64:
-				lvalue->type = FF_TYPE_DOUBLE;
-				break;
-
-			case ET_MAC_ADDRESS:
-				lvalue->type = FF_TYPE_MAC;
-				break;
-
-			case ET_OCTET_ARRAY:
-			case ET_STRING:
-				lvalue->type = FF_TYPE_STRING;
-				break;
-
-			case ET_DATE_TIME_MILLISECONDS:
-				lvalue->type = FF_TYPE_TIMESTAMP;
-				break;
-
-			case ET_DATE_TIME_SECONDS:
-			case ET_DATE_TIME_MICROSECONDS:
-			case ET_DATE_TIME_NANOSECONDS:
-				return FF_ERR_UNSUP;
-
-			case ET_IPV4_ADDRESS:
-			case ET_IPV6_ADDRESS:
-				lvalue->type = FF_TYPE_ADDR;
-				break;
-
-			case ET_BASIC_LIST:
-			case ET_SUB_TEMPLATE_LIST:
-			case ET_SUB_TEMPLATE_MULTILIST:
-			case ET_BOOLEAN:
-			case ET_UNASSIGNED:
-			default:
-				return FF_ERR_UNSUP;
-		}
-		return FF_OK;
 	}
-	return FF_ERR_OTHER;
+	if(item == NULL){
+		//potrebujem prekodovat nazov pola na en a id
+		const ipfix_element_result_t elemr = get_element_by_name(fieldstr, false);
+		if (elemr.result == NULL){
+			ff_set_error(filter, "\"%s\" element item not found", fieldstr);
+			return FF_ERR_OTHER_MSG;
+		}
+
+		lvalue->id[0].index = toEnId(elemr.result->en, elemr.result->id);
+		lvalue->id[1].index = 0;
+		elem = elemr.result;
+	} else {
+		lvalue->id[1].index = 0;
+
+		uint16_t gen, id;
+		uint32_t enterprise;
+
+		set_external_ids(item, lvalue);
+
+		//TODO: problem with flagged semi ipfix elements ie header items and calculated fields
+
+		unpackEnId(lvalue->id[0].index, &gen, &enterprise, &id);
+
+		elem = get_element_by_id(id, enterprise);
+
+	}
+
+	//Rozhodni datovy typ pre filter
+	//TODO: solve conflicting types
+	switch(elem->type){
+
+		case ET_BOOLEAN:
+		case ET_UNSIGNED_8:
+		case ET_UNSIGNED_16:
+		case ET_UNSIGNED_32:
+		case ET_UNSIGNED_64:
+			lvalue->type = FF_TYPE_UNSIGNED_BIG;
+			break;
+
+		case ET_SIGNED_8:
+		case ET_SIGNED_16:
+		case ET_SIGNED_32:
+		case ET_SIGNED_64:
+			lvalue->type = FF_TYPE_SIGNED_BIG;
+			break;
+
+		case ET_FLOAT_64:
+			lvalue->type = FF_TYPE_DOUBLE;
+			break;
+
+		case ET_MAC_ADDRESS:
+			lvalue->type = FF_TYPE_MAC;
+			break;
+
+		case ET_STRING:
+			lvalue->type = FF_TYPE_STRING;
+			break;
+
+		case ET_DATE_TIME_MILLISECONDS:
+			lvalue->type = FF_TYPE_TIMESTAMP;
+			break;
+
+		case ET_IPV4_ADDRESS:
+		case ET_IPV6_ADDRESS:
+			lvalue->type = FF_TYPE_ADDR;
+			break;
+
+		case ET_DATE_TIME_SECONDS:
+		case ET_DATE_TIME_MICROSECONDS:
+		case ET_DATE_TIME_NANOSECONDS:
+		case ET_FLOAT_32:
+		case ET_OCTET_ARRAY:
+		case ET_BASIC_LIST:
+		case ET_SUB_TEMPLATE_LIST:
+		case ET_SUB_TEMPLATE_MULTILIST:
+		case ET_UNASSIGNED:
+		default:
+			ff_set_error(filter, "ipfix item %s has unsupported format", fieldstr);
+			return FF_ERR_OTHER_MSG;
+	}
+	return FF_OK;
 }
 
 
@@ -719,7 +739,7 @@ ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, f
 				return FF_ERR_OTHER;
 			}
 
-			for (x = 0; x < strlen(valstr); x++) {
+			for (x = val = 0; x < strlen(valstr); x++) {
 				if ((hit = strchr(tcp_ctl_bits, valstr[x])) == NULL) {
 					return FF_ERR_OTHER;
 				}
@@ -778,7 +798,7 @@ ipx_filter_t *ipx_filter_create()
 {
 	ipx_filter_t *filter = NULL;
 
-	if ((filter = calloc(1, sizeof(ipx_filter_t))) == NULL){
+	if ((filter = calloc(1, sizeof(ipx_filter_t))) == NULL) {
 		return NULL;
 	}
 
@@ -807,7 +827,7 @@ int ipx_filter_parse(ipx_filter_t *filter, char* filter_str)
 	ff_options_t *opts = NULL;
 
 	if (ff_options_init(&opts) == FF_ERR_NOMEM) {
-		//TODO: NO MEM ERROR
+		ff_set_error(filter->filter, "memory allocation for options failed");
 		return 1;
 	}
 
@@ -816,7 +836,6 @@ int ipx_filter_parse(ipx_filter_t *filter, char* filter_str)
 	opts->ff_rval_map_func = ipf_rval_map_func;
 
 	if (ff_init(&filter->filter, filter_str, opts) != FF_OK) {
-		//TODO: SHOW POINT OF ERROR secure readable output
 		retval = 1;
 	}
 

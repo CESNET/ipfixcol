@@ -146,7 +146,7 @@ static ipx_filter_t *channel_parse_filter(xmlNodePtr root)
 	}
 
 	if (ipx_filter_parse(pdata, (char *)aux_char) != 0) {
-		MSG_ERROR(msg_module, "Error while parsing filter on line %ld, %s",
+		MSG_ERROR(msg_module, "While parsing filter on line %ld, %s",
 			xmlGetLineNo(filter_node), ipx_filter_get_error(pdata));
 		ipx_filter_free(pdata);
 		xmlFree(aux_char);

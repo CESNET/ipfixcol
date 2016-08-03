@@ -53,31 +53,6 @@
 typedef struct ipx_filter ipx_filter_t;
 
 /**
- * \struct nff_item_s
- * \brief Data structure that holds extra keywords and their numerical synonyms (some with extra flags)
- *
- * Pair field MUST be followed by adjacent fields, map is NULL terminated !
- */
-typedef struct nff_item_s {
-	const char* name;
-	union {
-		uint64_t en_id;
-		uint64_t data;
-	};
-}nff_item_t;
-
-/**
- * \brief Structure of ipfix message and record pointers
- *
- * Used to pass ipfix_message and record as one argument
- * Needed due to char* parameter in ff_data_func_t type
- */
-typedef struct nff_msg_rec_s {
-	struct ipfix_message* msg;
-	struct ipfix_record* rec;
-} nff_msg_rec_t;
-
-/**
  * \brief Filter object constructor
  *
  * \return Pointer to initialised structure, NULL otherwise;
