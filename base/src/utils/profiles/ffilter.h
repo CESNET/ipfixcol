@@ -32,52 +32,52 @@
 #define FF_SCALING_FACTOR  1000LL
 #define FF_MULTINODE_MAX 4
 
-
 typedef struct ff_ip_s { uint32_t data[4]; } ff_ip_t; /*!< IPv4/IPv6 address */
 
 /*! \brief Supported data types */
 typedef enum {
 	FF_TYPE_UNSUPPORTED = 0x0,  // for unsupported data types
-#define FF_TYPE_UNSUPPORTED_T void
-//	FF_TYPE_SIGNED,
-#define FF_TYPE_UNSIGNED_T char*
 	FF_TYPE_UNSIGNED,
-#define FF_TYPE_UNSIGNED_BIG_T char*
 	FF_TYPE_UNSIGNED_BIG,
-#define FF_TYPE_SIGNED_T char*
 	FF_TYPE_SIGNED,
-#define FF_TYPE_SIGNED_BIG_T char*
 	FF_TYPE_SIGNED_BIG,
-#define FF_TYPE_UINT8_T uint8_t
 	FF_TYPE_UINT8,				/* 1Byte unsigned - fixed size */
-#define FF_TYPE_UINT16_T uint8_t
 	FF_TYPE_UINT16,
-#define FF_TYPE_UINT32_T uint32_t
 	FF_TYPE_UINT32,
-#define FF_TYPE_UINT64_T uint64_t
 	FF_TYPE_UINT64,
-#define FF_TYPE_INT8_T int8_t
 	FF_TYPE_INT8,				/* 1Byte unsigned - fixed size */
-#define FF_TYPE_INT16_T int16_t
 	FF_TYPE_INT16,
-#define FF_TYPE_INT32_T int32_t
 	FF_TYPE_INT32,
-#define FF_TYPE_INT64_T int64_t
 	FF_TYPE_INT64,
-#define FF_TYPE_DOUBLE_T double
 	FF_TYPE_DOUBLE,        // TODO: muzeme si byt jisti, ze se bude pouzivat format IEEE 754?
-#define FF_TYPE_FLOAT_T double
 	FF_TYPE_ADDR,
-#define FF_TYPE_ADDR_T ff_ip_t
 	FF_TYPE_MAC,
-#define FF_TYPE_MAC_T char[8]
 	FF_TYPE_STRING,
-#define FF_TYPE_STRING_T char*
 	FF_TYPE_MPLS,
-#define FF_TYPE_MPLS_T unit32_t[10]
-	FF_TYPE_TIMESTAMP     // jaky format??
-#define FF_TYPE_TIMESTAMP_T unit64_t
+	FF_TYPE_TIMESTAMP     // TODO: jaky format??
 } ff_type_t;
+
+//TODO: Nebol by lepsi typedef ? Alebo mienene pouzite bolo len pre sizeof()
+#define FF_TYPE_UNSUPPORTED_T void
+#define FF_TYPE_UNSIGNED_T char*
+#define FF_TYPE_UNSIGNED_BIG_T char*
+#define FF_TYPE_SIGNED_T char*
+#define FF_TYPE_SIGNED_BIG_T char*
+#define FF_TYPE_UINT8_T uint8_t
+#define FF_TYPE_UINT16_T uint8_t
+#define FF_TYPE_UINT32_T uint32_t
+#define FF_TYPE_UINT64_T uint64_t
+#define FF_TYPE_INT8_T int8_t
+#define FF_TYPE_INT16_T int16_t
+#define FF_TYPE_INT32_T int32_t
+#define FF_TYPE_INT64_T int64_t
+#define FF_TYPE_DOUBLE_T double
+#define FF_TYPE_FLOAT_T double
+#define FF_TYPE_ADDR_T ff_ip_t
+#define FF_TYPE_MAC_T char[8]
+#define FF_TYPE_STRING_T char*
+#define FF_TYPE_MPLS_T unit32_t[10]
+#define FF_TYPE_TIMESTAMP_T unit64_t
 
 typedef enum {
 	FF_OK = 0x1,
@@ -127,9 +127,6 @@ typedef ff_error_t (*ff_lookup_func_t) (struct ff_s *, const char *, ff_lvalue_t
 typedef ff_error_t (*ff_data_func_t) (struct ff_s*, void *, ff_extern_id_t, char*, size_t *);
 typedef ff_error_t (*ff_rval_map_func_t) (struct ff_s *, const char *, ff_type_t, ff_extern_id_t, char*, size_t* );
 
-//typedef ff_error_t (*ff__func_t) (struct ff_s*, void *, ff_extern_id_t, char*, size_t *);
-
-
 /** \brief Options  */
 typedef struct ff_options_s {
 
@@ -141,7 +138,6 @@ typedef struct ff_options_s {
 	ff_rval_map_func_t ff_rval_map_func;
 } ff_options_t;
 
-
 /** \brief Filter instance */
 typedef struct ff_s {
 
@@ -151,7 +147,6 @@ typedef struct ff_s {
 	char error_str[FF_MAX_STRING];
 
 } ff_t;
-
 
 ff_error_t ff_options_init(ff_options_t **ff_options);
 ff_error_t ff_options_free(ff_options_t *ff_options);

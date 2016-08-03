@@ -35,13 +35,10 @@
 
 	#define YY_EXTRA_TYPE ff_t
 
-//	int ff2_lex();
-
 	void yyerror(yyscan_t scanner, ff_t *filter, char *msg)
 	{
 		ff_set_error(filter, msg);
 	}
-
 
 %}
 
