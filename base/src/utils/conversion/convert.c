@@ -621,13 +621,13 @@ int unpack_ot_enterprise_elements(struct ipfix_set_header *template_set, uint32_
 
 		/* Get number of elements */
 		struct ipfix_options_template_record *tmp = (struct ipfix_options_template_record *) template_row;
-		uint16_t numberOfElements = (ntohs(tmp->count) + ntohs(tmp->scope_field_count)) / 4;
+		uint16_t element_count = (ntohs(tmp->count) + ntohs(tmp->scope_field_count)) / 4;
 
 		/* Skip extra two bytes in option template record header */
 		template_row = (struct ipfix_set_header *) (((uint8_t *) template_row) + BYTES_2);
 
 		/* Iterate through all elements */
-		for (uint16_t i = 0; i < numberOfElements; ++i) {
+		for (uint16_t i = 0; i < element_count; ++i) {
 			template_row++;
 			remaining -= TEMPLATE_ROW_SIZE;
 
