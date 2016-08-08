@@ -432,7 +432,6 @@ int insert_timestamp_otemplate(struct ipfix_set_header *templSet)
 	struct ipfix_options_template_record *tmp;
 	uint16_t len, num, i, id;
 
-
 	/* Get template set total length without set header length */
 	len = ntohs(templSet->length) - sizeof(struct ipfix_options_template_record);
 
