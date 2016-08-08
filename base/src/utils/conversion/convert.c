@@ -611,7 +611,6 @@ int unpack_ot_enterprise_elements(struct ipfix_set_header *template_set, uint32_
 
 	/* Get template set total length without set header length */
 	uint16_t set_len = ntohs(template_row->length) - sizeof(struct ipfix_set_header);
-	MSG_DEBUG(msg_module,"PRIES: ot_unpack: Set Length = %u", set_len);
 	uint16_t added_pens = 0; /* Added private enterprise numbers */
 
 	/* Iterate through all templates */
@@ -623,7 +622,6 @@ int unpack_ot_enterprise_elements(struct ipfix_set_header *template_set, uint32_
 		struct ipfix_options_template_record *tmp = (struct ipfix_options_template_record*) template_row;
 		uint16_t numberOfElements = (ntohs(tmp->count) + ntohs(tmp->scope_field_count)) / 4;
 
-//		uint16_t numberOfElements = ntohs(template_row->length);
 		/* Skip extra two bytes in option template record header */
 		template_row = (struct ipfix_set_header*) (((uint8_t *) template_row) + 2);
 
