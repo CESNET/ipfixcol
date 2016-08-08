@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4 
 
-EXTRA_DIST = README.md LICENSE docker
+EXTRA_DIST = README.md LICENSE docker ansible
 
 SUBDIRS = base \
 	tools/fbitconvert \
@@ -22,3 +22,6 @@ SUBDIRS = base \
 	plugins/intermediate/uid
 
 # plugins/storage/unirec is not added to SUBDIRS due to its dependency on libtrap
+# plugins/storage/libnf is not added to SUBDIRS due to its dependency on libnf
+# plugins/input/udp_cpg is not added to SUBDIRS due to its dependency on libcpg
+
