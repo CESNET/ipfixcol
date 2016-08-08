@@ -615,8 +615,7 @@ int unpack_ot_enterprise_elements(struct ipfix_set_header *template_set, uint32_
 	uint16_t added_pens = 0; /* Added private enterprise numbers */
 
 	/* Iterate through all templates */
-	while ((uint8_t *) template_row < (uint8_t *) template_set + set_len) {
-		template_row++;
+	while ((uint8_t *) ++template_row < (uint8_t *) template_set + set_len) {
 		remaining -= TEMPLATE_ROW_SIZE;
 
 		/* Get number of elements */
@@ -676,8 +675,7 @@ int unpack_enterprise_elements(struct ipfix_set_header *template_set, uint32_t r
 	uint16_t added_pens = 0; /* Added private enterprise numbers */
 
 	/* Iterate through all templates */
-	while ((uint8_t *) template_row < (uint8_t *) template_set + set_len) {
-		template_row++;
+	while ((uint8_t *) ++template_row < (uint8_t *) template_set + set_len) {
 		remaining -= TEMPLATE_ROW_SIZE;
 
 		uint16_t numberOfElements = ntohs(template_row->length);
