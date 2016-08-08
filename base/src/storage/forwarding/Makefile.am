@@ -1,16 +1,15 @@
 pluginsdir = $(pkgdatadir)/plugins
-AM_CPPFLAGS = -I$(top_srcdir)/headers -I../../utils/libsiso
+AM_CPPFLAGS = -I$(top_srcdir)/headers
 
 plugins_LTLIBRARIES = ipfixcol-forwarding-output.la
-ipfixcol_forwarding_output_la_LDFLAGS = -L../../utils/libsiso/.libs -module -avoid-version -shared
-ipfixcol_forwarding_output_la_LIBADD = -lsiso
-
-if HAVE_SCTP
-ipfixcol_forwarding_output_la_LIBADD += -lsctp -lrt
-AM_CPPFLAGS += -DHAVE_SCTP
-endif
-
-ipfixcol_forwarding_output_la_SOURCES = forwarding.c forwarding.h
+ipfixcol_forwarding_output_la_LDFLAGS = -module -avoid-version -shared
+ipfixcol_forwarding_output_la_SOURCES = \
+	forwarding.c \
+	sender.c sender.h \
+	configuration.c configuration.h \
+	destination.c destination.h \
+	packet.c packet.h \
+	templates.c templates.h
 
 if HAVE_DOC
 MANSRC = ipfixcol-forwarding-output.dbk

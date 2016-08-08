@@ -1,5 +1,9 @@
 **Future release:**
 
+**Version 0.2.1:**
+
+*  Fixed several problems reported by Coverity Scan
+
 **Version 0.2.0:**
 
 *  Support for new extensions (id: 26, 27)

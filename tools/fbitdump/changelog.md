@@ -1,5 +1,12 @@
 **Future release:**
 
+**Version 0.4.1:**
+
+*  Fixed documentation of -t parameter
+*  Updated pugixml for fbitdump
+*  Fixed build with latest Fastbit library
+*  Add text IE to arg for plugins
+
 **Version 0.4.0:**
 
 *  Added parsing of plugin values in bit operations (&, |)

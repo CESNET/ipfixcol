@@ -40,6 +40,11 @@
 extern "C" {
 #include <ipfixcol.h>
 #include <ipfixcol/profiles.h>
+
+/* API version constant */
+IPFIXCOL_API_VERSION;
+}
+
 #include <libxml/parser.h>
 #include <libxml/tree.h>
 #include <siso.h>
@@ -48,10 +53,6 @@ extern "C" {
 #include <signal.h>
 #include <unistd.h>
 #include <sys/types.h>
-
-/* API version constant */
-IPFIXCOL_API_VERSION;
-}
 
 #include <stdexcept>
 #include <iostream>

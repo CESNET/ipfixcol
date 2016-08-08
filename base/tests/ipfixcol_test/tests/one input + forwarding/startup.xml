@@ -13,11 +13,16 @@
 		<destination>
 			<name>File forwarder</name>
 			<fileWriter>
+				<defaultPort>49999</defaultPort>
+				<protocol>UDP</protocol>
 				<fileFormat>forwarding</fileFormat>
-				<ipv4>127.0.0.1</ipv4>
-				<type>udp</type>
-				<templateLifeTime>1800</templateLifeTime>
-				<port>4568</port>
+				<distribution>all</distribution>
+				<templateLifetime>1800</templateLifetime>
+				<optionsTemplateLifetime>1800</optionsTemplateLifetime>
+				<destination>
+					<ip>127.0.0.1</ip>
+					<port>4568</port>
+				</destination>
 			</fileWriter>
 		</destination>
 		<destination>

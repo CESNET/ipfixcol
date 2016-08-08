@@ -38,7 +38,7 @@
 
 AC_PREREQ([2.60])
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol-json-output], [1.1.0])
+AC_INIT([ipfixcol-json-output], [1.2.0])
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([json.cpp])
@@ -87,7 +87,7 @@ AC_CHECK_FILE([/etc/protocols],[PROTOCOLS=yes], [PROTOCOLS=no])
 ###################### Check for configure parameters ##########################
 AC_ARG_ENABLE([debug], 
 	AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
-		[AM_CXXFLAGS="$AM_CXXFLAGS -Wextra -g"])
+		[AM_CXXFLAGS="$AM_CXXFLAGS -Wextra -g -O0"])
 
 AC_ARG_ENABLE([doc],
 	AC_HELP_STRING([--disable-doc],[disable documentation building]))

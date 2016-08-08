@@ -49,61 +49,63 @@ extern "C" {
 #include <vector>
 
 #include "fastbit.h"
-#include "fastbit_table.h"
-#include "FlowWatch.h"
 
-class template_table;
+struct fastbit_config {
+	/* Stores information on templates per flow data source (identified by
+	 * exporter IP address and ODID).
+	 */
+	std::map<uint32_t, /* CRC32 of IP address */
+			std::map<uint32_t, /* ODID */
+					struct od_info>*> *od_infos;
 
-struct fastbit_config{
-	/*ob_dom stores data buffers based on received templates
-	 * (observation ids -> template id -> template data */
-	std::map<uint32_t,std::map<uint16_t,template_table*>* > *ob_dom;
-
-	std::map<uint32_t,FlowWatch> *flowWatch;
-
-	/* element info from ipfix-elements.xml is loaded into elements_types
-	 * (Enterprise id -> element id -> element storage type) */
-	std::map<uint32_t,std::map<uint16_t,enum store_type> > *elements_types;
-
-	/* index_en_id stores elements which should be indexed.
-	 * elements stored as column names ('e0id4') */
+	/* Stores elements that should be indexed */
 	std::vector<std::string> *index_en_id;
 
-	/* directories for index & reorder thread */
+	/* Directories for index & reorder thread */
 	std::vector<std::string> *dirs;
 
-	/* time_window specifies time interval for storage directory rotation
-	 * (0 = no time based rotation ) */
+	/* Specifies time interval for storage directory rotation
+	 * (0 = no time based rotation)
+	 */
 	int time_window;
 
-	/* records_window specifies record count for storage directory rotation
-	 * (0 = no record based rotation ) */
+	/* Specifies record count for storage directory rotation
+	 * (0 = no record based rotation)
+	 */
 	int records_window;
 
-	bool new_dir; /** Is current directory a new one? */
+	bool new_dir; /* Is current directory a new one? */
 
-	/* hold type of name strategy for storage directory rotation */
+	/* Holds type of name strategy for storage directory rotation */
 	enum name_type dump_name;
 
-	/* path to directory where should be storage directory flushed */
+	/* Path to directory where should be storage directory flushed */
 	std::string sys_dir;
 
-	/* current window directory */
+	/* Current window directory */
 	std::string window_dir;
 
-	/* user prefix for storage directory */
+	/* User prefix for storage directory */
 	std::string prefix;
 
-	/* time of last flush (used for time based rotation,
-	 * name is based on start of interval not its end!) */
+	/* Time of last flush, used for time based rotation.
+	 * Name is based on start of interval, not its end.
+	 */
 	time_t last_flush;
 
-	/* specifies if stored data should be reordered */
-	int reorder;
+	/* Specifies whether stored data should be reordered */
+	bool reorder;
 
-	/* specifies if indexes should be build during storage.
-	 * 0 = no indexes, 1 = index all, 2 = index only marked elements*/
+	/* Specifies whether indexes should be build during storage.
+	 * 0 = no indexes, 1 = index all, 2 = index only marked elements
+	 */
 	int indexes;
+
+	/* Specifices whether .sp files should be created */
+	bool create_sp_files;
+
+	/* Specifies whether field lengths should be taken from template or ipfix-elements.xml */
+	bool use_template_field_lengths;
 
 	/* size of buffer (number of values)*/
 	int buff_size;

@@ -18,9 +18,10 @@
     *  [fbitmerge](#fbitmerge)
 	*  [profilesdaemon](#profilesdaemon)
 6.  [Howto build](#build)
-7.  [RPM](#rpm)
-8.  [FastBit](#fastbit)
-9.  [Contact us](#contact)
+7.  [Docker](#docker)
+8.  [RPM](#rpm)
+9.  [FastBit](#fastbit)
+10.  [Contact us](#contact)
     *  [Reporting bugs](#bug)
     *  [Forum](#mailing)
 
@@ -79,7 +80,7 @@ More info in it's [README](tools/fbitdump/)
 
 ###<a name="fbitexpire"></a> fbitexpire
 
-Daemon for removal old data.
+Daemon for removing old data.
 
 More info in it's [README](tools/fbitexpire/)
 
@@ -117,6 +118,14 @@ Or you can build each part (collector, tool(s), extarnal plugin(s)) separately.
 
 The projects that depend on ipfixcol headers check the reltive path to base/header directory to use headers. 
 When project is separated from the structure, it needs to have the headers installed (ipfixcol-devel package).
+
+##<a name="docker"></a> Docker
+
+IPFIXcol can be used with Docker. See [Docker howto](docker).
+
+##<a name="ansible"></a> Ansible
+
+IPFIXcol can also be installed using Ansible orchestration. See [Ansible howto](ansible).
 
 ##<a name="rpm"></a> RPM
 Each part of framework supports building rpm packages by running

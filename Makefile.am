@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4 
 
-EXTRA_DIST = README.md LICENSE
+EXTRA_DIST = README.md LICENSE docker
 
 SUBDIRS = base \
 	tools/fbitconvert \

@@ -1,5 +1,24 @@
 **Future release:**
 
+**Version 0.9.1:**
+
+* Statistics: print statistics with default verbosity level
+* Fixed a memory leak in TCP input plugin
+* Extended test cases for two ODIDs from same source
+* UDP input: consider ODID when identifying unique transport sessions
+* New forwarding plugin (added support for automatic reconnection of destinations, zero-copy packet builder, template remapping, dropped sup
+port for UDP and SCTP)
+* Filter plugin: fixed filter for IP addresses
+* Fixed timestamp conversion for NetFlowv9
+* Fixed closing of SCTP connection bug reported by Krzysztof Dudkiewicz
+* Improved ipfixsend (real time sending option, bugfixes)
+* Fixed several build issues (extern "C" problems, libxml dependency)
+* Better handling of multiple fileds with same IE number
+* Bug fixes in the profiler
+* Improved semantics and coding style
+
+* Many thanks to Kirc for improvements, bug reports and overall contribution to the codebase
+
 **Version 0.9.0:**
 
 * Many bug fixes

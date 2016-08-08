@@ -39,7 +39,7 @@
 AC_PREREQ([2.60])
 
 # Process this file with autoconf to produce a configure script.
-AC_INIT([fbitdump], [0.4.0])
+AC_INIT([fbitdump], [0.4.1])
 LT_INIT([dlopen disable-static])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 
@@ -93,6 +93,9 @@ AM_CXXFLAGS="$AM_CXXFLAGS $CXXSTD"
 
 AC_SEARCH_LIBS([fastbit_init], [fastbit],,
     	AC_MSG_ERROR([Required library fastbit missing]))
+
+PKG_CHECK_MODULES([LIBFASTBIT], [fastbit >= 2.0.3.2],,
+		AC_MSG_ERROR([Fastbit library version is too low (< 2.0.3.2)]))
 
 ### dynamic linker ###
 AC_SEARCH_LIBS([dlopen], [dl],,

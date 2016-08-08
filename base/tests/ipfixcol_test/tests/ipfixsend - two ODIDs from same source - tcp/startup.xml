@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
+    <collectingProcess>
+        <name>TCP collector</name>
+        <tcpCollector>
+            <name>Listening port 4739</name>
+            <localPort>4739</localPort>
+            <localIPAddress>127.0.0.1</localIPAddress>
+        </tcpCollector>
+        <exportingProcess>File writer</exportingProcess>
+    </collectingProcess>
+
+    <exportingProcess>
+        <name>File writer</name>
+        <destination>
+            <name>File writer</name>
+            <fileWriter>
+                <fileFormat>ipfix</fileFormat>
+                <file>file:./out.ipfix</file>
+            </fileWriter>
+        </destination>
+    </exportingProcess>
+
+    <intermediatePlugins>
+        <dummy>
+        </dummy>
+    </intermediatePlugins>
+</ipfix>

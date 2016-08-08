@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
+	
+	<collectingProcess>
+		<name>UDP collector</name>
+		<udpCollector>
+			<name>Listening port 4739</name>
+			<localPort>4739</localPort>
+			<localIPAddress></localIPAddress>
+			<templateLifeTime>1800</templateLifeTime>
+			<optionsTemplateLifeTime>1800</optionsTemplateLifeTime>
+		</udpCollector>
+		<exportingProcess>json</exportingProcess>
+	</collectingProcess>
+
+	<!--## Exporting process configuration -->
+	<exportingProcess>
+		<name>json</name>
+		<destination>
+			 <name>JSON storage plugin</name>
+			 <fileWriter>
+				 <fileFormat>json</fileFormat>
+				 <metadata>no</metadata>
+				 <tcpFlags>formated</tcpFlags>
+				 <timestamp>yes</timestamp>
+				 <protocol>formated</protocol>
+				 <ignoreUnknown>no</ignoreUnknown>
+				 <nonPrintableChar>no</nonPrintableChar>
+
+				 <output>
+					 <type>send</type>
+					 <ip>HOST_IP</ip>
+					 <port>4444</port>
+					 <protocol>udp</protocol>
+				 </output>
+			 </fileWriter>
+		 </destination>
+	</exportingProcess>
+</ipfix>

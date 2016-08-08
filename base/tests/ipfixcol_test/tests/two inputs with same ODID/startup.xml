@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ipfix xmlns="urn:ietf:params:xml:ns:yang:ietf-ipfix-psamp">
 	<collectingProcess>
-		<name>TCP collector</name>
+		<name>File reader</name>
 		<fileReader>
 			<file>file:../ipfix_data/03-odid0-*.ipfix</file>
 		</fileReader>

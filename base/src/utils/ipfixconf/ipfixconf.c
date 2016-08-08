@@ -82,18 +82,18 @@ void usage(char *binary)
 	printf("Tool for editing IPFIXcol internal configuration\n");
 	printf("\n");
 	printf("Usage: %s command [options]\n\n", binary);
-	printf("  -h               show this text\n");
-	printf("  -c path          configuration file, default %s\n", DEFAULT_INTERNAL);
-	printf("  -p type          plugin type: i (input), m (intermediate), o (output)\n");
-	printf("  -n name          plugin name\n");
-	printf("  -s path          path to plugin .so file\n");
-	printf("  -t thread_name   plugin thread name\n");
-	printf("  -f               force add (rewrite plugin in case it already exists)\n");
+	printf("  -h               Show this text\n");
+	printf("  -c path          Configuration file, default %s\n", DEFAULT_INTERNAL);
+	printf("  -p type          Plugin type: i (input), m (intermediate), o (output)\n");
+	printf("  -n name          Plugin name\n");
+	printf("  -s path          Path to plugin .so file\n");
+	printf("  -t thread_name   Plugin thread name\n");
+	printf("  -f               Force add (rewrite plugin in case it already exists)\n");
 	printf("\n");
 	printf("Available commands:\n");
-	printf("  add              add new plugin to configuration; all parameters are required\n");
-	printf("  remove           remove plugin from configuration; plugin type and name are required\n");
-	printf("  list             list configured plugins; type (-p) can be set\n");
+	printf("  add              Add new plugin to configuration; all parameters are required\n");
+	printf("  remove           Remove plugin from configuration; plugin type and name are required\n");
+	printf("  list             List configured plugins; type (-p) can be set\n");
 	printf("\n");
 }
 

@@ -1,8 +1,49 @@
+/**
+ * \file storage.c
+ * \author Imrich Stoffa <xstoff02@stud.fit.vutbr.cz>
+ * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
+ * \brief Storage management (source file)
+ *
+ * Copyright (C) 2015 CESNET, z.s.p.o.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name of the Company nor the names of its contributors
+ *    may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
+ *
+ * ALTERNATIVELY, provided that this notice is retained in full, this
+ * product may be distributed under the terms of the GNU General Public
+ * License (GPL) version 2 or later, in which case the provisions
+ * of the GPL apply INSTEAD OF those given above.
+ *
+ * This software is provided ``as is, and any express or implied
+ * warranties, including, but not limited to, the implied warranties of
+ * merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the company or contributors be liable for any
+ * direct, indirect, incidental, special, exemplary, or consequential
+ * damages (including, but not limited to, procurement of substitute
+ * goods or services; loss of use, data, or profits; or business
+ * interruption) however caused and on any theory of liability, whether
+ * in contract, strict liability, or tort (including negligence or
+ * otherwise) arising in any way out of the use of this software, even
+ * if advised of the possibility of such damage.
+ *
+ */
+
 #include <ipfixcol.h>
 #include <ipfixcol/profiles.h>
 
 #include "storage.h"
 #include "translator.h" 
+#include "bitset.h"
 #include <string.h>
 #include <libxml/xmlstring.h>
 #include <sys/types.h>
@@ -12,272 +53,466 @@
 #include <errno.h>
 #include <stdbool.h>
 
+// Module identification
+static const char* msg_module = "lnfstore";
 
-static const char* msg_module = "lnfstore_storage";
-
-typedef struct prec_s
+int cmp_profile_file(const void* m1, const void* m2)
 {
-	uint8_t *address;
-	lnf_file_t *lfp;
-}prec_t;
-
-
-
-int prec_compare(const void* pkey, const void* pelem)
-{
-	const prec_t *key, *elem;
-	key = pkey;
-	elem = pelem;
+	const profile_file_t *val1 = m1;
+	const profile_file_t *val2 = m2;
 	
-	if(key->address > elem->address){
-		return -1;
-	} else if(key->address == elem->address){
+	if (val1->address == val2->address) {
 		return 0;
 	}
-	return 1;
+
+	return (val1->address < val2->address) ? (-1) : (1);
 }
-
-int nstrlen(char** strings, int n)
-{	
-	int sum = 0;
-	for(int x = 0; x< n; x++){
-		if(strings[x] == NULL)
-			continue;
-		sum+=strlen(strings[x]);
-	}
-	return sum;
-}
-
-
-char* mkpath_string(struct lnfstore_conf *conf, const char* suffix)
-{
-	char* path_strings[5] = {
-		(char*)conf->storage_path, 
-		(char*)suffix,
-		conf->t_vars->dir, (char*)conf->prefix, conf->t_vars->suffix
-	};
-	
-	char* path = malloc(sizeof(char)*(nstrlen(path_strings, 5)+1));
-	if(path == NULL){
-		return NULL;
-	}
-
-	path[0] = 0; //*< Clear path string
-
-	for(int i = 0; i < 5; i++){ 
-		if(path_strings[i] == NULL)
-			continue;
-		strcat(path, path_strings[i]);
-	}
-	return path;
-}
-
-void mktime_window(time_t hint, struct lnfstore_conf *conf)
-{
-	struct time_vars* vars = conf->t_vars;
-    char buffer[25] = "";
-    
-	free(vars->dir);
-	free(vars->suffix);
-	
-    if(conf->align){
-        vars->window_start = (hint / conf->time_window)* conf->time_window;
-    }else{
-		vars->window_start = hint;
-    }
-	
-    strftime(buffer, 25, "/%Y/%m/%d/", gmtime(&vars->window_start));
-    vars->dir = strdup(buffer);
-
-	strftime(buffer, 25, (const char*)conf->suffix_mask, gmtime(&vars->window_start));
-	vars->suffix = strdup(buffer);
-} 
 
 int mkdir_hierarchy(const char* path)
 {
-    struct stat s;
-	
+	struct stat s;
 	char* pos = NULL;
 	char* realp = NULL;
 	unsigned subs_len = 0;
-	while((pos = strchr(path + subs_len + 1, '/')) != NULL )
-	{
+	while ((pos = strchr(path + subs_len + 1, '/')) != NULL ) {
 		subs_len = pos - path;
 		int status;
 		bool failed = false;
 		realp = strndup(path, subs_len);
 try_again:
-        status = stat(realp, &s);
-        if(status == -1){
-            if(ENOENT == errno){
-                if(mkdir(realp, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)){
-                    if(!failed){
-                        failed = true;
-                        goto try_again;
-                    }
-                    int err = errno;
-                    MSG_ERROR(msg_module, "Failed to create directory: %s", realp);
-                    errno = err;
-                    perror(msg_module);
-                    return 1;
-                }
-            }
-        } else if(!S_ISDIR(s.st_mode)){
-            MSG_ERROR(msg_module, "Failed to create directory, %s is file", realp);
-            return 2;
-        }
-		free(realp);
-    }
-	return 0;
-}	
-
-void store_record(struct metadata* mdata, struct lnfstore_conf *conf)
-{
-	static uint8_t buffer[(uint16_t)-1];
-	
-	static lnf_rec_t *recp = NULL;
-	static lnf_file_t *lfp = NULL; 
-	stack_t *smap = conf->pst;
-
-	if( conf->profiles && !mdata->channels ){
-		//Record wont be stored, it does not belong to any channel and profiling is activated
-		return;
-	}
-
-	if(recp == NULL) {
-		lnf_rec_init(&recp);
-	} else { 
-		lnf_rec_clear(recp);
-	}
-
-    uint16_t offset, length;
-    offset = 0;
-    struct ipfix_template *templ = mdata->record.templ;
-    uint8_t *data_record = (uint8_t*) mdata->record.record;
-
-    /* get all fields */
-    for (uint16_t count = 0, index = 0; count < templ->field_count; ++count, ++index) {
-		
-		struct ipfix_lnf_map *item, key;
-        
-        /* Get Enterprise number and ID */
-        key.ie = templ->fields[index].ie.id;
-        length = templ->fields[index].ie.length;
-        key.en = 0;
-
-        if (key.ie & 0x8000) {
-			key.ie &= 0x7fff;
-            key.en = templ->fields[++index].enterprise_number;
-        }
-
-		item = bsearch(&key, tr_table, MAX_TABLE , sizeof(struct ipfix_lnf_map), ipfix_lnf_map_compare);
-		
-		int problem = 1;
-		if(item != NULL){
-			problem = item->func(data_record, &offset, &length, buffer, item);	
-			lnf_rec_fset(recp, item->lnf_id, buffer);
+		status = stat(realp, &s);
+		if (status == -1) {
+			if (ENOENT == errno) {
+				if (mkdir(realp, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) {
+					if (!failed) {
+						failed = true;
+						goto try_again;
+					}
+					MSG_ERROR(msg_module, "Failed to create directory: %s", realp);
+					return 1;
+				}
+			}
+		} else if (!S_ISDIR(s.st_mode)) {
+			MSG_ERROR(msg_module, "Failed to create directory, %s is file", realp);
+			return 2;
 		}
-		
-		if(problem){
+		free(realp);
+	}
+	return 0;
+}
+
+/**
+ * \brief Fill new record
+ * \param[in] mdata IPFIX record
+ * \param[out] record Record
+ * \param[in,out] buffer Pointer to temporary buffer
+ * \return Number of converted fields
+ */
+int fill_record(const struct metadata *mdata, lnf_rec_t *record, uint8_t *buffer)
+{
+	int added = 0;
+
+	uint16_t offset = 0;
+	uint16_t length;
+
+	struct ipfix_template *templ = mdata->record.templ;
+	uint8_t *data_record = (uint8_t*) mdata->record.record;
+
+    // Process all fields
+    for (uint16_t count = 0, index = 0; count < templ->field_count; ++count, ++index) {
+		// Create a key - get Enterprise and Element ID
+		struct ipfix_lnf_map key, *item;
+
+		key.ie = templ->fields[index].ie.id;
+		length = templ->fields[index].ie.length;
+		key.en = 0;
+
+		if (key.ie & 0x8000) {
+			key.ie &= 0x7fff;
+			key.en = templ->fields[++index].enterprise_number;
+		}
+
+		// Find conversion function
+		item = bsearch(&key, tr_table, MAX_TABLE , sizeof(struct ipfix_lnf_map),
+			ipfix_lnf_map_compare);
+
+		int conv_failed = 1;
+		if (item != NULL) {
+			// Convert
+			conv_failed = item->func(data_record, &offset, &length, buffer, item);
+			if (!conv_failed) {
+				lnf_rec_fset(record, item->lnf_id, buffer);
+				added++;
+			}
+		}
+
+		if (conv_failed) {
 			length = real_length(data_record, &offset, length);
 		}
 
-        offset += length;
-    } //end of element processing
-
-	//!< Decide whether close close files and create new time window
-    time_t now = time(NULL);
-    if(difftime(now, conf->t_vars->window_start) > conf->time_window){
-
-		mktime_window(now, conf);
-		if( conf->profiles ){
-			prec_t* item = NULL;
-			//Close all old files
-			for(unsigned x = 0; x < smap->top; x += al4B(sizeof(prec_t))){
-				item = (prec_t*)smap->data + x; 
-				if(item->lfp == NULL)
-					continue;
-				lnf_close(item->lfp);
-				item->lfp = NULL;
-			}
-		} else {
-			lnf_close(lfp);
-			lfp = NULL;
-		}
+		offset += length;
     }
-    
-    if( conf->profiles ){
-		//On stack allocation of bit array
-		int ba_size = smap->top/(8*sizeof(int))+1;
-		int ba[ba_size];
-		memset(&ba[0], 0, ba_size*sizeof(int));
-		int status = 0;
-		
-		prec_t *item = NULL;
 
-		for( int i = 0; mdata->channels[i] != 0; i++ ){
-			
-			void* rec_prof = channel_get_profile(mdata->channels[i]);
+    return added;
+}
 
-			item = bsearch(&rec_prof, smap->data, smap->top/al4B(sizeof(prec_t)),
-					al4B(sizeof(prec_t)), prec_compare);
-			
-			if( item == NULL ){
-				//Profile is not in configuration
-				prec_t entry;
-				entry.address = rec_prof;
-				entry.lfp = NULL;
-				
-				const char* prpath = profile_get_path(rec_prof);
-				char* path = mkpath_string(conf, prpath);
-				mkdir_hierarchy(path);
-				status = lnf_open(&entry.lfp, path, LNF_WRITE | (conf->compress? LNF_COMP : 0), (char*)conf->ident);
+char *create_file_name(struct lnfstore_conf *conf)
+{
+	struct tm gm;
+	if (gmtime_r(&conf->window_start, &gm) == NULL) {
+		MSG_ERROR(msg_module, "Failed to convert time to UTC.");
+		return NULL;
+	}
 
-				stack_push(smap, &entry, sizeof(prec_t));
-				//Add resilience
-				qsort(smap->data, smap->top/al4B(sizeof(prec_t)), 
-						al4B(sizeof(prec_t)), prec_compare);
-				
-				free(path);
-			} else if( item->lfp == NULL ){
-				//Profile file is closed
-				const char* prpath = profile_get_path(rec_prof);
-				char* path = mkpath_string(conf, prpath);
-				mkdir_hierarchy(path);
-				status = lnf_open(&item->lfp, path, LNF_WRITE | (conf->compress? LNF_COMP : 0), (char*)conf->ident);
-				//Get prof name and open aprop file
-				free(path);
+	char time_path[13];
+	size_t length;
+
+	length = strftime(time_path, sizeof(time_path), "/%Y/%m/%d/", &gm);
+	if (length == 0) {
+		MSG_ERROR(msg_module, "Failed to fill file path template.");
+		return NULL;
+	}
+
+	char file_suffix[1024];
+	length = strftime(file_suffix, sizeof(file_suffix),
+		conf->params->file_suffix, &gm);
+	if (length == 0) {
+		MSG_ERROR(msg_module, "Failed to fill file path template (suffix).");
+		return NULL;
+	}
+
+	length = strlen(time_path) + strlen(conf->params->file_prefix)
+		+ strlen(file_suffix) + 1;
+
+	char *file_name = (char *) malloc(length * sizeof(char));
+	if (!file_name) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
+			__FILE__, __LINE__);
+		return NULL;
+	}
+
+	snprintf(file_name, length, "%s%s%s", time_path, conf->params->file_prefix,
+		file_suffix);
+	return file_name;
+}
+
+int open_storage_files(struct lnfstore_conf *conf)
+{
+	// Prepare filename(s)
+	char *file_str = create_file_name(conf);
+	if (!file_str) {
+		return 1;
+	}
+
+	size_t file_len = strlen(file_str);
+	unsigned int flags = LNF_WRITE;
+	if (conf->params->compress) {
+		flags |= LNF_COMP;
+	}
+
+	if (conf->params->profiles) {
+		// With profiler
+		for (int i = 0; i < conf->profiles_size; ++i) {
+			profile_file_t *profile = &conf->profiles_ptr[i];
+
+			const char *dir = profile_get_directory(profile->address);
+			size_t size = file_len + strlen(dir) + 2; // '/' + '\0'
+
+			char *total_path = (char *) malloc(size * sizeof(char));
+			if (!total_path) {
+				MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
+					__FILE__, __LINE__);
+				continue;
 			}
-		}
-		void* profile = NULL;
-		int i = 0;
-		for(profile = channel_get_profile(mdata->channels[i=0]);
-				mdata->channels[i] != 0;
-				profile = channel_get_profile(mdata->channels[i++]) ){
 
-			item = bsearch(&profile, smap->data, smap->top/al4B(sizeof(prec_t)),
-					al4B(sizeof(prec_t)), prec_compare);
-				
-			int index = (((base_t*)item) - smap->data)/al4B(sizeof(prec_t));
-			if( !GETb(ba, index) ){ //And profile is not shadow
-				status = lnf_write(item->lfp, recp);
-				SETb(ba, index, 1);
+			snprintf(total_path, size, "%s/%s", dir, file_str);
+			if (mkdir_hierarchy(total_path) != 0) {
+				free(total_path);
+				continue;
 			}
+
+			int status = lnf_open(&profile->file, total_path, flags,
+				conf->params->file_ident);
+			if (status != LNF_OK) {
+				MSG_ERROR(msg_module, "Failed to create new file '%s'",
+					total_path);
+				profile->file = NULL;
+			}
+
+			free(total_path);
 		}
 	} else {
-		if( lfp == NULL ){
-			int status;
-			char* path = mkpath_string(conf, NULL);
-			status = mkdir_hierarchy(path);
-			status |= lnf_open(&lfp, path, LNF_WRITE | (conf->compress ? LNF_COMP : 0), (char*)conf->ident);
-			if(status != LNF_OK) {
-				MSG_ERROR(msg_module, "Failed to open file! ...at path: %s \n", path);
-			}
-			free(path);
+		// Without profiler
+		size_t size = file_len + strlen(conf->params->storage_path) + 2; // '/' + '\0'
+		char *total_path = (char *) malloc(size *sizeof(char));
+		if (!total_path) {
+			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
+				__FILE__, __LINE__);
+			free(file_str);
+			return 1;
 		}
-		lnf_write(lfp, recp);
+
+		snprintf(total_path, size, "%s/%s", conf->params->storage_path, file_str);
+		if (mkdir_hierarchy(total_path) != 0) {
+			free(total_path);
+			free(file_str);
+			return 1;
+		}
+
+		int status = lnf_open(&conf->file_ptr, total_path, flags,
+			conf->params->file_ident);
+		if (status != LNF_OK) {
+			MSG_ERROR(msg_module, "Failed to create new file '%s'",
+				total_path);
+			conf->file_ptr = NULL;
+		}
+
+		free(total_path);
 	}
-	return;
+
+	free(file_str);
+	return 0;
+}
+
+void close_storage_files(struct lnfstore_conf *conf)
+{
+	if (conf->params->profiles) {
+		// With profiler
+		if (!conf->profiles_ptr) {
+			return;
+		}
+
+		for (int i = 0; i < conf->profiles_size; ++i) {
+			profile_file_t *profile = &conf->profiles_ptr[i];
+
+			if (!profile->file) {
+				// File not opened
+				continue;
+			}
+
+			lnf_close(profile->file);
+			profile->file = NULL;
+		}
+	} else {
+		// Without profiler
+		if (!conf->file_ptr) {
+			return;
+		}
+
+		lnf_close(conf->file_ptr);
+		conf->file_ptr = NULL;
+	}
 }
 
 
+void new_window(time_t now, struct lnfstore_conf *conf)
+{
+	// Close file(s)
+	close_storage_files(conf);
+
+	// Update time
+	conf->window_start = now;
+	if (conf->params->window_align) {
+		conf->window_start = (now / conf->params->window_time) *
+			conf->params->window_time;
+	}
+
+	// Create new files
+	open_storage_files(conf);
+
+	MSG_INFO(msg_module, "New time window created.");
+}
+
+
+void store_to_file(lnf_file_t *file, lnf_rec_t *rec)
+{
+	if (!file) {
+		return;
+	}
+
+	lnf_write(file, rec);
+}
+
+/**
+ * \brief Update the list of profiles
+ * \param[in,out] conf Plugin configuration
+ * \param[in] profiles List of all active profiles (null terminated)
+ * \return On success returns 0. Otherwise returns non-zero value.
+ */
+int update_profiles(struct lnfstore_conf *conf, void **profiles)
+{
+	if (!profiles) {
+		return 1;
+	}
+
+	// Delete old profiles
+	if (conf->profiles_ptr) {
+		close_storage_files(conf);
+		free(conf->profiles_ptr);
+		conf->profiles_ptr = NULL;
+		conf->profiles_size = 0;
+		bitset_destroy(conf->bitset);
+		conf->bitset = NULL;
+	}
+
+	// Create new profiles
+	int size;
+	for (size = 0; profiles[size] != 0; size++);
+	if (size == 0) {
+		MSG_WARNING(msg_module, "List of active profile is empty!");
+		return 1;
+	}
+
+	conf->profiles_ptr = (profile_file_t *) calloc(size, sizeof(profile_file_t));
+	if (!conf->profiles_ptr) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
+			__FILE__, __LINE__);
+		return 1;
+	}
+
+	conf->bitset = bitset_create(size);
+	if (!conf->bitset) {
+		MSG_ERROR(msg_module, "Failed to allocate internal bitset.");
+		free(conf->profiles_ptr);
+		conf->profiles_ptr = NULL;
+		return 1;
+	}
+
+	conf->profiles_size = size;
+
+	// Init profile pointers
+	for (int i = 0; i < conf->profiles_size; ++i) {
+		profile_file_t *profile = &conf->profiles_ptr[i];
+		profile->address = profiles[i];
+		profile->file = NULL;
+	}
+
+	// Sort profiles for further binary search
+	qsort(conf->profiles_ptr, conf->profiles_size, sizeof(profile_file_t),
+		cmp_profile_file);
+
+	// Open storage files
+	open_storage_files(conf);
+
+	MSG_DEBUG(msg_module, "List of profiles successfully updated.");
+	return 0;
+}
+
+int reload_profiles(struct lnfstore_conf *conf, void **channels)
+{
+	// Get profiles
+	void *channel = channels[0];
+	void *profile = channel_get_profile(channel);
+	void **profiles = profile_get_all_profiles(profile);
+	if (!profiles) {
+		MSG_ERROR(msg_module, "Failed to get the list of all profiles");
+		return 1;
+	}
+
+	// Update profiles
+	int ret_val;
+	ret_val = update_profiles(conf, profiles);
+	free(profiles);
+
+	if (ret_val != 0) {
+		MSG_ERROR(msg_module, "Failed to update the list of profiles");
+		return 1;
+	}
+
+	return 0;
+}
+
+
+void store_to_profiles(struct lnfstore_conf *conf, void **channels)
+{
+	if (channels == NULL || channels[0] == NULL) {
+		return;
+	}
+
+	if (conf->profiles_ptr == NULL) {
+		// Load all active profiles
+		if (reload_profiles(conf, channels) != 0) {
+			MSG_ERROR(msg_module, "Failed to reload the list of profiles");
+			return;
+		}
+	}
+
+	// Clear aux bitset
+	bitset_clear(conf->bitset);
+
+	// Fill bitset
+	for (int i = 0; channels[i] != 0; i++) {
+		// Create a key
+		void *profile_ptr = channel_get_profile(channels[i]);
+		profile_file_t key, *result;
+
+		key.address = profile_ptr;
+		result = bsearch(&key, conf->profiles_ptr, conf->profiles_size,
+			sizeof(profile_file_t), cmp_profile_file);
+
+		if (!result) {
+			// Unknown profile... reload list
+			if (reload_profiles(conf, channels) != 0) {
+				MSG_ERROR(msg_module, "Failed to reload the list of profiles");
+				return;
+			}
+
+			result = bsearch(&key, conf->profiles_ptr, conf->profiles_size,
+				sizeof(profile_file_t), cmp_profile_file);
+
+			if (!result) {
+				MSG_ERROR(msg_module, "Failed to find a profile in internal "
+					"structures. Something bad happend!");
+				return;
+			}
+		}
+
+		// Get index
+		int index = (result - conf->profiles_ptr);
+		if (bitset_get(conf->bitset, index) == true) {
+			// Already written to the file
+			continue;
+		}
+
+		// Store the record only if it is normal profile
+		if (profile_get_type(result->address) == PT_NORMAL) {
+			store_to_file(result->file, conf->rec_ptr);
+		}
+
+		bitset_set(conf->bitset, index, true);
+	}
+}
+
+
+void store_record(const struct metadata *mdata, struct lnfstore_conf *conf)
+{
+	if (conf->params->profiles && !mdata->channels) {
+		/*
+		 * Record won't be stored, it does not belong to any channel and
+		 * profiling is activated
+		 */
+		return;
+	}
+
+	// Fill record
+	lnf_rec_clear(conf->rec_ptr);
+	if (fill_record(mdata, conf->rec_ptr, conf->buffer) <= 0) {
+		// Nothing to store
+		return;
+	}
+
+	// Decide whether close files and create new time window
+	time_t now = time(NULL);
+	if (difftime(now, conf->window_start) > conf->params->window_time) {
+		new_window(now, conf);
+	}
+
+	// Store record
+	if (conf->params->profiles) {
+		// With profiler
+		store_to_profiles(conf, mdata->channels);
+	} else {
+		// Without profiler
+		store_to_file(conf->file_ptr, conf->rec_ptr);
+	}
+}

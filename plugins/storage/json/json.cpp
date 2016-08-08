@@ -96,6 +96,14 @@ void process_startup_xml(struct json_conf *conf, char *params)
 		conf->ignoreUnknown = false;
 	}
 
+	/* Convert and print white spaces in JSON strings */
+	std::string whiteSpaces = ie.node().child_value("nonPrintableChar");
+	conf->whiteSpaces = true;
+	if (strcasecmp(whiteSpaces.c_str(), "false") == 0 || whiteSpaces == "0" ||
+			strcasecmp(whiteSpaces.c_str(), "no") == 0) {
+		conf->whiteSpaces = false;
+	}
+
 	/* Process all outputs */
 	pugi::xpath_node_set outputs = doc.select_nodes("/fileWriter/output");
 

@@ -204,7 +204,7 @@ static int tm_fill_template(struct ipfix_template *template, void *template_reco
 
 	int i;
 	for (i = 0; i < OF_COUNT; ++i) {
-		template->offsets[i] = -1;
+		template->offsets[i].offset = -1;
 	}
 
 	return 0;
@@ -485,7 +485,7 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 		return tm_record_add_template(tmr, template, max_len, type, odid);
 	}
 	
-	/* save IDs */
+	/* Save IDs */
 	uint16_t templ_id = tmr->templates[i]->template_id;
 	
 	/* Create new template */
@@ -496,7 +496,7 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 	if (tm_compare_templates(new_tmpl, tmr->templates[i]) == 0) {
 		/* Templates are the same, no need to update */
 		free(new_tmpl);
-		MSG_DEBUG(msg_module, "[%u] Received the same template as last time, not replacing", odid);
+		MSG_DEBUG(msg_module, "[%u] Received the same template as last time; not replacing", odid);
 		return tmr->templates[i];
 	}
 
@@ -505,12 +505,12 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 	if (tmr->templates[i]->references == 0) {
 		if (tmr->templates[i]->next == NULL) {
 			/* No previous template */
-			/* remove the old template */
-//			MSG_DEBUG(msg_module, "No references and no previous template - removing, ID %d", id);
+			/* Remove the old template */
 			if (tm_record_remove_template(tmr, id) != 0) {
 				MSG_WARNING(msg_module, "[%u] Cannot remove template %i", odid, id);
 			}
-			/* create a new one */
+
+			/* Create a new one */
 			MSG_DEBUG(msg_module, "Creating new template... %d", id);
 			new_tmpl = tm_record_insert_template(tmr, new_tmpl);
 			if (new_tmpl) {
@@ -525,10 +525,10 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 			tmr->templates[i] = new;
 		}
 	} else {
-		MSG_DEBUG(msg_module, "[%u] Template %d cannot be removed (%u references), but it will be marked as 'old'", odid, id, tmr->templates[i]->references);
+		MSG_DEBUG(msg_module, "[%u] Template %d cannot be removed (%u reference(s)), but it will be marked as 'old'", odid, id, tmr->templates[i]->references);
 	}
 
-	/* Inserting new template */
+	/* Insert new template */
 	new_tmpl->next = tmr->templates[i];
 	tmr->templates[i] = new_tmpl;
 
@@ -844,7 +844,7 @@ int template_contains_field(struct ipfix_template *templ, uint16_t field)
 	}
 
 	if (hit) {
-		return (!variable_length) ? total_length : 0;
+		return (variable_length) ? 0 : total_length;
 	}
 
 	/* Field could not be found in specific template */
@@ -933,6 +933,76 @@ int template_get_field_offset(struct ipfix_template *templ, uint16_t eid, uint16
 }
 
 /**
+ * \brief Get length of a field as specified by the corresponding template.
+ *
+ * \param[in] templ Template
+ * \param[in] eid Enterprise ID (zero in case the field is not enterprise-specific)
+ * \param[in] fid Field ID
+ * \return For variable-length fields, 65535 is returned, while the 'real' length
+ * is returned for other fields. A negative value is returned if the specified field
+ * could not be found.
+ */
+int template_get_field_length(struct ipfix_template *templ, uint16_t eid, uint16_t fid)
+{
+	uint16_t fields = 0;
+	uint8_t *p;
+
+	if (!templ) {
+		return -1;
+	}
+
+	/* Set most specific bit to 1, to indicate enterprise field */
+	if (eid > 0) {
+		fid = fid | 0x8000;
+	}
+
+	if (templ->template_type == TM_OPTIONS_TEMPLATE) {
+		p = (uint8_t *) ((struct ipfix_options_template_record *) templ)->fields;
+	} else {
+		p = (uint8_t *) templ->fields;
+	}
+
+	uint32_t enterprise_id;
+	uint16_t ie_id;
+	uint16_t field_length;
+
+	while (fields < templ->field_count) {
+		ie_id = *((uint16_t *) p);
+		field_length = *((uint16_t *) (p + 2));
+
+		if (ie_id == fid) {
+			/* In case we are not dealing with an enterprise-specific field, we
+			 * can stop and return, since we found the field. Otherwise, we have
+			 * to check whether the enterprise IDs match.
+			 */
+			if (eid == 0) {
+				return field_length;
+			}
+		}
+
+		/* Move to next field (may be enterprise ID) */
+		p += 4;
+
+		/* Check whether field is enterprise-specific */
+		if (eid > 0 && ie_id == fid) {
+			enterprise_id = *((uint32_t *) p);
+
+			if (enterprise_id == eid) {
+				return field_length;
+			}
+
+			/* Move to next field */
+			p += 4;
+		}
+
+		fields += 1;
+	}
+
+	/* Field could not be found in specific template */
+	return -1;
+}
+
+/**
  * \brief Make ipfix_template_key from ODID, crc and template id
  * 
  * @param odid Observation Domain ID
@@ -1001,6 +1071,7 @@ int tm_compare_template_records(struct ipfix_template_record *first, struct ipfi
 	if (first->count != second->count) {
 		return 0;
 	}
+
 	uint16_t *field1 = (uint16_t *) first->fields;
 	uint16_t *field2 = (uint16_t *) second->fields;
 

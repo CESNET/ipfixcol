@@ -1,5 +1,7 @@
 #include <config.h>
 extern "C" {
+#include <ipfixcol/verbose.h>
+}
 #ifdef HAVE_LIBZ
 #include <zlib.h>
 #endif
@@ -7,10 +9,8 @@ extern "C" {
 #include <bzlib.h>
 #endif
 #include <string.h>
-#include <ipfixcol/verbose.h>
 #include <errno.h>
 #include <libxml/parser.h>
-}
 
 #include "ipfixcol_fastbit.h"
 #include "compression.h"

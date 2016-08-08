@@ -319,7 +319,7 @@ void Table::doQuery()
 		/* do order by only on valid result */
 		if (this->table && this->table->nRows() && !this->orderColumns.empty()) {
 			/* transform the column names to table names */
-			ibis::table::stringList orderByList;
+			ibis::table::stringArray orderByList;
 			std::vector<bool> direc;
 			for (stringSet::const_iterator it = this->orderColumns.begin(); it != this->orderColumns.end(); it++) {
 				bool isThere = false;

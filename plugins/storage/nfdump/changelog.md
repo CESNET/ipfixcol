@@ -1,5 +1,9 @@
 **Future release:**
 
+**Version 1.0.10:**
+
+*  Fixed extern "C" problems reported by J Thomas
+
 **Version 1.0.9:**
 
 *  Updated **nffile.h**

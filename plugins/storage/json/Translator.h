@@ -51,8 +51,6 @@ extern "C" {
 //#include <ipfix_element.h>
 }
 
-#define BUFF_SIZE 128
-
 /* size of bytes 1, 2, 4 or 8 */
 #define BYTE1 1
 #define BYTE2 2
@@ -70,7 +68,12 @@ enum class t_units {
 
 class Translator {
 public:
-    
+	/** Constructor */
+	Translator();
+
+	/** Destructor */
+	~Translator();
+
     /**
      * \brief Format IPv4 address into dotted format
      * 
@@ -160,13 +163,36 @@ public:
      */
 	const char *toFloat(uint16_t *length, uint8_t *data_record, uint16_t offset);
 
-private:
+	/**
+	 * \brief Convert string to JSON format
+	 *
+	 * Escape non-printable characters and replace them.
+	 * @param length Length of the field
+	 * @param field Pointer to the field
+	 * @param config Plugin configuration
+	 * @return
+	 */
+	const char *escapeString(uint16_t length, const uint8_t *field,
+		const struct json_conf *config);
 
-	char buffer[BUFF_SIZE];
+private:
+	/**
+	 * \brief Size of internal buffer for data conversion
+	 *
+	 * This buffer is used by all conversion functions for storing string
+	 * outputs. At worst Translator::escapeString() have to convert an
+	 * IPFIX record (max size of IPFIX message: 65536) of a string record that
+	 * contains only non-printable characters that will be replaced with
+	 * string "\uXXXX" (6) each.
+	 */
+	static const int BUFF_SIZE = (65536 * 6);
+
+	/** Buffer for JSON conversion */
+	char *buffer;
 
 	struct tm *tm{};
-	time_t timesec;
-	uint64_t msec;
+	time_t timesec{};
+	uint64_t msec{};
 };
 
 #endif	/* TRANSLATOR_H */
