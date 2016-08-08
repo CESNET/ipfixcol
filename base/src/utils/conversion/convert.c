@@ -504,7 +504,8 @@ int insert_timestamp_otemplate(struct ipfix_set_header *templSet)
 			} else {
 				templates.templ[len] += ntohs(tmp->count);
 			}
-		tmp = (struct ipfix_options_template_record*) (((uint8_t *) tmp) + 4);
+
+			tmp = (struct ipfix_options_template_record *) (((uint8_t *) tmp) + 4);
 		}
 	}
 
@@ -619,11 +620,11 @@ int unpack_ot_enterprise_elements(struct ipfix_set_header *template_set, uint32_
 		remaining -= TEMPLATE_ROW_SIZE;
 
 		/* Get number of elements */
-		struct ipfix_options_template_record *tmp = (struct ipfix_options_template_record*) template_row;
+		struct ipfix_options_template_record *tmp = (struct ipfix_options_template_record *) template_row;
 		uint16_t numberOfElements = (ntohs(tmp->count) + ntohs(tmp->scope_field_count)) / 4;
 
 		/* Skip extra two bytes in option template record header */
-		template_row = (struct ipfix_set_header*) (((uint8_t *) template_row) + 2);
+		template_row = (struct ipfix_set_header *) (((uint8_t *) template_row) + BYTES_2);
 
 		/* Iterate through all elements */
 		for (uint16_t i = 0; i < numberOfElements; ++i) {
