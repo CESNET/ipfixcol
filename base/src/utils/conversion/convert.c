@@ -603,7 +603,7 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
  *
  * \param template_set Template Set
  * \param remaining Number of bytes to the end of packet (including template set)
- * \return number of inserted bytes
+ * \return Number of inserted bytes
  */
 int unpack_ot_enterprise_elements(struct ipfix_set_header *template_set, uint32_t remaining)
 {
@@ -665,7 +665,7 @@ int unpack_ot_enterprise_elements(struct ipfix_set_header *template_set, uint32_
  *
  * \param template_set Template Set
  * \param remaining Number of bytes to the end of packet (indluding template set)
- * \return number of inserted bytes
+ * \return Number of inserted bytes
  */
 int unpack_enterprise_elements(struct ipfix_set_header *template_set, uint32_t remaining)
 {
