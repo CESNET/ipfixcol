@@ -632,6 +632,7 @@ int unpack_ot_enterprise_elements(struct ipfix_set_header *template_set, uint32_
 			remaining -= TEMPLATE_ROW_SIZE;
 
 			uint16_t field_id = ntohs(template_row->flowset_id);
+
 			/* We are only looking for elements with enterprise bit set to 1 */
 			if (!(field_id & ENTERPRISE_BIT)) {
 				continue;
