@@ -62,8 +62,9 @@ LBR_SET_DISTRO([redhat])
 
 ############################ Check for programs ################################
 
-# Check for rpmbuil
+# Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
+AC_SUBST([BUILDREQS])
 
 # Check for xsltproc
 LBR_CHECK_XSLTPROC

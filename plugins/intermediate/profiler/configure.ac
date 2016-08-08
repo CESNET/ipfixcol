@@ -41,7 +41,7 @@ AC_PREREQ([2.60])
 AC_INIT([ipfixcol-profiler-inter], [0.0.4])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 LT_PREREQ([2.2])
-LT_INIT([dlopen disable-static])
+LT_INIT([disable-static])
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([profiler.cpp])
@@ -50,6 +50,8 @@ AC_CONFIG_HEADERS([config.h])
 # Initialization
 : ${CXXFLAGS=""}
 AM_CXXFLAGS="-Wall -O2"
+# We need -fPIC to link to some of the libraries
+LDFLAGS="$LDFLAGS -fPIC"
 AC_LANG(C++)
 CXX="g++"
 
@@ -66,8 +68,9 @@ LBR_SET_DISTRO([redhat])
 AC_CHECK_PROG(DOXYGEN, doxygen, doxygen)
 AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
 
-# Check for rpmbuil
+# Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
+AC_SUBST([BUILDREQS])
 
 # Check for xsltproc
 LBR_CHECK_XSLTPROC

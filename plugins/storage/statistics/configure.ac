@@ -49,6 +49,8 @@ AC_CONFIG_HEADERS([config.h])
 
 # Initialization
 CFLAGS="-Wall"
+# We need -fPIC to link to some of the libraries
+LDFLAGS="$LDFLAGS -fPIC"
 
 RELEASE=1
 AC_SUBST(RELEASE)
@@ -64,6 +66,7 @@ AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
 
 # Check for xsltproc
 LBR_CHECK_XSLTPROC
+AC_SUBST([BUILDREQS])
 
 # Check for standard programs
 AC_PROG_CC

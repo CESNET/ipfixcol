@@ -1,8 +1,8 @@
-AM_CPPFLAGS += -I$(top_srcdir)/headers
+AM_CPPFLAGS += -I$(top_srcdir)/headers -fPIC
+AM_CFLAGS += -fPIC
 
 noinst_LIBRARIES = libprofiles.a
 
-libprofiles_a_CFLAGS = -fPIC
 libprofiles_a_SOURCES = \
 	Channel.cpp Channel.h \
 	profiles.cpp profiles_internal.h \

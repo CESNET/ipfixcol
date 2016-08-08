@@ -41,7 +41,7 @@ AC_PREREQ([2.60])
 AC_INIT([ipfixcol-unirec-output], [0.2.7])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 LT_PREREQ([2.2])
-LT_INIT([dlopen disable-static])
+LT_INIT([disable-static])
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([unirec.c])
@@ -49,6 +49,8 @@ AC_CONFIG_HEADERS([config.h])
 
 # Initialization
 CFLAGS="-Wall"
+# We need -fPIC to link to some of the libraries
+LDFLAGS="$LDFLAGS -fPIC"
 
 RELEASE=1
 AC_SUBST(RELEASE)
@@ -64,6 +66,7 @@ AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
 
 # Check for xsltproc
 LBR_CHECK_XSLTPROC
+AC_SUBST([BUILDREQS])
 
 # Check for standard programs
 AC_PROG_CC

@@ -96,11 +96,12 @@ AS_IF([test -z "$BISON"], [AC_MSG_ERROR([bison not found, please install bison p
 AC_CHECK_PROG(DOXYGEN, doxygen, doxygen)
 AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
 
-# Check for rpmbuil
+# Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
 
 # Check for xsltproc
 LBR_CHECK_XSLTPROC
+AC_SUBST([BUILDREQS])
 
 # Check for standard programs
 AC_PROG_CC

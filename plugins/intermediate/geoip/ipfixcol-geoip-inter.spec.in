@@ -10,9 +10,9 @@ Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 
-BuildRequires: gcc make doxygen
-BuildRequires: ipfixcol-devel >= 0.7.1
-Requires: ipfixcol >= 0.7.1
+BuildRequires: gcc autoconf libtool make doxygen libxslt GeoIP-devel @BUILDREQS@
+BuildRequires: libxml2-devel ipfixcol-devel >= 0.7.1
+Requires: libxml2 ipfixcol >= 0.7.1
 
 %description
 geoip intermediate plugin for ipfixcol.

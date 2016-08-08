@@ -41,7 +41,7 @@ AC_PREREQ([2.60])
 AC_INIT([ipfixcol-stats-inter], [0.0.4])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 LT_PREREQ([2.2])
-LT_INIT([dlopen disable-static])
+LT_INIT([disable-static])
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([stats.cpp])
@@ -50,6 +50,8 @@ AC_CONFIG_HEADERS([config.h])
 # Initialization
 : ${CXXFLAGS=""}
 AM_CXXFLAGS="-Wall -O2"
+# We need -fPIC to link to some of the libraries
+LDFLAGS="$LDFLAGS -fPIC"
 AC_LANG(C++)
 CXX="g++"
 
@@ -67,6 +69,7 @@ AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
 
 # Check for xsltproc
 LBR_CHECK_XSLTPROC
+AC_SUBST([BUILDREQS])
 
 # Check for standard programs
 AC_PROG_CXX
@@ -96,6 +99,7 @@ AC_CHECK_LIB([xml2], [main],
 
 ### RRD library ###
 AC_SEARCH_LIBS([rrd_create], [rrd],, AC_MSG_ERROR([librrd not found]))
+
 
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar.h])

@@ -49,6 +49,8 @@ AC_CONFIG_HEADERS([config.h])
 
 # Initialization
 CFLAGS="-Wall"
+# We need -fPIC to link to some of the libraries
+LDFLAGS="$LDFLAGS -fPIC"
 
 RELEASE=1
 AC_SUBST(RELEASE)
@@ -59,8 +61,9 @@ LBR_SET_DISTRO([redhat])
 
 ############################ Check for programs ################################
 
-# Check for rpmbuil
+# Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
+AC_SUBST([BUILDREQS])
 
 # Check for xsltproc
 LBR_CHECK_XSLTPROC

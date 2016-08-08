@@ -10,10 +10,13 @@ Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 
-BuildRequires: make
+BuildRequires: autoconf make doxygen libxslt @BUILDREQS@
 Requires: ipfixcol
 Requires: ipfixcol-fastbit-output
 Requires: ipfixcol-nfdump-input
+
+# Do not generate debug information for this package
+%global debug_package %{nil}
 
 %description
 Fbitconvert converts nfcapd file format to ipfixcol fastbit file format.
