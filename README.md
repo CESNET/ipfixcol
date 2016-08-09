@@ -17,11 +17,12 @@
     *  [fbitexpire](#fbitexpire)
     *  [fbitmerge](#fbitmerge)
 	*  [profilesdaemon](#profilesdaemon)
-6.  [Howto build](#build)
-7.  [Docker](#docker)
-8.  [RPM](#rpm)
-9.  [FastBit](#fastbit)
-10.  [Contact us](#contact)
+6.  [Howto install](#install)
+7.  [Howto build](#build)
+8.  [Docker](#docker)
+9.  [RPM](#rpm)
+10.  [FastBit](#fastbit)
+11.  [Contact us](#contact)
     *  [Reporting bugs](#bug)
     *  [Forum](#mailing)
 
@@ -95,6 +96,21 @@ More info in it's [README](tools/fbitmerge/)
 Tool for profiles management and distribution
 
 [More info](tools/profilesdaemon/)
+
+##<a name="install"></a> How to install
+
+Individual packages of the IPFIXcol framework can be installed from [Fedora copr repository](https://copr.fedorainfracloud.org/coprs/g/CESNET/IPFIXcol/)
+Just add the repository to your system:
+```
+dnf copr enable @CESNET/IPFIXcol 
+```
+
+And install the packages you need (e.g. IPFIXcol framework and JSON output plugin):
+```
+dnf install ipfixcol ipfixcol-json-output
+```
+
+If you not are using one of the supported operating systems, you can [build the IPFIXcol from sources](#build).
 
 ##<a name="build"></a> How to build
 Whole framework can be build at once with
