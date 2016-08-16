@@ -41,8 +41,8 @@ typedef struct ff_node_s {
 #   define ntohll(n)    (n)
 #   define htonll(n)    (n)
 #else
-#   define ntohll(n)    (((uint64_t)ntohl(n)) << 32) | ntohl(((uint64_t)(n)) >> 32)
-#   define htonll(n)    (((uint64_t)htonl(n)) << 32) | htonl(((uint64_t)(n)) >> 32)
+#   define ntohll(n)    ((((uint64_t)ntohl(n)) << 32) | ntohl(((uint64_t)(n)) >> 32))
+#   define htonll(n)    ((((uint64_t)htonl(n)) << 32) | htonl(((uint64_t)(n)) >> 32))
 #endif
 #define HAVE_HTONLL 1
 #endif

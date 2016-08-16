@@ -119,6 +119,14 @@ void unpackEnId(uint64_t from, uint16_t *gen, uint32_t* en, uint16_t* id)
 static struct nff_item_s nff_ipff_map[]={
 
 	/* items contains name as inputted to filter and mapping to iana ipfix enterprise and element_id */
+
+	//Implement default values (automatic)
+	{"inet", toEnId(0, 60)},
+	//{"inet6", toEnId(0, 60)},
+	{"ipv", toEnId(0, 60)},
+	//{"ipv4", toEnId(0, 60)},
+	//{"ipv6", toEnId(0, 60)},
+
 	{"proto", toEnId(0, 4)},
 
 	/* for functionality reasons there are extra flags in mapping part CTL_FPAIR
@@ -207,6 +215,7 @@ static struct nff_item_s nff_ipff_map[]={
 		{"out src mac", toEnId(0, 81)},
 		{"out dst mac", toEnId(0, 57)},
 
+
 	{"mplslabel1", toEnId(0, 70)},
 	{"mplslabel2", toEnId(0, 71)},
 	{"mplslabel3", toEnId(0, 72)},
@@ -239,9 +248,10 @@ static struct nff_item_s nff_ipff_map[]={
 
 	{"bpp", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_BPP)},
 
-	{"asa event", toEnId(0, 230)},
-	{"asa xevent", toEnId(0, 233)},
-
+//Not verified, for
+//	{"asa event", toEnId(0, 230)},
+//	{"asa xevent", toEnId(0, 233)},
+/*
 	{"xip", toGenEnId(CTL_FPAIR, 1, 2)},
 		{"src xip", toGenEnId(CTL_V4V6IP, 0, 225)},
 		{"dst xip", toGenEnId(CTL_V4V6IP, 0, 226)},
@@ -249,7 +259,7 @@ static struct nff_item_s nff_ipff_map[]={
 	{"xport", toGenEnId(CTL_FPAIR, 1, 2)},
 		{"src xport", toEnId(0, 227)},
 		{"dst xport", toEnId(0, 228)},
-
+*/
 	{"nat event", toEnId(0, 230)},
 
 	{"nip", toGenEnId(CTL_FPAIR, 1, 2)},
@@ -314,8 +324,8 @@ static struct nff_item_s nff_proto_id_map[]={
 	{ "IDPR-CMTP",	38 },
 	{ "TP++",	39 },
 	{ "IL",		40 },
-	{ "IPv6",	41 },
 	{ "SDRP",	42 },
+	{ "IPv6",	41 },
 	{ "IPv6-Route",	43 },
 	{ "IPv6-Frag",	44 },
 	{ "IDRP",	45 },
@@ -544,7 +554,7 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
 			break;
 		}
 	}
-	if(item == NULL){
+	if(item == NULL) {	//Polozka nenajdena
 		//potrebujem prekodovat nazov pola na en a id
 		const ipfix_element_result_t elemr = get_element_by_name(fieldstr, false);
 		if (elemr.result == NULL){
@@ -563,14 +573,19 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
 
 		set_external_ids(item, lvalue);
 
-		//TODO: problem with flagged semi ipfix elements ie header items and calculated fields
-		//Switch behavior according to type of element and set appropriate type
-
 		unpackEnId(lvalue->id[0].index, &gen, &enterprise, &id);
 
 		//This sets bad type when header or metadata items are selected
-		elem = get_element_by_id(id, enterprise);
-
+		if (gen & CTL_CALCULATED_ITEM) {
+			lvalue->type = FF_TYPE_UNSIGNED;
+			return FF_OK;
+		} /*else if (gen & CTL_MDATA_ITEM) {
+			lvalue->tupe = FF_TYPE_UNSUPPORTED;
+			ff_set_error(filter, "ipfix metadata item %s has unsupported format", fieldstr);
+			return FF_ERR_OTHER_MSG;
+		} */else {
+			elem = get_element_by_id(id, enterprise);
+		}
 	}
 
 	//Rozhodni datovy typ pre filter
@@ -623,12 +638,15 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
 		case ET_SUB_TEMPLATE_MULTILIST:
 		case ET_UNASSIGNED:
 		default:
-			ff_set_error(filter, "ipfix item %s has unsupported format", fieldstr);
+			lvalue->type = FF_TYPE_UNSUPPORTED;
+			ff_set_error(filter, "ipfix item \"%s\" has unsupported format", fieldstr);
 			return FF_ERR_OTHER_MSG;
 	}
 	return FF_OK;
 }
 
+/* Flow duration calculation function */
+ff_uint64_t data_record_get_flow_duration_milliseconds(uint8_t *record, struct ipfix_template *templ);
 
 /* getting data callback */
 ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data, size_t *size)
@@ -644,7 +662,7 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 	uint16_t generic_set;
 	unpackEnId(id.index, &generic_set, &en, &ie_id);
 
-	if (generic_set & CTL_MDATA_ITEM) {
+	/*if (generic_set & CTL_MDATA_ITEM) {
 		//Filtration by metadata not used for now
 		switch (ie_id) {
 		case 1:
@@ -659,34 +677,55 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 		//proceed directly to return
 			return FF_ERR_OTHER;
 		}
-	} else if (generic_set & CTL_CALCULATED_ITEM) {
-	//TODO: After datatype - length conversion tools are ready finish
-		uint64_t tmp2;
+	} else*/ if (generic_set & CTL_CALCULATED_ITEM) {
+		ff_uint64_t flow_duration;
+		ff_uint64_t tmp, tmp2;
 
+		//TODO: check that memcpy construction works
 		switch (ie_id) {
-//		case calc_pps:
-//			tmp = data_record_get_duration((msg_pair->rec)->record, (msg_pair->rec)->templ);
-//			ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, 0, 2, &len);
-//			memcpy(&tmp2, ipf_field, len);
-//			tmp2 = ntohll(tmp2);
-//			tmp = htonll(ntohll(tmp)/tmp2);
-//			break;
-//		case calc_duration:
-//			tmp = data_record_get_duration((msg_pair->rec)->record, (msg_pair->rec)->templ);
-//			/*difference of 153 and 152 ie*/
-//			len = sizeof(tmp);
-//			break;
-//		case calc_bps:
-//			tmp = data_record_get_duration((msg_pair->rec)->record, (msg_pair->rec)->templ);
-//			data_record_get_field(/*get bits ie 1*/);
-//			break;
-//		case calc_bpp:
-//			data_record_get_field(/*get bits ie 1*/);
-//			data_record_get_field(/*get packets ie 2*/);
-//			break;
-		default:
-			return FF_ERR_OTHER;
+		case CALC_PPS:
+			flow_duration = data_record_get_flow_duration_milliseconds(msg_pair->rec->record, msg_pair->rec->templ);
+			if (!flow_duration) { return FF_ERR_OTHER; }
+
+			ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, 0, 2, &len);
+			if (!len) { return FF_ERR_OTHER; }
+			memcpy(&tmp, ipf_field, len); //Not sure if this construction works for all lenghts
+
+			tmp = ((ntohll(tmp) * 1000) / flow_duration);
+			len = sizeof(tmp);
+
+			break;
+		case CALC_DURATION:
+			tmp = data_record_get_flow_duration_milliseconds(msg_pair->rec->record, msg_pair->rec->templ);
+			if (!tmp) { return FF_ERR_OTHER; }
+
+			len = sizeof(tmp);
+
+			break;
+		case CALC_BPS:
+			ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, 0, 1, &len);
+			if (!len) { return FF_ERR_OTHER; }
+			memcpy(&tmp, ipf_field, len);
+
+			tmp = ((ntohll(tmp) * 1000) / flow_duration);
+			len = sizeof(tmp);
+
+			break;
+		case CALC_BPP: ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, 0, 1, &len);
+			if (!len) { return FF_ERR_OTHER; }
+			memcpy(&tmp, ipf_field, len);
+
+			ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, 0, 2, &len);
+			if (!len) { return FF_ERR_OTHER; }
+			memcpy(&tmp2, ipf_field, len);
+
+			tmp = ntohll(tmp) / ntohll(tmp2);
+			len = sizeof(tmp);
+
+			break;
+		default: return FF_ERR_OTHER;
 		}
+		ipf_field = &tmp;
 	} else {
 
 		ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, en, ie_id, &len);
@@ -695,7 +734,7 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 				ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, en, ie_id, &len);
 			}
 		}
-		if(ipf_field == NULL){
+		if (ipf_field == NULL) {
 			return FF_ERR_OTHER;
 		}
 	}
@@ -723,10 +762,10 @@ ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, f
 	}
 
 	int x;
-	if (type == FF_TYPE_UNSIGNED_BIG) {
+	if (type == FF_TYPE_UNSIGNED_BIG || type == FF_TYPE_UINT64) {
 
-		*size = sizeof(uint64_t);
-		uint64_t val;
+		*size = sizeof(ff_uint64_t);
+		ff_uint64_t val;
 
 		switch (ie_id) {
 		default:
@@ -783,17 +822,25 @@ ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, f
 	return FF_ERR_OTHER;
 }
 
-//TODO: finish flow duration calculation function
-int64_t data_record_get_duration(struct ipfix_record* data, struct ipfix_template *templ)
+ff_uint64_t data_record_get_flow_duration_milliseconds(uint8_t *record, struct ipfix_template *templ)
 {
-//	int len;
-//	char *tend, *tstart;
+	int len;
+	char *ipf_data = NULL;
+	ff_uint64_t tend, tstart;
+	tend = tstart = 0;
 
-//	tend = data_record_get_field(data, templ, 0, 153, &len);
-//	tstart = data_record_get_field(data, templ, 0, 152, &len);
+	ipf_data = data_record_get_field(record, templ, 0, 153, &len);
+	if (len) {
+		memcpy(&tend, ipf_data, len);
+		tend = ntohll(tend);
+		ipf_data = data_record_get_field(record, templ, 0, 152, &len);
+		if (len) {
+			memcpy(&tstart, ipf_data, len);
+			tstart = ntohll(tstart);
+		} else { return 0; }
+	} else { return 0; }
 
-	return 0;
-
+	return abs(tend - tstart);
 }
 
 /* Constructor */
@@ -830,7 +877,7 @@ int ipx_filter_parse(ipx_filter_t *filter, char* filter_str)
 	ff_options_t *opts = NULL;
 
 	if (ff_options_init(&opts) == FF_ERR_NOMEM) {
-		ff_set_error(filter->filter, "memory allocation for options failed");
+		ff_set_error(filter->filter, "Memory allocation for options failed");
 		return 1;
 	}
 
@@ -859,8 +906,8 @@ int ipx_filter_eval(ipx_filter_t *filter, struct ipfix_message *msg, struct ipfi
 
 char *ipx_filter_get_error(ipx_filter_t *filter)
 {
-	ff_error(filter->filter, (char *)filter->buffer, FF_MAX_STRING);
-	((char *)filter->buffer)[FF_MAX_STRING-1] = 0;
+	ff_error(filter->filter, (char *) filter->buffer, FF_MAX_STRING);
+	((char *) filter->buffer)[FF_MAX_STRING - 1] = 0;
 
-	return (char *)filter->buffer;
+	return (char *) filter->buffer;
 }

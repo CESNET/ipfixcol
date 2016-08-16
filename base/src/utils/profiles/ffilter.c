@@ -75,7 +75,7 @@ uint64_t strtoul_unit(char *valstr, char**endptr)
 		if (mult != 0) {
 			/*Move conversion end potinter by one*/
 			*endptr = (*endptr + 1);
-		}
+		} else { endptr--; }
 	return tmp64*mult;
 }
 
@@ -96,7 +96,7 @@ int64_t strtoll_unit(char *valstr, char**endptr)
 		if (mult != 0) {
 			/*Move conversion end potinter by one*/
 			*endptr = (*endptr + 1);
-		}
+		} else { endptr--; }
 	return tmp64*mult;
 }
 
@@ -113,7 +113,6 @@ int str_to_uint(char *str, int type, char **res, size_t *vsize)
 		return 1;
 	}
 
-	//TODO: Should we follow local defines ? or for readability use target types
 	switch (type) {
 	case FF_TYPE_UINT64:
 		*vsize = sizeof(uint64_t);
@@ -240,7 +239,7 @@ char* unwrap_ip(char *ip_str, int numbits)
 	return ip;
 }
 
-/* convert string into lnf_ip_t */
+/* convert string into ff_addr_t */
 int str_to_addr(ff_t *filter, char *str, char **res, int *numbits, size_t *size)
 {
 	ff_net_t *ptr;
@@ -333,7 +332,7 @@ int str_to_mac(char *str, char **res, size_t *size)
 {
 	char *ptr;
 
-	ptr = malloc(sizeof(FF_TYPE_MAC_T));
+	ptr = malloc(sizeof(ff_mac_t));
 	if (ptr == NULL) {
 		return 1;
 	}
@@ -368,21 +367,33 @@ int str_to_mac(char *str, char **res, size_t *size)
 			endptr++;
 		}
 	}
-	if (!ret) {
-		free(*res);
+	if (ret) {
+		free(*ptr);
 		*size = 0;
 	} else {
 		*res = ptr;
-		*size = sizeof(FF_TYPE_MAC_T);
+		*size = sizeof(ff_mac_t);
 	}
 	return ret;
 }
 
 
-//TODO: Implement conversion to timestamp
 int str_to_timestamp(char* str, char** res, size_t *size)
 {
-	return 1;
+	struct tm tm;
+	time_t timest;
+
+	if (strptime(str, "%Y-%m-%d %H:%M:%S", &tm) == NULL) { return 1; }
+	timest = mktime(&tm);
+
+	char *ptr = malloc(sizeof(uint64_t));
+	if (!ptr) return 1;
+
+	*ptr = timest;
+	memcpy(*res, ptr, sizeof(uint64_t));
+	*size = sizeof(uint64_t);
+
+	return 0;
 }
 
 ff_error_t ff_type_cast(yyscan_t *scanner, ff_t *filter, char *valstr, ff_node_t* node) {
@@ -594,7 +605,7 @@ ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter, char *fieldstr, ff_oper_t
 	do { /* Break on error */
 		if (filter->options.ff_lookup_func(filter, fieldstr, &lvalue) != FF_OK) {
 
-			ff_set_error(filter, "Can't lookup field type for %s", fieldstr);
+			ff_set_error(filter, "Can't lookup field type for \"%s\"", fieldstr);
 			retval = NULL;
 			break;
 		}
