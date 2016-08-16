@@ -3,9 +3,9 @@
 
 	<collectingProcess>
 		<name>Forwarding collector</name>
-		<udpCollector>
+		<tcpCollector>
 		  <localPort>4568</localPort>
-		</udpCollector>
+		</tcpCollector>
 		<exportingProcess>File writer ipfix</exportingProcess>
 	</collectingProcess>
 
