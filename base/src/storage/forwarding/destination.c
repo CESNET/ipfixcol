@@ -805,11 +805,8 @@ static struct tmplts_per_odid *dest_templates_prepare(
 	return result;
 }
 
-/**
- * \brief Check and move reconnected destinations to connected destinations
- * \param[in,out] dst_mgr Destination manager
- */
-static void dest_check_reconnected(fwd_dest_t *dst_mgr)
+// Check and move reconnected destinations to connected destinations
+void dest_check_reconnected(fwd_dest_t *dst_mgr)
 {
 	if (dst_mgr->ready_empty) {
 		return;
@@ -1118,9 +1115,6 @@ void dest_send(fwd_dest_t *dst_mgr, fwd_bldr_t *bldr_all,
 	fwd_bldr_t *bldr_tmplts, enum DIST_MODE mode)
 {
 	bool res;
-
-	// Add reconnected clients
-	dest_check_reconnected(dst_mgr);
 
 	// Distribution
 	switch (mode) {

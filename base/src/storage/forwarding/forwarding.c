@@ -488,6 +488,9 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	} else
 	*/
 
+	// Add reconnected clients
+	dest_check_reconnected(cfg->dest_mgr);
+
 	// Process a message
 	if (fwd_parse_msg(cfg, ipfix_msg)) {
 		MSG_ERROR(msg_module, "Processing of IPFIX message failed.");
