@@ -49,7 +49,7 @@ typedef enum {
 	FF_TYPE_INT16,
 	FF_TYPE_INT32,
 	FF_TYPE_INT64,
-	FF_TYPE_DOUBLE,        // TODO: muzeme si byt jisti, ze se bude pouzivat format IEEE 754?
+	FF_TYPE_DOUBLE,        // TODO: muzeme si byt jisti, ze se bude pouzivat format IEEE 754? Podla standardu C vraj ano
 	FF_TYPE_ADDR,
 	FF_TYPE_MAC,
 	FF_TYPE_STRING,
@@ -78,6 +78,27 @@ typedef enum {
 #define FF_TYPE_STRING_T char*
 #define FF_TYPE_MPLS_T unit32_t[10]
 #define FF_TYPE_TIMESTAMP_T unit64_t
+
+typedef void ff_unsupported_t;
+typedef char* ff_uint_t;
+typedef char* ff_int_t;
+typedef uint8_t ff_uint8_t;
+typedef uint16_t ff_uint16_t;
+typedef uint32_t ff_uint32_t;
+typedef uint64_t ff_uint64_t;
+typedef int8_t ff_int8_t;
+typedef int16_t ff_int16_t;
+typedef int32_t ff_int32_t;
+typedef int64_t ff_int64_t;
+typedef double ff_double_t;
+typedef double ff_float_t;
+typedef ff_ip_t ff_addr_t;
+typedef char ff_mac_t[8];
+typedef char* ff_string_t;
+typedef uint32_t ff_mpls_t[10];
+typedef uint64_t ff_timestamp_t;
+
+
 
 typedef enum {
 	FF_OK = 0x1,

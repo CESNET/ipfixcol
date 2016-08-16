@@ -83,7 +83,9 @@ int ipx_filter_parse(ipx_filter_t *filter, char* filter_str);
  * \param[in] record IPFIX data record
  * \return 1 when node fits, 0 otherwise
  */
-int ipx_filter_eval(ipx_filter_t *filter, struct ipfix_message *msg, struct ipfix_record *record);
+int ipx_filter_eval(ipx_filter_t *filter,
+					struct ipfix_message *msg,
+					struct ipfix_record *record);
 
 /**
  * \brief Copy last ff_filter error to ipx_filter internal buffer

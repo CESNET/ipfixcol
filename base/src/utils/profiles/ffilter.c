@@ -105,8 +105,7 @@ int64_t strtoll_unit(char *valstr, char**endptr)
 int str_to_uint(char *str, int type, char **res, size_t *vsize)
 {
 	uint64_t tmp64;
-	void *tmp, *ptr;
-	tmp = &tmp64;
+	void *ptr;
 
 	char* endptr;
 	tmp64 = strtoul_unit(str, &endptr);
@@ -140,7 +139,7 @@ int str_to_uint(char *str, int type, char **res, size_t *vsize)
 		return 1;
 	}
 
-	memcpy(ptr, tmp, *vsize);
+	memcpy(ptr, &tmp64, *vsize);
 
 	*res = ptr;
 
@@ -153,7 +152,7 @@ int str_to_int(char *str, int type, char **res, size_t *vsize)
 {
 
 	int64_t tmp64;
-	void *tmp, *ptr;
+	void *ptr;
 
 	char *endptr;
 	tmp64 = strtoll_unit(str, &endptr);
@@ -186,22 +185,20 @@ int str_to_int(char *str, int type, char **res, size_t *vsize)
 		return 1;
 	}
 
-	memcpy(ptr, tmp, *vsize);
+	memcpy(ptr, &tmp64, *vsize);
 
 	*res = ptr;
 
 	return 0;
 }
 
-int *int_to_netmask(int *numbits, ff_ip_t *mask)
+int int_to_netmask(int *numbits, ff_ip_t *mask)
 {
 	int req_oct;
-	int octet;
 	int retval = 0;
 	if (*numbits > 128) { *numbits = 128; retval = 1;}
 
-	req_oct = (*numbits >> 5) + ((*numbits & 0b11111) > 0); //Get number of reqired octets
-	octet = 0;
+	//req_oct = (*numbits >> 5) + ((*numbits & 0b11111) > 0); //Get number of reqired octets
 
 	int x;
 	for (x = 0; x < (*numbits >> 5); x++) {
@@ -214,7 +211,7 @@ int *int_to_netmask(int *numbits, ff_ip_t *mask)
 	return retval;
 }
 
-int unwrap_ip(char* ip_str, int numbits)
+char* unwrap_ip(char *ip_str, int numbits)
 {
 	char *endptr = ip_str;
 	char suffix[8] = {0};
@@ -287,7 +284,7 @@ int str_to_addr(ff_t *filter, char *str, char **res, int *numbits, size_t *size)
 			}
 		} else {
 			//for ip v6 require ::0 if address is shortened;
-			int_to_netmask(numbits, &(ptr->mask.data[0]));
+			int_to_netmask(numbits, &(ptr->mask));
 			//Try to unwrap ipv4 address
 			ip = unwrap_ip(ip_str, *numbits);
 			if (ip) {
@@ -318,7 +315,7 @@ int str_to_addr(ff_t *filter, char *str, char **res, int *numbits, size_t *size)
 	free(ip_str);
 
 	*numbits = ip_ver == 4 ? 32 : 128;
-	*res = ptr;
+	*res = &(ptr->ip);
 
 	*size = sizeof(ff_net_t);
 	return 0;
@@ -381,11 +378,12 @@ int str_to_mac(char *str, char **res, size_t *size)
 	return ret;
 }
 
+
+//TODO: Implement conversion to timestamp
 int str_to_timestamp(char* str, char** res, size_t *size)
 {
 	return 1;
 }
-
 
 ff_error_t ff_type_cast(yyscan_t *scanner, ff_t *filter, char *valstr, ff_node_t* node) {
 
@@ -469,13 +467,13 @@ ff_error_t ff_type_cast(yyscan_t *scanner, ff_t *filter, char *valstr, ff_node_t
 		}
 		break;
 	case FF_TYPE_TIMESTAMP:
-		if (str_to_time(valstr, &node->value, &node->vsize)) {
+		if (str_to_timestamp(valstr, &node->value, &node->vsize)) {
 			ff_set_error(filter, "Can't convert '%s' to time", valstr);
 			return FF_ERR_OTHER_MSG;
 		}
 	default:
-		ff_set_error(filter, "Can't convert '%s' type unsupported", valstr);
-		return FF_ERR_OTHER;
+		ff_set_error(filter, "Can't convert '%s' type is unsupported", valstr);
+		return FF_ERR_OTHER_MSG;
 	}
 	return FF_OK;
 }
@@ -536,7 +534,6 @@ ff_node_t* ff_branch_node(ff_node_t *node, ff_oper_t oper, ff_lvalue_t* lvalue) 
 
 	return dup[0];
 }
-
 
 ff_node_t* ff_duplicate_node(ff_node_t* original) {
 
@@ -623,7 +620,7 @@ ff_node_t* ff_new_leaf(yyscan_t scanner, ff_t *filter, char *fieldstr, ff_oper_t
 		if (oper == FF_OP_IN) {
 			void* tmp;
 			int err = FF_OK;
-			ff_node_t *elem = valstr;
+			ff_node_t *elem = (ff_node_t *)valstr;
 
 			node->right = elem;
 			retval = node;
@@ -896,6 +893,7 @@ int ff_oper_eval(char* buf, size_t size, ff_node_t *node)
 
 		switch (node->type) {
 		case FF_TYPE_UNSIGNED_BIG:
+			if (size > node->vsize) { return -1; }                /* too big integer */
 			switch (size) {
 			case sizeof(uint64_t):
 				return (ntohll(*(uint64_t *) buf) & *(uint64_t *) node->value) ==
@@ -912,6 +910,7 @@ int ff_oper_eval(char* buf, size_t size, ff_node_t *node)
 			default: return -1;
 			}
 		case FF_TYPE_UNSIGNED:
+			if (size > node->vsize) { return -1; }                /* too big integer */
 			switch (size) {
 			case sizeof(uint64_t):
 				return ((*(uint64_t *) buf) & *(uint64_t *) node->value) ==
@@ -933,6 +932,7 @@ int ff_oper_eval(char* buf, size_t size, ff_node_t *node)
 	case FF_OP_EXIST:
 		return 1;
 
+	default: return -1;
 	}
 }
 

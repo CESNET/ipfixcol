@@ -62,6 +62,7 @@ static const char *msg_module = "ipx_filter";
 enum nff_control_e {
 	CTL_NA = 0x00,
 	CTL_V4V6IP = 0x01,
+	//TODO: solve mdata and calculated items
 	CTL_MDATA_ITEM = 0x02,
 	CTL_CALCULATED_ITEM = 0x04,
 	CTL_FLAGS = 0x08,
@@ -263,8 +264,8 @@ static struct nff_item_s nff_ipff_map[]={
 		{"ingress vrfid", toEnId(0, 234)},
 		{"egress vrfid", toEnId(0, 235)},
 
-	{"tstart", toEnId(0, 152)},
-	{"tend", toEnId(0, 153)},
+	//{"tstart", toEnId(0, 152)},
+	//{"tend", toEnId(0, 153)},
 
 	/* Array is null terminated */
 	{ NULL, 0U},
@@ -563,9 +564,11 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
 		set_external_ids(item, lvalue);
 
 		//TODO: problem with flagged semi ipfix elements ie header items and calculated fields
+		//Switch behavior according to type of element and set appropriate type
 
 		unpackEnId(lvalue->id[0].index, &gen, &enterprise, &id);
 
+		//This sets bad type when header or metadata items are selected
 		elem = get_element_by_id(id, enterprise);
 
 	}
