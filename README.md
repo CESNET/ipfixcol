@@ -119,7 +119,7 @@ autoconf bison docbook-style-xsl doxygen flex
 gcc gcc-c++ git libtool libxml2 libxml2-devel 
 libxslt lksctp-tools-devel lzo-devel make 
 openssl-devel pkgconfig GeoIP-devel rrdtool-devel
-sqlite-devel postgresql-devel
+sqlite-devel postgresql-devel rpm-build
 ```
 
 Debian and Ubuntu distributions have a different names for some of the packages:
