@@ -191,6 +191,13 @@ int str_to_int(char *str, int type, char **res, size_t *vsize)
 	return 0;
 }
 
+/**
+ * \brief Transform mask representation
+ * from number of network bits format to full bit-mask
+ * \param numbits Number of network portion bits
+ * \param mask Ip address containing full mask
+ * \return Zero on success
+ */
 int int_to_netmask(int *numbits, ff_ip_t *mask)
 {
 	int req_oct;
@@ -210,6 +217,12 @@ int int_to_netmask(int *numbits, ff_ip_t *mask)
 	return retval;
 }
 
+/**
+ * \brief Pad necessary zeros to shortened ipv4 address
+ * \param ip_str Shortened ip string
+ * \param numbits Number of network portion bits
+ * \return Autocompleted network address in new string (must be freed) \see strdup
+ */
 char* unwrap_ip(char *ip_str, int numbits)
 {
 	char *endptr = ip_str;
@@ -240,6 +253,15 @@ char* unwrap_ip(char *ip_str, int numbits)
 }
 
 /* convert string into ff_addr_t */
+/**
+ * \brief Extended conversion from ip string to internal representation
+ * \param filter
+ * \param str
+ * \param res
+ * \param numbits
+ * \param size
+ * \return
+ */
 int str_to_addr(ff_t *filter, char *str, char **res, int *numbits, size_t *size)
 {
 	ff_net_t *ptr;
@@ -479,7 +501,7 @@ ff_error_t ff_type_cast(yyscan_t *scanner, ff_t *filter, char *valstr, ff_node_t
 		break;
 	case FF_TYPE_TIMESTAMP:
 		if (str_to_timestamp(valstr, &node->value, &node->vsize)) {
-			ff_set_error(filter, "Can't convert '%s' to time", valstr);
+			ff_set_error(filter, "Can't convert '%s' to timestamp", valstr);
 			return FF_ERR_OTHER_MSG;
 		}
 	default:
@@ -729,6 +751,7 @@ int ff_oper_eval(char* buf, size_t size, ff_node_t *node)
 
 		case FF_TYPE_DOUBLE: return *(double *) buf == *(double *) node->value;
 		case FF_TYPE_STRING: return !strcmp((char *) buf, node->value);
+		case FF_TYPE_MAC: return !memcmp(buf, node->value, sizeof(ff_mac_t));
 
 		case FF_TYPE_UNSIGNED_BIG:
 			if (size > node->vsize) { return -1; }                /* too big integer */
@@ -1011,8 +1034,14 @@ int ff_eval_node(ff_t *filter, ff_node_t *node, void *rec) {
 	if (filter->options.ff_data_func(filter, rec, node->field, buf, &size) != FF_OK) {
 		//ff_set_error(filter, "Can't get data");
 		//On no data mimic zero
-		size = sizeof(int64_t);
-		((int64_t *)buf)[0] = 0L;
+		switch (node->type) {
+		case FF_TYPE_MAC: size = sizeof(ff_mac_t); break;
+		case FF_TYPE_ADDR: size = sizeof(ff_ip_t); break;
+		case FF_TYPE_DOUBLE: size = sizeof(ff_double_t); break;
+		case FF_TYPE_TIMESTAMP: size = sizeof(ff_timestamp_t); break;
+		default: size = sizeof(uint64_t);
+		}
+		memset(buf, 0, size);
 		exist = 0;	// No data found
 	}
 
