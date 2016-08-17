@@ -1,6 +1,7 @@
 #include "Sender.h"
 
 #include <stdexcept>
+#include <sys/time.h>
 
 static const char *msg_module = "json sender";
 
@@ -42,6 +43,8 @@ Sender::Sender(const pugi::xpath_node &config)
 	if (siso_create_connection(sender, ip.c_str(), port.c_str(), proto.c_str()) != SISO_OK) {
 		throw std::runtime_error(siso_get_last_err(sender));
 	}
+
+	gettimeofday(&connection_time, NULL);
 }
 
 Sender::~Sender()
@@ -51,7 +54,27 @@ Sender::~Sender()
 
 void Sender::ProcessDataRecord(const std::string &record)
 {
+	if (siso_is_connected(sender) == 0) {
+		// Not connected -> try to reconnect
+		struct timeval current_time;
+		gettimeofday(&current_time, NULL);
+
+		// Try only one reconnection per second
+		if (connection_time.tv_sec >= current_time.tv_sec) {
+			return;
+		}
+
+		connection_time = current_time;
+		if (siso_reconnect(sender) == SISO_OK) {
+			MSG_INFO(msg_module, "Successfully reconnected.", NULL);
+		} else {
+			MSG_WARNING(msg_module, "Reconnection failed.", NULL);
+			return;
+		}
+	}
+
 	if (siso_send(sender, record.c_str(), record.length()) != SISO_OK) {
-		MSG_ERROR(msg_module, "Sending data: %s", siso_get_last_err(sender));
+		MSG_ERROR(msg_module, "Failed to send JSON data (%s). Connection closed.",
+			siso_get_last_err(sender));
 	}
 }

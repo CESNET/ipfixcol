@@ -80,11 +80,16 @@ enum siso_conn_type {
 enum SISO_ERRORS {
 	SISO_ERR_OK,
 	SISO_ERR_TYPE,
+	SISO_ERR_CONNECT,
+	SISO_ERR_CONFIG
 };
 
 static const char *siso_messages[] = {
+
 	"Everything OK",
-	"Unknown connection type"
+	"Unknown connection type",
+	"Unable to create a new socket and connect to a destination.",
+	"Configuration information is missing."
 };
 
 static const char *siso_sc_types[] = {
@@ -115,9 +120,9 @@ sisoconf *siso_create()
 		return NULL;
 	}
 	
+	conf->sockfd = -1;
 	/* Set default message */
 	conf->last_error = siso_messages[SISO_ERR_OK];
-	
 	return conf;
 }
 
@@ -161,6 +166,12 @@ inline int siso_get_socket(sisoconf *conf)		{ return conf->sockfd; }
 inline int siso_get_conn_type(sisoconf *conf)   { return conf->type; }
 inline uint64_t siso_get_speed(sisoconf *conf)  { return conf->max_speed; }
 inline const char *siso_get_last_err(sisoconf *conf){ return conf->last_error; }
+
+// Check if a destination is connected
+int siso_is_connected(const sisoconf *conf)
+{
+	return (conf->sockfd == -1) ? 0 : 1;
+}
 
 /**
  * \brief Set unlimited speed
@@ -243,6 +254,11 @@ int siso_getaddrinfo(sisoconf *conf, const char *ip, const char *port)
 		break;
 	}
 
+	if (conf->servinfo != NULL) {
+		freeaddrinfo(conf->servinfo);
+		conf->servinfo = NULL;
+	}
+
 	if (getaddrinfo(ip, port, &hints, &(conf->servinfo)) != 0) {
 		conf->last_error = PERROR_LAST;
 		return SISO_ERR;
@@ -256,25 +272,30 @@ int siso_getaddrinfo(sisoconf *conf, const char *ip, const char *port)
  */
 int siso_create_socket(sisoconf *conf)
 {
-	conf->sockfd = socket(conf->servinfo->ai_family, conf->servinfo->ai_socktype, conf->servinfo->ai_protocol);
-	if (conf->sockfd == -1) {
-		conf->last_error = PERROR_LAST;
-		return SISO_ERR;
-	}
-	
-	return SISO_OK;
-}
+	struct addrinfo *iter;
+	int new_fd = -1;
 
-/**
- * \brief Connect socket to server
- */
-int siso_connect(sisoconf *conf)
-{
-	if (connect(conf->sockfd, conf->servinfo->ai_addr, conf->servinfo->ai_addrlen) < 0) {
-		conf->last_error = PERROR_LAST;
+	for (iter = conf->servinfo; iter != NULL; iter = iter->ai_next) {
+		// Create a socket
+		new_fd = socket(iter->ai_family, iter->ai_socktype, iter->ai_protocol);
+		if (new_fd == -1) {
+			continue;
+		}
+
+		if (connect(new_fd, iter->ai_addr, iter->ai_addrlen) != -1) {
+			// Success
+			break;
+		}
+
+		close(new_fd);
+	}
+
+	if (iter == NULL) {
+		conf->last_error = siso_messages[SISO_ERR_CONNECT];
 		return SISO_ERR;
 	}
-	
+
+	conf->sockfd = new_fd;
 	return SISO_OK;
 }
 
@@ -302,12 +323,6 @@ int siso_create_connection(sisoconf* conf, const char* ip, const char *port, con
 	ret = siso_create_socket(conf);
 	CHECK_RETVAL(ret);
 	
-	/* Connect */
-	if (conf->type != SC_UDP) {
-		ret = siso_connect(conf);
-		CHECK_RETVAL(ret);
-	}
-	
 	return SISO_OK;
 }
 
@@ -322,16 +337,16 @@ void siso_close_connection(sisoconf *conf)
 	}
 }
 
-int siso_set_nonblocking(sisoconf *conf)
+// Reconnect to the destination
+int siso_reconnect(sisoconf *conf)
 {
-	CHECK_PTR(conf);
-	
-	if (fcntl(conf->sockfd, F_SETFL, O_NONBLOCK) != 0) {
-		conf->last_error = PERROR_LAST;
+	if (conf->servinfo == NULL) {
+		conf->last_error = siso_messages[SISO_ERR_CONFIG];
 		return SISO_ERR;
 	}
-	
-	return SISO_OK;
+
+	siso_close_connection(conf);
+	return siso_create_socket(conf);
 }
 
 /**
@@ -354,11 +369,12 @@ int siso_send(sisoconf *conf, const char *data, ssize_t length)
 		/* Send data */
 		switch (conf->type) {
 		case SC_UDP:
-			sent_now = sendto(conf->sockfd, ptr, SISO_MIN(todo, SISO_UDP_MAX), 0, conf->servinfo->ai_addr, conf->servinfo->ai_addrlen);
+			sent_now = send(conf->sockfd, ptr, SISO_MIN(todo, SISO_UDP_MAX),
+				MSG_NOSIGNAL);
 			break;
 		case SC_TCP:
 		case SC_SCTP:
-			sent_now = send(conf->sockfd, ptr, todo, 0);
+			sent_now = send(conf->sockfd, ptr, todo, MSG_NOSIGNAL);
 			break;
 		default:
 			break;
@@ -366,8 +382,15 @@ int siso_send(sisoconf *conf, const char *data, ssize_t length)
 
 		/* Check for errors */
 		if (sent_now == -1) {
-			conf->last_error = PERROR_LAST;
-			return SISO_ERR;
+			if (errno != EAGAIN && errno != EWOULDBLOCK) {
+				// Connection broken, close...
+				conf->last_error = PERROR_LAST;
+				siso_close_connection(conf);
+				return SISO_ERR;
+			}
+
+			// Probably a signal occurred. Try again.
+			continue;
 		}
 		
 		/* Skip sent data */
