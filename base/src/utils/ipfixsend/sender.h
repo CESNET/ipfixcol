@@ -1,5 +1,5 @@
 /**
- * \file sender.h
+ * \file ipfixsend/sender.h
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \brief Functions for parsing IP, connecting to collector and sending packets
  *
@@ -42,26 +42,27 @@
 
 #include <netdb.h>
 #include <siso.h>
+#include "reader.h"
 
 /**
  * \brief Send all packets from array with speed limitation
  * 
- * \param[in] sender sisoconf object
- * \param[in] packets Packets array
+ * \param[in] sender    sisoconf object
+ * \param[in] reader    Input file
  * \param[in] packets_s packets/s limit
- * \return SISO_OK on success
+ * \return On succes returns 0. Otherwise returns nonzero value.
  */
-int send_packets_limit(sisoconf *sender, char **packets, int packets_s);
+int send_packets_limit(sisoconf *sender, reader_t *reader, int packets_s);
 
 /**
  * \brief Send all packets from array with real-time simulation
  *
  * \param[in] sender sisoconf object
- * \param[in] packets Packets array
- * \param[in] speed Speed-up compared to real-time (multiples)
- * \return SISO_OK on success
+ * \param[in] reader Input file
+ * \param[in] speed  Speed-up compared to real-time (multiples)
+ * \return On succes returns 0. Otherwise returns nonzero value.
  */
-int send_packets_realtime(sisoconf *sender, char **packets, double speed);
+int send_packets_realtime(sisoconf *sender, reader_t *reader, double speed);
 
 /**
  * \brief Stop sending data

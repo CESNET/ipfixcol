@@ -1,9 +1,9 @@
 /**
- * \file reader.h
- * \author Michal Kozubik <kozubik@cesnet.cz>
+ * \file ipfixsend/reader.h
+ * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Functions for reading IPFIX file
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2016 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,47 +37,104 @@
  *
  */
 
+#include <stdbool.h>
+#include <ipfixcol.h>
+
 #ifndef READER_H
 #define	READER_H
 
-enum read_status {
-    READ_EOF,
-    READ_OK,
-    READ_ERROR,
+/**
+ * \brief Return status of the packet reader
+ */
+enum READER_STATUS {
+	READER_EOF,   /**< End of File                                         */
+	READER_OK,    /**< Reader operation successfully finished              */
+	READER_ERROR, /**< Reader operation failed                             */
+	READER_SIZE   /**< Size of a buffer is too small                       */
 };
 
-/**
- * \brief Read packet from file
- * 
- * @param fd file descriptor
- * @param status read status (READ_ERROR, EOF, ...)
- * @return packet
- */
-char *read_packet(int fd, int *status);
+/** Datatype of the packet reader                                          */
+typedef struct reader_internal reader_t;
 
 /**
- * \brief Read packets from IPFIX file and store them into memory
- * 
- * @param input path to IPFIX file
- * @return array with packets
+ * \brief Create a new packet reader
+ * \param[in] file     Path to the IPFIX file
+ * \param[in] preload  Preload all IPFIX record to an internal buffer
+ * \return On success returns a new pointer to instance of the reader. Otherwise
+ *   returns NULL.
  */
-char **read_packets(char *input);
+reader_t *
+reader_create(const char *file, bool preload);
 
 /**
- * \brief Free allocated memory for packets
- * 
- * @param packets
+ * \brief Destroy a packet reader
+ * \param[in] reader   Pointer to the packet reader
  */
-void free_packets(char **packets);
+void
+reader_destroy(reader_t *reader);
 
 /**
- * \brief Read file
- * 
- * @param input input path to file
- * @param fsize file size
- * @return whole file content
+ * \brief Rewind file (go to the beginning of a file)
+ * \param[in] reader Pointer to the packet reader
  */
-char *read_file(char *input, long *fsize);
+void
+reader_rewind(reader_t *reader);
+
+/**
+ * \brief Push the current position in a file
+ *
+ * Only one position in the file can be remembered. Previously unpoped position
+ * in the file will be lost.
+ * \param[in] reader Pointer to the packet reader
+ * \return On success returns #READER_OK. Otherwise returns #READER_ERROR.
+ */
+enum READER_STATUS
+reader_position_push(reader_t *reader);
+
+/**
+ * \brief Pop the previously pushed position in the file
+ * \param[in] reader Pointer to the packet reader
+ * \return On success returns #READER_OK. Otherwise returns #READER_ERROR.
+ */
+enum READER_STATUS
+reader_position_pop(reader_t *reader);
+
+/**
+ * \brief Get the pointer to a next packet
+ *
+ * The function returns pointer to the next packet, which is stored in
+ * an internal buffer. The position in the file is changed. A user is allowed to
+ * change only a Sequence number and Observation Domain ID.
+ * \warning After calling reader_get_next_packet() or reader_get_next_header()
+ *   internal buffer is always overwritten with a new packet/header.
+ * \param[in]  reader  Pointer to the packet reader
+ * \param[out] output  Pointer to the internal buffer
+ * \param[out] size    Size of the record in the buffer (can be NULL)
+ * \return On success returns #READER_OK and fills the pointer to the packet
+ *   (\p output) and its \p size. Otherwise returns #READER_EOF (end of file)
+ *   or #READER_ERROR (malformed intput file).
+ */
+enum READER_STATUS
+reader_get_next_packet(reader_t *reader, struct ipfix_header **output,
+	uint16_t *size);
+
+/**
+ * \brief Get the pointer to header of a next packet
+ *
+ * The function returns pointer to the next header, which is stored in
+ * an internal buffer. The position in the file is changed. A user is allowed to
+ * change only a Sequence number and Observation Domain ID.
+ * \warning After calling reader_get_next_packet() or reader_get_next_header()
+ *   internal buffer is always overwritten with a new packet/header.
+ * \warning The rest of the message (behind the headers) is not available.
+ * \param[in] reader  Pointer to the packet reader
+ * \param[in] header  Pointer to the header
+ * \return On success returns #READER_OK and fills the pointer to the \p header.
+ *   Otherwise returns #READER_EOF (end of file) or #READER_ERROR (malformed
+ *   intput file).
+ */
+enum READER_STATUS
+reader_get_next_header(reader_t *reader, struct ipfix_header **header);
 
 #endif	/* READER_H */
 
