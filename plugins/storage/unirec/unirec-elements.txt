@@ -26,9 +26,6 @@ DNS_PSIZE                      uint16         2      e8057id8         DNS payloa
 DNS_DO                         uint8          1      e8057id9         DNS DNSSEC OK bit
 DNS_ID                         uint16         2      e8057id10        DNS transaction id
 SMTP_FLAGS                     uint8          1      e8057id200       SMTP flags
-SIP_CONTROL                    uint16         2      e8057id100       SIP response/command code
-SIP_FROM                       string        -1      e8057id101       SIP From header field
-SIP_TO                         string        -1      e8057id102       SIP To header field
 HB_TYPE                        uint8          1      e8057id700       TLS content type
 HB_DIR                         uint8          1      e8057id701       Heartbeat request/response byte
 HB_SIZE_MSG                    uint16 	      2      e8057id702       Heartbeat message size
