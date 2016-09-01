@@ -2,9 +2,9 @@
 #ifndef _FFILTER_INTERNAL_H
 #define _FFILTER_INTERNAL_H
 
-#include <ffilter.h>
+#include "ffilter.h"
 
-typedef struct ff_net_s { ff_ip_t ip; ff_ip_t mask; } ff_net_t;
+typedef struct ff_net_s { ff_ip_t ip; ff_ip_t mask; int ver; } ff_net_t;
 
 /* supported operations */
 typedef enum {
@@ -70,12 +70,17 @@ void yyerror(yyscan_t yyscanner, ff_t *filter, char *);
 /* conversion from string to numeric/bit value */
 int64_t get_unit(char *unit);
 int64_t strtoll_unit(char *num, char**endptr);
-uint64_t strtoul_unit(char *num, char**endptr);
-int str_to_uint(char *str, int type, char **res, size_t *vsize);
-int str_to_int(char *str, int type, char **res, size_t *vsize);
-int str_to_mac(char *str, char **res, size_t *vsize);
-int str_to_addr(ff_t *filter, char *str, char **res, int *numbits, size_t *vsize);
-int str_to_timestamp(char *str, char **res, size_t *vsize);
+uint64_t strtoull_unit(char *num, char**endptr);
+
+int str_to_uint(ff_t *filter, char *str, ff_type_t type, char **res, size_t *vsize);
+int str_to_int(ff_t *filter, char *str, ff_type_t type, char **res, size_t *vsize);
+
+int str_to_uint64(ff_t *filter, char *str, char **res, size_t *vsize);
+int str_to_int64(ff_t *filter, char *str, char **res, size_t *vsize);
+int str_to_real(ff_t *filter, char *str, char **res, size_t *vsize);
+int str_to_mac(ff_t *filter, char *str, char **res, size_t *vsize);
+int str_to_addr(ff_t *filter, char *str, char **res, size_t *vsize);
+int str_to_timestamp(ff_t *filter, char *str, char **res, size_t *vsize);
 
 /* add new node into parse tree */
 ff_node_t* ff_duplicate_node(ff_node_t* original);

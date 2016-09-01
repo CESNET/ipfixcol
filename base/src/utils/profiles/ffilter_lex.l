@@ -60,7 +60,7 @@ exist           { return EXIST; }
 "]"			{ return RPS; }
 
 "next"{ws}+"ip"	{
-			// Grammar exceptions
+			// Grammar exceptions nfdump compat, maybe enable one space separated identifiers ?
 					strncpy(yylval->string, "nextip", FF_MAX_STRING - 1);
 					return STRING;
 				}

@@ -62,12 +62,12 @@ ipx_filter_t *ipx_filter_create();
 /**
  * \brief Free profile's data
  *
- * \param[in] profile Profile
+ * \param[in] filter Profile
  */
 void ipx_filter_free(ipx_filter_t *filter);
 
 /**
- * \breif Compile filter expression and create profile structure
+ * \brief Compile filter expression and create profile structure
  *
  * \param pdata
  * \param filter_str

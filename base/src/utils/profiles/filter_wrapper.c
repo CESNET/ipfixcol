@@ -51,6 +51,7 @@
 #include "filter_wrapper.h"
 #include "ffilter.h"
 
+//TODO: Transform indentification to utilise ability to set pointer to general data in external identification
 #define toGenEnId(gen, en, id) (((uint64_t)gen & 0xffff) << 48 |\
 				((uint64_t)en & 0xffffffff) << 16 |\
 				 (uint16_t)id)
@@ -62,10 +63,11 @@ static const char *msg_module = "ipx_filter";
 enum nff_control_e {
 	CTL_NA = 0x00,
 	CTL_V4V6IP = 0x01,
-	//TODO: solve mdata and calculated items
+	//TODO: solve mdata items when time comes
 	CTL_MDATA_ITEM = 0x02,
 	CTL_CALCULATED_ITEM = 0x04,
 	CTL_FLAGS = 0x08,
+	CTL_CONST_ITEM = 0x10,
 	CTL_FPAIR = 0x8000,
 };
 
@@ -73,7 +75,21 @@ enum nff_calculated_e {
 	CALC_PPS = 1,
 	CALC_DURATION,
 	CALC_BPS,
-	CALC_BPP
+	CALC_BPP,
+	CALC_MPLS,
+	CALC_MPLS_EOS,
+	CALC_MPLS_EXP
+};
+
+enum nff_constant_e {
+	CONST_INET = 0,
+	CONST_INET6,
+	CONST_END
+};
+
+uint64_t constants[CONST_END] = {
+	4,
+	6,
 };
 
 struct ipx_filter {
@@ -122,10 +138,13 @@ static struct nff_item_s nff_ipff_map[]={
 
 	//Implement default values (automatic)
 	{"inet", toEnId(0, 60)},
-	//{"inet6", toEnId(0, 60)},
+	//{"inet", toGenEnId(CTL_CONSTANT, 60, CONST_INET6)},
 	{"ipv", toEnId(0, 60)},
-	//{"ipv4", toEnId(0, 60)},
-	//{"ipv6", toEnId(0, 60)},
+
+	/*{"inet", toGenEnId(CTL_CONSTANT, 60, CONST_INET)},
+	{"ipv4", toGenEnId(CTL_CONSTANT, 60, CONST_INET)},
+	{"ipv6", toGenEnId(CTL_CONSTANT, 60, CONST_INET6)},
+	 */
 
 	{"proto", toEnId(0, 4)},
 
@@ -180,16 +199,12 @@ static struct nff_item_s nff_ipff_map[]={
 	{"icmp-code", toEnId(0, 177)},
 
 	{"as", toGenEnId(CTL_FPAIR, 1, 2)},
-/*		{"srcas", toGenEnId(CTL_MDATA_ITEM, 0, 1)},
-		{"dstas", toGenEnId(CTL_MDATA_ITEM, 0, 2)},
-		{"prevas", toGenEnId(CTL_MDATA_ITEM, 0, 1)},
-		{"nextas", toGenEnId(CTL_MDATA_ITEM, 0, 2)},
-*/
+	{"as", toGenEnId(CTL_FPAIR, 2, 3)},
+	{"as", toGenEnId(CTL_FPAIR, 3, 4)},
 		{"src as", toEnId(0, 16)},
 		{"dst as", toEnId(0, 17)},
-
-	{"next as", toEnId(0, 128)}, //maps  to BGPNEXTADJACENTAS
-	{"prev as", toEnId(0, 129)}, //similar as above
+		{"next as", toEnId(0, 128)}, //maps  to BGPNEXTADJACENTAS
+		{"prev as", toEnId(0, 129)}, //similar as above
 
 
 	{"vlan", toGenEnId(CTL_FPAIR, 1, 2)},
@@ -216,16 +231,19 @@ static struct nff_item_s nff_ipff_map[]={
 		{"out dst mac", toEnId(0, 57)},
 
 
-	{"mplslabel1", toEnId(0, 70)},
-	{"mplslabel2", toEnId(0, 71)},
-	{"mplslabel3", toEnId(0, 72)},
-	{"mplslabel4", toEnId(0, 73)},
-	{"mplslabel5", toEnId(0, 74)},
-	{"mplslabel6", toEnId(0, 75)},
-	{"mplslabel7", toEnId(0, 76)},
-	{"mplslabel8", toEnId(0, 77)},
-	{"mplslabel9", toEnId(0, 78)},
-	{"mplslabel10", toEnId(0, 79)},
+	{"mplslabel1", toGenEnId(CTL_CALCULATED_ITEM, 70, CALC_MPLS)},
+	{"mplslabel2", toGenEnId(CTL_CALCULATED_ITEM, 71, CALC_MPLS)},
+	{"mplslabel3", toGenEnId(CTL_CALCULATED_ITEM, 72, CALC_MPLS)},
+	{"mplslabel4", toGenEnId(CTL_CALCULATED_ITEM, 73, CALC_MPLS)},
+	{"mplslabel5", toGenEnId(CTL_CALCULATED_ITEM, 74, CALC_MPLS)},
+	{"mplslabel6", toGenEnId(CTL_CALCULATED_ITEM, 75, CALC_MPLS)},
+	{"mplslabel7", toGenEnId(CTL_CALCULATED_ITEM, 76, CALC_MPLS)},
+	{"mplslabel8", toGenEnId(CTL_CALCULATED_ITEM, 77, CALC_MPLS)},
+	{"mplslabel9", toGenEnId(CTL_CALCULATED_ITEM, 78, CALC_MPLS)},
+	{"mplslabel10", toGenEnId(CTL_CALCULATED_ITEM, 79, CALC_MPLS)},
+
+	{"mplsexp", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_MPLS_EXP)},
+	{"mplseos", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_MPLS_EOS)},
 
 	{"packets", toEnId(0, 2)},
 
@@ -239,7 +257,6 @@ static struct nff_item_s nff_ipff_map[]={
 
 	/* CTL_CALCULATED_ITEM marks specific elements, enumerated ie_id mappings
 	 * are for calculated virtual fields */
-	 //TODO: EDIT data function
 	{"pps", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_PPS)},
 
 	{"duration", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_DURATION)},
@@ -523,12 +540,12 @@ int set_external_ids(nff_item_t *item, ff_lvalue_t *lvalue)
 	if (gen & CTL_FPAIR) {
 		ids += set_external_ids(item+of1, lvalue);
 		ids += set_external_ids(item+of2, lvalue);
-		lvalue->options |= FFOPTS_MULTINODE;
+		lvalue->options |= FF_OPTS_MULTINODE;
 		return ids;
 	}
 
 	if (gen & CTL_FLAGS) {
-		lvalue->options |= FFOPTS_FLAGS;
+		lvalue->options |= FF_OPTS_FLAGS;
 	}
 
 	while(ids < FF_MULTINODE_MAX && lvalue->id[ids].index) {
@@ -579,11 +596,11 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
 		if (gen & CTL_CALCULATED_ITEM) {
 			lvalue->type = FF_TYPE_UNSIGNED;
 			return FF_OK;
-		} /*else if (gen & CTL_MDATA_ITEM) {
-			lvalue->tupe = FF_TYPE_UNSUPPORTED;
+		/*} else if (gen & CTL_CONST_ITEM) {
+			lvalue->type = FF_TYPE_UNSUPPORTED;
 			ff_set_error(filter, "ipfix metadata item %s has unsupported format", fieldstr);
 			return FF_ERR_OTHER_MSG;
-		} */else {
+		*/} else {
 			elem = get_element_by_id(id, enterprise);
 		}
 	}
@@ -646,7 +663,7 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
 }
 
 /* Flow duration calculation function */
-ff_uint64_t data_record_get_flow_duration_milliseconds(uint8_t *record, struct ipfix_template *templ);
+ff_uint64_t calc_record_duration(uint8_t *record, struct ipfix_template *templ);
 
 /* getting data callback */
 ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data, size_t *size)
@@ -662,29 +679,19 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 	uint16_t generic_set;
 	unpackEnId(id.index, &generic_set, &en, &ie_id);
 
-	/*if (generic_set & CTL_MDATA_ITEM) {
-		//Filtration by metadata not used for now
-		switch (ie_id) {
-		case 1:
-			ipf_field = &(((struct metadata *)msg_pair->rec)->srcAS);
-			len = sizeof(((struct metadata *)msg_pair->rec)->srcAS);
-			break;
-		case 2:
-			ipf_field = &(((struct metadata *)msg_pair->rec)->dstAS);
-			len = sizeof(((struct metadata *)msg_pair->rec)->dstAS);
-			break;
-		default:
-		//proceed directly to return
-			return FF_ERR_OTHER;
-		}
-	} else*/ if (generic_set & CTL_CALCULATED_ITEM) {
+	if (generic_set & CTL_MDATA_ITEM) {
+
+		return FF_ERR_OTHER;
+
+	} else if (generic_set & CTL_CALCULATED_ITEM) {
 		ff_uint64_t flow_duration;
 		ff_uint64_t tmp, tmp2;
 
+		//TODO: add mpls handlers
 		//TODO: check that memcpy construction works
 		switch (ie_id) {
 		case CALC_PPS:
-			flow_duration = data_record_get_flow_duration_milliseconds(msg_pair->rec->record, msg_pair->rec->templ);
+			flow_duration = calc_record_duration(msg_pair->rec->record, msg_pair->rec->templ);
 			if (!flow_duration) { return FF_ERR_OTHER; }
 
 			ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, 0, 2, &len);
@@ -696,13 +703,15 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 
 			break;
 		case CALC_DURATION:
-			tmp = data_record_get_flow_duration_milliseconds(msg_pair->rec->record, msg_pair->rec->templ);
+			tmp = calc_record_duration(msg_pair->rec->record, msg_pair->rec->templ);
 			if (!tmp) { return FF_ERR_OTHER; }
 
 			len = sizeof(tmp);
 
 			break;
 		case CALC_BPS:
+			flow_duration = calc_record_duration(msg_pair->rec->record, msg_pair->rec->templ);
+			if (!len) { return FF_ERR_OTHER; }
 			ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, 0, 1, &len);
 			if (!len) { return FF_ERR_OTHER; }
 			memcpy(&tmp, ipf_field, len);
@@ -822,7 +831,7 @@ ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, f
 	return FF_ERR_OTHER;
 }
 
-ff_uint64_t data_record_get_flow_duration_milliseconds(uint8_t *record, struct ipfix_template *templ)
+ff_uint64_t calc_record_duration(uint8_t *record, struct ipfix_template *templ)
 {
 	int len;
 	char *ipf_data = NULL;
