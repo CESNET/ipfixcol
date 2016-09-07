@@ -1,10 +1,11 @@
 /**
- * \file storage.h
+ * \file storage_profiles.h
  * \author Imrich Stoffa <xstoff02@stud.fit.vutbr.cz>
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
+ * \author Pavel Krobot <Pavel.Krobot@cesnet.cz>
  * \brief Storage management (header file)
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2015, 2016 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,16 +39,24 @@
  *
  */
 
-#ifndef LS_STORAGE_H
-#define LS_STORAGE_H
+#ifndef LS_STORAGE_PROFILES_H
+#define LS_STORAGE_PROFILES_H
 
 #include <ipfixcol.h>
 #include "lnfstore.h"
 
+
+typedef enum {
+	IPE_NEW_WINDOW_START,
+	IPE_NEW_WINDOW_END,
+	IPE_RELOAD_PROFILES,
+	IPE_CLEANUP,
+} indexing_profiles_events_t;
+
+
 // Store a record
-void store_record(const struct metadata* mdata, struct lnfstore_conf *conf);
+void store_record_profiles(const struct metadata* mdata, struct lnfstore_conf *conf);
 
-// Close all output files
-void close_storage_files(struct lnfstore_conf *conf);
+void cleanup_storage_profiles(struct lnfstore_conf *conf);
 
-#endif //LS_STORAGE_H
+#endif //LS_STORAGE_PROFILES_H

@@ -1,41 +1,3 @@
-#
-# Copyright (c) 2015 CESNET
-#
-# LICENSE TERMS
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions
-# are met:
-# 1. Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright
-#    notice, this list of conditions and the following disclaimer in
-#    the documentation and/or other materials provided with the
-#    distribution.
-# 3. Neither the name of the Company nor the names of its contributors
-#    may be used to endorse or promote products derived from this
-#    software without specific prior written permission.
-#
-# ALTERNATIVELY, provided that this notice is retained in full, this
-# product may be distributed under the terms of the GNU General Public
-# License (GPL) version 2 or later, in which case the provisions
-# of the GPL apply INSTEAD OF those given above.
-#
-# This software is provided ``as is'', and any express or implied
-# warranties, including, but not limited to, the implied warranties of
-# merchantability and fitness for a particular purpose are disclaimed.
-# In no event shall the company or contributors be liable for any
-# direct, indirect, incidental, special, exemplary, or consequential
-# damages (including, but not limited to, procurement of substitute
-# goods or services; loss of use, data, or profits; or business
-# interruption) however caused and on any theory of liability, whether
-# in contract, strict liability, or tort (including negligence or
-# otherwise) arising in any way out of the use of this software, even
-# if advised of the possibility of such damage.
-#
-# $Id$
-#
-
 AC_PREREQ([2.60])
 # Process this file with autoconf to produce a configure script.
 AC_INIT([ipfixcol-lnfstore-output], [0.2.6])
@@ -78,7 +40,13 @@ AC_CHECK_LIB([xml2], [main],
     CPPFLAGS="`xml2-config --cflags` $CPPFLAGS"],
     AC_MSG_ERROR([Libxml2 not found ]))
 
-AC_SEARCH_LIBS([lnf_open], [nf], [], [AC_MSG_ERROR([unable to find the libnf library])])
+AC_CHECK_LIB([nf], [lnf_open],
+             [],
+             [AC_MSG_ERROR([libnf library not found])])
+
+AC_CHECK_LIB([bfindex], [create_index],
+             [],
+             [AC_MSG_ERROR([bfindex library not found])])
 
 ###################### Check for configure parameters ##########################
 AC_ARG_ENABLE([debug], 
@@ -99,8 +67,11 @@ AS_IF([test -d $srcdir/../../../base/headers],
 
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
 
-# Check libtrap headers
+# Check libnf headers
 AC_CHECK_HEADERS([libnf.h], , AC_MSG_ERROR([libnf.h header missing. Please install libnf package]), [AC_INCLUDES_DEFAULT])
+
+# Check libbfindex header
+AC_CHECK_HEADERS([bf_index.h], , AC_MSG_ERROR([bf_index.h header missing.]), [AC_INCLUDES_DEFAULT])
 
 ######## Checks for typedefs, structures, and compiler characteristics #########
 AC_C_INLINE

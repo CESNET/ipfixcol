@@ -2,9 +2,10 @@
  * \file lnfstore.c
  * \author Imrich Stoffa <xstoff02@stud.fit.vutbr.cz>
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
+ * \author Pavel Krobot <Pavel.Krobot@cesnet.cz>
  * \brief lnfstore plugin interface (source file)
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2015, 2016 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,7 +40,9 @@
  */
 
 #include "lnfstore.h"
-#include "storage.h"
+#include "storage_basic.h"
+#include "storage_profiles.h"
+#include <bf_index.h>
 #include <ipfixcol.h>
 #include <libxml/parser.h>
 #include <libxml/xmlmemory.h>
@@ -119,10 +122,34 @@ void destroy_parsed_params(struct conf_params *cnf)
 		if (cnf->file_ident) {
 			free(cnf->file_ident);
 		}
+//		if (cnf->bf.file_prefix) {
+//			free(cnf->bf.file_prefix);
+//		}
 
 		free(cnf);
 	}
 }
+
+
+struct lnfstore_index *create_lnfstore_index()
+{
+	struct lnfstore_index *new_index = malloc(sizeof(struct lnfstore_index));
+	if (new_index){
+		new_index->index = NULL;
+		new_index->state = BF_INIT;
+		new_index->unique_item_cnt = 0;
+		new_index->params_changed = false;
+	}
+
+	return new_index;
+}
+
+void destroy_lnfstore_index(struct lnfstore_index *lnf_index)
+{
+	destroy_index(lnf_index->index);
+	free(lnf_index);
+}
+
 
 /**
  * \brief Formats the path string according to the format specification
@@ -203,6 +230,10 @@ struct conf_params *process_startup_xml(const char *params)
 		return NULL;
 	}
 
+	/// TODO nedela se u teto xml konfigurace jinak?
+	cnf->bf.est_item_cnt = BF_DEFAULT_ITEM_CNT_EST;
+	cnf->bf.fp_prob = BF_DEFAULT_FP_PROB;
+
 	// Try to parse plugin configuration
 	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
 	if (doc == NULL) {
@@ -273,6 +304,20 @@ struct conf_params *process_startup_xml(const char *params)
 
 				cur_sub = cur_sub->next;
 			}
+//		} else if (!xmlStrcmp(cur->name, (const xmlChar*) "prefixBF")) {
+//			// Get file prefix
+//			cnf->bf.file_prefix = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+		} else if (!xmlStrcmp(cur->name, (const xmlChar*) "BF_Index")) {
+			// Turn on data indexing
+			cnf->bf.indexing = xml_cmp_bool(doc, cur, true);
+		} else if (!xmlStrcmp(cur->name, (const xmlChar*) "BF_FPProb")) {
+			char *val = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+			cnf->bf.fp_prob = strtod(val, NULL);
+		} else if (!xmlStrcmp(cur->name, (const xmlChar*) "BF_EstItemCnt")) {
+			char *val = (char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+			cnf->bf.est_item_cnt = strtoull(val, NULL, 0);
+		} else if (!xmlStrcmp(cur->name, (const xmlChar*) "BF_AutoSize")) {
+			cnf->bf_index_autosize = xml_cmp_bool(doc, cur, true);
 		} else {
 			MSG_WARNING(msg_module, "Unknown element \"%s\" in configuration "
 				"skipped.", cur->name);
@@ -303,6 +348,26 @@ struct conf_params *process_startup_xml(const char *params)
 			"(300 seconds).");
 	}
 
+	/// TODO kdyz uzivatel nastavi parametry indexace ale nezapne indexing
+	if (cnf->bf.indexing) {
+		cnf->bf.file_prefix = BF_FILE_PREFIX;
+//		if (!cnf->bf.file_prefix) {
+//			MSG_ERROR(msg_module, "Bloom filter index file prefix is not set.");
+//			goto err_xml;
+//		}
+		if (cnf->bf.fp_prob > 1 || cnf->bf.fp_prob < 0.000001){
+			MSG_ERROR(msg_module, "Wrong false positive probability value. "
+						"Use value from 1 to 0.000001 (invalid value is %f).",
+						cnf->bf.fp_prob);
+			goto err_xml;
+		}
+		if (cnf->bf.est_item_cnt <= 0){
+			MSG_ERROR(msg_module, "Wrong estimated item count, use vale greater"
+						"than 1 (invalid value is %ull).", cnf->bf.est_item_cnt);
+			goto err_xml;
+		}
+	}
+
 	xmlFreeDoc(doc);
 	return cnf;
 
@@ -314,7 +379,7 @@ err_xml:
 
 // Storage plugin initialization function.
 int storage_init (char *params, void **config)
-{	
+{
 	// Process XML configuration
 	struct conf_params *parsed_params = process_startup_xml(params);
 	if (!parsed_params) {
@@ -341,6 +406,17 @@ int storage_init (char *params, void **config)
 		return 1;
 	}
 
+	// Initialize indexing state (no profile mode only)
+	if (!conf->params->profiles && conf->params->bf.indexing){
+		conf->lnf_index = create_lnfstore_index();
+		if (!conf->lnf_index){
+			MSG_ERROR(msg_module, "Failed to initialize lnfstore index");
+			destroy_parsed_params(parsed_params);
+			free(conf);
+			return 1;
+		}
+	}
+
 	/* Save configuration */
 	*config = conf;
 
@@ -357,12 +433,16 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 {
 	(void) template_mgr;
 	struct lnfstore_conf *conf = (struct lnfstore_conf *) config;
-	
+
 	for (int i = 0; i < ipfix_msg->data_records_count; i++)
 	{
-		store_record(&(ipfix_msg->metadata[i]), conf);
+		if (conf->params->profiles){
+			store_record_profiles(&(ipfix_msg->metadata[i]), conf);
+		} else {
+			store_record_basic(&(ipfix_msg->metadata[i]), conf);
+		}
 	}
-	
+
 	return 0;
 }
 
@@ -378,22 +458,32 @@ int storage_close (void **config)
 {
 	MSG_DEBUG(msg_module, "closing...");
 	struct lnfstore_conf *conf = (struct lnfstore_conf *) *config;
-	
+
 	/* Destroy configuration */
 	lnf_rec_free(conf->rec_ptr);
-	close_storage_files(conf);
 
+	if (conf->params->profiles){
+		cleanup_storage_profiles(conf);
+	} else {
+		cleanup_storage_basic(conf);
+		if (conf->params->bf.indexing){
+			destroy_lnfstore_index(conf->lnf_index);
+		}
+	}
+
+	/* 2) Destroy profiles */
 	if (conf->profiles_ptr) {
 		free(conf->profiles_ptr);
 	}
-
 	if (conf->bitset) {
 		bitset_destroy(conf->bitset);
 	}
 
+	/* 3) Destroy configured parameters */
 	destroy_parsed_params(conf->params);
 
 	free(conf);
 	*config = NULL;
+
 	return 0;
 }

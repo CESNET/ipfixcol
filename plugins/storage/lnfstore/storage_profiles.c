@@ -2,9 +2,10 @@
  * \file storage.c
  * \author Imrich Stoffa <xstoff02@stud.fit.vutbr.cz>
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
+ * \author Pavel Krobot <Pavel.Krobot@cesnet.cz>
  * \brief Storage management (source file)
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2015, 2016 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,9 +42,12 @@
 #include <ipfixcol.h>
 #include <ipfixcol/profiles.h>
 
-#include "storage.h"
-#include "translator.h" 
+#include "storage_basic.h"
+#include "storage_profiles.h"
+#include "translator.h"
 #include "bitset.h"
+#include <bf_index.h>
+#include <libnf.h>
 #include <string.h>
 #include <libxml/xmlstring.h>
 #include <sys/types.h>
@@ -56,11 +60,59 @@
 // Module identification
 static const char* msg_module = "lnfstore";
 
-int cmp_profile_file(const void* m1, const void* m2)
+
+
+// Profile storage only ---------------------------------------------------- >>>
+static void update_profiles_states(struct lnfstore_conf *conf,
+								indexing_profiles_events_t event)
+{
+	if (!conf->profiles_ptr) {
+		return;
+	}
+
+	for (int i = 0; i < conf->profiles_size; ++i) {
+		profile_file_t *profile = &conf->profiles_ptr[i];
+
+		switch(event){
+			case IPE_NEW_WINDOW_START:
+				if (profile->lnf_index->state == BF_IN_PROGRESS){
+					profile->lnf_index->state = BF_CLOSING;
+				} else if (profile->lnf_index->state == BF_IN_PROGRESS_FIRST){
+					profile->lnf_index->state = BF_CLOSING_FIRST;
+				}
+				break;
+
+			case IPE_NEW_WINDOW_END:
+				if (profile->lnf_index->state == BF_CLOSING ||
+						profile->lnf_index->state == BF_CLOSING_FIRST){
+					profile->lnf_index->state = BF_IN_PROGRESS;
+				} else if (profile->lnf_index->state == BF_INIT){
+					profile->lnf_index->state = BF_IN_PROGRESS_FIRST;
+				}
+				break;
+
+			case IPE_RELOAD_PROFILES:
+				if (profile->lnf_index->state == BF_INIT){
+					profile->lnf_index->state = BF_IN_PROGRESS_FIRST;
+				}
+				break;
+
+			case IPE_CLEANUP:
+				profile->lnf_index->state = BF_CLOSING_LAST;
+				break;
+
+			default:
+				break;
+		}
+	}
+}
+
+
+static int cmp_profile_file(const void* m1, const void* m2)
 {
 	const profile_file_t *val1 = m1;
 	const profile_file_t *val2 = m2;
-	
+
 	if (val1->address == val2->address) {
 		return 0;
 	}
@@ -68,138 +120,16 @@ int cmp_profile_file(const void* m1, const void* m2)
 	return (val1->address < val2->address) ? (-1) : (1);
 }
 
-int mkdir_hierarchy(const char* path)
+
+static int open_storage_files(struct lnfstore_conf *conf)
 {
-	struct stat s;
-	char* pos = NULL;
-	char* realp = NULL;
-	unsigned subs_len = 0;
-	while ((pos = strchr(path + subs_len + 1, '/')) != NULL ) {
-		subs_len = pos - path;
-		int status;
-		bool failed = false;
-		realp = strndup(path, subs_len);
-try_again:
-		status = stat(realp, &s);
-		if (status == -1) {
-			if (ENOENT == errno) {
-				if (mkdir(realp, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) {
-					if (!failed) {
-						failed = true;
-						goto try_again;
-					}
-					MSG_ERROR(msg_module, "Failed to create directory: %s", realp);
-					return 1;
-				}
-			}
-		} else if (!S_ISDIR(s.st_mode)) {
-			MSG_ERROR(msg_module, "Failed to create directory, %s is file", realp);
-			return 2;
-		}
-		free(realp);
-	}
-	return 0;
-}
-
-/**
- * \brief Fill new record
- * \param[in] mdata IPFIX record
- * \param[out] record Record
- * \param[in,out] buffer Pointer to temporary buffer
- * \return Number of converted fields
- */
-int fill_record(const struct metadata *mdata, lnf_rec_t *record, uint8_t *buffer)
-{
-	int added = 0;
-
-	uint16_t offset = 0;
-	uint16_t length;
-
-	struct ipfix_template *templ = mdata->record.templ;
-	uint8_t *data_record = (uint8_t*) mdata->record.record;
-
-    // Process all fields
-    for (uint16_t count = 0, index = 0; count < templ->field_count; ++count, ++index) {
-		// Create a key - get Enterprise and Element ID
-		struct ipfix_lnf_map key, *item;
-
-		key.ie = templ->fields[index].ie.id;
-		length = templ->fields[index].ie.length;
-		key.en = 0;
-
-		if (key.ie & 0x8000) {
-			key.ie &= 0x7fff;
-			key.en = templ->fields[++index].enterprise_number;
-		}
-
-		// Find conversion function
-		item = bsearch(&key, tr_table, MAX_TABLE , sizeof(struct ipfix_lnf_map),
-			ipfix_lnf_map_compare);
-
-		int conv_failed = 1;
-		if (item != NULL) {
-			// Convert
-			conv_failed = item->func(data_record, &offset, &length, buffer, item);
-			if (!conv_failed) {
-				lnf_rec_fset(record, item->lnf_id, buffer);
-				added++;
-			}
-		}
-
-		if (conv_failed) {
-			length = real_length(data_record, &offset, length);
-		}
-
-		offset += length;
-    }
-
-    return added;
-}
-
-char *create_file_name(struct lnfstore_conf *conf)
-{
-	struct tm gm;
-	if (gmtime_r(&conf->window_start, &gm) == NULL) {
-		MSG_ERROR(msg_module, "Failed to convert time to UTC.");
-		return NULL;
+	if (!conf->profiles_ptr) {
+		return 0;
 	}
 
-	char time_path[13];
-	size_t length;
-
-	length = strftime(time_path, sizeof(time_path), "/%Y/%m/%d/", &gm);
-	if (length == 0) {
-		MSG_ERROR(msg_module, "Failed to fill file path template.");
-		return NULL;
-	}
-
-	char file_suffix[1024];
-	length = strftime(file_suffix, sizeof(file_suffix),
-		conf->params->file_suffix, &gm);
-	if (length == 0) {
-		MSG_ERROR(msg_module, "Failed to fill file path template (suffix).");
-		return NULL;
-	}
-
-	length = strlen(time_path) + strlen(conf->params->file_prefix)
-		+ strlen(file_suffix) + 1;
-
-	char *file_name = (char *) malloc(length * sizeof(char));
-	if (!file_name) {
-		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
-			__FILE__, __LINE__);
-		return NULL;
-	}
-
-	snprintf(file_name, length, "%s%s%s", time_path, conf->params->file_prefix,
-		file_suffix);
-	return file_name;
-}
-
-int open_storage_files(struct lnfstore_conf *conf)
-{
-	// Prepare filename(s)
-	char *file_str = create_file_name(conf);
+	// Prepare filenames
+	char *index_file;
+	char *file_str = create_file_name(conf, &index_file);
 	if (!file_str) {
 		return 1;
 	}
@@ -210,105 +140,134 @@ int open_storage_files(struct lnfstore_conf *conf)
 		flags |= LNF_COMP;
 	}
 
-	if (conf->params->profiles) {
-		// With profiler
-		for (int i = 0; i < conf->profiles_size; ++i) {
-			profile_file_t *profile = &conf->profiles_ptr[i];
+	for (int i = 0; i < conf->profiles_size; ++i) {
+		profile_file_t *profile = &conf->profiles_ptr[i];
 
-			const char *dir = profile_get_directory(profile->address);
-			size_t size = file_len + strlen(dir) + 2; // '/' + '\0'
+		const char *dir = profile_get_directory(profile->address);
+		size_t size = file_len + strlen(dir) + 2; // '/' + '\0'
 
-			char *total_path = (char *) malloc(size * sizeof(char));
-			if (!total_path) {
-				MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
-					__FILE__, __LINE__);
-				continue;
-			}
-
-			snprintf(total_path, size, "%s/%s", dir, file_str);
-			if (mkdir_hierarchy(total_path) != 0) {
-				free(total_path);
-				continue;
-			}
-
-			int status = lnf_open(&profile->file, total_path, flags,
-				conf->params->file_ident);
-			if (status != LNF_OK) {
-				MSG_ERROR(msg_module, "Failed to create new file '%s'",
-					total_path);
-				profile->file = NULL;
-			}
-
-			free(total_path);
-		}
-	} else {
-		// Without profiler
-		size_t size = file_len + strlen(conf->params->storage_path) + 2; // '/' + '\0'
-		char *total_path = (char *) malloc(size *sizeof(char));
+		char *total_path = (char *) malloc(size * sizeof(char));
 		if (!total_path) {
 			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
 				__FILE__, __LINE__);
-			free(file_str);
-			return 1;
+			continue;
 		}
 
-		snprintf(total_path, size, "%s/%s", conf->params->storage_path, file_str);
+		snprintf(total_path, size, "%s/%s", dir, file_str);
 		if (mkdir_hierarchy(total_path) != 0) {
 			free(total_path);
-			free(file_str);
-			return 1;
+			continue;
 		}
 
-		int status = lnf_open(&conf->file_ptr, total_path, flags,
+		int status = lnf_open(&profile->file, total_path, flags,
 			conf->params->file_ident);
 		if (status != LNF_OK) {
 			MSG_ERROR(msg_module, "Failed to create new file '%s'",
 				total_path);
-			conf->file_ptr = NULL;
+			profile->file = NULL;
 		}
-
 		free(total_path);
+
+		if (conf->params->bf.indexing) {
+			// If lnf index creation failed before, try again
+			if (!profile->lnf_index){
+				profile->lnf_index = create_lnfstore_index();
+				if (!profile->lnf_index){
+					/// TODO identifikace profilu
+					MSG_ERROR(msg_module, "Failed to initialize lnfstore index"
+								"for profile TODO, last data file will not be indexed");
+					continue;
+				}
+			}
+			// Prepare index
+			if (index_file){
+				if (prepare_index(profile->lnf_index, conf->params->bf, (char *) dir,
+						index_file) != 0){
+					MSG_WARNING(msg_module, "Unable to prepare index, last data "
+							"file will not be indexed");
+					profile->lnf_index->state = BF_ERROR;
+				} else {
+					if (profile->lnf_index->state == BF_ERROR){
+						profile->lnf_index->state = BF_IN_PROGRESS;
+					}
+				}
+			} else {
+				/// TODO identifikace profilu
+				MSG_WARNING(msg_module, "Unable to get index file name for "
+							"profile TODO, last data file will not be indexed");
+				profile->lnf_index->state = BF_ERROR;
+			}
+		}
 	}
 
 	free(file_str);
+	//free(dir); TODO nechybi??
+
+	if (index_file){
+		free(index_file);
+	}
+
 	return 0;
 }
 
-void close_storage_files(struct lnfstore_conf *conf)
+static void close_storage_files(struct lnfstore_conf *conf)
 {
-	if (conf->params->profiles) {
-		// With profiler
-		if (!conf->profiles_ptr) {
-			return;
+	if (!conf->profiles_ptr) {
+		return;
+	}
+
+	for (int i = 0; i < conf->profiles_size; ++i) {
+		profile_file_t *profile = &conf->profiles_ptr[i];
+
+		if (!profile->file) {
+			// File not opened
+			continue;
 		}
 
-		for (int i = 0; i < conf->profiles_size; ++i) {
-			profile_file_t *profile = &conf->profiles_ptr[i];
+		lnf_close(profile->file);
+		profile->file = NULL;
 
-			if (!profile->file) {
-				// File not opened
-				continue;
+		if (profile->lnf_index->state == BF_CLOSING || // standard situation
+			profile->lnf_index->state == BF_IN_PROGRESS || // reloading profiles inside a time window
+			profile->lnf_index->state == BF_CLOSING_FIRST || // standard situation (after first window)
+			profile->lnf_index->state == BF_IN_PROGRESS_FIRST || // reloading profiles (inside first window)
+			profile->lnf_index->state == BF_CLOSING_LAST) // standard situation (cleaning up)
+		{
+			if (store_index(profile->lnf_index)){
+				print_last_index_error();
+				MSG_WARNING(msg_module, "Storing index error, last data file "
+							"will not be indexed");
 			}
-
-			lnf_close(profile->file);
-			profile->file = NULL;
 		}
-	} else {
-		// Without profiler
-		if (!conf->file_ptr) {
-			return;
-		}
-
-		lnf_close(conf->file_ptr);
-		conf->file_ptr = NULL;
 	}
 }
 
 
-void new_window(time_t now, struct lnfstore_conf *conf)
+static void new_window(time_t now, struct lnfstore_conf *conf)
 {
 	// Close file(s)
 	close_storage_files(conf);
+
+	if (conf->profiles_ptr && conf->params->bf.indexing && conf->params->bf_index_autosize) {
+		for (int i = 0; i < conf->profiles_size; ++i) {
+			profile_file_t *profile = &conf->profiles_ptr[i];
+
+			if (!profile->lnf_index || profile->lnf_index->state != BF_CLOSING){
+				continue;
+			} else {
+				unsigned int act_cnt = stored_item_cnt(profile->lnf_index->index);
+				if ((act_cnt + BF_UPPER_TOLERANCE(act_cnt)) >
+						profile->lnf_index->unique_item_cnt ||
+					(act_cnt - BF_LOWER_TOLERANCE(act_cnt)) <
+						profile->lnf_index->unique_item_cnt)
+				{
+					profile->lnf_index->unique_item_cnt = act_cnt + BF_ITEM_CNT_ADDITION(act_cnt);
+					profile->lnf_index->params_changed = true;
+				}
+
+			}
+		}
+	}
 
 	// Update time
 	conf->window_start = now;
@@ -324,22 +283,13 @@ void new_window(time_t now, struct lnfstore_conf *conf)
 }
 
 
-void store_to_file(lnf_file_t *file, lnf_rec_t *rec)
-{
-	if (!file) {
-		return;
-	}
-
-	lnf_write(file, rec);
-}
-
 /**
  * \brief Update the list of profiles
  * \param[in,out] conf Plugin configuration
  * \param[in] profiles List of all active profiles (null terminated)
  * \return On success returns 0. Otherwise returns non-zero value.
  */
-int update_profiles(struct lnfstore_conf *conf, void **profiles)
+static int update_profiles(struct lnfstore_conf *conf, void **profiles)
 {
 	if (!profiles) {
 		return 1;
@@ -353,13 +303,14 @@ int update_profiles(struct lnfstore_conf *conf, void **profiles)
 		conf->profiles_size = 0;
 		bitset_destroy(conf->bitset);
 		conf->bitset = NULL;
+		/// TODO destroy indexes -> nebude, budou inteligentni profily
 	}
 
 	// Create new profiles
 	int size;
 	for (size = 0; profiles[size] != 0; size++);
 	if (size == 0) {
-		MSG_WARNING(msg_module, "List of active profile is empty!");
+		MSG_WARNING(msg_module, "List of active profiles is empty!");
 		return 1;
 	}
 
@@ -380,11 +331,17 @@ int update_profiles(struct lnfstore_conf *conf, void **profiles)
 
 	conf->profiles_size = size;
 
-	// Init profile pointers
+	// Initialize profile pointers
 	for (int i = 0; i < conf->profiles_size; ++i) {
 		profile_file_t *profile = &conf->profiles_ptr[i];
 		profile->address = profiles[i];
 		profile->file = NULL;
+		profile->lnf_index = create_lnfstore_index();
+		if (profile->lnf_index != NULL){
+			MSG_ERROR(msg_module, "Failed to initialize lnfstore index"
+						"for profile TODO, last data file will not be indexed");
+			continue;
+		}
 	}
 
 	// Sort profiles for further binary search
@@ -398,7 +355,8 @@ int update_profiles(struct lnfstore_conf *conf, void **profiles)
 	return 0;
 }
 
-int reload_profiles(struct lnfstore_conf *conf, void **channels)
+
+static int reload_profiles(struct lnfstore_conf *conf, void **channels)
 {
 	// Get profiles
 	void *channel = channels[0];
@@ -423,7 +381,7 @@ int reload_profiles(struct lnfstore_conf *conf, void **channels)
 }
 
 
-void store_to_profiles(struct lnfstore_conf *conf, void **channels)
+static void store_to_profiles(struct lnfstore_conf *conf, void **channels)
 {
 	if (channels == NULL || channels[0] == NULL) {
 		return;
@@ -435,6 +393,8 @@ void store_to_profiles(struct lnfstore_conf *conf, void **channels)
 			MSG_ERROR(msg_module, "Failed to reload the list of profiles");
 			return;
 		}
+
+		update_profiles_states(conf, IPE_RELOAD_PROFILES);
 	}
 
 	// Clear aux bitset
@@ -468,29 +428,40 @@ void store_to_profiles(struct lnfstore_conf *conf, void **channels)
 		}
 
 		// Get index
-		int index = (result - conf->profiles_ptr);
-		if (bitset_get(conf->bitset, index) == true) {
+		int r_index = (result - conf->profiles_ptr);
+		if (bitset_get(conf->bitset, r_index) == true) {
 			// Already written to the file
 			continue;
 		}
 
 		// Store the record only if it is normal profile
 		if (profile_get_type(result->address) == PT_NORMAL) {
-			store_to_file(result->file, conf->rec_ptr);
+			store_to_file(result->file, conf, result->lnf_index->index);
 		}
 
-		bitset_set(conf->bitset, index, true);
+		bitset_set(conf->bitset, r_index, true);
 	}
 }
 
 
-void store_record(const struct metadata *mdata, struct lnfstore_conf *conf)
+
+void cleanup_storage_profiles(struct lnfstore_conf *conf){
+	close_storage_files(conf);
+
+	if (conf->params->bf.indexing){
+		for (int i = 0; i < conf->profiles_size; ++i) {
+			profile_file_t *profile = &conf->profiles_ptr[i];
+			destroy_lnfstore_index(profile->lnf_index);
+		}
+	}
+}
+// <<< Profile storage only ------------------------------------------------ <<<
+
+void store_record_profilles(const struct metadata *mdata, struct lnfstore_conf *conf)
 {
-	if (conf->params->profiles && !mdata->channels) {
-		/*
-		 * Record won't be stored, it does not belong to any channel and
-		 * profiling is activated
-		 */
+	if (!mdata->channels) {
+		/* Record won't be stored, it does not belong to any channel and
+		 * profiling is activated */
 		return;
 	}
 
@@ -504,15 +475,13 @@ void store_record(const struct metadata *mdata, struct lnfstore_conf *conf)
 	// Decide whether close files and create new time window
 	time_t now = time(NULL);
 	if (difftime(now, conf->window_start) > conf->params->window_time) {
+
+		update_profiles_states(conf, IPE_NEW_WINDOW_START);
+
 		new_window(now, conf);
+
+		update_profiles_states(conf, IPE_NEW_WINDOW_START);
 	}
 
-	// Store record
-	if (conf->params->profiles) {
-		// With profiler
-		store_to_profiles(conf, mdata->channels);
-	} else {
-		// Without profiler
-		store_to_file(conf->file_ptr, conf->rec_ptr);
-	}
+	store_to_profiles(conf, mdata->channels);
 }
