@@ -302,7 +302,7 @@ int fill_record(const struct metadata *mdata, lnf_rec_t *record, uint8_t *buffer
 }
 
 
-void store_to_file(lnf_file_t *file, struct lnfstore_conf *conf, index_t *index)
+void store_to_file(lnf_file_t *file, struct lnfstore_conf *conf, struct lnfstore_index *lnf_index)
 {
 	if (!file) {
 		return;
@@ -311,7 +311,7 @@ void store_to_file(lnf_file_t *file, struct lnfstore_conf *conf, index_t *index)
 	lnf_write(file, conf->rec_ptr);
 
 	// Add index for source and destination IP addresses
-	if (conf->params->bf.indexing && conf->lnf_index->state != BF_ERROR){
+	if (conf->params->bf.indexing && lnf_index->state != BF_ERROR){
 		const size_t len = 16;
 		char buffer [16];
 
@@ -320,22 +320,22 @@ void store_to_file(lnf_file_t *file, struct lnfstore_conf *conf, index_t *index)
 		{
 			/// TODO legalni situace kdy zaznam nema adresu?
 			MSG_WARNING(msg_module, "Unable to get source IP address (lnf get), last data file will not be indexed");
-			conf->lnf_index->state = BF_ERROR;
+			lnf_index->state = BF_ERROR;
 			return;
 		}
 		// source IP (v4 or v6)
-		add_addr_index(index, (const unsigned char *) buffer, len);
+		add_addr_index(lnf_index->index, (const unsigned char *) buffer, len);
 
 		memset(buffer, 0, len);
 		if (lnf_rec_fget(conf->rec_ptr, LNF_FLD_DSTADDR, buffer) != LNF_OK)
 		{
 			/// TODO legalni situace kdy zaznam nema adresu?
 			MSG_WARNING(msg_module, "Unable to get destination IP address (lnf get), last data file will not be indexed");
-			conf->lnf_index->state = BF_ERROR;
+			lnf_index->state = BF_ERROR;
 			return;
 		}
 		// destination IP (v4 or v6)
-		add_addr_index(index, (const unsigned char *) buffer, len);
+		add_addr_index(lnf_index->index, (const unsigned char *) buffer, len);
 	}
 }
 
@@ -507,5 +507,5 @@ void store_record_basic(const struct metadata *mdata, struct lnfstore_conf *conf
 		}
 	}
 
-	store_to_file(conf->file_ptr, conf, conf->lnf_index->index);
+	store_to_file(conf->file_ptr, conf, conf->lnf_index);
 }

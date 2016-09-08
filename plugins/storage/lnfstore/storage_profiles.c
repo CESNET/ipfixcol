@@ -216,6 +216,8 @@ static void close_storage_files(struct lnfstore_conf *conf)
 		return;
 	}
 
+	MSG_INFO(msg_module, "Closing files.");
+
 	for (int i = 0; i < conf->profiles_size; ++i) {
 		profile_file_t *profile = &conf->profiles_ptr[i];
 
@@ -227,13 +229,15 @@ static void close_storage_files(struct lnfstore_conf *conf)
 		lnf_close(profile->file);
 		profile->file = NULL;
 
+		MSG_INFO(msg_module, "Profile %d indexing state: %d.", i, profile->lnf_index->state);
+
 		if (profile->lnf_index->state == BF_CLOSING || // standard situation
 			profile->lnf_index->state == BF_IN_PROGRESS || // reloading profiles inside a time window
 			profile->lnf_index->state == BF_CLOSING_FIRST || // standard situation (after first window)
 			profile->lnf_index->state == BF_IN_PROGRESS_FIRST || // reloading profiles (inside first window)
 			profile->lnf_index->state == BF_CLOSING_LAST) // standard situation (cleaning up)
 		{
-			if (store_index(profile->lnf_index)){
+			if (store_index(profile->lnf_index->index) != BFI_OK){
 				print_last_index_error();
 				MSG_WARNING(msg_module, "Storing index error, last data file "
 							"will not be indexed");
@@ -337,8 +341,8 @@ static int update_profiles(struct lnfstore_conf *conf, void **profiles)
 		profile->address = profiles[i];
 		profile->file = NULL;
 		profile->lnf_index = create_lnfstore_index();
-		if (profile->lnf_index != NULL){
-			MSG_ERROR(msg_module, "Failed to initialize lnfstore index"
+		if (!profile->lnf_index){
+			MSG_ERROR(msg_module, "Failed to initialize lnfstore index "
 						"for profile TODO, last data file will not be indexed");
 			continue;
 		}
@@ -376,6 +380,9 @@ static int reload_profiles(struct lnfstore_conf *conf, void **channels)
 		MSG_ERROR(msg_module, "Failed to update the list of profiles");
 		return 1;
 	}
+
+	MSG_INFO(msg_module, "Successfully reloaded profiles (%d profiles are "
+				"active now).", conf->profiles_size);
 
 	return 0;
 }
@@ -436,7 +443,7 @@ static void store_to_profiles(struct lnfstore_conf *conf, void **channels)
 
 		// Store the record only if it is normal profile
 		if (profile_get_type(result->address) == PT_NORMAL) {
-			store_to_file(result->file, conf, result->lnf_index->index);
+			store_to_file(result->file, conf, result->lnf_index);
 		}
 
 		bitset_set(conf->bitset, r_index, true);
@@ -457,7 +464,7 @@ void cleanup_storage_profiles(struct lnfstore_conf *conf){
 }
 // <<< Profile storage only ------------------------------------------------ <<<
 
-void store_record_profilles(const struct metadata *mdata, struct lnfstore_conf *conf)
+void store_record_profiles(const struct metadata *mdata, struct lnfstore_conf *conf)
 {
 	if (!mdata->channels) {
 		/* Record won't be stored, it does not belong to any channel and

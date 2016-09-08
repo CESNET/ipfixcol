@@ -54,7 +54,7 @@ int prepare_index(struct lnfstore_index *lnf_index, struct index_params ind_par,
 					char *path, char *filename);
 
 int fill_record(const struct metadata *mdata, lnf_rec_t *record, uint8_t *buffer);
-void store_to_file(lnf_file_t *file, struct lnfstore_conf *conf, index_t *index);
+void store_to_file(lnf_file_t *file, struct lnfstore_conf *conf, struct lnfstore_index *lnf_index);
 
 void cleanup_storage_basic(struct lnfstore_conf *conf);
 
