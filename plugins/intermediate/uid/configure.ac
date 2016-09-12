@@ -100,7 +100,8 @@ AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar
 
 # Check whether we can find headers dir in relative path (git repository)
 AS_IF([test -d $srcdir/../../../base/headers], 
-	[AM_CPPFLAGS+=" -I$srcdir/../../../base/headers"]
+	[AM_CPPFLAGS+=" -I$srcdir/../../../base/headers"
+	BUILD_AGAINST="git"]
 )
 
 cppflags_save="$CPPFLAGS"
@@ -169,6 +170,7 @@ echo "
   Distribution..: $DISTRO
   C Compiler....: $CC $AM_CFLAGS $CFLAGS
   Linker........: $AM_LDFLAGS $LDFLAGS $LIBS
+  Build against.: ${BUILD_AGAINST:-system}
   rpmbuild......: ${RPMBUILD:-NONE}
   Build doc.....: ${enable_doc:-yes}
   xsltproc......: ${XSLTPROC:-NONE}

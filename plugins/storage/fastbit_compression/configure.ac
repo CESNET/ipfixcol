@@ -121,7 +121,8 @@ AC_CHECK_HEADERS([libxml/xmlversion.h], , AC_MSG_ERROR([libxml headers missing. 
 
 # Check whether we can find headers dir in relative path (git repository)
 AS_IF([test -d $srcdir/../../../base/headers], 
-	[CPPFLAGS="$CPPFLAGS -I$srcdir/../../../base/headers"]
+	[CPPFLAGS="$CPPFLAGS -I$srcdir/../../../base/headers"
+	BUILD_AGAINST="git"]
 )
 
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
@@ -189,6 +190,7 @@ echo "
   Distribution..: $DISTRO
   C++ Compiler..: $CXX $AM_CXXFLAGS $CXXFLAGS $CPPFLAGS
   Linker........: $LDFLAGS $LIBS
+  Build against.: ${BUILD_AGAINST:-system}
   gzip..........: $enable_gzip
   bzip2.........: $enable_bzip
   rpmbuild......: ${RPMBUILD:-NONE}
