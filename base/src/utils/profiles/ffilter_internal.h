@@ -25,11 +25,12 @@ typedef enum {
 /* node of syntax tree */
 typedef struct ff_node_s {
 	ff_extern_id_t field;         /* field ID */
-	char *value;                  /*buffer allocated for data */
-	size_t vsize;                 /* size of data in lvalue */
-	int type;                     /* data type for lvalue */
-	int numbits;                  /* number of bits for IP adres */
+	char *value;                  /* buffer allocated for data */
+	size_t vsize;                 /* size of data in value */
+	int type;                     /* data type for value */
 	ff_oper_t oper;               /* operation */
+	int opts;                     /* mpls stack data selector label, exp or eos */
+	int n;                        /* extra identification for mpls<n> variant */
 
 	struct ff_node_s *left;
 	struct ff_node_s *right;

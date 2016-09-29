@@ -56,6 +56,7 @@
 %token <string> STRING DIR BIDIR_AND BIDIR_OR DIR_DIR_MAC
 %token BAD_TOKEN
 
+%type <t_uint> cmp
 %type <string> field value
 %type <node> expr filter list
 
@@ -89,19 +90,28 @@ expr:
 	| expr AND expr     { $$ = ff_new_node(scanner, filter, $1, FF_OP_AND, $3); if ($$ == NULL) { YYABORT; }; }
 	| expr OR expr      { $$ = ff_new_node(scanner, filter, $1, FF_OP_OR, $3); if ($$ == NULL) { YYABORT; }; }
 	| LP expr RP        { $$ = $2; }
-	| field value       { $$ = ff_new_leaf(scanner, filter, $1, FF_OP_NOOP, $2); if ($$ == NULL) { YYABORT; } }
-	| EXIST field       { $$ = ff_new_leaf(scanner, filter, $2, FF_OP_EXIST, ""); if ($$ == NULL) { YYABORT; } }
-	| field ISSET value { $$ = ff_new_leaf(scanner, filter, $1, FF_OP_ISSET, $3); if ($$ == NULL) { YYABORT; } }
-	| field EQ value    { $$ = ff_new_leaf(scanner, filter, $1, FF_OP_EQ, $3); if ($$ == NULL) { YYABORT; } }
-	| field LT value    { $$ = ff_new_leaf(scanner, filter, $1, FF_OP_LT, $3); if ($$ == NULL) { YYABORT; } }
-	| field GT value    { $$ = ff_new_leaf(scanner, filter, $1, FF_OP_GT, $3); if ($$ == NULL) { YYABORT; } }
 
-	| field IN list     {  $$ = ff_new_leaf(scanner, filter, $1, FF_OP_IN, $3); if ($$ == NULL) { YYABORT; } }
+	| "inet"            { $$ = ff_new_leaf(scanner, filter, "inet", FF_OP_EQ, "4"); if ($$ == NULL) { YYABORT; } }
+	| "inet6"           { $$ = ff_new_leaf(scanner, filter, "inet", FF_OP_EQ, "6"); if ($$ == NULL) { YYABORT; } }
+	| "ipv4"            { $$ = ff_new_leaf(scanner, filter, "inet", FF_OP_EQ, "4"); if ($$ == NULL) { YYABORT; } }
+	| "ipv6"            { $$ = ff_new_leaf(scanner, filter, "inet", FF_OP_EQ, "6"); if ($$ == NULL) { YYABORT; } }
+
+	| EXIST field       { $$ = ff_new_leaf(scanner, filter, $2, FF_OP_EXIST, ""); if ($$ == NULL) { YYABORT; } }
+	| field cmp value   { $$ = ff_new_leaf(scanner, filter, $1, $2, $3); if ($$ == NULL) { YYABORT; } }
+	| field IN list     { $$ = ff_new_leaf(scanner, filter, $1, FF_OP_IN, $3); if ($$ == NULL) { YYABORT; } }
 	;
 
 list:
 	STRING list         { $$ = ff_new_mval(scanner, filter, $1, FF_OP_EQ, $2); if ($$ == NULL) { YYABORT; } }
 	| STRING RPS        { $$ = ff_new_mval(scanner, filter, $1, FF_OP_EQ, NULL); if ($$ == NULL) { YYABORT; } }
+	;
+
+cmp:
+	|			{ $$ = FF_OP_NOOP; }
+	| ISSET		{ $$ = FF_OP_ISSET; }
+	| EQ		{ $$ = FF_OP_EQ; }
+	| LT		{ $$ = FF_OP_LT; }
+    | GT		{ $$ = FF_OP_GT; }
 	;
 
 %%

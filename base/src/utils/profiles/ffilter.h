@@ -44,6 +44,16 @@
 #endif
 
 typedef struct ff_ip_s { uint32_t data[4]; } ff_ip_t; /*!< IPv4/IPv6 address */
+typedef union {
+	//TODO: Test on big-endian machine
+	struct {
+		unsigned eos : 1;
+		unsigned exp : 3;
+		unsigned label : 20;
+		unsigned none : 8;
+	};
+	uint32_t data;
+} ff_mpls_label_t;
 
 /*! \brief Supported data types */
 typedef enum {
@@ -67,7 +77,7 @@ typedef enum {
 	//TODO: Implement
 	FF_TYPE_MPLS,
 	FF_TYPE_TIMESTAMP,      /* uint64_t bit timestamp eval as unsigned, milliseconds from 1-1-1970 00:00:00 */
-	FF_TYPE_TIMESTAMP_BIG,  /* uint64_t bit timestamp eval as unsigned, to host endian conversion required on data */
+	FF_TYPE_TIMESTAMP_BIG,  /* uint64_t bit timestamp eval as unsigned, to host byte order conversion required */
 } ff_type_t;
 
 #define FF_TYPE_UNSUPPORTED_T void
@@ -88,7 +98,7 @@ typedef enum {
 #define FF_TYPE_ADDR_T ff_ip_t
 #define FF_TYPE_MAC_T char[8]
 #define FF_TYPE_STRING_T char*
-#define FF_TYPE_MPLS_T unit32_t[10]
+#define FF_TYPE_MPLS_T uint32_t[10]
 #define FF_TYPE_TIMESTAMP_T unit64_t
 
 //Some of the types here are useless - why define another fixed size types ?
@@ -108,10 +118,10 @@ typedef double ff_double_t;
 typedef ff_ip_t ff_addr_t;
 typedef char ff_mac_t[8];
 typedef char* ff_string_t;
-//typedef uint32_t ff_mpls_t[10];		//WTF ? why 10 ? is it because of way libnf treats mpls
-typedef uint32_t ff_mpls_t[1];		//WTF ? why 10 ? is it because of way libnf treats mpls
+typedef ff_mpls_label_t ff_mpls_stack_t[10];		//WTF ? why 10 ? is it because of the way libnf treats mpls
 typedef uint64_t ff_timestamp_t;
-//typedef struct tm ff_time_t;
+
+
 
 /**
  * \typedef ffilter interface return codes
@@ -133,7 +143,9 @@ typedef enum {
 	FF_OPTS_NONE = 0,
 	FF_OPTS_MULTINODE = 0x01,	/**< Lvalue identificates more data filelds */
 	FF_OPTS_FLAGS = 0x02,		/**< Item is of flag type, this change behaviour when no operator is set to bit compare */
-	FF_OPTS_BIGENDIAN = 0x08	/**< Data recieved from data call back are in big-endian (not used currently)*/
+	FF_OPTS_MPLS_LABEL,
+	FF_OPTS_MPLS_EOS,
+	FF_OPTS_MPLS_EXP,
 } ff_opts_t;
 
 /** \brief External identification of value */
@@ -153,6 +165,8 @@ typedef struct ff_lvalue_s {
 	/** Extra options that modiflies evaluation of data */
 	//TODO: Clarify purpose, maybe create getters and setters
 	int options;
+	/** 0 for not set */
+	int n;
 } ff_lvalue_t;
 
 //typedef struct ff_s ff_t;
@@ -173,6 +187,7 @@ struct ff_s;
  * \return FF_OK on success
  */
 typedef ff_error_t (*ff_lookup_func_t) (struct ff_s *filter, const char *fieldstr, ff_lvalue_t *lvalue);
+
 /**
  * \typedef Data Callback signature
  * \brief Select requested data from record.
@@ -184,9 +199,8 @@ typedef ff_error_t (*ff_lookup_func_t) (struct ff_s *filter, const char *fieldst
  * \param[out] buf Buffer to store retrieved data
  * \param[out] vsize Length of retrieved data
  */
-//TODO: Eliminate the need to copy data from record, pass only pointer and valid length. This should speed up data retrieval process
-//Not neccesarily
 typedef ff_error_t (*ff_data_func_t) (struct ff_s*, void *, ff_extern_id_t, char*, size_t *);
+
 /**
  * \typedef Rval_map Callback signature
  * \brief Translate constant values unresolved by filter convertors.

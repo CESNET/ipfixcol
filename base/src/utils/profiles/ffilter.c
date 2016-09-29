@@ -925,6 +925,32 @@ int ff_oper_eval(char* buf, size_t size, ff_node_t *node)
 				return res;
 			default: return -1;
 			}
+
+		case FF_TYPE_MPLS:
+			switch(node->opts) {
+			case FF_OPTS_MPLS_LABEL:
+				res = *((uint32_t *) node->value) == ((ff_mpls_label_t *) buf)[node->n-1].label;
+				break;
+			case FF_OPTS_MPLS_EXP:
+				res = *((uint32_t *) node->value) == ((ff_mpls_label_t *) buf)[node->n-1].exp;
+				break;
+			case FF_OPTS_MPLS_EOS:
+				for (x = 0; x < 10; x++) {
+					if(!((ff_mpls_label_t *) buf)[x].eos) {
+						continue;
+					}
+					return res = (*((uint32_t *) node->value) == x);
+				}
+				return -1;
+			default: //ANY LABEL
+				res = 0;
+				for (x = 0; x < 10; x++) {
+					res = *((uint32_t *) node->value) == ((ff_mpls_label_t *) buf)[x].label;
+					if (res) break;
+				}
+				return res;
+			}
+
 		default: return -1;
 		}
 
@@ -982,6 +1008,31 @@ int ff_oper_eval(char* buf, size_t size, ff_node_t *node)
 			case sizeof(int64_t): return *(int64_t *) buf > *(int64_t *)node->value;
 			default: return -1;
 			}
+		case FF_TYPE_MPLS:
+			switch(node->opts) {
+			case FF_OPTS_MPLS_LABEL:
+				res = *((uint32_t *) node->value) > ((ff_mpls_label_t *) buf)[node->n-1].label;
+				break;
+			case FF_OPTS_MPLS_EXP:
+				res = *((uint32_t *) node->value) > ((ff_mpls_label_t *) buf)[node->n-1].exp;
+				break;
+			case FF_OPTS_MPLS_EOS:
+				for (x = 0; x < 10; x++) {
+					if(!((ff_mpls_label_t *) buf)[x].eos) {
+						continue;
+					}
+					return res = (*((uint32_t *) node->value) > x);
+				}
+				return -1;
+			default: //ANY LABEL
+				res = 0;
+				for (x = 0; x < 10; x++) {
+					res = *((uint32_t *) node->value) > ((ff_mpls_label_t *) buf)[x].label;
+					if (res) break;
+				}
+				return res;
+			}
+
 		default: return -1;
 		}
 
@@ -1039,6 +1090,31 @@ int ff_oper_eval(char* buf, size_t size, ff_node_t *node)
 			case sizeof(int64_t): return *(int64_t *) buf < *(int64_t *)node->value;
 			default: return -1;
 			}
+		case FF_TYPE_MPLS:
+			switch(node->opts) {
+			case FF_OPTS_MPLS_LABEL:
+				res = *((uint32_t *) node->value) < ((ff_mpls_label_t *) buf)[node->n-1].label;
+				break;
+			case FF_OPTS_MPLS_EXP:
+				res = *((uint32_t *) node->value) < ((ff_mpls_label_t *) buf)[node->n-1].exp;
+				break;
+			case FF_OPTS_MPLS_EOS:
+				for (x = 0; x < 10; x++) {
+					if(!((ff_mpls_label_t *) buf)[x].eos) {
+						continue;
+					}
+					return res = (*((uint32_t *) node->value) < x);
+				}
+				return -1;
+			default: //ANY LABEL
+				res = 0;
+				for (x = 0; x < 10; x++) {
+					res = *((uint32_t *) node->value) < ((ff_mpls_label_t *) buf)[x].label;
+					if (res) break;
+				}
+				return res;
+			}
+
 		default: return -1;
 		}
 
@@ -1092,29 +1168,6 @@ int ff_oper_eval(char* buf, size_t size, ff_node_t *node)
 
 	default: return -1;
 	}
-}
-
-int get_mpls_field(char *buf, ff_oper_t op, char *val, int req)
-{
-	uint32_t data;
-	size_t size;
-	data = 0;
-	memcpy(((char*)(&data))+1, buf, 3);
-	switch (req) {
-	case 1:
-		data >>= 4;
-		break;
-	case 2:
-		data &= 0xeL;
-		data >>= 1;
-		break;
-	case 3:
-		data &= 0x1L;
-		break;
-	default :
-		return -1;
-	}
-	return data;
 }
 
 /* add new item to list */
