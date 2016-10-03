@@ -188,7 +188,7 @@ static uint32_t *source_odids_get_seq(struct dst_client *dst, uint32_t odid)
 	}
 
 	// Just check that we have a valid pointer
-	if (!data->seq_data) {
+	if (!dst->seq_data) {
 		MSG_ERROR(msg_module, "dst_client with uninitialized data");
 		return NULL;
 	}
