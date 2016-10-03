@@ -54,7 +54,7 @@ struct fastbit_config {
 	/* Stores information on templates per flow data source (identified by
 	 * exporter IP address and ODID).
 	 */
-	std::map<uint32_t, /* CRC32 of IP address */
+	std::map<std::string, /* Exporter IP address */
 			std::map<uint32_t, /* ODID */
 					struct od_info>*> *od_infos;
 
