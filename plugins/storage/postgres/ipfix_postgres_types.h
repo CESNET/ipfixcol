@@ -87,7 +87,7 @@ const struct ipfix_postgres_types types[] = {
 	{ "signed16", "smallint", INT16 },
 	{ "signed32", "integer", INT32 },
 	{ "signed64", "bigint", INT64 },
-	{ "string", "decimal", STRING },
+	{ "string", "text", STRING },
 	{ "boolean", "decimal", BOOLEAN },
 	{ "ipv4Address", "inet", IPV4ADDR },
 	{ "ipv6Address", "inet", IPV6ADDR },
