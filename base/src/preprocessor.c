@@ -616,7 +616,7 @@ void preprocessor_parse_msg(void* packet, int len, struct input_info* input_info
 		 * the sequence numbers.
 		 */
 		uint32_t pkt_header_seq_number = ntohl(msg->pkt_header->sequence_number);
-		if (msg->input_info->sequence_number != pkt_header_seq_number && msg->data_records_count > 0) {
+		if (msg->input_info->sequence_number != pkt_header_seq_number) {
 			/* Only print a warning message if this is not the first message, since the first
 			 * message always triggers an alert (sequence number is then compared to zero).
 			 */
