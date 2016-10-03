@@ -106,12 +106,11 @@ list:
 	| STRING RPS        { $$ = ff_new_mval(scanner, filter, $1, FF_OP_EQ, NULL); if ($$ == NULL) { YYABORT; } }
 	;
 
-cmp:
-	|			{ $$ = FF_OP_NOOP; }
+cmp: %empty 	{ $$ = FF_OP_NOOP; }
 	| ISSET		{ $$ = FF_OP_ISSET; }
 	| EQ		{ $$ = FF_OP_EQ; }
 	| LT		{ $$ = FF_OP_LT; }
-    | GT		{ $$ = FF_OP_GT; }
+	| GT		{ $$ = FF_OP_GT; }
 	;
 
 %%
