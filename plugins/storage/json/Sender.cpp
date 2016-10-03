@@ -41,7 +41,9 @@ Sender::Sender(const pugi::xpath_node &config)
 
 	/* Connect it */
 	if (siso_create_connection(sender, ip.c_str(), port.c_str(), proto.c_str()) != SISO_OK) {
-		throw std::runtime_error(siso_get_last_err(sender));
+		std::string error = siso_get_last_err(sender);
+		siso_destroy(sender);
+		throw std::runtime_error(error);
 	}
 
 	gettimeofday(&connection_time, NULL);

@@ -189,6 +189,7 @@ int data_manager_add_plugin(struct data_manager_config *config, struct storage *
 	
 	if (retval != 0) {
 		MSG_WARNING(msg_module, "[%u] Storage plugin initialization failed", config->observation_domain_id);
+		free(config->storage_plugins[config->plugins_count]);
 		return 0;
 	}
 	
