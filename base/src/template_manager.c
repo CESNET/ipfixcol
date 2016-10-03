@@ -621,7 +621,11 @@ struct ipfix_template_mgr *tm_create() {
 	tm->last = NULL;
 
 	/* Initialize mutex */
-	pthread_mutex_init(&tm->tmr_lock, NULL);
+	if (pthread_mutex_init(&tm->tmr_lock, NULL) != 0) {
+		MSG_ERROR(msg_module, "Failed to initialize a mutex.");
+		free(tm);
+		return NULL;
+	}
 	
 	return tm;
 }

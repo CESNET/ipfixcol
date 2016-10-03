@@ -187,6 +187,12 @@ static uint32_t *source_odids_get_seq(struct dst_client *dst, uint32_t odid)
 		dst->seq_data = new_arr;
 	}
 
+	// Just check that we have a valid pointer
+	if (!data->seq_data) {
+		MSG_ERROR(msg_module, "dst_client with uninitialized data");
+		return NULL;
+	}
+
 	// Fill
 	struct seq_per_odid *tmp = &dst->seq_data[dst->seq_cnt++];
 	tmp->odid = odid;
