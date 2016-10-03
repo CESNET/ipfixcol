@@ -62,9 +62,13 @@
  ** wasted space and frequency of bloom filter re-creation (with new
  ** parameters).
 **/
-#define BF_UPPER_TOLERANCE(val)   (val * 0.05)
-#define BF_LOWER_TOLERANCE(val)   (val * 0.3)
-#define BF_ITEM_CNT_ADDITION(val) (val * 0.1)
+#define BF_TOL_COEFF(x) ((x > 10000000) ? 1.1 : (x > 100000) ? 1.2 : \
+        (x > 30000) ? 1.5 : (x > 5000) ? 2 : \
+        (x > 500) ? 3 : 10)
+
+#define BF_UPPER_TOLERANCE(val,coeff)     (val * coeff * 0.05)
+#define BF_LOWER_TOLERANCE(val,coeff)     ((coeff > 1.5) ? (val * coeff * 1.3) :\
+                                                          (val * coeff * 0.5))
 
 typedef enum {
     BF_INIT = 0,
@@ -140,7 +144,7 @@ struct lnfstore_conf
 };
 
 
-struct lnfstore_index *create_lnfstore_index();
+struct lnfstore_index *create_lnfstore_index(struct index_params params);
 void destroy_lnfstore_index(struct lnfstore_index *lnf_index);
 
 #endif //LS_LNFSTORE_H

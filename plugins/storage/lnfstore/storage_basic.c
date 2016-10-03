@@ -183,6 +183,7 @@ int prepare_index(struct lnfstore_index *lnf_index, struct index_params ind_par,
 	switch (lnf_index->state){
 		case BF_INIT:
 		case BF_ERROR:
+			if (lnf_index->index) {destroy_index(lnf_index->index);}
 			lnf_index->index = create_index();
 			if (!lnf_index->index){
 				print_last_index_error();
@@ -212,8 +213,6 @@ int prepare_index(struct lnfstore_index *lnf_index, struct index_params ind_par,
 //			break;
 
 		case BF_CLOSING_FIRST:
-			clear_index(lnf_index->index);
-
 		case BF_CLOSING:
 			if (lnf_index->params_changed) {
 				destroy_index(lnf_index->index);
@@ -228,14 +227,16 @@ int prepare_index(struct lnfstore_index *lnf_index, struct index_params ind_par,
 					return 1;
 				}
 				set_index_filename(lnf_index->index, index_fn);
+				lnf_index->params_changed = false;
 			} else {
 				clear_index(lnf_index->index);
+				set_index_filename(lnf_index->index, index_fn);
 			}
 			break;
 
 		default:
 			// should not happen
-			MSG_WARNING(msg_module, "Prepare index error (unknown state: %d) "
+			MSG_WARNING(msg_module, "Prepare index error (unexpected state: %d) "
 						"(%s:%d)", lnf_index->state, __FILE__, __LINE__);
 			return 1;
 			break;
@@ -403,8 +404,6 @@ static int open_storage_files(struct lnfstore_conf *conf)
 					conf->lnf_index->state = BF_IN_PROGRESS;
 				}
 			}
-
-			free(index_file);
 		} else {
 			MSG_WARNING(msg_module, "Unable to get index file name, last data "
 						"file will not be indexed");
@@ -442,15 +441,23 @@ static void new_window(time_t now, struct lnfstore_conf *conf)
 	// Close file
 	close_storage_files(conf);
 
-	if (conf->params->bf_index_autosize && conf->lnf_index->state == BF_CLOSING){
+	if (conf->params->bf_index_autosize && conf->params->bf.indexing &&
+			(conf->lnf_index->state == BF_CLOSING ||
+			conf->lnf_index->state == BF_CLOSING_FIRST)){
 		unsigned int act_cnt = stored_item_cnt(conf->lnf_index->index);
-		if ((act_cnt + BF_UPPER_TOLERANCE(act_cnt)) > conf->lnf_index->unique_item_cnt ||
-		    (act_cnt - BF_LOWER_TOLERANCE(act_cnt)) < conf->lnf_index->unique_item_cnt)
+		unsigned int coeff = BF_TOL_COEFF(act_cnt);
+		if ((act_cnt + (unsigned int)BF_UPPER_TOLERANCE(act_cnt, coeff)) >
+			conf->lnf_index->unique_item_cnt ||
+			(conf->lnf_index->state == BF_CLOSING &&
+				(act_cnt + (unsigned int)BF_LOWER_TOLERANCE(act_cnt, coeff)) <
+				conf->lnf_index->unique_item_cnt
+			))
 		{
-			conf->lnf_index->unique_item_cnt = act_cnt + BF_ITEM_CNT_ADDITION(act_cnt);
+			// Higher act_cnt = make bigger bloom filter
+			// Lower act_cnt = save space, make smaller bloom filter
+			conf->lnf_index->unique_item_cnt = act_cnt * coeff;
 			conf->lnf_index->params_changed = true;
 		}
-
 	}
 
 	// Update time

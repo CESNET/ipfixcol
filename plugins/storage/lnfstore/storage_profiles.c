@@ -171,7 +171,7 @@ static int open_storage_files(struct lnfstore_conf *conf)
 		if (conf->params->bf.indexing) {
 			// If lnf index creation failed before, try again
 			if (!profile->lnf_index){
-				profile->lnf_index = create_lnfstore_index();
+				profile->lnf_index = create_lnfstore_index(conf->params->bf);
 				if (!profile->lnf_index){
 					/// TODO identifikace profilu
 					MSG_ERROR(msg_module, "Failed to initialize lnfstore index"
@@ -202,10 +202,6 @@ static int open_storage_files(struct lnfstore_conf *conf)
 
 	free(file_str);
 	//free(dir); TODO nechybi??
-
-	if (index_file){
-		free(index_file);
-	}
 
 	return 0;
 }
@@ -256,19 +252,34 @@ static void new_window(time_t now, struct lnfstore_conf *conf)
 		for (int i = 0; i < conf->profiles_size; ++i) {
 			profile_file_t *profile = &conf->profiles_ptr[i];
 
-			if (!profile->lnf_index || profile->lnf_index->state != BF_CLOSING){
+			if (!profile->lnf_index){
 				continue;
 			} else {
 				unsigned int act_cnt = stored_item_cnt(profile->lnf_index->index);
-				if ((act_cnt + BF_UPPER_TOLERANCE(act_cnt)) >
+				double coeff = BF_TOL_COEFF(act_cnt);
+				if ((act_cnt + (unsigned int)BF_UPPER_TOLERANCE(act_cnt, coeff)) >
 						profile->lnf_index->unique_item_cnt ||
-					(act_cnt - BF_LOWER_TOLERANCE(act_cnt)) <
-						profile->lnf_index->unique_item_cnt)
+					 (profile->lnf_index->state == BF_CLOSING &&
+					 (act_cnt + (unsigned int)BF_LOWER_TOLERANCE(act_cnt, coeff)) <
+						profile->lnf_index->unique_item_cnt))
+
 				{
-					profile->lnf_index->unique_item_cnt = act_cnt + BF_ITEM_CNT_ADDITION(act_cnt);
+					fprintf(stderr, "Profile %d: State: %d, VAL: %d, COEFF: %f, UP: %d(%f), LOW: %d(%f), SET: %d(%f)\n",
+								i,
+								profile->lnf_index->state,
+								act_cnt,
+								coeff,
+								(act_cnt + (unsigned int)BF_UPPER_TOLERANCE(act_cnt, coeff)),
+								(double)act_cnt + BF_UPPER_TOLERANCE(act_cnt, coeff),
+								act_cnt + (unsigned int)BF_LOWER_TOLERANCE(act_cnt, coeff),
+								(double)act_cnt + BF_LOWER_TOLERANCE(act_cnt, coeff),
+								(unsigned int)(act_cnt*coeff),
+								act_cnt*coeff);
+					// Higher act_cnt = make bigger bloom filter
+					// Lower act_cnt = save space, make smaller bloom filter
+					profile->lnf_index->unique_item_cnt = (unsigned int)(act_cnt * coeff);
 					profile->lnf_index->params_changed = true;
 				}
-
 			}
 		}
 	}
@@ -340,7 +351,7 @@ static int update_profiles(struct lnfstore_conf *conf, void **profiles)
 		profile_file_t *profile = &conf->profiles_ptr[i];
 		profile->address = profiles[i];
 		profile->file = NULL;
-		profile->lnf_index = create_lnfstore_index();
+		profile->lnf_index = create_lnfstore_index(conf->params->bf);
 		if (!profile->lnf_index){
 			MSG_ERROR(msg_module, "Failed to initialize lnfstore index "
 						"for profile TODO, last data file will not be indexed");
@@ -482,12 +493,11 @@ void store_record_profiles(const struct metadata *mdata, struct lnfstore_conf *c
 	// Decide whether close files and create new time window
 	time_t now = time(NULL);
 	if (difftime(now, conf->window_start) > conf->params->window_time) {
-
 		update_profiles_states(conf, IPE_NEW_WINDOW_START);
 
 		new_window(now, conf);
 
-		update_profiles_states(conf, IPE_NEW_WINDOW_START);
+		update_profiles_states(conf, IPE_NEW_WINDOW_END);
 	}
 
 	store_to_profiles(conf, mdata->channels);

@@ -131,13 +131,13 @@ void destroy_parsed_params(struct conf_params *cnf)
 }
 
 
-struct lnfstore_index *create_lnfstore_index()
+struct lnfstore_index *create_lnfstore_index(struct index_params params)
 {
 	struct lnfstore_index *new_index = malloc(sizeof(struct lnfstore_index));
 	if (new_index){
 		new_index->index = NULL;
 		new_index->state = BF_INIT;
-		new_index->unique_item_cnt = 0;
+		new_index->unique_item_cnt = params.est_item_cnt;
 		new_index->params_changed = false;
 	}
 
@@ -408,7 +408,7 @@ int storage_init (char *params, void **config)
 
 	// Initialize indexing state (no profile mode only)
 	if (!conf->params->profiles && conf->params->bf.indexing){
-		conf->lnf_index = create_lnfstore_index();
+		conf->lnf_index = create_lnfstore_index(conf->params->bf);
 		if (!conf->lnf_index){
 			MSG_ERROR(msg_module, "Failed to initialize lnfstore index");
 			destroy_parsed_params(parsed_params);
