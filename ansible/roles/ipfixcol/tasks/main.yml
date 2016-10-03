@@ -1,0 +1,18 @@
+- name: Include dependency tasks
+  include: dependencies.yml
+
+- name: IPFIXcol base build
+  include: base.yml
+  tags: base
+
+- name: IPFIXcol input plugins
+  include: input-plugins.yml
+
+- name: IPFIXcol intermediate plugins
+  include: intermediate-plugins.yml
+  
+- name: IPFIXcol storage plugins
+  include: storage-plugins.yml
+  
+- name: IPFIXcol tools
+  include: tools.yml

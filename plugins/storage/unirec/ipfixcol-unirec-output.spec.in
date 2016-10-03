@@ -10,12 +10,9 @@ Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 
-BuildRequires: gcc make doxygen pkgconfig
-Requires: libxml2
-BuildRequires: libxml2-devel
-Requires: libtrap >= 0.3.0
-BuildRequires: libtrap-devel >= 0.3.0
-Requires: ipfixcol >= 0.7.1
+BuildRequires: gcc autoconf libtool make doxygen libxslt pkgconfig @BUILDREQS@
+Requires: libxml2 libtrap >= 0.3.0 ipfixcol >= 0.7.1
+BuildRequires: libxml2-devel libtrap-devel >= 0.3.0 ipfixcol-devel >= 0.7.1
 
 %description
 Plugin for converting IPFIX data to UniRec format.

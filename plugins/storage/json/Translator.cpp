@@ -253,14 +253,21 @@ const char *Translator::escapeString(uint16_t length, const uint8_t *field,
 		buffer[idx_output++] = ch; \
 	}
 
-	// Beggining of the string
+	// Beginning of the string
 	buffer[idx_output++] = '"';
 
 	for (uint32_t i = 0; i < length; ++i) {
+		// All characters from the extended part of ASCII must be escaped
+		if (field[i] > 0x7F) {
+			snprintf(&buffer[idx_output], 7, "\\u00%02x", field[i]);
+			idx_output += 6;
+			continue;
+		}
+
 		/*
 		 * Based on RFC 4627 (Section: 2.5. Strings):
 		 * Control characters (i.e. 0x00 - 0x1F), '"' and  '\' must be escaped
-		 * using "\"", "\\" or "\uXXXX" where "XXXX" is hexa value.
+		 * using "\"", "\\" or "\uXXXX" where "XXXX" is a hexa value.
 		 */
 		if (field[i] > 0x1F && field[i] != '"' && field[i] != '\\') {
 			// Copy to the output buffer

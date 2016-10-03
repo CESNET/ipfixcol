@@ -43,7 +43,7 @@ AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 AC_GNU_SOURCE
 
 LT_PREREQ([2.2])
-LT_INIT([dlopen disable-static])
+LT_INIT([disable-static])
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([geoip.c])
@@ -51,6 +51,8 @@ dnl AM_CONFIG_HEADER(config.h)
 
 # Initialization
 AM_CFLAGS="-Wall -O2 -std=gnu99"
+# We need -fPIC to link to some of the libraries
+LDFLAGS="$LDFLAGS -fPIC"
 AC_LANG(C)
 
 RELEASE=1
@@ -62,11 +64,12 @@ LBR_SET_DISTRO([redhat])
 
 ############################ Check for programs ################################
 
-# Check for rpmbuil
+# Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
 
 # Check for xsltproc
 LBR_CHECK_XSLTPROC
+AC_SUBST([BUILDREQS])
 
 # Check for standard programs
 AC_PROG_CC
@@ -95,7 +98,8 @@ AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar
 
 # Check whether we can find headers dir in relative path (git repository)
 AS_IF([test -d $srcdir/../../../base/headers], 
-	[AM_CPPFLAGS+=" -I$srcdir/../../../base/headers"]
+	[AM_CPPFLAGS+=" -I$srcdir/../../../base/headers"
+	BUILD_AGAINST="git"]
 )
 
 cppflags_save="$CPPFLAGS"
@@ -169,6 +173,7 @@ echo "
   Distribution..: $DISTRO
   C Compiler....: $CC $AM_CFLAGS $CFLAGS
   Linker........: $AM_LDFLAGS $LDFLAGS $LIBS
+  Build against.: ${BUILD_AGAINST:-system}
   rpmbuild......: ${RPMBUILD:-NONE}
   Build doc.....: ${enable_doc:-yes}
   xsltproc......: ${XSLTPROC:-NONE}

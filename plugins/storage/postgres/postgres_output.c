@@ -1136,6 +1136,11 @@ int storage_init(char *params, void **config)
 
 	conf->table_size = 128;	/* default value, just guess */
 	conf->table_names = (uint16_t *) malloc(conf->table_size * sizeof(uint16_t));
+	if (!(conf->table_names)) {
+		MSG_ERROR(msg_module, "Out of memory (%s:%d)", __FILE__, __LINE__);
+		return -1;
+	}
+	memset(conf->table_names, 0, conf->table_size * sizeof(uint16_t));
 
 	conf->conn = conn;
 

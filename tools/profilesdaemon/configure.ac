@@ -49,7 +49,7 @@ AC_SUBST(RELEASE)
 
 # Initialization
 : ${CXXFLAGS=""}
-AM_CXXFLAGS="-Wall -O2"
+AM_CXXFLAGS="-Wall -O2 -fPIE"
 AC_LANG(C++)
 
 CXX="g++"
@@ -69,6 +69,7 @@ AM_CONDITIONAL([HAVE_DOXYGEN], [test -n $DOXYGEN])
 
 # Check for xsltproc
 LBR_CHECK_XSLTPROC
+AC_SUBST([BUILDREQS])
 
 # Check for standard programs
 AC_PROG_CXX
@@ -80,10 +81,6 @@ LBR_SET_CXXSTD([gnu++11])
 AM_CXXFLAGS="$AM_CXXFLAGS $CXXSTD"
 
 ############################ Check for libraries ###############################
-
-### dynamic linker ###
-AC_SEARCH_LIBS([dlopen], [dl],,
-        AC_MSG_ERROR([Required library dl missing]))
 
 ############################# Check for files ##################################
 

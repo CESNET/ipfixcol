@@ -10,10 +10,9 @@ Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 
-BuildRequires: gcc make doxygen
-Requires: libxml2
-BuildRequires: rrdtool-devel ipfixcol-devel >= 0.7.1
-Requires: ipfixcol >= 0.7.1 rrdtool
+BuildRequires: gcc-c++ autoconf libtool make doxygen libxslt @BUILDREQS@
+BuildRequires: libxml2-devel rrdtool-devel ipfixcol-devel >= 0.7.1
+Requires: libxml2 rrdtool ipfixcol >= 0.7.1
 
 %description
 stats intermediate plugin for ipfixcol.

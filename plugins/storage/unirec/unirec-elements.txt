@@ -26,9 +26,6 @@ DNS_PSIZE                      uint16         2      e8057id8         DNS payloa
 DNS_DO                         uint8          1      e8057id9         DNS DNSSEC OK bit
 DNS_ID                         uint16         2      e8057id10        DNS transaction id
 SMTP_FLAGS                     uint8          1      e8057id200       SMTP flags
-SIP_CONTROL                    uint16         2      e8057id100       SIP response/command code
-SIP_FROM                       string        -1      e8057id101       SIP From header field
-SIP_TO                         string        -1      e8057id102       SIP To header field
 HB_TYPE                        uint8          1      e8057id700       TLS content type
 HB_DIR                         uint8          1      e8057id701       Heartbeat request/response byte
 HB_SIZE_MSG                    uint16 	      2      e8057id702       Heartbeat message size
@@ -83,3 +80,12 @@ INVEA_RTCP_OCTETS              uint64         8      e39499id49       RTCP octet
 INVEA_RTCP_SOURCE_COUNT        uint8          1      e39499id50       RTCP source count
 INVEA_SIP_USER_AGENT           string        -1      e39499id51       SIP User Agent
 INVEA_SIP_REQUEST_URI          string        -1      e39499id52       SIP Request-URI
+SIP_MSG_TYPE                   uint16         2      e8057id100       SIP message type
+SIP_STATUS_CODE                uint16         2      e8057id101       SIP status code
+SIP_CALL_ID                    string        -1      e8057id102       SIP call id
+SIP_CALLING_PARTY              string        -1      e8057id103       SIP from
+SIP_CALLED_PARTY               string        -1      e8057id104       SIP to
+SIP_VIA                        string        -1      e8057id105       SIP VIA
+SIP_USER_AGENT                 string        -1      e8057id106       SIP user agent
+SIP_REQUEST_URI                string        -1      e8057id107       SIP request uri
+SIP_CSEQ                       string        -1      e8057id108       SIP CSeq

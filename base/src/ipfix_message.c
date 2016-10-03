@@ -594,24 +594,24 @@ uint8_t *data_record_get_field(uint8_t *record, struct ipfix_template *templ, ui
 		}
 
 		/* If offset is already known, use it */
-		if (offset_id != OF_COUNT && templ->offsets[offset_id] > 0) {
+		if (offset_id != OF_COUNT && templ->offsets[offset_id].offset > 0) {
 			if (data_length) {
-				*data_length = offsets[offset_id].length;
+				*data_length = templ->offsets[offset_id].bytes;
 			}
 
-			return (uint8_t *) record + templ->offsets[offset_id];
+			return (uint8_t *) record + templ->offsets[offset_id].offset;
 		}
 	}
 
 	int offset = data_record_field_offset(record, templ, enterprise, id, data_length);
-
 	if (offset < 0) {
 		return NULL;
 	}
 
-	/* Store offset for future lookup */
-	if (offset_id != OF_COUNT) {
-		templ->offsets[offset_id] = offset;
+	/* Store offset for future lookup (safe only for templates without variable length) */
+	if (offset_id != OF_COUNT && data_length != NULL && !(templ->data_length & 0x80000000)) {
+		templ->offsets[offset_id].offset = offset;
+		templ->offsets[offset_id].bytes = *data_length;
 	}
 
 	return (uint8_t *) record + offset;
@@ -712,15 +712,43 @@ int data_set_process_records(struct ipfix_data_set *data_set, struct ipfix_templ
  */
 int template_set_process_records(struct ipfix_template_set *tset, int type, tset_callback_f processor, void *proc_data)
 {
-	uint16_t max_len, rec_len, count = 0;
 	uint8_t *ptr = (uint8_t *) &tset->first_record;
+	uint16_t max_len = ((uint8_t *) tset + ntohs(tset->header.length)) - ptr;
+	uint16_t count = 0;
+	uint16_t rec_len;
+
+	/*
+	 * Get a minimal size of a record based on a type of the first record
+	 * in the template set.
+	 */
+	size_t min_len = 4; // Size of a template withdrawal record (RFC 7011, 8.1)
+	if (max_len < min_len) {
+		// Emplty set -> only padding
+		return 0;
+	}
+
+	if (((const struct ipfix_template_record *) ptr)->count != 0) {
+		// The first record is not a template withdrawal
+		switch (type) {
+		case TM_TEMPLATE:
+			// Based on RFC 7011, 3.4.1 (a header + one or more specifiers)
+			min_len = sizeof(struct ipfix_template_record);
+			break;
+		case TM_OPTIONS_TEMPLATE:
+			// Based on RFC 7011, 3.4.2.2 (a header + one or more specifiers)
+			min_len = sizeof(struct ipfix_options_template_record);
+			break;
+		default:
+			return 0;
+		}
+	}
 
 	while (ptr < (uint8_t *) tset + ntohs(tset->header.length)) {
 		max_len = ((uint8_t *) tset + ntohs(tset->header.length)) - ptr;
 		rec_len = tm_template_record_length((struct ipfix_template_record *) ptr, max_len, type, NULL);
 
-		/* Check whether padding was applied */
-		if (rec_len < sizeof(struct ipfix_template_record)) {
+		/* Check whether a padding was applied */
+		if (rec_len < min_len) {
 			break;
 		}
 

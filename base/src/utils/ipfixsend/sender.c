@@ -1,5 +1,5 @@
 /**
- * \file sender.c
+ * \file ipfixsend/sender.c
  * \author Michal Kozubik <kozubik@cesnet.cz>
  * \author Lukas Hutak <hutak@cesnet.cz>
  * \brief Functions for parsing IP, connecting to collector and sending packets
@@ -54,6 +54,7 @@
 
 #include "ipfixsend.h"
 #include "sender.h"
+#include "reader.h"
 
 #include <siso.h>
 
@@ -78,9 +79,10 @@ void sender_stop()
 /**
  * \brief Send packet
  */
-int send_packet(sisoconf *sender, char *packet)
+int send_packet(sisoconf *sender, const struct ipfix_header *packet)
 {
-	return siso_send(sender, packet, (int) ntohs(((struct ipfix_header *) packet)->length));
+	const size_t size = ntohs(packet->length);
+	return siso_send(sender, (const char *) packet, size);
 }
 
 /**
@@ -98,8 +100,10 @@ long timeval_diff(const struct timeval *start, const struct timeval *end)
 /**
  * \brief Send all packets from array with speed limitation
  */
-int send_packets_limit(sisoconf *sender, char **packets, int packets_s)
+int send_packets_limit(sisoconf *sender, reader_t *reader, int packets_s)
 {
+	enum READER_STATUS status;
+	struct ipfix_header *pkt_data;
 	struct timeval end;
 	struct timespec sleep_time = {0};
 
@@ -114,12 +118,20 @@ int send_packets_limit(sisoconf *sender, char **packets, int packets_s)
 		time_per_pkt = 1000000.0 / packets_s; // [micro seconds]
 	}
 
-	for (int i = 0; packets[i] && stop_sending == 0; ++i) {
+	while (stop_sending == 0) {
+		status = reader_get_next_packet(reader, &pkt_data, NULL);
+		if (status == READER_EOF) {
+			break;
+		} else if (status == READER_ERROR) {
+			return 1;
+		}
+
 		/* send packet */
-		int ret = send_packet(sender, packets[i]);
-        if (ret != SISO_OK) {
-            return SISO_ERR;
-        }
+		int ret = send_packet(sender, pkt_data);
+		if (ret != SISO_OK) {
+			fprintf(stderr, "Network error: %s\n", siso_get_last_err(sender));
+			return 1;
+		}
 
 		pkts_from_begin++;
 		if (packets_s <= 0) {
@@ -153,81 +165,111 @@ int send_packets_limit(sisoconf *sender, char **packets, int packets_s)
 			gettimeofday(&begin, NULL);
 			pkts_from_begin = 0;
 		}
-	}
+	};
 
-	return SISO_OK;
-}
-
-/**
- * \brief Get time of the packet from the header
- * \param[in] packet Packet
- * \return Timestamp
- */
-uint32_t packet_time(const char *packet)
-{
-	const struct ipfix_header *header;
-	header = (const struct ipfix_header *) packet;
-
-	return ntohl(header->export_time);
+	return 0;
 }
 
 /**
  * \brief Get the count of packets in a group with the same timestamps
  *
- * The group timestamp is based on the timestamp of the first packet in an
- * array. The group ends when a packet with later timestamp is detected i.e.
- * the group also includes packets with earlier timestamps.
+ * The group timestamp is based on the timestamp of the first read packet.
+ * The group ends when a packet with later timestamp is detected i.e. the group
+ * also includes packets with earlier timestamps.
  *
- * \param[in] packets Array of packets
- * \return On success returns value > 0. Otherwise returns 0.
+ * \param[in] reader Packet reader
+ * \return On success returns value > 0. On EOF returns 0. Otherwise (errors)
+ *   returns a negative number.
  */
-int ts_grp_cnt(char **packets)
+int ts_grp_cnt(reader_t *reader)
 {
-	if (!packets || !(*packets)) {
-		return 0;
+	struct ipfix_header *header;
+	enum READER_STATUS status;
+	uint32_t reference_time;
+	int counter;
+
+	if (reader_position_push(reader) != READER_OK) {
+		return -1;
 	}
 
-	uint32_t grp_ts = packet_time(packets[0]);
-	int grp_cnt = 1;
+	status = reader_get_next_header(reader, &header);
+	if (status != READER_OK) {
+		return (status == READER_EOF) ? 0 : -1;
+	}
 
-	while (packets[grp_cnt]) {
-		if (packet_time(packets[grp_cnt]) > grp_ts) {
+	reference_time = ntohl(header->export_time);
+	counter = 1;
+
+	// Get next header
+	while ((status = reader_get_next_header(reader, &header)) != READER_EOF) {
+		if (status != READER_OK) {
+			return -1;
+		}
+
+		if (reference_time < ntohl(header->export_time)) {
 			break;
 		}
 
-		++grp_cnt;
+		++counter;
+	};
+
+	if (reader_position_pop(reader) != READER_OK) {
+		return -1;
 	}
 
-	return grp_cnt;
+	return counter;
 }
 
 /**
  * \brief Send all packets from array with real-time simulation
  */
-int send_packets_realtime(sisoconf *sender, char **packets, double speed)
+int send_packets_realtime(sisoconf *sender, reader_t *reader, double speed)
 {
-	if (!packets || !(*packets)) {
-		// No packets
-		return SISO_OK;
-	}
-
 	int grp_cnt = 0; // Number of packets in a group with same timestamp
 	int grp_id = 0;  // Index of the packet in the group
-
 	uint32_t grp_ts_prev = 0;
-	uint32_t grp_ts_now = packet_time(*packets);
+	uint32_t grp_ts_now;
 	double time_per_pkt = 0.0;
 	struct timeval group_ts_start, end;
+	struct ipfix_header *new_packet = NULL;
 
-	for (int i = 0; packets[i] && stop_sending == 0; ++i) {
+	if (reader_position_push(reader) != READER_OK) {
+		return 1;
+	}
+
+	if (reader_get_next_header(reader, &new_packet) != READER_OK) {
+		return 1;
+	}
+
+	grp_ts_now = ntohl(new_packet->export_time);
+	if (reader_position_pop(reader) != READER_OK) {
+		return 1;
+	}
+
+	while (stop_sending == 0) {
 		if (grp_cnt == grp_id) {
-			/* New group */
-			grp_cnt = ts_grp_cnt(&packets[i]);
+			// New group
 			grp_id = 0;
-			time_per_pkt = 1000000.0 / (grp_cnt * speed); // [micro seconds]
+			grp_cnt = ts_grp_cnt(reader);
+			if (grp_cnt == 0) {
+				// End of file
+				break;
+			}
+
+			if (grp_cnt < 0) {
+				// Error
+				return 1;
+			}
+
+			// Prepare a new packet
+			if (reader_get_next_packet(reader, &new_packet, NULL) != READER_OK) {
+				// This can not be EOF -> it must be error
+				return 1;
+			}
 
 			grp_ts_prev = grp_ts_now;
-			grp_ts_now = packet_time(packets[i]);
+			grp_ts_now = ntohl(new_packet->export_time);
+			time_per_pkt = 1000000.0 / (grp_cnt * speed); // [micro seconds]
 
 			/* Sleep between time groups only when difference > 1 second */
 			if (grp_ts_now > grp_ts_prev + 1) {
@@ -239,12 +281,19 @@ int send_packets_realtime(sisoconf *sender, char **packets, double speed)
 			}
 
 			gettimeofday(&group_ts_start, NULL);
+		} else {
+			// Prepare a new packet
+			if (reader_get_next_packet(reader, &new_packet, NULL) != READER_OK) {
+				// This can not be EOF -> it must be error
+				return 1;
+			}
 		}
 
-		/* Send a packet */
-		int ret = send_packet(sender, packets[i]);
+		// Send the packet
+		int ret = send_packet(sender, new_packet);
 		if (ret != SISO_OK) {
-			return SISO_ERR;
+			fprintf(stderr, "Network error: %s\n", siso_get_last_err(sender));
+			return 1;
 		}
 
 		++grp_id;
@@ -269,5 +318,5 @@ int send_packets_realtime(sisoconf *sender, char **packets, double speed)
 		}
 	}
 
-	return SISO_OK;
+	return 0;
 }

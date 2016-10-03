@@ -67,12 +67,25 @@ typedef enum {
 /**
  * \brief Macro for printing common messages, without severity prefix.
  *
+ * Print the message when the application verbosity level is same or higher.
  * In syslog, all of these messages will have LOG_INFO severity.
  *
  * @param level The verbosity level at which this message should be printed
  * @param format
  */
-#define MSG_COMMON(level, format, ...) if (verbose < level); else icmsg_print(-1, format"\n", ## __VA_ARGS__)
+#define MSG_COMMON(level, format, ...) if (verbose < level); else icmsg_print(ICMSG_INFO, format"\n", ## __VA_ARGS__)
+
+/**
+ * \brief Macro for printing messages, without severity prefix.
+ *
+ * Always print the message to the default output.
+ * In syslog, all of these messags will have LOG_INFO severity.
+ *
+ * \param[in] format Output format template
+ * \param[in] ...    List of arguments for the output template
+ *
+ */
+#define MSG_ALWAYS(format, ...) icmsg_print(ICMSG_INFO, format"\n", ## __VA_ARGS__)
 
 /**
  * \brief Macro for initialising syslog.

@@ -524,8 +524,8 @@ static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
 		uint64_t total_cpu = statistics_total_cpu();
 		float usage;
 		
-		MSG_INFO(stat_module, "");
-		MSG_INFO(stat_module, "%10s %7s %10s %15s", "TID", "state", "cpu usage", "thread name");
+		MSG_ALWAYS(" |", NULL);
+		MSG_ALWAYS(" | %10s %7s %10s %15s", "TID", "state", "cpu usage", "thread name");
 		while ((entry = readdir(dir)) != NULL) {
 			if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) {
 				continue;
@@ -567,13 +567,13 @@ static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
 			}
 			
 			/* Print statistics */
-			MSG_INFO(stat_module, "%10d %7c %8.2f %% %15s", tid, state, usage, thread_name);
+			MSG_ALWAYS(" | %10d %7c %8.2f %% %15s", tid, state, usage, thread_name);
 			
 			/* Update stats */
 			thread->proc_time = proc_time;
 		}
 
-		MSG_INFO(stat_module, "");
+		MSG_ALWAYS(" |", NULL);
 		closedir(dir);
 
 		/* Update stats */
@@ -593,22 +593,22 @@ void statistics_print_buffers(struct output_manager_config *conf, FILE *stat_out
 		/* Add contents here */
 	} else {
 		/* Print info about preprocessor's output queue */
-		MSG_INFO(stat_module, "Queue utilization:");
+		MSG_ALWAYS(" | Queue utilization:", NULL);
 		
 		struct ring_buffer *prep_buffer = get_preprocessor_output_queue();
-		MSG_INFO(stat_module, "     Preprocessor output queue: %u / %u", prep_buffer->count, prep_buffer->size);
+		MSG_ALWAYS(" |     Preprocessor output queue: %u / %u", prep_buffer->count, prep_buffer->size);
 
 		/* Print info about Output Manager queues */
 		struct data_manager_config *dm = conf->data_managers;
 		if (dm) {
 			if (conf->manager_mode == OM_SINGLE) {
-				MSG_INFO(stat_module, "     Output Manager output queue: %u / %u", dm->store_queue->count, dm->store_queue->size);
+				MSG_ALWAYS(" |     Output Manager output queue: %u / %u", dm->store_queue->count, dm->store_queue->size);
 			} else {
-				MSG_INFO(stat_module, "     Output Manager output queues:");
-				MSG_INFO(stat_module, "         %.4s | %.10s / %.10s", "ODID", "waiting", "total size");
+				MSG_ALWAYS(" |     Output Manager output queues:", NULL);
+				MSG_ALWAYS(" |         %.4s | %.10s / %.10s", "ODID", "waiting", "total size");
 				
 				while (dm) {
-					MSG_INFO(stat_module, "   %10u %9u / %u", dm->observation_domain_id, dm->store_queue->count, dm->store_queue->size);
+					MSG_ALWAYS(" |   %10u %9u / %u", dm->observation_domain_id, dm->store_queue->count, dm->store_queue->size);
 					dm = dm->next;
 				}
 			}
@@ -762,9 +762,9 @@ static void *statistics_thread(void* config)
 				break;
 			}
 		} else if (print_stat_to_console) {
-			MSG_INFO(stat_module, "");
-			MSG_INFO(stat_module, "Time: %lu, run time: %lu", time_now, run_time);
-			MSG_INFO(stat_module, "%10s %15s %15s %15s %15s %15s %20s", "ODID", "packets", "data rec.", "lost data rec.", "packets/s", "data records/s", "lost data records/s");
+			MSG_ALWAYS("Statistics", NULL);
+			MSG_ALWAYS(" | Time: %lu, run time: %lu", time_now, run_time);
+			MSG_ALWAYS(" | %10s %15s %15s %15s %15s %15s %20s", "ODID", "packets", "data rec.", "lost data rec.", "packets/s", "data records/s", "lost data records/s");
 		}
 
 		/* Variables for calculating sums */
@@ -798,7 +798,7 @@ static void *statistics_thread(void* config)
 				fprintf(stat_out_file, "%s_%u=%u\n", "LOST_DATA_REC_SEC",
 						aux_node->input_info->odid, delta_lost_data_records / conf->stat_interval);
 			} else if (print_stat_to_console) {
-				MSG_INFO(stat_module, "%10u %15lu %15lu %15lu %15u %15u %20u",
+				MSG_ALWAYS(" | %10u %15lu %15lu %15lu %15u %15u %20u",
 						aux_node->input_info->odid,
 						aux_node->input_info->packets,
 						aux_node->input_info->data_records,
@@ -824,8 +824,8 @@ static void *statistics_thread(void* config)
 
 		if (print_stat_to_console && aux_node_count > 1) {
 			/* Print totals row, but only in case there is more than one ODID */
-			MSG_INFO(stat_module, "%s", "----------------------------------------------------------");
-			MSG_INFO(stat_module, "%10s %15lu %15lu %15lu", "Total:", packets_total, data_records_total, lost_data_records_total);
+			MSG_ALWAYS(" | %s", "----------------------------------------------------------");
+			MSG_ALWAYS(" | %10s %15lu %15lu %15lu", "Total:", packets_total, data_records_total, lost_data_records_total);
 		}
 		
 		/* Print CPU usage by threads */

@@ -17,6 +17,7 @@ public:
 
 private:
 	sisoconf *sender{NULL};
+	struct timeval connection_time;
 };
 
 #endif // SENDER_H

@@ -96,6 +96,14 @@ enum offset_fields {
 };
 
 /**
+ * \brief Structure for offsets of common element
+ */
+struct ipfix_offsets {
+	int offset;         /**< Field offset  */
+	int bytes;          /**< Size of field */
+};
+
+/**
  * \struct ipfix_template
  * \brief Structure for storing Template Record/Options Template Record
  *
@@ -126,7 +134,7 @@ struct ipfix_template {
 	                              * length of the Data Record has to be
 	                              * calculated somehow else. For more information,
 	                              * see section 7 in RFC 5101. */
-	int offsets[OF_COUNT];
+	struct ipfix_offsets offsets[OF_COUNT]; /** Offsets of common elements    */
 	template_ie fields[1];       /** Template fields */
 };
 

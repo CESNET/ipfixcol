@@ -100,7 +100,7 @@ extern "C" {
      * @return 0 if not set
      */
     uint64_t siso_get_speed(sisoconf *conf);
-    
+
     /**
      * \brief Get last error description
      * 
@@ -116,6 +116,14 @@ extern "C" {
      */
     void siso_unlimit_speed(sisoconf* conf);
     
+	/**
+	 * \brief Check if a destination is connected
+	 * \paramf[in] conf
+	 * \return When the destination is NOT connected, returns 0. Otherwise
+	 *   returns non-zero value.
+	 */
+	int siso_is_connected(const sisoconf *conf);
+
     /**
      * \brief Set max. speed limit
      * 
@@ -155,17 +163,23 @@ extern "C" {
      */
     void siso_close_connection(sisoconf *conf);
 
-    /**
-     * \brief Set operations non blocking
-     * 
-     * @param conf sisoconf configuration
-     * @return SISO_OK or SISO_ERR and sets error message (see siso_get_last_err for details)
-     */
-    int siso_set_nonblocking(sisoconf *conf);
+	/**
+	 * \brief Reconnect to the destination
+	 *
+	 * Previous connection (if any) is closed and a new one is created.
+	 * \warning This function can be used only when the connection have been
+	 *   previously configured by siso_create_connection(), because otherwise
+	 *   a destination address, a port and a protocol are not specified.
+	 * \param[in,out] conf Sisoconf configuration
+	 * \return SISO_OK or SISO_ERR and sets error message (see siso_get_last_err for details)
+	 */
+	int siso_reconnect(sisoconf *conf);
     
     /**
      * \brief Send data
      * 
+	 * When the #SISO_ERR is returned, than the connection is broken and must
+	 * be reinitialized using siso_reconnect()
      * @param conf sisoconf configuration
      * @param data data to be sent
      * @param length data length

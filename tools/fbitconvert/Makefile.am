@@ -12,10 +12,6 @@ if HAVE_DOC
 SUBDIRS += man
 endif
 
-.PHONY: doc
-doc: 
-	(cd doc && $(MAKE) $(AM_MAKEFLAGS) $@) || exit 1
-
 .PHONY: rpm
 rpm: dist $(rpmspec)
 	@mkdir -p $(RPMDIR)/BUILD $(RPMDIR)/RPMS $(RPMDIR)/SOURCES $(RPMDIR)/SPECS $(RPMDIR)/SRPMS;

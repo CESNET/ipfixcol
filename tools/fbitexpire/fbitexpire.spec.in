@@ -10,7 +10,7 @@ Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 
-BuildRequires: gcc-c++ make doxygen pkgconfig
+BuildRequires: gcc-c++ autoconf libtool make doxygen libxslt @BUILDREQS@
 
 %description
 Tool for monitoring data size and removing old data.

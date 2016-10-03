@@ -42,8 +42,10 @@
 
 /* Get defines from configure */
 #ifdef HAVE_CONFIG_H
-# include <config.h>
+	#include <config.h>
 #endif
+
+#include "FlowWatch.h"
 
 /* We need be64toh macro */
 #ifndef HAVE_BE64TOH
@@ -60,10 +62,40 @@ const unsigned int RESERVED_SPACE = 75000;
 /** Identifier to MSG_* macros */
 #define msg_module "fastbit storage"
 
-/* this enum specifies types of file naming strategy */
+/* File name strategies */
 enum name_type { TIME, INCREMENTAL, PREFIX };
 
-/* this enum specifies types of elements */
+/* Element storage types */
 enum store_type { UINT, INT, BLOB, TEXT, FLOAT, IPV6, UNKNOWN };
+
+/* fastbit_table.h relies on the enums defined in this file, which
+ * is why we include fastbit_table.h after defining the enums
+ */
+#include "fastbit_table.h"
+
+class template_table;
+
+/* Data structure for holding information about observation domain (OD) */
+struct od_info {
+	/* template_table by template ID */
+	std::map<uint16_t, template_table*> template_info;
+
+	/* String representation of exporter IP address in non-canonical */
+	std::string exporter_ip_addr;
+
+	/* Directory for storing data for this observation domain */
+	std::string path;
+
+	/* FlowWatch for monitoring statistics */
+	FlowWatch flow_watch;
+};
+
+/**
+ * \brief Returns the length of an element, based on its type
+ *
+ * @param type Element type
+ *
+ */
+int get_len_from_type(ELEMENT_TYPE type);
 
 #endif /* FASTBIT_H_ */

@@ -38,10 +38,10 @@
 
 AC_PREREQ([2.60])
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol-unirec-output], [0.2.6])
+AC_INIT([ipfixcol-unirec-output], [0.2.9])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 LT_PREREQ([2.2])
-LT_INIT([dlopen disable-static])
+LT_INIT([disable-static])
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([unirec.c])
@@ -49,6 +49,8 @@ AC_CONFIG_HEADERS([config.h])
 
 # Initialization
 CFLAGS="-Wall"
+# We need -fPIC to link to some of the libraries
+LDFLAGS="$LDFLAGS -fPIC"
 
 RELEASE=1
 AC_SUBST(RELEASE)
@@ -64,6 +66,7 @@ AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
 
 # Check for xsltproc
 LBR_CHECK_XSLTPROC
+AC_SUBST([BUILDREQS])
 
 # Check for standard programs
 AC_PROG_CC
@@ -96,7 +99,8 @@ AC_CHECK_HEADERS([arpa/inet.h inttypes.h string.h unistd.h])
 
 # Check whether we can find headers dir in relative path (git repository)
 AS_IF([test -d $srcdir/../../../base/headers], 
-	[CPPFLAGS="$CPPFLAGS -I$srcdir/../../../base/headers"]
+	[CPPFLAGS="$CPPFLAGS -I$srcdir/../../../base/headers"
+	BUILD_AGAINST="git"]
 )
 
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
@@ -159,6 +163,7 @@ echo "
   Distribution..: $DISTRO
   C Compiler....: $CC $CFLAGS $CPPFLAGS
   Linker........: $LDFLAGS $LIBS
+  Build against.: ${BUILD_AGAINST:-system}
   rpmbuild......: ${RPMBUILD:-NONE}
   Build doc.....: ${enable_doc:-yes}
   xsltproc......: ${XSLTPROC:-NONE}
