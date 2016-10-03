@@ -265,8 +265,8 @@ void flush_data(struct fastbit_config *conf, std::string exporter_ip_addr, uint3
 
 		MSG_DEBUG(msg_module, "Flushing data to disk (exporter: %s, ODID: %u)",
 				odid_it->second.exporter_ip_addr.c_str(), odid);
-		MSG_DEBUG(msg_module, "    > Exported: %u", odid_it->second.flow_watch.received_flows());
-		MSG_DEBUG(msg_module, "    > Received: %u", odid_it->second.flow_watch.exported_flows());
+		MSG_DEBUG(msg_module, "    > Exported: %u", odid_it->second.flow_watch.exported_flows());
+		MSG_DEBUG(msg_module, "    > Received: %u", odid_it->second.flow_watch.received_flows());
 
 		for (table = templates->begin(); table != templates->end(); table++) {
 			conf->dirs->push_back(path + ((*table).second)->name() + "/");
