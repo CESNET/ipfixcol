@@ -231,19 +231,20 @@ static struct nff_item_s nff_ipff_map[]={
 		{"out dst mac", toEnId(0, 57)},
 
 
-	{"mplslabel1", toGenEnId(CTL_CALCULATED_ITEM, 70, CALC_MPLS)},
-	{"mplslabel2", toGenEnId(CTL_CALCULATED_ITEM, 71, CALC_MPLS)},
-	{"mplslabel3", toGenEnId(CTL_CALCULATED_ITEM, 72, CALC_MPLS)},
-	{"mplslabel4", toGenEnId(CTL_CALCULATED_ITEM, 73, CALC_MPLS)},
-	{"mplslabel5", toGenEnId(CTL_CALCULATED_ITEM, 74, CALC_MPLS)},
-	{"mplslabel6", toGenEnId(CTL_CALCULATED_ITEM, 75, CALC_MPLS)},
-	{"mplslabel7", toGenEnId(CTL_CALCULATED_ITEM, 76, CALC_MPLS)},
-	{"mplslabel8", toGenEnId(CTL_CALCULATED_ITEM, 77, CALC_MPLS)},
-	{"mplslabel9", toGenEnId(CTL_CALCULATED_ITEM, 78, CALC_MPLS)},
-	{"mplslabel10", toGenEnId(CTL_CALCULATED_ITEM, 79, CALC_MPLS)},
-
-	{"mplsexp", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_MPLS_EXP)},
 	{"mplseos", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_MPLS_EOS)},
+	{"mplsexp", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_MPLS_EXP)},
+	{"mplslabel", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_MPLS)},
+	{"mplslabel1", toGenEnId(CTL_CALCULATED_ITEM, 1, CALC_MPLS)},
+	{"mplslabel2", toGenEnId(CTL_CALCULATED_ITEM, 2, CALC_MPLS)},
+	{"mplslabel3", toGenEnId(CTL_CALCULATED_ITEM, 3, CALC_MPLS)},
+	{"mplslabel4", toGenEnId(CTL_CALCULATED_ITEM, 4, CALC_MPLS)},
+	{"mplslabel5", toGenEnId(CTL_CALCULATED_ITEM, 5, CALC_MPLS)},
+	{"mplslabel6", toGenEnId(CTL_CALCULATED_ITEM, 6, CALC_MPLS)},
+	{"mplslabel7", toGenEnId(CTL_CALCULATED_ITEM, 7, CALC_MPLS)},
+	{"mplslabel8", toGenEnId(CTL_CALCULATED_ITEM, 8, CALC_MPLS)},
+	{"mplslabel9", toGenEnId(CTL_CALCULATED_ITEM, 9, CALC_MPLS)},
+	{"mplslabel10", toGenEnId(CTL_CALCULATED_ITEM, 10, CALC_MPLS)},
+
 
 	{"packets", toEnId(0, 2)},
 
@@ -593,9 +594,32 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
 		unpackEnId(lvalue->id[0].index, &gen, &enterprise, &id);
 
 		//This sets bad type when header or metadata items are selected
+		//TODO: Test that works
 		if (gen & CTL_CALCULATED_ITEM) {
-			lvalue->type = FF_TYPE_UNSIGNED;
+			switch(id) {
+			case CALC_MPLS:
+				lvalue->n = enterprise;
+				if (enterprise != 0) {
+					lvalue->options |= FF_OPTS_MPLS_LABEL;
+				}
+				if (enterprise > 10) {
+					return FF_ERR_OTHER_MSG;
+				}
+				lvalue->type = FF_TYPE_MPLS;
+				break;
+			case CALC_MPLS_EOS:
+				lvalue->options |= FF_OPTS_MPLS_EOS;
+				lvalue->type = FF_TYPE_MPLS;
+				break;
+			case CALC_MPLS_EXP:
+				lvalue->options |= FF_OPTS_MPLS_EXP;
+				lvalue->type = FF_TYPE_MPLS;
+				break;
+			default:
+				lvalue->type = FF_TYPE_UNSIGNED;
+			}
 			return FF_OK;
+
 		/*} else if (gen & CTL_CONST_ITEM) {
 			lvalue->type = FF_TYPE_UNSUPPORTED;
 			ff_set_error(filter, "ipfix metadata item %s has unsupported format", fieldstr);
@@ -673,6 +697,7 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 	int len;
 	uint64_t tmp;
 	char *ipf_field;
+	ff_mpls_label_t mpls_stack[10];
 
 	uint32_t en;
 	uint16_t ie_id;
@@ -730,6 +755,19 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 
 			tmp = ntohll(tmp) / ntohll(tmp2);
 			len = sizeof(tmp);
+
+			break;
+		case CALC_MPLS:
+		case CALC_MPLS_EXP:
+		case CALC_MPLS_EOS:
+			memset(&mpls_stack[0], 0, sizeof(ff_mpls_stack_t));
+			for(tmp = 0; tmp < 10; tmp++){
+				ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, 0, 70+tmp, &len);
+				if(ipf_field != NULL) {
+					memcpy(&mpls_stack[tmp].data, ipf_field, len);
+				}
+			}
+			ipf_field = &mpls_stack[0];
 
 			break;
 		default: return FF_ERR_OTHER;
