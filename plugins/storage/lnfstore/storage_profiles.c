@@ -255,29 +255,27 @@ static void new_window(time_t now, struct lnfstore_conf *conf)
 			if (!profile->lnf_index){
 				continue;
 			} else {
-				unsigned int act_cnt = stored_item_cnt(profile->lnf_index->index);
+				unsigned long act_cnt = stored_item_cnt(profile->lnf_index->index);
 				double coeff = BF_TOL_COEFF(act_cnt);
-				if ((act_cnt + (unsigned int)BF_UPPER_TOLERANCE(act_cnt, coeff)) >
-						profile->lnf_index->unique_item_cnt ||
-					 (profile->lnf_index->state == BF_CLOSING &&
-					 (act_cnt + (unsigned int)BF_LOWER_TOLERANCE(act_cnt, coeff)) <
-						profile->lnf_index->unique_item_cnt))
+				if ((BF_UPPER_TOLERANCE(act_cnt, coeff)) > profile->lnf_index->unique_item_cnt ||
+						(profile->lnf_index->state == BF_CLOSING &&
+						BF_LOWER_TOLERANCE(act_cnt, coeff) < profile->lnf_index->unique_item_cnt))
 
 				{
-					fprintf(stderr, "Profile %d: State: %d, VAL: %d, COEFF: %f, UP: %d(%f), LOW: %d(%f), SET: %d(%f)\n",
-								i,
-								profile->lnf_index->state,
-								act_cnt,
-								coeff,
-								(act_cnt + (unsigned int)BF_UPPER_TOLERANCE(act_cnt, coeff)),
-								(double)act_cnt + BF_UPPER_TOLERANCE(act_cnt, coeff),
-								act_cnt + (unsigned int)BF_LOWER_TOLERANCE(act_cnt, coeff),
-								(double)act_cnt + BF_LOWER_TOLERANCE(act_cnt, coeff),
-								(unsigned int)(act_cnt*coeff),
-								act_cnt*coeff);
+//					fprintf(stderr, "Profile %d: State: %d, VAL: %d, COEFF: %f, UP: %d(%f), LOW: %d(%f), SET: %d(%f)\n",
+//								i,
+//								profile->lnf_index->state,
+//								act_cnt,
+//								coeff,
+//								(act_cnt + (unsigned long)BF_UPPER_TOLERANCE(act_cnt, coeff)),
+//								(double)act_cnt + BF_UPPER_TOLERANCE(act_cnt, coeff),
+//								act_cnt + (unsigned long)BF_LOWER_TOLERANCE(act_cnt, coeff),
+//								(double)act_cnt + BF_LOWER_TOLERANCE(act_cnt, coeff),
+//								(unsigned long)(act_cnt*coeff),
+//								act_cnt*coeff);
 					// Higher act_cnt = make bigger bloom filter
 					// Lower act_cnt = save space, make smaller bloom filter
-					profile->lnf_index->unique_item_cnt = (unsigned int)(act_cnt * coeff);
+					profile->lnf_index->unique_item_cnt = (unsigned long)(act_cnt * coeff);
 					profile->lnf_index->params_changed = true;
 				}
 			}

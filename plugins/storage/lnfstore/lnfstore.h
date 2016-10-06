@@ -66,9 +66,9 @@
         (x > 30000) ? 1.5 : (x > 5000) ? 2 : \
         (x > 500) ? 3 : 10)
 
-#define BF_UPPER_TOLERANCE(val,coeff)     (val * coeff * 0.05)
-#define BF_LOWER_TOLERANCE(val,coeff)     ((coeff > 1.5) ? (val * coeff * 1.3) :\
-                                                          (val * coeff * 0.5))
+#define BF_UPPER_TOLERANCE(val,coeff)     ((unsigned long)(val * (1 + coeff * 0.05)))
+#define BF_LOWER_TOLERANCE(val,coeff)     ((unsigned long)(val * (1 + coeff * \
+                                                                  ((coeff > 1.2) ? 1.3 : 0.5) )))
 
 typedef enum {
     BF_INIT = 0,
@@ -106,7 +106,7 @@ struct conf_params {
 
 struct lnfstore_index{
     index_t *index;                 /**< Bloom filter index for IP addresses) */
-    unsigned int unique_item_cnt;   /**< Stores unique item count of last time
+    unsigned long unique_item_cnt;   /**< Stores unique item count of last time
                                          window                               */
     bool params_changed;            /**< Flag which indicates if bloom filter
                                          parameters was changed (unique item

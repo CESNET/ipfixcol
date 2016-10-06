@@ -444,18 +444,15 @@ static void new_window(time_t now, struct lnfstore_conf *conf)
 	if (conf->params->bf_index_autosize && conf->params->bf.indexing &&
 			(conf->lnf_index->state == BF_CLOSING ||
 			conf->lnf_index->state == BF_CLOSING_FIRST)){
-		unsigned int act_cnt = stored_item_cnt(conf->lnf_index->index);
-		unsigned int coeff = BF_TOL_COEFF(act_cnt);
-		if ((act_cnt + (unsigned int)BF_UPPER_TOLERANCE(act_cnt, coeff)) >
-			conf->lnf_index->unique_item_cnt ||
-			(conf->lnf_index->state == BF_CLOSING &&
-				(act_cnt + (unsigned int)BF_LOWER_TOLERANCE(act_cnt, coeff)) <
-				conf->lnf_index->unique_item_cnt
-			))
+		unsigned long act_cnt = stored_item_cnt(conf->lnf_index->index);
+		double coeff = BF_TOL_COEFF(act_cnt);
+		if ((BF_UPPER_TOLERANCE(act_cnt, coeff)) > conf->lnf_index->unique_item_cnt ||
+				(conf->lnf_index->state == BF_CLOSING &&
+				BF_LOWER_TOLERANCE(act_cnt, coeff) < conf->lnf_index->unique_item_cnt))
 		{
 			// Higher act_cnt = make bigger bloom filter
 			// Lower act_cnt = save space, make smaller bloom filter
-			conf->lnf_index->unique_item_cnt = act_cnt * coeff;
+			conf->lnf_index->unique_item_cnt = (unsigned long)(act_cnt * coeff);
 			conf->lnf_index->params_changed = true;
 		}
 	}
