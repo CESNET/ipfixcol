@@ -365,9 +365,8 @@ TableManager::TableManager(Configuration &conf): conf(conf), orderAsc(false), ta
 		} else {
 			std::cerr << "Cannot open table part: " << tmp << std::endl;
 		}
-
-		
 	}
+
 	/* create order by string list if necessary */
 	if (conf.getOptionm()) {
 		this->orderColumns.insert(conf.getOrderByColumn()->getSelectName());

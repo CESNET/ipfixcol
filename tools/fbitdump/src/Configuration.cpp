@@ -487,6 +487,7 @@ void Configuration::searchForTableParts(stringVector &tables) throw (std::invali
 	if (tables.size() < 1) {
 		throw std::invalid_argument("Input file(s) must be specified");
 	}
+
 	/* go over all requested directories */
 	for (size_t i = 0; i < tables.size(); i++) {
 		/* check whether it is fastbit part */
