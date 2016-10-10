@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry 
+		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:xlink="http://www.w3.org/1999/xlink" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2016</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>10 October 2016</date>
+		<authorgroup>
+			<author>
+				<personname>
+					<firstname>Petr</firstname>
+					<surname>Velan</surname>
+				</personname>
+				<email>petr.velan@cesnet.cz</email>
+				<contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol-dhcp-inter</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">dhcp plugin for IPFIXcol.</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>ipfixcol-dhcp-inter</refname>
+		<refpurpose>dhcp plugin for IPFIXcol.</refpurpose>
+	</refnamediv>
+	
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+			The <command>ipfix-dhcp-inter</command> plugin is a part of IPFIXcol (IPFIX collector). 
+			It fills MAC addresses according to IP-MAC mapping stored in sqlite3 database.
+			It can be used to set MAC addresses retrieved from DHCP log.
+			Only IPv4 addresses are currently supported.
+			MAC addresses for IP addresses not found in the database are set to zero.
+		</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Configuration</title>
+		<simpara>The collector must be configured to use dhcp plugin in startup.xml configuration. 
+		The configuration specifies which plugins are used by the collector to process data and provides configuration for the plugins themselves. 
+		</simpara>
+		<simpara><filename>startup.xml</filename> dhcp example</simpara>
+		<programlisting>
+	<![CDATA[
+	<dhcp>
+		<path>/path/to/sql.db</path>
+		<pair>
+			<ip en="0" id="225"/>
+			<mac en="0" id="81"/>
+		</pair>
+		<pair>
+			<ip en="0" id="226"/>
+			<mac en="0" id="57"/>
+		</pair>
+	</dhcp>
+	]]>
+		</programlisting>
+	
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term><command>path</command></term>
+					<listitem>
+						<simpara>Path to SQL database file.</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term><command>pair</command></term>
+					<listitem>
+						<simpara>IP-MAC pair. MAC address for IP address from given elements is retrieved and substituted.</simpara>
+					</listitem>
+					<varlistentry>
+						<term><command>ip</command></term>
+						<listitem>
+							<simpara>IPv4 address element enterprise number and id.</simpara>
+						</listitem>
+					</varlistentry>
+					<varlistentry>
+						<term><command>mac</command></term>
+						<listitem>
+							<simpara>MAC address element enterprise number and id.</simpara>
+						</listitem>
+					</varlistentry>	
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org/technologies/ipfixcol/">http://www.liberouter.org/technologies/ipfixcol/</link>
+					</term>
+					<listitem>
+						<para>IPFIXcol Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>

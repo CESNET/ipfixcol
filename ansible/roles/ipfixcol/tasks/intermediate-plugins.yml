@@ -1,5 +1,14 @@
 # Intermediate plugins
 
+# dhcp
+- name: Build dhcp intermediate plugin
+  command: >
+    {{ item }}
+    chdir={{ build.dir }}/plugins/intermediate/dhcp
+    creates=/usr/local/share/ipfixcol/plugins/ipfixcol-dhcp-inter.so
+  with_items: "{{ build.cmds }}"
+  tags: dhcp
+
 # geoip
 - name: Build GeoIP intermediate plugin
   command: >
