@@ -350,7 +350,7 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 		/* check whether template exists */
 	} else if ((template = tm_get_template(template_mgr, key)) == NULL) {
 		/* add template */
-		/* check that the template has valid ID ( < 256 ) */
+		/* check that the template has valid ID (>= 256) */
 		if (ntohs(template_record->template_id) < 256) {
 			MSG_WARNING(msg_module, "[%u] %s ID %i is reserved and not valid for data set", key->odid, (type == TM_TEMPLATE) ? "Template" : "Options template", ntohs(template_record->template_id));
 		} else {
