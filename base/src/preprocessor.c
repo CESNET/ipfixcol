@@ -318,11 +318,12 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 {
 	struct ipfix_template_record *template_record;
 	struct ipfix_template *template;
+	uint16_t template_id;
 	int ret;
 
-	template_record = (struct ipfix_template_record*) tmpl;
-	
-	key->tid = ntohs(template_record->template_id);
+	template_record = (struct ipfix_template_record *) tmpl;
+	template_id = ntohs(template_record->template_id);
+	key->tid = template_id;
 
 	/* check for withdraw all templates message */
 	/* these templates are no longer used (checked in data_manager_withdraw_templates()) */
@@ -330,8 +331,8 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 		/* got withdrawal message with UDP -> this is wrong */
 		MSG_WARNING(msg_module, "[%u] Received template withdrawal message over UDP; ignoring...", input_info->odid);
 		return TM_TEMPLATE_WITHDRAW_LEN;
-	} else if ((ntohs(template_record->template_id) == IPFIX_TEMPLATE_FLOWSET_ID ||
-				ntohs(template_record->template_id) == IPFIX_OPTION_FLOWSET_ID) &&
+	} else if ((template_id == IPFIX_TEMPLATE_FLOWSET_ID ||
+				template_id == IPFIX_OPTION_FLOWSET_ID) &&
 			ntohs(template_record->count) == 0) {
 		/* withdraw template or option template */
 		tm_remove_all_templates(template_mgr, type);
@@ -344,17 +345,17 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 		/* Log error when removing unknown template */
 		if (ret == 1) {
 			MSG_WARNING(msg_module, "[%u] %s withdrawal message received for unknown template ID %u", input_info->odid,
-					(type == TM_TEMPLATE) ? "Template" : "Options template", ntohs(template_record->template_id));
+					(type == TM_TEMPLATE) ? "Template" : "Options template", template_id);
 		}
 		return TM_TEMPLATE_WITHDRAW_LEN;
 		/* check whether template exists */
 	} else if ((template = tm_get_template(template_mgr, key)) == NULL) {
 		/* add template */
 		/* check that the template has valid ID (>= 256) */
-		if (ntohs(template_record->template_id) < 256) {
-			MSG_WARNING(msg_module, "[%u] %s ID %i is reserved and not valid for data set", key->odid, (type == TM_TEMPLATE) ? "Template" : "Options template", ntohs(template_record->template_id));
+		if (template_id < 256) {
+			MSG_WARNING(msg_module, "[%u] %s ID %i is reserved and not valid for data set", key->odid, (type == TM_TEMPLATE) ? "Template" : "Options template", template_id);
 		} else {
-			MSG_INFO(msg_module, "[%u] New %s ID %i", key->odid, (type == TM_TEMPLATE) ? "template" : "options template", ntohs(template_record->template_id));
+			MSG_INFO(msg_module, "[%u] New %s ID %i", key->odid, (type == TM_TEMPLATE) ? "template" : "options template", template_id);
 			template = tm_add_template(template_mgr, tmpl, max_len, type, key);
 			/* Set new template ID according to ODID */
 			if (template) {
