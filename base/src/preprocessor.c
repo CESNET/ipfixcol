@@ -369,6 +369,7 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 				(type == TM_TEMPLATE) ? "Template" : "Options template", template->template_id);
 		template = tm_update_template(template_mgr, tmpl, max_len, type, key);
 	}
+
 	if (template == NULL) {
 		MSG_WARNING(msg_module, "[%u] Cannot parse %s set; skipping to next set...", key->odid,
 				(type == TM_TEMPLATE) ? "template" : "options template");
