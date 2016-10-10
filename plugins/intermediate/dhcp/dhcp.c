@@ -170,7 +170,7 @@ int intermediate_init(char* params, void* ip_config, uint32_t ip_id, struct ipfi
 	
 	/* Open database */
 	if (sqlite3_open(conf->db_path, &(conf->db))) {
-		MSG_ERROR(msg_module, "Cannot open UID database: %s", sqlite3_errmsg(conf->db));
+		MSG_ERROR(msg_module, "Cannot open DHCP database: %s", sqlite3_errmsg(conf->db));
 		dhcp_free_config(conf);
 		return 1;
 	}
@@ -248,6 +248,9 @@ void dhcp_replace_mac(struct plugin_conf *conf, struct metadata *mdata, int ip_f
 
 	/* Check that we got a result */
 	if (conf->mac[0] == '\0') {
+		/* Write zeroes */
+		uint64_t zero = 0;
+		memcpy(mac_data, &zero, 6);
 		return;
 	}
 
