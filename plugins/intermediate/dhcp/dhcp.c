@@ -45,18 +45,29 @@
 #include <sqlite3.h>
 #include <string.h>
 
-
-#define FIELD_IPV4_SRC_NAT 225
-#define FIELD_IPV4_DST_NAT 226
-
-#define FIELD_MAC_SRC 81
-#define FIELD_MAC_DST 80
+#define IP_MAC_PAIRS_MAX 16
 
 /* API version constant */
 IPFIXCOL_API_VERSION;
 
 /* Identifier for verbose macros */
 static const char *msg_module = "dhcp";
+
+/**
+ * \brief IPFIX element PEN and ID pair
+ */
+typedef struct {
+	uint32_t en;
+	uint16_t id;
+} dhcp_ipfix_element_t;
+
+/**
+ * \brief IP-MAC pair
+ */
+typedef struct {
+	dhcp_ipfix_element_t ip;
+	dhcp_ipfix_element_t mac;
+} dhcp_ip_mac_t;
 
 /**
  * \brief Plugin's configuration structure
@@ -66,6 +77,8 @@ struct plugin_conf {
 	sqlite3 *db;		/**< DB config */
 	char *db_path;		/**< Path to database file */
 	void *ip_config;	/**< Intermediate process config */
+	dhcp_ip_mac_t ip_mac_pairs[IP_MAC_PAIRS_MAX]; /**< IP-MAC pairs */
+	uint8_t ip_mac_pairs_count; /**< IP-MAC pairs count*/
 };
 
 /**
@@ -122,11 +135,38 @@ int process_startup_xml(struct plugin_conf *conf, char *params)
 		/* Path to database file */
 		if (!xmlStrcasecmp(node->name, (const xmlChar *) "path")) {
 			conf->db_path = (char *) xmlNodeListGetString(doc, node->children, 1);
+		} else if (!xmlStrcasecmp(node->name, (const xmlChar *) "pair")) { /* IP-MAC pairs */
+
+			if (conf->ip_mac_pairs_count >= IP_MAC_PAIRS_MAX) {
+				MSG_WARNING(msg_module, "Too many IP-MAC pairs in configuration");
+				continue;
+			}
+
+			/* Process IP-MAC pair */
+			xmlNode *pair;
+			for (pair = node->children; pair; pair = pair->next) {
+				if (!xmlStrcasecmp(pair->name, (const xmlChar *) "ip")) {
+					conf->ip_mac_pairs[conf->ip_mac_pairs_count].ip.en = atoi((char *) xmlGetProp(pair, BAD_CAST "en"));
+					conf->ip_mac_pairs[conf->ip_mac_pairs_count].ip.id = atoi((char *) xmlGetProp(pair, BAD_CAST "id"));
+				} else if (!xmlStrcasecmp(pair->name, (const xmlChar *) "mac")) {
+					conf->ip_mac_pairs[conf->ip_mac_pairs_count].mac.en = atoi((char *) xmlGetProp(pair, BAD_CAST "en"));
+					conf->ip_mac_pairs[conf->ip_mac_pairs_count].mac.id = atoi((char *) xmlGetProp(pair, BAD_CAST "id"));
+				}
+			}
+			conf->ip_mac_pairs_count++;
 		}
 	}
 	
+	MSG_INFO(msg_module, "Found %u IP-MAC pairs", conf->ip_mac_pairs_count);
+
 	if (!conf->db_path) {
 		MSG_ERROR(msg_module, "Missing path to database file!");
+		xmlFreeDoc(doc);
+		return 1;
+	}
+
+	if (conf->ip_mac_pairs_count == 0) {
+		MSG_ERROR(msg_module, "No IP-MAC pair found in configuration");
 		xmlFreeDoc(doc);
 		return 1;
 	}
@@ -205,23 +245,22 @@ static int dhcp_callback(void *data, int argc, char **argv, char **azColName){
  * 
  * \param[in] conf plugin's configuration
  * \param[in] mdata data record's metadata
- * \param[in] ip_field id with IPv4 address
- * \param[in] mac_field id with MAC address
+ * \param[in] ip_mac_pair IP-MAC pair
  * \return void
  */
-void dhcp_replace_mac(struct plugin_conf *conf, struct metadata *mdata, int ip_field, int mac_field)
+void dhcp_replace_mac(struct plugin_conf *conf, struct metadata *mdata, dhcp_ip_mac_t *ip_mac_pair)
 {
 	void *ip_data = NULL, *mac_data = NULL;
 	conf->mac[0] = '\0';
 	
 	/* Get IP address */
-	ip_data = data_record_get_field(mdata->record.record, mdata->record.templ, 0, ip_field, NULL);
+	ip_data = data_record_get_field(mdata->record.record, mdata->record.templ, ip_mac_pair->ip.en, ip_mac_pair->ip.id, NULL);
 	if (!ip_data) {
 		return;
 	}
 
 	/* Get MAC address pointer */
-	mac_data = data_record_get_field(mdata->record.record, mdata->record.templ, 0, mac_field, NULL);
+	mac_data = data_record_get_field(mdata->record.record, mdata->record.templ, ip_mac_pair->mac.en, ip_mac_pair->mac.id, NULL);
 	if (!mac_data) {
 		return;
 	}
@@ -275,7 +314,6 @@ int intermediate_process_message(void* config, void* message)
 {
 	struct plugin_conf *conf = (struct plugin_conf *) config;
 	struct ipfix_message *msg = (struct ipfix_message *) message;
-	
 	struct metadata *mdata;
 	
 	/* Process each data record */
@@ -283,9 +321,10 @@ int intermediate_process_message(void* config, void* message)
 		mdata = &(msg->metadata[i]);
 
 		/* Replace MACs from database */
-		dhcp_replace_mac(conf, mdata, FIELD_IPV4_SRC_NAT, FIELD_MAC_SRC);
-		
-		dhcp_replace_mac(conf, mdata, FIELD_IPV4_DST_NAT, FIELD_MAC_DST);
+		for (int j=0; j < conf->ip_mac_pairs_count; j++) {
+			dhcp_replace_mac(conf, mdata, &conf->ip_mac_pairs[j]);
+			printf("ip: %u %u, mac %u %u\n", conf->ip_mac_pairs[j].ip.en, conf->ip_mac_pairs[j].ip.id, conf->ip_mac_pairs[j].mac.en, conf->ip_mac_pairs[j].mac.id);
+		}
 	}
 	
 	/* Pass message to the next plugin/Output Manager */

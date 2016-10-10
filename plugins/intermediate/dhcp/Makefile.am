@@ -13,10 +13,10 @@ rpmspec = $(PACKAGE_TARNAME).spec
 RPMDIR = RPMBUILD
 
 #if HAVE_DOC
-#MANSRC = ipfixcol-dhcp-inter.dbk
-#EXTRA_DIST = $(MANSRC)
-#man_MANS = ipfixcol-dhcp-inter.1
-#CLEANFILES = ipfixcol-dhcp-inter.1
+MANSRC = ipfixcol-dhcp-inter.dbk
+EXTRA_DIST = $(MANSRC)
+man_MANS = ipfixcol-dhcp-inter.1
+CLEANFILES = ipfixcol-dhcp-inter.1
 #endif
 
 %.1 : %.dbk
