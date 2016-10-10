@@ -128,7 +128,7 @@ bool isFastbitPart(std::string dir)
 
 void sanitizePath(std::string &path)
 {
-	if (path[path.length() - 1] != '/') {
+	if (path.back() != '/') {
 		path += "/";
 	}
 }
