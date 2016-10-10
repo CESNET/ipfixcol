@@ -39,3 +39,4 @@ make DESTDIR=%{buildroot} install
 %files
 #intermediate plugins
 %{_datadir}/ipfixcol/plugins/ipfixcol-dhcp-inter.*
+%{_mandir}/man1/ipfixcol-dhcp-inter.1*
