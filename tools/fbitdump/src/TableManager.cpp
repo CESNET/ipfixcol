@@ -287,7 +287,7 @@ void TableManager::filter(Filter &filter, bool postAggregate)
 	i = 0;
 	size = this->parts.size();
 	for (ibis::partList::const_iterator it = this->parts.begin(); it != this->parts.end(); it++) {
-		Utils::progressBar( "Applying filter    ", "   ", size, i );
+		Utils::progressBar("Applying filter    ", "   ", size, i);
 		i++;
 		
 		/* create table for each part */
@@ -344,30 +344,28 @@ uint64_t TableManager::getInitRows() const
 
 TableManager::TableManager(Configuration &conf): conf(conf), orderAsc(false), tableSummary(NULL)
 {
-	std::string tmp;
 	ibis::part *part;
-	size_t size = this->conf.getPartsNames().size();
+	const stringVector partsNames = this->conf.getPartsNames();
+
 	/* open configured parts */
-	for (size_t i = 0; i < this->conf.getPartsNames().size(); i++) {
-		
-		tmp = this->conf.getPartsNames()[i];
+	for (size_t i = 0; i < partsNames.size(); i++) {
 #ifdef DEBUG
-		std::cerr << "Loading table part from: " << tmp << std::endl;
+		std::cerr << "Loading table part from: " << partsNames[i] << std::endl;
 #endif
-		part = new ibis::part(tmp.c_str(), true);
+
+		part = new ibis::part(partsNames[i].c_str(), true);
 		if (part != NULL) {
 			this->parts.push_back(part);
 
-			Utils::progressBar("Initializing tables", tmp.c_str(), size, i );
+			Utils::progressBar("Initializing tables", partsNames[i].c_str(), partsNames.size(), i);
 
 			/* clear reference for next loop */
 			part = NULL;
 		} else {
-			std::cerr << "Cannot open table part: " << tmp << std::endl;
+			std::cerr << "Cannot open table part: " << partsNames[i] << std::endl;
 		}
-
-		
 	}
+
 	/* create order by string list if necessary */
 	if (conf.getOptionm()) {
 		this->orderColumns.insert(conf.getOrderByColumn()->getSelectName());
