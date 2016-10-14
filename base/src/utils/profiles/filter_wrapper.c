@@ -140,6 +140,7 @@ static struct nff_item_s nff_ipff_map[]={
 	{"inet", toEnId(0, 60)},
 	//{"inet", toGenEnId(CTL_CONSTANT, 60, CONST_INET6)},
 	{"ipv", toEnId(0, 60)},
+	{"inetfamily", toEnId(0, 60)},
 
 	/*{"inet", toGenEnId(CTL_CONSTANT, 60, CONST_INET)},
 	{"ipv4", toGenEnId(CTL_CONSTANT, 60, CONST_INET)},
@@ -230,7 +231,7 @@ static struct nff_item_s nff_ipff_map[]={
 		{"out src mac", toEnId(0, 81)},
 		{"out dst mac", toEnId(0, 57)},
 
-
+/*
 	{"mplseos", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_MPLS_EOS)},
 	{"mplsexp", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_MPLS_EXP)},
 	{"mplslabel", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_MPLS)},
@@ -244,7 +245,7 @@ static struct nff_item_s nff_ipff_map[]={
 	{"mplslabel8", toGenEnId(CTL_CALCULATED_ITEM, 8, CALC_MPLS)},
 	{"mplslabel9", toGenEnId(CTL_CALCULATED_ITEM, 9, CALC_MPLS)},
 	{"mplslabel10", toGenEnId(CTL_CALCULATED_ITEM, 10, CALC_MPLS)},
-
+*/
 
 	{"packets", toEnId(0, 2)},
 
@@ -268,7 +269,7 @@ static struct nff_item_s nff_ipff_map[]={
 
 //Not verified, for
 //	{"asa event", toEnId(0, 230)},
-//	{"asa xevent", toEnId(0, 233)},
+	{"xevent", toEnId(0, 233)},
 /*
 	{"xip", toGenEnId(CTL_FPAIR, 1, 2)},
 		{"src xip", toGenEnId(CTL_V4V6IP, 0, 225)},
