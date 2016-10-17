@@ -265,7 +265,7 @@ protected:
 	 * @param size size of data to append
 	 * @return 0 on success, 1 otherwise
 	 */
-	int append_str(void *data, int size);
+	int append_str(void *data, uint16_t size);
 };
 
 class el_ipv6 : public element

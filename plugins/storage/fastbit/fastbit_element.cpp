@@ -271,7 +271,7 @@ el_text::el_text(struct fastbit_config *config, int size, uint32_t en, uint16_t 
 	}
 }
 
-int el_text::append_str(void *data, int size)
+int el_text::append_str(void *data, uint16_t size)
 {
 	/* Check buffer space */
 	if (_filled + size + 1 >= _buf_max) { /* 1 = terminating zero */
