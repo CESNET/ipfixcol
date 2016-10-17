@@ -487,6 +487,7 @@ void Configuration::searchForTableParts(stringVector &tables) throw (std::invali
 	if (tables.size() < 1) {
 		throw std::invalid_argument("Input file(s) must be specified");
 	}
+
 	/* go over all requested directories */
 	for (size_t i = 0; i < tables.size(); i++) {
 		/* check whether it is fastbit part */
@@ -506,7 +507,7 @@ void Configuration::searchForTableParts(stringVector &tables) throw (std::invali
 			continue;
 		}
 
-		while((dent = readdir(d)) != NULL) {
+		while ((dent = readdir(d)) != NULL) {
 			/* construct directory path */
 			std::string tablePath = tables[i] + std::string(dent->d_name);
 
@@ -518,7 +519,7 @@ void Configuration::searchForTableParts(stringVector &tables) throw (std::invali
 			if (S_ISDIR(statbuf.st_mode) && strcmp(dent->d_name, ".") && strcmp(dent->d_name, "..")) {
 				std::string status;
 				status = "Searching for table parts in " + tablePath;
-				Utils::printStatus( status );
+				Utils::printStatus(status);
 				Utils::sanitizePath(tablePath);
 
 				/* test whether the directory is fastbit part */

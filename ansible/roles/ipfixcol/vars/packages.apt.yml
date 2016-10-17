@@ -19,4 +19,5 @@ packages:
   geoip: [libgeoip-dev]
   stats: [librrd-dev]
   uid: [libsqlite3-dev]
+  dhcp: [libsqlite3-dev]
   postgres: [libpq-dev]

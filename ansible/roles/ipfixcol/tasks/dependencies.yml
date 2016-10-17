@@ -53,3 +53,8 @@
   action: "{{ ansible_pkg_mgr }} name={{ item }} state=latest"
   with_items: "{{ packages.uid }}"
   tags: uid
+
+- name: dhcp dependencies
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=latest"
+  with_items: "{{ packages.dhcp }}"
+  tags: dhcp

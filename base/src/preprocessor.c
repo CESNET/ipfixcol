@@ -56,126 +56,126 @@ static char *msg_module = "preprocessor";
 static struct ring_buffer *preprocessor_out_queue = NULL;
 static configurator *global_config = NULL;
 
-/* Sequence number counter for each ODID */
-struct odid_info {
-	uint32_t odid, sequence_number;
+/* Sequence number counter for each flow data source */
+struct data_source_info {
+	uint32_t exporter_ip_addr, odid, sequence_number;
 	uint32_t free_tid;
-	int sources;
-	struct odid_info *next;
+	struct data_source_info *next;
 };
 
-struct odid_info *odid_info = NULL;
+struct data_source_info *data_source_info = NULL;
 
 /**
- * \brief Get sequence number counter for given ODID
+ * \brief Get sequence number counter for given flow data source
  * 
+ * \param[in] exporter_ip_addr CRC32 of exporter IP address
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number counter
  */
-struct odid_info *odid_info_get(uint32_t odid)
+struct data_source_info *data_source_info_get(uint32_t exporter_ip_addr, uint32_t odid)
 {
-	struct odid_info *aux_info = odid_info;
+	struct data_source_info *aux_info = data_source_info;
 	while (aux_info) {
-		if (aux_info->odid == odid) {
+		if (aux_info->exporter_ip_addr == exporter_ip_addr && aux_info->odid == odid) {
 			return aux_info;
 		}
 
 		aux_info = aux_info->next;
 	}
+
 	return NULL;
 }
 
 /**
- * \brief Add new odid info
+ * \brief Add new flow data source info
  * 
+ * \param[in] exporter_ip_addr CRC32 of exporter IP address
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number counter
  */
-struct odid_info *odid_info_add(uint32_t odid)
+struct data_source_info *data_source_info_add(uint32_t exporter_ip_addr, uint32_t odid)
 {
-	struct odid_info *aux_info;
+	struct data_source_info *aux_info;
 
-	aux_info = calloc(1, sizeof(struct odid_info));
+	aux_info = calloc(1, sizeof(struct data_source_info));
 	if (!aux_info) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return NULL;
 	}
+
+	aux_info->exporter_ip_addr = exporter_ip_addr;
 	aux_info->odid = odid;
-	aux_info->sources = 1;
 	aux_info->free_tid = 256;
 
-	if (!odid_info) {
-		odid_info = aux_info;
+	if (!data_source_info) {
+		data_source_info = aux_info;
 	} else {
-		aux_info->next = odid_info->next;
-		odid_info->next = aux_info;
+		aux_info->next = data_source_info->next;
+		data_source_info->next = aux_info;
 	}
 
 	return aux_info;
 }
 
 /**
- * \brief Add new source for odid info
+ * \brief Add new data source info
  * 
+ * \param[in] exporter_ip_addr CRC32 of exporter IP address
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number counter
  */
-struct odid_info *odid_info_add_source(uint32_t odid)
+struct data_source_info *data_source_info_add_source(uint32_t exporter_ip_addr, uint32_t odid)
 {
-	struct odid_info *aux_info = odid_info_get(odid);
-
+	struct data_source_info *aux_info = data_source_info_get(exporter_ip_addr, odid);
 	if (!aux_info) {
-		return odid_info_add(odid);
+		return data_source_info_add(exporter_ip_addr, odid);
 	}
 
-	aux_info->sources++;
-	MSG_INFO(msg_module, "[%u] Accepted data from %d. source with this ODID", odid, aux_info->sources);
-	return aux_info;
+	MSG_WARNING(msg_module, "Something strange has happened; trying to add the same data source again");
+	return NULL;
 }
 
 /**
- * \brief Remove source from odid info
+ * \brief Remove data source info
  * 
+ * \param[in] exporter_ip_addr CRC32 of exporter IP address
  * \param[in] odid Observation Domain ID
  */
-void odid_info_remove_source(uint32_t odid)
+void data_source_info_remove_source(uint32_t exporter_ip_addr, uint32_t odid)
 {
-	struct odid_info *aux_info = odid_info_get(odid);
+	struct data_source_info *aux_info = data_source_info_get(exporter_ip_addr, odid);
 	if (!aux_info) {
 		return;
 	}
-
-	aux_info->sources--;
-	if (aux_info->sources <= 0) {
-		aux_info->sequence_number = 0;
-	}
 }
 
 /**
- * \brief Get odid_info struct or add a new one
+ * \brief Get data source info struct or add a new one
  * 
- * @param odid ODID
- * @return odid_info
+ * \param[in] exporter_ip_addr CRC32 of exporter IP address
+ * \param[in] odid Observation Domain ID
+ * \return data_source_info
  */
-struct odid_info *odid_info_get_or_add(uint32_t odid)
+struct data_source_info *data_source_info_get_or_add(uint32_t exporter_ip_addr, uint32_t odid)
 {
-	struct odid_info *aux_info = odid_info_get(odid);
+	struct data_source_info *aux_info = data_source_info_get(exporter_ip_addr, odid);
 	if (!aux_info) {
-		aux_info = odid_info_add(odid);
+		aux_info = data_source_info_add(exporter_ip_addr, odid);
 	}
 	
 	return aux_info;
 }
 
 /**
- * \brief Get sequence number for given ODID
+ * \brief Get sequence number for given data source
  * 
+ * \param[in] exporter_ip_addr CRC32 of exporter IP address
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number value
  */
-uint32_t *odid_info_get_sequence_number(uint32_t odid)
+uint32_t *data_source_info_get_sequence_number(uint32_t exporter_ip_addr, uint32_t odid)
 {
-	struct odid_info *aux_info = odid_info_get_or_add(odid);
+	struct data_source_info *aux_info = data_source_info_get_or_add(exporter_ip_addr, odid);
 	if (!aux_info) {
 		return NULL;
 	}
@@ -184,14 +184,15 @@ uint32_t *odid_info_get_sequence_number(uint32_t odid)
 }
 
 /**
- * \brief Get free template ID
+ * \brief Get free template ID for data source
  * 
- * @param odid ODID
- * @return template id
+ * \param[in] exporter_ip_addr CRC32 of exporter IP address
+ * \param[in] odid Observation Domain ID
+ * \return Next free template ID
  */
-uint32_t odid_info_get_free_tid(uint32_t odid)
+uint32_t data_source_info_get_free_tid(uint32_t exporter_ip_addr, uint32_t odid)
 {
-	struct odid_info *aux_info = odid_info_get_or_add(odid);
+	struct data_source_info *aux_info = data_source_info_get_or_add(exporter_ip_addr, odid);
 	if (!aux_info) {
 		return 256;
 	}
@@ -200,15 +201,15 @@ uint32_t odid_info_get_free_tid(uint32_t odid)
 }
 
 /**
- * \brief Remove all counters
+ * \brief Remove all data source info
  */
-void odid_info_destroy()
+void data_source_info_destroy()
 {
-	struct odid_info *aux_info = odid_info;
+	struct data_source_info *aux_info = data_source_info;
 	while (aux_info) {
-		odid_info = odid_info->next;
+		data_source_info = data_source_info->next;
 		free(aux_info);
-		aux_info = odid_info;
+		aux_info = data_source_info;
 	}
 }
 
@@ -318,11 +319,12 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 {
 	struct ipfix_template_record *template_record;
 	struct ipfix_template *template;
+	uint16_t template_id;
 	int ret;
 
-	template_record = (struct ipfix_template_record*) tmpl;
-	
-	key->tid = ntohs(template_record->template_id);
+	template_record = (struct ipfix_template_record *) tmpl;
+	template_id = ntohs(template_record->template_id);
+	key->tid = template_id;
 
 	/* check for withdraw all templates message */
 	/* these templates are no longer used (checked in data_manager_withdraw_templates()) */
@@ -330,8 +332,8 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 		/* got withdrawal message with UDP -> this is wrong */
 		MSG_WARNING(msg_module, "[%u] Received template withdrawal message over UDP; ignoring...", input_info->odid);
 		return TM_TEMPLATE_WITHDRAW_LEN;
-	} else if ((ntohs(template_record->template_id) == IPFIX_TEMPLATE_FLOWSET_ID ||
-				ntohs(template_record->template_id) == IPFIX_OPTION_FLOWSET_ID) &&
+	} else if ((template_id == IPFIX_TEMPLATE_FLOWSET_ID ||
+				template_id == IPFIX_OPTION_FLOWSET_ID) &&
 			ntohs(template_record->count) == 0) {
 		/* withdraw template or option template */
 		tm_remove_all_templates(template_mgr, type);
@@ -344,21 +346,21 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 		/* Log error when removing unknown template */
 		if (ret == 1) {
 			MSG_WARNING(msg_module, "[%u] %s withdrawal message received for unknown template ID %u", input_info->odid,
-					(type == TM_TEMPLATE) ? "Template" : "Options template", ntohs(template_record->template_id));
+					(type == TM_TEMPLATE) ? "Template" : "Options template", template_id);
 		}
 		return TM_TEMPLATE_WITHDRAW_LEN;
 		/* check whether template exists */
 	} else if ((template = tm_get_template(template_mgr, key)) == NULL) {
 		/* add template */
-		/* check that the template has valid ID ( < 256 ) */
-		if (ntohs(template_record->template_id) < 256) {
-			MSG_WARNING(msg_module, "[%u] %s ID %i is reserved and not valid for data set", key->odid, (type == TM_TEMPLATE) ? "Template" : "Options template", ntohs(template_record->template_id));
+		/* check that the template has valid ID (>= 256) */
+		if (template_id < 256) {
+			MSG_WARNING(msg_module, "[%u] %s ID %i is reserved and not valid for data set", key->odid, (type == TM_TEMPLATE) ? "Template" : "Options template", template_id);
 		} else {
-			MSG_INFO(msg_module, "[%u] New %s ID %i", key->odid, (type == TM_TEMPLATE) ? "template" : "options template", ntohs(template_record->template_id));
+			MSG_INFO(msg_module, "[%u] New %s ID %i", key->odid, (type == TM_TEMPLATE) ? "template" : "options template", template_id);
 			template = tm_add_template(template_mgr, tmpl, max_len, type, key);
 			/* Set new template ID according to ODID */
 			if (template) {
-				template->template_id = odid_info_get_free_tid(key->odid);
+				template->template_id = data_source_info_get_free_tid(preprocessor_compute_crc(input_info), key->odid);
 			}
 		}
 	} else {
@@ -367,6 +369,7 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 				(type == TM_TEMPLATE) ? "Template" : "Options template", template->template_id);
 		template = tm_update_template(template_mgr, tmpl, max_len, type, key);
 	}
+
 	if (template == NULL) {
 		MSG_WARNING(msg_module, "[%u] Cannot parse %s set; skipping to next set...", key->odid,
 				(type == TM_TEMPLATE) ? "template" : "options template");
@@ -562,6 +565,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
 void preprocessor_parse_msg(void* packet, int len, struct input_info* input_info, int source_status)
 {
 	struct ipfix_message* msg;
+	uint32_t exporter_ip_addr = preprocessor_compute_crc(input_info);
 	uint32_t *seqn;
 
 	if (source_status == SOURCE_STATUS_CLOSED) {
@@ -574,7 +578,7 @@ void preprocessor_parse_msg(void* packet, int len, struct input_info* input_info
 
 		msg->input_info = input_info;
 		msg->source_status = source_status;
-		odid_info_remove_source(input_info->odid);
+		data_source_info_remove_source(exporter_ip_addr, input_info->odid);
 	} else {
 		if (input_info == NULL) {
 			MSG_WARNING(msg_module, "Invalid parameters in preprocessor_parse_msg");
@@ -601,7 +605,7 @@ void preprocessor_parse_msg(void* packet, int len, struct input_info* input_info
 		}
 
 		if (source_status == SOURCE_STATUS_NEW) {
-			odid_info_add_source(ntohl(msg->pkt_header->observation_domain_id));
+			data_source_info_add_source(exporter_ip_addr, ntohl(msg->pkt_header->observation_domain_id));
 		}
 
 		/* Process templates and correct sequence number */
@@ -610,13 +614,13 @@ void preprocessor_parse_msg(void* packet, int len, struct input_info* input_info
 		/* Get sequence number for current ODID. More inputs can have the same ODID, so we
 		 * need to keep that separately.
 		 */
-		seqn = odid_info_get_sequence_number(ntohl(msg->pkt_header->observation_domain_id));
+		seqn = data_source_info_get_sequence_number(exporter_ip_addr, ntohl(msg->pkt_header->observation_domain_id));
 
 		/* If we have a message with data records (the only one that updates sequence number), check
 		 * the sequence numbers.
 		 */
 		uint32_t pkt_header_seq_number = ntohl(msg->pkt_header->sequence_number);
-		if (msg->input_info->sequence_number != pkt_header_seq_number && msg->data_records_count > 0) {
+		if (msg->input_info->sequence_number != pkt_header_seq_number) {
 			/* Only print a warning message if this is not the first message, since the first
 			 * message always triggers an alert (sequence number is then compared to zero).
 			 */
@@ -656,6 +660,6 @@ void preprocessor_parse_msg(void* packet, int len, struct input_info* input_info
 void preprocessor_close()
 {
 	/* output queue will be closed by intermediate process or output manager */
-	odid_info_destroy();
+	data_source_info_destroy();
 	return;
 }

@@ -230,11 +230,11 @@ void update_window_name(struct fastbit_config *conf)
  * \brief Flushes the data for the specified exporter and ODID
  *
  * @param conf Plugin configuration data structure
- * @param exporter_ip_addr_crc CRC32 of exporter IP address
+ * @param exporter_ip_addr Exporter IP address, as String
  * @param odid Observation domain ID
  * @param close Indicates whether plugin/thread should be closed after flushing all data
  */
-void flush_data(struct fastbit_config *conf, uint32_t exporter_ip_addr_crc, uint32_t odid,
+void flush_data(struct fastbit_config *conf, std::string exporter_ip_addr, uint32_t odid,
 		std::map<uint16_t,template_table*> *templates, bool close)
 {
 	std::map<uint16_t, template_table*>::iterator table;
@@ -242,11 +242,11 @@ void flush_data(struct fastbit_config *conf, uint32_t exporter_ip_addr_crc, uint
 	std::stringstream ss;
 	pthread_t index_thread;
 
-	std::map<uint32_t, std::map<uint32_t, od_info>*>::iterator exporter_it;
+	std::map<std::string, std::map<uint32_t, od_info>*>::iterator exporter_it;
 	std::map<uint32_t, od_info>::iterator odid_it;
 
 	/* Check whether exporter is listed in data structure */
-	if ((exporter_it = conf->od_infos->find(exporter_ip_addr_crc)) == conf->od_infos->end()) {
+	if ((exporter_it = conf->od_infos->find(exporter_ip_addr)) == conf->od_infos->end()) {
 		MSG_ERROR(msg_module, "Could not find exporter in od_infos; aborting...");
 		return;
 	}
@@ -265,8 +265,8 @@ void flush_data(struct fastbit_config *conf, uint32_t exporter_ip_addr_crc, uint
 
 		MSG_DEBUG(msg_module, "Flushing data to disk (exporter: %s, ODID: %u)",
 				odid_it->second.exporter_ip_addr.c_str(), odid);
-		MSG_DEBUG(msg_module, "    > Exported: %u", odid_it->second.flow_watch.received_flows());
-		MSG_DEBUG(msg_module, "    > Received: %u", odid_it->second.flow_watch.exported_flows());
+		MSG_DEBUG(msg_module, "    > Exported: %u", odid_it->second.flow_watch.exported_flows());
+		MSG_DEBUG(msg_module, "    > Received: %u", odid_it->second.flow_watch.received_flows());
 
 		for (table = templates->begin(); table != templates->end(); table++) {
 			conf->dirs->push_back(path + ((*table).second)->name() + "/");
@@ -305,8 +305,8 @@ void flush_data(struct fastbit_config *conf, uint32_t exporter_ip_addr_crc, uint
  */
 void flush_all_data(struct fastbit_config *conf, bool close)
 {
-	std::map<uint32_t, std::map<uint32_t, od_info>*> *od_infos = conf->od_infos;
-	std::map<uint32_t, std::map<uint32_t, od_info>*>::iterator exporter_it;
+	std::map<std::string, std::map<uint32_t, od_info>*> *od_infos = conf->od_infos;
+	std::map<std::string, std::map<uint32_t, od_info>*>::iterator exporter_it;
 	std::map<uint32_t, od_info>::iterator odid_it;
 
 	/* Iterate over all exporters and ODIDs and flush data */
@@ -455,7 +455,7 @@ int storage_init(char *params, void **config)
 	}
 
 	c = (struct fastbit_config*) *config;
-	c->od_infos = new std::map<uint32_t, std::map<uint32_t, struct od_info>*>;
+	c->od_infos = new std::map<std::string, std::map<uint32_t, struct od_info>*>;
 	if (c->od_infos == NULL) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return 1;
@@ -494,8 +494,8 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	std::map<uint16_t, template_table*> *templates = NULL;
 	std::map<uint16_t, template_table*> *old_templates = NULL; /* Templates to be removed */
 
-	std::map<uint32_t, std::map<uint32_t, od_info>*> *od_infos = conf->od_infos;
-	std::map<uint32_t, std::map<uint32_t, od_info>*>::iterator exporter_it;
+	std::map<std::string, std::map<uint32_t, od_info>*> *od_infos = conf->od_infos;
+	std::map<std::string, std::map<uint32_t, od_info>*>::iterator exporter_it;
 	std::map<uint32_t, od_info>::iterator odid_it;
 
 	static int rcnt = 0;
@@ -507,30 +507,29 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 	int rc_flows = 0;
 	uint64_t rc_flows_sum = 0;
 
-	char exporter_ip_addr[INET6_ADDRSTRLEN];
+	char exporter_ip_addr_tmp[INET6_ADDRSTRLEN];
 	if (input->l3_proto == 6) { /* IPv6 */
-		ipv6_addr_non_canonical(exporter_ip_addr, &(input->src_addr.ipv6));
+		ipv6_addr_non_canonical(exporter_ip_addr_tmp, &(input->src_addr.ipv6));
 	} else { /* IPv4 */
-		inet_ntop(AF_INET, &(input->src_addr.ipv4.s_addr), exporter_ip_addr, INET_ADDRSTRLEN);
+		inet_ntop(AF_INET, &(input->src_addr.ipv4.s_addr), exporter_ip_addr_tmp, INET_ADDRSTRLEN);
 	}
 
-	/* Calculate CRC32 over IP address, to have a constant 'key' length for IPv4
-	 * and IPv6 addresses */
-	uint32_t exporter_ip_addr_crc = 512;
+	/* Convert to C++ string for use in `od_infos` data structure */
+	std::string exporter_ip_addr (exporter_ip_addr_tmp);
 
 	/* Find exporter in od_infos data structure */
-	if ((exporter_it = od_infos->find(exporter_ip_addr_crc)) == od_infos->end()) {
-		MSG_INFO(msg_module, "Received data for new exporter: %s", exporter_ip_addr);
+	if ((exporter_it = od_infos->find(exporter_ip_addr)) == od_infos->end()) {
+		MSG_INFO(msg_module, "Received data for new exporter: %s", exporter_ip_addr.c_str());
 
 		/* Add new exporter to data structure */
 		std::map<uint32_t, od_info> *new_exporter = new std::map<uint32_t, od_info>;
-		od_infos->insert(std::make_pair(exporter_ip_addr_crc, new_exporter));
-		exporter_it = od_infos->find(exporter_ip_addr_crc);
+		od_infos->insert(std::make_pair(exporter_ip_addr, new_exporter));
+		exporter_it = od_infos->find(exporter_ip_addr);
 	}
 
 	/* Find ODID in template_info data structure (under exporter) */
 	if ((odid_it = exporter_it->second->find(odid)) == exporter_it->second->end()) {
-		MSG_INFO(msg_module, "Received new ODID for exporter %s: %u", exporter_ip_addr, odid);
+		MSG_INFO(msg_module, "Received new ODID for exporter %s: %u", exporter_ip_addr.c_str(), odid);
 
 		/* Add new ODID to data structure (under exporter) */
 		od_info new_odid;
@@ -579,7 +578,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 				old_templates->insert(std::pair<uint16_t, template_table*>(table->first, table->second));
 
 				/* Flush data */
-				flush_data(conf, exporter_ip_addr_crc, odid, old_templates, false);
+				flush_data(conf, exporter_ip_addr, odid, old_templates, false);
 
 				/* Remove rewritten template */
 				delete table->second;
@@ -668,8 +667,8 @@ int storage_close(void **config)
 {
 	struct fastbit_config *conf = (struct fastbit_config *) (*config);
 
-	std::map<uint32_t, std::map<uint32_t, od_info>*> *od_infos = conf->od_infos;
-	std::map<uint32_t, std::map<uint32_t, od_info>*>::iterator exporter_it;
+	std::map<std::string, std::map<uint32_t, od_info>*> *od_infos = conf->od_infos;
+	std::map<std::string, std::map<uint32_t, od_info>*>::iterator exporter_it;
 	std::map<uint32_t, od_info>::iterator odid_it;
 
 	std::map<uint16_t, template_table*> *templates;

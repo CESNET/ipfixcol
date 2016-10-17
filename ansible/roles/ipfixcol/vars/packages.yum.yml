@@ -21,4 +21,5 @@ packages:
   geoip: [GeoIP-devel]
   stats: [rrdtool-devel]
   uid: [sqlite-devel]
+  dhcp: [sqlite-devel]
   postgres: [postgresql-devel]

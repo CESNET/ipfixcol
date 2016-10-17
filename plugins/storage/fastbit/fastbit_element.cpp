@@ -132,7 +132,7 @@ std::string element::get_part_info()
 		+ "END Column\n";
 }
 
-el_var_size::el_var_size(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct fastbit_config *config)
+el_var_size::el_var_size(struct fastbit_config *config, int size, uint32_t en, uint16_t id, uint32_t buf_size)
 {
 	(void) buf_size;
 
@@ -170,7 +170,7 @@ int el_var_size::set_type()
 	return 0;
 }
 
-el_float::el_float(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct fastbit_config *config)
+el_float::el_float(struct fastbit_config *config, int size, uint32_t en, uint16_t id, uint32_t buf_size)
 {
 	_config = config;
 	_en = en;
@@ -229,7 +229,7 @@ int el_float::set_type()
 	return 0;
 }
 
-el_text::el_text(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct fastbit_config *config):
+el_text::el_text(struct fastbit_config *config, int size, uint32_t en, uint16_t id, uint32_t buf_size):
 	_var_size(false), _true_size(size), _sp_buffer(NULL)
 {
 	_config = config;
@@ -368,7 +368,7 @@ el_text::~el_text()
 	free(_sp_buffer);
 }
 
-el_ipv6::el_ipv6(int size, uint32_t en, uint16_t id, int part, uint32_t buf_size, struct fastbit_config *config)
+el_ipv6::el_ipv6(struct fastbit_config *config, int size, uint32_t en, uint16_t id, int part, uint32_t buf_size)
 {
 	_config = config;
 	_en = en;
@@ -403,7 +403,7 @@ int el_ipv6::set_type()
 	return 0;
 }
 
-el_blob::el_blob(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct fastbit_config *config):
+el_blob::el_blob(struct fastbit_config *config, int size, uint32_t en, uint16_t id, uint32_t buf_size):
 	_var_size(false), _true_size(size), _sp_buffer(NULL)
 {
 	_config = config;
@@ -533,7 +533,7 @@ el_blob::~el_blob()
 	free(_sp_buffer);
 }
 
-el_uint::el_uint(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct fastbit_config *config)
+el_uint::el_uint(struct fastbit_config *config, int size, uint32_t en, uint16_t id, uint32_t buf_size)
 {
 	_config = config;
 	_en = en;
@@ -673,7 +673,8 @@ int el_sint::set_type()
 	return 0;
 }
 
-el_sint::el_sint(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct fastbit_config *config)
+el_sint::el_sint(struct fastbit_config *config, int size, uint32_t en, uint16_t id, uint32_t buf_size)
+ : el_uint(config, size, en, id, buf_size)
 {
 	_config = config;
 	_en = en;
@@ -693,7 +694,7 @@ el_sint::el_sint(int size, uint32_t en, uint16_t id, uint32_t buf_size, struct f
 	allocate_buffer(buf_size);
 }
 
-el_unknown::el_unknown(int size, uint32_t en, uint16_t id, int part, uint32_t buf_size, struct fastbit_config *config)
+el_unknown::el_unknown(struct fastbit_config *config, int size, uint32_t en, uint16_t id, int part, uint32_t buf_size)
 {
 	(void) part;
 	(void) buf_size;
