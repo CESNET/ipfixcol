@@ -565,8 +565,23 @@ static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
 void preprocessor_parse_msg(void* packet, int len, struct input_info* input_info, int source_status)
 {
 	struct ipfix_message* msg;
-	uint32_t exporter_ip_addr = preprocessor_compute_crc(input_info);
+	uint32_t exporter_ip_addr;
 	uint32_t *seqn;
+
+	/* Check input info */
+	if (input_info == NULL) {
+		MSG_WARNING(msg_module, "Invalid parameters in preprocessor_parse_msg");
+
+		if (packet) {
+			free(packet);
+		}
+			
+		packet = NULL;
+		return;
+	}
+
+	/* CRC of exporter identification is used to differentiate sources */
+	exporter_ip_addr = preprocessor_compute_crc(input_info);
 
 	if (source_status == SOURCE_STATUS_CLOSED) {
 		/* Inform intermediate plugins and output manager about closed input */
@@ -580,17 +595,6 @@ void preprocessor_parse_msg(void* packet, int len, struct input_info* input_info
 		msg->source_status = source_status;
 		data_source_info_remove_source(exporter_ip_addr, input_info->odid);
 	} else {
-		if (input_info == NULL) {
-			MSG_WARNING(msg_module, "Invalid parameters in preprocessor_parse_msg");
-
-			if (packet) {
-				free(packet);
-			}
-			
-			packet = NULL;
-			return;
-		}
-
 		if (packet == NULL) {
 			MSG_WARNING(msg_module, "[%u] Received empty IPFIX message", input_info->odid);
 			return;

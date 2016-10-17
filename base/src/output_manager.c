@@ -121,7 +121,7 @@ void remove_input_info(struct input_info *node)
 		aux_node = aux_node->next;
 	}
 
-	/* Node not found, nothiung to dO */
+	/* Node not found, nothing to do */
 	if (!aux_node) {
 		return;
 	}

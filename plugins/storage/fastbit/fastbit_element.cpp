@@ -271,7 +271,7 @@ el_text::el_text(struct fastbit_config *config, int size, uint32_t en, uint16_t 
 	}
 }
 
-int el_text::append_str(void *data, int size)
+int el_text::append_str(void *data, uint16_t size)
 {
 	/* Check buffer space */
 	if (_filled + size + 1 >= _buf_max) { /* 1 = terminating zero */
@@ -338,6 +338,22 @@ int el_text::flush(std::string path)
 			return 1;
 		}
 
+		/* Get file offset */
+		struct stat stat_buf;
+		int rc = stat((path + "/" + _name).c_str(), &stat_buf);
+
+		/* Adjust the _sp_buffer values */
+		if (rc == 0 && stat_buf.st_size != 0) {
+			uint64_t file_offset = stat_buf.st_size;
+
+			/* We will ignore the first zero offset. The .sp file aready contains offset
+			 * pointing just after the file */
+			for (uint32_t i = 8; i < _sp_buffer_offset; i+=8) {
+				*(uint64_t *) (_sp_buffer + i-8) = (*(uint64_t *) (_sp_buffer + i)) + file_offset;
+			}
+			_sp_buffer_offset -= 8;
+		}
+
 		check = fwrite(_sp_buffer, 1 , _sp_buffer_offset, f);
 		if (check != (size_t) _sp_buffer_offset) {
 			MSG_ERROR(msg_module, "Error while writing data (fwrite)");
@@ -350,11 +366,6 @@ int el_text::flush(std::string path)
 
 		/* Reset buffer */
 		_sp_buffer_offset = 8;
-
-		/* TODO
-		 * It is necessary to get the offset right before next write to disk
-		 * Get the size of the element on disk and use it to calculate offset
-		 */
 	}
 
 	/* Call parent function to write the data buffer */
@@ -503,6 +514,22 @@ int el_blob::flush(std::string path)
 			return 1;
 		}
 
+		/* Get file offset */
+		struct stat stat_buf;
+		int rc = stat((path + "/" + _name).c_str(), &stat_buf);
+
+		/* Adjust the _sp_buffer values */
+		if (rc == 0 && stat_buf.st_size != 0) {
+			uint64_t file_offset = stat_buf.st_size;
+
+			/* We will ignore the first zero offset. The .sp file aready contains offset
+			 * pointing just after the file */
+			for (uint32_t i = 8; i < _sp_buffer_offset; i+=8) {
+				*(uint64_t *) (_sp_buffer + i-8) = (*(uint64_t *) (_sp_buffer + i)) + file_offset;
+			}
+			_sp_buffer_offset -= 8;
+		}
+
 		check = fwrite(_sp_buffer, 1 , _sp_buffer_offset, f);
 		if (check != (size_t) _sp_buffer_offset) {
 			MSG_ERROR(msg_module, "Error while writing data (fwrite)");
@@ -515,11 +542,6 @@ int el_blob::flush(std::string path)
 
 		/* Reset buffer */
 		_sp_buffer_offset = 8;
-
-		/* TODO
-		 * It is necessary to get the offset right before next write to disk
-		 * Get the size of the element on disk and use it to calculate offset
-		 */
 	}
 
 	/* Call parent function to write the data buffer */
