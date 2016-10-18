@@ -228,14 +228,27 @@ int intermediate_init(char *params, void *ip_config, uint32_t ip_id, struct ipfi
 
 	if (conf->type == ANONYMIZATION_TYPE_CRYPTOPAN) {
 		if (conf->key == NULL || strlen(conf->key) == 0) {
-			uint8_t random_key = rand() % 256;
-			PAnonymizer_Init(&random_key);
+
+			/* Read 32 bytes from /dev/urandom */
+			uint8_t rnd_key[32];
+			FILE *fr = fopen("/dev/urandom", "r");
+
+		    size_t result = fread(&rnd_key, 1, (sizeof rnd_key), fr);
+			if (result < 32) {
+				MSG_ERROR(msg_module, "Cannot read 32 bytes from /dev/urandom for Crypto-PAn key");
+				retval = 1;
+				fclose(fr);
+				goto out;
+			}
+			fclose(fr);
+
+			PAnonymizer_Init(rnd_key);
 		} else {
 			/* Check key length */
 			if (strlen(conf->key) == 32) {
 				PAnonymizer_Init((uint8_t *) conf->key);
 			} else {
-				MSG_ERROR(msg_module, "Key with invalid length provided (%s); must be 16, 24 or 32 bytes", conf->key);
+				MSG_ERROR(msg_module, "Key with invalid length provided (%s); must be 32 bytes", conf->key);
 				retval = 1;
 				free(conf->key);
 				goto out;
