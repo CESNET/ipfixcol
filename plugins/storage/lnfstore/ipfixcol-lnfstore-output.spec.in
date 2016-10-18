@@ -10,11 +10,9 @@ Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 
-BuildRequires: gcc make doxygen
-BuildRequires: ipfixcol-devel >= 0.7.1
-BuildRequires: lzo-devel
-Requires: ipfixcol >= 0.7.1
-Requires: lzo
+BuildRequires: gcc autoconf libtool make doxygen libxslt pkgconfig @BUILDREQS@
+BuildRequires: libnf-devel >= 1.25 lzo-devel libxml2-devel ipfixcol-devel >= 0.7.1
+Requires: libnf >= 1.25 lzo libxml2 ipfixcol >= 0.7.1
 
 %description
 lnfstore storage plugin for ipfixcol.
@@ -41,5 +39,4 @@ make DESTDIR=$RPM_BUILD_ROOT install
 %files
 #storage plugins
 %{_datadir}/ipfixcol/plugins/ipfixcol-lnfstore-output.*
-%{_datadir}/ipfixcol/plugins/ipfixcol-lnfstore-output.txt
 %{_mandir}/man1/ipfixcol-lnfstore-output.1*
