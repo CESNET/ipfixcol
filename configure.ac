@@ -18,6 +18,7 @@ AC_CONFIG_SUBDIRS([ base
 	plugins/storage/statistics
 	plugins/storage/nfdump
 	plugins/input/nfdump
+	plugins/intermediate/dhcp
 	plugins/intermediate/geoip
 	plugins/intermediate/profiler
 	plugins/intermediate/profile_stats
