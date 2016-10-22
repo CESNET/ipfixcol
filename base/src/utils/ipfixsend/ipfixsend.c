@@ -1,9 +1,10 @@
 /**
  * \file ipfixsend.c
  * \author Michal Kozubik <kozubik@cesnet.cz>
+ * \author Lukas Hutak <lukas.hutak@cesnet.cz>
  * \brief Tool that sends ipfix packets
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2016 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,6 +45,10 @@
 #include <ipfixcol.h>
 #include <signal.h>
 #include <stdbool.h>
+#include <errno.h>
+#include <sys/ioctl.h>
+#include <linux/sockios.h>
+#include <time.h>
 
 #include <siso.h>
 
@@ -55,11 +60,16 @@
 #include <netinet/sctp.h>
 #endif
 
-#define OPTSTRING "hi:d:p:t:n:s:S:R:O:"
+#define OPTSTRING "hci:d:p:t:n:s:S:R:"
 #define DEFAULT_IP "127.0.0.1"
 #define DEFAULT_PORT "4739"
 #define DEFAULT_TYPE "UDP"
 #define INFINITY_LOOPS (-1)
+/*
+ * Timeout for waiting until all queued messages have been sent before close()
+ * (in nanoseconds)
+ */
+#define FLUSHER_TIME 100000000LL
 
 #define CHECK_SET(_ptr_, _name_) \
 do { \
@@ -83,8 +93,8 @@ void usage()
 	printf("  -d ip      Destination IP address (default: %s)\n", DEFAULT_IP);
 	printf("  -p port    Destination port number (default: %s)\n", DEFAULT_PORT);
 	printf("  -t type    Connection type (UDP, TCP or SCTP) (default: UDP)\n");
+	printf("  -c         Precache input file (for performance tests)\n");
 	printf("  -n num     How many times the file should be sent (default: infinity)\n");
-	printf("  -O num     Change ODID (Observation Domain ID) of all packets\n");
 	printf("  -s speed   Maximum data sending speed/s\n");
 	printf("             Supported suffixes: B (default), K, M, G\n");
 	printf("  -S packets Speed limit in packets/s\n");
@@ -114,9 +124,7 @@ int main(int argc, char** argv)
 	int     loops =   INFINITY_LOOPS;
 	int     packets_s = 0;
 	double  realtime_s = 0.0;
-
-	bool    odid_change = false;
-	long    odid_value = 0;
+	bool    precache = false;
 
 	if (argc == 1) {
 		usage();
@@ -142,6 +150,9 @@ int main(int argc, char** argv)
 		case 't':
 			type = optarg;
 			break;
+		case 'c':
+			precache = true;
+			break;
 		case 'n':
 			loops = atoi(optarg);
 			break;
@@ -153,10 +164,6 @@ int main(int argc, char** argv)
 			break;
 		case 'R':
 			realtime_s = atof(optarg);
-			break;
-		case 'O':
-			odid_change = true;
-			odid_value = atol(optarg);
 			break;
 		default:
 			fprintf(stderr, "Unknown option.\n");
@@ -186,12 +193,6 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	if (odid_change && (odid_value < 0 || odid_value > UINT32_MAX)) {
-		fprintf(stderr, "Invalid ODID value. Must be in range "
-			"(0 .. %" PRIu32 ")\n", UINT32_MAX);
-		return 1;
-	}
-
 	/* Check whether everything is set */
 	CHECK_SET(input, "Input file");
 	signal(SIGINT, handler);
@@ -203,19 +204,11 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	/* Load packets from file */
-	char **packets = read_packets(input);
-	if (!packets) {
+	/* Prepare an input file */
+	reader_t *reader = reader_create(input, precache);
+	if (!reader) {
 		siso_destroy(sender);
 		return 1;
-	}
-
-	/* Change ODID */
-	if (odid_change) {
-		for (size_t i = 0; packets[i]; ++i) {
-			struct ipfix_header *header = (struct ipfix_header *) packets[i];
-			header->observation_domain_id = htonl((uint32_t) odid_value);
-		}
 	}
 
 	/* Create connection */
@@ -223,7 +216,7 @@ int main(int argc, char** argv)
 	if (ret != SISO_OK) {
 		fprintf(stderr, "Network error: %s\n", siso_get_last_err(sender));
 		siso_destroy(sender);
-		free_packets(packets);
+		reader_destroy(reader);
 		return 1;
 	}
 
@@ -235,22 +228,37 @@ int main(int argc, char** argv)
 	/* Send packets */
 	int i;
 	for (i = 0; !stop && (loops == INFINITY_LOOPS || i < loops); ++i) {
+		reader_rewind(reader);
 		if (realtime_s > 0.0) {
 			// Real-time sending
-			ret = send_packets_realtime(sender, packets, realtime_s);
+			ret = send_packets_realtime(sender, reader, realtime_s);
 		} else {
 			// Speed limitation sending
-			ret = send_packets_limit(sender, packets, packets_s);
+			ret = send_packets_limit(sender, reader, packets_s);
 		}
 
-		if (ret != SISO_OK) {
-			fprintf(stderr, "Network error: %s\n", siso_get_last_err(sender));
+		if (ret != 0) {
+			// Error
 			break;
 		}
 	}
 
 	/* Free resources */
-	free_packets(packets);
+	reader_destroy(reader);
+
+	/* Make sure that all packets are delivered before socket closes */
+	int socket_fd = siso_get_socket(sender);
+	int not_sent = 0;
+	while (!stop && ioctl(socket_fd, SIOCOUTQ, &not_sent) != -1) {
+		if (not_sent <= 0) {
+			break;
+		}
+
+		/* Wait */
+		struct timespec sleep_time = {0, FLUSHER_TIME};
+		nanosleep(&sleep_time, NULL);
+	}
+
 	siso_destroy(sender);
 	return 0;
 }

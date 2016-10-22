@@ -89,20 +89,6 @@ A tool for displaying captured ipfix data. Uses IPFIXcol, IPFIX file input plugi
 ###<a name="ipfixconf"></a>ipfixconf
 This tool provides interface to list, add and remove plugins from internal configuration so you don't need to edit XML file manualy. Each external plugin uses this tool after succesfull installation.
 
-##<a name="howbuild"></a>How to build
-Simply with:
-
-```sh
-autoreconf -i
-./configure
-make
-```
-
-And possibly:
-```sh
-sudo make install
-```
-
 ##<a name="howrun"></a>How to run
 ###Start ipfixcol
 The simplest way how to run collector is just running

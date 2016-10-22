@@ -136,9 +136,10 @@ void process_startup_xml(struct json_conf *conf, char *params)
 extern "C"
 int storage_init (char *params, void **config)
 {	
+	struct json_conf *conf;
 	try {
 		/* Create configuration */
-		struct json_conf *conf = new struct json_conf;
+		conf = new struct json_conf;
 		
 		/* Create storage */
 		conf->storage = new Storage();
@@ -154,6 +155,11 @@ int storage_init (char *params, void **config)
 	} catch (std::exception &e) {
 		*config = NULL;
 		MSG_ERROR(msg_module, "%s", e.what());
+
+		/* Free allocated memory */
+		delete conf->storage;
+		delete conf;
+
 		return 1;
 	}
 	

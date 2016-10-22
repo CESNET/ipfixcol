@@ -38,7 +38,7 @@
 
 AC_PREREQ([2.60])
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol-json-output], [1.1.0])
+AC_INIT([ipfixcol-json-output], [1.2.0])
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([json.cpp])
@@ -55,6 +55,8 @@ LT_INIT([dlopen disable-static])
 # Initialization
 : ${CXXFLAGS=""}
 AM_CXXFLAGS="-Wall -O2"
+# We need -fPIC to link to some of the libraries
+LDFLAGS="$LDFLAGS -fPIC"
 AC_LANG([C++])
 
 RELEASE=1
@@ -66,11 +68,12 @@ LBR_SET_DISTRO([redhat])
 
 ############################ Check for programs ################################
 
-# Check for rpmbuil
+# Check for rpmbuild
 AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
 
 # Check for xsltproc
 LBR_CHECK_XSLTPROC
+AC_SUBST([BUILDREQS])
 
 # Check for standard programs
 AC_PROG_INSTALL
@@ -119,7 +122,8 @@ AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar
 
 # Check whether we can find headers dir in relative path (git repository)
 AS_IF([test -d $srcdir/../../../base/headers], 
-	[AM_CPPFLAGS+="-I$srcdir/../../../base/headers"]
+	[AM_CPPFLAGS+="-I$srcdir/../../../base/headers"
+	BUILD_AGAINST="git"]
 )
 
 cppflags_save="$CPPFLAGS"
@@ -187,6 +191,7 @@ echo "
   Distribution..: $DISTRO
   C++ Compiler..: $CXX $AM_CXXFLAGS $CXXFLAGS $AM_CPPFLAGS $CPPFLAGS
   Linker........: $AM_LDFLAGS $LDFLAGS $LIBS
+  Build against.: ${BUILD_AGAINST:-system}
   rpmbuild......: ${RPMBUILD:-NONE}
   Build doc.....: ${enable_doc:-yes}
   xsltproc......: ${XSLTPROC:-NONE}

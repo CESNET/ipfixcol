@@ -114,6 +114,14 @@ int dest_connector_start(fwd_dest_t *dst_mgr, int period);
 int dest_connector_stop(fwd_dest_t *dst_mgr);
 
 /**
+ * \brief Check and move reconnected destinations to connected destinations
+ * \warning This functions must be called only by the thread that use
+ *   dest_send()!
+ * \param[in,out] dst_mgr Destination manager
+ */
+void dest_check_reconnected(fwd_dest_t *dst_mgr);
+
+/**
  * \brief Send prepared packet(s)
  * \param[in,out] dst_mgr     Destination manager
  * \param[in,out] bldr_all    Prepared packets - all parts (Packet builder)

@@ -187,6 +187,12 @@ static uint32_t *source_odids_get_seq(struct dst_client *dst, uint32_t odid)
 		dst->seq_data = new_arr;
 	}
 
+	// Just check that we have a valid pointer
+	if (!dst->seq_data) {
+		MSG_ERROR(msg_module, "dst_client with uninitialized data");
+		return NULL;
+	}
+
 	// Fill
 	struct seq_per_odid *tmp = &dst->seq_data[dst->seq_cnt++];
 	tmp->odid = odid;
@@ -805,11 +811,8 @@ static struct tmplts_per_odid *dest_templates_prepare(
 	return result;
 }
 
-/**
- * \brief Check and move reconnected destinations to connected destinations
- * \param[in,out] dst_mgr Destination manager
- */
-static void dest_check_reconnected(fwd_dest_t *dst_mgr)
+// Check and move reconnected destinations to connected destinations
+void dest_check_reconnected(fwd_dest_t *dst_mgr)
 {
 	if (dst_mgr->ready_empty) {
 		return;
@@ -1118,9 +1121,6 @@ void dest_send(fwd_dest_t *dst_mgr, fwd_bldr_t *bldr_all,
 	fwd_bldr_t *bldr_tmplts, enum DIST_MODE mode)
 {
 	bool res;
-
-	// Add reconnected clients
-	dest_check_reconnected(dst_mgr);
 
 	// Distribution
 	switch (mode) {

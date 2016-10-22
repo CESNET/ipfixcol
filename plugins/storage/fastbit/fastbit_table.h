@@ -56,12 +56,9 @@ extern "C" {
 
 #include <fastbit/ibis.h>
 
-#include "pugixml.hpp"
-
 #include "fastbit_element.h"
-#include "config_struct.h"
 
-class element; // Needed because of circular dependency
+class element; /* Needed because of circular dependency */
 
 uint64_t get_rows_from_part(const char *);
 
@@ -77,23 +74,23 @@ private:
 	uint16_t _template_id;
 	uint16_t _min_record_size;
 	char _name[10];
-	char _orig_name[10]; /**< Saves the _name when renamed due to template collision*/
-	bool _new_dir; /**< Remember that the directory is supposed to be new */
+	char _orig_name[10]; /* Saves the _name when renamed due to template collision */
+	bool _new_dir; /* Remember that the directory is supposed to be new */
 	char _index;
-	time_t _first_transmission; /**< First transmission of the template. Used to detect changes. */
+	time_t _first_transmission; /* First transmission of the template. Used to detect changes. */
 
 public:
-	/* vector of elements stored in data record (based on template)
+	/* Vector of elements stored in data record (based on template)
 	 * element polymorphs to necessary data type
 	 */
 	std::vector<element *> elements;
 	std::vector<element *>::iterator el_it;
 
 	template_table(uint16_t template_id, uint32_t buff_size);
-	int rows() {return _rows_count;}
-	void rows(int rows_count) {_rows_count = rows_count;}
-	std::string name(){return std::string(_name);}
-	int parse_template(struct ipfix_template *tmp,struct fastbit_config *config);
+	int rows() { return _rows_count; }
+	void rows(int rows_count) { _rows_count = rows_count; }
+	std::string name() { return std::string(_name); }
+	int parse_template(struct ipfix_template *tmp, struct fastbit_config *config);
 
 	/**
 	 * \brief Parse data_set and store its data in memory

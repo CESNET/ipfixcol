@@ -54,6 +54,7 @@ PREPROC="preproc.sh"
 POSTPROC="postproc.sh"
 IPFIXSEND_RUN="ipfixsend.sh"
 INTERNAL=$(readlink -fe -- configs/internalcfg.xml)
+ELEMENTS="`realpath ../../config/ipfix-elements.xml`"
 
 BASE="$PWD"
 LF="test.log"
@@ -94,9 +95,11 @@ fi
 export IPFIX_TEST_INTERNALCFG=$INTERNAL
 export IPFIX_TEST_IPFIXCOL=$IPFIXCOL
 export IPFIX_TEST_IPFIXSEND=$IPFIXSEND
+export IPFIX_TEST_ELEMENTCFG=$ELEMENTS
 
 echo -n "" > "$LOG_FILE" 
-echo -e "Using internal configuration file: $INTERNAL\n" | tee -a "$LOG_FILE"
+echo -e "Using internal configuration file: $INTERNAL" | tee -a "$LOG_FILE"
+echo -e "Using ipfix-elements file: $ELEMENTS\n" | tee -a "$LOG_FILE"
 
 cd $TESTDIR;
 # do tests
@@ -118,7 +121,7 @@ for test in *; do
 	fi
 	
 	if [[ "$test" == "ipfixsend "* ]]; then
-		$IPFIXCOL $PARAMS -i $INTERNAL > "$OUTPUT" 2>&1 &
+		$IPFIXCOL $PARAMS -i $INTERNAL -e $ELEMENTS > "$OUTPUT" 2>&1 &
 		echo $! > tmp_pid
 		sleep 1 # ipfixcol initialization
 		
@@ -129,7 +132,7 @@ for test in *; do
 		kill $(cat tmp_pid)
 		rm -f tmp_pid
 	else
-		$IPFIXCOL $PARAMS -i $INTERNAL > "$OUTPUT" 2>&1
+		$IPFIXCOL $PARAMS -i $INTERNAL -e $ELEMENTS > "$OUTPUT" 2>&1
 	fi
 	
 	if [ -f "$POSTPROC" ]; then

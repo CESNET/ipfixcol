@@ -265,7 +265,7 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 			record += '"';
 			break;
 		case ET_DATE_TIME_SECONDS:
-			record += translator.formatTimestamp(read64(data_record + offset),
+			record += translator.formatTimestamp(read32(data_record + offset),
 				t_units::SEC, config);
 			break;
 		case ET_DATE_TIME_MILLISECONDS:

@@ -432,7 +432,6 @@ int insert_timestamp_otemplate(struct ipfix_set_header *templSet)
 	struct ipfix_options_template_record *tmp;
 	uint16_t len, num, i, id;
 
-
 	/* Get template set total length without set header length */
 	len = ntohs(templSet->length) - sizeof(struct ipfix_options_template_record);
 
@@ -505,7 +504,8 @@ int insert_timestamp_otemplate(struct ipfix_set_header *templSet)
 			} else {
 				templates.templ[len] += ntohs(tmp->count);
 			}
-		tmp = (struct ipfix_options_template_record*) (((uint8_t *) tmp) + 4);
+
+			tmp = (struct ipfix_options_template_record *) (((uint8_t *) tmp) + 4);
 		}
 	}
 
@@ -603,8 +603,8 @@ int insert_timestamp_data(struct ipfix_set_header *dataSet, uint64_t time_header
  *  and converts them into IPFIX enterprise element.
  *
  * \param template_set Template Set
- * \param remaining Number of bytes to the end of packet (indluding template set)
- * \return number of inserted bytes
+ * \param remaining Number of bytes to the end of packet (including template set)
+ * \return Number of inserted bytes
  */
 int unpack_ot_enterprise_elements(struct ipfix_set_header *template_set, uint32_t remaining)
 {
@@ -612,28 +612,26 @@ int unpack_ot_enterprise_elements(struct ipfix_set_header *template_set, uint32_
 
 	/* Get template set total length without set header length */
 	uint16_t set_len = ntohs(template_row->length) - sizeof(struct ipfix_set_header);
-	MSG_DEBUG(msg_module,"PRIES: ot_unpack: Set Length = %u", set_len);
 	uint16_t added_pens = 0; /* Added private enterprise numbers */
 
 	/* Iterate through all templates */
-	while ((uint8_t *) template_row < (uint8_t *) template_set + set_len) {
-		template_row++;
+	while ((uint8_t *) ++template_row < (uint8_t *) template_set + set_len) {
 		remaining -= TEMPLATE_ROW_SIZE;
 
 		/* Get number of elements */
-		struct ipfix_options_template_record *tmp = (struct ipfix_options_template_record*) template_row;
-		uint16_t numberOfElements = (ntohs(tmp->count) + ntohs(tmp->scope_field_count)) / 4;
+		struct ipfix_options_template_record *tmp = (struct ipfix_options_template_record *) template_row;
+		uint16_t element_count = (ntohs(tmp->count) + ntohs(tmp->scope_field_count)) / 4;
 
-//		uint16_t numberOfElements = ntohs(template_row->length);
 		/* Skip extra two bytes in option template record header */
-		template_row = (struct ipfix_set_header*) (((uint8_t *) template_row) + 2);
+		template_row = (struct ipfix_set_header *) (((uint8_t *) template_row) + BYTES_2);
 
 		/* Iterate through all elements */
-		for (uint16_t i = 0; i < numberOfElements; ++i) {
+		for (uint16_t i = 0; i < element_count; ++i) {
 			template_row++;
 			remaining -= TEMPLATE_ROW_SIZE;
 
 			uint16_t field_id = ntohs(template_row->flowset_id);
+
 			/* We are only looking for elements with enterprise bit set to 1 */
 			if (!(field_id & ENTERPRISE_BIT)) {
 				continue;
@@ -666,7 +664,7 @@ int unpack_ot_enterprise_elements(struct ipfix_set_header *template_set, uint32_
  *
  * \param template_set Template Set
  * \param remaining Number of bytes to the end of packet (indluding template set)
- * \return number of inserted bytes
+ * \return Number of inserted bytes
  */
 int unpack_enterprise_elements(struct ipfix_set_header *template_set, uint32_t remaining)
 {
@@ -677,8 +675,7 @@ int unpack_enterprise_elements(struct ipfix_set_header *template_set, uint32_t r
 	uint16_t added_pens = 0; /* Added private enterprise numbers */
 
 	/* Iterate through all templates */
-	while ((uint8_t *) template_row < (uint8_t *) template_set + set_len) {
-		template_row++;
+	while ((uint8_t *) ++template_row < (uint8_t *) template_set + set_len) {
 		remaining -= TEMPLATE_ROW_SIZE;
 
 		uint16_t numberOfElements = ntohs(template_row->length);

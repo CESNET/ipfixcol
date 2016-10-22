@@ -66,6 +66,7 @@ AC_CHECK_PROG(RPMBUILD, rpmbuild, rpmbuild)
 
 # Check for xsltproc
 LBR_CHECK_XSLTPROC
+AC_SUBST([BUILDREQS])
 
 # Check for standard programs
 AC_PROG_INSTALL

@@ -41,11 +41,11 @@
 #define FASTBIT_ELEMENT
 
 extern "C" {
-#include <ipfixcol.h>
-#include <netinet/in.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
+	#include <ipfixcol.h>
+	#include <netinet/in.h>
+	#include <stdio.h>
+	#include <stdlib.h>
+	#include <time.h>
 }
 
 #include <map>
@@ -54,35 +54,13 @@ extern "C" {
 
 #include <fastbit/ibis.h>
 
-#include "pugixml.hpp"
-
 #include "fastbit.h"
 #include "config_struct.h"
 
+#define NFv9_CONVERSION_ENTERPRISE_NUMBER (~((uint32_t) 0))
+
 const int IE_NAME_LENGTH = 32;
 const int TYPE_NAME_LENGTH = 10;
-
-class template_table; //Needed becouse of Circular dependency
-
-/**
- * \brief Load elements types from xml to configure structure
- *
- * This function reads ipfix-elements.xml
- * and stores elements data type in configuration structure
- *
- * @param conf fastbit storage plug-in configuration structure
- */
-int load_types_from_xml(struct fastbit_config *conf);
-
-/**
- * \brief Search for element type in configure structure
- *
- * @param conf fastbit storage plug-in configuration structure
- * @param en Enterprise number of element
- * @param id ID of information element
- * @return element type
- */
-enum store_type get_type_from_xml(struct fastbit_config *conf, uint32_t en, uint16_t id);
 
 /**
  * \brief Class wrapper for information elements
@@ -199,8 +177,8 @@ class el_var_size : public element
 {
 public:
 	void *data;
-	el_var_size(int size = 0, uint32_t en = 0, uint16_t id = 0,
-			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
+	el_var_size(struct fastbit_config *config = NULL, int size = 0, uint32_t en = 0, uint16_t id = 0,
+			uint32_t buf_size = RESERVED_SPACE);
 
 	/**
 	 * \brief Fill internal element value according to given data
@@ -229,8 +207,8 @@ class el_float : public element
 {
 public:
 	float_u float_value;
-	el_float(int size = 1, uint32_t en = 0, uint16_t id = 0,
-			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
+	el_float(struct fastbit_config *config = NULL, int size = 1, uint32_t en = 0, uint16_t id = 0,
+			uint32_t buf_size = RESERVED_SPACE);
 
 	/**
 	 * \brief Fill internal element value according to given data
@@ -260,8 +238,8 @@ private:
 	uint32_t _sp_buffer_size;
 	uint32_t _sp_buffer_offset;
 public:
-	el_text(int size = 1, uint32_t en = 0, uint16_t id = 0,
-			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
+	el_text(struct fastbit_config *config, int size = 1, uint32_t en = 0, uint16_t id = 0,
+			uint32_t buf_size = RESERVED_SPACE);
 
 	virtual uint16_t fill(uint8_t *data);
 	virtual ~el_text();
@@ -287,15 +265,15 @@ protected:
 	 * @param size size of data to append
 	 * @return 0 on success, 1 otherwise
 	 */
-	int append_str(void *data, int size);
+	int append_str(void *data, uint16_t size);
 };
 
 class el_ipv6 : public element
 {
 public:
 	uint64_t ipv6_value;
-	el_ipv6(int size = 1, uint32_t en = 0, uint16_t id = 0, int part = 0,
-			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
+	el_ipv6(struct fastbit_config *config = NULL, int size = 1, uint32_t en = 0, uint16_t id = 0, int part = 0,
+			uint32_t buf_size = RESERVED_SPACE);
 
 	/**
 	 * \brief fill internal element value according to given data
@@ -317,8 +295,8 @@ protected:
 class el_blob : public element
 {
 public:
-	el_blob(int size = 1, uint32_t en = 0, uint16_t id = 0,
-			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
+	el_blob(struct fastbit_config *config = NULL, int size = 1, uint32_t en = 0, uint16_t id = 0,
+			uint32_t buf_size = RESERVED_SPACE);
 
 	virtual uint16_t fill(uint8_t *data);
 	virtual ~el_blob();
@@ -359,8 +337,8 @@ typedef union uinteger_union
 class el_uint : public element
 {
 public:
-	el_uint(int size = 1, uint32_t en = 0, uint16_t id = 0,
-			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
+	el_uint(struct fastbit_config *config, int size = 1, uint32_t en = 0, uint16_t id = 0,
+			uint32_t buf_size = RESERVED_SPACE);
 
 	/**
 	 * \brief fill internal element value according to given data
@@ -385,8 +363,8 @@ protected:
 class el_sint : public el_uint
 {
 public:
-	el_sint(int size = 1, uint32_t en = 0, uint16_t id = 0,
-			uint32_t buf_size = RESERVED_SPACE, struct fastbit_config *config = NULL);
+	el_sint(struct fastbit_config *config, int size = 1, uint32_t en = 0, uint16_t id = 0,
+			uint32_t buf_size = RESERVED_SPACE);
 
 protected:
 	int set_type();
@@ -405,8 +383,8 @@ protected:
 	int append(void *data);
 
 public:
-	el_unknown(int size = 0, uint32_t en = 0, uint16_t id = 0, int part = 0,
-			uint32_t buf_size = 0, struct fastbit_config *config = NULL);
+	el_unknown(struct fastbit_config *config, int size = 0, uint32_t en = 0, uint16_t id = 0, int part = 0,
+			uint32_t buf_size = 0);
 
 	/**
 	 * \brief fill internal element value according to given data

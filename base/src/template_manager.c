@@ -204,7 +204,7 @@ static int tm_fill_template(struct ipfix_template *template, void *template_reco
 
 	int i;
 	for (i = 0; i < OF_COUNT; ++i) {
-		template->offsets[i] = -1;
+		template->offsets[i].offset = -1;
 	}
 
 	return 0;
@@ -621,7 +621,11 @@ struct ipfix_template_mgr *tm_create() {
 	tm->last = NULL;
 
 	/* Initialize mutex */
-	pthread_mutex_init(&tm->tmr_lock, NULL);
+	if (pthread_mutex_init(&tm->tmr_lock, NULL) != 0) {
+		MSG_ERROR(msg_module, "Failed to initialize a mutex.");
+		free(tm);
+		return NULL;
+	}
 	
 	return tm;
 }

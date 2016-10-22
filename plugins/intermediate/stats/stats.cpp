@@ -338,7 +338,7 @@ void stats_update(stats_data *stats, std::string templ)
 		rrd_clear_error();
 	}
 
-	delete c_argv;
+	delete[] c_argv;
 }
 
 /**

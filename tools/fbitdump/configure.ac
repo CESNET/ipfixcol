@@ -39,7 +39,7 @@
 AC_PREREQ([2.60])
 
 # Process this file with autoconf to produce a configure script.
-AC_INIT([fbitdump], [0.4.0])
+AC_INIT([fbitdump], [0.4.1])
 LT_INIT([dlopen disable-static])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability])
 
@@ -52,7 +52,9 @@ AC_SUBST(RELEASE)
 
 # Initialization
 : ${CXXFLAGS=""}
-AM_CXXFLAGS="-Wall -O2"
+AM_CXXFLAGS="-Wall -O2 -fPIE"
+# We need -fPIE to link to some of the libraries
+LDFLAGS="$LDFLAGS -fPIE"
 AC_LANG(C++)
 CC="gcc"
 CXX="g++"
@@ -78,6 +80,7 @@ AM_CONDITIONAL([HAVE_DOXYGEN], [test -n $DOXYGEN])
 
 # Check for xsltproc
 LBR_CHECK_XSLTPROC
+AC_SUBST([BUILDREQS])
 
 # Check for standard programs
 AC_PROG_CXX

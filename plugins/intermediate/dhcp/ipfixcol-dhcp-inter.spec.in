@@ -1,0 +1,42 @@
+Summary: dhcp intermediate plugin for ipfixcol.
+Name: @PACKAGE_NAME@
+Version: @PACKAGE_VERSION@
+Release: @RELEASE@
+URL: http://www.liberouter.org/
+Source: http://homeproj.cesnet.cz/rpm/liberouter/stable/SOURCES/%{name}-%{version}-%{release}.tar.gz
+Group: Liberouter
+License: BSD
+Vendor: CESNET, z.s.p.o.
+Packager: @USERNAME@ <@USERMAIL@>
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
+
+BuildRequires: gcc autoconf libtool make doxygen libxslt @BUILDREQS@
+BuildRequires: sqlite-devel libxml2-devel ipfixcol-devel >= 0.7.1
+Requires: sqlite libxml2 ipfixcol >= 0.7.1
+
+%description
+uid intermediate plugin for ipfixcol.
+
+
+%prep
+%setup
+
+%post
+ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p m -n dhcp -t dhcp -s "%{_datadir}/ipfixcol/plugins/ipfixcol-dhcp-inter.so" -f
+
+%preun
+
+%postun
+ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p m -n dhcp
+
+%build
+%configure --with-distro=@DISTRO@
+make
+
+%install
+make DESTDIR=%{buildroot} install
+
+%files
+#intermediate plugins
+%{_datadir}/ipfixcol/plugins/ipfixcol-dhcp-inter.*
+%{_mandir}/man1/ipfixcol-dhcp-inter.1*

@@ -17,11 +17,12 @@
     *  [fbitexpire](#fbitexpire)
     *  [fbitmerge](#fbitmerge)
 	*  [profilesdaemon](#profilesdaemon)
-6.  [Howto build](#build)
-7.  [Docker](#docker)
-8.  [RPM](#rpm)
-9.  [FastBit](#fastbit)
-10.  [Contact us](#contact)
+6.  [Howto install](#install)
+7.  [Howto build](#build)
+8.  [Docker](#docker)
+9.  [RPM](#rpm)
+10.  [FastBit](#fastbit)
+11.  [Contact us](#contact)
     *  [Reporting bugs](#bug)
     *  [Forum](#mailing)
 
@@ -96,8 +97,41 @@ Tool for profiles management and distribution
 
 [More info](tools/profilesdaemon/)
 
+##<a name="install"></a> How to install
+
+Individual packages of the IPFIXcol framework can be installed from [Fedora copr repository](https://copr.fedorainfracloud.org/coprs/g/CESNET/IPFIXcol/)
+Just add the repository to your system:
+```
+dnf copr enable @CESNET/IPFIXcol 
+```
+
+And install the packages you need (e.g. IPFIXcol framework and JSON output plugin):
+```
+dnf install ipfixcol ipfixcol-json-output
+```
+
+If you not are using one of the supported operating systems, you can [build the IPFIXcol from sources](#build).
+
 ##<a name="build"></a> How to build
-Whole framework can be build at once with
+Dependencies must be installed first. For Fedora, CentOS and RHEL the list of necessary packages is as follows:
+```
+autoconf bison docbook-style-xsl doxygen flex 
+gcc gcc-c++ git libtool libxml2 libxml2-devel 
+libxslt lksctp-tools-devel lzo-devel make 
+openssl-devel pkgconfig GeoIP-devel rrdtool-devel
+sqlite-devel postgresql-devel rpm-build
+```
+
+Debian and Ubuntu distributions have a different names for some of the packages:
+```
+autoconf bison build-essential docbook-xsl doxygen flex
+git liblzo2-dev libtool libsctp-dev libssl-dev libxml2
+libxml2-dev pkg-config xsltproc libgeoip-dev librrd-dev
+libsqlite3-dev libpq-dev
+```
+Moreover, you need to build the [FastBit library](#fastbit)
+
+After installing all dependencies, the whole framework can be build at once with
 
 ```sh
 autoreconf -i 
@@ -111,10 +145,11 @@ to configure packages in subdirectories and generate Makefiles.
 
 ```sh
 make
+make install
 ```
-to build all projects.
+to build and install all projects.
 
-Or you can build each part (collector, tool(s), extarnal plugin(s)) separately.
+Or you can build each part (collector, tool(s), external plugin(s)) separately.
 
 The projects that depend on ipfixcol headers check the reltive path to base/header directory to use headers. 
 When project is separated from the structure, it needs to have the headers installed (ipfixcol-devel package).
@@ -123,12 +158,17 @@ When project is separated from the structure, it needs to have the headers insta
 
 IPFIXcol can be used with Docker. See [Docker howto](docker).
 
+##<a name="ansible"></a> Ansible
+
+IPFIXcol can also be installed using Ansible orchestration. See [Ansible howto](ansible).
+
 ##<a name="rpm"></a> RPM
 Each part of framework supports building rpm packages by running
 
 ```sh
 make rpm
 ```
+RPMs can be build only for specific parts, not the whole project.
 
 ##<a name="fastbit"></a> FastBit
 Plugins and tools that uses FastBit file format need FasBit library installed. IPFIXcol framework uses it's own fork of FastBit library to keep compatibility.

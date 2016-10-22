@@ -1,3 +1,6 @@
+# wait for data from forwarding collector
+sleep 1
+
 kill $(cat pid)
 rm -f pid
 
