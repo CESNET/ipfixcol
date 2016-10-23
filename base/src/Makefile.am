@@ -25,9 +25,11 @@ BUILT_SOURCES = config.h
 config.h: config.h.in ../config.status
 	sed 's|@sysconfdir[@]|$(sysconfdir)|g' $< > $@
 
-# This is a command for the linker to include all symbols (unused for plugins too)
-# There MUST NOT be any whitespace around commas!
+# "-Wl,--whole-archive,...,--no-whole-archive" is a command for the linker to 
+# include all symbols (unused for plugins too). There MUST NOT be any whitespace
+# around commas.
 ipfixcol_LDFLAGS = \
+	-Lutils/filter/ -lfilter \
 	-Wl,--whole-archive,utils/elements/libelements.a,utils/profiles/libprofiles.a,--no-whole-archive
 
 ipfixcol_LDADD = \
