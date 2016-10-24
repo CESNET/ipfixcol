@@ -78,11 +78,13 @@ void process_startup_xml(struct json_conf *conf, char *params)
 
 	/* Format of TCP flags */
 	std::string tcpFlags = ie.node().child_value("tcpFlags");
-	conf->tcpFlags = (strcasecmp(tcpFlags.c_str(), "formated") == 0);
+	conf->tcpFlags = (strcasecmp(tcpFlags.c_str(), "formated") == 0) ||
+                (strcasecmp(tcpFlags.c_str(), "formatted") == 0);
 
 	/* Format of timestamps */
 	std::string timestamp = ie.node().child_value("timestamp");
-	conf->timestamp = (strcasecmp(timestamp.c_str(), "formated") == 0);
+	conf->timestamp = (strcasecmp(timestamp.c_str(), "formated") == 0) ||
+                (strcasecmp(timestamp.c_str(), "formatted") == 0);
 
 	/* Format of protocols */
 	std::string protocol = ie.node().child_value("protocol");
