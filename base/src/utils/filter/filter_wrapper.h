@@ -42,7 +42,7 @@
 #define FILTER_H_
 
 #include <ipfixcol.h>
-#include "ffilter.h"
+#include "libnf-ffilter/ffilter.h"
 #include <stdint.h>
 
 /**

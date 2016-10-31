@@ -49,7 +49,7 @@
 #include <stdint.h>
 
 #include "filter_wrapper.h"
-#include "ffilter.h"
+#include "libnf-ffilter/ffilter.h"
 
 //TODO: Transform indentification to utilise ability to set pointer to general data in external identification
 #define toGenEnId(gen, en, id) (((uint64_t)gen & 0xffff) << 48 |\
@@ -297,7 +297,7 @@ static struct nff_item_s nff_ipff_map[]={
 	//{"tend", toEnId(0, 153)},
 
 	/* Array is null terminated */
-	{ NULL, 0U},
+	{ NULL, 0U },
 };
 
 /* IANA protocol list */
@@ -696,8 +696,7 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 	//assuming rec is struct ipfix_message
 	struct nff_msg_rec_s* msg_pair = rec;
 	int len;
-	uint64_t tmp;
-	char *ipf_field;
+	uint8_t *ipf_field;
 	ff_mpls_label_t mpls_stack[10];
 
 	uint32_t en;
@@ -768,12 +767,12 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 					memcpy(&mpls_stack[tmp].data, ipf_field, len);
 				}
 			}
-			ipf_field = &mpls_stack[0];
+			ipf_field = (uint8_t*)&mpls_stack[0];
 
 			break;
 		default: return FF_ERR_OTHER;
 		}
-		ipf_field = &tmp;
+		ipf_field = (uint8_t*)&tmp;
 	} else {
 
 		ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, en, ie_id, &len);
@@ -849,9 +848,7 @@ ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, f
 			break;
 		}
 
-
 		nff_item_t *item = NULL;
-		const ipfix_element_t *elem;
 
 		for (int x = 0; dict[x].name != NULL; x++) {
 			if (!strcasecmp(valstr, dict[x].name)) {
@@ -873,7 +870,7 @@ ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, f
 ff_uint64_t calc_record_duration(uint8_t *record, struct ipfix_template *templ)
 {
 	int len;
-	char *ipf_data = NULL;
+	uint8_t *ipf_data = NULL;
 	ff_uint64_t tend, tstart;
 	tend = tstart = 0;
 
