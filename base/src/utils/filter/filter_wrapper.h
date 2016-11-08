@@ -1,9 +1,9 @@
 /**
- * \file profiles/filter_wrapper.c
+ * \file filter_wrapper.h
  * \author Imrich Štoffa <xstoff02@stud.fit.vutbr.cz>
- * \brief Wrapper of future intermediate plugin for IPFIX data filtering
+ * \brief Wrapper of module for IPFIX data filtering
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2016 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -69,7 +69,7 @@ void ipx_filter_free(ipx_filter_t *filter);
 /**
  * \brief Compile filter expression and create profile structure
  *
- * \param pdata
+ * \param filter
  * \param filter_str
  * \return
  */
@@ -78,7 +78,7 @@ int ipx_filter_parse(ipx_filter_t *filter, char* filter_str);
 /**
  * \brief Match filter with IPFIX record
  *
- * \param[in] pdata filter node
+ * \param[in] filter filter node
  * \param[in] msg IPFIX message (filter may contain field from message header)
  * \param[in] record IPFIX data record
  * \return 1 when node fits, 0 otherwise

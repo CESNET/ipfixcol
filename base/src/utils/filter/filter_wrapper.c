@@ -1,9 +1,9 @@
 /**
- * \file profiles/filter_wrapper.c
+ * \file filter_wrapper.c
  * \author Imrich Štoffa <xstoff02@stud.fit.vutbr.cz>
- * \brief Wrapper of future intermediate plugin for IPFIX data filtering
+ * \brief Wrapper of module for IPFIX data filtering
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2016 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -792,6 +792,7 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 	return FF_OK;
 }
 
+/* callback to translate named numbers */
 ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, ff_extern_id_t id, char *buf, size_t *size)
 {
 	struct nff_item_s *dict = NULL;
