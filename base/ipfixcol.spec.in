@@ -74,6 +74,7 @@ make test
 #intermediate plugins
 %{_datadir}/%{name}/plugins/ipfixcol-anonymization-inter.la
 %{_datadir}/%{name}/plugins/ipfixcol-anonymization-inter.so
+%{_mandir}/man1/pfixcol-anonymization-inter.1.gz
 %{_datadir}/%{name}/plugins/ipfixcol-dummy-inter.la
 %{_datadir}/%{name}/plugins/ipfixcol-dummy-inter.so
 %{_datadir}/%{name}/plugins/ipfixcol-joinflows-inter.la
