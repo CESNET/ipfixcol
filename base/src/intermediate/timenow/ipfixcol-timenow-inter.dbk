@@ -11,7 +11,7 @@
 			<year>2016</year>
 			<holder>CESNET, z.s.p.o.</holder>
 		</copyright>
-		<date>10 October 2016</date>
+		<date>22 November 2016</date>
 		<authorgroup>
 			<author>
 				<personname>
@@ -40,10 +40,7 @@
 		<title>Description</title>
 		<simpara>
 			The <command>ipfix-timenow-inter</command> plugin is a part of IPFIXcol (IPFIX collector). 
-			It fills MAC addresses according to IP-MAC mapping stored in sqlite3 database.
-			It can be used to set MAC addresses retrieved from DHCP log.
-			Only IPv4 addresses are currently supported.
-			MAC addresses for IP addresses not found in the database are set to zero.
+			The plugin updates flowStartMilliseconds and flowEndMilliseconds elements in flows to make the flow records up to date. The new time is computed as "old_time + (now - export_time)".
 		</simpara>
 	</refsect1>
 
@@ -56,47 +53,10 @@
 		<programlisting>
 	<![CDATA[
 	<timenow>
-		<path>/path/to/sql.db</path>
-		<pair>
-			<ip en="0" id="225"/>
-			<mac en="0" id="81"/>
-		</pair>
-		<pair>
-			<ip en="0" id="226"/>
-			<mac en="0" id="57"/>
-		</pair>
 	</timenow>
 	]]>
 		</programlisting>
 	
-		<para>
-			<variablelist>
-				<varlistentry>
-					<term><command>path</command></term>
-					<listitem>
-						<simpara>Path to SQL database file.</simpara>
-					</listitem>
-				</varlistentry>
-				<varlistentry>
-					<term><command>pair</command></term>
-					<listitem>
-						<simpara>IP-MAC pair. MAC address for IP address from given elements is retrieved and substituted.</simpara>
-					</listitem>
-					<varlistentry>
-						<term><command>ip</command></term>
-						<listitem>
-							<simpara>IPv4 address element enterprise number and id.</simpara>
-						</listitem>
-					</varlistentry>
-					<varlistentry>
-						<term><command>mac</command></term>
-						<listitem>
-							<simpara>MAC address element enterprise number and id.</simpara>
-						</listitem>
-					</varlistentry>	
-				</varlistentry>
-			</variablelist>
-		</para>
 	</refsect1>
 
 	<refsect1>
