@@ -89,6 +89,9 @@ make test
 %{_datadir}/%{name}/plugins/ipfixcol-odip-inter.la
 %{_datadir}/%{name}/plugins/ipfixcol-odip-inter.so
 %{_mandir}/man1/ipfixcol-odip-inter.1.gz
+%{_datadir}/%{name}/plugins/ipfixcol-timenow-inter.la
+%{_datadir}/%{name}/plugins/ipfixcol-timenow-inter.so
+%{_mandir}/man1/ipfixcol-timenow-inter.1.gz
 #ipfixviewer
 %{_datadir}/%{name}/plugins/ipfixcol-ipfixviewer-output.*
 %{_datadir}/%{name}/ipfixviewer_startup.xml

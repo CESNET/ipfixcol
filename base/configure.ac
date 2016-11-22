@@ -228,6 +228,7 @@ AC_CONFIG_FILES([Makefile
 				src/intermediate/filter/Makefile
 				src/intermediate/odip/Makefile
 				src/intermediate/hooks/Makefile
+				src/intermediate/timenow/Makefile
 				src/utils/Makefile
 				src/utils/ipfixconf/Makefile
 				src/utils/ipfixsend/Makefile
