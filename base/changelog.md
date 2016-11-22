@@ -1,5 +1,20 @@
 **Future release:**
 
+**Version 0.9.2:**
+
+* Added ansible installation from sources
+* Fixed many typos and formatting issues
+* Updated build system to work with Fedora copr build system (epel7 and all fedora releases)
+* Updated install information. It is possible to use copr repositories
+* Fixed forwarding plugin test
+* Forwarding: fixed bug with multiple send of the same templates
+* JSON output + SISO: fixed crashes after destination disconnection
+* ipfixsend: new version with uncached file reading (better for multiple gigabyte files)
+* Added timenow plugin which updates flow times to make flow data fresh
+* Added anonymization plugin man pages to rpm build
+* Added man page documentation for anonymization plugin. Fixed random key init
+* Many more bugfixes
+
 **Version 0.9.1:**
 
 * Statistics: print statistics with default verbosity level
