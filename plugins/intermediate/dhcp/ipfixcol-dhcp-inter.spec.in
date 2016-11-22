@@ -15,7 +15,7 @@ BuildRequires: sqlite-devel libxml2-devel ipfixcol-devel >= 0.7.1
 Requires: sqlite libxml2 ipfixcol >= 0.7.1
 
 %description
-uid intermediate plugin for ipfixcol.
+dhcp intermediate plugin for ipfixcol.
 
 
 %prep
