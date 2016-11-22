@@ -157,7 +157,7 @@ void timenow_update_timestamps(struct ipfix_record *record, uint64_t time_diff)
 	}
 
 	/* Get flow end time (element ID 153) */
-	te = (uint64_t *) data_record_get_field(record->record, record->templ, 0, 152, NULL);
+	te = (uint64_t *) data_record_get_field(record->record, record->templ, 0, 153, NULL);
 	if (!te) {
 		return;
 	}
