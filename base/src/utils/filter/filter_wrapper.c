@@ -156,20 +156,20 @@ static struct nff_item_s nff_ipff_map[]={
 
 	/* CTL_V4V6IP flag allows filter to try to swtch to another equivalent field
 	 * when IPv4 item is not present in flow */
-		{"src ip", toGenEnId(CTL_V4V6IP, 0, 8)},
-		{"dst ip", toGenEnId(CTL_V4V6IP, 0, 12)},
+		{"srcip", toGenEnId(CTL_V4V6IP, 0, 8)},
+		{"dstip", toGenEnId(CTL_V4V6IP, 0, 12)},
 
 	{"net", toGenEnId(CTL_FPAIR, 1, 2)},
-		{"src net", toGenEnId(CTL_V4V6IP, 0, 8)},
-		{"dst net", toGenEnId(CTL_V4V6IP, 0, 12)},
+		{"srcnet", toGenEnId(CTL_V4V6IP, 0, 8)},
+		{"dstnet", toGenEnId(CTL_V4V6IP, 0, 12)},
 	//synonym of IP
 	{"host", toGenEnId(CTL_FPAIR, 1, 2)},
-		{"src host", toGenEnId(CTL_V4V6IP, 0, 8)},
-		{"dst host", toGenEnId(CTL_V4V6IP, 0, 12)},
+		{"srchost", toGenEnId(CTL_V4V6IP, 0, 8)},
+		{"dsthost", toGenEnId(CTL_V4V6IP, 0, 12)},
 
 	{"mask", toGenEnId(CTL_FPAIR, 1, 2)},
-		{"src mask", toGenEnId(CTL_V4V6IP, 0, 9)},
-		{"dst mask", toGenEnId(CTL_V4V6IP, 0, 13)},
+		{"srcmask", toGenEnId(CTL_V4V6IP, 0, 9)},
+		{"dstmask", toGenEnId(CTL_V4V6IP, 0, 13)},
 
 /*
 	//direct specific mapping
@@ -182,12 +182,12 @@ static struct nff_item_s nff_ipff_map[]={
 */
 
 	{"if", toGenEnId(CTL_FPAIR, 1, 2)},
-		{"in if", toEnId(0, 10)},
-		{"out if", toEnId(0, 14)},
+		{"inif", toEnId(0, 10)},
+		{"outif", toEnId(0, 14)},
 
 	{"port", toGenEnId(CTL_FPAIR, 1, 2)},
-		{"src port", toEnId(0, 7)},
-		{"dst port", toEnId(0, 11)},
+		{"srcport", toEnId(0, 7)},
+		{"dstport", toEnId(0, 11)},
 
 	{"icmp-type", toEnId(0, 176)},
 	{"icmp-code", toEnId(0, 177)},
@@ -202,15 +202,15 @@ static struct nff_item_s nff_ipff_map[]={
 	{"as", toGenEnId(CTL_FPAIR, 1, 2)},
 	{"as", toGenEnId(CTL_FPAIR, 2, 3)},
 	{"as", toGenEnId(CTL_FPAIR, 3, 4)},
-		{"src as", toEnId(0, 16)},
-		{"dst as", toEnId(0, 17)},
-		{"next as", toEnId(0, 128)}, //maps  to BGPNEXTADJACENTAS
-		{"prev as", toEnId(0, 129)}, //similar as above
+		{"srcas", toEnId(0, 16)},
+		{"dstas", toEnId(0, 17)},
+		{"nextas", toEnId(0, 128)}, //maps  to BGPNEXTADJACENTAS
+		{"prevas", toEnId(0, 129)}, //similar as above
 
 
 	{"vlan", toGenEnId(CTL_FPAIR, 1, 2)},
-		{"src vlan", toEnId(0, 58)},
-		{"dst vlan", toEnId(0, 59)},
+		{"srcvlan", toEnId(0, 58)},
+		{"dstvlan", toEnId(0, 59)},
 	/* CTL_FLAGS Marks this to be evaluated like flag in case no operator
 	 * is supplied */
 	{"flags", toGenEnId(CTL_FLAGS, 0, 6)},
@@ -222,10 +222,10 @@ static struct nff_item_s nff_ipff_map[]={
 	{"routerip", toEnId(0, 130)},
 
 	{"mac", toGenEnId(CTL_FPAIR, 1, 2)},
-	{"in mac", toGenEnId(CTL_FPAIR, 4, 5)},
-	{"out mac", toGenEnId(CTL_FPAIR, 5, 6)},
-	{"src mac", toGenEnId(CTL_FPAIR, 2, 4)},
-	{"dst mac", toGenEnId(CTL_FPAIR, 2, 4)},
+	{"inmac", toGenEnId(CTL_FPAIR, 4, 5)},
+	{"outmac", toGenEnId(CTL_FPAIR, 5, 6)},
+	{"srcmac", toGenEnId(CTL_FPAIR, 2, 4)},
+	{"dstmac", toGenEnId(CTL_FPAIR, 2, 4)},
 		{"in src mac", toEnId(0, 56)},
 		{"in dst mac", toEnId(0, 80)},
 		{"out src mac", toEnId(0, 81)},
@@ -254,8 +254,8 @@ static struct nff_item_s nff_ipff_map[]={
 	{"flows", toEnId(0, 3)},
 
 	{"tos", toEnId(0, 5)},
-	{"src tos", toEnId(0, 5)},
-	{"dst tos", toEnId(0, 55)},
+	{"srctos", toEnId(0, 5)},
+	{"dsttos", toEnId(0, 55)},
 
 	/* CTL_CALCULATED_ITEM marks specific elements, enumerated ie_id mappings
 	 * are for calculated virtual fields */
@@ -268,30 +268,30 @@ static struct nff_item_s nff_ipff_map[]={
 	{"bpp", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_BPP)},
 
 //Not verified, for
-//	{"asa event", toEnId(0, 230)},
+//	{"asaevent", toEnId(0, 230)},
 	{"xevent", toEnId(0, 233)},
 /*
 	{"xip", toGenEnId(CTL_FPAIR, 1, 2)},
-		{"src xip", toGenEnId(CTL_V4V6IP, 0, 225)},
-		{"dst xip", toGenEnId(CTL_V4V6IP, 0, 226)},
+		{"srcxip", toGenEnId(CTL_V4V6IP, 0, 225)},
+		{"dstxip", toGenEnId(CTL_V4V6IP, 0, 226)},
 
 	{"xport", toGenEnId(CTL_FPAIR, 1, 2)},
-		{"src xport", toEnId(0, 227)},
-		{"dst xport", toEnId(0, 228)},
+		{"srcxport", toEnId(0, 227)},
+		{"dstxport", toEnId(0, 228)},
 */
-	{"nat event", toEnId(0, 230)},
+	{"natevent", toEnId(0, 230)},
 
 	{"nip", toGenEnId(CTL_FPAIR, 1, 2)},
-		{"src nip", toGenEnId(CTL_V4V6IP, 0, 225)},
-		{"dst nip", toGenEnId(CTL_V4V6IP, 0, 226)},
+		{"srcnip", toGenEnId(CTL_V4V6IP, 0, 225)},
+		{"dstnip", toGenEnId(CTL_V4V6IP, 0, 226)},
 
 	{"nport", toGenEnId(CTL_FPAIR, 1, 2)},
-		{"src nport", toEnId(0, 227)},
-		{"dst nport", toEnId(0, 228)},
+		{"srcnport", toEnId(0, 227)},
+		{"dstnport", toEnId(0, 228)},
 
 	{"vrfid", toGenEnId(CTL_FPAIR, 1, 2)},
-		{"ingress vrfid", toEnId(0, 234)},
-		{"egress vrfid", toEnId(0, 235)},
+		{"ingressvrfid", toEnId(0, 234)},
+		{"egressvrfid", toEnId(0, 235)},
 
 	//{"tstart", toEnId(0, 152)},
 	//{"tend", toEnId(0, 153)},
