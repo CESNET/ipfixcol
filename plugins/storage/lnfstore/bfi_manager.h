@@ -55,9 +55,9 @@ typedef struct bfi_mgr_s bfi_mgr_t;
  * \brief Create a manager for a BloomFilter index
  *
  * \note
- *   An output file for current window doesn't exist. Adding records without
- *   the window configuration causes an error. To create a new window and
- *   it's storage file use bfi_mgr_new_file().
+ *   An output file for current window doesn't exist after creation of the index
+ *   manager. Adding records without the window configuration causes an error.
+ *   To create a new window and it's storage file use bfi_mgr_new_file().
  *
  * \param[in] prob     False positive probability
  * \param[in] item_cnt Projected element count (i.e. IP address count)

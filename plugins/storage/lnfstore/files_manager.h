@@ -58,16 +58,18 @@ enum FILES_MODE {
  * \brief Template for output files
  *
  * Output files is stored based on following templates:
- * \n LNF file:   'dir'/YY/MM/DD/'prefixes.lnf'/'suffix_mask'
- * \n Index file: 'dir'/YY/MM/DD/'prefixes.bloom'/'suffix_mask'
+ * \n LNF file:   'dir'/YY/MM/DD/'prefixes.lnf''suffix_mask'
+ * \n Index file: 'dir'/YY/MM/DD/'prefixes.bloom''suffix_mask'
  *
  * Where /YY/MM/DD means year/month/day. Variables 'dir' and 'prefixes.xxx'
- * should not include any special format characters for data & time.
+ * should not include any special format characters for date & time.
  * Variable 'suffix_mask' MUST include special format characters (at least,
  * for time) that are replaced with appropriate date & time representation!
  *
  * \note
- *   All fields expect 'prefixes.xxx' are mandatory i.e. MUST NOT be NULL.
+ *   All fields except 'prefixes.xxx' are mandatory i.e. MUST NOT be NULL.
+ *   'prefixes.lnf' and 'prefixes.bool' MUST NOT be equal, if indexing is turned
+ *   on, at least one of 'prefixes.xxx' have to be set.
  */
 struct files_mgr_paths {
 	const char *dir;            /**< Storage directory */
@@ -78,20 +80,20 @@ struct files_mgr_paths {
 	 */
 	struct {
 		const char *lnf;     /**< File prefix of a "LNF" file                */
-		const char *index;   /**< File prefix of a "Bloom Filter index" file */
+		const char *index;   /**< File prefix of a "Bloom filter index" file */
 	} prefixes;
 
 	const char *suffix_mask;    /**< File mask */
 };
 
 /**
- * \brief Structure for Bloom Filter index parameters
+ * \brief Structure for Bloom filter index parameters
  */
 struct files_mgr_idx_param {
 	double   prob;       /**< False positive probability */
 	uint64_t item_cnt;   /**< Projected element count (i.e. IP address count) */
 	bool     autosize;   /**< Enable automatic recalculation of parameters
-                            * based on usage. */
+						   *  based on usage. */
 };
 
 /**
@@ -107,9 +109,10 @@ struct files_mgr_lnf_param {
  * \brief Create an output file manager
  *
  * \note
- *   Output files for current window do not exist. Adding records to output
- *   files without the window configuration causes an error. To create a new
- *   window and it's storage files use files_mgr_new_window().
+ *   Output files for current window do not exist after creation of the output
+ *   file manager. Adding records to output files without the window
+ *   configuration causes an error. To create a new window and it's storage
+ *   files use files_mgr_new_window().
  *
  * \param[in] mode      Type of output file(s)
  * \param[in] paths     Path template of output file(s)

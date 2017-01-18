@@ -183,7 +183,7 @@ files_mgr_path_free(struct files_mgr_paths *paths)
 
 /**
  * \brief Make a copy of a path template
- * \warning The structure MUST be free by files_mgr_path_free()
+ * \warning The structure MUST be freed by files_mgr_path_free()
  * \param paths Pointer to original structure
  * \return On success returns a pointer to the copy. Otherwise (usually memory
  *   allocation error) returns NULL.
@@ -270,7 +270,7 @@ files_mgr_create(enum FILES_MODE mode, const struct files_mgr_paths *paths,
 
 	if (mode & FILES_M_INDEX && idx_param == NULL) {
 		MSG_ERROR(msg_module, "File manager error (missing parameters for "
-			"Bloom Filter index).");
+			"Bloom filter index).");
 		return NULL;
 	}
 
@@ -295,7 +295,7 @@ files_mgr_create(enum FILES_MODE mode, const struct files_mgr_paths *paths,
 			idx_param->item_cnt, idx_param->autosize);
 		if (!mgr->outputs.file_bloom) {
 			MSG_ERROR(msg_module, "Files manager error (unable to create "
-				"BFI manager).");
+				"index manager).");
 			files_mgr_path_free(mgr->paths_tmplt);
 			free(mgr);
 			return NULL;
