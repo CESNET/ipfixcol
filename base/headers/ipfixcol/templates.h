@@ -164,11 +164,47 @@ struct ipfix_template_key {
  */
 struct ipfix_template_mgr_record {
 	struct ipfix_template **templates;/**array of pointers to Templates */
-	uint16_t max_length;  /**maximum length of array */
-	uint16_t counter;     /**number of templates in array */
-	uint64_t key;		  /** unique identifier (combination of odid and crc from ipfix_template_key) */
+	uint16_t max_length;    /**< maximum length of array */
+	uint16_t counter;       /**< number of templates in array */
+	uint64_t key;           /**< unique identifier (combination of odid and crc from ipfix_template_key) */
+	uint16_t registrations; /**< Number of reservations (from sources) */
+
 	struct ipfix_template_mgr_record *next; /** pointer to next record in template manager's list */
 };
+
+/**
+ * \brief Registre an exporter template record
+ *
+ * This function protects ODID templates in case of short disconnection
+ * of an IPFIX exporter (shorter than closing time of a storage plugin).
+ * Reason:
+ * When sources of the same ODID are disconnected, output data manager will
+ * stop corresponding output plugins and then free ODID templates. Because
+ * closing of plugin can take a lot of time there is change that an exported
+ * that was early disconnected (and caused termination of output plugins) is
+ * reconnected and newly received templates are deleted, after the output
+ * plugins are successfully terminated (i.e. identification of the source
+ * is still the same from template manager's point of view).
+ *
+ * \param[in,out] tm   Template manager
+ * \param[in]     odid Observation domain ID
+ * \param[in]     crc  Source exported CRC
+ * \return On success returns 0. Otherwise returns a non-zero value.
+ */
+API int tm_source_register(struct ipfix_template_mgr *tm, uint32_t odid,
+	uint32_t crc);
+
+/**
+ * \brief Unregister an exporter template record
+ *
+ * When there is no registration on the record, templates can be removed.
+ * \param[in,out] tm   Template manager
+ * \param[in]     odid Observation domain ID
+ * \param[in]     crc  Source exported CRC
+ * \return On success returns 0. Otherwise returns a non-zero value.
+ */
+API int tm_source_unregister(struct ipfix_template_mgr *tm, uint32_t odid,
+	uint32_t crc);
 
 /**
  * \brief Function for creating new template
@@ -241,14 +277,12 @@ API struct ipfix_template *tm_get_template(struct ipfix_template_mgr *tm, struct
 API int tm_remove_template(struct ipfix_template_mgr *tm, struct ipfix_template_key *key);
 
 /**
- * \brief Function for removing all Temaplates of specific type.
+ * \brief Function for removing all Temaplates from the manager.
  *
  * \param[in]  tm Template Manager
- * \param[in]  type type of the template to withdraw. TM_TEMPLATE = Template,
- * TM_OPTIONS_TEMPLATE = Options Template.
  * \return 0 on success, negative value otherwise.
  */
-API int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type);
+API void tm_remove_all_templates(struct ipfix_template_mgr *tm);
 
 /**
  * \brief Remove all templates for ODID
@@ -322,7 +356,7 @@ API void tm_destroy(struct ipfix_template_mgr *tm);
 
 /**
  * \brief Make ipfix_template_key from ODID, crc and template id
- * 
+ *
  * \param[in] odid Observation Domain ID
  * \param[in] crc  CRC from source IP and source port
  * \param[in] tid  Template ID
@@ -341,7 +375,7 @@ API struct ipfix_template_key *tm_key_change_template_id(struct ipfix_template_k
 
 /**
  * \brief Destroy ipfix_template_key structure
- * 
+ *
  * \param[in] key IPFIX template key
  */
 API void tm_key_destroy(struct ipfix_template_key *key);

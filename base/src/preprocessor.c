@@ -67,7 +67,7 @@ struct data_source_info *data_source_info = NULL;
 
 /**
  * \brief Get sequence number counter for given flow data source
- * 
+ *
  * \param[in] exporter_ip_addr CRC32 of exporter IP address
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number counter
@@ -88,7 +88,7 @@ struct data_source_info *data_source_info_get(uint32_t exporter_ip_addr, uint32_
 
 /**
  * \brief Add new flow data source info
- * 
+ *
  * \param[in] exporter_ip_addr CRC32 of exporter IP address
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number counter
@@ -119,7 +119,7 @@ struct data_source_info *data_source_info_add(uint32_t exporter_ip_addr, uint32_
 
 /**
  * \brief Add new data source info
- * 
+ *
  * \param[in] exporter_ip_addr CRC32 of exporter IP address
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number counter
@@ -137,7 +137,7 @@ struct data_source_info *data_source_info_add_source(uint32_t exporter_ip_addr, 
 
 /**
  * \brief Remove data source info
- * 
+ *
  * \param[in] exporter_ip_addr CRC32 of exporter IP address
  * \param[in] odid Observation Domain ID
  */
@@ -151,7 +151,7 @@ void data_source_info_remove_source(uint32_t exporter_ip_addr, uint32_t odid)
 
 /**
  * \brief Get data source info struct or add a new one
- * 
+ *
  * \param[in] exporter_ip_addr CRC32 of exporter IP address
  * \param[in] odid Observation Domain ID
  * \return data_source_info
@@ -162,13 +162,13 @@ struct data_source_info *data_source_info_get_or_add(uint32_t exporter_ip_addr, 
 	if (!aux_info) {
 		aux_info = data_source_info_add(exporter_ip_addr, odid);
 	}
-	
+
 	return aux_info;
 }
 
 /**
  * \brief Get sequence number for given data source
- * 
+ *
  * \param[in] exporter_ip_addr CRC32 of exporter IP address
  * \param[in] odid Observation Domain ID
  * \return Pointer to sequence number value
@@ -185,7 +185,7 @@ uint32_t *data_source_info_get_sequence_number(uint32_t exporter_ip_addr, uint32
 
 /**
  * \brief Get free template ID for data source
- * 
+ *
  * \param[in] exporter_ip_addr CRC32 of exporter IP address
  * \param[in] odid Observation Domain ID
  * \return Next free template ID
@@ -196,7 +196,7 @@ uint32_t data_source_info_get_free_tid(uint32_t exporter_ip_addr, uint32_t odid)
 	if (!aux_info) {
 		return 256;
 	}
-	
+
 	return aux_info->free_tid++;
 }
 
@@ -239,19 +239,13 @@ struct ring_buffer *get_preprocessor_output_queue()
 	return preprocessor_out_queue;
 }
 
-/**
- * \brief Compute 32b CRC from input informations 
- * 
- * @param input_info Input informations
- * @return crc32
- */
 uint32_t preprocessor_compute_crc(struct input_info *input_info)
 {
 	if (input_info->type == SOURCE_TYPE_IPFIX_FILE) {
 		struct input_info_file *input_file = (struct input_info_file *) input_info;
 		return crc32(input_file->name, strlen(input_file->name));
 	}
-	
+
 	struct input_info_network *input = (struct input_info_network *) input_info;
 
 	char buff[INET6_ADDRSTRLEN + 5 + 1]; // 5: port; 1: null
@@ -314,7 +308,7 @@ static void preprocessor_udp_init(struct input_info_network *input_info, struct 
  * \param[in] key template key with filled crc and odid
  * \return length of the template
  */
-static int preprocessor_process_one_template(void *tmpl, int max_len, int type, 
+static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 		uint32_t msg_counter, struct input_info *input_info, struct ipfix_template_key *key)
 {
 	struct ipfix_template_record *template_record;
@@ -336,8 +330,9 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 				template_id == IPFIX_OPTION_FLOWSET_ID) &&
 			ntohs(template_record->count) == 0) {
 		/* withdraw template or option template */
-		tm_remove_all_templates(template_mgr, type);
+		// TODO: add support
 		/* don't try to parse the withdraw template */
+		MSG_WARNING(msg_module, "[%u] Received All %s withdrawal message. Not supported by this version of the collector!", input_info->odid, (type == TM_TEMPLATE) ? "Template" : "Options template");
 		return TM_TEMPLATE_WITHDRAW_LEN;
 		/* check for withdraw template message */
 	} else if (ntohs(template_record->count) == 0) {
@@ -379,7 +374,7 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 		template->last_message = msg_counter;
 		template->last_transmission = time(NULL);
 	}
-	
+
 	/* Set new template id to original template record */
 	template_record->template_id = htons(template->template_id);
 
@@ -398,7 +393,7 @@ static int mdata_max = 0;
 void fill_metadata(uint8_t *rec, int rec_len, struct ipfix_template *templ, void *data)
 {
 	struct ipfix_message *msg = (struct ipfix_message *) data;
-	
+
 	/* Allocate space for metadata */
 	if (mdata_max == 0) {
 		mdata_max = 75;
@@ -409,28 +404,28 @@ void fill_metadata(uint8_t *rec, int rec_len, struct ipfix_template *templ, void
 			return;
 		}
 	}
-	
+
 	/* Need more space */
 	if (msg->data_records_count == mdata_max) {
 		void *new_mdata = realloc(msg->metadata, mdata_max * 2 * sizeof(struct metadata));
-		
+
 		if (!new_mdata) {
 			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 			return;
 		}
-	
+
 		msg->metadata = new_mdata;
 		memset(&(msg->metadata[mdata_max]), 0, mdata_max * sizeof(struct metadata));
 
 		mdata_max *= 2;
 	}
-	
+
 	/* Fill metadata */
 	msg->live_profile = (global_config) ? config_get_current_profiles(global_config) : NULL;
 	msg->metadata[msg->data_records_count].record.record = rec;
 	msg->metadata[msg->data_records_count].record.length = rec_len;
 	msg->metadata[msg->data_records_count].record.templ = templ;
-	
+
 	msg->data_records_count++;
 }
 
@@ -461,7 +456,7 @@ static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
 
 	struct udp_conf udp_conf = {0};
 	struct ipfix_template_key key;
-	
+
 	msg->data_records_count = msg->templ_records_count = msg->opt_templ_records_count = 0;
 
 	key.odid = ntohl(msg->pkt_header->observation_domain_id);
@@ -544,19 +539,19 @@ static uint32_t preprocessor_process_templates(struct ipfix_message *msg)
 	 * a) fill metadata AFTER counting data records
 	 *		+ allocate whole array at once
 	 *		- data sets and data records are accesed twice (data_set_records_count and data_set_process_records)
-	 * 
+	 *
 	 * b) fill metadata WHILE counting data records (using now) (replace data_set_records_count with data_set_process_records and add callback)
 	 *		+ one acces to data sets
 	 *		- needs reallocation
 	 */
-	
+
 	/* return number of data records */
 	return msg->data_records_count;
 }
 
 /**
  * \brief Parse IPFIX message and send it to intermediate plugin or output managers queue
- * 
+ *
  * @param packet Received data from input plugins
  * @param len Packet length
  * @param input_info Input informations about source etc.
@@ -575,7 +570,7 @@ void preprocessor_parse_msg(void* packet, int len, struct input_info* input_info
 		if (packet) {
 			free(packet);
 		}
-			
+
 		packet = NULL;
 		return;
 	}
@@ -610,6 +605,10 @@ void preprocessor_parse_msg(void* packet, int len, struct input_info* input_info
 
 		if (source_status == SOURCE_STATUS_NEW) {
 			data_source_info_add_source(exporter_ip_addr, ntohl(msg->pkt_header->observation_domain_id));
+
+			if (tm_source_register(template_mgr, input_info->odid, exporter_ip_addr)) {
+				MSG_WARNING(msg_module, "[%u] Unable to register a source in the main template manager!", input_info->odid);
+			}
 		}
 
 		/* Process templates and correct sequence number */
