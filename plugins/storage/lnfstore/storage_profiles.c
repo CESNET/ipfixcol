@@ -1,9 +1,7 @@
 /**
- * \file storage.c
- * \author Imrich Stoffa <xstoff02@stud.fit.vutbr.cz>
+ * \file storage_profiles.c
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
- * \author Pavel Krobot <Pavel.Krobot@cesnet.cz>
- * \brief Storage management (source file)
+ * \brief Profile storage management (source file)
  *
  * Copyright (C) 2015, 2016 CESNET, z.s.p.o.
  *
@@ -40,463 +38,444 @@
  */
 
 #include <ipfixcol.h>
-#include <ipfixcol/profiles.h>
-
-#include "storage_basic.h"
-#include "storage_profiles.h"
-#include "translator.h"
-#include "bitset.h"
-#include <bf_index.h>
-#include <libnf.h>
 #include <string.h>
-#include <libxml/xmlstring.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <time.h>
-#include <errno.h>
-#include <stdbool.h>
+#include <ipfixcol/profiles.h>
+#include <limits.h>
 
-// Module identification
-static const char* msg_module = "lnfstore";
-
-
-
-// Profile storage only ---------------------------------------------------- >>>
-static void update_profiles_states(struct lnfstore_conf *conf,
-								indexing_profiles_events_t event)
-{
-	if (!conf->profiles_ptr) {
-		return;
-	}
-
-	for (int i = 0; i < conf->profiles_size; ++i) {
-		profile_file_t *profile = &conf->profiles_ptr[i];
-
-		switch(event){
-			case IPE_NEW_WINDOW_START:
-				if (profile->lnf_index->state == BF_IN_PROGRESS){
-					profile->lnf_index->state = BF_CLOSING;
-				} else if (profile->lnf_index->state == BF_IN_PROGRESS_FIRST){
-					profile->lnf_index->state = BF_CLOSING_FIRST;
-				}
-				break;
-
-			case IPE_NEW_WINDOW_END:
-				if (profile->lnf_index->state == BF_CLOSING ||
-						profile->lnf_index->state == BF_CLOSING_FIRST){
-					profile->lnf_index->state = BF_IN_PROGRESS;
-				} else if (profile->lnf_index->state == BF_INIT){
-					profile->lnf_index->state = BF_IN_PROGRESS_FIRST;
-				}
-				break;
-
-			case IPE_RELOAD_PROFILES:
-				if (profile->lnf_index->state == BF_INIT){
-					profile->lnf_index->state = BF_IN_PROGRESS_FIRST;
-				}
-				break;
-
-			case IPE_CLEANUP:
-				profile->lnf_index->state = BF_CLOSING_LAST;
-				break;
-
-			default:
-				break;
-		}
-	}
-}
-
-
-static int cmp_profile_file(const void* m1, const void* m2)
-{
-	const profile_file_t *val1 = m1;
-	const profile_file_t *val2 = m2;
-
-	if (val1->address == val2->address) {
-		return 0;
-	}
-
-	return (val1->address < val2->address) ? (-1) : (1);
-}
-
-
-static int open_storage_files(struct lnfstore_conf *conf)
-{
-	if (!conf->profiles_ptr) {
-		return 0;
-	}
-
-	// Prepare filenames
-	char *index_file;
-	char *file_str = create_file_name(conf, &index_file);
-	if (!file_str) {
-		return 1;
-	}
-
-	size_t file_len = strlen(file_str);
-	unsigned int flags = LNF_WRITE;
-	if (conf->params->compress) {
-		flags |= LNF_COMP;
-	}
-
-	for (int i = 0; i < conf->profiles_size; ++i) {
-		profile_file_t *profile = &conf->profiles_ptr[i];
-
-		const char *dir = profile_get_directory(profile->address);
-		size_t size = file_len + strlen(dir) + 2; // '/' + '\0'
-
-		char *total_path = (char *) malloc(size * sizeof(char));
-		if (!total_path) {
-			MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
-				__FILE__, __LINE__);
-			continue;
-		}
-
-		snprintf(total_path, size, "%s/%s", dir, file_str);
-		if (mkdir_hierarchy(total_path) != 0) {
-			free(total_path);
-			continue;
-		}
-
-		int status = lnf_open(&profile->file, total_path, flags,
-			conf->params->file_ident);
-		if (status != LNF_OK) {
-			MSG_ERROR(msg_module, "Failed to create new file '%s'",
-				total_path);
-			profile->file = NULL;
-		}
-		free(total_path);
-
-		if (conf->params->bf.indexing) {
-			// If lnf index creation failed before, try again
-			if (!profile->lnf_index){
-				profile->lnf_index = create_lnfstore_index(conf->params->bf);
-				if (!profile->lnf_index){
-					/// TODO identifikace profilu
-					MSG_ERROR(msg_module, "Failed to initialize lnfstore index"
-								"for profile TODO, last data file will not be indexed");
-					continue;
-				}
-			}
-			// Prepare index
-			if (index_file){
-				if (prepare_index(profile->lnf_index, conf->params->bf, (char *) dir,
-						index_file) != 0){
-					MSG_WARNING(msg_module, "Unable to prepare index, last data "
-							"file will not be indexed");
-					profile->lnf_index->state = BF_ERROR;
-				} else {
-					if (profile->lnf_index->state == BF_ERROR){
-						profile->lnf_index->state = BF_IN_PROGRESS;
-					}
-				}
-			} else {
-				/// TODO identifikace profilu
-				MSG_WARNING(msg_module, "Unable to get index file name for "
-							"profile TODO, last data file will not be indexed");
-				profile->lnf_index->state = BF_ERROR;
-			}
-		}
-	}
-
-	free(file_str);
-	//free(dir); TODO nechybi??
-
-	return 0;
-}
-
-static void close_storage_files(struct lnfstore_conf *conf)
-{
-	if (!conf->profiles_ptr) {
-		return;
-	}
-
-	MSG_INFO(msg_module, "Closing files.");
-
-	for (int i = 0; i < conf->profiles_size; ++i) {
-		profile_file_t *profile = &conf->profiles_ptr[i];
-
-		if (!profile->file) {
-			// File not opened
-			continue;
-		}
-
-		lnf_close(profile->file);
-		profile->file = NULL;
-
-		MSG_INFO(msg_module, "Profile %d indexing state: %d.", i, profile->lnf_index->state);
-
-		if (profile->lnf_index->state == BF_CLOSING || // standard situation
-			profile->lnf_index->state == BF_IN_PROGRESS || // reloading profiles inside a time window
-			profile->lnf_index->state == BF_CLOSING_FIRST || // standard situation (after first window)
-			profile->lnf_index->state == BF_IN_PROGRESS_FIRST || // reloading profiles (inside first window)
-			profile->lnf_index->state == BF_CLOSING_LAST) // standard situation (cleaning up)
-		{
-			if (store_index(profile->lnf_index->index) != BFI_OK){
-				print_last_index_error();
-				MSG_WARNING(msg_module, "Storing index error, last data file "
-							"will not be indexed");
-			}
-		}
-	}
-}
-
-
-static void new_window(time_t now, struct lnfstore_conf *conf)
-{
-	// Close file(s)
-	close_storage_files(conf);
-
-	if (conf->profiles_ptr && conf->params->bf.indexing && conf->params->bf_index_autosize) {
-		for (int i = 0; i < conf->profiles_size; ++i) {
-			profile_file_t *profile = &conf->profiles_ptr[i];
-
-			if (!profile->lnf_index){
-				continue;
-			} else {
-				unsigned long act_cnt = stored_item_cnt(profile->lnf_index->index);
-				double coeff = BF_TOL_COEFF(act_cnt);
-				if ((BF_UPPER_TOLERANCE(act_cnt, coeff)) > profile->lnf_index->unique_item_cnt ||
-						(profile->lnf_index->state == BF_CLOSING &&
-						BF_LOWER_TOLERANCE(act_cnt, coeff) < profile->lnf_index->unique_item_cnt))
-
-				{
-//					fprintf(stderr, "Profile %d: State: %d, VAL: %d, COEFF: %f, UP: %d(%f), LOW: %d(%f), SET: %d(%f)\n",
-//								i,
-//								profile->lnf_index->state,
-//								act_cnt,
-//								coeff,
-//								(act_cnt + (unsigned long)BF_UPPER_TOLERANCE(act_cnt, coeff)),
-//								(double)act_cnt + BF_UPPER_TOLERANCE(act_cnt, coeff),
-//								act_cnt + (unsigned long)BF_LOWER_TOLERANCE(act_cnt, coeff),
-//								(double)act_cnt + BF_LOWER_TOLERANCE(act_cnt, coeff),
-//								(unsigned long)(act_cnt*coeff),
-//								act_cnt*coeff);
-					// Higher act_cnt = make bigger bloom filter
-					// Lower act_cnt = save space, make smaller bloom filter
-					profile->lnf_index->unique_item_cnt = (unsigned long)(act_cnt * coeff);
-					profile->lnf_index->params_changed = true;
-				}
-			}
-		}
-	}
-
-	// Update time
-	conf->window_start = now;
-	if (conf->params->window_align) {
-		conf->window_start = (now / conf->params->window_time) *
-			conf->params->window_time;
-	}
-
-	// Create new files
-	open_storage_files(conf);
-
-	MSG_INFO(msg_module, "New time window created.");
-}
-
+#include "storage_profiles.h"
+#include "lnfstore.h"
+#include "files_manager.h"
+#include "profiler_events.h"
+#include "configuration.h"
+#include "storage_common.h"
 
 /**
- * \brief Update the list of profiles
- * \param[in,out] conf Plugin configuration
- * \param[in] profiles List of all active profiles (null terminated)
- * \return On success returns 0. Otherwise returns non-zero value.
+ * \brief Global data shared among all channels (read-only)
  */
-static int update_profiles(struct lnfstore_conf *conf, void **profiles)
+struct stg_profiles_global {
+	/** Pointer to the plugin parameters */
+	const struct conf_params *params;
+	/** Start of current time window (required for runtime reconfiguration of
+	 *  channels i.e. creating/deleting) */
+	time_t window_start;
+
+	/** Operation status (returns status of selected callbacks) */
+	int op_status;
+};
+
+/**
+ * \brief Local data for each channel
+ */
+struct stg_profiles_chnl_local {
+	/** Output file(s)  */
+	files_mgr_t *manager;
+};
+
+/**
+ * \brief Internal structure of the manager
+ */
+struct stg_profiles_s {
+	/** Profile event manager */
+	pevents_t *event_mgr;
+
+	/** Pointer to the global parameters shared among all channels */
+	struct stg_profiles_global global;
+};
+
+/**
+ * \brief Generate an output directory filename of a channel
+ *
+ * Based on an output directory specified by the channel's parent profile and
+ * channel name generates directory filename.
+ * Format: 'profile_dir'/'chanel_name'̈́/
+ *
+ * \warning Return value MUST be freed by user using free().
+ * \param[in] channel Pointer to the channel
+ * \return On success returns a pointer to the filename (string). Otherwise
+ *   returns a non-zero value.
+ */
+static char *
+channel_get_dirname(void *channel)
 {
-	if (!profiles) {
-		return 1;
+	const char *channel_subdir = "channels";
+	const char *channel_name;
+	const char *profile_dir;
+	void *profile_ptr;
+
+	channel_name = channel_get_name(channel);
+	profile_ptr  = channel_get_profile(channel);
+	profile_dir  = profile_get_directory(profile_ptr);
+
+	const size_t len_extra = strlen(channel_subdir) + 4U; // 4 = 3x'/' + 1x'\0'
+	size_t dir_len = strlen(profile_dir) + strlen(channel_name) + len_extra;
+	if (dir_len >= PATH_MAX) {
+		MSG_ERROR(msg_module, "Failed to create directory path (Directory name "
+			"is too long)");
+		return NULL;
 	}
 
-	// Delete old profiles
-	if (conf->profiles_ptr) {
-		close_storage_files(conf);
-		free(conf->profiles_ptr);
-		conf->profiles_ptr = NULL;
-		conf->profiles_size = 0;
-		bitset_destroy(conf->bitset);
-		conf->bitset = NULL;
-		/// TODO destroy indexes -> nebude, budou inteligentni profily
-	}
-
-	// Create new profiles
-	int size;
-	for (size = 0; profiles[size] != 0; size++);
-	if (size == 0) {
-		MSG_WARNING(msg_module, "List of active profiles is empty!");
-		return 1;
-	}
-
-	conf->profiles_ptr = (profile_file_t *) calloc(size, sizeof(profile_file_t));
-	if (!conf->profiles_ptr) {
+	char *out_dir = (char *) malloc(dir_len * sizeof(char));
+	if (!out_dir) {
 		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
 			__FILE__, __LINE__);
+		return NULL;
+	}
+
+	int ret = snprintf(out_dir, dir_len, "%s/%s/%s/", profile_dir,
+		channel_subdir, channel_name);
+	if (ret < 0 || ((size_t) ret) >= dir_len) {
+		MSG_ERROR(msg_module, "snprintf() error");
+		free(out_dir);
+		return NULL;
+	}
+
+	return out_dir;
+}
+
+/**
+ * \brief Close a channel's storage
+ *
+ * Destroy a files manager.
+ * \param[in,out] local Local data of the channel
+ */
+static void
+channel_storage_close(struct stg_profiles_chnl_local *local)
+{
+	// Close & delete a files manager
+	if (local->manager) {
+		files_mgr_destroy(local->manager);
+		local->manager = NULL;
+	}
+}
+
+/**
+ * \brief Open a channel's storage
+ *
+ * First, if the previous instance of the storage exists, it'll be closed and
+ * deleted. Second, the function generates a name of an output directory
+ * and creates a new files manager for output files.
+ * \param[in,out] local       Local data of the channel
+ * \param[in]     global      Global structure shared among all channels
+ * \param[in]     channel_ptr Pointer to a channel (from a profiler)
+ * \return On success returns 0. Otherwise returns a non-zero value and the
+ *   files manager is not initialized (i.e. no records can be created).
+ */
+static int
+channel_storage_open(struct stg_profiles_chnl_local *local,
+	const struct stg_profiles_global *global, void *channel_ptr)
+{
+	// Make sure that the previous instance is deleted
+	channel_storage_close(local);
+
+	// Get a new directory name
+	char *dir = channel_get_dirname(channel_ptr);
+	if (!dir) {
+		// Failed to create the directory name
 		return 1;
 	}
 
-	conf->bitset = bitset_create(size);
-	if (!conf->bitset) {
-		MSG_ERROR(msg_module, "Failed to allocate internal bitset.");
-		free(conf->profiles_ptr);
-		conf->profiles_ptr = NULL;
+	// Create a new files manager
+	files_mgr_t *new_mgr;
+	new_mgr = stg_common_files_mgr_create(global->params, dir);
+	free(dir);
+	if (!new_mgr) {
+		// Failed to create a files manager
 		return 1;
 	}
 
-	conf->profiles_size = size;
-
-	// Initialize profile pointers
-	for (int i = 0; i < conf->profiles_size; ++i) {
-		profile_file_t *profile = &conf->profiles_ptr[i];
-		profile->address = profiles[i];
-		profile->file = NULL;
-		profile->lnf_index = create_lnfstore_index(conf->params->bf);
-		if (!profile->lnf_index){
-			MSG_ERROR(msg_module, "Failed to initialize lnfstore index "
-						"for profile TODO, last data file will not be indexed");
-			continue;
-		}
-	}
-
-	// Sort profiles for further binary search
-	qsort(conf->profiles_ptr, conf->profiles_size, sizeof(profile_file_t),
-		cmp_profile_file);
-
-	// Open storage files
-	open_storage_files(conf);
-
-	MSG_DEBUG(msg_module, "List of profiles successfully updated.");
+	local->manager = new_mgr;
 	return 0;
 }
 
-
-static int reload_profiles(struct lnfstore_conf *conf, void **channels)
+/**
+ * \brief Create a new time window
+ *
+ * Close & reopen output files
+ * \param[in,out] local       Local data of the channel
+ * \param[in]     global      Global structure shared among all channels
+ * \param[in]     channel_ptr Pointer to a channel (from a profiler)
+ * \return On success returns 0. Otherwise returns a non-zero value.
+ */
+static int
+channel_storage_new_window(struct stg_profiles_chnl_local *local,
+	const struct stg_profiles_global *global)
 {
-	// Get profiles
-	void *channel = channels[0];
-	void *profile = channel_get_profile(channel);
-	void **profiles = profile_get_all_profiles(profile);
-	if (!profiles) {
-		MSG_ERROR(msg_module, "Failed to get the list of all profiles");
+	if (!local->manager) {
+		// Uninitialized manager
 		return 1;
 	}
 
-	// Update profiles
-	int ret_val;
-	ret_val = update_profiles(conf, profiles);
-	free(profiles);
-
-	if (ret_val != 0) {
-		MSG_ERROR(msg_module, "Failed to update the list of profiles");
+	// Start a time window
+	if (files_mgr_new_window(local->manager, &global->window_start)) {
+		// Totally or partially failed...
 		return 1;
-	}
-
-	MSG_INFO(msg_module, "Successfully reloaded profiles (%d profiles are "
-				"active now).", conf->profiles_size);
+	};
 
 	return 0;
 }
 
-
-static void store_to_profiles(struct lnfstore_conf *conf, void **channels)
+/**
+ * \brief Create a new channel
+ *
+ * The main purpose of this function is to create files managers (output files)
+ * for this channel.
+ *
+ * \param[in,out] ctx Information context about the channel
+ * \return On success returns a pointer to local data. Otherwise returns NULL.
+ */
+static void *
+channel_create_cb(struct pevents_ctx *ctx)
 {
-	if (channels == NULL || channels[0] == NULL) {
+	const char *channel_path = channel_get_path(ctx->ptr.channel);
+	const char *channel_name = channel_get_name(ctx->ptr.channel);
+	MSG_DEBUG(msg_module, "Processing new channel '%s%s'...", channel_path,
+		channel_name);
+
+	// Create an internal structure
+	struct stg_profiles_chnl_local *local_data;
+	local_data = calloc(1, sizeof(*local_data));
+	if (!local_data) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
+			__FILE__, __LINE__);
+		MSG_ERROR(msg_module, "Failed to create storage of channel '%s%s' "
+			"(memory allocation error). Unrecoverable error occurred, please, "
+			"delete and create the channel or restart this plugin.",
+			channel_path, channel_name);
+		return NULL;
+	}
+
+	if (channel_storage_open(local_data, ctx->user.global, ctx->ptr.channel)) {
+		// Failed
+		MSG_WARNING(msg_module, "Failed to create storage of channel '%s%s'. "
+			"Further records of this channel will NOT be stored.",
+			channel_path, channel_name);
+		return local_data;
+	}
+
+	if (channel_storage_new_window(local_data, ctx->user.global)) {
+		// Failed
+		MSG_WARNING(msg_module, "Failed to create a new time window of channel "
+			"'%s%s'. Output file(s) of this channel are not prepared and "
+			"further records will NOT be stored.", channel_path, channel_name);
+		return local_data;
+	}
+
+	MSG_INFO(msg_module, "Channel '%s%s' has been successfully created.",
+		channel_path, channel_name);
+	return local_data;
+}
+
+/**
+ * \brief Delete a channel
+ *
+ * The function deletes early create a file manager (aka local data)
+ * \param[in,out] ctx Information context about the channel
+ */
+static void
+channel_delete_cb(struct pevents_ctx *ctx)
+{
+	const char *channel_path = channel_get_path(ctx->ptr.channel);
+	const char *channel_name = channel_get_name(ctx->ptr.channel);
+	MSG_DEBUG(msg_module, "Deleting channel '%s%s'...", channel_path,
+		channel_name);
+
+	struct stg_profiles_chnl_local *local_data;
+	local_data = (struct stg_profiles_chnl_local *) ctx->user.local;
+	if (local_data != NULL) {
+		channel_storage_close(local_data);
+		free(local_data);
+	}
+
+	MSG_INFO(msg_module, "Channel '%s%s' has been successfully closed.",
+		channel_path, channel_name);
+}
+
+/**
+ * \brief Update a channel
+ *
+ * Based on a configuration of the channel and parent's profile, open/change/
+ * close file storage.
+ *
+ * \param[in,out] ctx   Information context about the channel
+ * \param[in]     flags Changes (see #PEVENTS_CHANGE)
+ */
+static void
+channel_update_cb(struct pevents_ctx *ctx, uint16_t flags)
+{
+	const char *channel_path = channel_get_path(ctx->ptr.channel);
+	const char *channel_name = channel_get_name(ctx->ptr.channel);
+	MSG_DEBUG(msg_module, "Updating channel '%s%s'...", channel_path,
+		channel_name);
+
+	struct stg_profiles_chnl_local *local_data;
+	local_data = (struct stg_profiles_chnl_local *) ctx->user.local;
+	if (!local_data) {
+		MSG_ERROR(msg_module, "Channel '%s%s' cannot be updated, because it's "
+			"not properly initialized. Try to delete it from a profiling "
+			"configuration and create it again.", channel_path, channel_name);
 		return;
 	}
 
-	if (conf->profiles_ptr == NULL) {
-		// Load all active profiles
-		if (reload_profiles(conf, channels) != 0) {
-			MSG_ERROR(msg_module, "Failed to reload the list of profiles");
+	void *profile = channel_get_profile(ctx->ptr.channel);
+	const enum PROFILE_TYPE type = profile_get_type(profile);
+
+	// Is the profile's type still the same?
+	if (type == PT_SHADOW) {
+		// The type is shadow -> Delete the files manager, if it exists.
+		if (local_data->manager == NULL) {
+			// Already deleted
 			return;
 		}
 
-		update_profiles_states(conf, IPE_RELOAD_PROFILES);
+		channel_storage_close(ctx->user.local);
+		MSG_INFO(msg_module, "Channel '%s%s' has been successfully updated "
+				"(storage has been closed).", channel_path, channel_name);
+
+		return;
 	}
 
-	// Clear aux bitset
-	bitset_clear(conf->bitset);
-
-	// Fill bitset
-	for (int i = 0; channels[i] != 0; i++) {
-		// Create a key
-		void *profile_ptr = channel_get_profile(channels[i]);
-		profile_file_t key, *result;
-
-		key.address = profile_ptr;
-		result = bsearch(&key, conf->profiles_ptr, conf->profiles_size,
-			sizeof(profile_file_t), cmp_profile_file);
-
-		if (!result) {
-			// Unknown profile... reload list
-			if (reload_profiles(conf, channels) != 0) {
-				MSG_ERROR(msg_module, "Failed to reload the list of profiles");
-				return;
-			}
-
-			result = bsearch(&key, conf->profiles_ptr, conf->profiles_size,
-				sizeof(profile_file_t), cmp_profile_file);
-
-			if (!result) {
-				MSG_ERROR(msg_module, "Failed to find a profile in internal "
-					"structures. Something bad happend!");
-				return;
-			}
+	// Only "Normal" type can be here!
+	if ((flags & PEVENTS_CHANGE_DIR) || (flags & PEVENTS_CHANGE_TYPE)) {
+		// The profile's directory and/or type has been changed.
+		// Delete & Create a new storage
+		if (channel_storage_open(ctx->user.local, ctx->user.global,
+				ctx->ptr.channel)) {
+			// Failed to open
+			MSG_WARNING(msg_module, "Failed to create/change storage of "
+				"channel '%s%s'. The current storage has been closed to"
+				"prevent potential collision with other profiles/channels "
+				"and further records of this channel will NOT be stored.",
+				channel_path, channel_name);
+			return;
 		}
 
-		// Get index
-		int r_index = (result - conf->profiles_ptr);
-		if (bitset_get(conf->bitset, r_index) == true) {
-			// Already written to the file
-			continue;
+		if (channel_storage_new_window(ctx->user.local, ctx->user.global)) {
+			// Failed
+			MSG_WARNING(msg_module, "Failed to create a new time window of "
+				"channel '%s%s'. Output file(s) of this channel are not "
+				"prepared and further records will NOT be stored.",
+				channel_path, channel_name);
+			return;
 		}
 
-		// Store the record only if it is normal profile
-		if (profile_get_type(result->address) == PT_NORMAL) {
-			store_to_file(result->file, conf, result->lnf_index);
-		}
-
-		bitset_set(conf->bitset, r_index, true);
+		MSG_INFO(msg_module, "Channel '%s%s' has been successfully updated "
+			"(storage has been created/changed).", channel_path, channel_name);
+		return;
 	}
 }
 
-
-
-void cleanup_storage_profiles(struct lnfstore_conf *conf){
-	close_storage_files(conf);
-
-	if (conf->params->bf.indexing){
-		for (int i = 0; i < conf->profiles_size; ++i) {
-			profile_file_t *profile = &conf->profiles_ptr[i];
-			destroy_lnfstore_index(profile->lnf_index);
-		}
-	}
-}
-// <<< Profile storage only ------------------------------------------------ <<<
-
-void store_record_profiles(const struct metadata *mdata, struct lnfstore_conf *conf)
+/**
+ * \brief Process data for a channel
+ *
+ * Data record is stored to output file(s)
+ * \param[in,out] ctx Information context about the channel
+ * \param[in] data LNF record
+ */
+static void
+channel_data_cb(struct pevents_ctx *ctx, void *data)
 {
-	if (!mdata->channels) {
-		/* Record won't be stored, it does not belong to any channel and
-		 * profiling is activated */
+	struct stg_profiles_chnl_local *local_data;
+	local_data = (struct stg_profiles_chnl_local *) ctx->user.local;
+	if (!local_data || !local_data->manager) {
+		// A file manager is not available
 		return;
 	}
 
-	// Fill record
-	lnf_rec_clear(conf->rec_ptr);
-	if (fill_record(mdata, conf->rec_ptr, conf->buffer) <= 0) {
-		// Nothing to store
+	lnf_rec_t *rec_ptr = data;
+	int ret = files_mgr_add_record(local_data->manager, rec_ptr);
+	if (ret != 0) {
+		// Failed
+		void *channel = ctx->ptr.channel;
+		MSG_DEBUG(msg_module, "Failed to store a record into channel '%s%s'.",
+			channel_get_path(channel), channel_get_name(channel));
+	}
+}
+
+/**
+ * \brief Auxiliary function for changing time windows
+ * \param[in,out] ctx Information context about the channel
+ */
+static void
+channel_new_window(struct pevents_ctx *ctx)
+{
+	if (!ctx->user.local) {
+		// Local data is not initialized -> unrecoverable error
 		return;
 	}
 
-	// Decide whether close files and create new time window
-	time_t now = time(NULL);
-	if (difftime(now, conf->window_start) > conf->params->window_time) {
-		update_profiles_states(conf, IPE_NEW_WINDOW_START);
+	struct stg_profiles_global *global = ctx->user.global;
+	int ret_val = channel_storage_new_window(ctx->user.local, global);
+	if (ret_val != 0) {
+		// Failed
+		void *channel = ctx->ptr.channel;
+		MSG_WARNING(msg_module, "Failed to create a new time window of "
+			"channel '%s%s'. Output file(s) of this channel are not prepared "
+			"and further records will NOT be stored.",
+			channel_get_path(channel), channel_get_name(channel));
+		global->op_status = 1;
+	}
+}
 
-		new_window(now, conf);
-
-		update_profiles_states(conf, IPE_NEW_WINDOW_END);
+stg_profiles_t *
+stg_profiles_create(const struct conf_params *params)
+{
+	// Prepare an internal structure
+	stg_profiles_t *mgr = (stg_profiles_t *) calloc(1, sizeof(*mgr));
+	if (!mgr) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
+			__FILE__, __LINE__);
+		return NULL;
 	}
 
-	store_to_profiles(conf, mdata->channels);
+	mgr->global.params = params;
+
+	// Initialize an array of callbacks
+	struct pevent_cb_set channel_cb;
+	memset(&channel_cb, 0, sizeof(channel_cb));
+
+	struct pevent_cb_set profile_cb;
+	memset(&profile_cb, 0, sizeof(profile_cb));
+
+	channel_cb.on_create = &channel_create_cb;
+	channel_cb.on_delete = &channel_delete_cb;
+	channel_cb.on_update = &channel_update_cb;
+	channel_cb.on_data   = &channel_data_cb;
+
+	// Create an event manager
+	mgr->event_mgr = pevents_create(profile_cb, channel_cb);
+	if (!mgr->event_mgr) {
+		// Failed
+		free(mgr);
+		return NULL;
+	}
+
+	pevents_global_set(mgr->event_mgr, &mgr->global);
+	return mgr;
+}
+
+void
+stg_profiles_destroy(stg_profiles_t *storage)
+{
+	// Destroy a profile manager and close all files (delete callback)
+	pevents_destroy(storage->event_mgr);
+	free(storage);
+}
+
+int
+stg_profiles_store(stg_profiles_t *storage, const struct metadata *mdata,
+	lnf_rec_t *rec)
+{
+	// Store the record to the channels
+	return pevents_process(storage->event_mgr, (const void **)mdata->channels,
+		rec);
+}
+
+int
+stg_profiles_new_window(stg_profiles_t *storage, time_t window)
+{
+	storage->global.window_start = window;
+	storage->global.op_status = 0;
+
+	pevents_for_each(storage->event_mgr, NULL, &channel_new_window);
+	return storage->global.op_status;
 }

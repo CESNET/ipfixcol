@@ -1,10 +1,9 @@
 /**
- * \file storage.h
- * \author Imrich Stoffa <xstoff02@stud.fit.vutbr.cz>
+ * \file storage_basic.h
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
- * \brief Storage management (header file)
+ * \brief Basic storage management (header file)
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2015-2017 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,21 +40,51 @@
 #ifndef LS_STORAGE_BASIC_H
 #define LS_STORAGE_BASIC_H
 
+#include "configuration.h"
+#include <libnf.h>
 #include <ipfixcol.h>
-#include "lnfstore.h"
 
-// Store a record
-void store_record_basic(const struct metadata* mdata, struct lnfstore_conf *conf);
+/**
+ * \brief Internal type
+ */
+typedef struct stg_basic_s stg_basic_t;
 
-char *create_file_name(struct lnfstore_conf *conf, char **bf_index_fn);
-int mkdir_hierarchy(const char* path);
+/**
+ * \brief Create a basic storage
+ * \param[in] params Parameters of this plugin instance
+ * \return On success returns a pointer to the storage. Otherwise returns NULL.
+ */
+stg_basic_t *
+stg_basic_create(const struct conf_params *params);
 
-int prepare_index(struct lnfstore_index *lnf_index, struct index_params ind_par,
-					char *path, char *filename);
+/**
+ * \brief Delete a basic storage
+ *
+ * Close output file(s) and delete the storage
+ * \param[in,out] storage Storage
+ */
+void
+stg_basic_destroy(stg_basic_t *storage);
 
-int fill_record(const struct metadata *mdata, lnf_rec_t *record, uint8_t *buffer);
-void store_to_file(lnf_file_t *file, struct lnfstore_conf *conf, struct lnfstore_index *lnf_index);
+/**
+ * \brief Store a LNF record to a storage
+ * \param[in,out] storage Storage
+ * \param[in]     rec     LNF record
+ * \return On success returns 0. Otherwise (failed to write to any of output
+ *   files) returns a non-zero value.
+ */
+int
+stg_basic_store(stg_basic_t *storage, lnf_rec_t *rec);
 
-void cleanup_storage_basic(struct lnfstore_conf *conf);
+/**
+ * \brief Create a new time window
+ *
+ * Current output file(s) will be closed and new ones will be opened
+ * \param[in,out] storage Storage
+ * \param[in]     window  Identification time of new window (UTC)
+ * \return On success returns 0. Otherwise returns a non-zero value.
+ */
+int
+stg_basic_new_window(stg_basic_t *storage, time_t window);
 
 #endif //LS_STORAGE_BASIC_H
