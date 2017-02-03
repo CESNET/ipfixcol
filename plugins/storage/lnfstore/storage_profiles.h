@@ -1,9 +1,7 @@
 /**
  * \file storage_profiles.h
- * \author Imrich Stoffa <xstoff02@stud.fit.vutbr.cz>
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
- * \author Pavel Krobot <Pavel.Krobot@cesnet.cz>
- * \brief Storage management (header file)
+ * \brief Profile storage management (header file)
  *
  * Copyright (C) 2015, 2016 CESNET, z.s.p.o.
  *
@@ -42,21 +40,54 @@
 #ifndef LS_STORAGE_PROFILES_H
 #define LS_STORAGE_PROFILES_H
 
-#include <ipfixcol.h>
-#include "lnfstore.h"
+#include <libnf.h>
+#include "configuration.h"
 
+/**
+ * \brief Internal type
+ */
+typedef struct stg_profiles_s stg_profiles_t;
 
-typedef enum {
-	IPE_NEW_WINDOW_START,
-	IPE_NEW_WINDOW_END,
-	IPE_RELOAD_PROFILES,
-	IPE_CLEANUP,
-} indexing_profiles_events_t;
+/**
+ * \brief Create a profile storage
+ * \param[in] params Parameters of this plugin instance
+ * \return On success returns a pointer to the storage. Otherwise returns NULL.
+ */
+stg_profiles_t *
+stg_profiles_create(const struct conf_params *params);
 
+/**
+ * \brief Delete a profile storage
+ *
+ * Close output file(s) and delete the storage
+ * \param[in,out] storage Storage
+ */
+void
+stg_profiles_destroy(stg_profiles_t *storage);
 
-// Store a record
-void store_record_profiles(const struct metadata* mdata, struct lnfstore_conf *conf);
+/**
+ * \brief Store a LNF record to a storage
+ * \param[in,out] storage Storage
+ * \param[in]     rec     LNF record
+ * \return On success (all channels have been found) returns 0. Otherwise
+ *   (failed to find a channel and rebuild a new configuration) returns
+ *   a non-zero value. The return value do not signalize status of output files.
+ */
+int
+stg_profiles_store(stg_profiles_t *storage, const struct metadata *mdata,
+	lnf_rec_t *rec);
 
-void cleanup_storage_profiles(struct lnfstore_conf *conf);
+/**
+ * \brief Create a new time window
+ *
+ * Current output file(s) will be closed and new ones will be opened.
+ * \param[in,out] storage Storage
+ * \param[in]     window  Identification time of new window (UTC)
+ * \return On success returns 0. Otherwise (at least one window is not
+ *   properly initialized) returns a non-zero value.
+ */
+int
+stg_profiles_new_window(stg_profiles_t *storage, time_t window);
+
 
 #endif //LS_STORAGE_PROFILES_H
