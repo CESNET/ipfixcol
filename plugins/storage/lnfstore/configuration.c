@@ -39,7 +39,7 @@
 
 #include "configuration.h"
 #include "lnfstore.h"
-#include "bfi_manager.h"
+#include "idx_manager.h"
 
 #include <ipfixcol.h>
 #include <stdlib.h>
