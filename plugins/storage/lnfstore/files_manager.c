@@ -1,6 +1,7 @@
 /**
  * \file files_manager.c
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
+ * \author Pavel Krobot <Pavel.Krobot@cesnet.cz>
  * \brief Output files manager (source file)
  *
  * Copyright (C) 2016-2017 CESNET, z.s.p.o.
@@ -45,7 +46,7 @@
 #include <errno.h>
 
 #include "files_manager.h"
-#include "bfi_manager.h"
+#include "idx_manager.h"
 
 extern const char* msg_module;
 
@@ -54,7 +55,8 @@ struct files_mgr_s {
 	/** Output files or managers */
 	struct {
 		lnf_file_t *file_lnf;     /**< LNF file     */
-		bfi_mgr_t  *file_bloom;   /**< Bloom file   */
+		idx_mgr_t  *index_mgr;    /**< Bloom filter index manager (contains
+									*  index output file) */
 	} outputs;
 
 	/** Copy of output templates */
@@ -62,7 +64,7 @@ struct files_mgr_s {
 
 	/** LNF compression */
 	struct {
-		bool compress;	/**< Enable compression            */
+		bool compress;  /**< Enable compression            */
 		char *ident;    /**< File identifier (can be NULL) */
 	} lnf_params;
 
@@ -291,9 +293,9 @@ files_mgr_create(enum FILES_MODE mode, const struct files_mgr_paths *paths,
 	// Configure Bloom Filter index
 	if (mode & FILES_M_INDEX) {
 		// Create BFI (Bloom Filter Index) manager
-		mgr->outputs.file_bloom = bfi_mgr_create(idx_param->prob,
+		mgr->outputs.index_mgr = idx_mgr_create(idx_param->prob,
 			idx_param->item_cnt, idx_param->autosize);
-		if (!mgr->outputs.file_bloom) {
+		if (!mgr->outputs.index_mgr) {
 			MSG_ERROR(msg_module, "Files manager error (unable to create "
 				"index manager).");
 			files_mgr_path_free(mgr->paths_tmplt);
@@ -311,7 +313,7 @@ files_mgr_create(enum FILES_MODE mode, const struct files_mgr_paths *paths,
 			if (!mgr->lnf_params.ident) {
 				MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
 						  __FILE__, __LINE__);
-				bfi_mgr_destroy(mgr->outputs.file_bloom);
+				idx_mgr_destroy(mgr->outputs.index_mgr);
 				files_mgr_path_free(mgr->paths_tmplt);
 				free(mgr);
 				return NULL;
@@ -331,8 +333,8 @@ files_mgr_destroy(files_mgr_t *mgr)
 		lnf_close(mgr->outputs.file_lnf);
 	}
 
-	if (mgr->outputs.file_bloom) {
-		bfi_mgr_destroy(mgr->outputs.file_bloom);
+	if (mgr->outputs.index_mgr) {
+		idx_mgr_destroy(mgr->outputs.index_mgr);
 	}
 
 	// Delete path template
@@ -622,11 +624,20 @@ files_mgr_new_window(files_mgr_t *mgr, const time_t *ts)
 		mgr->outputs.file_lnf = NULL;
 	}
 
+	if (mgr->mode & FILES_M_INDEX) {
+		if (idx_mgr_save_index(mgr->outputs.index_mgr) != 0){
+			MSG_WARNING(msg_module, "Files manager error (failed to save "
+				"current index - last window wont be indexed).");
+		}
+	}
+
 	// Create new file names
 	struct files_mgr_names names;
 	if (files_mgr_names_create(mgr, ts, &names) != 0) {
-		// Close an index window -> do not allow to add new records...
-		bfi_mgr_window_close(mgr->outputs.file_bloom);
+		// Invalidate an index window -> do not allow to add new records...
+		if (mgr->mode & FILES_M_INDEX) {
+			idx_mgr_invalidate(mgr->outputs.index_mgr);
+		}
 		return 1;
 	}
 
@@ -639,8 +650,10 @@ files_mgr_new_window(files_mgr_t *mgr, const time_t *ts)
 		MSG_ERROR(msg_module, "Files manager error (failed to create the "
 			"directory '%s' - %s).", names.dir, err_buff);
 
-		// Close an index window -> do not allow to add new records...
-		bfi_mgr_window_close(mgr->outputs.file_bloom);
+		// Invalidate an index window -> do not allow to add new records...
+		if (mgr->mode & FILES_M_INDEX) {
+			idx_mgr_invalidate(mgr->outputs.index_mgr);
+		}
 
 		files_mgr_names_free(&names);
 		return 1;
@@ -667,12 +680,13 @@ files_mgr_new_window(files_mgr_t *mgr, const time_t *ts)
 
 	// Create Index file
 	if (mgr->mode & FILES_M_INDEX) {
-		if (bfi_mgr_window_new(mgr->outputs.file_bloom, names.file_index)) {
+		if (idx_mgr_window_new(mgr->outputs.index_mgr, names.file_index)) {
 			MSG_WARNING(msg_module, "Files manager error (failed to create "
 				"a new window of Bloom Filter Index).");
 			ret_code = 1;
+			idx_mgr_invalidate(mgr->outputs.index_mgr);
 		} else {
-			MSG_DEBUG(msg_module, "File manager - the new BFI file '%s'",
+			MSG_DEBUG(msg_module, "File manager - the new BF index file '%s'",
 				names.file_index);
 		}
 	}
@@ -700,32 +714,33 @@ files_mgr_add2lnf(files_mgr_t *mgr, void *rec_ptr)
 }
 
 /**
- * \brief Add SRC and DST IP address to a Bloom Filter Index
+ * \brief Add source and destination IP address to a Bloom filter index
  * \note If any of the addresses is missing in a LNF record, the missing address
  *   is just skipped without error.
  * \param[in,out] mgr      Pointer to a file manager
  * \param[in]     rec_ptr  Pointer to the LNF record
- * \warning An internal BFI manager must exist.
+ * \warning An internal index (idx) manager must exist.
  * \return On success returns 0. Otherwise returns a non-zero value.
  */
 static int
 files_mgr_add2idx(files_mgr_t *mgr, void *rec_ptr)
 {
 	int status = 0;
-	bfi_mgr_t *idx_ptr = mgr->outputs.file_bloom;
+	idx_mgr_t *idx_ptr = mgr->outputs.index_mgr;
 
 	const size_t len = 16; // For IPv4 & IPv6
-	uint8_t buffer[len];
+	unsigned char buffer[len];
 
 	// Add source address
 	memset(buffer, 0, len);
 	if (lnf_rec_fget(rec_ptr, LNF_FLD_SRCADDR, buffer) != LNF_OK) {
 		// It is possible that a record do not have an SRC IP address
 		MSG_DEBUG(msg_module, "Unable to get a SRC IP address and insert it "
-			"into a Bloom Filter Index.");
+			"into a Bloom filter Index.");
+		// TODO: Warning in verbose mode?
 	} else {
 		// Cannot be null, only an internal window can be broken
-		status |= bfi_mgr_add(idx_ptr, buffer, len);
+		status |= idx_mgr_add(idx_ptr, buffer, len);
 	}
 
 	// Add destination address
@@ -734,9 +749,10 @@ files_mgr_add2idx(files_mgr_t *mgr, void *rec_ptr)
 		// It is possible that a record do not have an DST IP address
 		MSG_DEBUG(msg_module, "Unable to get a DST IP address and insert it "
 			"into a Bloom Filter Index.");
+		// TODO: Warning in verbose mode?
 	} else {
 		// Cannot be null, only an internal window can be broken
-		status |= bfi_mgr_add(idx_ptr, buffer, len);
+		status |= idx_mgr_add(idx_ptr, buffer, len);
 	}
 
 	return status;
