@@ -293,7 +293,7 @@ configuration_match_dump(xmlDocPtr doc, xmlNodePtr cur, struct conf_params *cfg)
  * \return On success returns 0. Otherwise returns a non-zero value.
  */
 static int
-configuration_match_bfi(xmlDocPtr doc, xmlNodePtr cur, struct conf_params *cfg)
+configuration_match_idx(xmlDocPtr doc, xmlNodePtr cur, struct conf_params *cfg)
 {
 	// Skip this node in case it's a comment or plain text node
 	if (cur->type == XML_COMMENT_NODE || cur->type == XML_TEXT_NODE) {
@@ -484,7 +484,7 @@ configuration_match(xmlDocPtr doc, xmlNodePtr cur, struct conf_params *cfg)
 		// Get Bloom Filter Index configuration
 		xmlNodePtr cur_sub = cur->xmlChildrenNode;
 		while (cur_sub != NULL) {
-			if (configuration_match_bfi(doc, cur_sub, cfg)) {
+			if (configuration_match_idx(doc, cur_sub, cfg)) {
 				return 1;
 			}
 
