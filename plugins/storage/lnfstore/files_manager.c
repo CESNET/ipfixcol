@@ -427,6 +427,42 @@ files_mgr_names_free(struct files_mgr_names *names)
 }
 
 /**
+ * \brief Remove unwanted characters in a path
+ *
+ * This function removes multiple slashes in the path. The size of the path
+ * can be only reduced, so all operations are performed in-situ.
+ * \param[in,out] path Path
+ */
+static void
+files_mgr_names_sanitize(char *path)
+{
+	if (!path || path[0] == '\0') {
+		// Empty string
+		return;
+	}
+
+	size_t idx_read = 1;
+	size_t idx_write = 1;
+
+	while (path[idx_read] != '\0') {
+		if (path[idx_read] == '/' && path[idx_read - 1] == '/') {
+			// Skip the slash
+			idx_read++;
+			continue;
+		}
+
+		if (idx_read != idx_write) {
+			path[idx_write] = path[idx_read];
+		}
+
+		idx_read++;
+		idx_write++;
+	}
+
+	path[idx_write] = '\0';
+}
+
+/**
  * \brief Generate names of output files (for a new window)
  *
  * Based on an internal template and current timestamp generate names of
@@ -519,6 +555,11 @@ files_mgr_names_create(const files_mgr_t *mgr, const time_t *ts,
 			return 1;
 		}
 	}
+
+	// Sanitize strings
+	files_mgr_names_sanitize(res.dir);
+	files_mgr_names_sanitize(res.file_index);
+	files_mgr_names_sanitize(res.file_lnf);
 
 	// Copy pointers
 	free(file_suffix);

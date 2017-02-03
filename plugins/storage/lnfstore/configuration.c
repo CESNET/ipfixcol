@@ -52,9 +52,9 @@
 #include <libxml2/libxml/xmlstring.h>
 #include <libxml2/libxml/parser.h>
 
-
 extern const char *msg_module;
 
+#define LNF_FILE_PREFIX         "lnf."
 #define BF_FILE_PREFIX          "bf."
 #define BF_DEFAULT_FP_PROB      0.01
 #define BF_DEFAULT_ITEM_CNT_EST 100000
@@ -329,7 +329,7 @@ configuration_match_idx(xmlDocPtr doc, xmlNodePtr cur, struct conf_params *cfg)
 		int result = xml_cmp_bool(doc, cur);
 		if (result == 0) {
 			MSG_ERROR(msg_module, "Configuration error - invalid value of "
-					"<autosize> (expected true/false).");
+				"<autosize> (expected true/false).");
 			return 1;
 		}
 
@@ -342,7 +342,7 @@ configuration_match_idx(xmlDocPtr doc, xmlNodePtr cur, struct conf_params *cfg)
 		uint64_t result;
 		if (xml_convert_number(doc, cur, &result)) {
 			MSG_ERROR(msg_module, "Configuration error - invalid value of "
-					"<estimatedItemCount> (expected unsigned integer).");
+				"<estimatedItemCount> (expected unsigned integer).");
 			return 1;
 		}
 
@@ -407,7 +407,7 @@ configuration_match(xmlDocPtr doc, xmlNodePtr cur, struct conf_params *cfg)
 		xmlChar *original = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
 		if (!original) {
 			MSG_ERROR(msg_module, "Configuration conversion failed "
-					"(xmlNodeListGetString() returned NULL).");
+				"(xmlNodeListGetString() returned NULL).");
 			return 1;
 		}
 
@@ -508,12 +508,22 @@ configuration_free(struct conf_params *config)
 	}
 
 	free(config->files.path);
-	free(config->files.suffix);
 
-	free(config->file_lnf.prefix);
-	free(config->file_lnf.ident);
+	if (config->files.suffix) {
+		xmlFree((xmlChar *) config->files.suffix);
+	}
 
-	free(config->file_index.prefix);
+	if (config->file_lnf.prefix) {
+		xmlFree((xmlChar *) config->file_lnf.prefix);
+	}
+
+	if (config->file_lnf.ident) {
+		xmlFree((xmlChar *) config->file_lnf.ident);
+	}
+
+	if (config->file_index.prefix) {
+		xmlFree((xmlChar *) config->file_index.prefix);
+	}
 
 	free(config);
 }
@@ -562,6 +572,14 @@ configuration_validate(const struct conf_params *cfg)
 				"Use a value from %f to %f.", FPP_MIN, FPP_MAX);
 			ret_code = 1;
 		}
+
+		// Check output prefixes
+		if (xmlStrcmp((const xmlChar *) cfg->file_index.prefix,
+				(const xmlChar *) cfg->file_lnf.prefix) == 0) {
+			MSG_ERROR(msg_module, "The same file prefix for LNF and Index file "
+				"is not allowed");
+			ret_code = 1;
+		}
 	}
 
 	if (cfg->window.size == 0) {
@@ -589,13 +607,6 @@ configuration_parse(const char *params)
 		return NULL;
 	}
 
-	// Set default parameters
-	cnf->file_index.est_cnt = BF_DEFAULT_ITEM_CNT_EST;
-	cnf->file_index.fp_prob = BF_DEFAULT_FP_PROB;
-
-	cnf->window.align = true;
-	cnf->window.size = WINDOW_SIZE;
-
 	// Try to parse plugin configuration
 	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
 	if (doc == NULL) {
@@ -618,6 +629,25 @@ configuration_parse(const char *params)
 		free(cnf);
 		return NULL;
 	}
+
+	// Set default parameters
+	cnf->file_index.en = true;
+	cnf->file_index.autosize = true;
+	cnf->file_index.est_cnt = BF_DEFAULT_ITEM_CNT_EST;
+	cnf->file_index.fp_prob = BF_DEFAULT_FP_PROB;
+
+	cnf->file_index.prefix = (char *) (xmlCharStrdup(BF_FILE_PREFIX));
+	cnf->file_lnf.prefix =   (char *) (xmlCharStrdup(LNF_FILE_PREFIX));
+	if (!cnf->file_index.prefix || !cnf->file_lnf.prefix) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
+				__FILE__, __LINE__);
+		xmlFreeDoc(doc);
+		configuration_free(cnf);
+		return NULL;
+	}
+
+	cnf->window.align = true;
+	cnf->window.size = WINDOW_SIZE;
 
 	// Process the configuration
 	cur = cur->xmlChildrenNode;
