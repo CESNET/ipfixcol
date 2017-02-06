@@ -84,7 +84,7 @@ struct ring_buffer *get_preprocessor_output_queue();
 
 /**
  * \brief Set new preprocessor output queue
- * 
+ *
  * @param out_queue
  */
 void preprocessor_set_output_queue(struct ring_buffer *out_queue);
@@ -101,5 +101,13 @@ void preprocessor_set_configurator(configurator *config);
  * \brief Close all data managers and their storage plugins
  */
 void preprocessor_close ();
+
+/**
+ * \brief Compute 32b CRC from input informations
+ *
+ * @param input_info Input informations
+ * @return crc32
+ */
+uint32_t preprocessor_compute_crc(struct input_info *input_info);
 
 #endif /* PREPROCESSOR_H_ */
