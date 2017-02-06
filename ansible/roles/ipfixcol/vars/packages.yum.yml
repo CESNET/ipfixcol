@@ -16,7 +16,6 @@ packages:
     lzo-devel,
     make,
     openssl-devel,
-    pkgconfig
   ]
   geoip: [GeoIP-devel]
   stats: [rrdtool-devel]

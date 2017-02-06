@@ -118,7 +118,7 @@ Dependencies must be installed first. For Fedora, CentOS and RHEL the list of ne
 autoconf bison docbook-style-xsl doxygen flex 
 gcc gcc-c++ git libtool libxml2 libxml2-devel 
 libxslt lksctp-tools-devel lzo-devel make 
-openssl-devel pkgconfig GeoIP-devel rrdtool-devel
+openssl-devel GeoIP-devel rrdtool-devel
 sqlite-devel postgresql-devel rpm-build
 ```
 
