@@ -130,7 +130,7 @@ AC_CHECK_LIB([xml2], [main],
     
 ### TLS support ###
 AS_IF([test "x$with_openssl" != xno],
-  [AC_CHECK_LIB([ssl], [SSL_library_init],
+  [AC_SEARCH_LIBS([SSL_library_init], [ssl :libssl.so.10],
     [TLS_SUPPORT="yes"
     # Check for pkg-config
 	AC_CHECK_PROG([PKG_CONFIG], [pkg-config], ["yes"], ["no"])
