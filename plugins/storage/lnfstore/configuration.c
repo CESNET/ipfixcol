@@ -54,8 +54,9 @@
 
 extern const char *msg_module;
 
+#define SUFFIX_MASK             "%Y%m%d%H%M%S"
 #define LNF_FILE_PREFIX         "lnf."
-#define BF_FILE_PREFIX          "bf."
+#define BF_FILE_PREFIX          "bfi."
 #define BF_DEFAULT_FP_PROB      0.01
 #define BF_DEFAULT_ITEM_CNT_EST 100000
 
@@ -500,34 +501,6 @@ configuration_match(xmlDocPtr doc, xmlNodePtr cur, struct conf_params *cfg)
 	return 1;
 }
 
-void
-configuration_free(struct conf_params *config)
-{
-	if (!config) {
-		return;
-	}
-
-	free(config->files.path);
-
-	if (config->files.suffix) {
-		xmlFree((xmlChar *) config->files.suffix);
-	}
-
-	if (config->file_lnf.prefix) {
-		xmlFree((xmlChar *) config->file_lnf.prefix);
-	}
-
-	if (config->file_lnf.ident) {
-		xmlFree((xmlChar *) config->file_lnf.ident);
-	}
-
-	if (config->file_index.prefix) {
-		xmlFree((xmlChar *) config->file_index.prefix);
-	}
-
-	free(config);
-}
-
 /**
  * \brief Check validity of a configuration
  * \param[in] cfg Configuration
@@ -590,6 +563,51 @@ configuration_validate(const struct conf_params *cfg)
 	return ret_code;
 }
 
+/**
+ * \brief Set default configuration params
+ * \param[in,out] cnf Configuration
+ * \return On success returns 0. Otherwise returns a non-zero value, the
+ *   content of the configuration is undefined and it MUST be destroyed
+ *   by configuration_free()
+ */
+static int
+configuration_set_defaults(struct conf_params *cnf)
+{
+	// Dump interval
+	cnf->window.align = true;
+	cnf->window.size = WINDOW_SIZE;
+
+	// Files (common)
+	cnf->files.suffix = (char *) (xmlCharStrdup(SUFFIX_MASK));
+	if (!cnf->files.suffix) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
+			__FILE__, __LINE__);
+		return 1;
+	}
+
+	// LNF file
+	cnf->file_lnf.prefix = (char *) (xmlCharStrdup(LNF_FILE_PREFIX));
+	if (!cnf->file_lnf.prefix) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
+			__FILE__, __LINE__);
+		return 1;
+	}
+
+	// Index file
+	cnf->file_index.en = true;
+	cnf->file_index.autosize = true;
+	cnf->file_index.est_cnt = BF_DEFAULT_ITEM_CNT_EST;
+	cnf->file_index.fp_prob = BF_DEFAULT_FP_PROB;
+	cnf->file_index.prefix = (char *) (xmlCharStrdup(BF_FILE_PREFIX));
+	if (!cnf->file_index.prefix) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
+			__FILE__, __LINE__);
+		return 1;
+	}
+
+	return 0;
+}
+
 struct conf_params *
 configuration_parse(const char *params)
 {
@@ -607,11 +625,17 @@ configuration_parse(const char *params)
 		return NULL;
 	}
 
+	if (configuration_set_defaults(cnf)) {
+		// Failed
+		configuration_free(cnf);
+		return NULL;
+	}
+
 	// Try to parse plugin configuration
 	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
 	if (doc == NULL) {
 		MSG_ERROR(msg_module, "Failed to parse the plugin configuration.");
-		free(cnf);
+		configuration_free(cnf);
 		return NULL;
 	}
 
@@ -619,35 +643,16 @@ configuration_parse(const char *params)
 	if (cur == NULL) {
 		MSG_ERROR(msg_module, "Configuration is empty.");
 		xmlFreeDoc(doc);
-		free(cnf);
+		configuration_free(cnf);
 		return NULL;
 	}
 
 	if(xmlStrcasecmp(cur->name, (const xmlChar*) "fileWriter")){
 		MSG_ERROR(msg_module, "Root node != fileWriter");
 		xmlFreeDoc(doc);
-		free(cnf);
-		return NULL;
-	}
-
-	// Set default parameters
-	cnf->file_index.en = true;
-	cnf->file_index.autosize = true;
-	cnf->file_index.est_cnt = BF_DEFAULT_ITEM_CNT_EST;
-	cnf->file_index.fp_prob = BF_DEFAULT_FP_PROB;
-
-	cnf->file_index.prefix = (char *) (xmlCharStrdup(BF_FILE_PREFIX));
-	cnf->file_lnf.prefix =   (char *) (xmlCharStrdup(LNF_FILE_PREFIX));
-	if (!cnf->file_index.prefix || !cnf->file_lnf.prefix) {
-		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
-				__FILE__, __LINE__);
-		xmlFreeDoc(doc);
 		configuration_free(cnf);
 		return NULL;
 	}
-
-	cnf->window.align = true;
-	cnf->window.size = WINDOW_SIZE;
 
 	// Process the configuration
 	cur = cur->xmlChildrenNode;
@@ -674,4 +679,32 @@ configuration_parse(const char *params)
 	}
 
 	return cnf;
+}
+
+void
+configuration_free(struct conf_params *config)
+{
+	if (!config) {
+		return;
+	}
+
+	free(config->files.path);
+
+	if (config->files.suffix) {
+		xmlFree((xmlChar *) config->files.suffix);
+	}
+
+	if (config->file_lnf.prefix) {
+		xmlFree((xmlChar *) config->file_lnf.prefix);
+	}
+
+	if (config->file_lnf.ident) {
+		xmlFree((xmlChar *) config->file_lnf.ident);
+	}
+
+	if (config->file_index.prefix) {
+		xmlFree((xmlChar *) config->file_index.prefix);
+	}
+
+	free(config);
 }
