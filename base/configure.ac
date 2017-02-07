@@ -129,6 +129,7 @@ AC_CHECK_LIB([xml2], [main],
     AC_MSG_ERROR([Libxml2 not found ]))
     
 ### TLS support ###
+save_libs="$LIBS"
 AS_IF([test "x$with_openssl" != xno],
   [AC_SEARCH_LIBS([SSL_library_init], [ssl :libssl.so.10],
     [TLS_SUPPORT="yes"
@@ -141,6 +142,7 @@ AS_IF([test "x$with_openssl" != xno],
     AC_MSG_ERROR([Required library openssl is missing])
   )], 
   [TLS_SUPPORT="no"])
+LIBS="$save_libs"
 AC_SUBST([TLS_CPPFLAGS])
 AC_SUBST([TLS_CFLAGS])
 AC_SUBST([TLS_LIBS])
