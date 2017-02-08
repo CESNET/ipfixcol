@@ -594,7 +594,7 @@ configuration_set_defaults(struct conf_params *cnf)
 	}
 
 	// Index file
-	cnf->file_index.en = true;
+	cnf->file_index.en = false;
 	cnf->file_index.autosize = true;
 	cnf->file_index.est_cnt = BF_DEFAULT_ITEM_CNT_EST;
 	cnf->file_index.fp_prob = BF_DEFAULT_FP_PROB;

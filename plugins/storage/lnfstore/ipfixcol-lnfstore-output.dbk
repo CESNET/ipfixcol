@@ -233,7 +233,7 @@
 					<term><command>enable</command></term>
 					<listitem><simpara>
 						Enable/disable creation of Bloom Filter indexes (yes/no)
-						[default: yes].
+						[default: no].
 					</simpara></listitem>
 				</varlistentry>
 

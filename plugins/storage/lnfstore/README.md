@@ -104,7 +104,7 @@ specifiers.
 
 * **index**
 	* **enable** - Enable/disable creation of Bloom Filter indexes (yes/no)
-		(default: yes).
+		(default: no).
 
 	* **autosize** - Enable/disable automatic resize of index files based on
 		the number of unique IP addresses in the last dump interval (yes/no)
