@@ -1,17 +1,23 @@
 ACLOCAL_AMFLAGS = -I m4
 
-ipfixcoldir = $(datadir)/ipfixcol 
+ipfixcoldir = $(datadir)/ipfixcol
 pluginsdir = $(datadir)/ipfixcol/plugins
 
 sofile = $(pluginsdir)/ipfixcol-lnfstore-output.so
 internalcfg = $(DESTDIR)$(sysconfdir)/ipfixcol/internalcfg.xml
 
-ipfixcol_lnfstore_output_la_LDFLAGS = -module -avoid-version -shared 
+ipfixcol_lnfstore_output_la_LDFLAGS = -module -avoid-version -shared
 ipfixcol_lnfstore_output_la_SOURCES = \
+	idx_manager.c idx_manager.h \
+	bitset.c bitset.h \
+	configuration.c configuration.h \
+	files_manager.c files_manager.h \
 	lnfstore.c lnfstore.h \
-	storage.c storage.h \
-	translator.c translator.h \
-	bitset.c bitset.h
+	profiler_events.c profiler_events.h \
+    storage_basic.c storage_basic.h \
+    storage_common.c storage_common.h \
+    storage_profiles.c storage_profiles.h \
+	translator.c translator.h
 
 plugins_LTLIBRARIES = ipfixcol-lnfstore-output.la
 
@@ -19,7 +25,7 @@ if HAVE_DOC
 MANSRC = ipfixcol-lnfstore-output.dbk
 man_MANS = ipfixcol-lnfstore-output.1
 EXTRA_DIST = $(MANSRC) # += error here
-CLEANFILES = ipfixcol-lnfstore-output.1 #and here  
+CLEANFILES = ipfixcol-lnfstore-output.1 #and here
 endif
 
 rpmspec = $(PACKAGE_TARNAME).spec
@@ -46,7 +52,7 @@ rpm: dist $(rpmspec)
 	$(RPMBUILD) -ba $(rpmspec) \
 		--define "_topdir `pwd`/$(RPMDIR)";
 
-clean-local: 
+clean-local:
 	rm -rf RPMBUILD
 
 install-data-hook:

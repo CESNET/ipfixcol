@@ -1,9 +1,9 @@
 /**
- * \file bitset.c
+ * \file storage_basic.h
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
- * \brief Bitset (source file)
+ * \brief Basic storage management (header file)
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2015-2017 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,71 +37,54 @@
  *
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include "bitset.h"
+#ifndef LS_STORAGE_BASIC_H
+#define LS_STORAGE_BASIC_H
 
-// Create a new bitset
-bitset_t *bitset_create(size_t size)
-{
-	bitset_t *set = (bitset_t *) calloc(1, sizeof(bitset_t));
-	if (!set) {
-		return NULL;
-	}
+#include "configuration.h"
+#include <libnf.h>
+#include <ipfixcol.h>
 
-	set->size = (size / BITSET_BITS) + 1U;
-	set->array = (bitset_type_t *) calloc(set->size, sizeof(bitset_type_t));
-	if (!set->array) {
-		free(set);
-		return NULL;
-	}
+/**
+ * \brief Internal type
+ */
+typedef struct stg_basic_s stg_basic_t;
 
-	return set;
-}
+/**
+ * \brief Create a basic storage
+ * \param[in] params Parameters of this plugin instance
+ * \return On success returns a pointer to the storage. Otherwise returns NULL.
+ */
+stg_basic_t *
+stg_basic_create(const struct conf_params *params);
 
-// Destroy a bitset
-void bitset_destroy(bitset_t *set)
-{
-	if (!set) {
-		return;
-	}
+/**
+ * \brief Delete a basic storage
+ *
+ * Close output file(s) and delete the storage
+ * \param[in,out] storage Storage
+ */
+void
+stg_basic_destroy(stg_basic_t *storage);
 
-	free(set->array);
-	free(set);
-}
-
-// Clear a bitset
-void bitset_clear(bitset_t *set)
-{
-	if (!set) {
-		return;
-	}
-
-	memset(set->array, 0, set->size * sizeof(bitset_type_t));
-}
-
+/**
+ * \brief Store a LNF record to a storage
+ * \param[in,out] storage Storage
+ * \param[in]     rec     LNF record
+ * \return On success returns 0. Otherwise (failed to write to any of output
+ *   files) returns a non-zero value.
+ */
 int
-bitset_resize(bitset_t *set, size_t size)
-{
-	bitset_type_t *new_array;
-	const size_t new_size = (size / BITSET_BITS) + 1U;
-	if (new_size == set->size) {
-		// No change, return
-		return 0;
-	}
+stg_basic_store(stg_basic_t *storage, lnf_rec_t *rec);
 
-	new_array = realloc(set->array, new_size * sizeof(bitset_type_t));
-	if (!new_array) {
-		return 1;
-	}
+/**
+ * \brief Create a new time window
+ *
+ * Current output file(s) will be closed and new ones will be opened
+ * \param[in,out] storage Storage
+ * \param[in]     window  Identification time of new window (UTC)
+ * \return On success returns 0. Otherwise returns a non-zero value.
+ */
+int
+stg_basic_new_window(stg_basic_t *storage, time_t window);
 
-	set->array = new_array;
-	if (set->size < new_size) {
-		// Initialize the rest of the bits
-		size_t diff = new_size - set->size;
-		memset(&set->array[set->size], 0, diff * sizeof(bitset_type_t));
-	}
-
-	set->size  = new_size;
-	return 0;
-}
+#endif //LS_STORAGE_BASIC_H
