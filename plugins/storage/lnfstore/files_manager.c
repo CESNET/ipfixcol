@@ -290,9 +290,9 @@ files_mgr_create(enum FILES_MODE mode, const struct files_mgr_paths *paths,
 		return NULL;
 	}
 
-	// Configure Bloom Filter index
+	// Configure Bloom filter index
 	if (mode & FILES_M_INDEX) {
-		// Create BFI (Bloom Filter Index) manager
+		// Create file index (IDX) manager
 		mgr->outputs.index_mgr = idx_mgr_create(idx_param->prob,
 			idx_param->item_cnt, idx_param->autosize);
 		if (!mgr->outputs.index_mgr) {
