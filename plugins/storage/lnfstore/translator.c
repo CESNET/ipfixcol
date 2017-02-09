@@ -48,8 +48,6 @@
 #define readui32(_ptr_)(*((uint32_t*)(_ptr_)))
 #define readui64(_ptr_)(*((uint64_t*)(_ptr_)))
 
-// Module identification
-static const char* msg_module = "lnfstore";
 
 /** \brief Conversion table
  *
@@ -280,9 +278,9 @@ int tr_datetime(uint8_t *src_data, uint16_t* offset, uint16_t *length,
 int tr_mpls(uint8_t *src_data, uint16_t* offset, uint16_t *length,
 	uint8_t* buffer, struct ipfix_lnf_map* item_info)
 {
-	//Assume all mpls labels are saved as block in ipfix msg, so between 
+	//Assume all mpls labels are saved as block in ipfix msg, so between
 	//succesive calls of tr_mpls buffer remains unchaged
-	
+
 	static int lc = 0; //label count
 	//First base mpls label resets memory of this function
 	if(item_info->en == 0 && item_info->ie == 70){
@@ -293,9 +291,9 @@ int tr_mpls(uint8_t *src_data, uint16_t* offset, uint16_t *length,
 	/** data scheme
 	 *					0		1		2		3		4		5		6		7
 	 *	xth	qword	|	_	|	label 2xth data		||	_	|	label 2xth-1 data	|
-	 *	
+	 *
 	 **/
-	unsigned spec_offs = lc/2 + (lc%2) ? 5 : 1; 
+	unsigned spec_offs = lc/2 + (lc%2) ? 5 : 1;
 	memcpy(buffer + spec_offs, src_data + *offset, 3);
 
 	return 0;

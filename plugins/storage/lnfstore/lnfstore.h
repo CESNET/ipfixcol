@@ -2,9 +2,10 @@
  * \file lnfstore.h
  * \author Imrich Stoffa <xstoff02@stud.fit.vutbr.cz>
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
+ * \author Pavel Krobot <Pavel.Krobot@cesnet.cz>
  * \brief lnfstore plugin interface (header file)
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2015, 2016 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,7 +25,7 @@
  * License (GPL) version 2 or later, in which case the provisions
  * of the GPL apply INSTEAD OF those given above.
  *
- * This software is provided ``as is, and any express or implied
+ * This software is provided ``as is``, and any express or implied
  * warranties, including, but not limited to, the implied warranties of
  * merchantability and fitness for a particular purpose are disclaimed.
  * In no event shall the company or contributors be liable for any
@@ -38,57 +39,41 @@
  *
  */
 
-#ifndef LS_LNFSTORE_H 
+#ifndef LS_LNFSTORE_H
 #define LS_LNFSTORE_H
 
-#include <libxml/xmlstring.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <libnf.h>
 
 #include "bitset.h"
+#include "configuration.h"
+#include "files_manager.h"
+#include "storage_basic.h"
+#include "storage_profiles.h"
 
-/**
- * \brief Structure for configuration parsed from XML
- */
-struct conf_params {
-	char *storage_path;              /**< Storage directory (template)    */
-	char *file_prefix;               /**< File prefix                     */
-	char *file_suffix;               /**< File suffix (template)          */
-	char *file_ident;                /**< Internal file identification    */
-
-	uint32_t window_time;            /**< Time windows size               */
-	bool window_align;               /**< Enable/disable window alignment */
-	bool compress;                   /**< Enable/disable LZO compression  */
-
-	bool profiles;                   /**< Use profile metadata            */
-};
+extern const char *msg_module;
 
 // Size of conversion buffer
-#define BUFF_SIZE (65535)
-
-/** \brief Profile identification */
-typedef struct profile_file_s {
-	void *address;
-	lnf_file_t *file;
-} profile_file_t;
+#define REC_BUFF_SIZE (65535)
 
 /**
- * \brief Configuration of the plugin instantion
+ * \brief Plugin instance structure
  */
-struct lnfstore_conf
-{
-	struct conf_params *params;      /**< Configuration from XML file     */
+struct conf_lnfstore {
+	struct conf_params *params; /**< Configuration from XML file             */
+	time_t window_start;        /**< Start of the current window             */
 
-	uint8_t buffer[BUFF_SIZE];       /**< Buffer for record conversion    */
-	lnf_rec_t *rec_ptr;              /**< Converted record */
-	time_t window_start;             /**< Start of current window         */
+	struct {
+		stg_basic_t    *basic;    /**< Store all samples                     */
+		stg_profiles_t *profiles; /**< Store records based on profiles       */
+	} storage; /**< Only one type of storage is initialized at the same time */
 
-	lnf_file_t *file_ptr;            /**< Storage (for no profiler mode)  */
-
-	profile_file_t *profiles_ptr;    /**< Storages (for profile mode)     */
-	int profiles_size;               /**< Size of the array               */
-	bitset_t *bitset;                /**< Aux bitset                      */
+	struct {
+		lnf_rec_t *rec_ptr;  /**< LNF record (converted IPFIX record)        */
+		uint8_t    rec_buffer[REC_BUFF_SIZE]; /**< Record conversion buffer  */
+	} record; /**< Record conversion */
 };
+
 
 #endif //LS_LNFSTORE_H

@@ -1,9 +1,9 @@
 /**
- * \file bitset.c
+ * \file storage_profiles.h
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
- * \brief Bitset (source file)
+ * \brief Profile storage management (header file)
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2015, 2016 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,71 +37,57 @@
  *
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include "bitset.h"
+#ifndef LS_STORAGE_PROFILES_H
+#define LS_STORAGE_PROFILES_H
 
-// Create a new bitset
-bitset_t *bitset_create(size_t size)
-{
-	bitset_t *set = (bitset_t *) calloc(1, sizeof(bitset_t));
-	if (!set) {
-		return NULL;
-	}
+#include <libnf.h>
+#include "configuration.h"
 
-	set->size = (size / BITSET_BITS) + 1U;
-	set->array = (bitset_type_t *) calloc(set->size, sizeof(bitset_type_t));
-	if (!set->array) {
-		free(set);
-		return NULL;
-	}
+/**
+ * \brief Internal type
+ */
+typedef struct stg_profiles_s stg_profiles_t;
 
-	return set;
-}
+/**
+ * \brief Create a profile storage
+ * \param[in] params Parameters of this plugin instance
+ * \return On success returns a pointer to the storage. Otherwise returns NULL.
+ */
+stg_profiles_t *
+stg_profiles_create(const struct conf_params *params);
 
-// Destroy a bitset
-void bitset_destroy(bitset_t *set)
-{
-	if (!set) {
-		return;
-	}
+/**
+ * \brief Delete a profile storage
+ *
+ * Close output file(s) and delete the storage
+ * \param[in,out] storage Storage
+ */
+void
+stg_profiles_destroy(stg_profiles_t *storage);
 
-	free(set->array);
-	free(set);
-}
-
-// Clear a bitset
-void bitset_clear(bitset_t *set)
-{
-	if (!set) {
-		return;
-	}
-
-	memset(set->array, 0, set->size * sizeof(bitset_type_t));
-}
-
+/**
+ * \brief Store a LNF record to a storage
+ * \param[in,out] storage Storage
+ * \param[in]     rec     LNF record
+ * \return On success (all channels have been found) returns 0. Otherwise
+ *   (failed to find a channel and rebuild a new configuration) returns
+ *   a non-zero value. The return value do not signalize status of output files.
+ */
 int
-bitset_resize(bitset_t *set, size_t size)
-{
-	bitset_type_t *new_array;
-	const size_t new_size = (size / BITSET_BITS) + 1U;
-	if (new_size == set->size) {
-		// No change, return
-		return 0;
-	}
+stg_profiles_store(stg_profiles_t *storage, const struct metadata *mdata,
+	lnf_rec_t *rec);
 
-	new_array = realloc(set->array, new_size * sizeof(bitset_type_t));
-	if (!new_array) {
-		return 1;
-	}
+/**
+ * \brief Create a new time window
+ *
+ * Current output file(s) will be closed and new ones will be opened.
+ * \param[in,out] storage Storage
+ * \param[in]     window  Identification time of new window (UTC)
+ * \return On success returns 0. Otherwise (at least one window is not
+ *   properly initialized) returns a non-zero value.
+ */
+int
+stg_profiles_new_window(stg_profiles_t *storage, time_t window);
 
-	set->array = new_array;
-	if (set->size < new_size) {
-		// Initialize the rest of the bits
-		size_t diff = new_size - set->size;
-		memset(&set->array[set->size], 0, diff * sizeof(bitset_type_t));
-	}
 
-	set->size  = new_size;
-	return 0;
-}
+#endif //LS_STORAGE_PROFILES_H

@@ -3,7 +3,7 @@
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
  * \brief Bitset (header file)
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2015-2017 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,8 +50,8 @@ typedef unsigned int bitset_type_t;
 
 /** \brief Bitset structure */
 typedef struct bitset_s {
-	bitset_type_t *array;     /**< Array */
-	int size;                 /**< Array items */
+	bitset_type_t *array;     /**< Bit array                         */
+	size_t         size;      /**< Number of items (bitset_type_t)   */
 } bitset_t;
 
 /**
@@ -59,54 +59,73 @@ typedef struct bitset_s {
  * \param[in] size Number of bits
  * \return On success returns pointer to the bitset. Otherwise returns NULL.
  */
-bitset_t *bitset_create(int size);
+bitset_t *
+bitset_create(size_t size);
 
 /**
  * \brief Destroy a bitset
  * \param[out] set Bitset
  */
-void bitset_destroy(bitset_t *set);
+void
+bitset_destroy(bitset_t *set);
 
 /**
  * \brief Clear a bitset
- * \param set Bitset
+ * \param[in,out] set Bitset
  */
-void bitset_clear(bitset_t *set);
+void
+bitset_clear(bitset_t *set);
+
+/**
+ * \brief Resize the bitset
+ *
+ * The values of bits will be unchanged. If the new size is larger than
+ * the old size, the added bits are set will be set to false.
+ * \param[in,out] set  Bitset
+ * \param[in]     size New number of bits
+ * \return On success returns 0. Otherwise returns a non-zero value and
+ *   the size is unchanged.
+ */
+int
+bitset_resize(bitset_t *set, size_t size);
 
 /**
  * \brief Get maximal index
  * \param[in] set Bitset
- * \return Max bit index (outsize of bitset!)
+ * \return Max bit index (outsite of bitset!)
  */
-static inline int bitset_get_size(const bitset_t *set)
+static inline size_t
+bitset_get_size(const bitset_t *set)
 {
 	return set->size * BITSET_BITS;
 }
 
 /**
- * \brief Set a bit without check of borders
+ * \brief Set a bit (without border check)
  * \param[in, out] set Bitset
  * \param[in] idx Index
  * \param[in] val Value
  */
-static inline void bitset_set_fast(bitset_t *set, int idx, bool val)
+static inline void
+bitset_set_fast(bitset_t *set, size_t idx, bool val)
 {
 	if (val == true) {
-		set->array[idx / BITSET_BITS] |= (1 << (idx % BITSET_BITS));
+		set->array[idx / BITSET_BITS] |= (1U << (idx % BITSET_BITS));
 	} else {
-		set->array[idx / BITSET_BITS] &= ~(1 << (idx % BITSET_BITS));
+		set->array[idx / BITSET_BITS] &= ~(1U << (idx % BITSET_BITS));
 	}
 }
 
 /**
- * \brief Set a bit with check of borders
+ * \brief Set a bit (with border check)
  * \param[in, out] set Bitset
  * \param[in] idx Index
  * \param[in] val Value
  */
-static inline void bitset_set(bitset_t *set, int idx, bool val)
+static inline void
+bitset_set(bitset_t *set, size_t idx, bool val)
 {
-	if (idx < 0 || set->size < idx / BITSET_BITS) {
+	if (set->size <= idx / BITSET_BITS) {
 		return;
 	}
 
@@ -114,25 +133,27 @@ static inline void bitset_set(bitset_t *set, int idx, bool val)
 }
 
 /**
- * \brief Get a bit without check of borders
+ * \brief Get a bit (without border check)
  * \param[in] set Bitset
  * \param[in] idx Index
- * \return Value of the bit
+ * \return Value of the bit.
  */
-static inline bool bitset_get_fast(const bitset_t *set, int idx)
+static inline bool
+bitset_get_fast(const bitset_t *set, size_t idx)
 {
-	return set->array[idx / BITSET_BITS] & (1 << (idx % BITSET_BITS));
+	return set->array[idx / BITSET_BITS] & (1U << (idx % BITSET_BITS));
 }
 
 /**
- * \brief Get a bit with check of borders
+ * \brief Get a bit (with border check)
  * \param[in] set Bitset
  * \param[in] idx Index
- * \return Value of the bit
+ * \return Value of the bit.
  */
-static inline bool bitset_get(const bitset_t *set, int idx)
+static inline bool
+bitset_get(const bitset_t *set, size_t idx)
 {
-	if (idx < 0 || set->size < idx / BITSET_BITS) {
+	if (set->size <= idx / BITSET_BITS) {
 		return 0;
 	}
 
@@ -140,12 +161,22 @@ static inline bool bitset_get(const bitset_t *set, int idx)
 }
 
 /**
-unsigned int * bitarray = (int *)calloc(size / 8 + 1, sizeof(unsigned int));
+ * \brief Get a bit and set its new value (with border check)
+ * \param set Bitset
+ * \param idx Index
+ * \param val New value
+ * \return Value of the bit before setting the new value.
+ */
+static inline bool
+bitset_get_and_set(bitset_t *set, size_t idx, bool val)
+{
+	if (set->size <= idx / BITSET_BITS) {
+		return 0;
+	}
 
-static inline void setIndex(unsigned int * bitarray, size_t idx) {
-    bitarray[idx / WORD_BITS] |= (1 << (idx % WORD_BITS));
+	bool result = bitset_get_fast(set, idx);
+	bitset_set_fast(set, idx, val);
+	return result;
 }
-
-**/
 
 #endif /* LNF_BITSET_H */

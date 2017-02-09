@@ -1,9 +1,9 @@
 /**
- * \file bitset.c
+ * \file storage_common.h
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
- * \brief Bitset (source file)
+ * \brief Common function for storage managers (header file)
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2017 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,71 +37,44 @@
  *
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include "bitset.h"
+#ifndef STORAGE_COMMON_H
+#define STORAGE_COMMON_H
 
-// Create a new bitset
-bitset_t *bitset_create(size_t size)
-{
-	bitset_t *set = (bitset_t *) calloc(1, sizeof(bitset_t));
-	if (!set) {
-		return NULL;
-	}
+#include <ipfixcol.h>
+#include "files_manager.h"
+#include "configuration.h"
 
-	set->size = (size / BITSET_BITS) + 1U;
-	set->array = (bitset_type_t *) calloc(set->size, sizeof(bitset_type_t));
-	if (!set->array) {
-		free(set);
-		return NULL;
-	}
 
-	return set;
-}
+/**
+ * \brief Create a file manager for output files
+ *
+ * Based on parsed parameters from the XML plugin configuration defines
+ * names of the output files (LNF and Bloom filter index) and creates
+ * the new file manager.
+ *
+ * \note The \p dir parameter is not taken automatically from the plugin
+ *   configuration because in profile mode each channel uses unique output
+ *   directory.
+ *
+ * \param[in] params Plugin configuration
+ * \param[in] dir    Output directory
+ * \return On success returns a pointer to the manager. Otherwise returns
+ *   NULL.
+ */
+files_mgr_t *
+stg_common_files_mgr_create(const struct conf_params *params, const char *dir);
 
-// Destroy a bitset
-void bitset_destroy(bitset_t *set)
-{
-	if (!set) {
-		return;
-	}
-
-	free(set->array);
-	free(set);
-}
-
-// Clear a bitset
-void bitset_clear(bitset_t *set)
-{
-	if (!set) {
-		return;
-	}
-
-	memset(set->array, 0, set->size * sizeof(bitset_type_t));
-}
-
+/**
+ * \brief Fill a new record (convert IPFIX to LNF)
+ *
+ * \param[in]     mdata  IPFIX record
+ * \param[out]    record LNF Record
+ * \param[in,out] buffer Pointer to temporary buffer (for data conversion)
+ * \return Number of converted fields
+ */
 int
-bitset_resize(bitset_t *set, size_t size)
-{
-	bitset_type_t *new_array;
-	const size_t new_size = (size / BITSET_BITS) + 1U;
-	if (new_size == set->size) {
-		// No change, return
-		return 0;
-	}
+stg_common_fill_record(const struct metadata *mdata, lnf_rec_t *record,
+	uint8_t *buffer);
 
-	new_array = realloc(set->array, new_size * sizeof(bitset_type_t));
-	if (!new_array) {
-		return 1;
-	}
 
-	set->array = new_array;
-	if (set->size < new_size) {
-		// Initialize the rest of the bits
-		size_t diff = new_size - set->size;
-		memset(&set->array[set->size], 0, diff * sizeof(bitset_type_t));
-	}
-
-	set->size  = new_size;
-	return 0;
-}
+#endif // STORAGE_COMMON_H
