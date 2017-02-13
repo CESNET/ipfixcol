@@ -51,7 +51,7 @@
 #include <stdbool.h>
 #include "sender.h"
 #include "packet.h"
-#include "templates.h"
+#include <ipfixcol.h>
 
 /**
  * \brief Mode of flow distribution
@@ -70,7 +70,7 @@ typedef struct _fwd_dest fwd_dest_t;
  * \param[in] tmplt_mgr  Template manager
  * \return Pointer or NULL
  */
-fwd_dest_t *dest_create(fwd_tmplt_mgr_t *tmplt_mgr);
+fwd_dest_t *dest_create(tmapper_t *tmplt_mgr);
 
 /**
  * \brief Destroy the destination manager

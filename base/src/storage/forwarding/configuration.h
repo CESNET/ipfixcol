@@ -51,7 +51,7 @@
 #include "sender.h"
 #include "destination.h"
 #include "packet.h"
-#include "templates.h"
+#include <ipfixcol.h>
 
 /**
  * \brief Configuration of the plugin
@@ -67,7 +67,7 @@ struct plugin_config {
 	fwd_bldr_t *builder_all;    /**< Packet builder (for data and templates) */
 	fwd_bldr_t *builder_tmplt;  /**< Packet builder (for templates only)     */
 
-	fwd_tmplt_mgr_t *tmplt_mgr; /**< Template manager                        */
+	tmapper_t  *tmplt_mgr;      /**< Template manager                        */
 };
 
 /**
