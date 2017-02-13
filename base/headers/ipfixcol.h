@@ -63,6 +63,7 @@
 #include <ipfixcol/storage.h>
 #include <ipfixcol/ipfix.h>
 #include <ipfixcol/templates.h>
+#include <ipfixcol/template_mapper.h>
 #include <ipfixcol/verbose.h>
 #include <ipfixcol/centos5.h>
 #include <ipfixcol/utils.h>
