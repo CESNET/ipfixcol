@@ -378,7 +378,7 @@ struct plugin_config *config_parse(const char *cfg_string)
 
 	config->builder_all = bldr_create();
 	config->builder_tmplt = bldr_create();
-	config->tmplt_mgr = tmplts_create();
+	config->tmplt_mgr = tmapper_create();
 	config->dest_mgr = dest_create(config->tmplt_mgr);
 	if (!config->dest_mgr      || !config->builder_all ||
 		!config->builder_tmplt || !config->tmplt_mgr) {
@@ -411,7 +411,7 @@ void config_destroy(struct plugin_config *cfg)
 	dest_destroy(cfg->dest_mgr);
 
 	free(cfg->def_port);
-	tmplts_destroy(cfg->tmplt_mgr);
+	tmapper_destroy(cfg->tmplt_mgr);
 	bldr_destroy(cfg->builder_all);
 	bldr_destroy(cfg->builder_tmplt);
 
