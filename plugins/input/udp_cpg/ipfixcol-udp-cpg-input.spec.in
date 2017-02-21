@@ -25,13 +25,18 @@ UDP input plugin for ipfixcol with support for template replication over CPG.
 %setup
 
 %post
-ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p i -n udp-cpgCollector -t udp-cpgCollector -s "%{_datadir}/ipfixcol/plugins/ipfixcol-udp-cpg-input.so" -f
+# Add config only during initial installation, not upgrade
+if [ "$1" = "1" ]; then
+    ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p i -n udp-cpgCollector -t udp-cpgCollector -s "%{_datadir}/ipfixcol/plugins/ipfixcol-udp-cpg-input.so" -f
+fi
 
 %preun
 
 %postun
-ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p i -n udp-cpg
-
+# Remove config only for uninstall, not upgrade
+if [ "$1" = "0" ]; then
+    ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p i -n udp-cpg
+fi
 
 %build
 %configure --with-distro=@DISTRO@
