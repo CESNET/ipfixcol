@@ -62,6 +62,7 @@ struct json_conf {
 	bool protocol;       /**< protocol format  - true(RAW), false(formatted)  */
 	bool ignoreUnknown;  /**< Ignore unknown elements                        */
 	bool whiteSpaces;    /**< Convert white spaces in strings (do not skip)  */
+	std::string prefix;  /**< Prefix for IPFIX elements */
 };
 
 class Output

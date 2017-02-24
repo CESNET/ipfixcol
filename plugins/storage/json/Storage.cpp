@@ -225,7 +225,8 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 			STR_APPEND(record, ", ");
 		}
 
-		STR_APPEND(record, "\"ipfix.");
+		STR_APPEND(record, "\"");
+		record += config->prefix;
 		record += element_name;
 		STR_APPEND(record, "\": ");
 

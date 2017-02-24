@@ -64,6 +64,7 @@ Here is an example of configuration in **startup.xml**:
 		<protocol>formatted</protocol>
 		<ignoreUnknown>yes</ignoreUnknown>
 		<nonPrintableChar>yes</nonPrintableChar>
+		<prefix>ipfix.</prefix>
 
 		<output>
 			<type>print</type>
@@ -100,6 +101,7 @@ Here is an example of configuration in **startup.xml**:
 * **protocol** - Convert protocol identification to formatted style (formatted) or to a number (raw) [default == formatted].
 * **ignoreUnknown** - Skip elements with unknown semantics (yes/no). Data of unknown elements are formatted as unsigned integer (1, 2, 4, 8 bytes length) or binary values. Names will have format 'eXXidYY' where XX is enterprise number and YY is element ID [default == yes].
 * **nonPrintableChar** - Convert non-printable characters (control characters, tab, newline, etc.) from IPFIX fields with data type of a string. (yes/no) [default == yes].
+* **prefix** - Prefix of the IPFIX element names. [default == ipfix.].
 
 * **output** - Specifies JSON data processor. Multiple outputs are supported.
 	* **type** - Output type. **print**, **send**, **file** and **server** are supported.

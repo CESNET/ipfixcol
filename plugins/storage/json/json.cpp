@@ -106,6 +106,14 @@ void process_startup_xml(struct json_conf *conf, char *params)
 		conf->whiteSpaces = false;
 	}
 
+	/* Prefix for IPFIX elements */
+	/* Set default rpefix */
+	conf->prefix = "ipfix.";
+	/* Override the default from configuration */
+	if (ie.node().child("prefix")) {
+		conf->prefix = ie.node().child_value("prefix");
+	}
+
 	/* Process all outputs */
 	pugi::xpath_node_set outputs = doc.select_nodes("/fileWriter/output");
 

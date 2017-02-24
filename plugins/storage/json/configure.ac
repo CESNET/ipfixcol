@@ -38,7 +38,7 @@
 
 AC_PREREQ([2.60])
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol-json-output], [1.2.1])
+AC_INIT([ipfixcol-json-output], [1.2.2])
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([json.cpp])
