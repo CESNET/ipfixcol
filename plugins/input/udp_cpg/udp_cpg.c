@@ -62,7 +62,7 @@
 #include <time.h>
 
 #include <ipfixcol.h>
-#include "convert.h"
+#include "convert/convert.h"
 
 #include <corosync/cpg.h> //closed process group
 #include <sys/select.h> //monitor multiple file descriptors

@@ -1,15 +1,16 @@
 ACLOCAL_AMFLAGS = -I m4
 
 pluginsdir = $(datadir)/ipfixcol/plugins
-AM_CPPFLAGS = -I$(srcdir)/../../../base/headers $(SFLOW_CPPFLAGS) -I$(top_srcdir)/../../../base/src/utils/conversion
+AM_CPPFLAGS = -I$(srcdir)/../../../base/headers $(SFLOW_CPPFLAGS)
 
 sofile = $(pluginsdir)/ipfixcol-udp-cpg-input.so
 internalcfg = $(DESTDIR)$(sysconfdir)/ipfixcol/internalcfg.xml
 
 plugins_LTLIBRARIES = ipfixcol-udp-cpg-input.la
-ipfixcol_udp_cpg_input_la_LDFLAGS = -module -avoid-version -shared -L$(top_srcdir)/../../../base/src/utils/conversion
-ipfixcol_udp_cpg_input_la_LIBADD = -lrt -lconversion
-ipfixcol_udp_cpg_input_la_SOURCES = udp_cpg.c
+ipfixcol_udp_cpg_input_la_LDFLAGS = -module -avoid-version -shared
+ipfixcol_udp_cpg_input_la_LIBADD = -lrt
+libconvert = convert/convert.c convert/convert.h convert/sflow.c convert/sflow.h convert/sflowtool.h
+ipfixcol_udp_cpg_input_la_SOURCES = udp_cpg.c $(libconvert)
 
 if HAVE_DOC
 MANSRC = ipfixcol-udp-cpg-input.dbk
