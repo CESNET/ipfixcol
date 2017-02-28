@@ -58,6 +58,7 @@
  */
 struct plugin_config {
 	char *def_port;             /**< Default port                            */
+	int def_proto;              /**< Default protocol                        */
 	enum DIST_MODE mode;        /**< Distribution mode                       */
 	uint16_t packet_size;       /**< Maximal size per generated packet       */
 	int reconn_period;          /**< Reconnection period (in milliseconds)   */

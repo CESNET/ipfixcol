@@ -49,6 +49,8 @@
 
 /** Default destination port                 */
 #define DEF_PORT "4739"
+/** Default transport protocol               */
+#define DEF_PROTO IPPROTO_TCP
 /** Default retry interval (seconds)         */
 #define DEF_RETRY_INT (5)
 /** Default maximal packet size              */
@@ -135,6 +137,26 @@ static enum DIST_MODE config_parse_distr(const char *str)
 }
 
 /**
+ * \brief Convert string to transport protocol
+ * \param[in] str String
+ * \return Return either parsed value or default protocol
+ */
+static int config_parse_proto(const char *str)
+{
+	if (!str) {
+		return DEF_PROTO;
+	}
+
+	if (!strcasecmp(str, "tcp")) {
+		return IPPROTO_TCP;
+	} else if (!strcasecmp(str, "udp")) {
+		return IPPROTO_UDP;
+	} else {
+		return DEF_PROTO;
+	}
+}
+
+/**
  * \brief Parse only default values from the plugin configuration
  * \param[in,out] ctx Parser context
  * \return On sucess returns 0. Ohterwise returns non-zero value.
@@ -145,12 +167,21 @@ static int config_parse_def_values(struct parser_context *ctx)
 	xmlNode *cur = ctx->node->children;
 	struct plugin_config *cfg = ctx->cfg;
 
+	// Set default protocol
+	cfg->def_proto = DEF_PROTO;
+
 	while (cur) {
 		if (!xmlStrcasecmp(cur->name, (const xmlChar *) "defaultPort")) {
 			// Default port
 			free(cfg->def_port);
 			cfg->def_port = (char *) xmlNodeListGetString(doc,
 				cur->xmlChildrenNode, 1);
+		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "defaultProtocol")) {
+			// Default protocol
+			char *str_proto = (char *) xmlNodeListGetString(doc,
+				cur->xmlChildrenNode, 1);
+			cfg->def_proto = config_parse_proto(str_proto);
+			free(str_proto);
 		} else {
 			// Other nodes -> skip
 		}
@@ -195,6 +226,7 @@ static fwd_sender_t *config_parse_destination(struct parser_context *ctx)
 {
 	xmlChar *str_ip = NULL;
 	xmlChar *str_port = NULL;
+	xmlChar *str_proto = NULL;
 	xmlNode *cur = ctx->node;
 
 	// Find all related XML nodes & parse them
@@ -213,6 +245,12 @@ static fwd_sender_t *config_parse_destination(struct parser_context *ctx)
 				xmlFree(str_port);
 			}
 			str_port = xmlNodeListGetString(ctx->doc, cur->xmlChildrenNode, 1);
+		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "protocol")) {
+			// Destination protocol
+			if (str_proto) {
+				xmlFree(str_proto);
+			}
+			str_proto = xmlNodeListGetString(ctx->doc, cur->xmlChildrenNode, 1);
 		} else {
 			// Other unknown nodes
 			MSG_WARNING(msg_module, "Unknown node '%s' in 'destination' node "
@@ -226,15 +264,21 @@ static fwd_sender_t *config_parse_destination(struct parser_context *ctx)
 	const char *dst_ip = (const char *) str_ip;
 	const char *dst_port = (str_port != NULL)
 			? (const char *) str_port : config_def_port(ctx->cfg);
+	int proto = ctx->cfg->def_proto;
+	if (str_proto != NULL) {
+		proto = config_parse_proto((const char *) str_proto);
+	}
 
 	fwd_sender_t *new_sender;
-	new_sender = sender_create(dst_ip, dst_port);
+	new_sender = sender_create(dst_ip, dst_port, proto);
 
 	// Clean up
 	if (str_ip)
 		xmlFree(str_ip);
 	if (str_port)
 		xmlFree(str_port);
+	if (str_proto)
+		xmlFree(str_proto);
 
 	return new_sender;
 }
@@ -259,6 +303,8 @@ static int config_parse_xml(struct parser_context *ctx)
 
 	while (cur && !failed) {
 		if (!xmlStrcasecmp(cur->name, (const xmlChar *) "defaultPort")) {
+			// Default values were already processed -> skip
+		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "defaultProtocol")) {
 			// Default values were already processed -> skip
 		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "fileFormat")) {
 			// Useless node -> skip

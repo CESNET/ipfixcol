@@ -82,6 +82,7 @@
 
 			<distribution>RoundRobin</distribution>
 			<defaultPort>4739</defaultPort>
+			<defaultProtocol>tcp</defaultProtocol>
 
 			<destination>
 				<ip>192.168.0.1</ip>
@@ -92,6 +93,7 @@
 			<destination>
 				<ip>192.168.0.3</ip>
 				<port>4740</port>
+				<protocol>udp</protocol>
 			</destination>
 		</fileWriter>
 	</destination>
@@ -118,6 +120,15 @@
 					</simpara>
 				</listitem>
 			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>defaultProtocol</command>
+				</term>
+				<listitem>
+					<simpara>Default transport protocol. It can be overriden by <command>protocol</command> tag in <command>destination</command>. Allowed values are <emphasis>tcp</emphasis> and <emphasis>udp</emphasis>. TCP protocol is the default when this configuration is missing.
+					</simpara>
+				</listitem>
+			</varlistentry>
 
 			<varlistentry>
 				<term>
@@ -138,6 +149,13 @@
 							<command>port</command>
 						</term>
 						<simpara>Destination port number</simpara>
+					</varlistentry>
+
+					<varlistentry>
+						<term>
+							<command>protocol</command>
+						</term>
+						<simpara>Transport protocol. Allowed values are same as for <command>defaultProtocol</command></simpara>
 					</varlistentry>
 
 				</listitem>

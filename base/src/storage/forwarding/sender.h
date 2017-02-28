@@ -70,11 +70,12 @@ typedef struct _fwd_sender fwd_sender_t;
 
 /**
  * \brief Create a new sender
- * \param[in] addr Destination IP address
- * \param[in] port Destination port
+ * \param[in] addr  Destination IP address
+ * \param[in] port  Destination port
+ * \param[in] proto Transport protocol
  * \return On success returns pointer to new sender. Otherwise returns NULL.
  */
-fwd_sender_t *sender_create(const char *addr, const char *port);
+fwd_sender_t *sender_create(const char *addr, const char *port, int proto);
 
 /**
  * \brief Destroy a sender
@@ -95,6 +96,13 @@ const char *sender_get_address(const fwd_sender_t *s);
  * \return Port
  */
 const char *sender_get_port(const fwd_sender_t *s);
+
+/**
+ * \brief Get transport protocol
+ * \param s Sender structure
+ * \return Transport protocol
+ */
+const int sender_get_proto(const fwd_sender_t *s);
 
 /**
  * \brief (Re)connect to the destination
