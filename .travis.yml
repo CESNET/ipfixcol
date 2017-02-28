@@ -14,7 +14,7 @@ env:
 
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install -y libxml2-dev libsctp-dev libsctp1 xsltproc docbook-xsl doxygen libpq-dev libbz2-dev liblzo2-dev libgeoip-dev librrd-dev libsqlite3-dev
+  - sudo apt-get install -y libxml2-dev libsctp-dev libsctp1 xsltproc docbook-xsl doxygen libpq-dev libbz2-dev liblzo2-dev libgeoip-dev librrd-dev libsqlite3-dev libcpg-dev corosync-dev
   - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 50
   - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 50
 
