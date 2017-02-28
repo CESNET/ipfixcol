@@ -116,8 +116,6 @@ idx_mgr_save_index(const idx_mgr_t *mgr);
 /**
  * \brief Create a new window
  *
-
- TOOD: change this ...
  * Each index window is stored into a file.
  * First, if a previous window exists, store the index to the previous output
  * file. Second, if automatic recalculation of parameters is enabled and

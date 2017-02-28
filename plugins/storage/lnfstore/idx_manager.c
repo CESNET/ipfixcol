@@ -141,6 +141,8 @@ idx_mgr_destroy(idx_mgr_t *mgr)
 	if (mgr->idx_ptr) {
 		bfi_destroy_index(&(mgr->idx_ptr));
 	}
+
+	free(mgr->idx_filename);
 	free(mgr);
 }
 
