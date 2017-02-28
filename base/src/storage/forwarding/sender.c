@@ -66,6 +66,7 @@ struct _fwd_sender {
 	char *dst_port;       /**< Destination port           */
 	int proto;            /**< Transport protocol         */
 	int socket_fd;        /**< Socket                     */
+	time_t tmpl_time;     /**< Last time all templates were sent */
 
 	uint8_t *buffer_data; /**< Buffer for unsent parts of messsages */
 	size_t buffer_valid;  /**< Valid part of the buffer             */
@@ -152,6 +153,7 @@ fwd_sender_t *sender_create(const char *addr, const char *port, int proto)
 	res->dst_addr = strdup(addr);
 	res->dst_port = strdup(port);
 	res->proto = proto;
+	res->tmpl_time = time(NULL);
 	if (!res->dst_addr || !res->dst_port) {
 		// Failed to copy parameters
 		sender_destroy(res);
@@ -194,6 +196,18 @@ const char *sender_get_port(const fwd_sender_t *s)
 const int sender_get_proto(const fwd_sender_t *s)
 {
 	return s->proto;	
+}
+
+/** Get time of last templates */
+const int sender_get_tmpl_time(const fwd_sender_t *s)
+{
+	return s->tmpl_time;	
+}
+
+/** Set time of last templates */
+void sender_set_tmpl_time(fwd_sender_t *s, int time)
+{
+	s->tmpl_time = time;	
 }
 
 /** (Re)connect to the destination */

@@ -488,6 +488,9 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 	} else
 	*/
 
+	// Check for UDP connections with expired templates
+	dest_check_expired_udp(cfg->dest_mgr);
+
 	// Add reconnected clients
 	dest_check_reconnected(cfg->dest_mgr);
 

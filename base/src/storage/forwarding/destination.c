@@ -507,6 +507,29 @@ static bool aux_dummy_true(struct dst_client *client, void *data)
 }
 
 /**
+ * \brief Test whether UDP client has expired templates
+ * \param[in] client Destination
+ * \param[in] data   Unused (can be NULL)
+ * \return Returns returns for UDP clients
+ */
+static bool aux_udp_expired(struct dst_client *client, void *data)
+{
+	time_t now = (time_t) data;
+	if (sender_get_proto(client->sender) != IPPROTO_UDP) {
+		return false;
+	}
+
+	// TODO make this constant configurable
+	if (sender_get_tmpl_time(client->sender) + 300 > now) {
+		return false;
+	}
+
+	sender_set_tmpl_time(client->sender, now);
+
+	return true;
+}
+
+/**
  * \brief Thread for reconnection of disconnected destinations
  * \param[in,out] arg Configuration of Destination Manager
  * \return Nothing
@@ -809,6 +832,14 @@ static struct tmplts_per_odid *dest_templates_prepare(
 	}
 
 	return result;
+}
+
+// Check UDP connections for expired templates and move them to ready state
+void dest_check_expired_udp(fwd_dest_t *dst_mgr)
+{
+	pthread_mutex_lock(&dst_mgr->group_mtx);
+	group_move(dst_mgr->conn, dst_mgr->ready, &aux_udp_expired, (void *) time(NULL));
+	pthread_mutex_unlock(&dst_mgr->group_mtx);
 }
 
 // Check and move reconnected destinations to connected destinations

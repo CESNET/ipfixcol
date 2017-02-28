@@ -105,6 +105,20 @@ const char *sender_get_port(const fwd_sender_t *s);
 const int sender_get_proto(const fwd_sender_t *s);
 
 /**
+ * \brief Get last time when all templates were sent
+ * \param s Sender structure
+ * \return Time of last templates send
+ */
+const int sender_get_tmpl_time(const fwd_sender_t *s);
+
+/**
+ * \brief Set last time when all templates were sent
+ * \param s Sender structure
+ * \param time Time to set
+ */
+void sender_set_tmpl_time(fwd_sender_t *s, int time);
+
+/**
  * \brief (Re)connect to the destination
  *
  * Create a socket and try to connect. Previous connection is closed.
