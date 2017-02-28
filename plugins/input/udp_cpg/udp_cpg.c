@@ -331,6 +331,8 @@ int input_init(char *params, void **config)
 			} else if (xmlStrEqual(cur_node->name, BAD_CAST "CPGName")) {
 				strncpy(conf->cpg_group_name.value, tmp_val, CPG_MAX_NAME_LENGTH - 1);
 				conf->cpg_group_name.length = strlen(conf->cpg_group_name.value);
+				/* value is copied, free original */
+				free(tmp_val);
 			} else { /* unknown parameter, ignore */
 				free(tmp_val);
 			}
