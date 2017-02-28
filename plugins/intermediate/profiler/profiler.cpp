@@ -149,7 +149,7 @@ void receive_config(daemon_config *daemon)
 	MSG_DEBUG(msg_module, "Reading %s", formatSize(remaining).c_str());
 
 	while (remaining > 0) {
-		readed = read(daemon->sockfd, daemon->buffer, std::min(remaining, (uint32_t) BUFFER_SIZE));
+		readed = read(daemon->sockfd, daemon->buffer, std::min(remaining, (uint32_t) BUFFER_SIZE - 1));
 		if (readed < 1) {
 			MSG_ERROR(msg_module, "Error while reading message: %s", strerror(errno));
 			daemon->message.clear();
