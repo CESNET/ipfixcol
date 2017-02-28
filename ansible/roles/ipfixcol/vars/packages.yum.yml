@@ -17,6 +17,7 @@ packages:
     make,
     openssl-devel,
   ]
+  udp_cpg: [corosync, corosync-devel]
   geoip: [GeoIP-devel]
   stats: [rrdtool-devel]
   uid: [sqlite-devel]

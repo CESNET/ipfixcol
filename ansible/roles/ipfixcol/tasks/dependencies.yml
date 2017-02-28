@@ -32,6 +32,11 @@
    - fbitmerge
    - fbitdump
 
+- name: udp_cpg dependencies
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=latest"
+  with_items: "{{ packages.udp_cpg }}"
+  tags: udp_cpg
+
 - name: postgres dependencies
   action: "{{ ansible_pkg_mgr }} name={{ item }} state=latest"
   with_items: "{{ packages.postgres }}"

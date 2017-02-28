@@ -119,7 +119,7 @@ autoconf bison docbook-style-xsl doxygen flex
 gcc gcc-c++ git libtool libxml2 libxml2-devel 
 libxslt lksctp-tools-devel lzo-devel make 
 openssl-devel GeoIP-devel rrdtool-devel
-sqlite-devel postgresql-devel rpm-build
+sqlite-devel postgresql-devel corosync corosync-devel rpm-build
 ```
 
 Debian and Ubuntu distributions have a different names for some of the packages:
@@ -127,7 +127,7 @@ Debian and Ubuntu distributions have a different names for some of the packages:
 autoconf bison build-essential docbook-xsl doxygen flex
 git liblzo2-dev libtool libsctp-dev libssl-dev libxml2
 libxml2-dev pkg-config xsltproc libgeoip-dev librrd-dev
-libsqlite3-dev libpq-dev
+libsqlite3-dev libpq-dev libcpg-dev corosync-dev
 ```
 Moreover, you need to build the [FastBit library](#fastbit)
 
