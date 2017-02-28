@@ -22,12 +22,18 @@ profilestats intermediate plugin for ipfixcol.
 %setup
 
 %post
-ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p m -n profilestats -t profilestats -s "%{_datadir}/ipfixcol/plugins/ipfixcol-profilestats-inter.so" -f
+# Add config only during initial installation, not upgrade
+if [ "$1" = "1" ]; then
+    ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p m -n profilestats -t profilestats -s "%{_datadir}/ipfixcol/plugins/ipfixcol-profilestats-inter.so" -f
+fi
 
 %preun
 
 %postun
-ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p m -n profilestats
+# Remove config only for uninstall, not upgrade
+if [ "$1" = "0" ]; then
+    ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p m -n profilestats
+fi
 
 %build
 %configure --with-distro=@DISTRO@

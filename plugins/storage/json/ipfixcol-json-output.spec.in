@@ -22,12 +22,18 @@ JSON storage plugin for ipfixcol.
 %setup
 
 %post
-ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p o -n json -t json -s "%{_datadir}/ipfixcol/plugins/ipfixcol-json-output.so" -f
+# Add config only during initial installation, not upgrade
+if [ "$1" = "1" ]; then
+    ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p o -n json -t json -s "%{_datadir}/ipfixcol/plugins/ipfixcol-json-output.so" -f
+fi
 
 %preun
 
 %postun
-ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p o -n json
+# Remove config only for uninstall, not upgrade
+if [ "$1" = "0" ]; then
+    ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p o -n json
+fi
 
 %build
 %configure --with-distro=@DISTRO@

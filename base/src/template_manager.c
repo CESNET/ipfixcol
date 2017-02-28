@@ -88,13 +88,13 @@ struct ipfix_template_mgr_record *tm_record_lookup(struct ipfix_template_mgr *tm
 {
 	struct ipfix_template_mgr_record *tmp_rec;
 	uint64_t table_key = ((uint64_t) key->odid << 32) | key->crc;
-	
+
 	for (tmp_rec = tm->first; tmp_rec != NULL; tmp_rec = tmp_rec->next) {
 		if (tmp_rec->key == table_key) {
 			return tmp_rec;
 		}
 	}
-	
+
 	return NULL;
 }
 
@@ -119,17 +119,17 @@ struct ipfix_template_mgr_record *tm_record_lookup_insert(struct ipfix_template_
 		uint64_t table_key = ((uint64_t) key->odid << 32) | key->crc;
 		tmr->key = table_key;
 		tmr->next = NULL;
-		
+
 		/* Insert new record at the end of list */
 		if (tm->first == NULL) {
 			tm->first = tmr;
 		} else {
 			tm->last->next = tmr;
 		}
-		
+
 		tm->last = tmr;
 	}
-	
+
 	pthread_mutex_unlock(&tm->tmr_lock);
 	return tmr;
 }
@@ -197,7 +197,7 @@ static int tm_fill_template(struct ipfix_template *template, void *template_reco
 							(uint8_t*)((struct ipfix_options_template_record*) template_record)->fields,
 							template_length - sizeof(struct ipfix_template) + sizeof(template_ie));
 	}
-	
+
 	template->references = 0;
 	template->next = NULL;
 	template->first_transmission = time(NULL);
@@ -286,6 +286,64 @@ uint16_t tm_template_record_length(struct ipfix_template_record *template, int m
 	}
 
 	return len;
+}
+
+int tm_source_register(struct ipfix_template_mgr *tm, uint32_t odid, uint32_t crc)
+{
+	struct ipfix_template_key key;
+	key.odid = odid;
+	key.crc = crc;
+	key.tid = 0; // This field is not used by lookup up function, so it is OK
+
+	struct ipfix_template_mgr_record *rec;
+	if ((rec = tm_record_lookup_insert(tm, &key)) == NULL) {
+		// Failed
+		return 1;
+	}
+
+	pthread_mutex_lock(&tm->tmr_lock);
+	// We have to get it again, but right now we are locked...
+	if ((rec = tm_record_lookup(tm, &key)) == NULL) {
+		// Someone removed the record, before we managed to lock the manager
+		pthread_mutex_unlock(&tm->tmr_lock);
+		return 1;
+	}
+
+	rec->registrations++;
+	unsigned int reg_cpy = rec->registrations;
+	pthread_mutex_unlock(&tm->tmr_lock);
+
+	MSG_DEBUG(msg_module, "[%u] New source reservation added (total: %u).",
+		odid, reg_cpy);
+	return 0;
+}
+
+int tm_source_unregister(struct ipfix_template_mgr *tm, uint32_t odid, uint32_t crc)
+{
+	struct ipfix_template_key key;
+	key.odid = odid;
+	key.crc = crc;
+	key.tid = 0; // This field is not used by lookup up function, so it is OK
+
+	pthread_mutex_lock(&tm->tmr_lock);
+
+	struct ipfix_template_mgr_record *rec;
+	if ((rec = tm_record_lookup(tm, &key)) == NULL) {
+		// Failed to find information about the source
+		pthread_mutex_unlock(&tm->tmr_lock);
+		return 1;
+	}
+
+	if (rec->registrations > 0) {
+		rec->registrations--;
+	}
+
+	unsigned int reg_cpy = rec->registrations;
+	pthread_mutex_unlock(&tm->tmr_lock);
+
+	MSG_DEBUG(msg_module, "[%u] Source reservation removed (total: %u).",
+		odid, reg_cpy);
+	return 0;
 }
 
 /**
@@ -414,7 +472,7 @@ int tm_record_remove_template(struct ipfix_template_mgr_record *tmr, uint16_t te
 
 /**
  * \brief Get template index in template manager's record
- * 
+ *
  * \param tmr Template manager's record
  * \param id Template ID
  * \return Template index or -1 if not found
@@ -431,7 +489,7 @@ int tm_record_template_index(struct ipfix_template_mgr_record *tmr, uint16_t id)
 			count++;
 		}
 	}
-	
+
 	return -1;
 }
 
@@ -476,18 +534,18 @@ struct ipfix_template *tm_record_update_template(struct ipfix_template_mgr_recor
 {
 	uint16_t id = ntohs(((struct ipfix_template_record *) template)->template_id);
 	struct ipfix_template *new_tmpl = NULL;
-	
+
 	/* Get template index */
 	int i = tm_record_template_index(tmr, id);
-	
+
 	if (i < 0) {
 		MSG_WARNING(msg_module, "[%u] Template %u cannot be updated (not found); creating new one...", odid, id);
 		return tm_record_add_template(tmr, template, max_len, type, odid);
 	}
-	
+
 	/* Save IDs */
 	uint16_t templ_id = tmr->templates[i]->template_id;
-	
+
 	/* Create new template */
 	if ((new_tmpl = tm_create_template(template, max_len, type, odid)) == NULL) {
 		return NULL;
@@ -581,7 +639,7 @@ void tm_record_remove_all_templates(struct ipfix_template_mgr *tm, struct ipfix_
 				free(next);
 				next = tmr->templates[i];
 			}
-			
+
 			free(tmr->templates[i]);
 			tmr->templates[i] = NULL;
 		}
@@ -626,7 +684,7 @@ struct ipfix_template_mgr *tm_create() {
 		free(tm);
 		return NULL;
 	}
-	
+
 	return tm;
 }
 
@@ -641,15 +699,15 @@ void tm_destroy(struct ipfix_template_mgr *tm)
 		return;
 	}
 	struct ipfix_template_mgr_record *tmp_rec = tm->first;
-	
+
 	while (tmp_rec) {
 		tmp_rec = tmp_rec->next;
 		tm_record_destroy(tm, tm->first);
 		tm->first = tmp_rec;
 	}
-	
+
 	pthread_mutex_destroy(&tm->tmr_lock);
-	
+
 	free(tm);
 	tm = NULL;
 }
@@ -658,9 +716,9 @@ void tm_destroy(struct ipfix_template_mgr *tm)
  * \brief Add new template into template manager
  */
 struct ipfix_template *tm_add_template(struct ipfix_template_mgr *tm, void *template, int max_len, int type, struct ipfix_template_key *key)
-{	
+{
 	struct ipfix_template_mgr_record *tmr = tm_record_lookup_insert(tm, key);
-	
+
 	if (tmr == NULL) {
 		return NULL;
 	}
@@ -677,7 +735,7 @@ struct ipfix_template *tm_insert_template(struct ipfix_template_mgr *tm, struct 
 	struct ipfix_template_mgr_record *tmr = tm_record_lookup_insert(tm, key);
 
 	if (tmr == NULL) {
-		return NULL;
+			return NULL;
 	}
 	return tm_record_insert_template(tmr, tmpl);
 }
@@ -692,9 +750,9 @@ struct ipfix_template *tm_update_template(struct ipfix_template_mgr *tm, void *t
 	if (tmr == NULL) {
 		return NULL;
 	}
-	
+
 	struct ipfix_template *templ = tm_record_update_template(tmr, template, max_len, type, key->odid);
-	
+
 	return templ;
 
 }
@@ -709,16 +767,50 @@ int tm_remove_template(struct ipfix_template_mgr *tm, struct ipfix_template_key 
 	if (tmr == NULL) {
 		return 1;
 	}
-	
+
 	return tm_record_remove_template(tmr, key->tid);
 }
 
-int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type)
+void tm_remove_all_templates(struct ipfix_template_mgr *tm)
 {
-	(void) tm;
-	(void) type;
-	/* dodělat */
-	return 0;
+	// Lock the list of sources
+	pthread_mutex_lock(&tm->tmr_lock);
+
+	struct ipfix_template_mgr_record *prev_rec = tm->first;
+	struct ipfix_template_mgr_record *aux_rec = tm->first;
+	MSG_INFO(msg_module, "Removing all templates in the collector!");
+
+	while (aux_rec) {
+		// Only template records without registration can be removed
+		if (aux_rec->registrations != 0) {
+			prev_rec = aux_rec;
+			aux_rec = aux_rec->next;
+			MSG_INFO(msg_module, "Unable to remove templates of one of "
+				"sources. The source is probably already reconnected.");
+			continue;
+		}
+
+		// Remove the record
+		if (aux_rec == tm->first) {
+			if (aux_rec == tm->last) {
+				tm->last = NULL;
+			}
+			tm->first = aux_rec->next;
+			tm_record_destroy(tm, aux_rec);
+			prev_rec = tm->first;
+			aux_rec = tm->first;
+		} else {
+			if (aux_rec == tm->last) {
+				tm->last = prev_rec;
+			}
+			prev_rec->next = aux_rec->next;
+			tm_record_destroy(tm, aux_rec);
+			aux_rec = prev_rec->next;
+		}
+	}
+
+	// Unlock list of sources
+	pthread_mutex_unlock(&tm->tmr_lock);
 }
 
 /**
@@ -726,33 +818,51 @@ int tm_remove_all_templates(struct ipfix_template_mgr *tm, int type)
  */
 void tm_remove_all_odid_templates(struct ipfix_template_mgr *tm, uint32_t odid)
 {
-	struct ipfix_template_mgr_record *prev_rec = tm->first, *aux_rec = tm->first;
+	// Lock the list of sources
+	pthread_mutex_lock(&tm->tmr_lock);
 
+	struct ipfix_template_mgr_record *prev_rec = tm->first;
+	struct ipfix_template_mgr_record *aux_rec = tm->first;
 	MSG_INFO(msg_module, "[%u] Removing all templates", odid);
 
 	while (aux_rec) {
-		if (aux_rec->key >> 32 == odid) {
-			if (aux_rec == tm->first) {
-				if (aux_rec == tm->last) {
-					tm->last = NULL;
-				}
-				tm->first = aux_rec->next;
-				tm_record_destroy(tm, aux_rec);
-				prev_rec = tm->first;
-				aux_rec = tm->first;
-			} else {
-				if (aux_rec == tm->last) {
-					tm->last = prev_rec;
-				}
-				prev_rec->next = aux_rec->next;
-				tm_record_destroy(tm, aux_rec);
-				aux_rec = prev_rec->next;
-			}
-		} else {
+		if (aux_rec->key >> 32 != odid) {
+			// Different ODID source
 			prev_rec = aux_rec;
 			aux_rec = aux_rec->next;
+			continue;
+		}
+
+		// Only template records without registration can be removed
+		if (aux_rec->registrations != 0) {
+			prev_rec = aux_rec;
+			aux_rec = aux_rec->next;
+			MSG_INFO(msg_module, "[%u] Unable to remove templates of one of "
+				"sources. The source is probably already reconnected.", odid);
+			continue;
+		}
+
+		// Remove the record
+		if (aux_rec == tm->first) {
+			if (aux_rec == tm->last) {
+				tm->last = NULL;
+			}
+			tm->first = aux_rec->next;
+			tm_record_destroy(tm, aux_rec);
+			prev_rec = tm->first;
+			aux_rec = tm->first;
+		} else {
+			if (aux_rec == tm->last) {
+				tm->last = prev_rec;
+			}
+			prev_rec->next = aux_rec->next;
+			tm_record_destroy(tm, aux_rec);
+			aux_rec = prev_rec->next;
 		}
 	}
+
+	// Unlock list of sources
+	pthread_mutex_unlock(&tm->tmr_lock);
 }
 
 /**
@@ -891,7 +1001,7 @@ int template_get_field_offset(struct ipfix_template *templ, uint16_t eid, uint16
 		field_length = *((uint16_t *) (p + 2));
 
 		if (ie_id == fid) {
-			/* 
+			/*
 			 * In case we are not dealing with an enterprise-specific field, we
 			 * can stop and return, since we found the field. Otherwise, we have
 			 * to check whether the enterprise IDs match.
@@ -1008,7 +1118,7 @@ int template_get_field_length(struct ipfix_template *templ, uint16_t eid, uint16
 
 /**
  * \brief Make ipfix_template_key from ODID, crc and template id
- * 
+ *
  * @param odid Observation Domain ID
  * @param crc  CRC from source IP and source port
  * @param tid  Template ID
@@ -1020,11 +1130,11 @@ struct ipfix_template_key *tm_key_create(uint32_t odid, uint32_t crc, uint32_t t
 	if (key == NULL) {
 		return NULL;
 	}
-	
+
 	key->crc = crc;
 	key->odid = odid;
 	key->tid = tid;
-	
+
 	return key;
 }
 
@@ -1043,7 +1153,7 @@ struct ipfix_template_key *tm_key_change_template_id(struct ipfix_template_key *
 
 /**
  * \brief Destroy ipfix_template_key structure
- * 
+ *
  * @param key IPFIX template key
  */
 void tm_key_destroy(struct ipfix_template_key *key)

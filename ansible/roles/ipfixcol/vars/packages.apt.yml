@@ -16,6 +16,7 @@ packages:
     pkg-config,
     xsltproc
   ]
+  udp_cpg: [libcpg-dev, corosync-dev]
   geoip: [libgeoip-dev]
   stats: [librrd-dev]
   uid: [libsqlite3-dev]

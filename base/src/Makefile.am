@@ -2,7 +2,7 @@ SUBDIRS = utils \
 	. \
 	input/tcp input/udp input/ipfix \
 	intermediate/anonymization intermediate/dummy intermediate/joinflows \
-	intermediate/filter intermediate/odip intermediate/hooks \
+	intermediate/filter intermediate/odip intermediate/hooks intermediate/timenow \
 	storage/ipfix storage/dummy storage/forwarding \
 	ipfixviewer
 
@@ -28,7 +28,7 @@ config.h: config.h.in ../config.status
 # This is a command for the linker to include all symbols (unused for plugins too)
 # There MUST NOT be any whitespace around commas!
 ipfixcol_LDFLAGS = \
-	-Wl,--whole-archive,utils/elements/libelements.a,utils/profiles/libprofiles.a,--no-whole-archive
+	-Wl,--whole-archive,utils/elements/libelements.a,utils/profiles/libprofiles.a,utils/template_mapper/libtmapper.a,--no-whole-archive
 
 ipfixcol_LDADD = \
 	-lstdc++

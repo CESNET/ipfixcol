@@ -100,5 +100,10 @@
 		<file>@pkgdatadir@/plugins/ipfixcol-hooks-inter.so</file>
 		<threadName>hooks_inter</threadName>
 	</intermediatePlugin>
+	<intermediatePlugin>
+		<name>timenow</name>
+		<file>@pkgdatadir@/plugins/ipfixcol-timenow-inter.so</file>
+		<threadName>timenow_inter</threadName>
+	</intermediatePlugin>
 
 </ipfixcol>

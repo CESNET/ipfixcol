@@ -2373,6 +2373,13 @@
 		<dataType>string</dataType>
 		<semantic></semantic>
 	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>1001</id>
+		<name>Venom</name>
+		<dataType>unsigned8</dataType>
+		<semantic></semantic>
+	</element>
 
 	<!-- Masaryk University (16982) -->
 	<element>

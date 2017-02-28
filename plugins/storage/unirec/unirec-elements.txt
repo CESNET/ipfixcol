@@ -89,3 +89,4 @@ SIP_VIA                        string        -1      e8057id105       SIP VIA
 SIP_USER_AGENT                 string        -1      e8057id106       SIP user agent
 SIP_REQUEST_URI                string        -1      e8057id107       SIP request uri
 SIP_CSEQ                       string        -1      e8057id108       SIP CSeq
+VENOM                          uint8          1      e8057id1001      Venom rootkit detection

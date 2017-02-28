@@ -366,6 +366,7 @@ int el_text::flush(std::string path)
 
 		/* Reset buffer */
 		_sp_buffer_offset = 8;
+		*(uint64_t *) _sp_buffer = 0;
 	}
 
 	/* Call parent function to write the data buffer */
@@ -542,6 +543,7 @@ int el_blob::flush(std::string path)
 
 		/* Reset buffer */
 		_sp_buffer_offset = 8;
+		*(uint64_t *) _sp_buffer = 0;
 	}
 
 	/* Call parent function to write the data buffer */

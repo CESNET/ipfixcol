@@ -1,10 +1,9 @@
 /**
- * \file storage.h
- * \author Imrich Stoffa <xstoff02@stud.fit.vutbr.cz>
+ * \file storage_basic.h
  * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
- * \brief Storage management (header file)
+ * \brief Basic storage management (source file)
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2015-2017 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,16 +37,70 @@
  *
  */
 
-#ifndef LS_STORAGE_H
-#define LS_STORAGE_H
-
 #include <ipfixcol.h>
 #include "lnfstore.h"
 
-// Store a record
-void store_record(const struct metadata* mdata, struct lnfstore_conf *conf);
+#include "storage_basic.h"
+#include "storage_common.h"
+#include "configuration.h"
 
-// Close all output files
-void close_storage_files(struct lnfstore_conf *conf);
+/** \brief Basic storage structure */
+struct stg_basic_s {
+	/** Pointer to the plugin configuration */
+	const struct conf_params *params;
+	files_mgr_t *mgr; /**< Output files     */
+};
 
-#endif //LS_STORAGE_H
+
+stg_basic_t *
+stg_basic_create(const struct conf_params *params)
+{
+	// Prepare the internal structure
+	stg_basic_t *instance = (stg_basic_t *) calloc(1, sizeof(*instance));
+	if (!instance) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
+			__FILE__, __LINE__);
+		return NULL;
+	}
+
+	// Create an output file manager
+	files_mgr_t * mgr;
+	mgr = stg_common_files_mgr_create(params, params->files.path);
+	if (!mgr) {
+		MSG_ERROR(msg_module, "Failed to create output manager.");
+		return NULL;
+	}
+
+	instance->params = params;
+	instance->mgr = mgr;
+	return instance;
+}
+
+void
+stg_basic_destroy(stg_basic_t *storage)
+{
+	files_mgr_destroy(storage->mgr);
+	free(storage);
+}
+
+int
+stg_basic_store(stg_basic_t *storage, lnf_rec_t *rec)
+{
+	return files_mgr_add_record(storage->mgr, rec);
+}
+
+int
+stg_basic_new_window(stg_basic_t *storage, time_t window)
+{
+	int ret = files_mgr_new_window(storage->mgr, &window);
+	if (ret) {
+		MSG_WARNING(msg_module, "New time window is not properly created.");
+		return 1;
+	} else {
+		MSG_INFO(msg_module, "New time window successfully created.");
+		return 0;
+	}
+}
+
+
+

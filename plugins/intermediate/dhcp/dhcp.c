@@ -214,6 +214,9 @@ int intermediate_init(char* params, void* ip_config, uint32_t ip_id, struct ipfi
 		dhcp_free_config(conf);
 		return 1;
 	}
+
+	/* Set a 10ms busy timeout */
+	sqlite3_busy_timeout(conf->db, 10);
 	
 	/* Save configuration */
 	conf->ip_config = ip_config;
@@ -323,7 +326,6 @@ int intermediate_process_message(void* config, void* message)
 		/* Replace MACs from database */
 		for (int j=0; j < conf->ip_mac_pairs_count; j++) {
 			dhcp_replace_mac(conf, mdata, &conf->ip_mac_pairs[j]);
-			printf("ip: %u %u, mac %u %u\n", conf->ip_mac_pairs[j].ip.en, conf->ip_mac_pairs[j].ip.id, conf->ip_mac_pairs[j].mac.en, conf->ip_mac_pairs[j].mac.id);
 		}
 	}
 	

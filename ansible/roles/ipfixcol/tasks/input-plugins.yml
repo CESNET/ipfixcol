@@ -9,11 +9,11 @@
   with_items: "{{ build.cmds }}"
   tags: nfdump-input
 
-# udp_cpg - requires libcpg not available fedora and centos repos
-#- name: Build UDP CPG input plugin
-#  command: >
-#    {{ item }}
-#    chdir={{ build.dir }}/plugins/input/udp_cpg
-#    creates=/usr/local/share/ipfixcol/plugins/ipfixcol-udp_cpg-input.so
-#  with_items: "{{ build.cmds }}"
-#  tags: udp_cpg
+# udp_cpg
+- name: Build UDP CPG input plugin
+  command: >
+    {{ item }}
+    chdir={{ build.dir }}/plugins/input/udp_cpg
+    creates=/usr/local/share/ipfixcol/plugins/ipfixcol-udp_cpg-input.so
+  with_items: "{{ build.cmds }}"
+  tags: udp_cpg

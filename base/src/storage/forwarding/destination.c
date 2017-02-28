@@ -114,7 +114,7 @@ struct _fwd_dest {
 	struct timespec reconn_period;
 
 	/** Template manager                                                     */
-	fwd_tmplt_mgr_t *tmplt_mgr;
+	tmapper_t *tmplt_mgr;
 };
 
 /**
@@ -599,7 +599,7 @@ int dest_connector_stop(fwd_dest_t *dst_mgr)
 }
 
 /** Create structure for all remote destinations */
-fwd_dest_t *dest_create(fwd_tmplt_mgr_t *tmplt_mgr)
+fwd_dest_t *dest_create(tmapper_t *tmplt_mgr)
 {
 	if (!tmplt_mgr) {
 		return NULL;
@@ -696,19 +696,19 @@ void dest_reconnect(fwd_dest_t *dst_mgr, bool verbose)
  * \param[in] type Type of the template (#TM_TEMPLATE or #TM_OPTIONS_TEMPLATE)
  * \return On success returns 0. Otherwise returns non-zero value.
  */
-static int dest_templates_aux_fill(fwd_bldr_t *bldr, fwd_tmplt_mgr_t *mgr,
+static int dest_templates_aux_fill(fwd_bldr_t *bldr, tmapper_t *mgr,
 	uint32_t odid, int type)
 {
 	uint16_t      tmplt_cnt;
-	fwd_tmplt_t **tmplt_arr;
+	tmapper_tmplt_t **tmplt_arr;
 
-	tmplt_arr = tmplts_get_templates(mgr, odid, type, &tmplt_cnt);
+	tmplt_arr = tmapper_get_templates(mgr, odid, type, &tmplt_cnt);
 	if (!tmplt_arr) {
 		return 1;
 	}
 
 	for (unsigned int i = 0; i < tmplt_cnt; ++i) {
-		const fwd_tmplt_t *tmp = tmplt_arr[i];
+		const tmapper_tmplt_t *tmp = tmplt_arr[i];
 		if (bldr_add_template(bldr, tmp->rec, tmp->length, tmp->id, type)) {
 			free(tmplt_arr);
 			return 1;
@@ -745,7 +745,7 @@ static void dest_templates_free(struct tmplts_per_odid *templates, uint32_t cnt)
  * \warning The structure MUST be freed by dest_templates_free()
  */
 static struct tmplts_per_odid *dest_templates_prepare(
-	fwd_tmplt_mgr_t *mgr, const uint32_t *odids, uint32_t cnt)
+	tmapper_t *mgr, const uint32_t *odids, uint32_t cnt)
 {
 	bool failure = false;
 
@@ -822,7 +822,7 @@ void dest_check_reconnected(fwd_dest_t *dst_mgr)
 	uint32_t *odid_ids;
 	uint32_t  odid_cnt;
 
-	odid_ids = tmplts_get_odids(dst_mgr->tmplt_mgr, &odid_cnt);
+	odid_ids = tmapper_get_odids(dst_mgr->tmplt_mgr, &odid_cnt);
 	if (!odid_ids) {
 		MSG_ERROR(msg_module, "Failed to create templates for reconnected "
 			"client(s).");
