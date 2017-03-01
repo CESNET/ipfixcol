@@ -135,6 +135,15 @@ struct tmplts_for_reconnected {
 };
 
 /**
+ * \brief Auxiliary structure for checking timeout of UDP templates
+ */
+struct udp_template_timeout {
+	time_t now;             /**< Current time */
+	unsigned int timeout;   /**< Template timeout (in seconds) */
+};
+
+
+/**
  * \brief Callback function prototype
  * \param[in,out] sndr Destination
  * \param[in,out] data Processing function data
@@ -507,6 +516,28 @@ static bool aux_dummy_true(struct dst_client *client, void *data)
 }
 
 /**
+ * \brief Test whether UDP client has expired templates
+ * \param[in] client Destination
+ * \param[in] data   UDP template timeout structure
+ * \return When the client expired returns true and updates expiration time.
+ *   Otherwise returns false.
+ */
+static bool aux_udp_expired(struct dst_client *client, void *data)
+{
+	struct udp_template_timeout *params = (struct udp_template_timeout *) data;
+	if (sender_get_proto(client->sender) != IPPROTO_UDP) {
+		return false;
+	}
+
+	if (sender_get_tmpl_time(client->sender) + params->timeout > params->now) {
+		return false;
+	}
+
+	sender_set_tmpl_time(client->sender, params->now);
+	return true;
+}
+
+/**
  * \brief Thread for reconnection of disconnected destinations
  * \param[in,out] arg Configuration of Destination Manager
  * \return Nothing
@@ -809,6 +840,18 @@ static struct tmplts_per_odid *dest_templates_prepare(
 	}
 
 	return result;
+}
+
+// Check UDP connections for expired templates and move them to ready state
+void dest_check_expired_udp(fwd_dest_t *dst_mgr, unsigned int timeout)
+{
+	struct udp_template_timeout params;
+	params.now = time(NULL);
+	params.timeout = timeout;
+
+	pthread_mutex_lock(&dst_mgr->group_mtx);
+	group_move(dst_mgr->conn, dst_mgr->ready, &aux_udp_expired, &params);
+	pthread_mutex_unlock(&dst_mgr->group_mtx);
 }
 
 // Check and move reconnected destinations to connected destinations
