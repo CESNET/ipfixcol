@@ -164,77 +164,6 @@ xml_convert_double(xmlDocPtr doc, const xmlNodePtr node, double *out)
 }
 
 /**
- * \brief Formats the path string according to the format specification
- * \param[in] original path with special character sequences
- * \return NULL on error, pointer to newly created path otherwise
- */
-static char *
-path_preprocessor(const char *original)
-{
-	char tmp[PATH_MAX];
-	char *last_path = tmp;
-	char *perc_sign;
-	char *new; //new path
-
-	const size_t err_len = 128;
-	char err_buff[err_len];
-	err_buff[0] = '\0';
-
-	if (original == NULL) {
-		return NULL;
-	}
-
-	if (strlen(original) > PATH_MAX - 1) {
-		strerror_r(ENAMETOOLONG, err_buff, err_len);
-		MSG_ERROR(msg_module, "Path preprocessor failed (%s \"%s\")",
-			err_buff, original);
-		return NULL;
-	}
-
-	strcpy(tmp, original);
-
-	new = calloc(PATH_MAX, sizeof (char));
-	if (new == NULL) {
-		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
-			__FILE__, __LINE__);
-		return NULL;
-	}
-
-	/* last_path == tmp */
-	perc_sign = strchr(last_path, '%'); //find first percent sign
-	while (perc_sign != NULL) {
-		*perc_sign = '\0';
-		strcat(new, last_path); //copy original path till percent sign
-
-		perc_sign++; //move pointer to escaped character
-		switch (*perc_sign) {
-		case 'h':
-			errno = 0;
-			gethostname(new + strlen(new), PATH_MAX - strlen(new));
-			if (errno != 0) {
-				strerror_r(ENAMETOOLONG, err_buff, err_len);
-				MSG_ERROR(msg_module, "Path preprocessor failed (%s \"%s\")",
-					err_buff, original);
-				free(new);
-				return NULL;
-			}
-			break;
-		default:
-			MSG_ERROR(msg_module, "Path preprocessor failed (Unknown escape "
-				"sequence \"%s\"", original);
-			free(new);
-			return NULL;
-		}
-
-		last_path = perc_sign + 1; //ptr to next regular character
-		perc_sign = strchr(last_path, '%');
-	}
-
-	strcat(new, last_path); //copy rest of the original path
-	return new;
-}
-
-/**
  * \brief Auxiliary match function for DumpInterval XML elements
  * \param[in]     doc XML document
  * \param[in]     cur XML node
@@ -412,7 +341,7 @@ configuration_match(xmlDocPtr doc, xmlNodePtr cur, struct conf_params *cfg)
 			return 1;
 		}
 
-		cfg->files.path = path_preprocessor((const char *) original);
+		cfg->files.path = utils_path_preprocessor((const char *) original);
 		xmlFree(original);
 		if (!cfg->files.path) {
 			return 1;

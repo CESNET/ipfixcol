@@ -47,5 +47,13 @@ API char  *utils_dir_from_path(char *path);
 API char  *strncpy_safe (char *destination, const char *source, size_t num);
 API int    strtoi (const char* str, int base);
 
+/**
+ * \brief Formats the path string according to the format specification
+ * \param[in] original Path with special character sequences
+ * \return On success returns a pointer to the newly created path. Otherwise
+ *   returns a non-zero value.
+ */
+API char *utils_path_preprocessor(const char *original);
+
 #endif	/* UTILS_H */
 

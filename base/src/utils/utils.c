@@ -37,7 +37,7 @@
  *
  */
 
-#include "ipfixcol.h"
+#include <ipfixcol.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -55,8 +55,8 @@
 static const char *msg_module = "utils";
 
 /**
- * \brief determine whether string matches regexp or not 
- * 
+ * \brief determine whether string matches regexp or not
+ *
  * \return 1 if string matches regexp, 0 otherwise */
 static int regexp_asterisk(char *regexp, char *string)
 {
@@ -89,7 +89,7 @@ static int regexp_asterisk(char *regexp, char *string)
 	}
 
 	strncpy_safe(aux_regexp, regexp, strlen(regexp) + 1);
-	
+
 	int pos = 1; /* we assume that asterisk is in the middle of the string */
 	if (aux_regexp[0] == asterisk) {
 		/* asterisk on the beginning */
@@ -157,19 +157,19 @@ char **utils_files_from_path(char *path)
 	char *dirname = NULL, *filename = NULL;
 	struct dirent *entry = NULL, *result = NULL;
 	struct stat st;
-	
+
 	int ret = 0, array_length = 0, inputf_index = 0;
-	
+
 	dirname  = utils_dir_from_path(path);
 	if (!dirname) {
 		goto err_file;
 	}
-	
+
 	filename = basename(path);
 	if (!filename) {
 		goto err_file;
 	}
-	
+
 	dir = opendir(dirname);
 	if (dir == NULL) {
 		MSG_ERROR(msg_module, "Unable to open input file(s); directory cannot be found (%s)\n", dirname);
@@ -177,7 +177,7 @@ char **utils_files_from_path(char *path)
 		return NULL;
 	}
 
-	int len = offsetof(struct dirent, d_name) + 
+	int len = offsetof(struct dirent, d_name) +
 			pathconf(dirname, _PC_NAME_MAX) + 1;
 
 	entry = (struct dirent *) malloc(len);
@@ -199,7 +199,7 @@ char **utils_files_from_path(char *path)
 			MSG_ERROR(msg_module, "Error while reading directory '%s'\n", dirname);
 			goto err_file;
 		}
-		
+
 		if (result == NULL) {
 			/* no more files in directory */
 			break;
@@ -255,13 +255,13 @@ char **utils_files_from_path(char *path)
 	qsort(input_files, inputf_index, sizeof(const char *), compare);
 
 	input_files[inputf_index] = NULL;
-	
+
 	closedir(dir);
 	free(entry);
 	free(dirname);
-	
+
 	return input_files;
-	
+
 err_file:
 	if (dirname) {
 		free(dirname);
@@ -270,7 +270,7 @@ err_file:
 	if (dir) {
 		closedir(dir);
 	}
-	
+
 	if (input_files) {
 		free(input_files);
 	}
@@ -278,7 +278,7 @@ err_file:
 	if (entry) {
 		free(entry);
 	}
-	
+
 	return NULL;
 }
 
@@ -286,7 +286,7 @@ char *utils_dir_from_path(char *path)
 {
 	char *dir = strdup(path);
 	dir = dirname(dir);
-	
+
 	return dir;
 }
 
@@ -316,7 +316,7 @@ int strtoi(const char* str, int base)
 	if (str == NULL) {
 		return INT_MAX;
 	}
-	
+
 	const long ret_long = strtol(str, &end, base);
 	int ret_int;
 
@@ -329,4 +329,75 @@ int strtoi(const char* str, int base)
 	}
 
 	return ret_int;
+}
+
+/**
+ * \brief Formats the path string according to the format specification
+ * \param[in] original Path with special character sequences
+ * \return On success returns a pointer to the newly created path. Otherwise
+ *   returns a non-zero value.
+ */
+char *utils_path_preprocessor(const char *original)
+{
+	char tmp[PATH_MAX];
+	char *last_path = tmp;
+	char *perc_sign;
+	char *new_str; //new path
+
+	const size_t err_len = 128;
+	char err_buff[err_len];
+	err_buff[0] = '\0';
+
+	if (original == NULL) {
+		return NULL;
+	}
+
+	if (strlen(original) > PATH_MAX - 1) {
+		strerror_r(ENAMETOOLONG, err_buff, err_len);
+		MSG_ERROR(msg_module, "Path preprocessor failed (%s \"%s\")",
+			err_buff, original);
+		return NULL;
+	}
+
+	strcpy(tmp, original);
+
+	new_str = calloc(PATH_MAX, sizeof (char));
+	if (new_str == NULL) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
+			__FILE__, __LINE__);
+		return NULL;
+	}
+
+	/* last_path == tmp */
+	perc_sign = strchr(last_path, '%'); //find first percent sign
+	while (perc_sign != NULL) {
+		*perc_sign = '\0';
+		strcat(new_str, last_path); //copy original path till percent sign
+
+		perc_sign++; //move pointer to escaped character
+		switch (*perc_sign) {
+		case 'h':
+			errno = 0;
+			gethostname(new_str + strlen(new_str), PATH_MAX - strlen(new_str));
+			if (errno != 0) {
+				strerror_r(ENAMETOOLONG, err_buff, err_len);
+				MSG_ERROR(msg_module, "Path preprocessor failed (%s \"%s\")",
+					err_buff, original);
+				free(new_str);
+				return NULL;
+			}
+			break;
+		default:
+			MSG_ERROR(msg_module, "Path preprocessor failed (Unknown escape "
+				"sequence \"%s\"", original);
+			free(new_str);
+			return NULL;
+		}
+
+		last_path = perc_sign + 1; //ptr to next regular character
+		perc_sign = strchr(last_path, '%');
+	}
+
+	strcat(new_str, last_path); //copy rest of the original path
+	return new_str;
 }

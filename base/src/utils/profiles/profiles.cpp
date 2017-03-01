@@ -72,14 +72,14 @@ extern "C" int yyparse (struct filter_parser_data *data);
 
 /**
  * \brief Parse filter string
- * 
+ *
  * \param[in] pdata parser data
  * \return 0 on success
  */
 int parse_filter(filter_parser_data* pdata)
 {
 	int ret = 0;
-	
+
 	/* Prepare scanner */
 	yylex_init(&(pdata->scanner));
 	YY_BUFFER_STATE bp = yy_scan_string(pdata->filter, pdata->scanner);
@@ -87,12 +87,12 @@ int parse_filter(filter_parser_data* pdata)
 
 	/* Parse filter */
 	ret = yyparse(pdata);
-	
+
 	/* Clear scanner */
 	yy_flush_buffer(bp, pdata->scanner);
 	yy_delete_buffer(bp, pdata->scanner);
 	yylex_destroy(pdata->scanner);
-	
+
 	return ret;
 }
 
@@ -244,7 +244,7 @@ static std::string channel_parse_source_list(xmlNodePtr root)
 
 /**
  * \brief Process channel's configuration and create new Channel object
- * 
+ *
  * \param[in] profile Channel's profile
  * \param[in] root channel xml configuration root
  * \param[in] pdata Filter parser data
@@ -256,7 +256,7 @@ Channel *process_channel(Profile *profile, xmlNode *root,
 	/* Get channel ID */
 	xmlChar *aux_char;
 	aux_char = xmlGetProp(root, (const xmlChar *) "name");
-	
+
 	if (!aux_char) {
 		MSG_ERROR(msg_module, "Profile %s: missing channel name (line: %ld)",
 			profile_id(profile), xmlGetLineNo(root));
@@ -270,7 +270,7 @@ Channel *process_channel(Profile *profile, xmlNode *root,
 
 	/* Initialize parser data */
 	pdata->filter = NULL;
-	
+
 	try {
 		/* Find and parse filter */
 		filter_profile *filter = channel_parse_filter(root, pdata);
@@ -294,7 +294,7 @@ Channel *process_channel(Profile *profile, xmlNode *root,
 		delete channel;
 		throw_empty;
 	}
-	
+
 	return channel;
 }
 
@@ -368,9 +368,16 @@ static std::string profile_parse_directory(xmlNodePtr root)
 		throw_empty;
 	}
 
-	std::string result = (const char *) aux_char;
+	// Replace special characters
+	char *processed_path = utils_path_preprocessor((const char *) aux_char);
 	xmlFree(aux_char);
+	if (processed_path == NULL) {
+		// Preprocessor failed
+		throw_empty;
+	}
 
+	std::string result = processed_path;
+	free(processed_path);
 	if (result.empty()) {
 		MSG_ERROR(msg_module, "The content of the 'directory' is missing "
 			"(line %ld).", xmlGetLineNo(dir_node));
@@ -493,7 +500,7 @@ static int profile_parse_subprofiles(Profile *profile, xmlNodePtr root,
 
 /**
  * \brief Process profile's configuration and create new Profile object
- * 
+ *
  * \param[in] parent Profile's parent
  * \param[in] root Profile xml configuration root
  * \param[in] pdata Filter parser data
@@ -530,13 +537,13 @@ Profile *process_profile(Profile *parent, xmlNode *root,
 		delete profile;
 		throw;
 	}
-	
+
 	return profile;
 }
 
 /**
  * \brief Free parser data (context and document)
- * 
+ *
  * \param[in] pdata parser data
  */
 void free_parser_data(struct filter_parser_data *pdata)
@@ -551,12 +558,12 @@ void free_parser_data(struct filter_parser_data *pdata)
 
 /**
  * \brief Process profile tree xml configuration
- * 
+ *
  * \param[in] filename XML configuration file
  * \return Pointer to root profile
  */
 Profile *process_profile_xml(const char *filename)
-{	
+{
 	struct filter_parser_data pdata;
 
 	/* Open file */
@@ -574,7 +581,7 @@ Profile *process_profile_xml(const char *filename)
 		MSG_ERROR(msg_module, "Unable to parse configuration file %s", filename);
 		return NULL;
 	}
-	
+
 	xmlNode *root = xmlDocGetRootElement(doc);
 	if (!root) {
 		xmlFreeDoc(doc);
@@ -582,14 +589,14 @@ Profile *process_profile_xml(const char *filename)
 		MSG_ERROR(msg_module, "Unable to get root element from file %s", filename);
 		return NULL;
 	}
-	
+
 	/* Initialize IPFIX elements */
 	filter_init_elements(&pdata);
-	
+
 	Profile *rootProfile{NULL};
 
 	try {
-		/* Iterate throught all profiles */
+		/* Iterate through all profiles */
 		/* rootProfile must be considered as loop condition, since storage allocated
 		   by process_profile will be leaked otherwise
 		 */
@@ -616,7 +623,7 @@ Profile *process_profile_xml(const char *filename)
 	if (!rootProfile) {
 		MSG_ERROR(msg_module, "No profile found in profile tree configuration");
 		return NULL;
-	}	
+	}
 
 	rootProfile->updatePathName();
 	return rootProfile;
