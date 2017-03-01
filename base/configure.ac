@@ -39,7 +39,7 @@
 AC_PREREQ([2.60])
 
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol], [0.9.2])
+AC_INIT([ipfixcol], [0.9.3])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability subdir-objects tar-ustar])
 LT_PREREQ([2.2])
 LT_INIT([dlopen disable-static])
