@@ -193,21 +193,21 @@ const char *sender_get_port(const fwd_sender_t *s)
 }
 
 /** Get transport protocol */
-const int sender_get_proto(const fwd_sender_t *s)
+int sender_get_proto(const fwd_sender_t *s)
 {
-	return s->proto;	
+	return s->proto;
 }
 
 /** Get time of last templates */
-const int sender_get_tmpl_time(const fwd_sender_t *s)
+time_t sender_get_tmpl_time(const fwd_sender_t *s)
 {
-	return s->tmpl_time;	
+	return s->tmpl_time;
 }
 
 /** Set time of last templates */
-void sender_set_tmpl_time(fwd_sender_t *s, int time)
+void sender_set_tmpl_time(fwd_sender_t *s, time_t time)
 {
-	s->tmpl_time = time;	
+	s->tmpl_time = time;
 }
 
 /** (Re)connect to the destination */

@@ -114,10 +114,12 @@ int dest_connector_start(fwd_dest_t *dst_mgr, int period);
 int dest_connector_stop(fwd_dest_t *dst_mgr);
 
 /**
- * \brief Check UDP connections for expired templates and move them to ready state
+ * \brief Check UDP connections for expired templates and move them to ready
+ *   state
  * \param[in,out] dst_mgr Destination manager
+ * \param[in]     timeout Template refresh timeout
  */
-void dest_check_expired_udp(fwd_dest_t *dst_mgr);
+void dest_check_expired_udp(fwd_dest_t *dst_mgr, unsigned int timeout);
 
 /**
  * \brief Check and move reconnected destinations to connected destinations

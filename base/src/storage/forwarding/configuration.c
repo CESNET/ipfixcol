@@ -51,10 +51,12 @@
 #define DEF_PORT "4739"
 /** Default transport protocol               */
 #define DEF_PROTO IPPROTO_TCP
-/** Default retry interval (seconds)         */
-#define DEF_RETRY_INT (5)
+/** Default re-connection period (in milliseconds)*/
+#define DEF_RECONN_PERIOD (1000)
 /** Default maximal packet size              */
 #define DEF_PACKET_SIZE (4096)
+/** Default template refresh timeout         */
+#define DEF_TEMPLATE_REFRESH (300U)
 
 static const char *msg_module = "forwarding(config)";
 
@@ -348,7 +350,7 @@ static int config_parse_xml(struct parser_context *ctx)
 			aux_str = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
 			if (config_parse_int((char *) aux_str, &result)) {
 				// Conversion failed
-				MSG_ERROR(msg_module, "Failed to parse 'reconnectionPeriod' "
+				MSG_ERROR(msg_module, "Failed to parse the 'reconnectionPeriod' "
 					"node.");
 				failed = true;
 			} else if (result <= 0) {
@@ -358,6 +360,24 @@ static int config_parse_xml(struct parser_context *ctx)
 				failed = true;
 			} else {
 				ctx->cfg->reconn_period = result;
+			}
+		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "udpTemplateRefreshTimeout")) {
+			// Refresh timeout for UDP (options) templates
+			int result;
+			aux_str = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+			if (config_parse_int((char *) aux_str, &result)) {
+				// Conversion failed
+				MSG_ERROR(msg_module, "Failed to parse the "
+					"'udpTemplateRefreshTimeout' node.");
+				failed = true;
+			} else if (result <= 0) {
+				// Out of range
+				MSG_ERROR(msg_module, "Template refresh timeout cannot be zero "
+					"or negative.");
+				failed = true;
+			} else {
+				// Success (now it is safe to convert int to unsigned int)
+				ctx->cfg->udp_refresh_timeout = (unsigned int) result;
 			}
 		} else {
 			// Other unknown nodes
@@ -420,7 +440,8 @@ struct plugin_config *config_parse(const char *cfg_string)
 	// Set default values
 	config->mode = DIST_ALL;
 	config->packet_size = DEF_PACKET_SIZE;
-	config->reconn_period = 1000; // milliseconds
+	config->reconn_period = DEF_RECONN_PERIOD; // milliseconds
+	config->udp_refresh_timeout = DEF_TEMPLATE_REFRESH; // seconds
 
 	config->builder_all = bldr_create();
 	config->builder_tmplt = bldr_create();

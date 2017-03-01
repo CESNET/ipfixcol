@@ -62,6 +62,8 @@ struct plugin_config {
 	enum DIST_MODE mode;        /**< Distribution mode                       */
 	uint16_t packet_size;       /**< Maximal size per generated packet       */
 	int reconn_period;          /**< Reconnection period (in milliseconds)   */
+	unsigned int udp_refresh_timeout; /**< UDP template refresh timeout
+	                                    * (in seconds)                       */
 
 	fwd_dest_t *dest_mgr;       /**< Destination manager                     */
 
