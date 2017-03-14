@@ -133,8 +133,6 @@ uint16_t Storage::realLength(uint16_t length, uint8_t *data_record, uint16_t &of
  */
 void Storage::readRawData(uint16_t &length, uint8_t* data_record, uint16_t &offset)
 {
-	record += '"';
-
 	/* Read raw value */
 	switch (length) {
 	case 1:
@@ -151,16 +149,24 @@ void Storage::readRawData(uint16_t &length, uint8_t* data_record, uint16_t &offs
 		break;
 	default:
 		length = this->realLength(length, data_record, offset);
+
+		if (length == 0) {
+			STR_APPEND(record, "null");
+			return;
+		}
+
 		if (length * 2 > buffer.capacity()) {
 			buffer.reserve(length * 2 + 1);
 		}
 
+		/* Start the string with 0x and print the rest in hexa */
+		strncpy(buffer.data(), "0x", 3);
 		for (int i = 0; i < length; i++) {
-			sprintf(buffer.data() + i * 2, "%02x", (data_record + offset)[i]);
+			sprintf(buffer.data() + i * 2 + 2, "%02x", (data_record + offset)[i]);
 		}
-		STR_APPEND(record, "0x");
 	}
 
+	record += '"';
 	record += buffer.data();
 	record += '"';
 }
