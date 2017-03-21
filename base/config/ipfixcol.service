@@ -1,0 +1,19 @@
+[Unit]
+Description=IPFIXcol service
+Documentation=https://github.com/CESNET/ipfixcol
+Requires=network.target remote-fs.target
+After=network.target remote-fs.target
+
+[Service]
+Type=forking
+PIDFile=/var/run/ipfixcol.pid
+User=root
+Group=root
+EnvironmentFile=/etc/sysconfig/ipfixcol
+ExecStart=/usr/bin/ipfixcol -d -p /var/run/ipfixcol.pid $IPFIXCOL_PARAMS
+ExecStop=
+Restart=on-failure
+SyslogIdentifier=ipfixcol
+
+[Install]
+WantedBy=multi-user.target
