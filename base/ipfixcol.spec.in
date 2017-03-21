@@ -106,7 +106,3 @@ make test
 %{_includedir}/ipfixcol/*.h
 #doxygen
 %{_datadir}/%{name}/%{name}-doxy-%{version}.tar.gz
-
-   /usr/share/man/man1/ipfixcol-filter-inter.1.gz
-   /usr/share/man/man1/ipfixcol-forwarding-output.1.gz
-   /usr/share/man/man1/ipfixcol-joinflows-inter.1.gz
