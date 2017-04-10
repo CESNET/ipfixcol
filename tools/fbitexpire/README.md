@@ -1,22 +1,22 @@
-##fbitexpire
+## fbitexpire
 
-###Tool description
+### Tool description
 
 This tool is used to control free disk space and remove old FastBit data if needed. It consist of several parts.
 
-###Watcher
+### Watcher
 
 Watcher thread uses inotify (inotify-cxx, it is included within tool sources) events to register newly created folders and informs scanner about their existence.
 
-###Scanner
+### Scanner
 
 Scanner keeps directory tree with informations about their size and age (time last modified). If disk usage reaches given limit it removes the oldest folder(s) from tree and tells cleaner to remove them from disk.
 
-###Cleaner
+### Cleaner
 
 Simple part which waits on request from scanner and removes folders.
 
-###PipeListener
+### PipeListener
 
 You can communicate with fbitexpire on it's pipe. PipeListener parses these messages and informs other parts about changes etc. 
 
@@ -27,7 +27,7 @@ These requests can be send into pipe:
 *  to change maximal size limit on the fly
 *  to change watermark limit (the lower limit when removing old folders) on the fly
 
-###Example
+### Example
 
 ```sh
 fbitexpire -d 4 -s 5000 /data/collector/

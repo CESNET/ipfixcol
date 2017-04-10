@@ -1,4 +1,4 @@
-##<a name="top"></a>Table of Contents
+## <a name="top"></a>Table of Contents
 
 1.  [What is IPFIXcol](#what)
 2.  [Configuration](#conf)
@@ -15,7 +15,7 @@
 7.  [How to run](#howrun)
 8.  [How to write plugins](#howplug)
 
-##<a name="what"></a>What is IPFIXcol
+## <a name="what"></a>What is IPFIXcol
 
 IPFIXcol is a flexible IPFIX flow data collector designed to be easily extensible by plugins.
 
@@ -25,7 +25,7 @@ IPFIXcol corresponds to [RFC7011](http://tools.ietf.org/html/rfc7011)
 
 ![IPFIXcol](documentation/img/arch_scheme.png)
 
-##<a name="conf"></a>Configuration
+## <a name="conf"></a>Configuration
 
 IPFIXcol stores its configuration in the **/etc/ipfixcol/** directory.
 
@@ -36,7 +36,7 @@ IPFIXcol stores its configuration in the **/etc/ipfixcol/** directory.
 
 * **startup.xml** describes how IPFIXcol is configured at startup, which plugins are used and where the data will be stored. The XML is self-documented, so read the elements description carefully. The collector will listen on TCP, UDP and SCTP on startup by default, so be careful to configure which plugin you want to use before starting it.
 
-###<a name="reconf"></a>Reconfiguration
+### <a name="reconf"></a>Reconfiguration
 
 Collector can be reconfigured at runtime by sending SIGUSR1 signal. When this signal is received, startup configuration is reloaded and chages are processed.
 
@@ -49,14 +49,14 @@ Reconfiguration can:
 *  Change plugin settings (plugin is reloaded)
 *  Reorder intermediate plugins (they're removed and loaded in the new order)
 
-##<a name="bplugs"></a>Built-in plugins
-###<a name="input"></a>Input plugins
+## <a name="bplugs"></a>Built-in plugins
+### <a name="input"></a>Input plugins
 
 * **TCP**, **UDP** and **SCTP** plugin are provided accept data from the network. Each can be configured to listen on a specific interface and a port. They are compatible with IPFIX, Netflow v5, Netflow v9 and sFlow.
 
 * **IPFIX file** format input plugin can read data from a file in the mentioned format and store them in any other, depending on the storage plugin used. The IPFIX file format is specified in [RFC5655](http://tools.ietf.org/html/rfc5655).
 
-###<a name="inter"></a>Intermediate plugins
+### <a name="inter"></a>Intermediate plugins
 
 * **anonymization** - anonymizes IP addresses with Crypto-PAn algorithm.
 
@@ -66,7 +66,7 @@ Reconfiguration can:
 
 * **joinflows** plugin merges multiple flows into one and adds information about original ODID to each Template and Data record.
 
-###<a name="storage"></a>Storage plugins
+### <a name="storage"></a>Storage plugins
 
 By default, Output manager dynamically creates for each ODID an instance of Data manager with private instances of storage plugins. This can be useful, for example, when you want to store flows from different ODIDs into different files.
 If you don't need to have different storage plugins for every ODID, you can enable single Data manager in **startup.xml** by adding `<singleManager>yes</singleManager>` to particular exporting process.
@@ -79,18 +79,18 @@ If you don't need to have different storage plugins for every ODID, you can enab
 
 * **forwarding** plugin sends data over the network (e.g. to the next collector). There is configurable connection type (TCP, UDP or SCTP), destination port and IPv4 or IPv6 address. With UDP, template refresh time etc. can be set.
 
-##<a name="explugs"></a>External plugins
+## <a name="explugs"></a>External plugins
 External plugins are described in the main [README](https://github.com/CESNET/ipfixcol#plugins).
 
-##<a name="tools"></a> Other tools
-###<a name="view"></a>ipfixviewer
+## <a name="tools"></a> Other tools
+### <a name="view"></a>ipfixviewer
 A tool for displaying captured ipfix data. Uses IPFIXcol, IPFIX file input plugin and ipfixviewer storage plugin.
 
-###<a name="ipfixconf"></a>ipfixconf
+### <a name="ipfixconf"></a>ipfixconf
 This tool provides interface to list, add and remove plugins from internal configuration so you don't need to edit XML file manualy. Each external plugin uses this tool after succesfull installation.
 
-##<a name="howrun"></a>How to run
-###Start ipfixcol
+## <a name="howrun"></a>How to run
+### Start ipfixcol
 The simplest way how to run collector is just running
 ```sh
 ipfixcol
@@ -107,7 +107,7 @@ To run the collector as a daemon with specified startup configuration, use
 ipfixcol -d -c path/to/startup.xml
 ```
 
-###Stop collector
+### Stop collector
 
 IPFIXcol catches SIGINT, SIGQUIT and SIGTERM signals. When multiple input plugins are used, it is forked to multiple processes. You can stop each instance separately according to used input plugin.
 
@@ -118,7 +118,7 @@ killall ipfixcol:TCP
 ...
 ```
 
-##<a name="howplug"></a>How to write plugins
+## <a name="howplug"></a>How to write plugins
 
 See [wiki page](https://github.com/CESNET/ipfixcol/wiki/How-to-write-IPFIXcol-plugins).
 

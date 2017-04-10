@@ -1,17 +1,17 @@
-##<a name="top"></a>FastBit storage plugin woth compression support
-###Plugin description
+## <a name="top"></a>FastBit storage plugin woth compression support
+### Plugin description
 
 The plugin uses FastBit library to store and index data and gzip or bzip2 libraries for compression.
 
 The plugin was created by Jakub Adler as part of his [Bachelor's thesis](https://is.muni.cz/th/396111/fi_b/) at Masary University.
 
-###FastBit library
+### FastBit library
 
  IPFIXcol framework uses it's own fork of FastBit library to keep compatibility.
 
 IPFIXcol's FastBit library can be found [here](https://github.com/CESNET/libfastbit). Branch compression contains a fork of the library that allows to read compressed files.
 
-###Configuration
+### Configuration
 
 Default plugin configuration in **internalcfg.xml**:
 

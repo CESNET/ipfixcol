@@ -1,6 +1,6 @@
-##<a name="top"></a>UniRec storage plugin
+## <a name="top"></a>UniRec storage plugin
 
-###Table of Contents
+### Table of Contents
 1. [Plugin description](#descr)
 2. [Configuration files](#conf)
   *  [IPFIXcol configuration file](#confipfix)
@@ -10,12 +10,12 @@
 5. [Additional information](#info)
 
 
-###<a name="descr"></a> Plugin description
+### <a name="descr"></a> Plugin description
 UniRec plugin is storage plugin for IPFIX collector. It converts IPFIX fields, processed by IPFIX collector, to NEMEA UniRec format structure and sends them to specified TRAP interface.
 
 
-###<a name="conf"></a> Configuration
-####<a name="confipfix"></a> IPFIXcol configuration file
+### <a name="conf"></a> Configuration
+#### <a name="confipfix"></a> IPFIXcol configuration file
 Default plugin configuration in **internalcfg.xml**
 
 ```xml
@@ -100,7 +100,7 @@ Example of simple configuration of **joinflows** plugin:
 This will merge all IPFIX messages with different ODID and send them to UniRec plugin. Number '63' must be different than any ODID that can possibly arrive to IPFIX collector.
 
 
-####<a name="confuni"></a> UniRec configuration file
+#### <a name="confuni"></a> UniRec configuration file
 
 This file is loaded with UniRec plugin. It specifies which IPFIX field is mapped to which NEMEA UniRec field and size of given field. Every line corresponds to one UniRec field. 
 
@@ -127,16 +127,16 @@ SRC_IP   16   e0id18,e0id27   IPv4 or IPv6 address
 This will map IP version 4 or 6 to UniRec field.
 
 
-###<a name="howto"></a> How to use
+### <a name="howto"></a> How to use
 
 If everything is configured correctly, then just start ipfixcol binary and UniRec plugin will output data on specified port in NEMEA UniRec format.
 
 
-###<a name="compile"></a> Compilation
+### <a name="compile"></a> Compilation
 No special compilation parameters are needed but for this plugin to work libtrap library needs to be installed on system.
 
 
-###<a name="info"></a>Additional information
+### <a name="info"></a>Additional information
 For additional information about TRAP or NEMEA go to this site: https://www.liberouter.org/technologies/nemea/
 
 [Back to Top](#top)

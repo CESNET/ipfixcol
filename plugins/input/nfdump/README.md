@@ -1,14 +1,14 @@
-##<a name="top"></a> NFDUMP input plugin
+## <a name="top"></a> NFDUMP input plugin
 
-###Plugin description
+### Plugin description
 Plugin reads nfcapd file and transforms it into IPFIX packet(s). It corresponds to nfdump version 1.6.x (headers are included within plugin)
 
-###NFDUMP support
+### NFDUMP support
 Plugin supports only nfdump extensions up to 25 and these types of records:
 * CommonRecordV0Type
 * ExtensionMapType
 
-###Configuration
+### Configuration
 
 Default plugin configuration in **internalcfg.xml**
 

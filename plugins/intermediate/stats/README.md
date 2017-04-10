@@ -1,13 +1,13 @@
-##<a name="top"></a>Stats intermediate plugin
-###Plugin description
+## <a name="top"></a>Stats intermediate plugin
+### Plugin description
 
 This plugin creates RRD databases per Observation Domain ID.
 
-###Statistics data
+### Statistics data
 
 Statistics are counted for number packets, traffic and flows by protocol type (total, udp, tcp, icmp, other).
 
-###Configuration
+### Configuration
 
 Default plugin configuration in **internalcfg.xml**:
 

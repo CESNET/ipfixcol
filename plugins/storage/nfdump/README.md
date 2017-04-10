@@ -1,15 +1,15 @@
-##<a name="top"></a>NFDUMP storage plugin
-###Plugin description
+## <a name="top"></a>NFDUMP storage plugin
+### Plugin description
 
 Plugin stores IPFIX data into nfcapd file format.  
 
-###NFDUMP support
+### NFDUMP support
 
 NFDUMP file format is designed to store only certain flow information. So this plug-in can´t store all IPFIX elements to NFDUMP files. There are few elements which **MUST** be present in IPFIX record otherwise WHOLE record is ignored and NOT stored at all(this usually means all data records for certain template). Rest of supported IPFIX elements is optional. IPFIX records can contain unsupported elements too (these elements are simply ignored). See below for supported IPFIX elements (identified by numbers assigned by IANA).
 
 You can find list of necessary/optional elements in plugins's man pages.
 
-###Configuration
+### Configuration
 
 Default plugin configuration in **internalcfg.xml**:
 

@@ -1,5 +1,5 @@
-##<a name="top"></a>TimeNow intermediate plugin
-###Plugin description
+## <a name="top"></a>TimeNow intermediate plugin
+### Plugin description
 
 The plugin updates flowStartMilliseconds and flowEndMilliseconds elements in flows
 to make the flow records up to date. The new time is computed as
@@ -7,7 +7,7 @@ to make the flow records up to date. The new time is computed as
 old_time + (now - export_time)
 ```
 
-###Configuration
+### Configuration
 
 Default plugin configuration in **internalcfg.xml**:
 

@@ -1,5 +1,5 @@
-##<a name="top"></a>ProfileStats intermediate plugin
-###Plugin description
+## <a name="top"></a>ProfileStats intermediate plugin
+### Plugin description
 
 The plugin creates and updates RRD statistics per profile and channel.
 Based on a configuration of profiles maintained by **profiler** plugin,
@@ -49,7 +49,7 @@ will create databases: &lt;profile_dir&gt;/rrd/live.rrd,
 &lt;profile_dir&gt;/rrd/channels/ch1.rrd and
 &lt;profile_dir&gt;/rrd/channels/ch2.rrd.
 
-###Configuration
+### Configuration
 
 Default plugin configuration in **internalcfg.xml**:
 
@@ -84,7 +84,7 @@ Example **startup.xml** configuration:
 *  **interval** Update interval (in seconds). Size of the interval
 significantly infuence size of databases. [min: 5, max: 3600, default: 300]
 
-###How to generate a graph (with RRD tools)
+### How to generate a graph (with RRD tools)
 For example, let us consider a profile with two channels, "ch1" and "ch2".
 The channel "ch1" accepts all records with IPv4 addresses and channel
 "ch2" accepts all records with IPv6 address. We want to create a graph of
@@ -144,7 +144,7 @@ For example:
       ...
 ```
 
-###Note
+### Note
 It is highly recommended to use only one instance of the plugin
 in the configuration of IPFIXcol, because external RRD library is not
 very thread-safety.

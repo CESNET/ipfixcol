@@ -1,10 +1,10 @@
-##<a name="top"></a>JSON storage plugin
+## <a name="top"></a>JSON storage plugin
 
-###Plugin description
+### Plugin description
 Plugin converts IPFIX data into JSON format.
 
 
-###Format
+### Format
 Each data set is an array of data records.
 
 Example:
@@ -32,7 +32,7 @@ Example:
 }
 ```
 
-###Configuration
+### Configuration
 
 Default plugin configuration in **internalcfg.xml**
 

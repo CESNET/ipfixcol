@@ -1,27 +1,27 @@
-##fbitdump
+## fbitdump
 
-###Tool description
+### Tool description
 
 fbitdump is a tool for manipulating IPFIX data in FastBit database format. It uses FastBit library to read and index data.
 There are many command line options - see man pages for their description.
 
-###Configuration
+### Configuration
 
 fbitdump uses **fbitdump.xml** file with configured data columns, output formats etc.
 
-###Output formats
+### Output formats
 
 There are few predefined formats specified in **fbitdump.xml**. Each format is defined as string containing column aliases starting with %.
 Custom formats are supported.
 
-###Filter
+### Filter
 
 The filter can be either specified on the command line after all options or in a separate file. It can span several lines.
 Specifying an element in the filter makes fbitdump to select only the tables with such an element.
 
 Any filter consists of one or more expression expr. Any number of expr can be linked together with and or or keyword. This is case independent.
 
-###Plugins
+### Plugins
 
 Fbitdump supports input and output plugins. Input plugins are used for parsing data from given filter and output plugins are used for valid formatting printed data.
 Plugin names and paths must be specified in **fbitdump.xml** file.
@@ -30,7 +30,7 @@ For output format description, see man pages for fbitdump-plugins.
 
 Fbitdump already contains one default plugin for parsing and formatting data for columns without specified plugin.
 
-###Examples
+### Examples
 
 ```sh 
 fbitdump -R /dir/dir-with-templates/template -o line4 "%dstport = 80" -c 100

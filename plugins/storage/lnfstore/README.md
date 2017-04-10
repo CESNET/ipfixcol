@@ -1,4 +1,4 @@
-##<a name="top"></a>Lnfstore storage plugin
+## <a name="top"></a>Lnfstore storage plugin
 
 ### Plugin description
 The lnfstore plugin converts and store IPFIX data into NfDump files. Only a subset of IPFIX elements that have NetFlow equivalents can be stored into NfDump files. Other elements are skipped.
