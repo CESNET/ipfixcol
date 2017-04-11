@@ -217,10 +217,6 @@ void output_manager_remove(struct output_manager_config *output_manager, struct 
 	data_manager_close(&old_manager);
 
 	if (!output_manager->perman_odid_merge && output_manager->manager_mode != OM_SINGLE) {
-		if (odid == 0) {
-			MSG_ERROR(msg_module, "Internal error: Removing all ODID 0 templates is not valid.");
-		}
-
 		tm_remove_all_odid_templates(template_mgr, odid);
 	} else {
 		// Single manager -> remove all templates
