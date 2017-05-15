@@ -368,8 +368,9 @@ struct input_info_list *create_input_info(struct plugin_conf *conf,
  *
  * \param conf Plugin configuration
  * \param info Input info list structure to be removed
+ * \param delete Add to list of infos to be deleted later (inform collector)
  */
-void remove_input_info(struct plugin_conf *conf, struct input_info_list *info)
+void remove_input_info(struct plugin_conf *conf, struct input_info_list *info, int delete)
 {
 	struct input_info_list *info_list = NULL, *info_list_prev = NULL;
 
@@ -384,8 +385,10 @@ void remove_input_info(struct plugin_conf *conf, struct input_info_list *info)
 			}
 
 			/* Add to list of input_infos to be deleted */
-			info->next = conf->used_info_list;
-			conf->used_info_list = info;
+			if (delete) {
+				info->next = conf->used_info_list;
+				conf->used_info_list = info;
+			}
 			break;
 		}
 
@@ -395,7 +398,7 @@ void remove_input_info(struct plugin_conf *conf, struct input_info_list *info)
 }
 
 /**
- * \brief Funtion that listens for new connetions
+ * \brief Funtion that listens for new connections
  *
  * Runs in a thread and adds new connections to plugin_conf->master set
  *
@@ -1007,7 +1010,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 			if (info_list->info.status == SOURCE_STATUS_CLOSED) {
 				*info = (struct input_info*) &info_list->info;
 				*source_status = SOURCE_STATUS_CLOSED;
-				remove_input_info(conf, info_list);
+				remove_input_info(conf, info_list, 1);
 				return INPUT_CLOSED;
 			}
 		}
@@ -1220,7 +1223,7 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		*source_status = SOURCE_STATUS_CLOSED;
 
 		/* Remove current input_info from list */
-		remove_input_info(conf, info_list);
+		remove_input_info(conf, info_list, (*info)->status != SOURCE_STATUS_NEW);
 
 		/* Set status of all other input_infos from this source
 		 * The current one is not affected, it is removed from the list */
