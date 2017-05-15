@@ -107,7 +107,9 @@ int storage_init(char *params, void **config)
 	while (cur != NULL) {
 		/* find out the desired delay */
 		if ((!xmlStrcmp(cur->name, (const xmlChar *) "delay"))) {
-			conf->delay = atoi((char *) xmlNodeListGetString(doc, cur->xmlChildrenNode, 1));
+			xmlChar *delay = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+			conf->delay = atoi((char *) delay);
+			xmlFree(delay);
 			break;
 		}
 		cur = cur->next;
