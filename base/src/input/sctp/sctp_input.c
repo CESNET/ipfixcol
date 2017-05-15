@@ -740,7 +740,13 @@ wait_for_data:
 			/* no more data from this exporter */
 			/* \todo free input info structure now (in near future) */
 			*source_status = SOURCE_STATUS_CLOSED;
-			return INPUT_CLOSED;
+			if (info_node->info.status == SOURCE_STATUS_NEW) {
+				/* We did not inform collector about this connection at all */
+				return INPUT_INTR;
+			} else {
+				/* Have collector close everything properly */
+				return INPUT_CLOSED;
+			}
 		} else {
 			MSG_WARNING(msg_module, "Unsupported SCTP event occured");
 		}
