@@ -64,7 +64,9 @@ static const char *msg_module = "forwarding(sender)";
 struct _fwd_sender {
 	char *dst_addr;       /**< Destination IP address     */
 	char *dst_port;       /**< Destination port           */
+	int proto;            /**< Transport protocol         */
 	int socket_fd;        /**< Socket                     */
+	time_t tmpl_time;     /**< Last time all templates were sent */
 
 	uint8_t *buffer_data; /**< Buffer for unsent parts of messsages */
 	size_t buffer_valid;  /**< Valid part of the buffer             */
@@ -74,10 +76,11 @@ struct _fwd_sender {
  * \brief Network address and service translation
  * \param[in] addr Destination address
  * \param[in] port Destination port
+ * \param[in] proto Transport protocol
  * \return Same as getaddrinfo()
  * \warning Returned structure MUST be freed using freeaddrinfo()
  */
-static struct addrinfo *sender_getaddrinfo(const char *addr, const char *port)
+static struct addrinfo *sender_getaddrinfo(const char *addr, const char *port, int proto)
 {
 	int ret_val;
 	struct addrinfo hints;
@@ -86,8 +89,8 @@ static struct addrinfo *sender_getaddrinfo(const char *addr, const char *port)
 	// Network address and service translation
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_protocol = IPPROTO_TCP;
+	hints.ai_socktype = (proto == IPPROTO_TCP) ? SOCK_STREAM: SOCK_DGRAM;
+	hints.ai_protocol = proto;
 
 	ret_val = getaddrinfo(addr, port, &hints, &info);
 	if (ret_val != 0) {
@@ -119,7 +122,7 @@ static void sender_socket_close(fwd_sender_t *s)
 }
 
 /** Create a new sender */
-fwd_sender_t *sender_create(const char *addr, const char *port)
+fwd_sender_t *sender_create(const char *addr, const char *port, int proto)
 {
 	// Check parameters
 	if (!addr || !port) {
@@ -128,7 +131,7 @@ fwd_sender_t *sender_create(const char *addr, const char *port)
 
 	// Just try to translate a given address
 	struct addrinfo *info;
-	info = sender_getaddrinfo(addr, port);
+	info = sender_getaddrinfo(addr, port, proto);
 	if (!info) {
 		return NULL;
 	}
@@ -149,6 +152,8 @@ fwd_sender_t *sender_create(const char *addr, const char *port)
 
 	res->dst_addr = strdup(addr);
 	res->dst_port = strdup(port);
+	res->proto = proto;
+	res->tmpl_time = time(NULL);
 	if (!res->dst_addr || !res->dst_port) {
 		// Failed to copy parameters
 		sender_destroy(res);
@@ -187,6 +192,24 @@ const char *sender_get_port(const fwd_sender_t *s)
 	return s->dst_port;
 }
 
+/** Get transport protocol */
+int sender_get_proto(const fwd_sender_t *s)
+{
+	return s->proto;
+}
+
+/** Get time of last templates */
+time_t sender_get_tmpl_time(const fwd_sender_t *s)
+{
+	return s->tmpl_time;
+}
+
+/** Set time of last templates */
+void sender_set_tmpl_time(fwd_sender_t *s, time_t time)
+{
+	s->tmpl_time = time;
+}
+
 /** (Re)connect to the destination */
 int sender_connect(fwd_sender_t *s)
 {
@@ -197,7 +220,7 @@ int sender_connect(fwd_sender_t *s)
 
 	// Get a translation of an address
 	struct addrinfo *dst_info;
-	dst_info = sender_getaddrinfo(s->dst_addr, s->dst_port);
+	dst_info = sender_getaddrinfo(s->dst_addr, s->dst_port, s->proto);
 	if (!dst_info) {
 		return 1;
 	}

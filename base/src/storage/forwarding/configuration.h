@@ -51,23 +51,26 @@
 #include "sender.h"
 #include "destination.h"
 #include "packet.h"
-#include "templates.h"
+#include <ipfixcol.h>
 
 /**
  * \brief Configuration of the plugin
  */
 struct plugin_config {
 	char *def_port;             /**< Default port                            */
+	int def_proto;              /**< Default protocol                        */
 	enum DIST_MODE mode;        /**< Distribution mode                       */
 	uint16_t packet_size;       /**< Maximal size per generated packet       */
 	int reconn_period;          /**< Reconnection period (in milliseconds)   */
+	unsigned int udp_refresh_timeout; /**< UDP template refresh timeout
+	                                    * (in seconds)                       */
 
 	fwd_dest_t *dest_mgr;       /**< Destination manager                     */
 
 	fwd_bldr_t *builder_all;    /**< Packet builder (for data and templates) */
 	fwd_bldr_t *builder_tmplt;  /**< Packet builder (for templates only)     */
 
-	fwd_tmplt_mgr_t *tmplt_mgr; /**< Template manager                        */
+	tmapper_t  *tmplt_mgr;      /**< Template manager                        */
 };
 
 /**

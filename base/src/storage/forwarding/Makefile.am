@@ -8,8 +8,7 @@ ipfixcol_forwarding_output_la_SOURCES = \
 	sender.c sender.h \
 	configuration.c configuration.h \
 	destination.c destination.h \
-	packet.c packet.h \
-	templates.c templates.h
+	packet.c packet.h
 
 if HAVE_DOC
 MANSRC = ipfixcol-forwarding-output.dbk

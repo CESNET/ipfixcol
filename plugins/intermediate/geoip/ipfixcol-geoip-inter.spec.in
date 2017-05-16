@@ -22,12 +22,18 @@ geoip intermediate plugin for ipfixcol.
 %setup
 
 %post
-ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p m -n geoip -t geoip -s "%{_datadir}/ipfixcol/plugins/ipfixcol-geoip-inter.so" -f
+# Add config only during initial installation, not upgrade
+if [ "$1" = "1" ]; then
+    ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p m -n geoip -t geoip -s "%{_datadir}/ipfixcol/plugins/ipfixcol-geoip-inter.so" -f
+fi
 
 %preun
 
 %postun
-ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p m -n geoip
+# Remove config only for uninstall, not upgrade
+if [ "$1" = "0" ]; then
+    ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p m -n geoip
+fi
 
 %build
 %configure --with-distro=@DISTRO@

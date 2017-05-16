@@ -334,9 +334,16 @@ static std::string profile_parse_directory(xmlNodePtr root)
 		throw_empty;
 	}
 
-	std::string result = (const char *) aux_char;
+	// Replace special characters
+	char *processed_path = utils_path_preprocessor((const char *) aux_char);
 	xmlFree(aux_char);
+	if (processed_path == NULL) {
+		// Preprocessor failed
+		throw_empty;
+	}
 
+	std::string result = processed_path;
+	free(processed_path);
 	if (result.empty()) {
 		MSG_ERROR(msg_module, "The content of the 'directory' is missing "
 			"(line %ld).", xmlGetLineNo(dir_node));
@@ -532,7 +539,7 @@ Profile *process_profile_xml(const char *filename)
 	Profile *rootProfile{NULL};
 
 	try {
-		/* Iterate throught all profiles */
+		/* Iterate through all profiles */
 		/* rootProfile must be considered as loop condition, since storage allocated
 		   by process_profile will be leaked otherwise
 		 */

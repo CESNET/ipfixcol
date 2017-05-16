@@ -10,12 +10,10 @@ Vendor: CESNET, z.s.p.o.
 Packager: @USERNAME@ <@USERMAIL@>
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 
-BuildRequires: gcc make doxygen
-BuildRequires: ipfixcol-devel >= 0.7.1
-BuildRequires: corosynclib-devel
+BuildRequires: gcc autoconf libtool make doxygen libxslt libxml2-devel @BUILDREQS@
+BuildRequires: corosynclib-devel ipfixcol-devel >= 0.7.1
 
-Requires: ipfixcol >= 0.7.1
-Requires: corosynclib
+Requires: corosynclib libxml2 ipfixcol >= 0.7.1
 
 %description
 UDP input plugin for ipfixcol with support for template replication over CPG.
@@ -25,13 +23,18 @@ UDP input plugin for ipfixcol with support for template replication over CPG.
 %setup
 
 %post
-ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p i -n udp-cpgCollector -t udp-cpgCollector -s "%{_datadir}/ipfixcol/plugins/ipfixcol-udp-cpg-input.so" -f
+# Add config only during initial installation, not upgrade
+if [ "$1" = "1" ]; then
+    ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p i -n udp-cpgCollector -t udp-cpgCollector -s "%{_datadir}/ipfixcol/plugins/ipfixcol-udp-cpg-input.so" -f
+fi
 
 %preun
 
 %postun
-ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p i -n udp-cpg
-
+# Remove config only for uninstall, not upgrade
+if [ "$1" = "0" ]; then
+    ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p i -n udp-cpg
+fi
 
 %build
 %configure --with-distro=@DISTRO@

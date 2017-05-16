@@ -1,13 +1,13 @@
-##<a name="top"></a>GeoIP intermediate plugin
-###Plugin description
+## <a name="top"></a>GeoIP intermediate plugin
+### Plugin description
 
 This plugin fills informations about country codes of source and destination address into the data record's metadata structure.
 
-###Geolocation
+### Geolocation
 
 For geolocation, MaxMind GeoIP API and database is used.
 
-###Configuration
+### Configuration
 
 Default plugin configuration in **internalcfg.xml**:
 

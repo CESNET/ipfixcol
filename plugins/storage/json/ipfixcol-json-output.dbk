@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <refentry 
-		xmlns="http://docbook.org/ns/docbook" 
+		xmlns:db="http://docbook.org/ns/docbook" 
 		xmlns:xlink="http://www.w3.org/1999/xlink" 
 		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
@@ -66,11 +66,12 @@
 		<fileWriter>
 			<fileFormat>json</fileFormat>
 			<metadata>no</metadata>
-			<tcpFlags>formated</tcpFlags>
-			<timestamp>formated</timestamp>
-			<protocol>formated</protocol>
+			<tcpFlags>formatted</tcpFlags>
+			<timestamp>formatted</timestamp>
+			<protocol>formatted</protocol>
 			<ignoreUnknown>yes</ignoreUnknown>
 			<nonPrintableChar>yes</nonPrintableChar>
+			<prefix>ipfix.</prefix>
 
 			<output>
 				<type>print</type>
@@ -123,28 +124,28 @@
 				<varlistentry>
 					<term><command>tcpFlags</command></term>
 					<listitem>
-						<simpara>Convert TCP flags to formated style of dots and letters (formated) or to a number (raw) [default == raw].</simpara>
+						<simpara>Convert TCP flags to formatted style of dots and letters (formatted) or to a number (raw) [default == raw].</simpara>
 					</listitem>
 				</varlistentry>
 		
 				<varlistentry>
 					<term><command>timestamp</command></term>
 					<listitem>
-						<simpara>Convert time to formated style (formated) or to a number (unix) [default == unix].</simpara>
+						<simpara>Convert time to formatted style (formatted) or to a number (unix) [default == unix].</simpara>
 					</listitem>
 				</varlistentry>
 
 				<varlistentry>
 					<term><command>protocol</command></term>
 					<listitem>
-						<simpara>Convert protocol identification to formated style (formated) or to a number (raw) [default == formated].</simpara>
+						<simpara>Convert protocol identification to formatted style (formatted) or to a number (raw) [default == formatted].</simpara>
 					</listitem>
 				</varlistentry>
 
 				<varlistentry>
 					<term><command>ignoreUnknown</command></term>
 					<listitem>
-						<simpara>Skip elements with unknown semantics (yes/no). Data of unknown elements are formated as unsigned integer (1, 2, 4, 8 bytes length) or binary values. Names will have format 'eXXidYY' where XX is enterprise number and YY is element ID [default == yes].</simpara>
+						<simpara>Skip elements with unknown semantics (yes/no). Data of unknown elements are formatted as unsigned integer (1, 2, 4, 8 bytes length) or binary values. Names will have format 'eXXidYY' where XX is enterprise number and YY is element ID [default == yes].</simpara>
 					</listitem>
 				</varlistentry>
 
@@ -152,6 +153,13 @@
 					<term><command>nonPrintableChar</command></term>
 					<listitem>
 						<simpara>Convert non-printable characters (control characters, tab, newline, etc.) from IPFIX fields with data type of a string. (yes/no) [default == yes].</simpara>
+					</listitem>
+				</varlistentry>
+
+				<varlistentry>
+					<term><command>prefix</command></term>
+					<listitem>
+						<simpara>Prefix of the IPFIX element names. [default == ipfix.].</simpara>
 					</listitem>
 				</varlistentry>
 

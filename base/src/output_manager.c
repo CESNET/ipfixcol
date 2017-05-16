@@ -140,7 +140,7 @@ void remove_input_info(struct input_info *node)
 /**
  * \brief Dummy SIGUSR1 signal handler
  */
-void sig_handler(int s) 
+void sig_handler(int s)
 {
 	(void) s;
 }
@@ -169,7 +169,7 @@ static struct data_manager_config *get_data_mngmt_config(uint32_t id, struct dat
 
 /**
  * \brief Insert new Data manager into list
- * 
+ *
  * \param[in] output_manager Output Manager structure
  * \param[in] new_manager New Data manager
  */
@@ -186,7 +186,7 @@ void output_manager_insert(struct output_manager_config *output_manager, struct 
 
 /**
  * \brief Remove data manager from list, close it and free templates
- * 
+ *
  * \param[in] output_manager Output Manager structure
  * \param[in] old_manager Data Manager to remove and close
  */
@@ -218,6 +218,9 @@ void output_manager_remove(struct output_manager_config *output_manager, struct 
 
 	if (!output_manager->perman_odid_merge && output_manager->manager_mode != OM_SINGLE) {
 		tm_remove_all_odid_templates(template_mgr, odid);
+	} else {
+		// Single manager -> remove all templates
+		tm_remove_all_templates(template_mgr);
 	}
 }
 
@@ -237,19 +240,19 @@ void output_manager_set_in_queue(struct ring_buffer *in_queue)
 	if (conf->in_queue == in_queue) {
 		return;
 	}
-	
+
 	if (conf->running) {
 		/* If already running, control message must be sent */
 		pthread_mutex_lock(&conf->in_q_mutex);
-		
+
 		conf->new_in = in_queue;
 		rbuffer_write(conf->in_queue, NULL, 1);
-		
+
 		/* Wait for change */
 		while (conf->in_queue != in_queue) {
 			pthread_cond_wait(&conf->in_q_cond, &conf->in_q_mutex);
 		}
-		
+
 		pthread_mutex_unlock(&conf->in_q_mutex);
 	} else {
 		conf->in_queue = in_queue;
@@ -263,15 +266,15 @@ int output_manager_add_plugin(struct storage *plugin)
 {
 	int i;
 	struct data_manager_config *data_mgr = NULL;
-	
+
 	/* Find a place for plugin in array */
 	for (i = 0; conf->storage_plugins[i]; ++i) {}
 	conf->storage_plugins[i] = plugin;
-	
+
 	if (plugin->xml_conf->observation_domain_id) {
 		/* Plugin for one specific ODID */
 		data_mgr = get_data_mngmt_config(atol(plugin->xml_conf->observation_domain_id), conf->data_managers);
-		
+
 		if (data_mgr) {
 			/* Update existing Data Manager */
 			data_manager_add_plugin(data_mgr, plugin);
@@ -283,7 +286,7 @@ int output_manager_add_plugin(struct storage *plugin)
 			data_manager_add_plugin(data_mgr, plugin);
 		}
 	}
-	
+
 	return 0;
 }
 
@@ -295,7 +298,7 @@ int output_manager_remove_plugin(int id)
 	int i;
 	struct data_manager_config *data_mgr = NULL;
 	struct storage *plugin = NULL;
-	
+
 	/* Find plugin with given id */
 	for (i = 0; conf->storage_plugins[i]; ++i) {
 		if (conf->storage_plugins[i]->id == id) {
@@ -305,17 +308,17 @@ int output_manager_remove_plugin(int id)
 			break;
 		}
 	}
-	
+
 	if (!plugin) {
 		/* Plugin not found */
 		return 0;
 	}
-	
+
 	/* Kill all its instances */
 	if (plugin->xml_conf->observation_domain_id) {
 		/* Has ODID - max. 1 instance */
 		data_mgr = get_data_mngmt_config(atol(plugin->xml_conf->observation_domain_id), conf->data_managers);
-		
+
 		if (data_mgr) {
 			/* Kill plugin */
 			data_manager_remove_plugin(data_mgr, id);
@@ -327,7 +330,7 @@ int output_manager_remove_plugin(int id)
 			data_manager_remove_plugin(data_mgr, id);
 		}
 	}
-	
+
 	return 0;
 }
 
@@ -365,7 +368,7 @@ static void *output_manager_plugin_thread(void* config)
 				pthread_cond_signal(&conf->in_q_cond);
 				continue;
 			}
-			
+
 			/* Stop manager */
 			break;
 		}
@@ -405,6 +408,14 @@ static void *output_manager_plugin_thread(void* config)
 			MSG_DEBUG(msg_module, "[%u] Closed source", data_config->observation_domain_id);
 			data_config->references--;
 
+			/* Remove a reference to a template record */
+			uint32_t original_odid = msg->input_info->odid;
+			uint32_t source_crc = preprocessor_compute_crc(msg->input_info);
+
+			if (tm_source_unregister(template_mgr, original_odid, source_crc)) {
+				MSG_ERROR(msg_module, "[%u] Unable to unregister the source from the main template manager!", data_config->observation_domain_id);
+			}
+
 			/* Remove input_info from statistics */
 			remove_input_info(msg->input_info);
 
@@ -417,7 +428,7 @@ static void *output_manager_plugin_thread(void* config)
 			rbuffer_remove_reference(conf->in_queue, index, 1);
 			continue;
 		}
-		
+
 		/* Write data into input queue of Storage Plugins */
 		if (rbuffer_write(data_config->store_queue, msg, data_config->plugins_count) != 0) {
 			MSG_WARNING(msg_module, "[%u] Unable to write into Data Manager input queue; skipping data...", data_config->observation_domain_id);
@@ -425,7 +436,7 @@ static void *output_manager_plugin_thread(void* config)
 			free(msg);
 			continue;
 		}
-		
+
 		/* Remove data from queue (without memory deallocation) */
 		rbuffer_remove_reference(conf->in_queue, index, 0);
 	}
@@ -437,7 +448,7 @@ static void *output_manager_plugin_thread(void* config)
 
 /**
  * \brief Get total cpu time
- * 
+ *
  * @return total cpu time
  */
 uint64_t statistics_total_cpu()
@@ -447,20 +458,20 @@ uint64_t statistics_total_cpu()
 		MSG_WARNING(stat_module, "Cannot open file '%s'", "/proc/stat");
 		return 0;
 	}
-	
+
 	uint32_t user = 0, nice = 0, sys = 0, idle = 0;
 	if (fscanf(stat, "%*s %" SCNu32 "%" SCNu32 "%" SCNu32 "%" SCNu32, &user, &nice, &sys, &idle) == EOF) {
 		MSG_ERROR(stat_module, "Error while reading /proc/stat: %s", strerror(errno));
 	}
-	
+
 	fclose(stat);
-	
+
 	return ((uint64_t) user + (uint64_t) nice + (uint64_t) sys + (uint64_t) idle);
 }
 
 /**
  * \brief Search thread statistics
- * 
+ *
  * @param conf statiscics conf
  * @param tid thread id
  * @return thread
@@ -473,13 +484,13 @@ struct stat_thread *statistics_get_thread(struct stat_conf *conf, unsigned long 
 			break;
 		}
 	}
-	
+
 	return aux_thread;
 }
 
 /**
  * \brief Add thread to list
- * 
+ *
  * @param conf statistics conf
  * @param tid thread id
  * @return thread
@@ -491,17 +502,17 @@ struct stat_thread *statistics_add_thread(struct stat_conf *conf, long tid)
 		MSG_ERROR(stat_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return NULL;
 	}
-	
+
 	thread->tid = tid;
 	thread->next = conf->threads;
 	conf->threads = thread;
-	
+
 	return thread;
 }
 
 /**
  * \brief Print cpu usage for each collector's thread
- * 
+ *
  * @param conf statistics conf
  */
 static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
@@ -514,7 +525,7 @@ static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
 			MSG_WARNING(stat_module, "Cannot open directory '%s'", conf->tasks_dir);
 			return;
 		}
-		
+
 		FILE *stat;
 		struct dirent *entry;
 		char stat_path[MAX_DIR_LEN], thread_name[MAX_DIR_LEN], state;
@@ -523,14 +534,14 @@ static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
 		uint64_t proc_time;
 		uint64_t total_cpu = statistics_total_cpu();
 		float usage;
-		
+
 		MSG_ALWAYS(" |", NULL);
 		MSG_ALWAYS(" | %10s %7s %10s %15s", "TID", "state", "cpu usage", "thread name");
 		while ((entry = readdir(dir)) != NULL) {
 			if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) {
 				continue;
 			}
-			
+
 			/* Parse stat file */
 			snprintf(stat_path, MAX_DIR_LEN, "%s/%s/stat", conf->tasks_dir, entry->d_name);
 			stat = fopen(stat_path, "r");
@@ -538,7 +549,7 @@ static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
 				MSG_WARNING(stat_module, "Cannot open file '%s'", stat_path);
 				continue;
 			}
-			
+
 			/* Read thread info */
 			uint8_t format_str_len = 62 + sizeof(MAX_DIR_LEN) + 1; // 62 is size of the raw format string, without MAX_DIR_LEN; +1 is null-terminating char
 			char format_str[format_str_len];
@@ -547,10 +558,10 @@ static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
 				MSG_ERROR(stat_module, "Error while reading %s: %s", stat_path, strerror(errno));
 			}
 			fclose(stat);
-			
+
 			/* Count thread CPU time */
 			proc_time = utime + systime;
-			
+
 			struct stat_thread *thread = statistics_get_thread(conf, tid);
 			if (!thread) {
 				thread = statistics_add_thread(conf, tid);
@@ -558,17 +569,17 @@ static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
 					continue;
 				}
 			}
-			
+
 			/* Count thread CPU utilization (%) */
 			if (thread->proc_time && total_cpu - conf->total_cpu > 0) {
 				usage = conf->cpus * (proc_time - thread->proc_time) * 100 / (float) (total_cpu - conf->total_cpu);
 			} else {
 				usage = 0.0;
 			}
-			
+
 			/* Print statistics */
 			MSG_ALWAYS(" | %10d %7c %8.2f %% %15s", tid, state, usage, thread_name);
-			
+
 			/* Update stats */
 			thread->proc_time = proc_time;
 		}
@@ -583,7 +594,7 @@ static void statistics_print_cpu(struct stat_conf *conf, FILE *stat_out_file)
 
 /**
  * \brief Print queue usage
- * 
+ *
  * @param conf Output Manager config
  * @param stat_out_file Output file for statistics
  */
@@ -594,7 +605,7 @@ void statistics_print_buffers(struct output_manager_config *conf, FILE *stat_out
 	} else {
 		/* Print info about preprocessor's output queue */
 		MSG_ALWAYS(" | Queue utilization:", NULL);
-		
+
 		struct ring_buffer *prep_buffer = get_preprocessor_output_queue();
 		MSG_ALWAYS(" |     Preprocessor output queue: %u / %u", prep_buffer->count, prep_buffer->size);
 
@@ -606,7 +617,7 @@ void statistics_print_buffers(struct output_manager_config *conf, FILE *stat_out
 			} else {
 				MSG_ALWAYS(" |     Output Manager output queues:", NULL);
 				MSG_ALWAYS(" |         %.4s | %.10s / %.10s", "ODID", "waiting", "total size");
-				
+
 				while (dm) {
 					MSG_ALWAYS(" |   %10u %9u / %u", dm->observation_domain_id, dm->store_queue->count, dm->store_queue->size);
 					dm = dm->next;
@@ -618,7 +629,7 @@ void statistics_print_buffers(struct output_manager_config *conf, FILE *stat_out
 
 /**
  * \brief Periodically prints statistics about proccessing speed
- * 
+ *
  * @param config Output Manager configuration
  * @return 0;
  */
@@ -626,7 +637,7 @@ static void *statistics_thread(void* config)
 {
 	struct output_manager_config *conf = (struct output_manager_config *) config;
 	time_t begin = time(NULL), time_now, run_time;
-	
+
 	/* Create statistics config */
 	conf->stats.total_cpu = 0;
 	conf->stats.threads = NULL;
@@ -727,10 +738,10 @@ static void *statistics_thread(void* config)
 
 		node = node->next;
 	}
-	
+
 	/* Set thread name */
 	prctl(PR_SET_NAME, "ipfixcol:stats", 0, 0, 0);
-	
+
 	FILE *stat_out_file = NULL;
 	while (conf->stat_interval && !conf->stats.done) { /* stats.done can be set by Output Manager */
 		/* Sleep */
@@ -740,7 +751,7 @@ static void *statistics_thread(void* config)
 
 		/* Reconfiguration (SIGUSR1) cause sleep interruption */
 		while (nanosleep(&tv, &tv) == -1 && errno == EINTR && !conf->stats.done);
-		
+
 		/* Compute time */
 		time_now = time(NULL);
 		run_time = time_now - begin;
@@ -827,10 +838,10 @@ static void *statistics_thread(void* config)
 			MSG_ALWAYS(" | %s", "----------------------------------------------------------");
 			MSG_ALWAYS(" | %10s %15lu %15lu %15lu", "Total:", packets_total, data_records_total, lost_data_records_total);
 		}
-		
+
 		/* Print CPU usage by threads */
 		statistics_print_cpu(&(conf->stats), stat_out_file);
-		
+
 		/* Print buffer usage */
 		statistics_print_buffers(conf, stat_out_file);
 
@@ -844,7 +855,7 @@ static void *statistics_thread(void* config)
 	if (print_stat_to_file) {
 		free(full_stat_out_file_path);
 	}
-	
+
 	return NULL;
 }
 
@@ -864,7 +875,7 @@ int output_manager_create(configurator *plugins_config, int stat_interval, bool 
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
 		return -1;
 	}
-	
+
 	conf->manager_mode = odid_merge ? OM_SINGLE : OM_MULTIPLE;
 	conf->stat_interval = stat_interval;
 	conf->plugins_config = plugins_config;
@@ -877,14 +888,14 @@ int output_manager_create(configurator *plugins_config, int stat_interval, bool 
 	} else {
 		/* Unknown mode */
 	}
-	
+
 	*config = conf;
 	return 0;
 }
 
 /**
  * \brief Start Output Manager thread(s)
- * 
+ *
  * @return 0 on success
  */
 int output_manager_start()
@@ -898,7 +909,7 @@ int output_manager_start()
 		free(conf);
 		return -1;
 	}
-	
+
 	conf->running = 1;
 
 	if (conf->stat_interval > 0) {
@@ -909,7 +920,7 @@ int output_manager_start()
 			return -1;
 		}
 	}
-	
+
 	return 0;
 }
 
@@ -962,7 +973,7 @@ void output_manager_close(void *config)
 			free(tmp_thread);
 		}
 	}
-	
+
 	free(manager);
 }
 

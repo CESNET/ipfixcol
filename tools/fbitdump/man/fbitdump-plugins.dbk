@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <refentry
-   xmlns="http://docbook.org/ns/docbook"
+   xmlns:db="http://docbook.org/ns/docbook"
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
    xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd

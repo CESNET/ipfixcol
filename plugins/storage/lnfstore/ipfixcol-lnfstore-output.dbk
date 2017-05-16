@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<refentry 
-		xmlns="http://docbook.org/ns/docbook" 
-		xmlns:xlink="http://www.w3.org/1999/xlink" 
+<refentry
+		xmlns:db="http://docbook.org/ns/docbook"
+		xmlns:xlink="http://www.w3.org/1999/xlink"
 		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
 			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
 		version="5.0" xml:lang="en">
 	<info>
 		<copyright>
-			<year>2008-2015</year>
+			<year>2008-2017</year>
 			<holder>CESNET, z.s.p.o.</holder>
 		</copyright>
-		<date>28 December 2015</date>
+		<date>7 February 2017</date>
 		<authorgroup>
 			<author>
 				<personname>
@@ -29,6 +29,14 @@
 				<email>xhutak01@stud.fit.vutbr.cz</email>
 				<contrib>developer</contrib>
 			</author>
+			<author>
+				<personname>
+					<firstname>Pavel</firstname>
+					<surname>Krobot</surname>
+				</personname>
+				<email>Pavel.Krobot@cesnet.cz</email>
+				<contrib>developer</contrib>
+			</author>
 		</authorgroup>
 		<orgname>The Liberouter Project</orgname>
 	</info>
@@ -36,7 +44,7 @@
 	<refmeta>
 		<refentrytitle>ipfixcol-lnfstore-output</refentrytitle>
 		<manvolnum>1</manvolnum>
-		<refmiscinfo otherclass="manual" class="manual">lnfstore output plugin for IPFIXcol.</refmiscinfo>
+		<refmiscinfo otherclass="manual" class="manual">lnfstore output plugin</refmiscinfo>
 	</refmeta>
 
 	<refnamediv>
@@ -47,21 +55,54 @@
 	<refsect1>
 		<title>Description</title>
 		<simpara>
-			The <command>ipfix-lnfstore-output</command> plugin is a part of IPFIXcol (IPFIX collector). It converts and store IPFIX data into NfDump files. Only a subset of IPFIX elements that have NetFlow equivalents can be stored into NfDump files. Other elements are skipped.
+			The <command>ipfix-lnfstore-output</command> plugin is a part of
+			IPFIXcol (IPFIX collector). It converts and store IPFIX data into
+			NfDump files. Only a subset of IPFIX elements that have NetFlow
+			equivalents can be stored into NfDump files. Other elements are
+			skipped.
+		</simpara>
+		<simpara>
+			In normal mode, files will be stored based on a configuration using
+			the following template:
+			<![CDATA[ "<storagePath>/YYYY/MM/DD/<prefix><suffixMask>" ]]>
+			where "YYYY/MM/DD" means year/month/day. However, when profile
+			mode is enabled flows will stored into directories of all channels
+			where they belong. In this case the template is slightly different:
+			<![CDATA[
+				"_profileDir_/channels/_channelName_/YYYY/MM/DD/<prefix><suffixMask>"
+			]]>
+		</simpara>
+
+		<simpara>
+			To speed up search of records of an IP address in multiple data
+			files, the plugin can also create index files. These files
+			will be create simultaneously with data files and they can be
+			utilized by tools such as
+			<citerefentry>
+				<refentrytitle>fdistdump</refentrytitle>
+				<manvolnum>1</manvolnum>
+			</citerefentry>
+			to promptly determine if there is at least one record with the
+			specified IP address in a file. This can dramatically reduce the
+			number of processed files and provide query results faster.
 		</simpara>
 	</refsect1>
 
 	<refsect1>
 		<title>Configuration</title>
-		<simpara>The collector must be configured to use lnfstore output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
-		The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves.
+		<simpara>
+			The collector must be configured to use lnfstore output plugin
+			in startup.xml configuration
+			(<filename>/etc/ipfixcol/startup.xml</filename>).
+			The configuration specifies which plugins (destinations) are
+			used by the collector to store data and provides configuration
+			for the plugins themselves.
 		</simpara>
 
-		<simpara>We strongly recommend to use this plugin with activated Single Manager mode i.e. only one instance of the plugin is shared between all ODIDs. See the example configuration below.</simpara>
-
-		<simpara>Files will be stored based on a configuration using the following template: 
-		<![CDATA[ "<storagePath>/YYYY/MM/DD/<prefix><suffixMask>" ]]>
-		where "YYYY/MM/DD" means year/month/day.
+		<simpara>
+			We strongly recommend to use this plugin with activated Single
+			Manager mode i.e. only one instance of the plugin is shared among
+			all ODIDs. See the example configuration.
 		</simpara>
 
 		<simpara><filename>startup.xml</filename> lnfstore example</simpara>
@@ -72,97 +113,177 @@
 	<fileWriter>
 		<fileFormat>lnfstore</fileFormat>
 		<profiles>no</profiles>
-		<storagePath>/storage/data/path/</storagePath>
-		<prefix>nfcapd.</prefix>
-		<suffixMask>%Y%m%d%H%M%S</suffixMask>
+		<storagePath>/tmp/IPFIXcol/lnfstore</storagePath>
 		<identificatorField>ipfixcol</identificatorField>
 		<compress>yes</compress>
 		<dumpInterval>
 			<timeWindow>300</timeWindow>
 			<align>yes</align>
 		</dumpInterval>
+		<index>
+			<enable>yes</enable>
+			<autosize>yes</autosize>
+		</index>
 	</fileWriter>
 </destination>
+
 <!--## Only one plugin for all ODIDs -->
 <singleManager>yes</singleManager>
 	]]>
 		</programlisting>
+	</refsect1>
 
-		<para>
-			<variablelist>
+	<refsect1>
+		<title>Parameters</title>
 
+		<para><variablelist>
+		<varlistentry>
+			<term><command>fileFormat</command></term>
+			<listitem><simpara>
+				Same as in <filename>internalcfg.xml</filename> file.
+			</simpara></listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><command>profiles</command></term>
+			<listitem><simpara>
+				When it is enabled ("yes"), the parameter
+				<![CDATA[<storagePath>]]> is ignored and flows will be stored
+				into directories of profiles generated by profiler (see
+				<citerefentry>
+					<refentrytitle>ipfix-profiler-inter</refentrytitle>
+					<manvolnum>1</manvolnum>
+				</citerefentry>) [default: no].
+			</simpara></listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><command>storagePath</command></term>
+			<listitem><simpara>
+				The path element specifies the storage directory for data.
+				Valid only when profile processing is not enabled. Path may
+				contain special character sequences, each of which is
+				introduced by a "%" character and terminated by some other
+				character. Each of this sequences is substituted by its value.
+				Currently supported special characters: %h = hostname.
+			</simpara></listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><command>prefix</command></term>
+			<listitem><simpara>
+				Specifies the first part of output file names [default: "lnf."].
+			</simpara></listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><command>suffixMask</command></term>
+			<listitem><simpara>
+				Specifies name suffix of output files. The mask can contain
+				format specifier for day, month, etc. This allows you to
+				create names based on format specifiers
+				[default: "%Y%m%d%H%M%S"]. See
+				<citerefentry>
+					<refentrytitle>strftime</refentrytitle>
+					<manvolnum>3</manvolnum>
+				</citerefentry>
+				for all specifiers.
+			</simpara></listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><command>identificatorField</command></term>
+			<listitem><simpara>
+				Specifies name identification line for nfdump files.
+			</simpara></listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><command>compress</command></term>
+			<listitem><simpara>
+				Enable/disable LZO compression for files (yes/no) [default: no].
+			</simpara></listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><command>dumpInterval</command></term>
+			<listitem>
 				<varlistentry>
-					<term><command>fileFormat</command></term>
-					<listitem>
-						<simpara>Same as in <filename>internalcfg.xml</filename> file.</simpara>
-					</listitem>
+					<term><command>timeWindow</command></term>
+					<listitem><simpara>
+						Specifies the time interval in seconds to rotate files
+						[default: 300].
+					</simpara></listitem>
 				</varlistentry>
 
 				<varlistentry>
-					<term><command>profiles</command></term>
-					<listitem>
-						<simpara>
-						When it is enabled ("yes"), the parameter <![CDATA[<storagePath>]]> is ignored and flows will be stored into directories of profiles generated by profiler plugin. See <citerefentry><refentrytitle>ipfix-profiler-inter</refentrytitle><manvolnum>1</manvolnum></citerefentry>.
-						</simpara>
-					</listitem>
+					<term><command>align</command></term>
+					<listitem><simpara>
+						Align file rotation with next N minute interval (yes/no)
+						[default: yes].
+					</simpara></listitem>
+				</varlistentry>
+			</listitem>
+		</varlistentry>
+
+		<varlistentry>
+			<term><command>index</command></term>
+			<listitem>
+				<varlistentry>
+					<term><command>enable</command></term>
+					<listitem><simpara>
+						Enable/disable creation of Bloom Filter indexes (yes/no)
+						[default: no].
+					</simpara></listitem>
 				</varlistentry>
 
 				<varlistentry>
-					<term><command>storagePath</command></term>
-					<listitem>
-						<simpara>The path element specifies the storage directory for data collected by the lnfstore plugin. Path may contain special character sequences, each of which is introduced by a "%" character and terminated by some other character. Each of this sequences is substituted by its value. Currenly supported special characters: %h = hostname.</simpara>
-					</listitem>
+					<term><command>autosize</command></term>
+					<listitem><simpara>
+						Enable/disable automatic resize of index files based on
+						the number of unique IP addresses in the last dump
+						interval (yes/no) [default: yes].
+					</simpara></listitem>
 				</varlistentry>
 
 				<varlistentry>
 					<term><command>prefix</command></term>
-					<listitem>
-						<simpara>Specifies name prefix of output files.</simpara>
-					</listitem>
+					<listitem><simpara>
+						Specifies the first part of output file names
+						[default: "bfi."].
+					</simpara></listitem>
 				</varlistentry>
 
 				<varlistentry>
-					<term><command>suffixMask</command></term>
-					<listitem>
-						<simpara>Specifies name suffix of output files. Mask can contain format specifier for day, month, etc. This allows you to create names based on format specifiers. See <command>strftime</command> for conversion specification.</simpara>
-					</listitem>
+					<term><command>estimatedItemCount</command></term>
+					<listitem><simpara>
+						Expected number of unique IP addresses in dump interval.
+						When <![CDATA[<autosize>]]> is enabled this value is
+						continuously recalculated to suit current utilization.
+						The value affects the size of index files i.e. higher
+						value, larger files [default: 100000].
+					</simpara></listitem>
 				</varlistentry>
 
 				<varlistentry>
-					<term><command>identificatorField</command></term>
-					<listitem>
-						<simpara>Specifies name identification line for nfdump files.</simpara>
-					</listitem>
+					<term><command>falsePositiveProbability</command></term>
+					<listitem><simpara>
+						False positive probability of the index. The probability
+						that presence test of an IP address indicates that the
+						IP address is present in a data file, when it actually
+						is not. It does not affect the situation when the
+						IP address is actually in the data file i.e. when the
+						IP is in the file, the result of the test is always
+						correct. The value affects the size of index files i.e.
+						smaller value, larger files [default: 0.01].
+					</simpara></listitem>
 				</varlistentry>
 
-				<varlistentry>
-					<term><command>compress</command></term>
-					<listitem>
-						<simpara>LZO compression for files (yes/no)</simpara>
-					</listitem>
-				</varlistentry>
+			</listitem>
+		</varlistentry>
 
-				<varlistentry>
-					<term><command>dumpInterval</command></term>
-					<listitem>
-						<varlistentry>
-							<term><command>timeWindow</command></term>
-							<listitem>
-								<simpara>Specifies the time interval in seconds to rotate files.</simpara>
-							</listitem>
-						</varlistentry>
 
-						<varlistentry>
-							<term><command>align</command></term>
-							<listitem>
-								<simpara>Align file rotation with next N minute interval.</simpara>
-							</listitem>
-						</varlistentry>
-					</listitem>
-				</varlistentry>
-
-			</variablelist>
-		</para>
+		</variablelist></para>
 	</refsect1>
 
 	<refsect1>

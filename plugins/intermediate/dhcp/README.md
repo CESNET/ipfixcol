@@ -1,12 +1,12 @@
-##<a name="top"></a>DHCP intermediate plugin
-###Plugin description
+## <a name="top"></a>DHCP intermediate plugin
+### Plugin description
 
 The plugin fills MAC addresses according to IP-MAC mapping stored in sqlite3 database.  
 It can be used to set MAC addresses retrieved from DHCP log.  
 Only IPv4 addresses are currently supported.  
 MAC addresses for IP addresses not found in the database are set to zero.
 
-####SQL database
+#### SQL database
 
 SQL database file must contain table **dhcp** with these columns:
 *  **timestamp**, integer, UNIX timestamp in seconds
@@ -23,7 +23,7 @@ sqlite3 $DB_FILE 'CREATE TABLE IF NOT EXISTS dhcp '\
 ');'
 ```
 
-###Configuration
+### Configuration
 
 Default plugin configuration in **internalcfg.xml**:
 

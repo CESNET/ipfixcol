@@ -42,14 +42,14 @@
 #include "bitset.h"
 
 // Create a new bitset
-bitset_t *bitset_create(int size)
+bitset_t *bitset_create(size_t size)
 {
 	bitset_t *set = (bitset_t *) calloc(1, sizeof(bitset_t));
 	if (!set) {
 		return NULL;
 	}
 
-	set->size = (size / BITSET_BITS) + 1;
+	set->size = (size / BITSET_BITS) + 1U;
 	set->array = (bitset_type_t *) calloc(set->size, sizeof(bitset_type_t));
 	if (!set->array) {
 		free(set);
@@ -78,4 +78,30 @@ void bitset_clear(bitset_t *set)
 	}
 
 	memset(set->array, 0, set->size * sizeof(bitset_type_t));
+}
+
+int
+bitset_resize(bitset_t *set, size_t size)
+{
+	bitset_type_t *new_array;
+	const size_t new_size = (size / BITSET_BITS) + 1U;
+	if (new_size == set->size) {
+		// No change, return
+		return 0;
+	}
+
+	new_array = realloc(set->array, new_size * sizeof(bitset_type_t));
+	if (!new_array) {
+		return 1;
+	}
+
+	set->array = new_array;
+	if (set->size < new_size) {
+		// Initialize the rest of the bits
+		size_t diff = new_size - set->size;
+		memset(&set->array[set->size], 0, diff * sizeof(bitset_type_t));
+	}
+
+	set->size  = new_size;
+	return 0;
 }

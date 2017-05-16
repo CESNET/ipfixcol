@@ -1,10 +1,10 @@
-##<a name="top"></a>JSON storage plugin
+## <a name="top"></a>JSON storage plugin
 
-###Plugin description
+### Plugin description
 Plugin converts IPFIX data into JSON format.
 
 
-###Format
+### Format
 Each data set is an array of data records.
 
 Example:
@@ -32,7 +32,7 @@ Example:
 }
 ```
 
-###Configuration
+### Configuration
 
 Default plugin configuration in **internalcfg.xml**
 
@@ -59,11 +59,12 @@ Here is an example of configuration in **startup.xml**:
 	<fileWriter>
 		<fileFormat>json</fileFormat>
 		<metadata>no</metadata>
-		<tcpFlags>formated</tcpFlags>
-		<timestamp>formated</timestamp>
-		<protocol>formated</protocol>
+		<tcpFlags>formatted</tcpFlags>
+		<timestamp>formatted</timestamp>
+		<protocol>formatted</protocol>
 		<ignoreUnknown>yes</ignoreUnknown>
 		<nonPrintableChar>yes</nonPrintableChar>
+		<prefix>ipfix.</prefix>
 
 		<output>
 			<type>print</type>
@@ -95,11 +96,12 @@ Here is an example of configuration in **startup.xml**:
 </destination>
 ```
 * **metadata** - Add record metadata to the output (yes/no) [default == no].
-* **tcpFlags** - Convert TCP flags to formated style of dots and letters (formated) or to a number (raw) [default == raw].
-* **timestamp** - Convert time to formated style (formated) or to a number (unix) [default == unix].
-* **protocol** - Convert protocol identification to formated style (formated) or to a number (raw) [default == formated].
-* **ignoreUnknown** - Skip elements with unknown semantics (yes/no). Data of unknown elements are formated as unsigned integer (1, 2, 4, 8 bytes length) or binary values. Names will have format 'eXXidYY' where XX is enterprise number and YY is element ID [default == yes].
+* **tcpFlags** - Convert TCP flags to formatted style of dots and letters (formatted) or to a number (raw) [default == raw].
+* **timestamp** - Convert time to formatted style (formatted) or to a number (unix) [default == unix].
+* **protocol** - Convert protocol identification to formatted style (formatted) or to a number (raw) [default == formatted].
+* **ignoreUnknown** - Skip elements with unknown semantics (yes/no). Data of unknown elements are formatted as unsigned integer (1, 2, 4, 8 bytes length) or binary values. Names will have format 'eXXidYY' where XX is enterprise number and YY is element ID [default == yes].
 * **nonPrintableChar** - Convert non-printable characters (control characters, tab, newline, etc.) from IPFIX fields with data type of a string. (yes/no) [default == yes].
+* **prefix** - Prefix of the IPFIX element names. [default == ipfix.].
 
 * **output** - Specifies JSON data processor. Multiple outputs are supported.
 	* **type** - Output type. **print**, **send**, **file** and **server** are supported.

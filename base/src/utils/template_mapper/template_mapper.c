@@ -1,9 +1,9 @@
 ﻿/**
- * \file storage/forwarding/templates.c
+ * \file utils/template_mapper/template_mapper.c
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
- * \brief Template manager for forwarding plugin (source file)
- *
- * Copyright (C) 2016 CESNET, z.s.p.o.
+ * \brief Template mapper (source file)
+ */
+/* Copyright (C) 2016-2017 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,10 +40,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
-#include "templates.h"
+#include <ipfixcol.h>
 
 /** Module description */
-static const char *msg_module = "forwarding(templates)";
+static const char *msg_module = "template mapper";
 
 /**
  * \def MEMBER_SIZE(_type_, _member_)
@@ -84,7 +84,7 @@ typedef struct fwd_odid_s {
 	 * Sparse array (256 x 256) of templates. Unused parts
 	 * (of 256 templates) can be substitute by NULL pointer.
 	 */
-	fwd_tmplt_t **tmplts[GROUP_CNT];
+	tmapper_tmplt_t **tmplts[GROUP_CNT];
 } fwd_odid_t;
 
 /**
@@ -113,9 +113,9 @@ typedef struct fwd_source_s {
 } fwd_source_t;
 
 /**
- * \brief Template manager
+ * \brief Template mapper
  */
-struct _fwd_tmplt_mgr {
+struct tmapper_s {
 	/** Array of Observation Domain IDs                                */
 	fwd_odid_t **odid_arr;
 	/** Number of valid records in the ODID array                      */
@@ -136,7 +136,7 @@ struct _fwd_tmplt_mgr {
  */
 enum TMPLT_DEF_TYPE {
 	TYPE_INVALID,       /**< Invalid template                            */
-	TYPE_NEW,           /**< New defintion                               */
+	TYPE_NEW,           /**< New definition                              */
 	TYPE_WITHDRAWAL,    /**< Template withdrawal of a one template       */
 	TYPE_WITHDRAWAL_ALL /**< Template withdrawal of all templates        */
 };
@@ -147,14 +147,15 @@ static int fwd_odid_template_increment(fwd_odid_t *odid, uint16_t shared_id);
 static int fwd_odid_template_decrement(fwd_odid_t *odid, uint16_t shared_id);
 
 /**
- * \brief Get a type of a template defition
+ * \brief Get a type of a template definition
  * \param[in] rec Template record
  * \param[in] length Length of the template record
  * \param[in] type Type of the template (#TM_TEMPLATE or #TM_OPTIONS_TEMPLATE)
  * \return The type
  */
-static enum TMPLT_DEF_TYPE tmplts_aux_def_type(
-	const struct ipfix_template_record *rec, size_t length, int type)
+static enum TMPLT_DEF_TYPE
+tmplts_aux_def_type(const struct ipfix_template_record *rec, size_t length,
+	int type)
 {
 	if (length < 4) { // Minimum for a template record
 		return TYPE_INVALID;
@@ -193,8 +194,8 @@ static enum TMPLT_DEF_TYPE tmplts_aux_def_type(
  * \param[in,out] maintainer Shared ODID maintainer
  * \return Pointer or NULL
  */
-static fwd_source_t *fwd_src_create(const struct input_info *src,
-	fwd_odid_t *maintainer)
+static fwd_source_t *
+fwd_src_create(const struct input_info *src, fwd_odid_t *maintainer)
 {
 	if (maintainer->odid != src->odid) {
 		MSG_ERROR(msg_module, "ODID of a Flow source (%" PRIu32 ") and "
@@ -222,7 +223,8 @@ static fwd_source_t *fwd_src_create(const struct input_info *src,
  * \brief Destroy a Flow Source
  * \param[in,out] src Flow Source
  */
-static void fwd_src_destroy(fwd_source_t *src)
+static void
+fwd_src_destroy(fwd_source_t *src)
 {
 	if (!src) {
 		return;
@@ -252,7 +254,8 @@ static void fwd_src_destroy(fwd_source_t *src)
  * \return If the mapping doesn't exist, returns 0. Otherwise returns new ID
  * (>= 256).
  */
-static uint16_t fwd_src_mapping_get(const fwd_source_t *src, uint16_t old_id)
+static uint16_t
+fwd_src_mapping_get(const fwd_source_t *src, uint16_t old_id)
 {
 	const uint16_t *group = src->map[old_id / GROUP_SIZE];
 	if (!group) {
@@ -268,8 +271,8 @@ static uint16_t fwd_src_mapping_get(const fwd_source_t *src, uint16_t old_id)
  * \param[in] old_id Private Template ID
  * \param[in] new_id Shared Template ID
  */
-static void fwd_src_mapping_set(fwd_source_t *src, uint16_t old_id,
-	uint16_t new_id)
+static void
+fwd_src_mapping_set(fwd_source_t *src, uint16_t old_id, uint16_t new_id)
 {
 	// Set the mapping
 	uint16_t *group = src->map[old_id / GROUP_SIZE];
@@ -302,7 +305,8 @@ static void fwd_src_mapping_set(fwd_source_t *src, uint16_t old_id,
  * \param[in] src Flow source
  * \param[in] old_id Private Template ID
  */
-static void fwd_src_mapping_remove(fwd_source_t *src, uint16_t old_id)
+static void
+fwd_src_mapping_remove(fwd_source_t *src, uint16_t old_id)
 {
 	uint16_t shared_id = 0;
 	uint16_t *group = src->map[old_id / GROUP_SIZE];
@@ -335,10 +339,11 @@ static void fwd_src_mapping_remove(fwd_source_t *src, uint16_t old_id)
  * \param[in] new_id New Template ID
  * \return Pointer or NULL
  */
-static fwd_tmplt_t *fwd_tmplt_create(const struct ipfix_template_record *rec,
-	size_t length, int type, uint16_t new_id)
+static tmapper_tmplt_t *
+fwd_tmplt_create(const struct ipfix_template_record *rec, size_t length,
+	int type, uint16_t new_id)
 {
-	fwd_tmplt_t *res = calloc(1, sizeof(*res));
+	tmapper_tmplt_t *res = calloc(1, sizeof(*res));
 	if (!res) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)",
 			__FILE__, __LINE__);
@@ -369,7 +374,8 @@ static fwd_tmplt_t *fwd_tmplt_create(const struct ipfix_template_record *rec,
  * \brief Destroy a template record
  * \param[in,out] tmplt Template record
  */
-static void fwd_tmplt_destroy(fwd_tmplt_t *tmplt)
+static void
+fwd_tmplt_destroy(tmapper_tmplt_t *tmplt)
 {
 	if (!tmplt) {
 		return;
@@ -389,8 +395,9 @@ static void fwd_tmplt_destroy(fwd_tmplt_t *tmplt)
  * \return If template records are equal, returns 0. Otherwise returns non-zero
  * value.
  */
-static int fwd_tmplt_cmp(const struct ipfix_template_record *rec,
-	size_t rec_len, int rec_type, const fwd_tmplt_t *tmplt)
+static int
+fwd_tmplt_cmp(const struct ipfix_template_record *rec, size_t rec_len,
+	int rec_type, const tmapper_tmplt_t *tmplt)
 {
 	if (tmplt->type != rec_type) {
 		return 1;
@@ -416,7 +423,8 @@ static int fwd_tmplt_cmp(const struct ipfix_template_record *rec,
  * \param[in] odid Observation Domain ID (ODID)
  * \return Pointer or NULL
  */
-static fwd_odid_t *fwd_odid_create(uint32_t odid)
+static fwd_odid_t *
+fwd_odid_create(uint32_t odid)
 {
 	fwd_odid_t *res = calloc(1, sizeof(*res));
 	if (!res) {
@@ -435,14 +443,15 @@ static fwd_odid_t *fwd_odid_create(uint32_t odid)
  * \brief Destroy an Observation Domaind ID (ODID) maintainer
  * \param[in,out] odid Maintainer
  */
-static void fwd_odid_destroy(fwd_odid_t *odid)
+static void
+fwd_odid_destroy(fwd_odid_t *odid)
 {
 	if (!odid) {
 		return;
 	}
 
-	fwd_tmplt_t **group_ptr;
-	fwd_tmplt_t *tmplt_ptr;
+	tmapper_tmplt_t **group_ptr;
+	tmapper_tmplt_t *tmplt_ptr;
 
 	for (int group = 0; group < GROUP_CNT; ++group) {
 		// Delete a group
@@ -476,9 +485,10 @@ static void fwd_odid_destroy(fwd_odid_t *odid)
  * \param[in] id Template ID
  * \return If the template exists, returns a pointer. Otherwise returns NULL.
  */
-static fwd_tmplt_t *fwd_odid_template_get(const fwd_odid_t *odid, uint16_t id)
+static tmapper_tmplt_t *
+fwd_odid_template_get(const fwd_odid_t *odid, uint16_t id)
 {
-	fwd_tmplt_t **group = odid->tmplts[id / GROUP_SIZE];
+	tmapper_tmplt_t **group = odid->tmplts[id / GROUP_SIZE];
 	if (!group) {
 		return NULL;
 	}
@@ -494,7 +504,8 @@ static fwd_tmplt_t *fwd_odid_template_get(const fwd_odid_t *odid, uint16_t id)
  * \return On success returns valid Template ID (>= 256).
  * If all Template IDs are used, returns 0.
  */
-static uint16_t fwd_odid_template_unused_id(const fwd_odid_t *odid, uint16_t hint)
+static uint16_t
+fwd_odid_template_unused_id(const fwd_odid_t *odid, uint16_t hint)
 {
 	// Try to use preferred Template ID
 	if (hint >= IPFIX_MIN_RECORD_FLOWSET_ID) {
@@ -529,7 +540,8 @@ static uint16_t fwd_odid_template_unused_id(const fwd_odid_t *odid, uint16_t hin
  * \return On success returns new Template ID assigned to the template (>= 256).
  * Otherwise returns 0.
  */
-static uint16_t fwd_odid_template_insert(fwd_odid_t *odid,
+static uint16_t
+fwd_odid_template_insert(fwd_odid_t *odid,
 	const struct ipfix_template_record *rec, size_t rec_len, int rec_type)
 {
 	// Create a template record
@@ -549,16 +561,16 @@ static uint16_t fwd_odid_template_insert(fwd_odid_t *odid,
 		return 0;
 	}
 
-	fwd_tmplt_t *tmplt = fwd_tmplt_create(rec, rec_len, rec_type, new_id);
+	tmapper_tmplt_t *tmplt = fwd_tmplt_create(rec, rec_len, rec_type, new_id);
 	if (!tmplt) {
 		return 0;
 	}
 
 	// Store the template
-	fwd_tmplt_t **group = odid->tmplts[new_id / GROUP_SIZE];
+	tmapper_tmplt_t **group = odid->tmplts[new_id / GROUP_SIZE];
 	if (!group) {
 		// Not found -> create a new group
-		fwd_tmplt_t ***new_grp = &odid->tmplts[new_id / GROUP_SIZE];
+		tmapper_tmplt_t ***new_grp = &odid->tmplts[new_id / GROUP_SIZE];
 		*new_grp = calloc(GROUP_SIZE, sizeof(*group));
 		if (*new_grp == NULL) {
 			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)",
@@ -588,10 +600,11 @@ static uint16_t fwd_odid_template_insert(fwd_odid_t *odid,
  * \param[in,out] odid Observation Domain (ODID) maintainer
  * \param[in] id Template ID
  */
-static void fwd_odid_template_remove(fwd_odid_t *odid, uint16_t id)
+static void
+fwd_odid_template_remove(fwd_odid_t *odid, uint16_t id)
 {
-	fwd_tmplt_t **group = odid->tmplts[id / GROUP_SIZE];
-	fwd_tmplt_t *rec = NULL;
+	tmapper_tmplt_t **group = odid->tmplts[id / GROUP_SIZE];
+	tmapper_tmplt_t *rec = NULL;
 
 	if (group) {
 		rec = group[id % GROUP_SIZE];
@@ -633,11 +646,12 @@ static void fwd_odid_template_remove(fwd_odid_t *odid, uint16_t id)
  * \return If the template is not present, returns 0. Otherwise returns
  * new Template ID (>= 256) used in the ODID maintainer.
  */
-static uint16_t fwd_odid_template_find(const fwd_odid_t *odid,
+static uint16_t
+fwd_odid_template_find(const fwd_odid_t *odid,
 	const struct ipfix_template_record *rec, size_t rec_length, int rec_type)
 {
-	fwd_tmplt_t **group;
-	const fwd_tmplt_t *tmplt;
+	tmapper_tmplt_t **group;
+	const tmapper_tmplt_t *tmplt;
 
 	// For each group
 	for (uint16_t i = 0; i < GROUP_CNT; ++i) {
@@ -672,9 +686,10 @@ static uint16_t fwd_odid_template_find(const fwd_odid_t *odid,
  * \return On success returns 0. Otherwise (usually because the template doesn't
  * exist) returns non-zero value.
  */
-static int fwd_odid_template_increment(fwd_odid_t *odid, uint16_t shared_id)
+static int
+fwd_odid_template_increment(fwd_odid_t *odid, uint16_t shared_id)
 {
-	fwd_tmplt_t *tmplt = fwd_odid_template_get(odid, shared_id);
+	tmapper_tmplt_t *tmplt = fwd_odid_template_get(odid, shared_id);
 	if (!tmplt) {
 		return 1;
 	}
@@ -694,9 +709,10 @@ static int fwd_odid_template_increment(fwd_odid_t *odid, uint16_t shared_id)
  * \return On success returns 0. Otherwise (usually because the template doesn't
  * exist) returns non-zero value.
  */
-static int fwd_odid_template_decrement(fwd_odid_t *odid, uint16_t shared_id)
+static int
+fwd_odid_template_decrement(fwd_odid_t *odid, uint16_t shared_id)
 {
-	fwd_tmplt_t *tmplt = fwd_odid_template_get(odid, shared_id);
+	tmapper_tmplt_t *tmplt = fwd_odid_template_get(odid, shared_id);
 	if (!tmplt) {
 		return 1;
 	}
@@ -713,73 +729,17 @@ static int fwd_odid_template_decrement(fwd_odid_t *odid, uint16_t shared_id)
 	return 0;
 }
 
-// Create a template manager
-fwd_tmplt_mgr_t *tmplts_create()
-{
-	fwd_tmplt_mgr_t *res = calloc(1, sizeof(*res));
-	if (!res) {
-		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)",
-			__FILE__, __LINE__);
-		return NULL;
-	}
-
-	res->odid_arr_size = 0;
-	res->odid_arr_max = ARRAY_DEF_SIZE;
-	res->odid_arr = calloc(res->odid_arr_max, sizeof(*res->odid_arr));
-	if (!res->odid_arr) {
-		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)",
-			__FILE__, __LINE__);
-		free(res);
-		return NULL;
-	}
-
-	res->src_arr_size = 0;
-	res->src_arr_max = ARRAY_DEF_SIZE;
-	res->src_arr = calloc(res->src_arr_max, sizeof(*res->src_arr));
-	if (!res->src_arr) {
-		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)",
-			__FILE__, __LINE__);
-		free(res->odid_arr);
-		free(res);
-		return NULL;
-	}
-
-	return res;
-}
-
-// Destroy a template manager
-void tmplts_destroy(fwd_tmplt_mgr_t *mgr)
-{
-	if (!mgr) {
-		return;
-	}
-
-	// Detele Flow sources (must go first before ODIDs)
-	for (size_t i = 0; i < mgr->src_arr_size; ++i) {
-		fwd_src_destroy(mgr->src_arr[i]);
-	}
-
-	// Delete ODIDs
-	for (size_t i = 0; i < mgr->odid_arr_size; ++i) {
-		fwd_odid_destroy(mgr->odid_arr[i]);
-	}
-
-	free(mgr->odid_arr);
-	free(mgr->src_arr);
-	free(mgr);
-}
-
-
 /**
- * \brief Add new Observation domain ID (ODID) maintainer to a template manager
+ * \brief Add new Observation domain ID (ODID) maintainer to a template mapper
  * \warning First, make sure that there is not another ODID maintainer with
- * the same ODID.
- * \param[in,out] mgr Template manager
+ *   the same ODID.
+ * \param[in,out] mgr Template mapper
  * \param[in] odid ODID
  * \return On success returns a pointer to the new ODID maintainer. Otherwise
- * returns NULL.
+ *   returns NULL.
  */
-static fwd_odid_t *tmplts_odid_add(fwd_tmplt_mgr_t *mgr, uint32_t odid)
+static fwd_odid_t *
+tmplts_odid_add(tmapper_t *mgr, uint32_t odid)
 {
 	fwd_odid_t *odid_struct = fwd_odid_create(odid);
 	if (!odid_struct) {
@@ -809,10 +769,11 @@ static fwd_odid_t *tmplts_odid_add(fwd_tmplt_mgr_t *mgr, uint32_t odid)
 
 /**
  * \brief Remove a Observation Domain ID (ODID) maintainer
- * \param[in,out] mgr Template manager
+ * \param[in,out] mgr Template mapper
  * \param[in] odid ODID
  */
-static void tmplts_odid_remove(fwd_tmplt_mgr_t *mgr, uint32_t odid)
+static void
+tmplts_odid_remove(tmapper_t *mgr, uint32_t odid)
 {
 	size_t pos;
 	for (pos = 0; pos < mgr->odid_arr_size; ++pos) {
@@ -843,11 +804,12 @@ static void tmplts_odid_remove(fwd_tmplt_mgr_t *mgr, uint32_t odid)
 
 /**
  * \brief Find an Observation Domain ID (ODID) maintainer
- * \param[in] mgr Template manager
+ * \param[in] mgr Template mapper
  * \param[in] odid ODID
  * \return On success returns a pointer. Otherwise returns NULL.
  */
-static fwd_odid_t *tmplts_odid_find(fwd_tmplt_mgr_t *mgr, uint32_t odid)
+static fwd_odid_t *
+tmplts_odid_find(tmapper_t *mgr, uint32_t odid)
 {
 	for (size_t i = 0; i < mgr->odid_arr_size; ++i) {
 		fwd_odid_t *odid_struct = mgr->odid_arr[i];
@@ -863,12 +825,13 @@ static fwd_odid_t *tmplts_odid_find(fwd_tmplt_mgr_t *mgr, uint32_t odid)
  * \brief Get Observation Domain ID (ODID) maintainer
  *
  * If the maintainer doesn't exist, create a new one.
- * \param[in] mgr Template manager
+ * \param[in] mgr Template mapper
  * \param[in] odid ODID
  * \return Should always returns a pointer to the maintainer. On error (usually
- * memory allocation) returns NULL.
+ *   memory allocation) returns NULL.
  */
-static fwd_odid_t *tmplts_odid_get(fwd_tmplt_mgr_t *mgr, uint32_t odid)
+static fwd_odid_t *
+tmplts_odid_get(tmapper_t *mgr, uint32_t odid)
 {
 	fwd_odid_t *res = tmplts_odid_find(mgr, odid);
 	if (res) {
@@ -882,14 +845,14 @@ static fwd_odid_t *tmplts_odid_get(fwd_tmplt_mgr_t *mgr, uint32_t odid)
 }
 
 /**
- * \brief Add a new Flow Source to the template manager
- * \param[in,out] mgr Template manager
+ * \brief Add a new Flow Source to the template mapper
+ * \param[in,out] mgr Template mapper
  * \param[in] src Input info about the Flow source
  * \return On success returns a pointer to the new Flow Source. Otherwise
- * returns NULL.
+ *   returns NULL.
  */
-static fwd_source_t *tmplts_src_add(fwd_tmplt_mgr_t *mgr,
-	const struct input_info *src)
+static fwd_source_t *
+tmplts_src_add(tmapper_t *mgr, const struct input_info *src)
 {
 	// Find an Observation Domain ID maintainer & create the Flow source
 	fwd_odid_t *odid = tmplts_odid_get(mgr, src->odid);
@@ -925,10 +888,11 @@ static fwd_source_t *tmplts_src_add(fwd_tmplt_mgr_t *mgr,
 
 /**
  * \brief Remove a description of a Flow source
- * \param[in,out] mgr Template manager
+ * \param[in,out] mgr Template mapper
  * \param[in] src Input info about the Flow source
  */
-static void tmplts_src_remove(fwd_tmplt_mgr_t *mgr, const struct input_info *src)
+static void
+tmplts_src_remove(tmapper_t *mgr, const struct input_info *src)
 {
 	size_t pos;
 	for (pos = 0; pos < mgr->src_arr_size; ++pos) {
@@ -958,12 +922,12 @@ static void tmplts_src_remove(fwd_tmplt_mgr_t *mgr, const struct input_info *src
 
 /**
  * \brief Find a description of the Flow source
- * \param[in] mgr Template manager
+ * \param[in] mgr Template mapper
  * \param[in] src Input info about the Flow source
  * \return On success returns a pointer. Otherwise returns NULL.
  */
-static fwd_source_t *tmplts_src_find(fwd_tmplt_mgr_t *mgr,
-	const struct input_info *src)
+static fwd_source_t *
+tmplts_src_find(tmapper_t *mgr, const struct input_info *src)
 {
 	for (size_t i = 0; i < mgr->src_arr_size; ++i) {
 		fwd_source_t *flow_src = mgr->src_arr[i];
@@ -979,13 +943,13 @@ static fwd_source_t *tmplts_src_find(fwd_tmplt_mgr_t *mgr,
  * \brief Get a description of a Flow source
  *
  * If the Flow source doesn't exist, create a new one.
- * \param[in] mgr Template manager
+ * \param[in] mgr Template mapper
  * \param[in] info Input info about the Flow source
  * \return Should always returns a pointer to the maintainer. On error (usually
  * memory allocation) returns NULL.
  */
-static fwd_source_t *tmplts_src_get(fwd_tmplt_mgr_t *mgr,
-	const struct input_info *info)
+static fwd_source_t *
+tmplts_src_get(tmapper_t *mgr, const struct input_info *info)
 {
 	fwd_source_t *res = tmplts_src_find(mgr, info);
 	if (res) {
@@ -998,22 +962,6 @@ static fwd_source_t *tmplts_src_get(fwd_tmplt_mgr_t *mgr,
 	return res;
 }
 
-
-// Get new Set ID of a Data Set
-uint16_t tmplts_remap_data_set(fwd_tmplt_mgr_t *mgr,
-	const struct input_info *src, const struct ipfix_set_header *header)
-{
-	// Find Flow source
-	fwd_source_t *flow_src = tmplts_src_find(mgr, (const void *) src);
-	if (!flow_src) {
-		return 0;
-	}
-
-	// Find mapping
-	const uint16_t private_id = ntohs(header->flowset_id);
-	return fwd_src_mapping_get(flow_src, private_id);
-}
-
 /**
  * \brief Add a new template from a Flow source
  * \param[in,out] src Flow source
@@ -1023,9 +971,9 @@ uint16_t tmplts_remap_data_set(fwd_tmplt_mgr_t *mgr,
  * \param[out] new_id New ID (only valid when the return code is TMPLT_ACT_PASS)
  * \return Same as tmplts_process_template()
  */
-static enum TMPLT_MGR_ACTION fwd_src_add_tmplt(fwd_source_t *src,
-	const struct ipfix_template_record *rec, size_t rec_len, int rec_type,
-	uint16_t *new_id)
+static enum TMAPPER_ACTION
+fwd_src_add_tmplt(fwd_source_t *src, const struct ipfix_template_record *rec,
+	size_t rec_len, int rec_type, uint16_t *new_id)
 {
 	// Check if there is a mapping for this Flow source & template
 	const uint16_t private_id = ntohs(rec->template_id);
@@ -1033,18 +981,18 @@ static enum TMPLT_MGR_ACTION fwd_src_add_tmplt(fwd_source_t *src,
 
 	if (shared_id > 0) {
 		// Template mapping already exists
-		fwd_tmplt_t *tmplt = fwd_odid_template_get(src->maintainer, shared_id);
+		tmapper_tmplt_t *tmplt = fwd_odid_template_get(src->maintainer, shared_id);
 		if (!tmplt) {
 			MSG_ERROR(msg_module, "Unable to find a template record "
 				"(ID: %" PRIu16 ") used by template mapping.", shared_id);
-			return TMPLT_ACT_INVALID;
+			return TMAPPER_ACT_INVALID;
 		}
 
 		// Compare templates
 		int res = fwd_tmplt_cmp(rec, rec_len, rec_type, tmplt);
 		if (res == 0) {
 			// Same templates -> OK
-			return TMPLT_ACT_DROP;
+			return TMAPPER_ACT_DROP;
 		}
 
 		/*
@@ -1060,19 +1008,19 @@ static enum TMPLT_MGR_ACTION fwd_src_add_tmplt(fwd_source_t *src,
 	if (shared_id > 0) {
 		// The same template already exists in the ODID maintainer
 		fwd_src_mapping_set(src, private_id, shared_id);
-		return TMPLT_ACT_DROP;
+		return TMAPPER_ACT_DROP;
 	}
 
 	// Store the template
 	shared_id = fwd_odid_template_insert(src->maintainer, rec, rec_len, rec_type);
 	if (shared_id == 0) {
-		return TMPLT_ACT_DROP;
+		return TMAPPER_ACT_DROP;
 	}
 
 	// Configure the mapping of the template
 	fwd_src_mapping_set(src, private_id, shared_id);
 	*new_id = shared_id;
-	return TMPLT_ACT_PASS;
+	return TMAPPER_ACT_PASS;
 }
 
 /**
@@ -1080,7 +1028,8 @@ static enum TMPLT_MGR_ACTION fwd_src_add_tmplt(fwd_source_t *src,
  * \param[in,out] src Flow source
  * \param[in] type Type of the templates (#TM_TEMPLATE or #TM_OPTIONS_TEMPLATE)
  */
-static void fwd_src_withdraw_type(fwd_source_t *src, int type)
+static void
+fwd_src_withdraw_type(fwd_source_t *src, int type)
 {
 	const unsigned int min = IPFIX_MIN_RECORD_FLOWSET_ID;
 	const unsigned int max = FWD_MAX_RECORD_FLOWSET_ID;
@@ -1099,7 +1048,7 @@ static void fwd_src_withdraw_type(fwd_source_t *src, int type)
 		}
 
 		// Check a type of a template
-		const fwd_tmplt_t *tmplt;
+		const tmapper_tmplt_t *tmplt;
 		tmplt = fwd_odid_template_get(src->maintainer, shared_id);
 		if (!tmplt) {
 			MSG_ERROR(msg_module, "Unable to get a reference to a shared "
@@ -1121,7 +1070,8 @@ static void fwd_src_withdraw_type(fwd_source_t *src, int type)
  * \param[in] type Type of the template (#TM_TEMPLATE or #TM_OPTIONS_TEMPLATE)
  * \param[in] id Template ID
  */
-static void fwd_src_withdraw_id(fwd_source_t *src, int type, uint16_t id)
+static void
+fwd_src_withdraw_id(fwd_source_t *src, int type, uint16_t id)
 {
 	const uint16_t share_id = fwd_src_mapping_get(src, id);
 	if (share_id == 0) {
@@ -1130,7 +1080,7 @@ static void fwd_src_withdraw_id(fwd_source_t *src, int type, uint16_t id)
 		return;
 	}
 
-	const fwd_tmplt_t *tmplt = fwd_odid_template_get(src->maintainer, share_id);
+	const tmapper_tmplt_t *tmplt = fwd_odid_template_get(src->maintainer, share_id);
 	if (!tmplt) {
 		MSG_ERROR(msg_module, "Trying to remove a non-existent template "
 			"mapping.");
@@ -1147,17 +1097,78 @@ static void fwd_src_withdraw_id(fwd_source_t *src, int type, uint16_t id)
 	fwd_src_mapping_remove(src, id);
 }
 
+// INTERFACE FUNCTIONS ---------------------------------------------------------
+
+// Create a template mapper
+tmapper_t *
+tmapper_create()
+{
+	tmapper_t *res = calloc(1, sizeof(*res));
+	if (!res) {
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)",
+				__FILE__, __LINE__);
+		return NULL;
+	}
+
+	res->odid_arr_size = 0;
+	res->odid_arr_max = ARRAY_DEF_SIZE;
+	res->odid_arr = calloc(res->odid_arr_max, sizeof(*res->odid_arr));
+	if (!res->odid_arr) {
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)",
+				__FILE__, __LINE__);
+		free(res);
+		return NULL;
+	}
+
+	res->src_arr_size = 0;
+	res->src_arr_max = ARRAY_DEF_SIZE;
+	res->src_arr = calloc(res->src_arr_max, sizeof(*res->src_arr));
+	if (!res->src_arr) {
+		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)",
+				__FILE__, __LINE__);
+		free(res->odid_arr);
+		free(res);
+		return NULL;
+	}
+
+	return res;
+}
+
+// Destroy a template mapper
+void
+tmapper_destroy(tmapper_t *mgr)
+{
+	if (!mgr) {
+		return;
+	}
+
+	// Detele Flow sources (must go first before ODIDs)
+	for (size_t i = 0; i < mgr->src_arr_size; ++i) {
+		fwd_src_destroy(mgr->src_arr[i]);
+	}
+
+	// Delete ODIDs
+	for (size_t i = 0; i < mgr->odid_arr_size; ++i) {
+		fwd_odid_destroy(mgr->odid_arr[i]);
+	}
+
+	free(mgr->odid_arr);
+	free(mgr->src_arr);
+	free(mgr);
+}
+
 // Process a template record
-enum TMPLT_MGR_ACTION tmplts_process_template(fwd_tmplt_mgr_t *mgr,
-	const struct input_info *src, const struct ipfix_template_record *rec,
-	int type, size_t length, uint16_t *new_id)
+enum TMAPPER_ACTION
+tmapper_process_template(tmapper_t *mgr, const struct input_info *src,
+	const struct ipfix_template_record *rec, int type, size_t length,
+	uint16_t *new_id)
 {
 	// Get a description of a flow source
 	fwd_source_t *flow_src = tmplts_src_get(mgr, src);
 	if (!flow_src) {
 		MSG_ERROR(msg_module, "Unable to get an internal representation of "
 			"a flow source. A template will be probably lost.");
-		return TMPLT_ACT_DROP;
+		return TMAPPER_ACT_DROP;
 	}
 
 	// Get a type of a template & process it
@@ -1170,26 +1181,43 @@ enum TMPLT_MGR_ACTION tmplts_process_template(fwd_tmplt_mgr_t *mgr,
 
 	case TYPE_WITHDRAWAL:
 		fwd_src_withdraw_id(flow_src, type, ntohs(rec->template_id));
-		return TMPLT_ACT_DROP;
+		return TMAPPER_ACT_DROP;
 
 	case TYPE_WITHDRAWAL_ALL:
 		fwd_src_withdraw_type(flow_src, type);
-		return TMPLT_ACT_DROP;
+		return TMAPPER_ACT_DROP;
 
 	case TYPE_INVALID:
 		// Drop the template
 		MSG_ERROR(msg_module, "Invalid template from a source (ODID: " PRIu32
 			") skipped.", src->odid);
-		return TMPLT_ACT_INVALID;
+		return TMAPPER_ACT_INVALID;
 
 	default:
 		MSG_ERROR(msg_module, "Unknown type of a template.");
-		return TMPLT_ACT_INVALID;
+		return TMAPPER_ACT_INVALID;
 	}
 }
 
-// Remove a flow source and its mapping from the template manager
-int tmplts_remove_source(fwd_tmplt_mgr_t *mgr, const struct input_info *src)
+// Get new Set ID of a Data Set
+uint16_t
+tmapper_remap_data_set(tmapper_t *mgr, const struct input_info *src,
+		const struct ipfix_set_header *header)
+{
+	// Find Flow source
+	fwd_source_t *flow_src = tmplts_src_find(mgr, (const void *) src);
+	if (!flow_src) {
+		return 0;
+	}
+
+	// Find mapping
+	const uint16_t private_id = ntohs(header->flowset_id);
+	return fwd_src_mapping_get(flow_src, private_id);
+}
+
+// Remove a flow source and its mapping from the template mapper
+int
+tmapper_remove_source(tmapper_t *mgr, const struct input_info *src)
 {
 	fwd_source_t *flow_src = tmplts_src_find(mgr, src);
 	if (!flow_src) {
@@ -1208,8 +1236,8 @@ int tmplts_remove_source(fwd_tmplt_mgr_t *mgr, const struct input_info *src)
 /**
  * This function also frees templates and ODIDs that are no longer required.
  */
-uint16_t *tmplts_withdraw_ids(fwd_tmplt_mgr_t *mgr, uint32_t odid, int type,
-	uint16_t *cnt)
+uint16_t *
+tmapper_withdraw_ids(tmapper_t *mgr, uint32_t odid, int type, uint16_t *cnt)
 {
 	fwd_odid_t *odid_grp = tmplts_odid_find(mgr, odid);
 	if (!odid_grp) {
@@ -1235,7 +1263,7 @@ uint16_t *tmplts_withdraw_ids(fwd_tmplt_mgr_t *mgr, uint32_t odid, int type,
 
 	const unsigned int min = IPFIX_MIN_RECORD_FLOWSET_ID;
 	const unsigned int max = FWD_MAX_RECORD_FLOWSET_ID;
-	fwd_tmplt_t *tmplt;
+	tmapper_tmplt_t *tmplt;
 
 	unsigned int add_cnt = 0;
 	for (unsigned int id = min; id < max && rec_cnt > 0; ++id) {
@@ -1273,8 +1301,8 @@ uint16_t *tmplts_withdraw_ids(fwd_tmplt_mgr_t *mgr, uint32_t odid, int type,
 }
 
 // Get a pointer to templates defined by an ODID and a type
-fwd_tmplt_t **tmplts_get_templates(fwd_tmplt_mgr_t *mgr, uint32_t odid,
-	int type, uint16_t *cnt)
+tmapper_tmplt_t **
+tmapper_get_templates(tmapper_t *mgr, uint32_t odid, int type, uint16_t *cnt)
 {
 	const unsigned int min = IPFIX_MIN_RECORD_FLOWSET_ID;
 	const unsigned int max = FWD_MAX_RECORD_FLOWSET_ID;
@@ -1294,7 +1322,7 @@ fwd_tmplt_t **tmplts_get_templates(fwd_tmplt_mgr_t *mgr, uint32_t odid,
 			? odid_grp->templates_normal : odid_grp->templates_options;
 
 	// Create and fill an array
-	fwd_tmplt_t **result = calloc(rec_cnt + 1, sizeof(*result));
+	tmapper_tmplt_t **result = calloc(rec_cnt + 1, sizeof(*result));
 	if (!result) {
 		MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)",
 			__FILE__, __LINE__);
@@ -1303,7 +1331,7 @@ fwd_tmplt_t **tmplts_get_templates(fwd_tmplt_mgr_t *mgr, uint32_t odid,
 
 	unsigned int add_cnt = 0;
 	for (unsigned int id = min; id < max && rec_cnt > 0; ++id) {
-		fwd_tmplt_t *tmplt = fwd_odid_template_get(odid_grp, id);
+		tmapper_tmplt_t *tmplt = fwd_odid_template_get(odid_grp, id);
 		if (!tmplt) {
 			continue;
 		}
@@ -1325,7 +1353,8 @@ fwd_tmplt_t **tmplts_get_templates(fwd_tmplt_mgr_t *mgr, uint32_t odid,
 }
 
 // Get all Observation Domain IDs (ODIDs)
-uint32_t *tmplts_get_odids(const fwd_tmplt_mgr_t *mgr, uint32_t *cnt)
+uint32_t *
+tmapper_get_odids(const tmapper_t *mgr, uint32_t *cnt)
 {
 	const uint32_t rec_cnt = mgr->odid_arr_size;
 

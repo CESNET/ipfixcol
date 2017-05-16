@@ -1,9 +1,9 @@
-##<a name="top"></a>User ID intermediate plugin
-###Plugin description
+## <a name="top"></a>User ID intermediate plugin
+### Plugin description
 
 Plugin uses sqlite3 database and fills user information according to source and destination address for each IPFIX data record.
 
-####SQL database
+#### SQL database
 
 SQL database file must contain table **logs** with these columns:
 *  **id** - integer, primary key
@@ -12,7 +12,7 @@ SQL database file must contain table **logs** with these columns:
 *  **action** - numerical value, **1** == login, **0** == logout
 *  **time** - unix timestamp in seconds
 
-###Configuration
+### Configuration
 
 Default plugin configuration in **internalcfg.xml**:
 

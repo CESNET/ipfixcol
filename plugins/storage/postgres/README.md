@@ -1,9 +1,9 @@
-##<a name="top"></a>Posgres storage plugin
-###Plugin description
+## <a name="top"></a>Posgres storage plugin
+### Plugin description
 
 Plugin stores IPFIX data into PostgreSQL database so it need postgresql library installed. Recommended PostgreSQL version is at least 8.4.9.
 
-###Configuration
+### Configuration
 
 Default plugin configuration in **internalcfg.xml**:
 

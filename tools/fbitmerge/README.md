@@ -1,10 +1,10 @@
-##fbitmerge
+## fbitmerge
 
-###Tool description
+### Tool description
 
 This tool merges FastBit data so they take up less disk space, have fewer files and working with them is faster.
 
-###Examples
+### Examples
 
 ```sh
 fbitmerge -b /dir/subdir/subdir-with-ic-prefixed-folders/ -k h -p ic

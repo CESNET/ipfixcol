@@ -1,16 +1,16 @@
-##<a name="top"></a>statistics storage plugin
+## <a name="top"></a>statistics storage plugin
 
-###Plugin description
+### Plugin description
 Plugin calculates statistics from IPFIX data. It uses RRD database.
 
-###Calculated data
+### Calculated data
 Statistics are calculated for
 
 * bytes
 * packets
 * flows
 
-###Configuration
+### Configuration
 
 Default plugin configuration in **internalcfg.xml**
 

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<refentry 
-		xmlns="http://docbook.org/ns/docbook" 
-		xmlns:xlink="http://www.w3.org/1999/xlink" 
+<refentry
+		xmlns:db="http://docbook.org/ns/docbook"
+		xmlns:xlink="http://www.w3.org/1999/xlink"
 		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
 			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
@@ -35,14 +35,14 @@
 		<refname>ipfixcol-forwarding-output</refname>
 		<refpurpose>Forwarding output plugin for IPFIXcol.</refpurpose>
 	</refnamediv>
-	
+
 	<refsect1>
 		<title>Description</title>
 		<simpara>
 		The <command>ipfixcol-forwarding-output.so</command> is output plugin for IPFIXcol (IPFIX collector).
 		</simpara>
 		<simpara>
-		The plugin distributes IPFIX packets over the network to one or more destinations using TCP protocol and non-blocking sockets. As a destination can be used another instance of IPFIXcol or any other collector. Every packet can be distributed to all destinations or forwarded to one of destinations using Round Robin distribution model. 
+		The plugin distributes IPFIX packets over the network to one or more destinations using TCP protocol and non-blocking sockets. The plugins also supports UDP protocol transfer although this options is only experimental. When it is possible, always prefer TCP over UDP. As a destination can be used another instance of IPFIXcol or any other collector. Every packet can be distributed to all destinations or forwarded to one of destinations using Round Robin distribution model.
 		</simpara>
 		<simpara>
 		The plugin preserves Observation Domain ID (ODID) of all packets. If more (independent) metering processes (i.e. sources of IPFIX packets) use the same ODID, the plugin remap identification numbers of templates of packets to prevent misinterpretation of IPFIX records. It is very <emphasis>important</emphasis> to avoid using different types and configurations of flow sampling by the metering processes as the packets are mixed. (Flow sampling is not recommended).
@@ -68,9 +68,9 @@
 	]]>
 		</programlisting>
 		<para></para>
-		
-		<simpara>The collector must be configured to use forwarding output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
-		The configuration specifies which plugins are used by the collector to process data and provides configuration for the plugins themselves. 
+
+		<simpara>The collector must be configured to use forwarding output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>).
+		The configuration specifies which plugins are used by the collector to process data and provides configuration for the plugins themselves.
 		</simpara>
 		<simpara><filename>startup.xml</filename> forwarding example</simpara>
 		<programlisting>
@@ -82,6 +82,7 @@
 
 			<distribution>RoundRobin</distribution>
 			<defaultPort>4739</defaultPort>
+			<defaultProtocol>tcp</defaultProtocol>
 
 			<destination>
 				<ip>192.168.0.1</ip>
@@ -92,6 +93,7 @@
 			<destination>
 				<ip>192.168.0.3</ip>
 				<port>4740</port>
+				<protocol>udp</protocol>
 			</destination>
 		</fileWriter>
 	</destination>
@@ -118,6 +120,25 @@
 					</simpara>
 				</listitem>
 			</varlistentry>
+			<varlistentry>
+				<term>
+					<command>defaultProtocol</command>
+				</term>
+				<listitem>
+					<simpara>Default transport protocol. It can be overriden by <command>protocol</command> tag in <command>destination</command>. Allowed values are <emphasis>tcp</emphasis> and <emphasis>udp</emphasis>. TCP protocol is the default when this configuration is missing.
+					</simpara>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term>
+					<command>udpTemplateRefreshTimeout</command>
+				</term>
+				<listitem>
+					<simpara>Template refresh timeout for UDP destinations (in seconds). This value defines how often the plugin retransmits all templates to the destinations. [default == 300]
+					</simpara>
+				</listitem>
+			</varlistentry>
 
 			<varlistentry>
 				<term>
@@ -138,6 +159,13 @@
 							<command>port</command>
 						</term>
 						<simpara>Destination port number</simpara>
+					</varlistentry>
+
+					<varlistentry>
+						<term>
+							<command>protocol</command>
+						</term>
+						<simpara>Transport protocol. Allowed values are same as for <command>defaultProtocol</command></simpara>
 					</varlistentry>
 
 				</listitem>

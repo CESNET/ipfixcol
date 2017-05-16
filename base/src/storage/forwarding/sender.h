@@ -38,7 +38,7 @@
  */
 
 /**
- * \defgroup sender Packet sender 
+ * \defgroup sender Packet sender
  * \ingroup forwardingStoragePlugin
  *
  * @{
@@ -70,11 +70,12 @@ typedef struct _fwd_sender fwd_sender_t;
 
 /**
  * \brief Create a new sender
- * \param[in] addr Destination IP address
- * \param[in] port Destination port
+ * \param[in] addr  Destination IP address
+ * \param[in] port  Destination port
+ * \param[in] proto Transport protocol
  * \return On success returns pointer to new sender. Otherwise returns NULL.
  */
-fwd_sender_t *sender_create(const char *addr, const char *port);
+fwd_sender_t *sender_create(const char *addr, const char *port, int proto);
 
 /**
  * \brief Destroy a sender
@@ -95,6 +96,27 @@ const char *sender_get_address(const fwd_sender_t *s);
  * \return Port
  */
 const char *sender_get_port(const fwd_sender_t *s);
+
+/**
+ * \brief Get transport protocol
+ * \param s Sender structure
+ * \return Transport protocol
+ */
+int sender_get_proto(const fwd_sender_t *s);
+
+/**
+ * \brief Get last time when all templates were sent
+ * \param s Sender structure
+ * \return Time of last templates send
+ */
+time_t sender_get_tmpl_time(const fwd_sender_t *s);
+
+/**
+ * \brief Set last time when all templates were sent
+ * \param s Sender structure
+ * \param time Time to set
+ */
+void sender_set_tmpl_time(fwd_sender_t *s, time_t time);
 
 /**
  * \brief (Re)connect to the destination

@@ -1,12 +1,12 @@
-##UDP-CPG input plugin
+## UDP-CPG input plugin
 
-###Description
+### Description
 This plugin is inteded to be used in the environment of the high-availability cluster, where several instances of the IPFIXcol are running in the active/passive mode.
 It works the same way as standard UDP input plugin, on top of that it uses closed process group to share template and option template sets with other IPFIXcol instances.
 Without this feature, passive instances wouldn't receive templates and after active instance failure, new active instance would have to wait for periodic template sets.
 That would mean data loss.
 
-###Configuration
+### Configuration
 The collector must be configured to use UDP-CPG plugin in the **internalcfg.xml** configuration file.
 You can do that either by manually editing the file or by `ipfixconf` tool:
 

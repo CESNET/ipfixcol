@@ -78,11 +78,13 @@ void process_startup_xml(struct json_conf *conf, char *params)
 
 	/* Format of TCP flags */
 	std::string tcpFlags = ie.node().child_value("tcpFlags");
-	conf->tcpFlags = (strcasecmp(tcpFlags.c_str(), "formated") == 0);
+	conf->tcpFlags = (strcasecmp(tcpFlags.c_str(), "formated") == 0) ||
+                (strcasecmp(tcpFlags.c_str(), "formatted") == 0);
 
 	/* Format of timestamps */
 	std::string timestamp = ie.node().child_value("timestamp");
-	conf->timestamp = (strcasecmp(timestamp.c_str(), "formated") == 0);
+	conf->timestamp = (strcasecmp(timestamp.c_str(), "formated") == 0) ||
+                (strcasecmp(timestamp.c_str(), "formatted") == 0);
 
 	/* Format of protocols */
 	std::string protocol = ie.node().child_value("protocol");
@@ -102,6 +104,14 @@ void process_startup_xml(struct json_conf *conf, char *params)
 	if (strcasecmp(whiteSpaces.c_str(), "false") == 0 || whiteSpaces == "0" ||
 			strcasecmp(whiteSpaces.c_str(), "no") == 0) {
 		conf->whiteSpaces = false;
+	}
+
+	/* Prefix for IPFIX elements */
+	/* Set default rpefix */
+	conf->prefix = "ipfix.";
+	/* Override the default from configuration */
+	if (ie.node().child("prefix")) {
+		conf->prefix = ie.node().child_value("prefix");
 	}
 
 	/* Process all outputs */

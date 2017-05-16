@@ -49,10 +49,14 @@
 
 /** Default destination port                 */
 #define DEF_PORT "4739"
-/** Default retry interval (seconds)         */
-#define DEF_RETRY_INT (5)
+/** Default transport protocol               */
+#define DEF_PROTO IPPROTO_TCP
+/** Default re-connection period (in milliseconds)*/
+#define DEF_RECONN_PERIOD (1000)
 /** Default maximal packet size              */
 #define DEF_PACKET_SIZE (4096)
+/** Default template refresh timeout         */
+#define DEF_TEMPLATE_REFRESH (300U)
 
 static const char *msg_module = "forwarding(config)";
 
@@ -135,6 +139,26 @@ static enum DIST_MODE config_parse_distr(const char *str)
 }
 
 /**
+ * \brief Convert string to transport protocol
+ * \param[in] str String
+ * \return Return either parsed value or default protocol
+ */
+static int config_parse_proto(const char *str)
+{
+	if (!str) {
+		return DEF_PROTO;
+	}
+
+	if (!strcasecmp(str, "tcp")) {
+		return IPPROTO_TCP;
+	} else if (!strcasecmp(str, "udp")) {
+		return IPPROTO_UDP;
+	} else {
+		return DEF_PROTO;
+	}
+}
+
+/**
  * \brief Parse only default values from the plugin configuration
  * \param[in,out] ctx Parser context
  * \return On sucess returns 0. Ohterwise returns non-zero value.
@@ -145,12 +169,21 @@ static int config_parse_def_values(struct parser_context *ctx)
 	xmlNode *cur = ctx->node->children;
 	struct plugin_config *cfg = ctx->cfg;
 
+	// Set default protocol
+	cfg->def_proto = DEF_PROTO;
+
 	while (cur) {
 		if (!xmlStrcasecmp(cur->name, (const xmlChar *) "defaultPort")) {
 			// Default port
 			free(cfg->def_port);
 			cfg->def_port = (char *) xmlNodeListGetString(doc,
 				cur->xmlChildrenNode, 1);
+		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "defaultProtocol")) {
+			// Default protocol
+			char *str_proto = (char *) xmlNodeListGetString(doc,
+				cur->xmlChildrenNode, 1);
+			cfg->def_proto = config_parse_proto(str_proto);
+			free(str_proto);
 		} else {
 			// Other nodes -> skip
 		}
@@ -195,6 +228,7 @@ static fwd_sender_t *config_parse_destination(struct parser_context *ctx)
 {
 	xmlChar *str_ip = NULL;
 	xmlChar *str_port = NULL;
+	xmlChar *str_proto = NULL;
 	xmlNode *cur = ctx->node;
 
 	// Find all related XML nodes & parse them
@@ -213,6 +247,12 @@ static fwd_sender_t *config_parse_destination(struct parser_context *ctx)
 				xmlFree(str_port);
 			}
 			str_port = xmlNodeListGetString(ctx->doc, cur->xmlChildrenNode, 1);
+		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "protocol")) {
+			// Destination protocol
+			if (str_proto) {
+				xmlFree(str_proto);
+			}
+			str_proto = xmlNodeListGetString(ctx->doc, cur->xmlChildrenNode, 1);
 		} else {
 			// Other unknown nodes
 			MSG_WARNING(msg_module, "Unknown node '%s' in 'destination' node "
@@ -226,15 +266,21 @@ static fwd_sender_t *config_parse_destination(struct parser_context *ctx)
 	const char *dst_ip = (const char *) str_ip;
 	const char *dst_port = (str_port != NULL)
 			? (const char *) str_port : config_def_port(ctx->cfg);
+	int proto = ctx->cfg->def_proto;
+	if (str_proto != NULL) {
+		proto = config_parse_proto((const char *) str_proto);
+	}
 
 	fwd_sender_t *new_sender;
-	new_sender = sender_create(dst_ip, dst_port);
+	new_sender = sender_create(dst_ip, dst_port, proto);
 
 	// Clean up
 	if (str_ip)
 		xmlFree(str_ip);
 	if (str_port)
 		xmlFree(str_port);
+	if (str_proto)
+		xmlFree(str_proto);
 
 	return new_sender;
 }
@@ -259,6 +305,8 @@ static int config_parse_xml(struct parser_context *ctx)
 
 	while (cur && !failed) {
 		if (!xmlStrcasecmp(cur->name, (const xmlChar *) "defaultPort")) {
+			// Default values were already processed -> skip
+		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "defaultProtocol")) {
 			// Default values were already processed -> skip
 		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "fileFormat")) {
 			// Useless node -> skip
@@ -302,7 +350,7 @@ static int config_parse_xml(struct parser_context *ctx)
 			aux_str = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
 			if (config_parse_int((char *) aux_str, &result)) {
 				// Conversion failed
-				MSG_ERROR(msg_module, "Failed to parse 'reconnectionPeriod' "
+				MSG_ERROR(msg_module, "Failed to parse the 'reconnectionPeriod' "
 					"node.");
 				failed = true;
 			} else if (result <= 0) {
@@ -312,6 +360,24 @@ static int config_parse_xml(struct parser_context *ctx)
 				failed = true;
 			} else {
 				ctx->cfg->reconn_period = result;
+			}
+		} else if (!xmlStrcasecmp(cur->name, (const xmlChar *) "udpTemplateRefreshTimeout")) {
+			// Refresh timeout for UDP (options) templates
+			int result;
+			aux_str = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
+			if (config_parse_int((char *) aux_str, &result)) {
+				// Conversion failed
+				MSG_ERROR(msg_module, "Failed to parse the "
+					"'udpTemplateRefreshTimeout' node.");
+				failed = true;
+			} else if (result <= 0) {
+				// Out of range
+				MSG_ERROR(msg_module, "Template refresh timeout cannot be zero "
+					"or negative.");
+				failed = true;
+			} else {
+				// Success (now it is safe to convert int to unsigned int)
+				ctx->cfg->udp_refresh_timeout = (unsigned int) result;
 			}
 		} else {
 			// Other unknown nodes
@@ -374,11 +440,12 @@ struct plugin_config *config_parse(const char *cfg_string)
 	// Set default values
 	config->mode = DIST_ALL;
 	config->packet_size = DEF_PACKET_SIZE;
-	config->reconn_period = 1000; // milliseconds
+	config->reconn_period = DEF_RECONN_PERIOD; // milliseconds
+	config->udp_refresh_timeout = DEF_TEMPLATE_REFRESH; // seconds
 
 	config->builder_all = bldr_create();
 	config->builder_tmplt = bldr_create();
-	config->tmplt_mgr = tmplts_create();
+	config->tmplt_mgr = tmapper_create();
 	config->dest_mgr = dest_create(config->tmplt_mgr);
 	if (!config->dest_mgr      || !config->builder_all ||
 		!config->builder_tmplt || !config->tmplt_mgr) {
@@ -411,7 +478,7 @@ void config_destroy(struct plugin_config *cfg)
 	dest_destroy(cfg->dest_mgr);
 
 	free(cfg->def_port);
-	tmplts_destroy(cfg->tmplt_mgr);
+	tmapper_destroy(cfg->tmplt_mgr);
 	bldr_destroy(cfg->builder_all);
 	bldr_destroy(cfg->builder_tmplt);
 

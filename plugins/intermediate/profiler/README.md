@@ -1,9 +1,9 @@
-##<a name="top"></a>Profiler intermediate plugin
-###Plugin description
+## <a name="top"></a>Profiler intermediate plugin
+### Plugin description
 
 This plugin fills informations about profiles and their channels into the data record's metadata structure.
 
-###Configuration
+### Configuration
 
 Default plugin configuration in **internalcfg.xml**:
 
@@ -40,7 +40,7 @@ Example **startup.xml** configuration:
 
 *  **profiles** is path to the file containing profiles specification.
 
-####Profiles configuration
+#### Profiles configuration
 
 Example of **profiles.xml**:
 

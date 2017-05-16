@@ -15,19 +15,25 @@ BuildRequires: sqlite-devel libxml2-devel ipfixcol-devel >= 0.7.1
 Requires: sqlite libxml2 ipfixcol >= 0.7.1
 
 %description
-uid intermediate plugin for ipfixcol.
+dhcp intermediate plugin for ipfixcol.
 
 
 %prep
 %setup
 
 %post
-ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p m -n dhcp -t dhcp -s "%{_datadir}/ipfixcol/plugins/ipfixcol-dhcp-inter.so" -f
+# Add config only during initial installation, not upgrade
+if [ "$1" = "1" ]; then
+    ipfixconf add -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p m -n dhcp -t dhcp -s "%{_datadir}/ipfixcol/plugins/ipfixcol-dhcp-inter.so" -f
+fi
 
 %preun
 
 %postun
-ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p m -n dhcp
+# Remove config only for uninstall, not upgrade
+if [ "$1" = "0" ]; then
+    ipfixconf remove -c "%{_sysconfdir}/ipfixcol/internalcfg.xml" -p m -n dhcp
+fi
 
 %build
 %configure --with-distro=@DISTRO@

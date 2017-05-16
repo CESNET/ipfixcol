@@ -39,7 +39,7 @@
 AC_PREREQ([2.60])
 
 # Process this file with autoconf to produce a configure script.
-AC_INIT([ipfixcol], [0.9.1])
+AC_INIT([ipfixcol], [0.9.3])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign -Wno-portability subdir-objects tar-ustar])
 LT_PREREQ([2.2])
 LT_INIT([dlopen disable-static])
@@ -54,12 +54,12 @@ AM_CFLAGS="-Wall -O2 -std=gnu99"
 RELEASE=1
 AC_SUBST(RELEASE)
 
-# Set user name and email for packaging purposes 
+# Set user name and email for packaging purposes
 LBR_SET_CREDENTIALS
 LBR_SET_DISTRO([redhat])
 
 ###################### Check for configure parameters ##########################
-AC_ARG_ENABLE([debug], 
+AC_ARG_ENABLE([debug],
         AC_HELP_STRING([--enable-debug],[turn on more debugging options]),
         [AM_CFLAGS="$AM_CFLAGS -Wextra -g"
         AM_CPPFLAGS="$AM_CPPFLAGS -DDEBUG"])
@@ -69,8 +69,8 @@ AC_ARG_ENABLE([sflow],
 	AC_HELP_STRING([--enable-sflow],[enable sFlow support]), [SFLOW_CPPFLAGS="-DENABLE_SFLOW"])
 AM_CONDITIONAL([ENABLE_SFLOW], [test "$enable_sflow" = "yes"])
 AC_SUBST([SFLOW_CPPFLAGS])
-       
-AC_ARG_ENABLE([sctp], 
+
+AC_ARG_ENABLE([sctp],
         AC_HELP_STRING([--disable-sctp],[disable sctp input plugin]))
 AM_CONDITIONAL([HAVE_SCTP], [test "$enable_sctp" != "no"])
 
@@ -127,10 +127,11 @@ AC_CHECK_LIB([xml2], [main],
 	CFLAGS="`xml2-config --cflags` $CFLAGS"
 	CPPFLAGS="`xml2-config --cflags` $CPPFLAGS"],
     AC_MSG_ERROR([Libxml2 not found ]))
-    
+
 ### TLS support ###
+save_libs="$LIBS"
 AS_IF([test "x$with_openssl" != xno],
-  [AC_CHECK_LIB([ssl], [SSL_library_init],
+  [AC_SEARCH_LIBS([SSL_library_init], [ssl :libssl.so.10],
     [TLS_SUPPORT="yes"
     # Check for pkg-config
 	AC_CHECK_PROG([PKG_CONFIG], [pkg-config], ["yes"], ["no"])
@@ -139,8 +140,9 @@ AS_IF([test "x$with_openssl" != xno],
 	TLS_CFLAGS="`pkg-config --cflags libssl`"
 	TLS_LIBS="`pkg-config --libs libssl`"],
     AC_MSG_ERROR([Required library openssl is missing])
-  )], 
+  )],
   [TLS_SUPPORT="no"])
+LIBS="$save_libs"
 AC_SUBST([TLS_CPPFLAGS])
 AC_SUBST([TLS_CFLAGS])
 AC_SUBST([TLS_LIBS])
@@ -148,20 +150,20 @@ AC_SUBST([TLS_LIBS])
 ### libsctp ###
 # empty command on if-found-action is to prevent -lsctp to be added to LIBS
 AM_COND_IF(HAVE_SCTP,
-	[AC_CHECK_LIB([sctp], [sctp_bindx], [echo -n ""], 
+	[AC_CHECK_LIB([sctp], [sctp_bindx], [echo -n ""],
 		[AC_MSG_ERROR([sctp library not found, run with --disable-sctp to build without SCTP support or install libsctp package])]
 	)]
 )
 
 ### pthread ###
-AC_CHECK_LIB([pthread], [pthread_create], 
+AC_CHECK_LIB([pthread], [pthread_create],
         [CFLAGS="$CFLAGS -pthread"],
     	AC_MSG_ERROR([Required library pthread missing]))
 
 ### dynamic linker ###
 AC_CHECK_LIB([dl], [dlopen],,
         AC_MSG_ERROR([Required library dl missing]))
-        
+
 
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h syslog.h unistd.h])
@@ -169,13 +171,13 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stddef.h stdint.h std
 AC_CHECK_HEADERS([libxml/xmlversion.h], , AC_MSG_ERROR([libxml headers missing. Please install libxml-devel package]), [AC_INCLUDES_DEFAULT])
 
 AM_COND_IF(HAVE_SCTP,
-	[AC_CHECK_HEADER([netinet/sctp.h], , 
+	[AC_CHECK_HEADER([netinet/sctp.h], ,
 		[AC_MSG_ERROR([netinet/sctp.h header not found, run with --disable-sctp to build without SCTP support])]
 	)]
 )
 
 AS_IF([test "$with_openssl" != "no"],
-	[AC_CHECK_HEADER([openssl/ssl.h], , 
+	[AC_CHECK_HEADER([openssl/ssl.h], ,
 		[AC_MSG_ERROR([openssl/ssl.h header not found])]
 	)]
 )
@@ -228,6 +230,7 @@ AC_CONFIG_FILES([Makefile
 				src/intermediate/filter/Makefile
 				src/intermediate/odip/Makefile
 				src/intermediate/hooks/Makefile
+				src/intermediate/timenow/Makefile
 				src/utils/Makefile
 				src/utils/ipfixconf/Makefile
 				src/utils/ipfixsend/Makefile
@@ -236,6 +239,7 @@ AC_CONFIG_FILES([Makefile
 				src/utils/profiles/Makefile
 				src/utils/elements/Makefile
 				src/utils/conversion/Makefile
+				src/utils/template_mapper/Makefile
 				config/Makefile
 				headers/Makefile
 				documentation/doxygen/Makefile
@@ -247,7 +251,7 @@ AC_OUTPUT
 
 ######################## Checks for xsltproc and doxygen if doc building is enabled ##########################
 AM_COND_IF(HAVE_DOC,
-    [AM_COND_IF(HAVE_XSLTPROC, 
+    [AM_COND_IF(HAVE_XSLTPROC,
         [AM_COND_IF(HAVE_DOXYGEN, , AC_MSG_ERROR([Missing doxygen - install it or run with --disable-doc]))],
         AC_MSG_ERROR([Missing xsltproc - install it or run with --disable-doc])
     )]
@@ -264,7 +268,7 @@ echo "
   Distribution..: $DISTRO
   Debug build...: ${enable_debug:-no}
   C Compiler....: $CC $AM_CFLAGS $CFLAGS $AM_CPPFLAGS $CPPFLAGS $TLS_CPPFLAGS $SFLOW_CPPFLAGS
-  C++ Compiler..: $CXX $AM_CXXFLAGS $CXXFLAGS $AM_CPPFLAGS $CPPFLAGS 
+  C++ Compiler..: $CXX $AM_CXXFLAGS $CXXFLAGS $AM_CPPFLAGS $CPPFLAGS
   Linker........: $LDFLAGS $LIBS
   rpmbuild......: ${RPMBUILD:-NONE}
   Build doc.....: ${enable_doc:-yes}

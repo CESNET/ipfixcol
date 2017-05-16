@@ -1,15 +1,15 @@
-##<a name="top"></a>FastBit storage plugin
-###Plugin description
+## <a name="top"></a>FastBit storage plugin
+### Plugin description
 
 The plugin uses FastBit library to store and index data.
 
-###FastBit library
+### FastBit library
 
  IPFIXcol framework uses it's own fork of FastBit library to keep compatibility.
 
 IPFIXcol's FastBit library can be found [here](https://github.com/CESNET/libfastbit).
 
-###Configuration
+### Configuration
 
 Default plugin configuration in **internalcfg.xml**:
 

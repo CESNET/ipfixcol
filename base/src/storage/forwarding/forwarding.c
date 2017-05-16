@@ -36,14 +36,14 @@
  * if advised of the possibility of such damage.
  *
  */
- 
+
 /**
  * \defgroup forwardingStoragePlugin Forwarding output process
  * \ingroup storagePlugins
  *
 */
- 
- 
+
+
 /**
  * \defgroup forwaring Main
  * \ingroup forwardingStoragePlugin
@@ -129,19 +129,19 @@ static void fwd_process_template_func(uint8_t *rec, int rec_len, void *data)
 		return;
 	}
 
-	enum TMPLT_MGR_ACTION action;
+	enum TMAPPER_ACTION action;
 	uint16_t new_id;
 
-	action = tmplts_process_template(ctx->cfg->tmplt_mgr, ctx->src_info, tmplt,
-		ctx->type, rec_len, &new_id);
+	action = tmapper_process_template(ctx->cfg->tmplt_mgr, ctx->src_info, tmplt,
+			ctx->type, rec_len, &new_id);
 	switch (action) {
-	case TMPLT_ACT_PASS:
+	case TMAPPER_ACT_PASS:
 		// Pass a template (with possibly new ID assigned by the manager)
 		break;
-	case TMPLT_ACT_DROP:
+	case TMAPPER_ACT_DROP:
 		// Drop a template
 		return;
-	case TMPLT_ACT_INVALID:
+	case TMAPPER_ACT_INVALID:
 		// Invalid operation (The template manager wrote out a warning)
 		return;
 	default:
@@ -151,7 +151,7 @@ static void fwd_process_template_func(uint8_t *rec, int rec_len, void *data)
 		return;
 	}
 
-	// Only "TMPLT_ACT_PASS" can get here
+	// Only "TMAPPER_ACT_PASS" can get here
 	int ret_all, ret_tmplt;
 	ret_all = bldr_add_template(ctx->cfg->builder_all, rec, rec_len, new_id,
 		ctx->type);
@@ -241,7 +241,7 @@ static int fwd_process_data_set(struct plugin_config *cfg,
 
 	// Add the Data Set to the Packet builder
 	uint16_t new_id;
-	new_id = tmplts_remap_data_set(cfg->tmplt_mgr, msg->input_info, header);
+	new_id = tmapper_remap_data_set(cfg->tmplt_mgr, msg->input_info, header);
 	if (new_id == 0) {
 		// Template mapping is unknown -> skip
 		MSG_WARNING(msg_module, "Template manager of the plugin doesn't have "
@@ -279,7 +279,7 @@ static int fwd_process_withdrawals(struct plugin_config *cfg, uint32_t odid,
 	uint16_t *ids_data;
 	int ret_all, ret_tmplt;
 
-	ids_data = tmplts_withdraw_ids(cfg->tmplt_mgr, odid, type, &ids_cnt);
+	ids_data = tmapper_withdraw_ids(cfg->tmplt_mgr, odid, type, &ids_cnt);
 	if (!ids_data) {
 		return 1;
 	}
@@ -323,7 +323,7 @@ static int fwd_remove_source(struct plugin_config *cfg,
 	bldr_start(cfg->builder_all, pkt_odid, pkt_exp_time);
 	bldr_start(cfg->builder_tmplt, pkt_odid, pkt_exp_time);
 
-	if (tmplts_remove_source(cfg->tmplt_mgr, msg->input_info)) {
+	if (tmapper_remove_source(cfg->tmplt_mgr, msg->input_info)) {
 		return 1;
 	}
 
@@ -487,6 +487,9 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 		}
 	} else
 	*/
+
+	// Check for UDP connections with expired templates
+	dest_check_expired_udp(cfg->dest_mgr, cfg->udp_refresh_timeout);
 
 	// Add reconnected clients
 	dest_check_reconnected(cfg->dest_mgr);

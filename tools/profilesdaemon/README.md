@@ -1,22 +1,22 @@
-##profilesdaemon
+## profilesdaemon
 
-###Tool description
+### Tool description
 
 Profilesdaemon is a tool for profiles management and configuration distribution
 
-###Management
+### Management
 
 Tool provides API for profiles.xml modification (adding/editing/removing profiles and channels).
 It uses UNIX datagram socket for accepting commands and sending responses in JSON format.
 
-###Distribution
+### Distribution
 
 Profilesdaemon can distribute profiles configuration to multiple IPFIX collectors.
 Tool accepts new collectors on TCP network socket and keeps connection opened.
 Configuration is sent to all active collectors after performing some changes.
 IPFIX collector must be running with profiler intermediate plugin.
 
-###API
+### API
 
 Here is an acceptable JSON message format with all possible requests:
 
