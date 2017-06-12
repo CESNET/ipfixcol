@@ -1,5 +1,13 @@
 **Future release:**
 
+**Version 0.4.2:**
+* Fixed markdown syntax
+* Support DocBook XSL Stylesheets v1.79
+* Removed pkgconfig from spec file dependencies.
+* fix and improve coding style
+* fix vertical spacing
+* Updated build system to work with Fedora copr build system (epel7 and all fedora releases)
+
 **Version 0.4.1:**
 
 *  Fixed documentation of -t parameter
