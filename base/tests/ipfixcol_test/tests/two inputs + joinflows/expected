@@ -2,7 +2,7 @@
 IPFIX Message Header:
 	Version: 10
 	Length: 92
-	Export Time: 1405941532 (Mon Jul 21 13:18:52 2014)
+	Export Time: 1405941532 (2014-07-21T11:18:52Z)
 	Sequence Number: 0
 	Observation Domain ID: 123
 
@@ -35,7 +35,7 @@ Fields:
 IPFIX Message Header:
 	Version: 10
 	Length: 232
-	Export Time: 1405941533 (Mon Jul 21 13:18:53 2014)
+	Export Time: 1405941533 (2014-07-21T11:18:53Z)
 	Sequence Number: 0
 	Observation Domain ID: 123
 
@@ -119,7 +119,7 @@ Data Record (#4):		(network byte order)
 IPFIX Message Header:
 	Version: 10
 	Length: 96
-	Export Time: 1405941533 (Mon Jul 21 13:18:53 2014)
+	Export Time: 1405941533 (2014-07-21T11:18:53Z)
 	Sequence Number: 4
 	Observation Domain ID: 123
 
@@ -153,7 +153,7 @@ Fields:
 IPFIX Message Header:
 	Version: 10
 	Length: 452
-	Export Time: 1405941538 (Mon Jul 21 13:18:58 2014)
+	Export Time: 1405941538 (2014-07-21T11:18:58Z)
 	Sequence Number: 4
 	Observation Domain ID: 123
 
@@ -318,7 +318,7 @@ Data Record (#4):		(network byte order)
 IPFIX Message Header:
 	Version: 10
 	Length: 84
-	Export Time: 1405941538 (Mon Jul 21 13:18:58 2014)
+	Export Time: 1405941538 (2014-07-21T11:18:58Z)
 	Sequence Number: 12
 	Observation Domain ID: 123
 
@@ -349,7 +349,7 @@ Fields:
 IPFIX Message Header:
 	Version: 10
 	Length: 94
-	Export Time: 1405941538 (Mon Jul 21 13:18:58 2014)
+	Export Time: 1405941538 (2014-07-21T11:18:58Z)
 	Sequence Number: 12
 	Observation Domain ID: 123
 
@@ -377,7 +377,7 @@ Data Record (#1):		(network byte order)
 IPFIX Message Header:
 	Version: 10
 	Length: 152
-	Export Time: 1405941538 (Mon Jul 21 13:18:58 2014)
+	Export Time: 1405941538 (2014-07-21T11:18:58Z)
 	Sequence Number: 13
 	Observation Domain ID: 123
 
@@ -418,7 +418,7 @@ Fields:
 IPFIX Message Header:
 	Version: 10
 	Length: 771
-	Export Time: 1405941546 (Mon Jul 21 13:19:06 2014)
+	Export Time: 1405941546 (2014-07-21T11:19:06Z)
 	Sequence Number: 13
 	Observation Domain ID: 123
 
@@ -640,7 +640,7 @@ Data Record (#2):		(network byte order)
 IPFIX Message Header:
 	Version: 10
 	Length: 84
-	Export Time: 1405941546 (Mon Jul 21 13:19:06 2014)
+	Export Time: 1405941546 (2014-07-21T11:19:06Z)
 	Sequence Number: 23
 	Observation Domain ID: 123
 
@@ -671,7 +671,7 @@ Fields:
 IPFIX Message Header:
 	Version: 10
 	Length: 687
-	Export Time: 1405941548 (Mon Jul 21 13:19:08 2014)
+	Export Time: 1405941548 (2014-07-21T11:19:08Z)
 	Sequence Number: 23
 	Observation Domain ID: 123
 
@@ -861,7 +861,7 @@ Data Record (#1):		(network byte order)
 IPFIX Message Header:
 	Version: 10
 	Length: 88
-	Export Time: 1405941548 (Mon Jul 21 13:19:08 2014)
+	Export Time: 1405941548 (2014-07-21T11:19:08Z)
 	Sequence Number: 32
 	Observation Domain ID: 123
 
@@ -893,7 +893,7 @@ Fields:
 IPFIX Message Header:
 	Version: 10
 	Length: 1454
-	Export Time: 1405941561 (Mon Jul 21 13:19:21 2014)
+	Export Time: 1405941561 (2014-07-21T11:19:21Z)
 	Sequence Number: 32
 	Observation Domain ID: 123
 
@@ -1330,7 +1330,7 @@ Data Record (#1):		(network byte order)
 IPFIX Message Header:
 	Version: 10
 	Length: 1468
-	Export Time: 1405941573 (Mon Jul 21 13:19:33 2014)
+	Export Time: 1405941573 (2014-07-21T11:19:33Z)
 	Sequence Number: 53
 	Observation Domain ID: 123
 
@@ -1794,7 +1794,7 @@ Data Record (#2):		(network byte order)
 IPFIX Message Header:
 	Version: 10
 	Length: 1438
-	Export Time: 1405941584 (Mon Jul 21 13:19:44 2014)
+	Export Time: 1405941584 (2014-07-21T11:19:44Z)
 	Sequence Number: 76
 	Observation Domain ID: 123
 
@@ -2241,7 +2241,7 @@ Data Record (#2):		(network byte order)
 IPFIX Message Header:
 	Version: 10
 	Length: 1466
-	Export Time: 1405941599 (Mon Jul 21 13:19:59 2014)
+	Export Time: 1405941599 (2014-07-21T11:19:59Z)
 	Sequence Number: 98
 	Observation Domain ID: 123
 
@@ -2703,7 +2703,7 @@ Data Record (#2):		(network byte order)
 IPFIX Message Header:
 	Version: 10
 	Length: 126
-	Export Time: 1405941534 (Mon Jul 21 13:18:54 2014)
+	Export Time: 1405941534 (2014-07-21T11:18:54Z)
 	Sequence Number: 121
 	Observation Domain ID: 123
 
@@ -2751,7 +2751,7 @@ Data Record (#2):		(network byte order)
 IPFIX Message Header:
 	Version: 10
 	Length: 238
-	Export Time: 1405941538 (Mon Jul 21 13:18:58 2014)
+	Export Time: 1405941538 (2014-07-21T11:18:58Z)
 	Sequence Number: 123
 	Observation Domain ID: 123
 
@@ -2842,7 +2842,7 @@ Data Record (#2):		(network byte order)
 IPFIX Message Header:
 	Version: 10
 	Length: 94
-	Export Time: 1405941538 (Mon Jul 21 13:18:58 2014)
+	Export Time: 1405941538 (2014-07-21T11:18:58Z)
 	Sequence Number: 127
 	Observation Domain ID: 123
 
@@ -2870,7 +2870,7 @@ Data Record (#1):		(network byte order)
 IPFIX Message Header:
 	Version: 10
 	Length: 771
-	Export Time: 1405941546 (Mon Jul 21 13:19:06 2014)
+	Export Time: 1405941546 (2014-07-21T11:19:06Z)
 	Sequence Number: 128
 	Observation Domain ID: 123
 
@@ -3092,7 +3092,7 @@ Data Record (#2):		(network byte order)
 IPFIX Message Header:
 	Version: 10
 	Length: 799
-	Export Time: 1405941548 (Mon Jul 21 13:19:08 2014)
+	Export Time: 1405941548 (2014-07-21T11:19:08Z)
 	Sequence Number: 138
 	Observation Domain ID: 123
 
@@ -3325,7 +3325,7 @@ Data Record (#1):		(network byte order)
 IPFIX Message Header:
 	Version: 10
 	Length: 1454
-	Export Time: 1405941561 (Mon Jul 21 13:19:21 2014)
+	Export Time: 1405941561 (2014-07-21T11:19:21Z)
 	Sequence Number: 149
 	Observation Domain ID: 123
 
@@ -3762,7 +3762,7 @@ Data Record (#1):		(network byte order)
 IPFIX Message Header:
 	Version: 10
 	Length: 1468
-	Export Time: 1405941573 (Mon Jul 21 13:19:33 2014)
+	Export Time: 1405941573 (2014-07-21T11:19:33Z)
 	Sequence Number: 170
 	Observation Domain ID: 123
 
@@ -4226,7 +4226,7 @@ Data Record (#2):		(network byte order)
 IPFIX Message Header:
 	Version: 10
 	Length: 1438
-	Export Time: 1405941584 (Mon Jul 21 13:19:44 2014)
+	Export Time: 1405941584 (2014-07-21T11:19:44Z)
 	Sequence Number: 193
 	Observation Domain ID: 123
 
@@ -4673,7 +4673,7 @@ Data Record (#2):		(network byte order)
 IPFIX Message Header:
 	Version: 10
 	Length: 1466
-	Export Time: 1405941599 (Mon Jul 21 13:19:59 2014)
+	Export Time: 1405941599 (2014-07-21T11:19:59Z)
 	Sequence Number: 215
 	Observation Domain ID: 123
 
