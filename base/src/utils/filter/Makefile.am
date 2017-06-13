@@ -12,6 +12,8 @@ libfilter_a_SOURCES = \
 	filter_wrapper.c filter_wrapper.h \
 	libnf-ffilter/ffilter.c libnf-ffilter/ffilter.h \
 	libnf-ffilter/ffilter_internal.h \
+	libnf-ffilter/fcore.c \
+	libnf-ffilter/fcore.h \
 	ffilter_gram.c ffilter_gram.h \
 	ffilter_lex.h ffilter_lex.c
 

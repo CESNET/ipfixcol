@@ -3,7 +3,7 @@
  * \author Imrich Štoffa <xstoff02@stud.fit.vutbr.cz>
  * \brief Wrapper of module for IPFIX data filtering
  *
- * Copyright (C) 2016 CESNET, z.s.p.o.
+ * Copyright (C) 2017 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
