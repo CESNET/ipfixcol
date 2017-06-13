@@ -84,9 +84,12 @@ struct viewer_config {
  */
 static void print_header(struct ipfix_header *hdr)
 {
+	struct tm t;
+	char str_time[32];
+
 	time_t time = (time_t) ntohl(hdr->export_time);
-	char *str_time = ctime(&time);
-	str_time[strlen(str_time) - 1] = '\0';
+	gmtime_r(&time, &t);
+	strftime(str_time, sizeof(str_time), "%FT%TZ", &t);
 
 	printf("--------------------------------------------------------------------------------\n");
 	printf("IPFIX Message Header:\n");

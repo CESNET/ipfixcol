@@ -1,5 +1,13 @@
 **Future release:**
 
+**Version 0.2.3:**
+
+*  Fixed markdown syntax
+*  Support DocBook XSL Stylesheets v1.79
+*  Fixed problem with plugin update removing plugin configuration.
+*  Added info about used headers to configure script of all plugins
+*  Updated build system to work with Fedora copr build system (epel7 and all fedora releases)
+
 **Version 0.2.1:**
 
 *  Fixed several problems reported by Coverity Scan

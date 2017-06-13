@@ -1,5 +1,22 @@
 **Future release:**
 
+**Version 0.9.4**
+
+* Fixed handling of empty values in JSON plugin
+* Fixed closing of connections with no data in TCP input
+* Fixed memleak in dummy storage plugin
+* Removed message about internal error when the ODID 0 is used by a source (false alarm)
+* Fixed markdown syntax
+* Support DocBook XSL Stylesheets v1.79
+* Removed superfluous files from devel package
+* Added systemd service file. No automatic installation
+* forwarding: UDP template refresh timeout is now configurable
+* Added basic UDP support to forwarding, no template resending
+* Utils: new template mapper (originally from forwarding plugin)
+* Added check for more specific libssl (Fedora 26 compatibility)
+* Removed pkgconfig from spec file dependencies.
+* Fixed issue: Long closing time of storage plugin can result in removal of valid templates
+
 **Version 0.9.2:**
 
 * Added ansible installation from sources
