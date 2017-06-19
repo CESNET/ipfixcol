@@ -184,23 +184,6 @@ uint32_t *data_source_info_get_sequence_number(uint32_t exporter_ip_addr, uint32
 }
 
 /**
- * \brief Get free template ID for data source
- *
- * \param[in] exporter_ip_addr CRC32 of exporter IP address
- * \param[in] odid Observation Domain ID
- * \return Next free template ID
- */
-uint32_t data_source_info_get_free_tid(uint32_t exporter_ip_addr, uint32_t odid)
-{
-	struct data_source_info *aux_info = data_source_info_get_or_add(exporter_ip_addr, odid);
-	if (!aux_info) {
-		return 256;
-	}
-
-	return aux_info->free_tid++;
-}
-
-/**
  * \brief Remove all data source info
  */
 void data_source_info_destroy()
@@ -353,10 +336,6 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 		} else {
 			MSG_INFO(msg_module, "[%u] New %s ID %i", key->odid, (type == TM_TEMPLATE) ? "template" : "options template", template_id);
 			template = tm_add_template(template_mgr, tmpl, max_len, type, key);
-			/* Set new template ID according to ODID */
-			if (template) {
-				template->template_id = data_source_info_get_free_tid(preprocessor_compute_crc(input_info), key->odid);
-			}
 		}
 	} else {
 		/* template already exists */
@@ -374,9 +353,6 @@ static int preprocessor_process_one_template(void *tmpl, int max_len, int type,
 		template->last_message = msg_counter;
 		template->last_transmission = time(NULL);
 	}
-
-	/* Set new template id to original template record */
-	template_record->template_id = htons(template->template_id);
 
 	/* return the length of the original template:
 	 * = template length - template header length + template record header length */
