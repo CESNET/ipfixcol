@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry
+		xmlns:db="http://docbook.org/ns/docbook"
+		xmlns:xlink="http://www.w3.org/1999/xlink"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2015-2017</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>23 June 2017</date>
+		<authorgroup>
+			<author>
+				<personname>
+					<firstname>Lukas</firstname>
+					<surname>Hutak</surname>
+				</personname>
+				<email>lukas.hutak@cesnet.cz</email>
+				<contrib>developer</contrib>
+			</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol-ipfix-output</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">IPFIX output plugin</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>ipfixcol-ipfix-output</refname>
+		<refpurpose>IPFIX output plugin for IPFIXcol.</refpurpose>
+	</refnamediv>
+
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+		The <command>ipfixcol-ipfix-output.so</command> is output plugin for IPFIXcol (IPFIX collector).
+		</simpara>
+		<simpara>
+		An IPFIX File is a serialized stream of IPFIX Messages. Simply put, the plugin stores all valid packets received by the collector into one or more IPFIX Files. Although this is not an optimal way to store flows, it can be quite useful for testing purposes - capture flow records into IPFIX File(s) and replay them using <command>ipfixsend</command> tool.
+		</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Known issues</title>
+		<simpara>
+			Template definitions (descriptions of flow record structures) are unique for combination of a Flow Source (e.g. a flow exporter) and an Observation Domain ID (ODID), but the IPFIX File doesn't store information about Flow sources, and therefore a reader/interpreter of the IPFIX file will not be able to distinguish correct templates when multiple Flow Sources use the same ODID. In other words, each Flow Source must use a unique ODID, otherwise the content of the file will be broken because of collisions of template definitions. Note: This issue should be solved in the future by renumbering Template IDs in the case of the collisions.
+		</simpara>
+		<simpara>
+		    <command>ipfixsend</command> tool doesn't support sequential reading of multiple IPFIX Files right now. However, there is a workaround - you can merge multiple IPFIX Files using <command>cat</command> tool e.g. "<command>cat file1.ipfix file2.ipfix > merge.ipfix</command>" and then use "<command>ipfixsend -i merge.ipfix</command>" to send data.
+		</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Configuration</title>
+		<simpara>There are two configuration XML files for IPFIXcol that affects plugin usage.
+		First one is internal configuration XML (<filename>/etc/ipfixcol/internalcfg.xml</filename>) where are lists of all available plugins for the collector. To use IPFIX output plugin, make sure it is properly specified in the configuration XMLs.
+		</simpara>
+		<simpara><filename>internalcfg.xml</filename> ipfix example</simpara>
+		<programlisting>
+	<![CDATA[
+	<storagePlugin>
+		<name>ipfix</name>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-ipfix-output.so</file>
+		<threadName>ipfix</threadName>
+	</storagePlugin>
+	]]>
+		</programlisting>
+		<para></para>
+
+		<simpara>The collector must be configured to use the IPFIX output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). The configuration specifies which plugins are used by the collector to process data and provides configuration for the plugins themselves.
+		</simpara>
+		<simpara><filename>startup.xml</filename> ipfix example</simpara>
+		<programlisting>
+	<![CDATA[
+	<destination>
+		<name>IPFIX File writer</name>
+		<fileWriter>
+			<fileFormat>ipfix</fileFormat>
+			<file>/tmp/ipfix/ipfix.%Y%m%d%H%M%S</file>
+			<dumpInterval>
+				<timeWindow>300</timeWindow>
+				<align>yes</align>
+			</dumpInterval>
+		</fileWriter>
+	</destination>
+	]]>
+		</programlisting>
+
+	<para>
+		<variablelist>
+			<varlistentry>
+				<term>
+					<command>file</command>
+				</term>
+				<listitem><simpara>
+					Specifies an absolute path of output files. The path can contain format specifier for day, month, etc. This allows you to create names based on format specifiers, for example: "/tmp/ipfix/ipfix.%Y%m%d%H%M%S". See
+				<citerefentry>
+					<refentrytitle>strftime</refentrytitle>
+					<manvolnum>3</manvolnum>
+				</citerefentry>.
+				</simpara></listitem>
+			</varlistentry>
+
+			<varlistentry>
+			<term><command>dumpInterval [optional]</command></term>
+			<listitem>
+				<varlistentry>
+					<term><command>timeWindow</command></term>
+					<listitem><simpara>
+						Specifies the time interval in seconds to rotate files. If the value is "0", all flow will be stored into a single file. [default: 0]
+					</simpara></listitem>
+				</varlistentry>
+
+				<varlistentry>
+					<term><command>align</command></term>
+					<listitem><simpara>
+						Align file rotation with next N minute interval (yes/no). [default: no]
+					</simpara></listitem>
+				</varlistentry>
+			</listitem>
+		</varlistentry>
+		</variablelist>
+	</para>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+						<citerefentry><refentrytitle>ipfixcol-lnfstore-output</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+						<citerefentry><refentrytitle>ipfixcol-fastbit-output</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+						<citerefentry><refentrytitle>ipfixcol-forwarding-output</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org/technologies/ipfixcol/">http://www.liberouter.org/technologies/ipfixcol/</link>
+					</term>
+					<listitem>
+						<para>IPFIXcol Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>

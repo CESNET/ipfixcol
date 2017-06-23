@@ -1,9 +1,10 @@
 /**
  * \file storage/ipfix/ipfix_file.c
  * \author Michal Srb <michal.srb@cesnet.cz>
- * \brief Storage plugin for IPFIX file format.
- *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
+ * \brief Storage plugin for IPFIX file format (source file).
+ */
+/* Copyright (C) 2015-2017 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,201 +49,181 @@
 
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <stdint.h>
-#include <string.h>
 #include <stdlib.h>
-#include <stdio.h>
-#include <errno.h>
-#include <libgen.h>
-#include <ctype.h>
-#include <arpa/inet.h>
-#include <libxml/xmlmemory.h>
-#include <libxml/parser.h>
-#include <time.h>
 
-#include "ipfixcol.h"
+#include "configuration.h"
+#include "ipfix_file.h"
+
+#include <time.h>
+#include <ipfixcol.h>
 
 /* API version constant */
 IPFIXCOL_API_VERSION;
 
-/** Identifier to MSG_* macros */
-static char *msg_module = "ipfix storage";
+const char *msg_module = "ipfix storage";
 
-/**
- * \struct ipfix_config
- *
- * \brief IPFIX storage plugin specific "config" structure
- */
-struct ipfix_config {
-	int fd;                     /**< file descriptor of an output file */
-	uint32_t fcounter;          /**< number of created files */
-	uint64_t bcounter;          /**< bytes written into a current output
-	                             * file */
-	xmlChar *xml_file;          /**< URI from XML configuration file */
-	char *file;                 /**< actual path where to store messages */
-};
-
-
-/**
- * \brief Open/create output file
- *
- * \param[in] conf  output plugin config structure
- * \return  0 on success, negative value otherwise.
- */
-static int prepare_output_file(struct ipfix_config *config)
-{
-	int fd;
-
-	/* file counter */
-	config->fcounter += 1;
-	/* byte counter */
-	config->bcounter = 0;
-
-
-	fd = open(config->file, O_WRONLY | O_CREAT | O_TRUNC,
-	          S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-	if (fd == -1) {
-		config->fcounter -= 1;
-		MSG_ERROR(msg_module, "Unable to open output file");
-		return -1;
-	}
-
-	config->fd = fd;
-
-	return 0;
-}
-
-/**
- * \brief Close output file
- *
- * \param[in] conf  output plugin config structure
- * \return  0 on success, negative value otherwise
- */
-static int close_output_file(struct ipfix_config *config)
-{
-	int ret;
-
-	ret = close(config->fd);
-	if (ret == -1) {
-		MSG_ERROR(msg_module, "Error when closing output file");
-		return -1;
-	}
-
-	config->fd = -1;
-
-	return 0;
-}
+///**
+// * \brief Open/create output file
+// *
+// * \param[in] conf  output plugin config structure
+// * \return  0 on success, negative value otherwise.
+// */
+//static int prepare_output_file(struct ipfix_config *config)
+//{
+//	int fd;
+//
+//	/* file counter */
+//	config->fcounter += 1;
+//	/* byte counter */
+//	config->bcounter = 0;
+//
+//
+//	fd = open(config->file, O_WRONLY | O_CREAT | O_TRUNC,
+//	          S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+//	if (fd == -1) {
+//		config->fcounter -= 1;
+//		MSG_ERROR(msg_module, "Unable to open output file");
+//		return -1;
+//	}
+//
+//	config->fd = fd;
+//
+//	return 0;
+//}
+//
+///**
+// * \brief Close output file
+// *
+// * \param[in] conf  output plugin config structure
+// * \return  0 on success, negative value otherwise
+// */
+//static int close_output_file(struct ipfix_config *config)
+//{
+//	int ret;
+//
+//	ret = close(config->fd);
+//	if (ret == -1) {
+//		MSG_ERROR(msg_module, "Error when closing output file");
+//		return -1;
+//	}
+//
+//	config->fd = -1;
+//
+//	return 0;
+//}
 
 
 /*
- * * * * * Storage Plugin API implementation
-*/
-
+ * Storage Plugin API implementation
+ */
 
 /**
  * \brief Storage plugin initialization.
  *
  * Initialize IPFIX storage plugin. This function allocates, fills and
- * returns config structure.
+ * returns a config structure.
  *
- * \param[in] params parameters for this storage plugin
- * \param[out] config the plugin specific configuration structure
+ * \param[in]  params Parameters for this storage plugin
+ * \param[out] config The plugin specific configuration structure
  * \return 0 on success, negative value otherwise
  */
-int storage_init(char *params, void **config)
+int
+storage_init(char *params, void **config) {
+	// Process XML configuration
+	struct conf_params *parsed_params = configuration_parse(params);
+	if (!parsed_params) {
+		MSG_ERROR(msg_module, "Failed to parse the plugin configuration.");
+		return 1;
+	}
+
+	// Create main plugin structure
+	struct conf_plugin *conf = calloc(1, sizeof(*conf));
+	if (!conf) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
+			__FILE__, __LINE__);
+		configuration_free(parsed_params);
+		return 1;
+	}
+
+	// Create a storage manager
+	files_t *storage = files_create((char *) parsed_params->output.pattern);
+	if (!storage) {
+		// Failed
+		configuration_free(parsed_params);
+		free(conf);
+		return 1;
+	}
+
+	// Prepare a time window
+	const uint32_t window_size = parsed_params->window.size;
+	time_t now = time(NULL);
+
+	if (parsed_params->window.align && window_size != 0) {
+		// Alignment
+		now /= window_size;
+		now *= window_size;
+	}
+
+	conf->params = parsed_params;
+	conf->window_start = now;
+	conf->storage = storage;
+
+	// Try to create a new window
+	if (files_new_window(storage, now)) {
+		// Failed to open file, generate filename, etc. -> skip (ignore)
+		MSG_ERROR(msg_module, "Failed to create a new output file for a new "
+			"time window. Flow records will be lost.", NULL);
+	}
+
+	// Success
+	*config = conf;
+	MSG_DEBUG(msg_module, "Initialized...", NULL);
+	return 0;
+}
+
+/**
+ * \brief Check duration of the current time window and eventually create a one
+ *
+ * Compare the start of the current window and the system time. If the window
+ * has exceed configured size, create a new one.
+ *
+ * \param[in,out] conf Plugin configuration
+ * \return When the duration of the current window is within the window size,
+ *   the function returns 0. When the duration exceeded the size, the function
+ *   will create a new window and it will return a positive value. When the
+ *   function fails to create the new window, it will return a negative value.
+ */
+static int
+check_window(struct conf_plugin *conf)
 {
-	struct ipfix_config *conf;
+	const uint32_t window_size = conf->params->window.size;
+	if (window_size == 0) {
+		// Never change the window
+		return 0;
+	}
 
-	xmlDocPtr doc;
-	xmlNodePtr cur;
+	time_t now = time(NULL);
+	if (difftime(now, conf->window_start) < window_size) {
+		// Still within the same window
+		return 0;
+	}
 
-	time_t t;
-	struct tm tm;
+	if (conf->params->window.align) {
+		// Align the new window
+		now /= window_size;
+		now *= window_size;
+	}
 
- 	/* allocate space for config structure */
-	conf = (struct ipfix_config *) malloc(sizeof(*conf));
-	if (conf == NULL) {
-		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
+	// Open the new file
+	conf->window_start = now;
+	if (files_new_window(conf->storage, now)) {
+		MSG_ERROR(msg_module, "Failed to create a new output file for a new "
+			"time window. Flow records will be lost.", NULL);
 		return -1;
 	}
-	memset(conf, '\0', sizeof(*conf));
 
-	/* try to parse configuration file */
-	doc = xmlReadMemory(params, strlen(params), "nobase.xml", NULL, 0);
-	if (doc == NULL) {
-		MSG_ERROR(msg_module, "Plugin configuration not parsed successfully");
-		goto err_init;
-	}
-	cur = xmlDocGetRootElement(doc);
-	if (cur == NULL) {
-		MSG_ERROR(msg_module, "Empty configuration");
-		goto err_init;
-	}
-	if (xmlStrcmp(cur->name, (const xmlChar *) "fileWriter")) {
-		MSG_ERROR(msg_module, "Root node != fileWriter");
-		goto err_init;
-	}
-	cur = cur->xmlChildrenNode;
-	while (cur != NULL) {
-		/* find out where to store output files */
-		if ((!xmlStrcmp(cur->name, (const xmlChar *) "file"))) {
-			conf->xml_file = xmlNodeListGetString(doc, cur->xmlChildrenNode, 1);
-			break;
-		}
-		cur = cur->next;
-	}
-
-	/* check whether we have found "file" element in configuration file */
-	if (conf->xml_file == NULL) {
-		MSG_ERROR(msg_module, "Configuration file doesn't specify where "
-		                        "to store output files (\"file\" element "
-								"is missing)");
-		goto err_init;
-	}
-
-	/* we only support local files */
-	if (strncmp((char *) conf->xml_file, "file:", 5)) {
-		MSG_ERROR(msg_module, "Element \"file\": invalid URI - "
-								"only allowed scheme is \"file:\"");
-		goto err_init;
-	}
-
-	/* output file path + timestamp */
-	uint16_t path_len = strlen((char *) conf->xml_file) + 13;
-	conf->file = (char *) malloc(path_len);
-	if (conf->file == NULL) {
-		MSG_ERROR(msg_module, "Not enough memory (%s:%d)", __FILE__, __LINE__);
-		goto err_init;
-	}
-	memset(conf->file, 0, path_len);
-
-	/* copy file path, skip "file:" at the beginning of the URI */
-	strncpy_safe(conf->file, (char *) conf->xml_file + 5, path_len);
-
-	/* add timestamp at the end of the file name */
-	memset(&tm, 0, sizeof(tm));
-	t = time(NULL);
-
-	localtime_r(&t, &tm);
-
-	strftime(conf->file+strlen((char *) conf->file), 14, ".%y%m%d%H%M%S", &tm);
-	/* conf->file now looks like: "/path/to/file.1109131509" */
-
-	prepare_output_file(conf);
-
-	/* we don't need this xml tree anymore */
-	xmlFreeDoc(doc);
-
-	*config = conf;
-
-	return 0;
-
-
-err_init:
-	free(conf);
-	return -1;
+	return 1;
 }
 
 /**
@@ -255,57 +236,37 @@ err_init:
  * \param[in] template_mgr Template manager
  * \return 0 on success, negative value otherwise
  */
-int store_packet(void *config, const struct ipfix_message *ipfix_msg,
-                 const struct ipfix_template_mgr *template_mgr)
+int
+store_packet(void *config, const struct ipfix_message *ipfix_msg,
+	const struct ipfix_template_mgr *template_mgr)
 {
 	(void) template_mgr;
-	ssize_t count = 0;
-	uint16_t wbytes = 0;
-	struct ipfix_config *conf;
-	conf = (struct ipfix_config *) config;
+	struct conf_plugin *conf = (struct conf_plugin *) config;
 
-	/* write IPFIX message into an output file */
-	while (wbytes < ntohs(ipfix_msg->pkt_header->length)) {
-		count = write(conf->fd, (ipfix_msg->pkt_header)+wbytes,
-		              ntohs(ipfix_msg->pkt_header->length)-wbytes);
-		if (count == -1) {
-			if (errno == EINTR) {
-				/* interrupted by signal, try again */
-				break;
-			} else {
-				/* serious error occurs */
-				MSG_ERROR(msg_module, "Error while writing into the "
-				                        "output file");
-				return -1;
-			}
-		} else {
-			wbytes += count;
-		}
-	}
-
-	conf->bcounter += wbytes;
-
+	/*
+	 * Decide whether close the current file and create new one
+	 * Note: We don't care about the return value. The file manager MUST
+	 *   process potential templates in this packet therefore we pass the
+	 *   packet to the manager even if we know that the output file is not
+	 *   ready.
+	 */
+	check_window(conf);
+	files_add_packet(conf->storage, ipfix_msg);
 	return 0;
 }
 
 /**
  * \brief Store everything we have immediately and close output file.
- *
- * Just flush all buffers.
- *
+ * *
  * \param[in] config the plugin specific configuration structure
  * \return 0 on success, negative value otherwise
  */
 int store_now(const void *config)
 {
-	struct ipfix_config *conf;
-	conf = (struct ipfix_config *) config;
-
-	fsync(conf->fd);
-
+	// Do nothing
+	(void) config;
 	return 0;
 }
-
 
 /**
  * \brief Remove storage plugin.
@@ -318,22 +279,13 @@ int store_now(const void *config)
  */
 int storage_close(void **config)
 {
-	struct ipfix_config *conf;
-	conf = (struct ipfix_config *) *config;
+	struct conf_plugin *conf = (struct conf_plugin *) *config;
 
-	close_output_file(conf);
-
-	if (conf->bcounter == 0) {
-		/* current output file is empty, get rid of it */
-		unlink(conf->file);
-	}
-
-	xmlFree(conf->xml_file);
-	free(conf->file);
+	files_destroy(conf->storage);
+	configuration_free(conf->params);
 	free(conf);
 
 	*config = NULL;
-
 	return 0;
 }
 
