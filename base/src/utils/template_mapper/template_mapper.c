@@ -42,6 +42,45 @@
 #include <inttypes.h>
 #include <ipfixcol.h>
 
+/*
+ * TODO: FOR FUTURE FIXES / IMPLEMENTATION
+ * - Different exporters can use different export time (wrong time sync.).
+ *   Therefore, a mapper should remember an export time of an original template.
+ *   There can be a situation when we receive the same template with the same
+ *   ID from a second exporter but the export time of the second template
+ *   is from the past.
+ *   There is also very high change that we will receive data messages from
+ *   the second exporter with earlier export time than time of the first
+ *   template registration in the mapper (i.e. export time of the message with
+ *   the template from the first source). In other words, the data sets from
+ *   the second exporter will be for a while mapped to a template ID
+ *   from the future (this is wrong!!!). The simple approach is to change
+ *   export time of the messages, but the problem is, for example,
+ *   with IPFIX elements flowStartDeltaMicroseconds and flowEndDeltaMicroseconds
+ *   that represent time relative to start/end of export time.
+ *   Possible solutions:
+ *     - Wrong (easy): just change export time of messages and ignore delta
+ *       items (warning: there can be more delta items in enterprise ODIDs)
+ *     - Correct (hard): When we receive the second template (with the earlier
+ *       export time) the mapper will create a new template, but with different
+ *       ID! The data messages from the second exporter will be mapped to this
+ *       new template as well as the data messages from the first exporter.
+ *       The previous template will be/must withdrawed.
+ *
+ * - We MUST be able to track sequence numbers of messages and correctly
+ *   modify them. (What to do when we know that we have UDP traffic and
+ *   reordered packets?)
+ *
+ * - Add support for remapping basicList, subTemplateList, subTemplateMultiList.
+ *   This is more complicated, because it required modification of templates
+ *   (changing headers is not sufficient) and data records!!!
+ *
+ * - To support UDP export (for example in the forwarding plugin), protective
+ *   interval of templates MUST be implemented i.e. do not use a template
+ *   again until the interval elapsed (for example 30 minutes). So we
+ *   also have to define when we stored the template locally (time_t).
+ */
+
 /** Module description */
 static const char *msg_module = "template mapper";
 
