@@ -88,7 +88,7 @@ enum ELEMENT_TYPE {
 
 /**
  * \enum ELEMENT_SEMANTIC
- * \breif IPFIX element semantics
+ * \brief IPFIX element semantics
  *
  * The type distinguish several general semantics based on RFC 5610
  */

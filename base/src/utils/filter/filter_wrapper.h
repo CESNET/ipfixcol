@@ -1,9 +1,9 @@
 /**
- * \file profiles_internal.h
- * \author Michal Kozubik <kozubik@cesnet.cz>
- * \brief intermediate plugin for profiling data
+ * \file filter_wrapper.h
+ * \author Imrich Štoffa <xstoff02@stud.fit.vutbr.cz>
+ * \brief Wrapper of module for IPFIX data filtering
  *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * Copyright (C) 2017 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,31 +37,62 @@
  *
  */
 
-#ifndef PROFILER_H
-#define PROFILER_H
 
-extern "C" {
+#ifndef FILTER_H_
+#define FILTER_H_
+
 #include <ipfixcol.h>
-#include "filter_wrapper.h"
-#include <string.h>
-}
+#include "libnf-ffilter/ffilter.h"
+#include <stdint.h>
 
-#include <stdexcept>
+/**
+ * \brief Profile structure
+ *
+ * Each filter string is representing one filter profile
+ */
+typedef struct ipx_filter ipx_filter_t;
 
-struct match_data {
-	struct ipfix_message *msg;
-	struct metadata *mdata;
-	void **channels;
-	uint16_t channelsCounter;
-	uint16_t channelsMax;
-};
+/**
+ * \brief Filter object constructor
+ *
+ * \return Pointer to initialised structure, NULL otherwise;
+ */
+ipx_filter_t *ipx_filter_create();
 
-/* ID types can by changed here */
-using profile_id_t = uint16_t;
-using channel_id_t = uint16_t;
-using couple_id_t  = uint32_t;
+/**
+ * \brief Free profile's data
+ *
+ * \param[in] filter Profile
+ */
+void ipx_filter_free(ipx_filter_t *filter);
 
-#include "Profile.h"
-#include "Channel.h"
+/**
+ * \brief Compile filter expression and create profile structure
+ *
+ * \param filter
+ * \param filter_str
+ * \return
+ */
+int ipx_filter_parse(ipx_filter_t *filter, char* filter_str);
 
-#endif	/* PROFILER_H */
+/**
+ * \brief Match filter with IPFIX record
+ *
+ * \param[in] filter filter node
+ * \param[in] msg IPFIX message (filter may contain field from message header)
+ * \param[in] record IPFIX data record
+ * \return 1 when node fits, 0 otherwise
+ */
+int ipx_filter_eval(ipx_filter_t *filter,
+					struct ipfix_message *msg,
+					struct ipfix_record *record);
+
+/**
+ * \brief Copy last ff_filter error to ipx_filter internal buffer
+ *
+ * \param filter Filter context
+ * \return Pointer to error string
+ */
+char *ipx_filter_get_error(ipx_filter_t *filter);
+
+#endif /* FILTER_H_ */
