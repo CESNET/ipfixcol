@@ -9,6 +9,7 @@ SUBDIRS = \
     ipfixsend \
     conversion \
     template_mapper \
+	filter \
     .
 
 noinst_LIBRARIES = libutils.a
