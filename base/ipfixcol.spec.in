@@ -97,9 +97,9 @@ make test
 %{_datadir}/%{name}/ipfixviewer_startup.xml
 %{_bindir}/ipfixviewer
 #config files
-%config %{_sysconfdir}/ipfixcol/internalcfg.xml
-%config %{_sysconfdir}/ipfixcol/ipfix-elements.xml
-%config %{_sysconfdir}/ipfixcol/startup.xml
+%config(noreplace) %{_sysconfdir}/ipfixcol/internalcfg.xml
+%config(noreplace) %{_sysconfdir}/ipfixcol/ipfix-elements.xml
+%config(noreplace) %{_sysconfdir}/ipfixcol/startup.xml
 
 %files devel
 %{_includedir}/ipfixcol.h
