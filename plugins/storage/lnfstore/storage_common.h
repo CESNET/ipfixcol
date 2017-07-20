@@ -76,5 +76,13 @@ int
 stg_common_fill_record(const struct metadata *mdata, lnf_rec_t *record,
 	uint8_t *buffer);
 
+/**
+ * \brief Check if a directory exists
+ * \param[in] dir Directory path
+ * \return If the directory exists returns 0. Otherwise (the directory doesn't
+ *   exist or search permission is denied) returns a non-zero value.
+ */
+int
+stg_common_dir_exists(const char *dir);
 
 #endif // STORAGE_COMMON_H

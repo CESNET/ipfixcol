@@ -92,6 +92,17 @@ stg_basic_store(stg_basic_t *storage, lnf_rec_t *rec)
 int
 stg_basic_new_window(stg_basic_t *storage, time_t window)
 {
+	// Check if the output directory already exists
+	const char *dir_path = storage->params->files.path;
+	if (stg_common_dir_exists(dir_path)) {
+		files_mgr_invalidate(storage->mgr);
+		MSG_ERROR(msg_module, "Failed to create a new time window. All data "
+			"will be lost (output directory '%s' doesn't exists or search "
+			"permission is denied for one or more directories in the path).",
+			dir_path);
+		return 1;
+	}
+
 	int ret = files_mgr_new_window(storage->mgr, &window);
 	if (ret) {
 		MSG_WARNING(msg_module, "New time window is not properly created.");

@@ -154,6 +154,18 @@ int
 files_mgr_new_window(files_mgr_t *mgr, const time_t *ts);
 
 /**
+ * \brief Disable all outputs
+ *
+ * If a previous window exists, flush and close all opened output files.
+ * The outputs will be in invalid states, therefore files_mgr_add_record()
+ * will always return an error code.
+ *
+ * To enable the outputs simply call files_mgr_new_window().
+ */
+void
+files_mgr_invalidate(files_mgr_t *mgr);
+
+/**
  * \brief Add a record to output files
  *
  * \param[in,out] mgr     File manager
@@ -163,5 +175,22 @@ files_mgr_new_window(files_mgr_t *mgr, const time_t *ts);
  */
 int
 files_mgr_add_record(files_mgr_t *mgr, lnf_rec_t *rec_ptr);
+
+/**
+ * \brief Get the storage directory of the manager
+ * \return The directory
+ */
+const char *
+files_mgr_get_storage_dir(files_mgr_t *mgr);
+
+/**
+ * \brief Remove unwanted characters in a path (auxiliary function)
+ *
+ * This function removes multiple slashes in the path. The size of the path
+ * can be only reduced, so all operations are performed in-situ.
+ * \param[in,out] path Path
+ */
+void
+files_mgr_names_sanitize(char *path);
 
 #endif //LNFSTORAGE_FILES_H

@@ -37,6 +37,7 @@
  *
  */
 #include <string.h>
+#include <sys/stat.h>
 #include "storage_common.h"
 #include "translator.h"
 
@@ -129,4 +130,17 @@ stg_common_fill_record(const struct metadata *mdata, lnf_rec_t *record,
 	}
 
 	return added;
+}
+
+int
+stg_common_dir_exists(const char *dir)
+{
+	struct stat sb;
+	if (stat(dir, &sb) == 0 && S_ISDIR(sb.st_mode)) {
+		// Exists
+		return 0;
+	} else {
+		// Doesn't exist or search permission is denied
+		return 1;
+	}
 }
