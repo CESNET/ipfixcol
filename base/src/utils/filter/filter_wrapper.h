@@ -69,8 +69,8 @@ void ipx_filter_free(ipx_filter_t *filter);
 /**
  * \brief Compile filter expression and create profile structure
  *
- * \param filter
- * \param filter_str
+ * \param filter filter object
+ * \param filter_str string with filtering rule
  * \return
  */
 int ipx_filter_parse(ipx_filter_t *filter, char* filter_str);
@@ -78,14 +78,12 @@ int ipx_filter_parse(ipx_filter_t *filter, char* filter_str);
 /**
  * \brief Match filter with IPFIX record
  *
- * \param[in] filter filter node
- * \param[in] msg IPFIX message (filter may contain field from message header)
+ * \param[in] filter filter object
+ * \param[in] msg    IPFIX message (filter may contain field from message header)
  * \param[in] record IPFIX data record
  * \return 1 when node fits, 0 otherwise
  */
-int ipx_filter_eval(ipx_filter_t *filter,
-					struct ipfix_message *msg,
-					struct ipfix_record *record);
+int ipx_filter_eval(ipx_filter_t *filter, struct ipfix_message *msg, struct ipfix_record *record);
 
 /**
  * \brief Copy last ff_filter error to ipx_filter internal buffer

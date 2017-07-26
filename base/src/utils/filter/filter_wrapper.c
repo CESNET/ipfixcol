@@ -53,10 +53,9 @@
 
 //TODO: Transform indentification to utilise ability to set pointer to general data in external identification
 #define toGenEnId(gen, en, id) (((uint64_t)gen & 0xffff) << 48 |\
-				((uint64_t)en & 0xffffffff) << 16 |\
-				 (uint16_t)id)
-#define toEnId(en, id) (((uint64_t)en & 0xffffffff) << 16 |\
-			 (uint16_t)id)
+    ((uint64_t)en & 0xffffffff) << 16 | (uint16_t)id)
+
+#define toEnId(en, id) (((uint64_t)en & 0xffffffff) << 16 | (uint16_t)id)
 
 static const char *msg_module = "ipx_filter";
 
@@ -432,8 +431,8 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
 			break;
 		}
 	}
-	if(item == NULL) {	//Polozka nenajdena
-		//potrebujem prekodovat nazov pola na en a id
+	if(item == NULL) {	// Polozka nenajdena
+		// potrebujem prekodovat nazov pola na en a id
 		const ipfix_element_result_t elemr = get_element_by_name(fieldstr, false);
 		if (elemr.result == NULL){
 			ff_set_error(filter, "\"%s\" element item not found", fieldstr);
@@ -453,12 +452,12 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
 
 		unpackEnId(lvalue->id[0].index, &gen, &enterprise, &id);
 
-		//This sets bad type when header or metadata items are selected
+		// This sets bad type when header or metadata items are selected
 		if (gen & CTL_CALCULATED_ITEM) {
 			lvalue->type = FF_TYPE_UNSIGNED;
 			return FF_OK;
 		} else if (gen & CTL_CONST_ITEM) {
-			lvalue->literal = &constants[id];
+			lvalue->literal = constants[id];
 			elem = get_element_by_id(enterprise, 0);
 		} else {
 			elem = get_element_by_id(id, enterprise);
@@ -527,7 +526,7 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
 ff_uint64_t calc_record_duration(uint8_t *record, struct ipfix_template *templ);
 
 /* getting data callback */
-ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data, size_t *size)
+ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char **data, size_t *size)
 {
 	//assuming rec is struct ipfix_message
 	struct nff_msg_rec_s* msg_pair = rec;
@@ -554,10 +553,14 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 		switch (ie_id) {
 		case CALC_PPS:
 			flow_duration = calc_record_duration(msg_pair->rec->record, msg_pair->rec->templ);
-			if (!flow_duration) { return FF_ERR_OTHER; }
+			if (!flow_duration) { 
+                return FF_ERR_OTHER; 
+            }
 
 			ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, 0, 2, &len);
-			if (!len) { return FF_ERR_OTHER; }
+			if (!len) { 
+                return FF_ERR_OTHER; 
+            }
 			memcpy(&tmp, ipf_field, len); //Not sure if this construction works for all lenghts
 
 			tmp = ((ntohll(tmp) * 1000) / flow_duration);
@@ -566,16 +569,22 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 			break;
 		case CALC_DURATION:
 			tmp = calc_record_duration(msg_pair->rec->record, msg_pair->rec->templ);
-			if (!tmp) { return FF_ERR_OTHER; }
+			if (!tmp) {
+                return FF_ERR_OTHER; 
+            }
 
 			len = sizeof(tmp);
 
 			break;
 		case CALC_BPS:
 			flow_duration = calc_record_duration(msg_pair->rec->record, msg_pair->rec->templ);
-			if (!len) { return FF_ERR_OTHER; }
+			if (!len) { 
+                return FF_ERR_OTHER; 
+            }
 			ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, 0, 1, &len);
-			if (!len) { return FF_ERR_OTHER; }
+			if (!len) { 
+                return FF_ERR_OTHER; 
+            }
 			memcpy(&tmp, ipf_field, len);
 
 			tmp = ((ntohll(tmp) * 1000) / flow_duration);
@@ -583,11 +592,15 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 
 			break;
 		case CALC_BPP: ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, 0, 1, &len);
-			if (!len) { return FF_ERR_OTHER; }
+			if (!len) { 
+                return FF_ERR_OTHER; 
+            }
 			memcpy(&tmp, ipf_field, len);
 
 			ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, 0, 2, &len);
-			if (!len) { return FF_ERR_OTHER; }
+			if (!len) { 
+                return FF_ERR_OTHER; 
+            }
 			memcpy(&tmp2, ipf_field, len);
 
 			tmp = ntohll(tmp) / ntohll(tmp2);
@@ -596,7 +609,11 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 			break;
 		default: return FF_ERR_OTHER;
 		}
-		memcpy(data+sizeof(char *), &tmp, len);
+        // Copy calculated data to provided buffer
+		memcpy(*data, &tmp, len);
+        *size = len;
+        return FF_OK;
+        
 	} else {
 
 		ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, en, ie_id, &len);
@@ -609,8 +626,7 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char *data,
 			return FF_ERR_OTHER;
 		}
 	}
-
-	*((char**)data) = ipf_field;
+	*data = ipf_field;
 	*size = len;
 	return FF_OK;
 }

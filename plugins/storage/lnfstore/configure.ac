@@ -48,7 +48,7 @@ AC_CHECK_LIB([nf], [lnf_open],
              [],
              [AC_MSG_ERROR([libnf library not found])])
 
-AC_CHECK_LIB([bfindex], [bfi_init_index],
+AC_CHECK_LIB([bfindex], [init_index],
              [],
              [AC_MSG_ERROR([bfindex library not found])])
 
