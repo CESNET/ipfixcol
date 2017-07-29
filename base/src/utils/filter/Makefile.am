@@ -15,7 +15,8 @@ libfilter_a_SOURCES = \
 	libnf-ffilter/fcore.c \
 	libnf-ffilter/fcore.h \
 	ffilter_gram.c ffilter_gram.h \
-	ffilter_lex.h ffilter_lex.c
+	ffilter_lex.h ffilter_lex.c \
+	literals.c literals.h
 
 CLEANFILES = ffilter_gram.c ffilter_gram.h ffilter_lex.h ffilter_lex.c
 BUILT_SOURCES = ffilter_gram.c ffilter_gram.h ffilter_lex.h ffilter_lex.c

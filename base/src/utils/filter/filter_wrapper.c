@@ -50,6 +50,7 @@
 
 #include "filter_wrapper.h"
 #include "ffilter.h"
+#include "literals.h"
 
 //TODO: Transform indentification to utilise ability to set pointer to general data in external identification
 #define toGenEnId(gen, en, id) (((uint64_t)gen & 0xffff) << 48 |\
@@ -102,8 +103,8 @@ enum nff_constant_e {
 };
 
 const char constants[10][CONST_END] = {
-    "4",
-    "6",
+    [CONST_INET]{"4"},
+    [CONST_INET6]{"6"}
 };
 
 struct ipx_filter {
@@ -135,6 +136,17 @@ typedef struct nff_item_s {
         uint64_t data;
     };
 }nff_item_t;
+
+/* To be done
+typedef struct nff_item2_s {
+    const char* name;
+    nff_control_e flags;
+    uint32_t en;
+    uint16_t id;
+    struct nff_item2_s *pair1;
+    struct nff_item2_s *pair2;
+}nff_item2_t;
+*/
 
 void unpackEnId(uint64_t from, uint16_t *gen, uint32_t* en, uint16_t* id)
 {
@@ -311,56 +323,9 @@ static struct nff_item_s nff_ipff_map[]={
     { NULL, 0U},
 };
 
-/* IANA protocol list subset*/
-static struct nff_item_s nff_proto_id_map[]={
-    { "ICMP",	1 },
-    { "IGMP",	2 },
-    { "IPv4",	4 },
-    { "TCP",	6 },
-    { "UDP",	17 },
-    { "RDP",	27 },
-    { "IPv6",	41 },
-    { "RSVP",	46 },
-    { "IPv6-ICMP",	58 },
-    { "ICMP6",	58 },
-    { "EIGRP",	88 },
-    { "ETHERIP",	97 },
-    { "IPX-in-IP",	111 },
-    { "L2TP",	115 },
-    { "ISIS-over-IPv4",	124 },
-    { "SPS",	130 },
-    { "SCTP",	132 },
-    { "UDPLite",	136 },
-    { NULL, 	0U }
-};
-
-/* IANA assigned port names subset */
-static struct nff_item_s nff_port_map[]={
-    { "tcpmux",	1 },
-    { "echo",	7 },
-    { "discard",	9 },
-    { "systat",	11 },
-    { "daytime",	13 },
-    { "msp",	18 },
-    { "ftp-data",	20 },
-    { "ftp",	21 },
-    { "ssh",	22 },
-    { "telnet",	23 },
-    { "smtp",	25 },
-    { "time",	37 },
-    { "rap",	38 },
-    { "rlp",	39 },
-    { "graphics",	41 },
-    { "name",	42 },
-    { "nameserver",	42 },
-    { "nicname",	43 },
-    { "http",	80 },
-    { "https",	443 },
-    { NULL, 	0U }
-};
 
 /**
- * \brief specify_ipv switches information_element to equivalent from ipv4
+ * \brief specify_ipv switches ipfix information element to equivalent from ipv4
  * to ipv6 and vice versa
  *
  * \param i Element Id
@@ -406,7 +371,7 @@ int specify_ipv(uint16_t *i)
 /**
  * \brief set_external_ids
  * \param[in] item
- * \param lvalue
+ * \param     lvalue
  * \return number of ids set
  */
 int set_external_ids(nff_item_t *item, ff_lvalue_t *lvalue)
@@ -747,7 +712,7 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char **data
 
 ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, ff_extern_id_t id, char *buf, size_t *size)
 {
-    struct nff_item_s *dict = NULL;
+    struct nff_literal_s *dict = NULL;
     char *tcp_ctl_bits = "FSRPAUECNX";
     char *hit = NULL;
     *size = 0;
@@ -762,61 +727,62 @@ ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, f
     }
 
     int x;
-    if (type == FF_TYPE_UNSIGNED_BIG || type == FF_TYPE_UINT64) {
 
-        *size = sizeof(ff_uint64_t);
-        ff_uint64_t val;
+    *size = sizeof(ff_uint64_t);
+    ff_uint64_t val;
 
-        switch (ie_id) {
-        default:
-            return FF_ERR_UNSUP;
-            break;
-        case 4:
-            dict = &nff_proto_id_map[0];
-            break;
+    switch (ie_id) {
 
-            /* Translate tcpControlFlags */
-        case 6:
-            if (strlen(valstr)>9) {
+    /** Protocol */
+    case 4:
+        dict = nff_get_protocol_map();
+        break;
+
+    /** Translate tcpControlFlags */
+    case 6:
+        if (strlen(valstr) > 9) {
+            return FF_ERR_OTHER;
+        }
+
+        for (x = val = 0; x < strlen(valstr); x++) {
+            if ((hit = strchr(tcp_ctl_bits, valstr[x])) == NULL) {
                 return FF_ERR_OTHER;
             }
-
-            for (x = val = 0; x < strlen(valstr); x++) {
-                if ((hit = strchr(tcp_ctl_bits, valstr[x])) == NULL) {
-                    return FF_ERR_OTHER;
-                }
-                val |= 1 << (hit - tcp_ctl_bits);
-                /* If X was in string set all flags */
-                if (*hit == 'X') {
-                    val = 1 << (hit - tcp_ctl_bits);
-                    val--;
-                }
-            }
-            memcpy(buf, &val, sizeof(val));
-            return FF_OK;
-            break;
-        case 7:
-        case 11:
-            dict = &nff_port_map[0];
-            break;
-        }
-
-
-        nff_item_t *item = NULL;
-        const ipfix_element_t *elem;
-
-        for (int x = 0; dict[x].name != NULL; x++) {
-            if (!strcasecmp(valstr, dict[x].name)) {
-                item = &dict[x];
-                break;
+            val |= 1 << (hit - tcp_ctl_bits);
+            /* If X was in string set all flags */
+            if (*hit == 'X') {
+                val = 1 << (hit - tcp_ctl_bits);
+                val--;
             }
         }
+        memcpy(buf, &val, sizeof(val));
+        return FF_OK;
+        break;
 
-        if (item != NULL) {
-            memcpy(buf, &item->data, sizeof(item->data));
-            *size = sizeof(item->data);
-            return FF_OK;
+    /** Src/dst ports */
+    case 7:
+    case 11:
+        dict = nff_get_port_map();
+        break;
+    default:
+        return FF_ERR_UNSUP;
+    }
+
+
+    // Universal processing for literals
+    nff_item_t *item = NULL;
+
+    for (int x = 0; dict[x].name != ""; x++) {
+        if (!strcasecmp(valstr, dict[x].name)) {
+            item = &dict[x];
+            break;
         }
+    }
+
+    if (item != NULL) {
+        memcpy(buf, &item->data, sizeof(item->data));
+        *size = sizeof(item->data);
+        return FF_OK;
     }
 
     return FF_ERR_OTHER;
@@ -825,8 +791,11 @@ ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, f
 ff_uint64_t calc_record_duration(uint8_t *record, struct ipfix_template *templ)
 {
     int len;
-    char *ipf_data = NULL;
-    ff_uint64_t tend, tstart;
+    char *ipf_data;
+    ff_uint64_t tend;
+    ff_uint64_t tstart;
+
+    ipf_data = NULL;
     tend = tstart = 0;
 
     ipf_data = data_record_get_field(record, templ, 0, 153, &len);
@@ -837,8 +806,12 @@ ff_uint64_t calc_record_duration(uint8_t *record, struct ipfix_template *templ)
         if (len) {
             memcpy(&tstart, ipf_data, len);
             tstart = ntohll(tstart);
-        } else { return 0; }
-    } else { return 0; }
+        } else {
+            return 0;
+        }
+    } else {
+        return 0;
+    }
 
     return abs(tend - tstart);
 }
