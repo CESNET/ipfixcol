@@ -2,7 +2,6 @@ AM_CPPFLAGS = -I$(top_srcdir)/headers
 AM_CFLAGS += -rdynamic
 
 SUBDIRS = \
-	filter \
     profiles \
     elements \
     libsiso \
