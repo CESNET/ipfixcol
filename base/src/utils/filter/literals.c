@@ -1,11 +1,11 @@
 //
 // Created by istoffa on 7/28/17.
 //
-
+#include <stdlib.h>
 #include "literals.h"
 
 /* IANA protocol list subset*/
-const struct nff_literal_s nff_proto_id_map[]={
+struct nff_literal_s nff_proto_id_map[]={
     { "ICMP",	1 },
     { "IGMP",	2 },
     { "IPv4",	4 },
@@ -25,11 +25,11 @@ const struct nff_literal_s nff_proto_id_map[]={
     { "SCTP",	132 },
     { "UDPLite",	136 },
     // terminator
-    { "", 	0U }
+    { NULL, 	0U }
 };
 
 /* IANA assigned port names subset */
-const struct nff_literal_s nff_port_map[]={
+struct nff_literal_s nff_port_map[]={
     { "tcpmux",	1 },
     { "echo",	7 },
     { "discard",	9 },
@@ -51,15 +51,15 @@ const struct nff_literal_s nff_port_map[]={
     { "http",	80 },
     { "https",	443 },
     // terminator
-    { "", 	0U }
+    { NULL, 	0U }
 };
 
-const struct nff_literal_s * nff_get_protocol_map()
+struct nff_literal_s * nff_get_protocol_map()
 {
     return &nff_proto_id_map[0];
 }
 
-const struct nff_literal_s * nff_get_port_map()
+struct nff_literal_s * nff_get_port_map()
 {
     return &nff_port_map[0];
 }
