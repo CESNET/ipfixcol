@@ -52,7 +52,6 @@
 #include "ffilter.h"
 #include "literals.h"
 
-//TODO: Transform indentification to utilise ability to set pointer to general data in external identification
 #define toGenEnId(gen, en, id) (((uint64_t)gen & 0xffff) << 48 |\
     ((uint64_t)en & 0xffffffff) << 16 | (uint16_t)id)
 
@@ -70,7 +69,6 @@ static const char *msg_module = "ipx_filter";
 enum nff_control_e {
     CTL_NA = 0x00,
     CTL_V4V6IP = 0x01,
-    //TODO: solve mdata items when time comes
     CTL_HEADER_ITEM = 0x02,
     CTL_CALCULATED_ITEM = 0x04,
     CTL_FLAGS = 0x08,
@@ -104,7 +102,7 @@ enum nff_constant_e {
 
 const char constants[10][CONST_END] = {
     [CONST_INET]{"4"},
-    [CONST_INET6]{"6"}
+    [CONST_INET6]{"6"},
 };
 
 struct ipx_filter {
@@ -158,8 +156,7 @@ void unpackEnId(uint64_t from, uint16_t *gen, uint32_t* en, uint16_t* id)
 }
 
 /* This map of strings and ids determines which (hopefully) synonyms of nfdump filter keywords are supported */
-static struct nff_item_s nff_ipff_map[]={
-
+static struct nff_item_s nff_ipff_map[] = {
     /* items contains name as inputted to filter and mapping to iana ipfix enterprise and element_id */
     {"odid", toGenEnId(CTL_HEADER_ITEM, 0, HD_ODID)},
     {"exporterip", toGenEnId(CTL_HEADER_ITEM, 0, HD_SRCADDR)},
@@ -392,10 +389,10 @@ int set_external_ids(nff_item_t *item, ff_lvalue_t *lvalue)
         lvalue->options |= FF_OPTS_FLAGS;
     }
 
-    while(ids < sizeof(lvalue->id)/sizeof(lvalue->id[0]) && lvalue->id[ids].index) {
+    while(ids < (int)sizeof(lvalue->id) / sizeof(lvalue->id[0]) && lvalue->id[ids].index) {
         ids++;
     }
-    if (ids < sizeof(lvalue->id)/sizeof(lvalue->id[0])) {
+    if (ids < (int)sizeof(lvalue->id) / sizeof(lvalue->id[0])) {
         lvalue->id[ids].index = item->en_id;
     }
 
@@ -468,7 +465,6 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
     }
 
     // Rozhodni datovy typ pre filter
-    //TODO: solve conflicting types
     switch(elem->type){
 
     case ET_BOOLEAN:
@@ -533,7 +529,6 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char **data
     //assuming rec is struct ipfix_message
     struct nff_msg_rec_s* msg_pair = rec;
     int len;
-    uint64_t tmp;
     char *ipf_field;
 
     uint32_t en;
@@ -547,7 +542,7 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char **data
         struct input_info_network *ii_net;
         int is_network;
 
-        ii = &(msg_pair->msg->input_info);
+        ii = msg_pair->msg->input_info;
         ii_net = (struct input_info_network *) ii;
         is_network = ii->type == SOURCE_TYPE_TCP || ii->type == SOURCE_TYPE_TCPTLS
                 || ii->type == SOURCE_TYPE_UDP;
@@ -726,13 +721,12 @@ ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, f
         return FF_ERR_OTHER;
     }
 
-    int x;
+    unsigned x;
 
     *size = sizeof(ff_uint64_t);
     ff_uint64_t val;
 
     switch (ie_id) {
-
     /** Protocol */
     case 4:
         dict = nff_get_protocol_map();
@@ -768,9 +762,8 @@ ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, f
         return FF_ERR_UNSUP;
     }
 
-
     // Universal processing for literals
-    nff_item_t *item = NULL;
+    nff_literal_t *item = NULL;
 
     for (int x = 0; dict[x].name != NULL; x++) {
         if (!strcasecmp(valstr, dict[x].name)) {
@@ -780,8 +773,8 @@ ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, f
     }
 
     if (item != NULL) {
-        memcpy(buf, &item->data, sizeof(item->data));
-        *size = sizeof(item->data);
+        memcpy(buf, &item->value, sizeof(item->value));
+        *size = sizeof(item->value);
         return FF_OK;
     }
 
