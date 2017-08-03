@@ -13,7 +13,7 @@ typedef struct nff_literal_s {
 }nff_literal_t;
 
 
-const struct nff_literal_s * nff_get_protocol_map();
-const struct nff_literal_s * nff_get_port_map();
+struct nff_literal_s * nff_get_protocol_map();
+struct nff_literal_s * nff_get_port_map();
 
 #endif //IPFIXCOL_RVALUES_H
