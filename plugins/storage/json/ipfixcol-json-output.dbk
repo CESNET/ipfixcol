@@ -197,7 +197,7 @@
 						<varlistentry>
 							<term><command>port</command></term>
 							<listitem>
-								<simpara>Remove port number (default 4739).</simpara>
+								<simpara>Remote port number (default 4739).</simpara>
 							</listitem>
 						</varlistentry>
 
