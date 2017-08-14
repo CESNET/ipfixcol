@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<refentry
+		xmlns:db="http://docbook.org/ns/docbook"
+		xmlns:xlink="http://www.w3.org/1999/xlink"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
+			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
+		version="5.0" xml:lang="en">
+	<info>
+		<copyright>
+			<year>2008-2017</year>
+			<holder>CESNET, z.s.p.o.</holder>
+		</copyright>
+		<date>14 August 2017</date>
+		<authorgroup>
+		<author>
+			<personname>
+				<firstname>Petr</firstname>
+				 <surname>Velan</surname>
+			</personname>
+			<email>petr.velan@cesnet.cz</email>
+			<contrib>developer</contrib>
+		</author>
+		</authorgroup>
+		<orgname>The Liberouter Project</orgname>
+	</info>
+
+	<refmeta>
+		<refentrytitle>ipfixcol-tcp-input</refentrytitle>
+		<manvolnum>1</manvolnum>
+		<refmiscinfo otherclass="manual" class="manual">TCP input plugin for IPFIXcol.</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>ipfixcol-tcp-input</refname>
+		<refpurpose>TCP input plugin for IPFIXcol.</refpurpose>
+	</refnamediv>
+
+	<refsect1>
+		<title>Description</title>
+		<simpara>
+			The <command>ipfixcol-tcp-input</command> plugin is a part of IPFIXcol (IPFIX collector). 
+			It provides means to read flow data from TCP and TLS/TCP sockets.
+		</simpara>
+	</refsect1>
+
+	<refsect1>
+		<title>Configuration</title>
+		<simpara>There are two configuration XML files for ipfixcol that affects plugin usage.
+		First one is internal configuration XML (<filename>/etc/ipfixcol/internalcfg.xml</filename>) where are list of all available plugins for the collecor. 
+	The plugin must be specified here to be usable.
+	</simpara>
+	<simpara><filename>internalcfg.xml</filename> TCP input example</simpara>
+	<programlisting>
+    <![CDATA[
+	<inputPlugin>
+		<name>tcpCollector</name>
+		<file>/usr/share/ipfixcol/plugins/ipfixcol-tcp-input.so</file>
+		<processName>TCP</processName>
+	</inputPlugin>
+    ]]>
+	</programlisting>
+	<para></para>
+
+	<simpara>The collector must be configured to use TCP input plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
+	The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves.
+	</simpara>
+	<simpara><filename>startup.xml</filename> TCP input example</simpara>
+	<programlisting>
+    <![CDATA[
+	<name>read IPFIX data from TCP and TLS/TCP sockets</name>
+	<tcpCollector>
+		<name>Listening port 4739</name>
+		<localPort>4739</localPort>
+		<localIPAddress>127.0.0.1</localIPAddress>
+		<transportLayerSecurity>
+			<!--## Path to Certificate Authority file -->
+			<localCAfile>pathtoCAfile</localCAfile>
+			<!--## Path to collector certificate file -->
+			<localServerCert>pathtoServerCertFile</localServerCert>
+			<!--## Path to collector private key file -->
+			<localServerCertKey>pathtoServerPrivateKeyFile</localServerCertKey>
+		</transportLayerSecurity>
+	</tcpCollector>
+	<exportingProcess>File writer TCP</exportingProcess>
+    ]]>
+	</programlisting>
+
+	<para>
+		<variablelist>
+			<varlistentry>
+				<term><command>name</command></term>
+				<listitem>
+					<simpara>Name of the TCP collector plugin. Used only for readability.</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term><command>localPort</command></term>
+				<listitem>
+					<simpara>Local port on which the TCP input plugin listens. The default is 4739.</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term><command>localIPAddress</command></term>
+				<listitem>
+					<simpara>Local address an which the TCP input plugin listens. The default (if the field is left empty) is to listen on all interfaces.</simpara>
+				</listitem>
+			</varlistentry>
+			<varlistentry>
+				<term><command>transportLayerSecurity</command></term>
+				<listitem>
+					<simpara>Turns on TLS</simpara>
+					<varlistentry>
+						<term><command>localCAfile</command></term>
+						<listitem>
+							<simpara>Path to Certificate Authority file.</simpara>
+						</listitem>
+					</varlistentry>
+						<varlistentry>
+						<term><command>localServerCert</command></term>
+						<listitem>
+							<simpara>Path to collector certificate file.</simpara>
+						</listitem>
+					</varlistentry>
+						<varlistentry>
+						<term><command>localServerCertKey</command></term>
+						<listitem>
+							<simpara>Path to collector private key file.</simpara>
+						</listitem>
+					</varlistentry>
+				</listitem>
+			</varlistentry>
+		</variablelist>
+	</para>
+	</refsect1>
+
+	<refsect1>
+		<title>See Also</title>
+		<para></para>
+		<para>
+			<variablelist>
+				<varlistentry>
+					<term>
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+					</term>
+					<listitem>
+						<simpara>Man pages</simpara>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org/technologies/ipfixcol/">http://www.liberouter.org/technologies/ipfixcol/</link>
+					</term>
+					<listitem>
+						<para>IPFIXCOL Project Homepage</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<link xlink:href="http://www.liberouter.org">http://www.liberouter.org</link>
+					</term>
+					<listitem>
+						<para>Liberouter web page</para>
+					</listitem>
+				</varlistentry>
+				<varlistentry>
+					<term>
+						<email>tmc-support@cesnet.cz</email>
+					</term>
+					<listitem>
+						<para>Support mailing list</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
+	</refsect1>
+</refentry>
