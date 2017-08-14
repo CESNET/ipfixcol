@@ -10,7 +10,11 @@ if HAVE_SCTP
 SUBDIRS += input/sctp
 endif
 
-bin_PROGRAMS = ipfixcol
+bin_PROGRAMS = \
+	ipfixcol \
+	ipfixcol-profiles-check \
+	ipfixcol-filter-check
+
 AM_CPPFLAGS += -I$(top_srcdir)/headers
 AM_CFLAGS += -rdynamic
 
@@ -56,3 +60,30 @@ ipfixcol_SOURCES = \
 	template_manager.c \
 	verbose.c \
 	utils/utils.c
+
+# Profiles validator
+ipfixcol_profiles_check_LDADD = \
+	utils/profiles/libprofiles.a \
+	utils/filter/libfilter.a \
+	utils/elements/libelements.a \
+	-lstdc++
+
+ipfixcol_profiles_check_SOURCES = \
+	profiles_check.c \
+	utils/utils.c \
+	ipfix_message.c \
+	template_manager.c \
+	verbose.c
+
+# Filter validator
+ipfixcol_filter_check_LDADD = \
+	utils/filter/libfilter.a \
+	utils/elements/libelements.a \
+	-lstdc++
+
+ipfixcol_filter_check_SOURCES = \
+	filter_check.c \
+	utils/utils.c \
+	ipfix_message.c \
+	template_manager.c \
+	verbose.c
