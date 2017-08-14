@@ -54,6 +54,10 @@ make test
 %{_bindir}/ipfixconf
 #ipfixsend
 %{_bindir}/ipfixsend
+#ipfixcol-filter-check
+%{_bindir}/ipfixcol-filter-check
+#ipfixcol-profiles-check
+%{_bindir}/ipfixcol-profiles-check
 #libsiso
 %{_libdir}/libsiso.so
 %{_libdir}/libsiso.la
