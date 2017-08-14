@@ -141,16 +141,20 @@ void help ()
 	printf ("\n");
 }
 
+/**
+ * \brief Reconfiguration signal handler
+ */
+void reconf_signal_handler (int sig)
+{
+	MSG_COMMON(ICMSG_ERROR, "Signal detected (%i); reloading configuration...", sig);
+	reconf = 1;
+}
+
+/**
+ * \brief Terminating signal handler
+ */
 void term_signal_handler (int sig)
 {
-	/* Reconfiguration signal */
-	if (sig == SIGUSR1) {
-		MSG_COMMON(ICMSG_ERROR, "Signal detected (%i); reloading configuration...", sig);
-		reconf = 1;
-		return;
-	}
-	
-	/* Terminating signal */
 	if (terminating) {
 		MSG_COMMON(ICMSG_ERROR, "Another termination signal detected (%i); quiting without cleanup...", sig);
 		exit (EXIT_FAILURE);
@@ -269,10 +273,15 @@ int main (int argc, char* argv[])
 	/* establish the signal handler */
 	sigemptyset(&action.sa_mask);
 	action.sa_flags = 0;
+
+	/* set termination handler */
 	action.sa_handler = term_signal_handler;
 	sigaction(SIGINT, &action, NULL);
 	sigaction(SIGQUIT, &action, NULL);
 	sigaction(SIGTERM, &action, NULL);
+
+	/* set reconfiguration handler */
+	action.sa_handler = reconf_signal_handler;
 	sigaction(SIGUSR1, &action, NULL);
 
 	/*
