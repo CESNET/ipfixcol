@@ -25,6 +25,7 @@ ipfixcol_json_output_la_SOURCES = \
 
 if NEED_KAFKA
 ipfixcol_json_output_la_SOURCES += Kafka.cpp Kafka.h
+AM_CPPFLAGS += -DHAVE_KAFKA
 endif
 
 ipfixcol_json_output_la_LIBADD = pugixml/libpugixml.la

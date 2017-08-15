@@ -144,6 +144,10 @@ CPPFLAGS="$CPPFLAGS $AM_CPPFLAGS"
 AC_CHECK_HEADERS([ipfixcol.h], , AC_MSG_ERROR([ipfixcol.h header missing. Please install ipfixcol-devel package]), [AC_INCLUDES_DEFAULT])
 CPPFLAGS="$cppflags_save"
 
+AM_COND_IF(NEED_KAFKA,
+	AC_CHECK_HEADERS([librdkafka/rdkafka.h], , AC_MSG_ERROR([librdkafka/rdkafka.h header missing. Please install librdkafka devel package]), [AC_INCLUDES_DEFAULT])
+)
+
 ######## Checks for typedefs, structures, and compiler characteristics #########
 AC_HEADER_STDBOOL
 AC_C_INLINE
