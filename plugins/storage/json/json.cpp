@@ -56,6 +56,7 @@ IPFIXCOL_API_VERSION;
 #include "Sender.h"
 #include "Server.h"
 #include "File.h"
+#include "Kafka.h"
 
 static const char *msg_module = "json_storage";
 
@@ -130,6 +131,8 @@ void process_startup_xml(struct json_conf *conf, char *params)
 			output = new Server(node);
 		} else if (type == "file") {
 			output = new File(node);
+		} else if (type == "kafka") {
+			output = new Kafka(node);
 		} else {
 			throw std::invalid_argument("Unknown output type \"" + type + "\"");
 		}

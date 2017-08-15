@@ -95,6 +95,11 @@ AC_ARG_ENABLE([debug],
 AC_ARG_ENABLE([doc],
 	AC_HELP_STRING([--disable-doc],[disable documentation building]))
 AM_CONDITIONAL([HAVE_DOC], [test "$enable_doc" != "no"],, [$enable_doc=yes])
+
+AC_ARG_ENABLE([kafka],
+	AC_HELP_STRING([--enable-kafka],[enable Kafka output format]))
+AM_CONDITIONAL([NEED_KAFKA], [test "$enable_kafka" = "yes"])
+
 ############################ Check for libraries ###############################
 
 libsisodir="$srcdir/../../../base/src/utils/libsiso/"
@@ -116,6 +121,14 @@ AC_SUBST([SISO_LDFLAGS])
 AC_CHECK_LIB([pthread], [pthread_create],
 	[CXXFLAGS="$CXXFLAGS -pthread"],
 	AC_MSG_ERROR([Required library pthread missing]))
+
+AM_COND_IF(NEED_KAFKA,
+	[AC_CHECK_LIB([rdkafka], [rd_kafka_new], [HAVE_KAFKA="yes"], [HAVE_KAFKA="no"])
+	AS_IF([test "$HAVE_KAFKA" = "no"], 
+	AC_MSG_ERROR([Missing librdkafka library - install it or remove --enable-kafka option]), 
+	KAFKA_LDFLAGS="-lrdkafka")]
+)
+AC_SUBST([KAFKA_LDFLAGS])
 
 ######################### Checks for header files ##############################
 AC_CHECK_HEADERS([float.h netinet/in.h stddef.h stdint.h stdlib.h string.h wchar.h])
@@ -192,6 +205,7 @@ echo "
   C++ Compiler..: $CXX $AM_CXXFLAGS $CXXFLAGS $AM_CPPFLAGS $CPPFLAGS
   Linker........: $AM_LDFLAGS $LDFLAGS $LIBS
   Build against.: ${BUILD_AGAINST:-system}
+  Kafka support.: ${enable_kafka:-no}
   rpmbuild......: ${RPMBUILD:-NONE}
   Build doc.....: ${enable_doc:-yes}
   xsltproc......: ${XSLTPROC:-NONE}

@@ -8,10 +8,10 @@
 		version="5.0" xml:lang="en">
 	<info>
 		<copyright>
-			<year>2015</year>
+			<year>2017</year>
 			<holder>CESNET, z.s.p.o.</holder>
 		</copyright>
-		<date>17 December 2015</date>
+		<date>15 August 2017</date>
 		<authorgroup>
 			<author>
 				<personname>
@@ -28,6 +28,15 @@
 					<surname>Hutak</surname>
 				</personname>
 				<email>lukas.hutak@cesnet.cz</email>
+				<contrib>developer</contrib>
+			</author>
+
+			<author>
+				<personname>
+					<firstname>Petr</firstname>
+					<surname>Velan</surname>
+				</personname>
+				<email>petr.velan@cesnet.cz</email>
 				<contrib>developer</contrib>
 			</author>
 		</authorgroup>
@@ -100,6 +109,13 @@
 				<blocking>no</blocking>
 			</output>
 
+			<output>
+				<type>kafka</type>
+				<ip>127.0.0.1</ip>
+				<port>9092</port>
+				<partitions>2</partitions>
+				<topic>ipfix.kafkaexport</topic>
+			</output>
 		</fileWriter>
 	</destination>
 	]]>
@@ -170,7 +186,7 @@
 						<varlistentry>
 							<term><command>type</command></term>
 							<listitem>
-								<simpara>Output type. <command>print</command>, <command>send</command>, <command>file</command> and <command>server</command> are supported.</simpara>
+								<simpara>Output type. <command>print</command>, <command>send</command>, <command>file</command>, <command>server</command>, and <command>kafka</command> are supported.</simpara>
 							</listitem>
 						</varlistentry>
 					</listitem>
@@ -264,6 +280,40 @@
 							<term><command>blocking</command></term>
 							<listitem>
 								<simpara>Type of the connection. Blocking (yes) or non-blocking (no).</simpara>
+							</listitem>
+						</varlistentry>
+					</listitem>
+				</varlistentry>
+
+				<varlistentry>
+					<term><command>output - kafka</command></term>
+					<listitem>
+						<simpara>Sends data to Kafka. Must be compiled with --enable-kafka, tested against version 0.8.6.</simpara>
+						<varlistentry>
+							<term><command>ip</command></term>
+							<listitem>
+								<simpara>Address of Kafka host.</simpara>
+							</listitem>
+						</varlistentry>
+
+						<varlistentry>
+							<term><command>port</command></term>
+							<listitem>
+								<simpara>Port of Kafka host.</simpara>
+							</listitem>
+						</varlistentry>
+
+						<varlistentry>
+							<term><command>partitions</command></term>
+							<listitem>
+								<simpara>Number of partitions to which send data. Uses round robin to send to partitions 0 - (N-1).</simpara>
+							</listitem>
+						</varlistentry>
+
+						<varlistentry>
+							<term><command>topic</command></term>
+							<listitem>
+								<simpara>Kafka topic to send data to.</simpara>
 							</listitem>
 						</varlistentry>
 					</listitem>
