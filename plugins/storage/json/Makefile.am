@@ -21,7 +21,8 @@ ipfixcol_json_output_la_SOURCES = \
 	Sender.cpp Sender.h \
 	Printer.cpp Printer.h \
 	Server.cpp Server.h \
-	File.cpp File.h
+	File.cpp File.h \
+	branchslut2.h
 
 if NEED_KAFKA
 ipfixcol_json_output_la_SOURCES += Kafka.cpp Kafka.h
