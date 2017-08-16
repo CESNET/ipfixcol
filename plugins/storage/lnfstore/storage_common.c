@@ -83,56 +83,6 @@ stg_common_files_mgr_create(const struct conf_params *params, const char *dir)
 }
 
 int
-stg_common_fill_record(const struct metadata *mdata, lnf_rec_t *record,
-	uint8_t *buffer)
-{
-	int added = 0;
-
-	uint16_t offset = 0;
-	uint16_t length;
-
-	struct ipfix_template *templ = mdata->record.templ;
-	uint8_t *data_record = (uint8_t*) mdata->record.record;
-
-	// Process all fields
-	for (uint16_t count = 0, id = 0; count < templ->field_count; ++count, ++id) {
-		// Create a key - get Enterprise and Element ID
-		struct ipfix_lnf_map key, *item;
-
-		key.ie = templ->fields[id].ie.id;
-		length = templ->fields[id].ie.length;
-		key.en = 0;
-
-		if (key.ie & 0x8000) {
-			key.ie &= 0x7fff;
-			key.en = templ->fields[++id].enterprise_number;
-		}
-
-		// Find conversion function
-		item = bsearch(&key, tr_table, MAX_TABLE, sizeof(struct ipfix_lnf_map),
-				ipfix_lnf_map_compare);
-
-		int conv_failed = 1;
-		if (item != NULL) {
-			// Convert
-			conv_failed = item->func(data_record, &offset, &length, buffer, item);
-			if (!conv_failed) {
-				lnf_rec_fset(record, item->lnf_id, buffer);
-				added++;
-			}
-		}
-
-		if (conv_failed) {
-			length = real_length(data_record, &offset, length);
-		}
-
-		offset += length;
-	}
-
-	return added;
-}
-
-int
 stg_common_dir_exists(const char *dir)
 {
 	struct stat sb;

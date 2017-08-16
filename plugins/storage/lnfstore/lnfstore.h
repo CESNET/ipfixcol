@@ -51,6 +51,7 @@
 #include "files_manager.h"
 #include "storage_basic.h"
 #include "storage_profiles.h"
+#include "translator.h"
 
 extern const char *msg_module;
 
@@ -70,8 +71,8 @@ struct conf_lnfstore {
 	} storage; /**< Only one type of storage is initialized at the same time */
 
 	struct {
-		lnf_rec_t *rec_ptr;  /**< LNF record (converted IPFIX record)        */
-		uint8_t    rec_buffer[REC_BUFF_SIZE]; /**< Record conversion buffer  */
+		lnf_rec_t *rec_ptr;       /**< LNF record (converted IPFIX record)   */
+		translator_t *translator; /**< IPFIX to LNF translator               */
 	} record; /**< Record conversion */
 };
 
