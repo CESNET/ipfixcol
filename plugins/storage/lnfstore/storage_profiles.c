@@ -41,6 +41,7 @@
 #include <string.h>
 #include <ipfixcol/profiles.h>
 #include <limits.h>
+#include <stdint.h>
 
 #include "storage_profiles.h"
 #include "lnfstore.h"
@@ -67,7 +68,11 @@ struct stg_profiles_global {
  * \brief Local data for each channel
  */
 struct stg_profiles_chnl_local {
-	/** Output file(s)  */
+	/** Manager of output file(s)
+	 *  This manager must NOT exist when parameters of it's channel are not
+	 *  correct, for example, storage path is outside of the main storage dir.,
+	 *  etc.
+	 */
 	files_mgr_t *manager;
 };
 
@@ -154,6 +159,9 @@ channel_storage_close(struct stg_profiles_chnl_local *local)
  * First, if the previous instance of the storage exists, it'll be closed and
  * deleted. Second, the function generates a name of an output directory
  * and creates a new files manager for output files.
+ *
+ * \note Output files will not be ready yet, you have to create a time window
+ *   first i.e. channel_storage_new_window().
  * \param[in,out] local       Local data of the channel
  * \param[in]     global      Global structure shared among all channels
  * \param[in]     channel_ptr Pointer to a channel (from a profiler)
@@ -188,6 +196,57 @@ channel_storage_open(struct stg_profiles_chnl_local *local,
 }
 
 /**
+ * \brief Check if a directory is inside a parent directory (based on names)
+ * \param[in] path_dir    The directory path
+ * \param[in] path_parent The parent path
+ * \note If the \p path_parent is NULL or empty, the function will return 0.
+ * \return If the directory is in the parent directory returns 0. Otherwise
+ *   returns a non-zero value.
+ */
+static int
+channel_storage_check_subdir(const char *path_dir, const char *path_parent)
+{
+	if (!path_parent) {
+		// If the path_parent is not defined, do not check it
+		return 0;
+	}
+
+	// Make copies of both strings
+	const size_t len_parent = strlen(path_parent);
+	const size_t len_dir = strlen(path_dir);
+	if (len_parent == 0) {
+		// Empty string
+		return 0;
+	}
+
+	char *cpy_parent = calloc(len_parent + 2, sizeof(char));
+	char *cpy_dir = calloc(len_dir + 2, sizeof(char)); // 2 = '/' + '\0'
+	if (!cpy_dir || !cpy_parent) {
+		MSG_ERROR(msg_module, "Unable to allocate memory (%s:%d)",
+			__FILE__, __LINE__);
+		free(cpy_parent);
+		free(cpy_dir);
+		return 1;
+	}
+
+	strncpy(cpy_parent, path_parent, len_parent);
+	strncpy(cpy_dir, path_dir, len_dir);
+
+	// Add slashes and sanitize the strings
+	cpy_parent[len_parent] = '/';
+	cpy_dir[len_dir] = '/';
+	files_mgr_names_sanitize(cpy_parent);
+	files_mgr_names_sanitize(cpy_dir);
+
+	// Compare
+	int result = strncmp(cpy_parent, cpy_dir, strlen(cpy_parent));
+	free(cpy_parent);
+	free(cpy_dir);
+
+	return result;
+}
+
+/**
  * \brief Create a new time window
  *
  * Close & reopen output files
@@ -198,19 +257,100 @@ channel_storage_open(struct stg_profiles_chnl_local *local,
  */
 static int
 channel_storage_new_window(struct stg_profiles_chnl_local *local,
-	const struct stg_profiles_global *global)
+	const struct stg_profiles_global *global, void *channel_ptr)
 {
+	(void) channel_ptr;
 	if (!local->manager) {
 		// Uninitialized manager
 		return 1;
 	}
 
-	// Start a time window
+	// Check if the main storage directory exists (if it is defined)
+	const char *main_storage = global->params->files.path; // can be NULL
+	if (main_storage && stg_common_dir_exists(main_storage) != 0) {
+		// The storage directory doesn't exists -> don't try to create files
+		return 1;
+	}
+
+	// Create a time window
 	if (files_mgr_new_window(local->manager, &global->window_start)) {
 		// Totally or partially failed...
 		return 1;
 	};
 
+	return 0;
+}
+
+/**
+ * \brief All-in-one initialization of a channel's storage
+ *
+ * First, check if storage parameters are correct. Second, create a new file
+ * manager and, finally, create a new time window files. All changes are stored
+ * into the local data of the channel. Therefore, channel will end up,
+ * respectively, without file manager (i.e. NULL), with file manager without
+ * output files or with the fully working manager. If the file manager is NULL,
+ * it can be reinitialized only by this function. If the file manager is
+ * defined but output files are not (partially) ready, it can be fixed using
+ * channel_storage_new_window() function, but this usually automatically when
+ * new time windows are created.
+ *
+ * If the channel is not fully ready (something went wrong), all other
+ * functions that manipulate channel can be used, but they usually do not have
+ * any effect.
+ *
+ * \note This function can be also used to reinitialize the channel's file
+ *   manager when profile's/channel's storage directory has been changed.
+ *
+ * \param[in,out] local       Local data of the channel
+ * \param[in]     global      Global structure shared among all channels
+ * \param[in]     channel_ptr Pointer to a channel (from a profiler)
+ * \return On success returns 0. Otherwise (something went wrong) returns
+ *   a non-zero value.
+ */
+static int
+channel_storage_init(struct stg_profiles_chnl_local *local,
+	const struct stg_profiles_global *global, void *channel_ptr)
+{
+	const char *channel_path = channel_get_path(channel_ptr);
+	const char *channel_name = channel_get_name(channel_ptr);
+
+	void *profile_ptr  = channel_get_profile(channel_ptr);
+	const char *profile_dir = profile_get_directory(profile_ptr);
+	const char *main_dir = global->params->files.path; // Can be NULL
+
+	// Check if the storage parameters are correct
+	if (main_dir && channel_storage_check_subdir(profile_dir, main_dir)) {
+		// Failed -> do not create a file manager
+		MSG_ERROR(msg_module, "Failed to create a storage of channel '%s%s'. "
+			"Main storage directory (%s) is specified, but the storage "
+			"directory of this channel's profile (%s) is outside of the main "
+			"directory. Further records of this channel will NOT be stored. "
+			"Change storage directory of the profile or omit storage "
+			"directory in the plugin's configuration",
+			channel_path, channel_name, main_dir, profile_dir);
+		return 1;
+	}
+
+	// Create a storage manager and save it to the local data
+	if (channel_storage_open(local, global, channel_ptr)) {
+		// Failed
+		MSG_WARNING(msg_module, "Failed to create storage of channel '%s%s'. "
+			"Further records of this channel will NOT be stored.",
+			channel_path, channel_name);
+		return 1;
+	}
+
+	// Create a new time window
+	if (channel_storage_new_window(local, global, channel_ptr)) {
+		// Failed
+		MSG_WARNING(msg_module, "Failed to create a new time window of channel "
+			"'%s%s'. Output file(s) of this channel are not prepared and "
+			"further records will NOT be stored.",
+			channel_path, channel_name);
+		return 1;
+	}
+
+	// Success
 	return 0;
 }
 
@@ -244,19 +384,16 @@ channel_create_cb(struct pevents_ctx *ctx)
 		return NULL;
 	}
 
-	if (channel_storage_open(local_data, ctx->user.global, ctx->ptr.channel)) {
-		// Failed
-		MSG_WARNING(msg_module, "Failed to create storage of channel '%s%s'. "
-			"Further records of this channel will NOT be stored.",
-			channel_path, channel_name);
+	void *profile = channel_get_profile(ctx->ptr.channel);
+	const enum PROFILE_TYPE type = profile_get_type(profile);
+	if (type != PT_NORMAL) {
+		// Do not create a file manager for this shadow channel
 		return local_data;
 	}
 
-	if (channel_storage_new_window(local_data, ctx->user.global)) {
-		// Failed
-		MSG_WARNING(msg_module, "Failed to create a new time window of channel "
-			"'%s%s'. Output file(s) of this channel are not prepared and "
-			"further records will NOT be stored.", channel_path, channel_name);
+	// Initialize a storage
+	if (channel_storage_init(local_data, ctx->user.global, ctx->ptr.channel)) {
+		// Something went wrong and a message was printed.
 		return local_data;
 	}
 
@@ -302,8 +439,9 @@ channel_delete_cb(struct pevents_ctx *ctx)
 static void
 channel_update_cb(struct pevents_ctx *ctx, uint16_t flags)
 {
-	const char *channel_path = channel_get_path(ctx->ptr.channel);
-	const char *channel_name = channel_get_name(ctx->ptr.channel);
+	void *channel_ptr = ctx->ptr.channel;
+	const char *channel_path = channel_get_path(channel_ptr);
+	const char *channel_name = channel_get_name(channel_ptr);
 	MSG_DEBUG(msg_module, "Updating channel '%s%s'...", channel_path,
 		channel_name);
 
@@ -312,49 +450,34 @@ channel_update_cb(struct pevents_ctx *ctx, uint16_t flags)
 	if (!local_data) {
 		MSG_ERROR(msg_module, "Channel '%s%s' cannot be updated, because it's "
 			"not properly initialized. Try to delete it from a profiling "
-			"configuration and create it again.", channel_path, channel_name);
+			"configuration and create it again or restart this plugin.",
+			channel_path, channel_name);
 		return;
 	}
 
-	void *profile = channel_get_profile(ctx->ptr.channel);
+	void *profile = channel_get_profile(channel_ptr);
 	const enum PROFILE_TYPE type = profile_get_type(profile);
 
 	// Is the profile's type still the same?
-	if (type == PT_SHADOW) {
+	if (type != PT_NORMAL) {
 		// The type is shadow -> Delete the files manager, if it exists.
 		if (local_data->manager == NULL) {
 			// Already deleted
 			return;
 		}
 
-		channel_storage_close(ctx->user.local);
+		channel_storage_close(local_data);
 		MSG_INFO(msg_module, "Channel '%s%s' has been successfully updated "
-				"(storage has been closed).", channel_path, channel_name);
-
+			"(storage has been closed).", channel_path, channel_name);
 		return;
 	}
 
 	// Only "Normal" type can be here!
 	if ((flags & PEVENTS_CHANGE_DIR) || (flags & PEVENTS_CHANGE_TYPE)) {
-		// The profile's directory and/or type has been changed.
-		// Delete & Create a new storage
-		if (channel_storage_open(ctx->user.local, ctx->user.global,
-				ctx->ptr.channel)) {
-			// Failed to open
-			MSG_WARNING(msg_module, "Failed to create/change storage of "
-				"channel '%s%s'. The current storage has been closed to"
-				"prevent potential collision with other profiles/channels "
-				"and further records of this channel will NOT be stored.",
-				channel_path, channel_name);
-			return;
-		}
-
-		if (channel_storage_new_window(ctx->user.local, ctx->user.global)) {
-			// Failed
-			MSG_WARNING(msg_module, "Failed to create a new time window of "
-				"channel '%s%s'. Output file(s) of this channel are not "
-				"prepared and further records will NOT be stored.",
-				channel_path, channel_name);
+		/* The profile's directory and/or type has been changed.
+		 * Delete the old storage & create a new one
+		 */
+		if (channel_storage_init(local_data, ctx->user.global, channel_ptr)) {
 			return;
 		}
 
@@ -392,22 +515,41 @@ channel_data_cb(struct pevents_ctx *ctx, void *data)
 }
 
 /**
- * \brief Auxiliary function for changing time windows
+ * \brief Auxiliary callback function for invalidating time windows
+ * \param[in,out] ctx Information context about the channel
+ */
+static void
+channel_disable_window(struct pevents_ctx *ctx)
+{
+	struct stg_profiles_chnl_local *local = ctx->user.local;
+	if (!local || !local->manager) {
+		// Local data or the file manager is not initialized
+		return;
+	}
+
+	files_mgr_invalidate(local->manager);
+}
+
+/**
+ * \brief Auxiliary callback function for changing time windows
  * \param[in,out] ctx Information context about the channel
  */
 static void
 channel_new_window(struct pevents_ctx *ctx)
 {
-	if (!ctx->user.local) {
-		// Local data is not initialized -> unrecoverable error
+	struct stg_profiles_chnl_local *local = ctx->user.local;
+	struct stg_profiles_global *global = ctx->user.global;
+	void *channel = ctx->ptr.channel;
+
+	if (!local || !local->manager) {
+		// Local data or a file manager is not initialized
 		return;
 	}
 
-	struct stg_profiles_global *global = ctx->user.global;
-	int ret_val = channel_storage_new_window(ctx->user.local, global);
+	// Try to create the new window
+	int ret_val = channel_storage_new_window(local, global, channel);
 	if (ret_val != 0) {
 		// Failed
-		void *channel = ctx->ptr.channel;
 		MSG_WARNING(msg_module, "Failed to create a new time window of "
 			"channel '%s%s'. Output file(s) of this channel are not prepared "
 			"and further records will NOT be stored.",
@@ -476,6 +618,17 @@ stg_profiles_new_window(stg_profiles_t *storage, time_t window)
 	storage->global.window_start = window;
 	storage->global.op_status = 0;
 
+	// If the main storage directory is specified, check if it exists
+	const char *main_dir = storage->global.params->files.path;
+	if (main_dir != NULL && stg_common_dir_exists(main_dir) != 0) {
+		MSG_ERROR(msg_module, "Storage directory '%s' doesn't exist. "
+			"All records will be lost! Try to create the directory and make "
+			"sure the collector has access rights.", main_dir);
+		pevents_for_each(storage->event_mgr, NULL, &channel_disable_window);
+		return 1;
+	}
+
+	// Try to create new time windows
 	pevents_for_each(storage->event_mgr, NULL, &channel_new_window);
 	return storage->global.op_status;
 }

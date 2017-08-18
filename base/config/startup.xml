@@ -34,6 +34,13 @@
 			<name>Listening port 4739</name>
 			<localPort>4739</localPort>
 			<localIPAddress>127.0.0.1</localIPAddress>
+			<!--## Turn on TLS
+			<transportLayerSecurity>
+				<localCAfile>pathtoCAfile</localCAfile>
+				<localServerCert>pathtoServerCertFile</localServerCert>
+				<localServerCertKey>pathtoServerPrivateKeyFile</localServerCertKey>
+			</transportLayerSecurity>
+			-->
 		</tcpCollector>
 		<exportingProcess>File writer TCP</exportingProcess>
 	</collectingProcess>

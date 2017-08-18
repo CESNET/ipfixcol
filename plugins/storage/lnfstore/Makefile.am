@@ -17,7 +17,8 @@ ipfixcol_lnfstore_output_la_SOURCES = \
     storage_basic.c storage_basic.h \
     storage_common.c storage_common.h \
     storage_profiles.c storage_profiles.h \
-	translator.c translator.h
+	translator.c translator.h \
+	converters.h
 
 plugins_LTLIBRARIES = ipfixcol-lnfstore-output.la
 

@@ -92,6 +92,14 @@ Here is an example of configuration in **startup.xml**:
 			<port>4800</port>
 			<blocking>no</blocking>
 		</output>
+
+		<output>
+			<type>kafka</type>
+			<ip>127.0.0.1</ip>
+			<port>9092</port>
+			<partitions>2</partitions>
+			<topic>ipfix.kafkaexport</topic>
+		</output>
 	</fileWriter>
 </destination>
 ```
@@ -104,7 +112,7 @@ Here is an example of configuration in **startup.xml**:
 * **prefix** - Prefix of the IPFIX element names. [default == ipfix.].
 
 * **output** - Specifies JSON data processor. Multiple outputs are supported.
-	* **type** - Output type. **print**, **send**, **file** and **server** are supported.
+	* **type** - Output type. **print**, **send**, **file**, **server**. and **kafka** are supported.
 * **output : print** - Writes data to the standard output.
 * **output : send** - Sends data over the network.
 	* **ip** - IPv4/IPv6 address of remote host (default 127.0.0.1).
@@ -119,5 +127,10 @@ Here is an example of configuration in **startup.xml**:
 * **output : server** - Sends data over the network to connected clients.
 	* **port** - Local port number.
 	* **blocking** - Type of the connection. Blocking (yes) or non-blocking (no).
+* **output: kafka** - Sends data to Kafka. Must be compiled with --enable-kafka, tested against version 0.8.6.
+	* **ip** - Address of Kafka host.
+	* **port** - Port of Kafka host.
+	* **partitions** - Number of partitions to which send data. Uses round robin to send to partitions 0 - (N-1).
+	* **topic** - Kafka topic to send data to.
 
 [Back to Top](#top)

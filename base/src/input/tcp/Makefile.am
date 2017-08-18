@@ -7,3 +7,23 @@ ipfixcol_tcp_input_la_LDFLAGS = -module -avoid-version -shared -L$(top_srcdir)/s
 ipfixcol_tcp_input_la_LIBADD = $(TLS_LIBS) -lrt -lconversion
 
 ipfixcol_tcp_input_la_SOURCES = tcp_input.c
+
+if HAVE_DOC
+MANSRC = ipfixcol-tcp-input.dbk
+EXTRA_DIST = $(MANSRC)
+man_MANS = ipfixcol-tcp-input.1
+CLEANFILES = ipfixcol-tcp-input.1
+endif
+
+%.1 : %.dbk
+	@if [ -n "$(XSLTPROC)" ]; then \
+		if [ -f "$(XSLTMANSTYLE)" ]; then \
+			echo $(XSLTPROC) $(XSLTMANSTYLE) $<; \
+			$(XSLTPROC) $(XSLTMANSTYLE) $<; \
+		else \
+			echo "Missing $(XSLTMANSTYLE)!"; \
+			exit 1; \
+		fi \
+	else \
+		echo "Missing xsltproc"; \
+	fi

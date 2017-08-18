@@ -141,16 +141,19 @@ void help ()
 	printf ("\n");
 }
 
+/**
+ * \brief Reconfiguration signal handler
+ */
+void reconf_signal_handler (int sig)
+{
+	reconf = 1;
+}
+
+/**
+ * \brief Terminating signal handler
+ */
 void term_signal_handler (int sig)
 {
-	/* Reconfiguration signal */
-	if (sig == SIGUSR1) {
-		MSG_COMMON(ICMSG_ERROR, "Signal detected (%i); reloading configuration...", sig);
-		reconf = 1;
-		return;
-	}
-	
-	/* Terminating signal */
 	if (terminating) {
 		MSG_COMMON(ICMSG_ERROR, "Another termination signal detected (%i); quiting without cleanup...", sig);
 		exit (EXIT_FAILURE);
@@ -190,6 +193,7 @@ int main (int argc, char* argv[])
 	bool daemonize = false;
 	char *startup_config = NULL, *internal_config = NULL;
 	struct sigaction action;
+	sigset_t set;
 	char *packet = NULL;
 	struct input_info* input_info;
 	void *output_manager_config = NULL;
@@ -269,11 +273,24 @@ int main (int argc, char* argv[])
 	/* establish the signal handler */
 	sigemptyset(&action.sa_mask);
 	action.sa_flags = 0;
+
+	/* set termination handler */
 	action.sa_handler = term_signal_handler;
 	sigaction(SIGINT, &action, NULL);
 	sigaction(SIGQUIT, &action, NULL);
 	sigaction(SIGTERM, &action, NULL);
+
+	/* set reconfiguration handler */
+	action.sa_handler = reconf_signal_handler;
 	sigaction(SIGUSR1, &action, NULL);
+
+	/* mask allowed signals. they are enabled for main thread before main loop */
+	sigemptyset(&set);
+	sigaddset(&set, SIGINT);
+	sigaddset(&set, SIGQUIT);
+	sigaddset(&set, SIGTERM);
+	sigaddset(&set, SIGUSR1);
+	pthread_sigmask(SIG_BLOCK, &set, NULL);
 
 	/*
 	 * this initialize the library and check potential ABI mismatches
@@ -398,24 +415,15 @@ int main (int argc, char* argv[])
 		MSG_ERROR(msg_module, "[%d] Storage Manager initialization failed", config->proc_id);
 		goto cleanup;
 	}
-	
+
+	/* Allow signals in the main thread only */
+	pthread_sigmask(SIG_UNBLOCK, &set, NULL);
+
 	/* main loop */
 	while (!terminating) {
 		/* get data to process */
 		if ((get_retval = config->input.get(config->input.config, &input_info, &packet, &source_status)) < 0) {
-			if ((!reconf && !terminating) || get_retval != INPUT_INTR) {
-				/* If interrupted and closing, it's OK */
-				/* We don't print warnings or errors here, since we leave that responsibility
-				 * to the respective input plugin.
-				 */
-				// MSG_WARNING(msg_module, "[%d] Could not get IPFIX data", config->proc_id);
-			}
-			
-			if (reconf) {
-				config_reconf(config);
-				reconf = 0;
-			}
-			
+			/* No data received, probably interrupted by a signal */
 			if (packet) {
 				free(packet);
 				packet = NULL;
@@ -441,7 +449,14 @@ int main (int argc, char* argv[])
 		source_status = SOURCE_STATUS_OPENED;
 		packet = NULL;
 		input_info = NULL;
-	}
+
+		/* Check whether reconfiguration is needed */
+		if (reconf) {
+			MSG_INFO(msg_module, "[%d] Starting reconfiguration process", config->proc_id);
+			config_reconf(config);
+			reconf = 0;
+		}
+}
 	
 	goto cleanup;
 	

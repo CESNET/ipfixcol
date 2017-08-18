@@ -65,16 +65,12 @@ files_mgr_t *
 stg_common_files_mgr_create(const struct conf_params *params, const char *dir);
 
 /**
- * \brief Fill a new record (convert IPFIX to LNF)
- *
- * \param[in]     mdata  IPFIX record
- * \param[out]    record LNF Record
- * \param[in,out] buffer Pointer to temporary buffer (for data conversion)
- * \return Number of converted fields
+ * \brief Check if a directory exists
+ * \param[in] dir Directory path
+ * \return If the directory exists returns 0. Otherwise (the directory doesn't
+ *   exist or search permission is denied) returns a non-zero value.
  */
 int
-stg_common_fill_record(const struct metadata *mdata, lnf_rec_t *record,
-	uint8_t *buffer);
-
+stg_common_dir_exists(const char *dir);
 
 #endif // STORAGE_COMMON_H

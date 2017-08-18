@@ -55,7 +55,8 @@ storage_init (char *params, void **config) {
 	// Process XML configuration
 	struct conf_params *parsed_params = configuration_parse(params);
 	if (!parsed_params) {
-		MSG_ERROR(msg_module, "Failed to parse the plugin configuration.");
+		MSG_ERROR(msg_module, "Failed to parse the plugin configuration.",
+			NULL);
 		return 1;
 	}
 
@@ -73,7 +74,17 @@ storage_init (char *params, void **config) {
 	// Init a LNF record for conversion from IPFIX
 	if (lnf_rec_init(&conf->record.rec_ptr) != LNF_OK) {
 		MSG_ERROR(msg_module, "Failed to initialize an internal structure "
-			"for conversion of records");
+			"for conversion of records", NULL);
+		configuration_free(parsed_params);
+		free(conf);
+		return 1;
+	}
+
+	conf->record.translator = translator_init();
+	if (!conf->record.translator) {
+		MSG_ERROR(msg_module, "Failed to initialize a record translator.",
+			NULL);
+		lnf_rec_free(conf->record.rec_ptr);
 		configuration_free(parsed_params);
 		free(conf);
 		return 1;
@@ -88,7 +99,8 @@ storage_init (char *params, void **config) {
 
 	if (!conf->storage.basic && !conf->storage.profiles) {
 		MSG_ERROR(msg_module, "Failed to initialize an internal structure "
-			"for file storage(s).");
+			"for file storage(s).", NULL);
+		translator_destroy(conf->record.translator);
 		lnf_rec_free(conf->record.rec_ptr);
 		configuration_free(parsed_params);
 		free(conf);
@@ -96,7 +108,7 @@ storage_init (char *params, void **config) {
 
 	// Save the configuration
 	*config = conf;
-	MSG_DEBUG(msg_module, "Initialized...");
+	MSG_DEBUG(msg_module, "Initialized...", NULL);
 	return 0;
 }
 
@@ -143,8 +155,7 @@ store_packet (void *config, const struct ipfix_message *ipfix_msg,
 
 		// Fill record
 		lnf_rec_t *rec = conf->record.rec_ptr;
-		lnf_rec_clear(rec);
-		if (stg_common_fill_record(mdata, rec, conf->record.rec_buffer) <= 0) {
+		if (translator_translate(conf->record.translator, mdata, rec) <= 0) {
 			// Nothing to store
 			continue;
 		}
@@ -183,7 +194,8 @@ storage_close (void **config)
 		stg_basic_destroy(conf->storage.basic);
 	}
 
-	// Destroy a record
+	// Destroy a translator and a record
+	translator_destroy(conf->record.translator);
 	lnf_rec_free(conf->record.rec_ptr);
 
 	// Destroy parsed XML configuration

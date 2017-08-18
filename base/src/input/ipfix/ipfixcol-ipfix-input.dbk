@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<refentry 
-		xmlns:db="http://docbook.org/ns/docbook" 
-		xmlns:xlink="http://www.w3.org/1999/xlink" 
+<refentry
+		xmlns:db="http://docbook.org/ns/docbook"
+		xmlns:xlink="http://www.w3.org/1999/xlink"
 		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
 			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
 		version="5.0" xml:lang="en">
 	<info>
 		<copyright>
-			<year>2008-2015</year>
+			<year>2008-2017</year>
 			<holder>CESNET, z.s.p.o.</holder>
 		</copyright>
 		<date>16 March 2012</date>
@@ -35,11 +35,11 @@
 		<refname>ipfixcol-ipfix-input</refname>
 		<refpurpose>IPFIX file input plugin for IPFIXcol.</refpurpose>
 	</refnamediv>
-    
+
 	<refsect1>
 		<title>Description</title>
 		<simpara>
-			The <command>ipfixcol-ipfix-input</command> plugin is a part of IPFIXcol (IPFIX collector). 
+			The <command>ipfixcol-ipfix-input</command> plugin is a part of IPFIXcol (IPFIX collector).
 			It provides means to read flow data from files in IPFIX file format.
 		</simpara>
 	</refsect1>
@@ -47,25 +47,26 @@
 	<refsect1>
 		<title>Configuration</title>
 		<simpara>There are two configuration XML files for ipfixcol that affects plugin usage.
-		First one is internal configuration XML (<filename>/etc/ipfixcol/internalcfg.xml</filename>) where are list of all available plugins for the collecor. 
-    	The plugin must be specified here to be usable.
-    	</simpara>
-    	<simpara><filename>internalcfg.xml</filename> IPFIX file input example</simpara>
-    	<programlisting>
+		First one is internal configuration XML (<filename>/etc/ipfixcol/internalcfg.xml</filename>) where are list of all available plugins for the collecor.
+	The plugin must be specified here to be usable.
+	</simpara>
+	<simpara><filename>internalcfg.xml</filename> IPFIX file input example</simpara>
+	<programlisting>
     <![CDATA[
 	<inputPlugin>
 		<name>fileReader</name>
 		<file>/usr/share/ipfixcol/plugins/ipfixcol-ipfix-input.so</file>
+		<processName>file</processName>
 	</inputPlugin>
     ]]>
-    	</programlisting>
-    	<para></para>
-    	
-    	<simpara>The collector must be configured to use IPFIX file input plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
-    	The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves.
-    	</simpara>
-    	<simpara><filename>startup.xml</filename> IPFIX file input example</simpara>
-    	<programlisting>
+	</programlisting>
+	<para></para>
+
+	<simpara>The collector must be configured to use IPFIX file input plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>).
+	The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves.
+	</simpara>
+	<simpara><filename>startup.xml</filename> IPFIX file input example</simpara>
+	<programlisting>
     <![CDATA[
 	<name>read IPFIX data from IPFIX file</name>
 	<fileReader>
@@ -73,9 +74,9 @@
 	</fileReader>
 	<exportingProcess>File writer IPFIX</exportingProcess>
     ]]>
-    	</programlisting>
-    
-    	<para>
+	</programlisting>
+
+		<para>
 			<variablelist>
 				<varlistentry>
 					<term><command>file</command></term>

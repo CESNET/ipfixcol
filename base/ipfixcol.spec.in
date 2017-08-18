@@ -65,6 +65,7 @@ make test
 #input plugins
 %{_datadir}/%{name}/plugins/ipfixcol-udp-input.*
 %{_datadir}/%{name}/plugins/ipfixcol-tcp-input.*
+%{_mandir}/man1/ipfixcol-tcp-input.1.gz
 %{_datadir}/%{name}/plugins/ipfixcol-sctp-input.*
 %{_datadir}/%{name}/plugins/ipfixcol-ipfix-input.*
 %{_mandir}/man1/ipfixcol-ipfix-input.1.gz
@@ -101,9 +102,9 @@ make test
 %{_datadir}/%{name}/ipfixviewer_startup.xml
 %{_bindir}/ipfixviewer
 #config files
-%config %{_sysconfdir}/ipfixcol/internalcfg.xml
-%config %{_sysconfdir}/ipfixcol/ipfix-elements.xml
-%config %{_sysconfdir}/ipfixcol/startup.xml
+%config(noreplace) %{_sysconfdir}/ipfixcol/internalcfg.xml
+%config(noreplace) %{_sysconfdir}/ipfixcol/ipfix-elements.xml
+%config(noreplace) %{_sysconfdir}/ipfixcol/startup.xml
 
 %files devel
 %{_includedir}/ipfixcol.h

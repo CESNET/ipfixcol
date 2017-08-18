@@ -433,7 +433,7 @@ files_mgr_names_free(struct files_mgr_names *names)
  * can be only reduced, so all operations are performed in-situ.
  * \param[in,out] path Path
  */
-static void
+void
 files_mgr_names_sanitize(char *path)
 {
 	if (!path || path[0] == '\0') {
@@ -736,6 +736,24 @@ files_mgr_new_window(files_mgr_t *mgr, const time_t *ts)
 	return ret_code;
 }
 
+void
+files_mgr_invalidate(files_mgr_t *mgr)
+{
+	// Close/flush LNF file
+	if (mgr->outputs.file_lnf) {
+		lnf_close(mgr->outputs.file_lnf);
+		mgr->outputs.file_lnf = NULL;
+	}
+
+	if (mgr->mode & FILES_M_INDEX) {
+		if (idx_mgr_save_index(mgr->outputs.index_mgr) != 0) {
+			MSG_WARNING(msg_module, "Files manager error (failed to save "
+				"current index - last window wont be indexed).");
+		}
+		idx_mgr_invalidate(mgr->outputs.index_mgr);
+	}
+}
+
 /**
  * \brief Add a LNF record to a LNF file
  * \param[in,out] mgr     Pointer to a file manager
@@ -817,3 +835,8 @@ files_mgr_add_record(files_mgr_t *mgr, lnf_rec_t *rec_ptr)
 	return status;
 }
 
+const char *
+files_mgr_get_storage_dir(files_mgr_t *mgr)
+{
+	return mgr->paths_tmplt->dir;
+}

@@ -63,5 +63,5 @@ AS_IF([ test -z "$CXXSTD" ],
 AS_IF([ test "-std=$1" = "$CXXFLAGS" -a "$CXXSTD" != "$CXXFLAGS" ],
 	AC_MSG_ERROR([C++ compiler does not support $1 ])
 )
-CXXFLAGS="$my_save_cflags"
+CXXFLAGS="$my_save_cxxflags"
 ])# LBR_SET_CXXSTD

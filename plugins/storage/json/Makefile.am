@@ -3,7 +3,7 @@ ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = pugixml
 AM_CPPFLAGS += -I$(top_srcdir)/pugixml $(SISO_CPPFLAGS)
 #-I$(top_srcdir)/../../../base/src/utils/libsiso/
-AM_LDFLAGS += $(SISO_LDFLAGS) -module -avoid-version -shared 
+AM_LDFLAGS += $(SISO_LDFLAGS) $(KAFKA_LDFLAGS) -module -avoid-version -shared
  
 pluginsdir = $(datadir)/ipfixcol/plugins
 
@@ -22,6 +22,11 @@ ipfixcol_json_output_la_SOURCES = \
 	Printer.cpp Printer.h \
 	Server.cpp Server.h \
 	File.cpp File.h
+
+if NEED_KAFKA
+ipfixcol_json_output_la_SOURCES += Kafka.cpp Kafka.h
+AM_CPPFLAGS += -DHAVE_KAFKA
+endif
 
 ipfixcol_json_output_la_LIBADD = pugixml/libpugixml.la
 

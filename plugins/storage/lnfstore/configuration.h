@@ -57,8 +57,8 @@
  */
 struct conf_params {
 	struct {
-		char *path;     /**< Storage directory template (only non-profile).
-                          *  This is undefined only when profiles.en == true */
+		char *path;     /**< Storage directory template.
+                          *  This can be NULL only when profiles.en == true  */
 		char *suffix;   /**< Common file suffix                              */
 	} files;   /**< Common storage templates */
 
