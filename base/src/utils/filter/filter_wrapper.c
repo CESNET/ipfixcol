@@ -158,134 +158,132 @@ void unpackEnId(uint64_t from, uint16_t *gen, uint32_t* en, uint16_t* id)
 /* This map of strings and ids determines which (hopefully) synonyms of nfdump filter keywords are supported */
 static struct nff_item_s nff_ipff_map[] = {
     /* items contains name as inputted to filter and mapping to iana ipfix enterprise and element_id */
-    {"odid", toGenEnId(CTL_HEADER_ITEM, 0, HD_ODID)},
-    {"exporterip", toGenEnId(CTL_HEADER_ITEM, 0, HD_SRCADDR)},
-    {"collectorip", toGenEnId(CTL_HEADER_ITEM, 0, HD_DSTADDR)},
-    {"exporterport", toGenEnId(CTL_HEADER_ITEM, 0, HD_SRCPORT)},
-    {"collectorport", toGenEnId(CTL_HEADER_ITEM, 0, HD_DSTPORT)},
+    {"odid",          {toGenEnId(CTL_HEADER_ITEM, 0, HD_ODID)}},
+    {"exporterip",    {toGenEnId(CTL_HEADER_ITEM, 0, HD_SRCADDR)}},
+    {"collectorip",   {toGenEnId(CTL_HEADER_ITEM, 0, HD_DSTADDR)}},
+    {"exporterport",  {toGenEnId(CTL_HEADER_ITEM, 0, HD_SRCPORT)}},
+    {"collectorport", {toGenEnId(CTL_HEADER_ITEM, 0, HD_DSTPORT)}},
 
-    {"inet", toGenEnId(CTL_CONST_ITEM, 60, CONST_INET)},
-    {"inet6", toGenEnId(CTL_CONST_ITEM, 60, CONST_INET6)},
-    {"ipv4", toGenEnId(CTL_CONST_ITEM, 60, CONST_INET)},
-    {"ipv6", toGenEnId(CTL_CONST_ITEM, 60, CONST_INET6)},
+    {"inet",      {toGenEnId(CTL_CONST_ITEM, 60, CONST_INET)}},
+    {"inet6",     {toGenEnId(CTL_CONST_ITEM, 60, CONST_INET6)}},
+    {"ipv4",      {toGenEnId(CTL_CONST_ITEM, 60, CONST_INET)}},
+    {"ipv6",      {toGenEnId(CTL_CONST_ITEM, 60, CONST_INET6)}},
 
-    {"proto", toEnId(0, 4)},
-
-    {"first", toEnId(0, 22)},
-
-    {"last", toEnId(0, 21)},
+    {"proto",     {toEnId(0, 4)}},
+    {"first",     {toEnId(0, 22)}},
+    {"last",      {toEnId(0, 21)}},
 
     /* for functionality reasons there are extra flags in mapping part CTL_FPAIR
      * stands for item that maps to two other elements and mapping contain
-     * offsets relative to itself where taget items lie in map*/
-    {"ip", toGenEnId(CTL_FPAIR, 1, 2)},
+     * offsets relative to itself where target items lie in map*/
+    {"ip",        {toGenEnId(CTL_FPAIR, 1, 2)}},
 
     /* CTL_V4V6IP flag allows filter to try to swtch to another equivalent field
      * when IPv4 item is not present in flow */
-    {"srcip", toGenEnId(CTL_V4V6IP, 0, 8)},
-    {"dstip", toGenEnId(CTL_V4V6IP, 0, 12)},
+    {"srcip",     {toGenEnId(CTL_V4V6IP, 0, 8)}},
+    {"dstip",     {toGenEnId(CTL_V4V6IP, 0, 12)}},
 
     //synonym of IP
-    {"net", toGenEnId(CTL_FPAIR, 1, 2)},
-    {"srcnet", toGenEnId(CTL_V4V6IP, 0, 8)},
-    {"dstnet", toGenEnId(CTL_V4V6IP, 0, 12)},
+    {"net",       {toGenEnId(CTL_FPAIR, 1, 2)}},
+    {"srcnet",    {toGenEnId(CTL_V4V6IP, 0, 8)}},
+    {"dstnet",    {toGenEnId(CTL_V4V6IP, 0, 12)}},
     //synonym of IP
-    {"host", toGenEnId(CTL_FPAIR, 1, 2)},
-    {"srchost", toGenEnId(CTL_V4V6IP, 0, 8)},
-    {"dsthost", toGenEnId(CTL_V4V6IP, 0, 12)},
+    {"host",      {toGenEnId(CTL_FPAIR, 1, 2)}},
+    {"srchost",   {toGenEnId(CTL_V4V6IP, 0, 8)}},
+    {"dsthost",   {toGenEnId(CTL_V4V6IP, 0, 12)}},
 
-    {"mask", toGenEnId(CTL_FPAIR, 1, 2)},
-    {"srcmask", toGenEnId(CTL_V4V6IP, 0, 9)},
-    {"dstmask", toGenEnId(CTL_V4V6IP, 0, 13)},
+    {"mask",      {toGenEnId(CTL_FPAIR, 1, 2)}},
+    {"srcmask",   {toGenEnId(CTL_V4V6IP, 0, 9)}},
+    {"dstmask",   {toGenEnId(CTL_V4V6IP, 0, 13)}},
 
     //Direct specific mapping for IP src/dst ips
-    {"ipv4", toGenEnId(CTL_FPAIR, 1, 2)},
-    {"srcipv4", toEnId(0, 8)},
-    {"dstipv4", toEnId(0, 12)},
-    {"ipv6", toGenEnId(CTL_FPAIR, 1, 2)},
-    {"srcipv6", toEnId(0, 27)},
-    {"dstipv6", toEnId(0, 28)},
+    {"ipv4",      {toGenEnId(CTL_FPAIR, 1, 2)}},
+    {"srcipv4",   {toEnId(0, 8)}},
+    {"dstipv4",   {toEnId(0, 12)}},
+    {"ipv6",      {toGenEnId(CTL_FPAIR, 1, 2)}},
+    {"srcipv6",   {toEnId(0, 27)}},
+    {"dstipv6",   {toEnId(0, 28)}},
 
-    {"if", toGenEnId(CTL_FPAIR, 1, 2)},
-    {"inif", toEnId(0, 10)},
-    {"outif", toEnId(0, 14)},
+    {"if",        {toGenEnId(CTL_FPAIR, 1, 2)}},
+    {"inif",      {toEnId(0, 10)}},
+    {"outif",     {toEnId(0, 14)}},
 
-    {"port", toGenEnId(CTL_FPAIR, 1, 2)},
-    {"srcport", toEnId(0, 7)},
-    {"dstport", toEnId(0, 11)},
+    {"port",      {toGenEnId(CTL_FPAIR, 1, 2)}},
+    {"srcport",   {toEnId(0, 7)}},
+    {"dstport",   {toEnId(0, 11)}},
 
-    {"icmp-type", toEnId(0, 176)},
-    {"icmp-code", toEnId(0, 177)},
+    {"icmp-type", {toEnId(0, 176)}},
+    {"icmp-code", {toEnId(0, 177)}},
 
-    {"engine-type", toEnId(0, 38)},
-    {"engine-id", toEnId(0, 39)},
+    {"engine-type", {toEnId(0, 38)}},
+    {"engine-id",   {toEnId(0, 39)}},
 //	{"sysid", toEnId(0, 177)},
 
-    {"as", toGenEnId(CTL_FPAIR, 1, 2)},
-    {"srcas", toEnId(0, 16)},
-    {"dstas", toEnId(0, 17)},
+    {"as",        {toGenEnId(CTL_FPAIR, 1, 2)}},
+    {"srcas",     {toEnId(0, 16)}},
+    {"dstas",     {toEnId(0, 17)}},
 
-    {"nextas", toEnId(0, 128)}, //maps  to BGPNEXTADJACENTAS
-    {"prevas", toEnId(0, 129)}, //similar as above
+    {"nextas",    {toEnId(0, 128)}}, //maps  to BGPNEXTADJACENTAS
+    {"prevas",    {toEnId(0, 129)}}, //similar as above
 
 
-    {"vlan", toGenEnId(CTL_FPAIR, 1, 2)},
-    {"srcvlan", toEnId(0, 58)},
-    {"dstvlan", toEnId(0, 59)},
+    {"vlan",      {toGenEnId(CTL_FPAIR, 1, 2)}},
+    {"srcvlan",   {toEnId(0, 58)}},
+    {"dstvlan",   {toEnId(0, 59)}},
     /* CTL_FLAGS Marks this to be evaluated like flag in case no operator
      * is supplied */
-    {"flags", toGenEnId(CTL_FLAGS, 0, 6)},
+    {"flags",     {toGenEnId(CTL_FLAGS, 0, 6)}},
 
-    {"nextip", toGenEnId(CTL_V4V6IP, 0, 15)},
+    {"nextip",    {toGenEnId(CTL_V4V6IP, 0, 15)}},
 
-    {"bgpnextip", toGenEnId(CTL_V4V6IP, 0, 18)},
+    {"bgpnextip", {toGenEnId(CTL_V4V6IP, 0, 18)}},
 
-    {"routerip", toEnId(0, 130)},
+    {"routerip",  {toEnId(0, 130)}},
 
-    {"mac", toGenEnId(CTL_FPAIR, 1, 2)},
-    {"inmac", toGenEnId(CTL_FPAIR, 4, 5)},
-    {"outmac", toGenEnId(CTL_FPAIR, 5, 6)},
-    {"srcmac", toGenEnId(CTL_FPAIR, 2, 4)},
-    {"dstmac", toGenEnId(CTL_FPAIR, 2, 4)},
-    {"insrcmac", toEnId(0, 56)},
-    {"indstmac", toEnId(0, 80)},
-    {"outsrcmac", toEnId(0, 81)},
-    {"outdstmac", toEnId(0, 57)},
+    {"mac",       {toGenEnId(CTL_FPAIR, 1, 2)}},
+    {"inmac",     {toGenEnId(CTL_FPAIR, 4, 5)}},
+    {"outmac",    {toGenEnId(CTL_FPAIR, 5, 6)}},
+    {"srcmac",    {toGenEnId(CTL_FPAIR, 2, 4)}},
+    {"dstmac",    {toGenEnId(CTL_FPAIR, 2, 4)}},
+    {"insrcmac",  {toEnId(0, 56)}},
+    {"indstmac",  {toEnId(0, 80)}},
+    {"outsrcmac", {toEnId(0, 81)}},
+    {"outdstmac", {toEnId(0, 57)}},
 
 
-    {"mplslabel1", toGenEnId(CTL_CALCULATED_ITEM, 70, CALC_MPLS)},
-    {"mplslabel2", toGenEnId(CTL_CALCULATED_ITEM, 71, CALC_MPLS)},
-    {"mplslabel3", toGenEnId(CTL_CALCULATED_ITEM, 72, CALC_MPLS)},
-    {"mplslabel4", toGenEnId(CTL_CALCULATED_ITEM, 73, CALC_MPLS)},
-    {"mplslabel5", toGenEnId(CTL_CALCULATED_ITEM, 74, CALC_MPLS)},
-    {"mplslabel6", toGenEnId(CTL_CALCULATED_ITEM, 75, CALC_MPLS)},
-    {"mplslabel7", toGenEnId(CTL_CALCULATED_ITEM, 76, CALC_MPLS)},
-    {"mplslabel8", toGenEnId(CTL_CALCULATED_ITEM, 77, CALC_MPLS)},
-    {"mplslabel9", toGenEnId(CTL_CALCULATED_ITEM, 78, CALC_MPLS)},
-    {"mplslabel10", toGenEnId(CTL_CALCULATED_ITEM, 79, CALC_MPLS)},
+    {"mplslabel1",  {toGenEnId(CTL_CALCULATED_ITEM, 70, CALC_MPLS)}},
+    {"mplslabel2",  {toGenEnId(CTL_CALCULATED_ITEM, 71, CALC_MPLS)}},
+    {"mplslabel3",  {toGenEnId(CTL_CALCULATED_ITEM, 72, CALC_MPLS)}},
+    {"mplslabel4",  {toGenEnId(CTL_CALCULATED_ITEM, 73, CALC_MPLS)}},
+    {"mplslabel5",  {toGenEnId(CTL_CALCULATED_ITEM, 74, CALC_MPLS)}},
+    {"mplslabel6",  {toGenEnId(CTL_CALCULATED_ITEM, 75, CALC_MPLS)}},
+    {"mplslabel7",  {toGenEnId(CTL_CALCULATED_ITEM, 76, CALC_MPLS)}},
+    {"mplslabel8",  {toGenEnId(CTL_CALCULATED_ITEM, 77, CALC_MPLS)}},
+    {"mplslabel9",  {toGenEnId(CTL_CALCULATED_ITEM, 78, CALC_MPLS)}},
+    {"mplslabel10", {toGenEnId(CTL_CALCULATED_ITEM, 79, CALC_MPLS)}},
 
-    {"mplsexp", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_MPLS_EXP)},
-    {"mplseos", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_MPLS_EOS)},
+    {"mplsexp",   {toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_MPLS_EXP)}},
+    {"mplseos",   {toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_MPLS_EOS)}},
 
-    {"packets", toEnId(0, 2)},
+    {"packets",   {toEnId(0, 2)}},
 
-    {"bytes", toEnId(0, 1)},
+    {"bytes",     {toEnId(0, 1)}},
 
-    {"flows", toEnId(0, 3)},
+    {"flows",     {toEnId(0, 3)}},
 
-    {"tos", toEnId(0, 5)},
-    {"srctos", toEnId(0, 5)},
-    {"dsttos", toEnId(0, 55)},
+    {"tos",       {toEnId(0, 5)}},
+    {"srctos",    {toEnId(0, 5)}},
+    {"dsttos",    {toEnId(0, 55)}},
 
     /* CTL_CALCULATED_ITEM marks specific elements, enumerated ie_id mappings
      * are for calculated virtual fields */
-    {"pps", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_PPS)},
+    {"pps",       {toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_PPS)}},
 
-    {"duration", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_DURATION)},
+    {"duration",  {toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_DURATION)}},
 
-    {"bps", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_BPS)},
+    {"bps",       {toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_BPS)}},
 
-    {"bpp", toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_BPP)},
+    {"bpp",       {toGenEnId(CTL_CALCULATED_ITEM, 0, CALC_BPP)}},
 
 //Not verified, for
 //	{"asa event", toEnId(0, 230)},
@@ -299,25 +297,25 @@ static struct nff_item_s nff_ipff_map[] = {
 		{"src xport", toEnId(0, 227)},
 		{"dst xport", toEnId(0, 228)},
 */
-    {"natevent", toEnId(0, 230)},
+    {"natevent",  {toEnId(0, 230)}},
 
-    {"nip", toGenEnId(CTL_FPAIR, 1, 2)},
-    {"srcnip", toGenEnId(CTL_V4V6IP, 0, 225)},
-    {"dstnip", toGenEnId(CTL_V4V6IP, 0, 226)},
+    {"nip",       {toGenEnId(CTL_FPAIR, 1, 2)}},
+    {"srcnip",    {toGenEnId(CTL_V4V6IP, 0, 225)}},
+    {"dstnip",    {toGenEnId(CTL_V4V6IP, 0, 226)}},
 
-    {"nport", toGenEnId(CTL_FPAIR, 1, 2)},
-    {"srcnport", toEnId(0, 227)},
-    {"dstnport", toEnId(0, 228)},
+    {"nport",     {toGenEnId(CTL_FPAIR, 1, 2)}},
+    {"srcnport",  {toEnId(0, 227)}},
+    {"dstnport",  {toEnId(0, 228)}},
 
-    {"vrfid", toGenEnId(CTL_FPAIR, 1, 2)},
-    {"ingressvrfid", toEnId(0, 234)},
-    {"egressvrfid", toEnId(0, 235)},
+    {"vrfid",     {toGenEnId(CTL_FPAIR, 1, 2)}},
+    {"ingressvrfid", {toEnId(0, 234)}},
+    {"egressvrfid",  {toEnId(0, 235)}},
 
     //{"tstart", toEnId(0, 152)},
     //{"tend", toEnId(0, 153)},
 
     /* Array is null terminated */
-    { NULL, 0U},
+    { NULL, {0U}},
 };
 
 
@@ -412,8 +410,8 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
             break;
         }
     }
-    if(item == NULL) {	// Polozka nenajdena
-        // potrebujem prekodovat nazov pola na en a id
+    if(item == NULL) {	// Alias not found
+        // Try to find an IPFIX field with this name
         const ipfix_element_result_t elemr = get_element_by_name(fieldstr, false);
         if (elemr.result == NULL){
             ff_set_error(filter, "\"%s\" element item not found", fieldstr);
@@ -430,7 +428,6 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
         uint32_t enterprise;
 
         set_external_ids(item, lvalue);
-
         unpackEnId(lvalue->id[0].index, &gen, &enterprise, &id);
 
         // This sets bad type when header or metadata items are selected
@@ -451,7 +448,7 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
                 lvalue->type = FF_TYPE_UNSIGNED;
                 break;
             default:
-                ff_set_error(filter, "Cannot find ipfix header element with ID '%d' "
+                ff_set_error(filter, "Cannot find IPFIX header element with ID '%d' "
                     "(not implemented)", id);
                 return FF_ERR_OTHER_MSG;
             }
@@ -514,7 +511,7 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
     case ET_UNASSIGNED:
     default:
         lvalue->type = FF_TYPE_UNSUPPORTED;
-        ff_set_error(filter, "ipfix item \"%s\" has unsupported format", fieldstr);
+        ff_set_error(filter, "IPFIX field \"%s\" has unsupported format", fieldstr);
         return FF_ERR_OTHER_MSG;
     }
     return FF_OK;
@@ -838,7 +835,6 @@ void ipx_filter_free(ipx_filter_t *filter)
 
 int ipx_filter_parse(ipx_filter_t *filter, char* filter_str)
 {
-    //vytvorenie options - lookup fc data-callback fc
     int retval = 0;
     ff_options_t *opts = NULL;
 
@@ -856,7 +852,6 @@ int ipx_filter_parse(ipx_filter_t *filter, char* filter_str)
     }
 
     ff_options_free(opts);
-
     return retval;
 }
 
