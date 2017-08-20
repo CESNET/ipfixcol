@@ -46,9 +46,7 @@
 #include <stdint.h>
 #include <libnf.h>
 
-#include "bitset.h"
 #include "configuration.h"
-#include "files_manager.h"
 #include "storage_basic.h"
 #include "storage_profiles.h"
 #include "translator.h"

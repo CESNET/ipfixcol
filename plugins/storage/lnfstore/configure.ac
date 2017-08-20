@@ -10,7 +10,7 @@ AC_CONFIG_SRCDIR([lnfstore.c])
 AC_CONFIG_HEADERS([config.h])
 
 # Initialization
-CFLAGS="-Wall -std=gnu99"
+AM_CFLAGS="-Wall -std=gnu99"
 # We need -fPIC to link to some of the libraries
 LDFLAGS="$LDFLAGS -fPIC"
 

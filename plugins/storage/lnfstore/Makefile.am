@@ -9,14 +9,12 @@ internalcfg = $(DESTDIR)$(sysconfdir)/ipfixcol/internalcfg.xml
 ipfixcol_lnfstore_output_la_LDFLAGS = -module -avoid-version -shared
 ipfixcol_lnfstore_output_la_SOURCES = \
 	idx_manager.c idx_manager.h \
-	bitset.c bitset.h \
 	configuration.c configuration.h \
 	files_manager.c files_manager.h \
 	lnfstore.c lnfstore.h \
-	profiler_events.c profiler_events.h \
-    storage_basic.c storage_basic.h \
-    storage_common.c storage_common.h \
-    storage_profiles.c storage_profiles.h \
+	storage_basic.c storage_basic.h \
+	storage_common.c storage_common.h \
+	storage_profiles.c storage_profiles.h \
 	translator.c translator.h \
 	converters.h
 

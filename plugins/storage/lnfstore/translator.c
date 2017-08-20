@@ -39,11 +39,11 @@
  *
  */
 
+#include <string.h>
+#include <inttypes.h>
 #include <ipfixcol.h>
 #include "lnfstore.h"
 #include "translator.h"
-
-#include <string.h>
 #include "converters.h"
 
 /**

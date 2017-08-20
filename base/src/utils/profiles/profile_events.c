@@ -41,15 +41,16 @@
 #include <ipfixcol.h>
 #include <string.h>
 #include <ipfixcol/profiles.h>
-#include "profiler_events.h"
+#include <ipfixcol/profile_events.h>
 #include "bitset.h"
-#include "lnfstore.h"
 
 /*
  * TODO aka notes for future development
  * - allow postponed reconfiguration. USECASE: do reconfiguration only when
  *   an old timeslot is closed and a new one is opened.
  */
+
+static const char *msg_module = "profile events";
 
 /** \brief Minimal number of expected profiles */
 #define PEVENTS_HINT_PROFILE  (8U)
@@ -1027,8 +1028,7 @@ pevents_process(pevents_t *mgr, const void **channels, void *data)
 
 		// Failed -> Reload configuration
 		if (pevents_reload(mgr, channels[i])) {
-			MSG_ERROR(msg_module, "Failed to reload profiling configuration. "
-				"A record will not be stored.");
+			MSG_ERROR(msg_module, "Failed to reload profiling configuration. ");
 			return 1;
 		}
 

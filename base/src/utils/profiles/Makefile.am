@@ -11,5 +11,7 @@ noinst_LIBRARIES = libprofiles.a
 libprofiles_a_SOURCES = \
 	Channel.cpp Channel.h \
 	profiles.cpp profiles_internal.h \
-	Profile.cpp Profile.h
+	Profile.cpp Profile.h \
+	bitset.c bitset.h \
+	profile_events.c
 
