@@ -165,87 +165,97 @@ const char *Translator::formatTimestamp(uint64_t tstamp, t_units units, struct j
 /**
  * \brief Conversion of unsigned int
  */
-const char *Translator::toUnsigned(uint16_t *length, uint8_t *data_record,
+const char *Translator::toUnsigned(uint16_t length, uint16_t *ret_len, uint8_t *data_record,
 	uint16_t offset, const ipfix_element_t * element, struct json_conf * config)
 {
-	if(*length == BYTE1) {
+	// Calculate the length of returned string here to avoid unnecessary strlen later
+	const char *ret = NULL;
+	*ret_len = 0;
+
+	if(length == BYTE1) {
 		// 1 byte
 		if(element->en == 0 && element->id == 6 && config->tcpFlags) {
 			// Formated TCP flags
-			return formatFlags8(read8(data_record + offset));
+			ret = formatFlags8(read8(data_record + offset));
+			*ret_len = 8;
+			return ret;
 		} else if (element->en == 0 && element->id == 4 && !config->protocol) {
 			// Formated protocol identification (TCP, UDP, ICMP,...)
-			return (formatProtocol(read8(data_record + offset)));
+			ret =  (formatProtocol(read8(data_record + offset)));
+			*ret_len = strlen(ret);
+			return ret;
 		} else {
 			// Other elements
-// 			snprintf(buffer, BUFF_SIZE, "%" PRIu8, read8(data_record + offset));
-			u32toa_branchlut2(read8(data_record + offset), buffer);
+			ret = u32toa_branchlut2(read8(data_record + offset), buffer);
 		}
-	} else if(*length == BYTE2) {
+	} else if(length == BYTE2) {
 		// 2 bytes
 		if (element->en == 0 && element->id == 6 && config->tcpFlags) {
 			// Formated TCP flags
-			return formatFlags16(read16(data_record + offset));
+			ret = formatFlags16(read16(data_record + offset));
+			*ret_len = 8;
+			return ret;
 		} else {
 			// Other elements
-// 			snprintf(buffer, BUFF_SIZE, "%" PRIu16, ntohs(read16(data_record + offset)));
-			u32toa_branchlut2(ntohs(read16(data_record + offset)), buffer);
+			ret = u32toa_branchlut2(ntohs(read16(data_record + offset)), buffer);
 		}
-	} else if(*length == BYTE4) {
+	} else if(length == BYTE4) {
 		// 4 bytes
-// 		snprintf(buffer, BUFF_SIZE, "%" PRIu32, ntohl(read32(data_record + offset)));
-		u32toa_branchlut2(ntohl(read32(data_record + offset)), buffer);
-	} else if(*length == BYTE8) {
+		ret = u32toa_branchlut2(ntohl(read32(data_record + offset)), buffer);
+	} else if(length == BYTE8) {
 		// 8 bytes
-// 		snprintf(buffer, BUFF_SIZE, "%" PRIu64, be64toh(read64(data_record + offset)));
- 		u64toa_branchlut2(be64toh(read64(data_record + offset)), buffer);
+ 		ret = u64toa_branchlut2(be64toh(read64(data_record + offset)), buffer);
 	} else {
 		// Other sizes
-		snprintf(buffer, BUFF_SIZE, "%s", "\"unknown\"");
+		*ret_len = snprintf(buffer, BUFF_SIZE, "%s", "\"unknown\"");
+		return buffer;
 	}
 
+	*ret_len = ret - buffer;
 	return buffer;
 }
 
 /**
  * \brief Conversion of signed int
  */
-const char *Translator::toSigned(uint16_t *length, uint8_t *data_record, uint16_t offset)
+const char *Translator::toSigned(uint16_t length, uint16_t *ret_len, uint8_t *data_record, uint16_t offset)
 {
-	if(*length == BYTE1) {
+	// Calculate the length of returned string here to avoid unnecessary strlen later
+	const char *ret = NULL;
+	*ret_len = 0;
+
+	if(length == BYTE1) {
 		// 1 byte
-// 		snprintf(buffer, BUFF_SIZE, "%" PRId8, (int8_t) read8(data_record + offset));
-		i32toa_branchlut2(read8(data_record + offset), buffer);
-	} else if(*length == BYTE2) {
+		ret = i32toa_branchlut2(read8(data_record + offset), buffer);
+	} else if(length == BYTE2) {
 		// 2 bytes
-// 		snprintf(buffer, BUFF_SIZE, "%" PRId16, (int16_t) ntohs(read16(data_record + offset)));
-		i32toa_branchlut2(ntohs(read16(data_record + offset)), buffer);
-	} else if(*length == BYTE4) {
+		ret = i32toa_branchlut2(ntohs(read16(data_record + offset)), buffer);
+	} else if(length == BYTE4) {
 		// 4 bytes
-// 		snprintf(buffer, BUFF_SIZE, "%" PRId32, (int32_t) ntohl(read32(data_record + offset)));
-		i32toa_branchlut2(ntohl(read32(data_record + offset)), buffer);
-	} else if(*length == BYTE8) {
+		ret = i32toa_branchlut2(ntohl(read32(data_record + offset)), buffer);
+	} else if(length == BYTE8) {
 		// 8 bytes
-// 		snprintf(buffer, BUFF_SIZE, "%" PRId64, (int64_t) be64toh(read64(data_record + offset)));
-		i64toa_branchlut2(be64toh(read64(data_record + offset)), buffer);
+		ret = i64toa_branchlut2(be64toh(read64(data_record + offset)), buffer);
 	} else {
-		snprintf(buffer, BUFF_SIZE, "\"unknown\"");
+		*ret_len = snprintf(buffer, BUFF_SIZE, "\"unknown\"");
+		return buffer;
 	}
 
+	*ret_len = ret - buffer;
 	return buffer;
 }
 
 /**
  * \brief Conversion of float
  */
-const char *Translator::toFloat(uint16_t *length, uint8_t *data_record, uint16_t offset)
+const char *Translator::toFloat(uint16_t length, uint16_t *ret_len, uint8_t *data_record, uint16_t offset)
 {
-	if(*length == BYTE4)
-		snprintf(buffer, BUFF_SIZE, "%f", (float) ntohl(read32(data_record + offset)));
-	else if(*length == BYTE8)
-		snprintf(buffer, BUFF_SIZE, "%lf", (double) be64toh(read64(data_record + offset)));
+	if(length == BYTE4)
+		*ret_len = snprintf(buffer, BUFF_SIZE, "%f", (float) ntohl(read32(data_record + offset)));
+	else if(length == BYTE8)
+		*ret_len = snprintf(buffer, BUFF_SIZE, "%lf", (double) be64toh(read64(data_record + offset)));
 	else
-		snprintf(buffer, BUFF_SIZE, "\"unknown\"");
+		*ret_len = snprintf(buffer, BUFF_SIZE, "\"unknown\"");
 
 	return buffer;
 }

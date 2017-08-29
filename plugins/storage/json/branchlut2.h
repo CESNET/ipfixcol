@@ -64,36 +64,41 @@ const char gDigitsLut[200] = {
         MIDDLE8(t16 / 100000000); MIDDLE8(t16 % 100000000); \
     } while(0)
 
-static inline void u32toa_branchlut2(uint32_t x, char* p) {
-    
+static inline char *
+u32toa_branchlut2(uint32_t x, char* p)
+{
     if(x < 100000000) BEGIN8(x);
     else { BEGIN2(x / 100000000); MIDDLE8(x % 100000000); }
     *p = 0;
-    
+    return p;
 }
-static inline void i32toa_branchlut2(int32_t x, char* p) {
-    
+
+static inline char *
+i32toa_branchlut2(int32_t x, char* p)
+{
     uint64_t t;
     if(x >= 0) t = x;
     else *p++ = '-', t = -uint32_t(x);
-    u32toa_branchlut2(t, p);
-    
+    return u32toa_branchlut2(t, p);
 }
-static inline void u64toa_branchlut2(uint64_t x, char* p) {
-    
+
+static inline char *
+u64toa_branchlut2(uint64_t x, char* p)
+{
     if(x < 100000000) BEGIN8(x);
     else if(x < 10000000000000000) { BEGIN8(x / 100000000); MIDDLE8(x % 100000000); }
     else { BEGIN4(x / 10000000000000000); MIDDLE16(x % 10000000000000000); }
     *p = 0;
-    
+	return p;
 }
-static inline void i64toa_branchlut2(int64_t x, char* p) {
-    
+
+static inline char * 
+i64toa_branchlut2(int64_t x, char* p)
+{
     uint64_t t;
     if(x >= 0) t = x;
     else *p++ = '-', t = -uint64_t(x);
-    u64toa_branchlut2(t, p);
-    
+    return u64toa_branchlut2(t, p);
 }
 
 #endif /* BRANCHLUT_H */
