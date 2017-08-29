@@ -41,7 +41,7 @@
 #include <string.h>
 #include <ipfixcol/profiles.h>
 #include <ipfixcol/profile_events.h>
-#include <limits.h>
+#include <linux/limits.h>
 #include <stdint.h>
 
 #include "storage_profiles.h"
