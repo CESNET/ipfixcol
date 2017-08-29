@@ -7,7 +7,10 @@ internalcfg = $(DESTDIR)$(sysconfdir)/ipfixcol/internalcfg.xml
 
 plugins_LTLIBRARIES = ipfixcol-profilestats-inter.la
 ipfixcol_profilestats_inter_la_LDFLAGS = -module -avoid-version -shared
-ipfixcol_profilestats_inter_la_SOURCES = profilestats.cpp stats.h
+ipfixcol_profilestats_inter_la_SOURCES = \
+    profilestats.cpp profilestats.h \
+    configuration.cpp configuration.h \
+    RRD.cpp RRD.h
 
 if HAVE_DOC
 MANSRC = ipfixcol-profilestats-inter.dbk
@@ -39,7 +42,7 @@ rpm: dist $(rpmspec)
 	$(RPMBUILD) -ba $(rpmspec) \
 		--define "_topdir `pwd`/$(RPMDIR)";
 
-clean-local: 
+clean-local:
 	rm -rf RPMBUILD
 
 install-data-hook:

@@ -1,10 +1,11 @@
 /**
  * \file profilestats.cpp
- * \author Michal Kozubik <kozubik@cesnet.cz>
  * \author Lukas Hutak <lukas.hutak@cesnet.cz>
- * \brief intermediate plugin for IPFIXcol
- *
- * Copyright (C) 2015 CESNET, z.s.p.o.
+ * \brief Intermediate plugin for RRD statistics (source file)
+ * \note Inspired by the previous implementation by Michal Kozubik
+ */
+/*
+ * Copyright (C) 2015-2017 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,7 +25,7 @@
  * License (GPL) version 2 or later, in which case the provisions
  * of the GPL apply INSTEAD OF those given above.
  *
- * This software is provided ``as is, and any express or implied
+ * This software is provided ``as is``, and any express or implied
  * warranties, including, but not limited to, the implied warranties of
  * merchantability and fitness for a particular purpose are disclaimed.
  * In no event shall the company or contributors be liable for any
@@ -38,187 +39,551 @@
  *
  */
 
+#include <exception>
+#include <algorithm>
+#include <vector>
+#include <memory>
+#include <cstring>
+#include "configuration.h"
+#include "profilestats.h"
+#include "RRD.h"
+
 extern "C" {
 #include <ipfixcol.h>
 #include <ipfixcol/profiles.h>
+#include <ipfixcol/profile_events.h>
 
 // API version constant
 IPFIXCOL_API_VERSION
 }
 
-#include <rrd.h>
-#include <sys/stat.h>
-#include <libxml2/libxml/xpath.h>
-#include <libxml2/libxml/parser.h>
-#include <libxml2/libxml/tree.h>
+#define PROFILE_PATH_FIX(var) \
+	if ((var) != nullptr && (var)[0] == '\0') { \
+		(var) = "live"; \
+    }
 
-#include "stats.h"
-
-#include <iostream>
-#include <sstream>
-#include <vector>
-#include <stdexcept>
 
 // Identifier for verbose macros
 static const char *msg_module = "profilestats";
 
-// Some auxiliary functions for extracting data of exact length
-#define read8(ptr) (*((uint8_t *) (ptr)))
-#define read16(ptr) (*((uint16_t *) (ptr)))
-#define read32(ptr) (*((uint32_t *) (ptr)))
-#define read64(ptr) (*((uint64_t *) (ptr)))
+/** IPFIX Information Element of bytes       */
+constexpr uint16_t IPFIX_IE_BYTES   = 1;
+/** IPFIX Information Element of packets     */
+constexpr uint16_t IPFIX_IE_PACKETS = 2;
+/** IPFIX Information Element of protocol    */
+constexpr uint16_t IPFIX_IE_PROTO   = 4;
 
 /**
- * \brief Maximum update interval of RRD (in seconds)
+ * \brief Plugin instance
  */
-#define UPDATE_INT_MAX (3600)
-
-/**
- * \brief Minimum update interval of RRD (in seconds)
- */
-#define UPDATE_INT_MIN (5)
-
-/**
- * \brief Type of RRD data source
- */
-enum RRD_DATA_SOURCE_TYPE {
-	RRD_DST_GAUGE = 0,
-	RRD_DST_COUNTER,
-	RRD_DST_DCOUNTER,
-	RRD_DST_DERIVE,
-	RRD_DST_DDERIVE,
-	RRD_DST_ABSOLUTE,
-	RRD_DST_COMPUTE
-};
-
-// String alternative of the enum above
-static const char *rrd_dst_str[] = {
-	"GAUGE",
-	"COUNTER",
-	"DCOUNTER",
-	"DERIVE",
-	"DDERIVE",
-	"ABSOLUTE",
-	"COMPUTE"
-};
-
-/**
- * \brief Definition of a RRD source
- */
-struct rrd_field {
-	const char           *name; /**< Name of the source      */
-	RRD_DATA_SOURCE_TYPE  type; /**< Type of the source      */
-};
-
-/**
- * \brief Names and types of RRD Data sources
- */
-const static std::vector<rrd_field> templ_fields = {
-	// Flows
-	{"flows",            RRD_DST_ABSOLUTE},
-	{"flows_tcp",        RRD_DST_ABSOLUTE},
-	{"flows_udp",        RRD_DST_ABSOLUTE},
-	{"flows_icmp",       RRD_DST_ABSOLUTE},
-	{"flows_other",      RRD_DST_ABSOLUTE},
-	// Packets
-	{"packets",          RRD_DST_ABSOLUTE},
-	{"packets_tcp",      RRD_DST_ABSOLUTE},
-	{"packets_udp",      RRD_DST_ABSOLUTE},
-	{"packets_icmp",     RRD_DST_ABSOLUTE},
-	{"packets_other",    RRD_DST_ABSOLUTE},
-	// Traffic
-	{"traffic",          RRD_DST_ABSOLUTE},
-	{"traffic_tcp",      RRD_DST_ABSOLUTE},
-	{"traffic_udp",      RRD_DST_ABSOLUTE},
-	{"traffic_icmp",     RRD_DST_ABSOLUTE},
-	{"traffic_other",    RRD_DST_ABSOLUTE},
-	// Others
-	{"packets_max",      RRD_DST_GAUGE},
-	{"packets_avg",      RRD_DST_GAUGE},
-	{"traffic_max",      RRD_DST_GAUGE},
-	{"traffic_avg",      RRD_DST_GAUGE}
-};
-
-/**
- * Statistic fields
- */
-struct stats_field {
-	uint64_t sum[PROTOCOLS_PER_GROUP];  /**< Summary fields                 */
-	uint64_t max;                       /**< Max value                      */
-	uint64_t avg;                       /**< Average value                  */
-};
-
-/**
- * Stats data per profile/channel
- */
-struct stats_data {
-	uint64_t    last_rrd_update;  /**< Last RRD update (unix timestamp)     */
-	uint32_t    last_update_id;   /**< Identification of the last update    */
-	std::string file;             /**< Path to RRD file                     */
-	stats_field fields[GROUPS];   /**< Stats fields                         */
-};
-
-/**
- * Plugin configuration
- */
-struct plugin_conf {
-	/** Internal process configuration                 */
+struct plugin_data {
+	/** Internal process configuration   */
 	void *ip_config;
-	/** Update interval (in seconds)                   */
-	uint32_t interval;
-	/**< RRD template for database update              */
-	std::string templ;
-	/**< Stats data for a profile                      */
-	std::map<std::string, stats_data*> stats;
 
-	/** Sequence number for update identification      */
-	uint32_t update_id;
+	/** Parsed parameters                */
+	plugin_config *cfg;
+	/** Event manager of profiles        */
+	pevents_t *events;
+	/** Start of the current interval    */
+	time_t interval_start;
+
+    // Constructor
+    plugin_data() {
+        ip_config = nullptr;
+        cfg = nullptr;
+        events = nullptr;
+        interval_start = 0;
+    }
+
+    // Destructor
+	~plugin_data() {
+		if (cfg != nullptr) {
+			delete(cfg);
+		}
+		if (events != nullptr) {
+			pevents_destroy(events);
+		}
+	}
+
+	// Disable copy constructors
+	plugin_data(const plugin_data &) = delete;
+	plugin_data &operator=(const plugin_data &) = delete;
 };
 
 /**
- * \brief Process startup configuration
+ * \brief Get a value of an unsigned integer (stored in big endian order a.k.a.
+ *   network byte order)
  *
- * \param[in] conf plugin configuration structure
- * \param[in] params configuration xml data
+ * The \p value is read from a data \p field and converted from
+ * the appropriate byte order to host byte order.
+ * \param[in]  field  Pointer to the data field (in "network byte order")
+ * \param[in]  size   Size of the data field (min: 1 byte, max: 8 bytes)
+ * \param[out] value  Pointer to a variable for the result
+ * \return On success returns 0 and fills the \p value.
+ *   Otherwise (usually the incorrect \p size of the field) returns
+ *   a non-zero value and the \p value is not filled.
  */
-void process_startup_xml(plugin_conf *conf, char *params)
-{	
-	xmlChar *aux_char;
-	
-	// Load XML configuration
-	xmlDoc *doc = xmlParseDoc(BAD_CAST params);
-	if (!doc) {
-		throw std::invalid_argument("Cannot parse config xml");
-	}
-	
-	xmlNode *root = xmlDocGetRootElement(doc);
-	if (!root) {
-		throw std::invalid_argument("Cannot get document root element!");
-	}
-	
-	// Set default interval
-	conf->interval = DEFAULT_INTERVAL;
+static inline int
+flow_stat_convert_field(const void *field, size_t size, uint64_t *value)
+{
+	switch (size) {
+	case 8:
+		*value = be64toh(*(const uint64_t *) field);
+		return 0;
 
-	// Iterate throught all elements
-	for (xmlNode *node = root->children; node; node = node->next) {
-		if (node->type != XML_ELEMENT_NODE) {
-			continue;
-		}
+	case 4:
+		*value = ntohl(*(const uint32_t *) field);
+		return 0;
 
-		if (!xmlStrcmp(node->name, (const xmlChar *) "interval")) {
-			// Statistics interval
-			aux_char = xmlNodeListGetString(doc, node->children, 1);
-			conf->interval = atoi((const char *) aux_char);
-			xmlFree(aux_char);
-		}
+	case 2:
+		*value = ntohs(*(const uint16_t *) field);
+		return 0;
+
+	case 1:
+		*value = *(const uint8_t *) field;
+		return 0;
+
+	default:
+		// Other sizes (3,5,6,7)
+		break;
 	}
 
-	// Free resources
-	xmlFreeDoc(doc);
-
-	if (conf->interval < UPDATE_INT_MIN || conf->interval > UPDATE_INT_MAX) {
-		throw std::invalid_argument("Interval is out of range (5 .. 3600)");
+	if (size == 0 || size > 8) {
+		return 1;
 	}
+
+	uint64_t new_value = 0;
+	memcpy(&(((uint8_t *) &new_value)[8U - size]), field, size);
+
+	*value = be64toh(new_value);
+	return 0;
+}
+
+/**
+ * \brief Find an IANA IPFIX field in a record and convert it to uint64_t
+ * \param[in]  rec    IPFIX record
+ * \param[in]  id     Identification of IPFIX Information Element
+ * \param[out] result Converted value
+ * \return On success returns 0 and \p result is filled.
+ *   Otherwise (usually the field is not present) returns a non-zero value.
+ */
+int
+flow_stat_get_value(struct ipfix_record *rec, uint16_t id, uint64_t &result)
+{
+	uint8_t *rec_data = static_cast<uint8_t *>(rec->record);
+	int field_size;
+	uint8_t *field_data;
+
+	// Locate the field in the record
+	field_data = data_record_get_field(rec_data, rec->templ, 0, id,
+		&field_size);
+	if (!field_data) {
+		return 1;
+	}
+
+	if (flow_stat_convert_field(field_data, size_t(field_size), &result) != 0) {
+		return 1;
+	}
+
+	return 0;
+}
+
+/**
+ * \brief Gather flow fields for update of RRD statistics
+ * \param[in]  rec   IPFIX record
+ * \param[out] stats Flow fields
+ * \return On success returns 0. Otherwise (at least one field not found),
+ *   returns a non-zero value.
+ */
+int
+flow_stat_prepare(struct ipfix_record *rec, struct flow_stat &stats)
+{
+	if (flow_stat_get_value(rec, IPFIX_IE_PROTO, stats.proto)) {
+		return 1;
+	}
+
+	if (flow_stat_get_value(rec, IPFIX_IE_BYTES, stats.bytes)) {
+		return 1;
+	}
+
+	if (flow_stat_get_value(rec, IPFIX_IE_PACKETS, stats.packets)) {
+		return 1;
+	}
+
+	return 0;
+}
+
+/**
+ * \brief Create a new channel
+ *
+ * Generate a new file name of the channel based on profiling configuration
+ * and try to create appropriate RRD database.
+ * \param[in] ctx Event context (local and global data)
+ * \return Pointer to newly created RRD wrapper instance
+ */
+static void *
+channel_create_cb(struct pevents_ctx *ctx)
+{
+	plugin_data *instance = static_cast<plugin_data *>(ctx->user.global);
+	void *channel_ptr = ctx->ptr.channel;
+	void *profile_ptr = channel_get_profile(channel_ptr);
+	const char *channel_path = channel_get_path(channel_ptr);
+	const char *channel_name = channel_get_name(channel_ptr);
+	MSG_DEBUG(msg_module, "Creating channel '%s%s'...", channel_path,
+		channel_name);
+
+	RRD_wrapper *rrd = nullptr;
+
+	try {
+		std::string file;
+		file += profile_get_directory(profile_ptr);
+		file += "/rrd/channels/";
+		file += channel_name;
+		file += ".rrd";
+
+		rrd = new RRD_wrapper(instance->cfg->base_dir, file, instance->cfg->interval);
+		// Note: If create operation fails, we will still have a wrapper
+		rrd->file_create(instance->interval_start, false);
+
+	} catch (std::exception &ex) {
+		MSG_WARNING(msg_module, "Failed to create channel '%s%s': %s",
+			channel_path, channel_name, ex.what());
+		return rrd;
+	} catch (...) {
+		MSG_WARNING(msg_module, "Failed to create channel '%s%s': %s",
+			channel_path, channel_name, "Unknown error has occurred");
+		return rrd;
+	}
+
+	MSG_INFO(msg_module, "Channel '%s%s' has been successfully created.",
+		channel_path, channel_name);
+	return rrd;
+}
+
+/**
+ * \brief Destroy a channel
+ *
+ * First, flush remaining statistics to the RRD file and then delete RRD
+ * wrapper instance. The RRD file will be preserved.
+ * \param[in,out] ctx Event context (local and global data)
+ */
+static void
+channel_delete_cb(struct pevents_ctx *ctx)
+{
+	plugin_data *instance = static_cast<plugin_data *>(ctx->user.global);
+	RRD_wrapper *rrd = static_cast<RRD_wrapper *>(ctx->user.local);
+	void *channel_ptr = ctx->ptr.channel;
+	const char *channel_path = channel_get_path(channel_ptr);
+	const char *channel_name = channel_get_name(channel_ptr);
+	MSG_DEBUG(msg_module, "Deleting channel '%s%s'...", channel_path,
+		channel_name);
+
+	if (!rrd) {
+		// Nothing to delete
+		return;
+	}
+
+	try {
+		// Flush up to now statistics and delete the channel
+		std::unique_ptr<RRD_wrapper> wrapper(rrd);
+		wrapper->file_update(instance->interval_start);
+	} catch (std::exception &ex) {
+		MSG_WARNING(msg_module, "Failed to properly delete channel '%s%s': %s",
+			channel_path, channel_name, ex.what());
+		return;
+	} catch (...) {
+		MSG_WARNING(msg_module, "Failed to properly delete channel '%s%s': %s",
+			channel_path, channel_name, "Unknown error has occurred");
+		return;
+	}
+
+	MSG_INFO(msg_module, "Channel '%s%s' has been successfully closed.",
+		channel_path, channel_name);
+}
+
+/**
+ * \brief Update a channel configuration
+ *
+ * Update is sensitive only to change of storage directory. Other changes are
+ * ignored. If the storage directory is changed, old RRD wrapped is destroyed
+ * and replaces with the new one.
+ * \param[in,out] ctx Event context (local and global data)
+ * \param[in] flags Detected changes in configuration
+ */
+static void
+channel_update_cb(struct pevents_ctx *ctx, uint16_t flags)
+{
+	if (!(flags & PEVENTS_CHANGE_DIR)) {
+		// Directory is still the same i.e. no changes
+		return;
+	}
+
+	void *channel_ptr = ctx->ptr.channel;
+	const char *channel_path = channel_get_path(channel_ptr);
+	const char *channel_name = channel_get_name(channel_ptr);
+	MSG_DEBUG(msg_module, "Updating channel '%s%s'...", channel_path,
+		channel_name);
+
+
+	// Delete the previous instance of the wrapper
+	channel_delete_cb(ctx);
+
+	// Create new one
+	RRD_wrapper *new_wrapper;
+	new_wrapper = static_cast<RRD_wrapper *>(channel_create_cb(ctx));
+	ctx->user.local = new_wrapper;
+	if (!new_wrapper) {
+		MSG_WARNING(msg_module, "Update process of channel '%s%s' failed.",
+			channel_path, channel_name);
+		return;
+	}
+
+	MSG_INFO(msg_module, "Channel '%s%s' has been successfully updated.",
+		channel_path, channel_name);
+}
+
+/**
+ * \brief Add a flow
+ *
+ * Statistics will be stored into an RRD wrapper that aggregates them and later
+ * will be flushed to the appropriate RRD file when channel_flush_cb() is
+ * called. In other words, by calling this function the database is not
+ * immediately updated, only statistics are cached.
+ * \param[in,out] ctx  Event context (local and global data)
+ * \param[in]     data Pointer to parsed flow features
+ */
+static void
+channel_data_cb(struct pevents_ctx *ctx, void *data)
+{
+	struct flow_stat *stat = static_cast<struct flow_stat *>(data);
+	RRD_wrapper *rrd = static_cast<RRD_wrapper *>(ctx->user.local);
+	if (!rrd) {
+		return;
+	}
+
+	rrd->flow_add(*stat);
+}
+
+/**
+ * \brief Flush aggregated statistics to an RRD
+ *
+ * All statistics aggregated since last flush will be stored to the database
+ * and the local statistics will be reset to zeros.
+ * \param[in,out] ctx Event context (local and global data)
+ */
+static void
+channel_flush_cb(struct pevents_ctx *ctx)
+{
+	plugin_data *instance = static_cast<plugin_data *>(ctx->user.global);
+	RRD_wrapper *rrd = static_cast<RRD_wrapper *>(ctx->user.local);
+	if (!rrd) {
+		return;
+	}
+
+	void *channel_ptr = ctx->ptr.channel;
+	const char *channel_path = channel_get_path(channel_ptr);
+	const char *channel_name = channel_get_name(channel_ptr);
+	MSG_DEBUG(msg_module, "Updating RRD of channel '%s%s'...", channel_path,
+		channel_name);
+
+	try {
+		rrd->file_update(instance->interval_start);
+	} catch (std::exception &ex) {
+		MSG_WARNING(msg_module, "Failed to update RRD of channel '%s%s': %s",
+			channel_path, channel_name, ex.what());
+		return;
+	} catch (...) {
+		MSG_WARNING(msg_module, "Failed to update RRD of channel '%s%s': %s",
+			channel_path, channel_name, "Unknown error has occurred");
+		return;
+	}
+
+	MSG_INFO(msg_module, "RRD of channel '%s%s' has been successfully updated.",
+		channel_path, channel_name);
+}
+
+/**
+ * \brief Create a new profile
+ *
+ * Generate a new file name of the profile based on profiling configuration
+ * and try to create appropriate RRD database.
+ * \param[in] ctx Event context (local and global data)
+ * \return Pointer to newly created RRD wrapper instance
+ */
+static void *
+profile_create_cb(struct pevents_ctx *ctx)
+{
+	plugin_data *instance = static_cast<plugin_data *>(ctx->user.global);
+	void *profile_ptr = ctx->ptr.profile;
+	const char *profile_path = profile_get_path(profile_ptr);
+	PROFILE_PATH_FIX(profile_path);
+	MSG_DEBUG(msg_module, "Creating profile '%s'...", profile_path);
+
+	RRD_wrapper *rrd = nullptr;
+
+	try {
+		std::string file;
+		file += profile_get_directory(profile_ptr);
+		file += "/rrd/";
+		file += profile_get_name(profile_ptr);
+		file += ".rrd";
+
+		rrd = new RRD_wrapper(instance->cfg->base_dir, file, instance->cfg->interval);
+		// Note: If create operation fails, we will still have a wrapper
+		rrd->file_create(instance->interval_start, false);
+
+	} catch (std::exception &ex) {
+		MSG_WARNING(msg_module, "Failed to create profile '%s': %s",
+			profile_path, ex.what());
+		return rrd;
+	} catch (...) {
+		MSG_WARNING(msg_module, "Failed to create profile '%s': %s",
+			profile_path, "Unknown error has occurred");
+		return rrd;
+	}
+
+	MSG_INFO(msg_module, "Profile '%s' has been successfully created.",
+		profile_path);
+	return rrd;
+}
+
+/**
+ * \brief Destroy a profile
+ *
+ * First, flush remaining statistics to the RRD file and then delete RRD
+ * wrapper instance. The RRD file will be preserved.
+ * \param[in,out] ctx Event context (local and global data)
+ */
+static void
+profile_delete_cb(struct pevents_ctx *ctx)
+{
+	plugin_data *instance = static_cast<plugin_data *>(ctx->user.global);
+	RRD_wrapper *rrd = static_cast<RRD_wrapper *>(ctx->user.local);
+	void *profile_ptr = ctx->ptr.profile;
+	const char *profile_path = profile_get_path(profile_ptr);
+	PROFILE_PATH_FIX(profile_path);
+	MSG_DEBUG(msg_module, "Deleting profile '%s'...", profile_path);
+
+	if (!rrd) {
+		// Nothing to delete
+		return;
+	}
+
+	try {
+		// Flush up to now statistics and delete the channel
+		std::unique_ptr<RRD_wrapper> wrapper(rrd);
+		wrapper->file_update(instance->interval_start);
+	} catch (std::exception &ex) {
+		MSG_WARNING(msg_module, "Failed to properly delete profile '%s': %s",
+			profile_path, ex.what());
+		return;
+	} catch (...) {
+		MSG_WARNING(msg_module, "Failed to properly delete profile '%s': %s",
+			profile_path, "Unknown error has occurred");
+		return;
+	}
+
+	MSG_INFO(msg_module, "Profile '%s' has been successfully closed.",
+		profile_path);
+}
+
+/**
+ * \brief Update a profile configuration
+ *
+ * Update is sensitive only to change of storage directory. Other changes are
+ * ignored. If the storage directory is changed, old RRD wrapped is destroyed
+ * and replaces with the new one.
+ * \param[in,out] ctx Event context (local and global data)
+ * \param[in] flags Detected changes in configuration
+ */
+static void
+profile_update_cb(struct pevents_ctx *ctx, uint16_t flags)
+{
+	if (!(flags & PEVENTS_CHANGE_DIR)) {
+		// Directory is still the same i.e. no changes
+		return;
+	}
+
+	void *profile_ptr = ctx->ptr.profile;
+	const char *profile_path = profile_get_path(profile_ptr);
+	PROFILE_PATH_FIX(profile_path);
+	MSG_DEBUG(msg_module, "Updating profile '%s'...", profile_path);
+
+
+	// Delete the previous instance of the wrapper
+	profile_delete_cb(ctx);
+
+	// Create new one
+	RRD_wrapper *new_wrapper;
+	new_wrapper = static_cast<RRD_wrapper *>(profile_create_cb(ctx));
+	ctx->user.local = new_wrapper;
+	if (!new_wrapper) {
+		MSG_WARNING(msg_module, "Update process of profile '%s' failed.",
+			profile_path);
+		return;
+	}
+
+	MSG_INFO(msg_module, "Profile '%s' has been successfully updated.",
+		profile_path);
+}
+
+/**
+ * \brief Add a flow
+ *
+ * Statistics will be stored into an RRD wrapper that aggregates them and later
+ * will be flushed to the appropriate RRD file when profile_flush_cb() is
+ * called. In other words, by calling this function the database is not
+ * immediately updated, only statistics are cached.
+ * \param[in,out] ctx  Event context (local and global data)
+ * \param[in]     data Pointer to parsed flow features
+ */
+static void
+profile_data_cb(struct pevents_ctx *ctx, void *data)
+{
+	struct flow_stat *stat = static_cast<struct flow_stat *>(data);
+	RRD_wrapper *rrd = static_cast<RRD_wrapper *>(ctx->user.local);
+	if (!rrd) {
+		return;
+	}
+
+	rrd->flow_add(*stat);
+}
+
+/**
+ * \brief Flush aggregated statistics to an RRD
+ *
+ * All statistics aggregated since last flush will be stored to the database
+ * and the local statistics will be reset to zeros.
+ * \param[in,out] ctx Event context (local and global data)
+ */
+static void
+profile_flush_cb(struct pevents_ctx *ctx)
+{
+	plugin_data *instance = static_cast<plugin_data *>(ctx->user.global);
+	RRD_wrapper *rrd = static_cast<RRD_wrapper *>(ctx->user.local);
+	if (!rrd) {
+		return;
+	}
+
+	void *profile_ptr = ctx->ptr.profile;
+	const char *profile_path = profile_get_path(profile_ptr);
+	PROFILE_PATH_FIX(profile_path);
+	MSG_DEBUG(msg_module, "Updating RRD of profile '%s'...", profile_path);
+
+	try {
+		rrd->file_update(instance->interval_start);
+	} catch (std::exception &ex) {
+		MSG_WARNING(msg_module, "Failed to update RRD of profile '%s': %s",
+			profile_path, ex.what());
+		return;
+	} catch (...) {
+		MSG_WARNING(msg_module, "Failed to update RRD of profile '%s': %s",
+			profile_path, "Unknown error has occurred");
+		return;
+	}
+
+	MSG_INFO(msg_module, "RRD of profile '%s' has been successfully updated.",
+		profile_path);
 }
 
 /**
@@ -231,427 +596,62 @@ void process_startup_xml(plugin_conf *conf, char *params)
  * \param[out] config      Config storage
  * \return 0 on success
  */
-int intermediate_init(char* params, void* ip_config, uint32_t ip_id,
+int
+intermediate_init(char* params, void* ip_config, uint32_t ip_id,
 	ipfix_template_mgr* template_mgr, void** config)
-{	
+{
 	// Suppress compiler warnings
-	(void) ip_id; (void) template_mgr;
-	
+	(void) ip_id;
+	(void) template_mgr;
+
 	if (!params) {
-		MSG_ERROR(msg_module, "Missing plugin configuration");
+		MSG_ERROR(msg_module, "Missing plugin configuration.", NULL);
 		return 1;
 	}
-	
+
 	try {
-		// Create configuration
-		plugin_conf *conf = new plugin_conf;
-		conf->update_id = 0;
-		
-		// Process params
-		process_startup_xml(conf, params);
+		std::unique_ptr<struct plugin_data> data(new struct plugin_data());
+		// Parse parameters
+		data.get()->cfg = new plugin_config(params);
 
-		// Create template
-		conf->templ = "";
-		for (uint16_t i = 0; i < templ_fields.size(); ++i) {
-			if (i > 0) {
-				conf->templ += ":";
-			}
+		// Create a profile event manager
+		struct pevent_cb_set channel_cb;
+		memset(&channel_cb, 0, sizeof(channel_cb));
+		channel_cb.on_create = channel_create_cb;
+		channel_cb.on_delete = channel_delete_cb;
+		channel_cb.on_update = channel_update_cb;
+		channel_cb.on_data =   channel_data_cb;
 
-			conf->templ += templ_fields[i].name;
+		struct pevent_cb_set profile_cb;
+		memset(&profile_cb, 0, sizeof(profile_cb));
+		profile_cb.on_create = profile_create_cb;
+		profile_cb.on_delete = profile_delete_cb;
+		profile_cb.on_update = profile_update_cb;
+		profile_cb.on_data =   profile_data_cb;
+
+		data.get()->events = pevents_create(profile_cb, channel_cb);
+		if (!data.get()->events) {
+			throw std::runtime_error("Failed to initialize a manager of "
+				"profile events");
 		}
+		// Global data will be pointer to the plugin instance
+		pevents_global_set(data.get()->events, data.get());
 
 		// Save configuration
-		conf->ip_config = ip_config;
-		*config = conf;
-		
-	} catch (std::exception &e) {
-		*config = NULL;
-		MSG_ERROR(msg_module, "%s", e.what());
+		data.get()->ip_config = ip_config;
+		*config = data.release();
+
+	} catch (const std::exception &ex) {
+		// Standard exceptions
+		MSG_ERROR(msg_module, "%s", ex.what());
+	} catch (...) {
+		// Non-standard exceptions
+		MSG_ERROR(msg_module, "Unknown exception has occurred.", NULL);
 		return 1;
 	}
 
-	MSG_DEBUG(msg_module, "initialized");
+	MSG_DEBUG(msg_module, "Successfully initialized.", NULL);
 	return 0;
-}
-
-/**
- * \brief Create folder from file path
- * \param[in] file Path to the RRD stats file
- */
-void stats_create_folder_from_file(std::string file)
-{
-	std::string::size_type lastSlash = file.find_last_of('/');
-	if (lastSlash == std::string::npos) {
-		return;
-	}
-
-	std::string command = "mkdir -p \"" + file.substr(0, lastSlash) + "\"";
-	system(command.c_str());
-}
-
-/**
- * \brief Create new RRD database
- *
- * \param[in] conf plugin configuration
- * \param[in] file path to RRD file
- * \return stats_data structure
- */
-stats_data *stats_rrd_create(plugin_conf *conf, std::string file)
-{
-	// Create stats counters
-	stats_data *stats = new stats_data;
-	stats->file = file;
-	stats->last_rrd_update = time(NULL);
-	stats->last_update_id = 0;
-
-	for (int group = 0; group < GROUPS; ++group) {
-		for (int field = 0; field < PROTOCOLS_PER_GROUP; ++field) {
-			stats->fields[group].sum[field] = 0;
-		}
-
-		stats->fields[group].avg = 0;
-		stats->fields[group].max = 0;
-	}
-
-	// Create a file
-	struct stat sts;
-	if (!(stat(file.c_str(), &sts) == -1 && errno == ENOENT)) {
-		// File already exists
-		return stats;
-	}
-
-	// Create folder for file
-	stats_create_folder_from_file(file);
-
-	const size_t buffer_size = 128;
-	char buffer[buffer_size];
-
-	// Create arguments field
-	std::vector<std::string> argv{};
-
-	// Create the file
-	argv.push_back("create");
-	argv.push_back(file);;
-
-	/*
-	 * Set start time
-	 * Time is decreased by 1 because immediately after RRD creation
-	 * update is called and RRD library requires at least 1 time
-	 * unit between updates
-	 */
-	snprintf(buffer, buffer_size, "--start=%lld", (long long) time(NULL) - 1);
-	argv.push_back(buffer);
-
-	// Set interval
-	snprintf(buffer, buffer_size, "--step=%d", conf->interval);
-	argv.push_back(buffer);
-
-	// Add all fields
-	for (const auto &field: templ_fields) {
-		/*
-		 * DS = Data Source definition,
-		 * Heartbeat interval defines the maximum number of seconds that may
-		 *   pass between two updates of this data source before the value of
-		 *   the data source is assumed to be *UNKNOWN*
-		 */
-		const char *name = field.name;
-		const char *type = rrd_dst_str[field.type];
-		const unsigned heartbeat = 2 * conf->interval;
-
-		snprintf(buffer, buffer_size, "DS:%s:%s:%u:0:U", name, type, heartbeat);
-		argv.push_back(buffer);
-	}
-
-	/*
-	 * Add statistics i.e. Round Robin Archives (RRA)
-	 * For example: 5 minute update interval (300 seconds):
-	 *   1 x 5m =  5 min samples, 6 *  30 * 288 (per day) = 51840 (6 * 30 days)
-	 *   6 x 5m = 30 min samples, 6 *  30 *  48 (per day) = 8640  (6 * 30 days)
-	 *  24 x 5m = 2 hour samples, 6 *  30 *  12 (per day) = 2160  (6 * 30 days)
-	 * 288 x 5m = 1 day samples,  5 * 365 *   1 (per day) = 1825  (5 * 365 days)
-	 */
-	// FIXME: add to the configuration (long/short term)
-	const unsigned history_long  = 5 * 365;   // days (5 years)
-	const unsigned history_short = 3 * 30;    // days (approx. quarter a year)
-	const unsigned secs_per_day = 24 * 60 * 60;
-	const unsigned samples_per_day = secs_per_day / conf->interval;
-
-	const unsigned total_rec_history_short = samples_per_day * history_short;
-
-	const char *fmt_avg = "RRA:AVERAGE:0.5:%u:%u";
-	const char *fmt_max = "RRA:MAX:0.5:%u:%u";
-
-	snprintf(buffer, buffer_size, fmt_avg, 1U, total_rec_history_short);
-	argv.push_back(buffer); // For 5 minute example: "RRA:AVERAGE:0.5:1:51840"
-	snprintf(buffer, buffer_size, fmt_avg, 6U, total_rec_history_short / 6U);
-	argv.push_back(buffer); // For 5 minute example: "RRA:AVERAGE:0.5:6:8640"
-	snprintf(buffer, buffer_size, fmt_avg, 24U, total_rec_history_short / 24U);
-	argv.push_back(buffer); // For 5 minute exmmple: "RRA:AVERAGE:0.5:24:2160"
-	snprintf(buffer, buffer_size, fmt_avg, samples_per_day, history_long);
-	argv.push_back(buffer); // For 5 minute exmmple: "RRA:AVERAGE:0.5:288:1825"
-	snprintf(buffer, buffer_size, fmt_max, 1U, total_rec_history_short);
-	argv.push_back(buffer); // For 5 minute example: "RRA:MAX:0.5:1:51840"
-	snprintf(buffer, buffer_size, fmt_max, 6U, total_rec_history_short / 6U);
-	argv.push_back(buffer); // For 5 minute example: "RRA:MAX:0.5:6:8640"
-	snprintf(buffer, buffer_size, fmt_max, 24U, total_rec_history_short / 24U);
-	argv.push_back(buffer); // For 5 minute exmmple: "RRA:MAX:0.5:24:2160"
-	snprintf(buffer, buffer_size, fmt_max, samples_per_day, history_long);
-	argv.push_back(buffer); // For 5 minute exmmple: "RRA:MAX:0.5:288:1825"
-
-	// Create C style argv
-	const char **c_argv = new const char*[argv.size()];
-	for (u_int16_t i = 0; i < argv.size(); ++i) {
-		c_argv[i] = argv[i].c_str();
-	}
-
-	// Create RRD database
-	if (rrd_create(argv.size(), (char **) c_argv)) {
-		MSG_ERROR(msg_module, "Create RRD DB Error: %s", rrd_get_error());
-		rrd_clear_error();
-		delete stats;
-		return NULL;
-	}
-
-	return stats;
-}
-
-/**
- * \brief Convert stats counters to string
- * \warning Also resets all counters
- * \param[in] last	 Update time (unix timestamp)
- * \param[in] fields Stats fields
- * \return Counters converted to string
- */
-std::string stats_counters_to_string(uint64_t last, stats_field fields[GROUPS])
-{
-	std::stringstream ss;
-
-	// Add update time
-	ss << last;
-
-	// Compute averages
-	const uint64_t total_flows = fields[FLOWS].sum[ST_TOTAL];
-	for (int group = 1; group < GROUPS; ++group) {
-		if (total_flows == 0) {
-			fields[group].avg = 0;
-		} else {
-			fields[group].avg = fields[group].sum[ST_TOTAL] / total_flows;
-		}
-	}
-
-	// Add sum statistics
-	for (int group = 0; group < GROUPS; ++group) {
-		for (int proto = 0; proto < PROTOCOLS_PER_GROUP; ++proto) {
-			ss << ":" << fields[group].sum[proto];
-		}
-	}
-
-	// Add rest
-	ss << ":" << fields[PACKETS].max << ":" << fields[PACKETS].avg;
-	ss << ":" << fields[TRAFFIC].max << ":" << fields[TRAFFIC].avg;
-
-	// Reset values
-	for (int group = 0; group < GROUPS; ++group) {
-		for (int proto = 0; proto < PROTOCOLS_PER_GROUP; ++proto) {
-			fields[group].sum[proto] = 0;
-		}
-
-		fields[group].max = fields[group].avg = 0;
-	}
-
-	return ss.str();
-}
-
-/**
- * \brief Update RRD stats file
- *
- * \param[in] stats Stats data
- * \param[in] templ RRD template
- */
-void stats_update(stats_data *stats, std::string templ)
-{
-	std::vector<std::string> argv;
-
-	// Set RRD file
-	argv.push_back("update");
-	argv.push_back(stats->file);
-
-	// Set template
-	argv.push_back("--template");
-	argv.push_back(templ);
-
-	// Add counters
-	argv.push_back(stats_counters_to_string(stats->last_rrd_update, stats->fields));
-
-	// Create C style argv
-	const char **c_argv = new const char*[argv.size()];
-	for (u_int16_t i = 0; i < argv.size(); ++i) {
-		c_argv[i] = argv[i].c_str();
-	}
-
-	// Update database
-	if (rrd_update(argv.size(), (char **) c_argv)) {
-		MSG_ERROR(msg_module, "RRD Insert Error: %s", rrd_get_error());
-		rrd_clear_error();
-	}
-
-	delete[] c_argv;
-}
-
-/**
- * \brief Converts IPFIX protocolIdentifier to stats protocol
- *
- * \param[in] rec Data record
- * \return stats protocol
- */
-enum st_protocol stats_get_proto(ipfix_record *rec)
-{
-	// Get "protocolIdentifier"
-	uint8_t *data = data_record_get_field((uint8_t*) rec->record, rec->templ,
-		0, PROTOCOL_ID, NULL);
-	int ipfix_proto = data ? (*((uint8_t *) (data))) : 0;
-
-	// Decode value
-	switch (ipfix_proto) {
-	case IG_UDP:	return ST_UDP;
-	case IG_TCP:	return ST_TCP;
-	case IG_ICMP:	return ST_ICMP;
-	default:		return ST_OTHER;
-	}
-}
-
-/**
- * \brief Get a field value
- *
- * \param[in] rec Data record
- * \param[in] field_id	Field ID
- * \return field value (or zero if not found)
- */
-uint64_t stats_field_val(ipfix_record *rec, int field_id)
-{
-	int dataSize = 0;
-	uint8_t *data = data_record_get_field((uint8_t*) rec->record, rec->templ,
-		0, field_id, &dataSize);
-
-	// Field not found
-	if (!data) {
-		return 0;
-	}
-
-	// Convert value to host byte order
-	switch (dataSize) {
-	case 1: return read8(data);
-	case 2: return ntohs(read16(data));
-	case 4: return ntohl(read32(data));
-	case 8: return be64toh(read64(data));
-	default: return 0;
-	}
-}
-
-/**
- * \brief Update stats fields for one protocol
- *
- * \param[in] fields stats fields
- * \param[in] proto	protocol
- * \param[in] packets packet counter
- * \param[in] traffic traffic counter
- */
-void stats_update_one_proto_fields(stats_field *fields, int proto,
-	uint64_t packets, uint64_t traffic)
-{
-	fields[PACKETS].sum[proto] += packets;
-	fields[TRAFFIC].sum[proto] += traffic;
-	fields[FLOWS].sum[proto]   += 1;
-
-	if (fields[PACKETS].max < packets) {
-		fields[PACKETS].max = packets;
-	}
-
-	if (fields[TRAFFIC].max < traffic) {
-		fields[TRAFFIC].max = traffic;
-	}
-}
-
-/**
- * \brief Update stats counters
- *
- * \param[in] stats     Statistics
- * \param[in] mdata     Data record's metadata
- * \param[in] update_id Update ID (prevention of multiple updates from the same
- *   record)
- */
-void stats_update_counters(stats_data *stats, metadata *mdata, uint32_t update_id)
-{
-	if (stats->last_update_id == update_id) {
-		// Already updated
-		return;
-	}
-
-	stats->last_update_id = update_id;
-
-	// Get stats values
-	uint64_t packets = stats_field_val(&(mdata->record), PACKETS_ID);
-	uint64_t traffic = stats_field_val(&(mdata->record), TRAFFIC_ID);
-
-	// Decode protocol
-	enum st_protocol proto = stats_get_proto(&(mdata->record));
-
-	// Update total stats
-	stats_update_one_proto_fields(stats->fields, ST_TOTAL, packets, traffic);
-	stats_update_one_proto_fields(stats->fields, proto, packets, traffic);
-}
-
-/**
- * \brief Update RRD files if interval passed
- *
- * \param[in] conf plugin config
- * \param[in] force ignore interval, always update files
- */
-void stats_flush_counters(plugin_conf *conf, bool force = false)
-{
-	// Update stats
-	uint64_t now = time(NULL);
-	for (auto st: conf->stats) {
-		// Some pointers can be NULL after unsuccessfull creation
-		if (!st.second) {
-			continue;
-		}
-
-		uint64_t next_window; // Start of the next window
-		next_window = (st.second->last_rrd_update / conf->interval) + 1;
-		next_window *= conf->interval;
-
-		if (force || next_window <= now) {
-			MSG_DEBUG(msg_module, "Updating statistics for: %s",
-				st.second->file.c_str());
-			stats_update(st.second, conf->templ);
-			st.second->last_rrd_update = now;
-		}
-	}
-}
-
-/**
- * \brief Get a statistic record for a RRD
- *
- * If the record doesn't exist, create a new one.
- * \param[in,out] conf Plugin configuration
- * \param[in]     file Path to the RRD
- * \return On success returns pointer to the record. Otherwise returns NULL.
- */
-stats_data *stats_get_rrd(plugin_conf *conf, std::string file)
-{
-	std::string fullPath = file + ".rrd";
-	stats_data *stats = conf->stats[fullPath];
-
-	if (stats) {
-		return stats;
-	}
-
-	// Create new RRD file
-	stats = stats_rrd_create(conf, fullPath);
-	conf->stats[fullPath] = stats;
-
-	return stats;
 }
 
 /**
@@ -661,57 +661,55 @@ stats_data *stats_get_rrd(plugin_conf *conf, std::string file)
  * \param[in] message IPFIX message
  * \return 0 on success
  */
-int intermediate_process_message(void* config, void* message)
+int
+intermediate_process_message(void* config, void* message)
 {
-	plugin_conf *conf = reinterpret_cast<plugin_conf *>(config);
-	struct ipfix_message *msg = reinterpret_cast<struct ipfix_message *>(message);
+	struct plugin_data *instance = static_cast<struct plugin_data *>(config);
+	struct ipfix_message *msg = static_cast<struct ipfix_message *>(message);
 
 	// Catch closing message
 	if (msg->source_status == SOURCE_STATUS_CLOSED) {
-		pass_message(conf->ip_config, msg);
+		pass_message(instance->ip_config, msg);
 		return 0;
 	}
 
-	// Update counters
-	stats_flush_counters(conf);
+	// Are we still in the same interval or we should create a new one
+	time_t now = time(NULL);
+	if (difftime(now, instance->interval_start) > instance->cfg->interval) {
+		time_t new_time = now;
 
-	// Process message
-	stats_data *profileStats, *channelStats;
-	std::string profile_dir,   channel_dir;
+		if (instance->cfg->alignment) {
+			// We expect that time is integer value
+			new_time /= instance->cfg->interval;
+			new_time *= instance->cfg->interval;
+		}
 
-	// Go through all data records
+		// Use the old timestamp to store statistics
+		pevents_for_each(instance->events, profile_flush_cb, channel_flush_cb);
+		instance->interval_start = new_time;
+	}
+
+	// Process all IPFIX records
+	struct flow_stat flow_stats;
 	for (uint16_t i = 0; i < msg->data_records_count; ++i) {
-		struct metadata *mdata = &(msg->metadata[i]);
-		conf->update_id++;
-
-		if (!mdata || !mdata->channels) {
+		struct metadata *mdata = &msg->metadata[i];
+		if (!mdata->channels) {
+			// No channels -> skip
 			continue;
 		}
 
-		for (int ch = 0; mdata->channels[ch]; ++ch) {
-			void *channel = mdata->channels[ch];
-			void *profile = channel_get_profile(channel);
-
-			profile_dir = profile_get_directory(profile);
-			profile_dir += "/rrd/";
-			channel_dir = profile_dir + "channels/";
-
-			profileStats = stats_get_rrd(conf, profile_dir +
-				profile_get_name(profile));
-			channelStats = stats_get_rrd(conf, channel_dir +
-				channel_get_name(channel));
-
-			if (profileStats) {
-				stats_update_counters(profileStats, mdata, conf->update_id);
-			}
-
-			if (channelStats) {
-				stats_update_counters(channelStats, mdata, conf->update_id);
-			}
+		// Gather flow statistics
+		if (flow_stat_prepare(&mdata->record, flow_stats) != 0) {
+			continue;
 		}
+
+		// Pass the statistics to all affected channels/profiles
+		pevents_process(instance->events, (const void **)mdata->channels,
+			&flow_stats);
 	}
 
-	pass_message(conf->ip_config, msg);
+	// Always pass a message
+	pass_message(instance->ip_config, msg);
 	return 0;
 }
 
@@ -721,25 +719,16 @@ int intermediate_process_message(void* config, void* message)
  * \param[in] config Plugin configuration
  * \return 0 on success
  */
-int intermediate_close(void *config)
+int
+intermediate_close(void *config)
 {
-	MSG_DEBUG(msg_module, "CLOSING");
-	plugin_conf *conf = static_cast<plugin_conf*>(config);
-	
-	// Force update counters
-	stats_flush_counters(conf, true);
+	MSG_DEBUG(msg_module, "Closing...", NULL);
+	struct plugin_data *instance = static_cast<struct plugin_data *>(config);
 
-	// Destroy configuration
-	for (auto &stat : conf->stats) {
-		stats_data *ptr = stat.second;
-		if (!ptr) {
-			continue;
-		}
+	// Flush and destroy all profiles and channels
+	pevents_destroy(instance->events);
+	instance->events = nullptr;
 
-		delete ptr;
-	}
-
-	delete conf;
-
+	delete(instance);
 	return 0;
 }

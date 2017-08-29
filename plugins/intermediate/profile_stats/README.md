@@ -79,10 +79,23 @@ Example **startup.xml** configuration:
 ```xml
 <profilestats>
         <interval>300</interval>
+        <align>true</align>
+        <baseDir></baseDir>
 </profilestats>
 ```
 *  **interval** Update interval (in seconds). Size of the interval
-significantly infuence size of databases. [min: 5, max: 3600, default: 300]
+significantly infuence size of databases. (min: 5, max: 3600, default: 300)
+*  **align** Align update interval. For example, if interval is 5 min, perform
+database update at 0, 5, 10, etc. wall clock minutes. (default: true)
+*  **baseDir** Expected storage for databases. Profiles with storage
+directories outside of the path are omitted. This allows you to make sure that
+files will be stored only into specified location. This directory must already
+exist in your system, otherwise all data will be lost. If the directory is not
+specified or the path is empty, no directory check will be performed.
+Path may contain special character sequences, each of which is introduced by
+a "%" character and terminated by some other character. Each of this sequences
+is substituted by its value. Currently supported special characters:
+%h = hostname.
 
 ### How to generate a graph (with RRD tools)
 For example, let us consider a profile with two channels, "ch1" and "ch2".
