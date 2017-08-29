@@ -191,6 +191,8 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 	ELEMENT_TYPE element_type;
 
 	offset = 0;
+	uint16_t trans_len = 0;
+	const char *trans_str = NULL;
 	record.clear();
 	STR_APPEND(record, "{\"@type\": \"ipfix.entry\", ");
 
@@ -240,23 +242,28 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 		case ET_UNSIGNED_8:
 		case ET_UNSIGNED_16:
 		case ET_UNSIGNED_32:
-		case ET_UNSIGNED_64:
-			record += translator.toUnsigned(&length, data_record, offset,
+		case ET_UNSIGNED_64:{
+			trans_str = translator.toUnsigned(length, &trans_len, data_record, offset,
 				element, config);
+			record.append(trans_str, trans_len);
+		}
 			break;
 		case ET_SIGNED_8:
 		case ET_SIGNED_16:
 		case ET_SIGNED_32:
 		case ET_SIGNED_64:
-			record += translator.toSigned(&length, data_record, offset);
+			trans_str = translator.toSigned(length, &trans_len, data_record, offset);
+			record.append(trans_str, trans_len);
 			break;
 		case ET_FLOAT_32:
 		case ET_FLOAT_64:
-			record += translator.toFloat(&length, data_record, offset);
+			trans_str = translator.toFloat(length, &trans_len, data_record, offset);
+			record.append(trans_str, trans_len);
 			break;
 		case ET_IPV4_ADDRESS:
 			record += '"';
-			record += translator.formatIPv4(read32(data_record + offset));
+			trans_str = translator.formatIPv4(read32(data_record + offset), &trans_len);
+			record.append(trans_str, trans_len);
 			record += '"';
 			break;
 		case ET_IPV6_ADDRESS:

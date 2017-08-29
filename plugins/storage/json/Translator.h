@@ -78,9 +78,10 @@ public:
      * \brief Format IPv4 address into dotted format
      * 
      * @param addr address
+     * @param ret_len pointer to return length of generated string
      * @return formatted address
      */
-	const char *formatIPv4(uint32_t addr);
+	const char *formatIPv4(uint32_t addr, uint16_t *ret_len);
 
     /**
      * \brief Format IPv6 address
@@ -135,33 +136,36 @@ public:
      * \brief Checks, if real length of record is the same as its data type. If not, converts to real length.
      *
      * @param length length of record
+     * @param ret_len pointer to return length of generated string
      * @param data_record pointer to head of data record
      * @param offset offset since head of data record
      * @param element pointer to actuall element in record
      * @param config pointer to configuration structure
      * @return value of Unsigned int
      */
-	const char *toUnsigned(uint16_t *length, uint8_t *data_record, uint16_t offset, const ipfix_element_t * element, struct json_conf * config);
+	const char *toUnsigned(uint16_t length, uint16_t *ret_len, uint8_t *data_record, uint16_t offset, const ipfix_element_t * element, struct json_conf * config);
 
     /**
      * \brief Checks, if real length of record is the same as its data type. If not, converts to real length.
      *
      * @param length length of record
+     * @param ret_len pointer to return length of generated string
      * @param data_record pointer to head of data record
      * @param offset offset since head of data record
      * @return value of Signed int
      */
-	const char *toSigned(uint16_t *length, uint8_t *data_record, uint16_t offset);
+	const char *toSigned(uint16_t length, uint16_t *ret_len, uint8_t *data_record, uint16_t offset);
 
     /**
      * \brief Checks, if real length of record is the same as its data type. If not, converts to real length.
      *
      * @param length length of record
+     * @param ret_len pointer to return length of generated string
      * @param data_record pointer to head of data record
      * @param offset offset since head of data record
      * @return value of Float
      */
-	const char *toFloat(uint16_t *length, uint8_t *data_record, uint16_t offset);
+	const char *toFloat(uint16_t length, uint16_t *ret_len, uint8_t *data_record, uint16_t offset);
 
 	/**
 	 * \brief Convert string to JSON format
