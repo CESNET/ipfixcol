@@ -78,9 +78,10 @@ public:
      * \brief Format IPv4 address into dotted format
      * 
      * @param addr address
+     * @param ret_len pointer to return length of generated string
      * @return formatted address
      */
-	const char *formatIPv4(uint32_t addr);
+	const char *formatIPv4(uint32_t addr, uint16_t *ret_len);
 
     /**
      * \brief Format IPv6 address

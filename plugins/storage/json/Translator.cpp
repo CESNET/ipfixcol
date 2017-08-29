@@ -88,11 +88,21 @@ Translator::~Translator()
 }
 
 /**
- * \brief Format IPv6
+ * \brief Format IPv4
  */
-const char *Translator::formatIPv4(uint32_t addr)
+const char *Translator::formatIPv4(uint32_t addr, uint16_t *ret_len)
 {	
-	inet_ntop(AF_INET, &addr, buffer, INET_ADDRSTRLEN);
+	char *ret = NULL;
+
+	ret = u32toa_branchlut2(((uint8_t *) &addr)[0], buffer);
+	ret++[0] = '.';
+	ret = u32toa_branchlut2(((uint8_t *) &addr)[1], ret);
+	ret++[0] = '.';
+	ret = u32toa_branchlut2(((uint8_t *) &addr)[2], ret);
+	ret++[0] = '.';
+	ret = u32toa_branchlut2(((uint8_t *) &addr)[3], ret);
+
+	*ret_len = ret - buffer;
 	return buffer;
 }
 

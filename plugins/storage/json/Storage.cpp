@@ -262,7 +262,8 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 			break;
 		case ET_IPV4_ADDRESS:
 			record += '"';
-			record += translator.formatIPv4(read32(data_record + offset));
+			trans_str = translator.formatIPv4(read32(data_record + offset), &trans_len);
+			record.append(trans_str, trans_len);
 			record += '"';
 			break;
 		case ET_IPV6_ADDRESS:
