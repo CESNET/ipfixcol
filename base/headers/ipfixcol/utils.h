@@ -55,5 +55,13 @@ API int    strtoi (const char* str, int base);
  */
 API char *utils_path_preprocessor(const char *original);
 
+/**
+ * \brief Create recursively a directory
+ * \param[in] path Full directory path
+ * \return On success returns 0. Otherwise returns a non-zero value and errno
+ *   is set appropriately.
+ */
+API int utils_mkdir(const char* path);
+
 #endif	/* UTILS_H */
 

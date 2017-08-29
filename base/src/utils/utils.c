@@ -401,3 +401,82 @@ char *utils_path_preprocessor(const char *original)
 	strcat(new_str, last_path); //copy rest of the original path
 	return new_str;
 }
+
+int utils_mkdir(const char* path)
+{
+	// Access rights: RWX for a user and his group. R_X for others.
+	const mode_t dir_mode = S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH;
+	const char ch_slash = '/';
+	bool add_slash = false;
+
+	// Check the parameter
+	size_t len = strlen(path);
+	if (path[len - 1] != ch_slash) {
+		len++; // We have to add another slash
+		add_slash = true;
+	}
+
+	if (len > PATH_MAX - 1) {
+		errno = ENAMETOOLONG;
+		return 1;
+	}
+
+	// Make a copy
+	char *path_cpy = malloc((len + 1) * sizeof(char)); // +1 for '\0'
+	if (!path_cpy) {
+		errno = ENOMEM;
+		return 1;
+	}
+
+	strcpy(path_cpy, path);
+	if (add_slash) {
+		path_cpy[len - 1] = ch_slash;
+		path_cpy[len] = '\0';
+	}
+
+	struct stat info;
+	char *pos;
+
+	// Create directories from the beginning
+	for (pos = path_cpy + 1; *pos; pos++) {
+		// Find a slash
+		if (*pos != ch_slash) {
+			continue;
+		}
+
+		*pos = '\0'; // Temporarily truncate pathname
+
+		// Check if a subdirectory exists
+		if (stat(path_cpy, &info) == 0) {
+			// Check if the "info" is about directory
+			if (!S_ISDIR(info.st_mode)) {
+				free(path_cpy);
+				errno = ENOTDIR;
+				return 1;
+			}
+
+			// Fix the pathname and continue with the next subdirectory
+			*pos = ch_slash;
+			continue;
+		}
+
+		// Errno is filled by stat()
+		if (errno != ENOENT) {
+			free(path_cpy);
+			return 1;
+		}
+
+		// Required directory doesn't exist -> create new one
+		if (mkdir(path_cpy, dir_mode) != 0 && errno != EEXIST) {
+			// Failed (by the way, EEXIST because of race condition i.e.
+			// multiple applications creating the same folder)
+			free(path_cpy);
+			return 1;
+		}
+
+		*pos = ch_slash;
+	}
+
+	free(path_cpy);
+	return 0;
+}
