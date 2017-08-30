@@ -404,17 +404,18 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
     /* fieldstr is set - try to find field id and relevant function */
     nff_item_t* item = NULL;
     const ipfix_element_t * elem;
-    for(int x = 0; nff_ipff_map[x].name != NULL; x++){
-        if(!strcmp(fieldstr, nff_ipff_map[x].name)){
+    for (int x = 0; nff_ipff_map[x].name != NULL; x++) {
+        if (!strcmp(fieldstr, nff_ipff_map[x].name)) {
             item = &nff_ipff_map[x];
             break;
         }
     }
-    if(item == NULL) {	// Alias not found
+
+    if (item == NULL) {	// Alias not found
         // Try to find an IPFIX field with this name
         const ipfix_element_result_t elemr = get_element_by_name(fieldstr, false);
-        if (elemr.result == NULL){
-            ff_set_error(filter, "\"%s\" element item not found", fieldstr);
+        if (elemr.result == NULL) {
+            ff_set_error(filter, "\"%s\" element item not found in ipfix names", fieldstr);
             return FF_ERR_OTHER_MSG;
         }
 
@@ -450,18 +451,35 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
             default:
                 ff_set_error(filter, "Cannot find IPFIX header element with ID '%d' "
                     "(not implemented)", id);
-                return FF_ERR_OTHER_MSG;
             }
             return FF_OK;
         } else if (gen & CTL_CONST_ITEM) {
+            // Cleanup ID, constant is still field, it just has default value
+            lvalue->id[0].index = toEnId(0, enterprise);
+            // Set option to constant
+            lvalue->options = FF_OPTS_CONST;
+            // Select implicit value for given field
             lvalue->literal = constants[id];
+
             elem = get_element_by_id(enterprise, 0);
+            if (!elem) {
+                ff_set_error(filter, "Cannot find IPFIX element with ID '%d' "
+                    "EN '0', required by constant \"%s\"", enterprise, fieldstr);
+            }
         } else {
+            // Nothing unusual
             elem = get_element_by_id(id, enterprise);
+            if (!elem) {
+                ff_set_error(filter, "Cannot find IPFIX element with ID '%d' "
+                    "EN '%d', required by \"%s\"", id, enterprise, fieldstr);
+            }
         }
     }
 
-    // Rozhodni datovy typ pre filter
+    if (elem == NULL) {
+        return FF_ERR_OTHER_MSG;
+    }
+    // Map data types to internal types of ffilter
     switch(elem->type){
 
     case ET_BOOLEAN:
@@ -615,6 +633,7 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char **data
         return FF_OK;
 
     } else if (generic_set & CTL_CALCULATED_ITEM) {
+
         ff_uint64_t flow_duration;
         ff_uint64_t tmp, tmp2;
 
@@ -685,7 +704,14 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char **data
         *size = len;
         return FF_OK;
 
-    } else {
+    } /*else if (generic_set & CTL_CONST_ITEM) {
+
+        ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, 0, en, &len);
+        if (ipf_field == NULL) {
+            return FF_ERR_OTHER;
+        }
+
+    } */else {
 
         ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, en, ie_id, &len);
         if (generic_set & CTL_V4V6IP && ipf_field == NULL) {
@@ -696,6 +722,7 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char **data
         if (ipf_field == NULL) {
             return FF_ERR_OTHER;
         }
+
     }
     *data = ipf_field;
     *size = len;
