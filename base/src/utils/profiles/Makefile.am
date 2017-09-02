@@ -1,5 +1,12 @@
-AM_CPPFLAGS += -I$(top_srcdir)/headers -fPIC
-AM_CFLAGS += -fPIC
+AM_CPPFLAGS += \
+	-fPIC \
+	-I$(top_srcdir)/headers \
+	-I$(top_srcdir)/src/utils/filter
+	-I$(top_srcdir)/src #last one is for config.h in ffilter
+
+# C code must be able to propagate C++ exceptions
+# Note: This can happen in callbacks of profile events
+AM_CFLAGS += -fPIC -fexceptions
 
 noinst_LIBRARIES = libprofiles.a
 
@@ -7,17 +14,6 @@ libprofiles_a_SOURCES = \
 	Channel.cpp Channel.h \
 	profiles.cpp profiles_internal.h \
 	Profile.cpp Profile.h \
-	filter.c filter.h \
-	parser.c parser.h \
-	scanner.c scanner.h
+	bitset.c bitset.h \
+	profile_events.c
 
-CLEANFILES = parser.h parser.c scanner.h scanner.c
-BUILT_SOURCES = parser.h parser.c scanner.h scanner.c
-
-parser.h parser.c: parser.y
-	$(BISON) --defines=parser.h -o parser.c $<
-
-scanner.h scanner.c: scanner.l
-	$(FLEX) -o scanner.c --header-file=scanner.h $<
-
-EXTRA_DIST = parser.y scanner.l

@@ -10,7 +10,7 @@ AC_CONFIG_SRCDIR([lnfstore.c])
 AC_CONFIG_HEADERS([config.h])
 
 # Initialization
-CFLAGS="-Wall -std=gnu99"
+AM_CFLAGS="$AM_CFLAGS -Wall -std=gnu99"
 # We need -fPIC to link to some of the libraries
 LDFLAGS="$LDFLAGS -fPIC"
 
@@ -103,6 +103,7 @@ if test -z "$RPMBUILD"; then
 fi
 
 AC_SUBST(XSLTPROC)
+AC_SUBST(AM_CFLAGS)
 
 # generate output
 AC_CONFIG_FILES([Makefile
@@ -125,7 +126,7 @@ echo "
   $PACKAGE_NAME version $PACKAGE_VERSION
   Prefix........: $prefix
   Distribution..: $DISTRO
-  C Compiler....: $CC $CFLAGS $CPPFLAGS
+  C Compiler....: $CC $AM_CFLAGS $CFLAGS $CPPFLAGS
   Linker........: $LDFLAGS $LIBS
   Build against.: ${BUILD_AGAINST:-system}
   rpmbuild......: ${RPMBUILD:-NONE}

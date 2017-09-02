@@ -235,6 +235,7 @@ AC_CONFIG_FILES([Makefile
 				src/utils/ipfixconf/Makefile
 				src/utils/ipfixsend/Makefile
 				src/utils/libsiso/Makefile
+				src/utils/filter/Makefile
 				src/utils/profiles/Makefile
 				src/utils/elements/Makefile
 				src/utils/conversion/Makefile

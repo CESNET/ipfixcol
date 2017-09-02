@@ -1,11 +1,10 @@
 /**
- * \file lnfstore.h
- * \author Imrich Stoffa <xstoff02@stud.fit.vutbr.cz>
- * \author Lukas Hutak <xhutak01@stud.fit.vutbr.cz>
- * \author Pavel Krobot <Pavel.Krobot@cesnet.cz>
- * \brief lnfstore plugin interface (header file)
- *
- * Copyright (C) 2015, 2016 CESNET, z.s.p.o.
+ * \file profilestats.h
+ * \author Lukas Hutak <lukas.hutak@cesnet.cz>
+ * \brief Intermediate plugin for RRD statistics (header file)
+ */
+/*
+ * Copyright (C) 2017 CESNET, z.s.p.o.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,40 +38,17 @@
  *
  */
 
-#ifndef LS_LNFSTORE_H
-#define LS_LNFSTORE_H
+#ifndef PROFILESTATS_H
+#define PROFILESTATS_H
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <libnf.h>
-
-#include "configuration.h"
-#include "storage_basic.h"
-#include "storage_profiles.h"
-#include "translator.h"
-
-extern const char *msg_module;
-
-// Size of conversion buffer
-#define REC_BUFF_SIZE (65535)
-
-/**
- * \brief Plugin instance structure
- */
-struct conf_lnfstore {
-	struct conf_params *params; /**< Configuration from XML file             */
-	time_t window_start;        /**< Start of the current window             */
-
-	struct {
-		stg_basic_t    *basic;    /**< Store all samples                     */
-		stg_profiles_t *profiles; /**< Store records based on profiles       */
-	} storage; /**< Only one type of storage is initialized at the same time */
-
-	struct {
-		lnf_rec_t *rec_ptr;       /**< LNF record (converted IPFIX record)   */
-		translator_t *translator; /**< IPFIX to LNF translator               */
-	} record; /**< Record conversion */
+/** Data fields from a flow required for update of statistics */
+struct flow_stat {
+	/** Protocol identifier of the flow */
+	uint64_t proto;
+	/** Number of packet in the flow    */
+	uint64_t packets;
+	/** Number of bytes in the flow     */
+	uint64_t bytes;
 };
 
-
-#endif //LS_LNFSTORE_H
+#endif // PROFILESTATS_H

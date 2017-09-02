@@ -1,7 +1,9 @@
 # <a name="top"></a>IPFIXcol framework
 
+<!--
 [![Build Status](https://travis-ci.org/CESNET/ipfixcol.svg?branch=coverity_scan)](https://travis-ci.org/CESNET/ipfixcol)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/5119/badge.svg)](https://scan.coverity.com/projects/cesnet-ipfixcol)
+-->
 
 ## Table of Contents
 1.  [Framework description](#desc)
@@ -131,7 +133,19 @@ libsqlite3-dev libpq-dev libcpg-dev corosync-dev
 ```
 Moreover, you need to build the [FastBit library](#fastbit)
 
-After installing all dependencies, the whole framework can be build at once with
+First, download IPFIXcol git repository (do NOT forget to use `--recursive` option):
+```sh
+git clone --recursive https://github.com/CESNET/ipfixcol.git
+```
+
+Note: If you have updated from a previous revision of the repository without a submodule 
+or if you forgot to add `--recursive` option, you can just download submodule manually:
+```sh
+git submodule init
+git submodule update
+```
+
+After installing all dependencies and downloading the repository, the whole framework can be build at once with
 
 ```sh
 autoreconf -i 

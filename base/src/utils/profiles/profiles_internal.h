@@ -38,11 +38,11 @@
  */
 
 #ifndef PROFILER_H
-#define	PROFILER_H
+#define PROFILER_H
 
 extern "C" {
 #include <ipfixcol.h>
-#include "filter.h"
+#include "filter_wrapper.h"
 #include <string.h>
 }
 

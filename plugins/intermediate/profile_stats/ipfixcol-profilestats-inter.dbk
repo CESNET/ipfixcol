@@ -8,10 +8,10 @@
 		version="5.0" xml:lang="en">
 	<info>
 		<copyright>
-			<year>2016</year>
+			<year>2017</year>
 			<holder>CESNET, z.s.p.o.</holder>
 		</copyright>
-		<date>11 July 2016</date>
+		<date>29 August 2017</date>
 		<authorgroup>
 			<author>
 				<personname>
@@ -170,6 +170,8 @@
 	<![CDATA[
     <profilestats>
         <interval>300</interval>
+        <align>true</align>
+        <baseDir></baseDir>
     </profilestats>
 	]]>
 		</programlisting>
@@ -179,7 +181,25 @@
 				<varlistentry>
 					<term><command>interval</command></term>
 					<listitem>
-						<simpara>Update interval (in seconds).  Size of the interval significantly infuence size of databases. [min: 5, max: 3600, default: 300]</simpara>
+						<simpara>Update interval (in seconds).  Size of the interval significantly influence size of databases. [min: 5, max: 3600, default: 300]</simpara>
+					</listitem>
+				</varlistentry>
+
+				<varlistentry>
+					<term><command>align</command></term>
+					<listitem>
+						<simpara>Align update interval. For example, if interval is 5 min, perform database update at 0, 5, 10, etc. wall clock minutes. [default: true]</simpara>
+					</listitem>
+				</varlistentry>
+
+				<varlistentry>
+					<term><command>baseDir</command></term>
+					<listitem>
+						<simpara>
+						Expected storage for databases. Profiles with storage directories outside of the path are omitted. This allows you to make sure that files will be stored only into specified location.
+						This directory must already exist in your system, otherwise all data will be lost. If the directory is not specified or the path is empty, no directory check will be performed.
+						Path may contain special character sequences, each of which is introduced by a "%" character and terminated by some other character. Each of this sequences is substituted by its value. Currently supported special characters: %h = hostname.
+						</simpara>
 					</listitem>
 				</varlistentry>
 			</variablelist>

@@ -53,11 +53,11 @@ static const char *msg_module = "profiles";
 void trim(std::string& str)
 {
 	std::string::size_type pos = str.find_last_not_of(' ');
-	
+
 	if (pos != std::string::npos) {
 		str.erase(pos + 1);
 		pos = str.find_first_not_of(' ');
-		
+
 		if (pos != std::string::npos) {
 			str.erase(0, pos);
 		}
@@ -80,19 +80,17 @@ Channel::Channel(std::string name)
 Channel::~Channel()
 {
 	/* Delete filter */
-	if (m_filter) {
-		filter_free_profile(m_filter);
-	}
+	ipx_filter_free(m_filter);
 }
 
 /**
  * Set channel sources
  */
 void Channel::setSources(std::string sources)
-{	
+{
 	std::istringstream iss(sources);
 	std::string channel;
-	
+
 	/* TOP channel, ignore any source specification */
 	if (!m_profile->getParent()) {
 		if (sources != "*") {
@@ -100,12 +98,12 @@ void Channel::setSources(std::string sources)
 		}
 		return;
 	}
-	
+
 	/* Process each source in comma separated list */
 	while (std::getline(iss, channel, ',')) {
 		/* Remove whitespaces */
 		trim(channel);
-		
+
 		/* Process data from all channels */
 		if (channel == "*") {
 			for (auto& ch: m_profile->getParent()->getChannels()) {
@@ -113,7 +111,7 @@ void Channel::setSources(std::string sources)
 			}
 			continue;
 		}
-		
+
 		/* Find channel in parent profile */
 		Channel *src{};
 		for (auto& ch: m_profile->getParent()->getChannels()) {
@@ -122,13 +120,13 @@ void Channel::setSources(std::string sources)
 				break;
 			}
 		}
-		
+
 		/* Source not found */
 		if (!src) {
 			MSG_ERROR(msg_module, "Channel %s: no %s channel in parent profile %s", m_name.c_str(), channel.c_str(), m_profile->getParent()->getName().c_str());
 			throw std::runtime_error(std::string(""));
 		}
-		
+
 		/* Subscribe as a listener */
 		src->addListener(this);
 	}
@@ -198,7 +196,7 @@ void Channel::setProfile(Profile* profile)
 /**
  * Set channel filter
  */
-void Channel::setFilter(filter_profile* filter)
+void Channel::setFilter(ipx_filter_t* filter)
 {
 	m_filter = filter;
 }
@@ -220,22 +218,25 @@ void Channel::updatePathName()
  */
 void Channel::match(ipfix_message* msg, metadata* mdata, std::vector<Channel *>& channels)
 {
-	if (m_filter && !filter_fits_node(m_filter->root, msg, &(mdata->record))) {
+	if (m_filter && 0 >= ipx_filter_eval(m_filter, msg, &(mdata->record))) {
 		return;
 	}
-	
+
 	/* Mark channel into metadata */
 	channels.push_back(this);
-	
+
 	/* Process all listeners */
 	for (auto& child: m_listeners) {
 		child->match(msg, mdata, channels);
 	}
 }
 
+/**
+ * Match channel filter to data record
+ */
 void Channel::match(struct match_data *data)
 {
-	if (m_filter && !filter_fits_node(m_filter->root, data->msg, &(data->mdata->record))) {
+	if (m_filter && 0 >= ipx_filter_eval(m_filter, data->msg, &(data->mdata->record))) {
 		return;
 	}
 

@@ -40,13 +40,13 @@
 #include <ipfixcol.h>
 #include <string.h>
 #include <ipfixcol/profiles.h>
-#include <limits.h>
+#include <ipfixcol/profile_events.h>
+#include <linux/limits.h>
 #include <stdint.h>
 
 #include "storage_profiles.h"
 #include "lnfstore.h"
 #include "files_manager.h"
-#include "profiler_events.h"
 #include "configuration.h"
 #include "storage_common.h"
 

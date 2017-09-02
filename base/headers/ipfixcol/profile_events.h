@@ -37,10 +37,11 @@
  *
  */
 
-#include <stdint.h>
+#ifndef PROFILE_EVENTS_H
+#define PROFILE_EVENTS_H
 
-#ifndef PROFILER_MANAGER_H
-#define PROFILER_MANAGER_H
+#include <stdint.h>
+#include "api.h"
 
 /**
  * \brief Identification flags of changes
@@ -155,7 +156,7 @@ struct pevent_cb_set {
  * \param[in] channels Callback functions for channels
  * \return On success returns a pointer to the manager. Otherwise returns NULL.
  */
-pevents_t *
+API pevents_t *
 pevents_create(struct pevent_cb_set profiles, struct pevent_cb_set channels);
 
 /**
@@ -165,7 +166,7 @@ pevents_create(struct pevent_cb_set profiles, struct pevent_cb_set channels);
  * channels are called.
  * \param[in,out] mgr Pointer to the event manager
  */
-void
+API void
 pevents_destroy(pevents_t *mgr);
 
 /**
@@ -176,7 +177,7 @@ pevents_destroy(pevents_t *mgr);
  * \param[in] mgr    Event manger
  * \param[in] global Global variable
  */
-void
+API void
 pevents_global_set(pevents_t *mgr, void *global);
 
 /**
@@ -185,7 +186,7 @@ pevents_global_set(pevents_t *mgr, void *global);
  * \return If the global variables hasn't been set before returns NULL.
  *   Otherwise returns the pointer to the global variable.
  */
-void *
+API void *
 pevents_global_get(pevents_t *mgr);
 
 /**
@@ -227,7 +228,7 @@ pevents_global_get(pevents_t *mgr);
  * \return On success returns 0. Otherwise returns a non-zero value and the
  *   data record was not stored.
  */
-int
+API int
 pevents_process(pevents_t *mgr, const void **channels, void *data);
 
 /**
@@ -240,7 +241,7 @@ pevents_process(pevents_t *mgr, const void **channels, void *data);
  * \param[in]     prfl_fn     General function for profiles (can be NULL)
  * \param[in]     chnl_fn     General function for channels (can be NULL)
  */
-void
+API void
 pevents_for_each(pevents_t *mgr, pevents_fn prfl_fn, pevents_fn chnl_fn);
 
-#endif //PROFILER_MANAGER_H
+#endif // PROFILE_EVENTS_H
