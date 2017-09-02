@@ -101,8 +101,8 @@ enum nff_constant_e {
 };
 
 const char constants[10][CONST_END] = {
-    [CONST_INET]{"4"},
-    [CONST_INET6]{"6"},
+    [CONST_INET] = {"4"},
+    [CONST_INET6] = {"6"},
 };
 
 struct ipx_filter {
@@ -170,8 +170,8 @@ static struct nff_item_s nff_ipff_map[] = {
     {"ipv6",      {toGenEnId(CTL_CONST_ITEM, 60, CONST_INET6)}},
 
     {"proto",     {toEnId(0, 4)}},
-    {"first",     {toEnId(0, 22)}},
-    {"last",      {toEnId(0, 21)}},
+    {"first",     {toEnId(0, 152)}},
+    {"last",      {toEnId(0, 153)}},
 
     /* for functionality reasons there are extra flags in mapping part CTL_FPAIR
      * stands for item that maps to two other elements and mapping contain
@@ -364,6 +364,269 @@ int specify_ipv(uint16_t *i)
 }
 
 /**
+ * \brief Get a value of an unsigned integer (stored in big endian order a.k.a.
+ *   network byte order)
+ *
+ * The \p value is read from a data \p field and converted from
+ * the appropriate byte order to host byte order.
+ * \param[in]  field  Pointer to the data field (in "network byte order")
+ * \param[in]  size   Size of the data field (min: 1 byte, max: 8 bytes)
+ * \param[out] value  Pointer to a variable for the result
+ * \return On success returns 0 and fills the \p value.
+ *   Otherwise (usually the incorrect \p size of the field) returns
+ *   a non-zero value and the \p value is not filled.
+ */
+static inline int
+convert_uint_be(const void *field, size_t size, uint64_t *value)
+{
+    switch (size) {
+    case 8:
+        *value = be64toh(*(const uint64_t *) field);
+        return 0;
+
+    case 4:
+        *value = ntohl(*(const uint32_t *) field);
+        return 0;
+
+    case 2:
+        *value = ntohs(*(const uint16_t *) field);
+        return 0;
+
+    case 1:
+        *value = *(const uint8_t *) field;
+        return 0;
+
+    default:
+        // Other sizes (3,5,6,7)
+        break;
+    }
+
+    if (size == 0 || size > 8) {
+        return 1;
+    }
+
+    uint64_t new_value = 0;
+    memcpy(&(((uint8_t *) &new_value)[8U - size]), field, size);
+
+    *value = be64toh(new_value);
+    return 0;
+}
+
+/**
+ * \brief Get a unsigned integer value of a field
+ * \param[in]  record Recodd
+ * \param[in]  templ  Template
+ * \param[in]  id     Field ID
+ * \param[out] res    Result value (filled only on success)
+ * \return On success returns 0. Otherwise returns a non-zero value.
+ */
+static inline int
+get_unsigned(uint8_t *record, struct ipfix_template *templ, uint16_t id,
+    ff_uint64_t *res)
+{
+    uint8_t *data_ptr;
+    int data_len;
+
+    data_ptr = data_record_get_field(record, templ, 0, id, &data_len);
+    if (!data_ptr) {
+        return 1;
+    }
+
+    const size_t size = (size_t) data_len;
+    return (convert_uint_be(data_ptr, size, res) == 0) ? 0 : 1;
+}
+
+/**
+ * \brief Type of timestamp
+ */
+enum datetime {
+    /**
+     * The type represents a time value expressed with second-level precision.
+     */
+    DATETIME_SECONDS,
+    /**
+     * The type represents a time value expressed with millisecond-level
+     * precision.
+     */
+    DATETIME_MILLISECONDS,
+    /**
+     * The type represents a time value expressed with microsecond-level
+     * precision.
+     */
+    DATETIME_MICROSECONDS,
+    /**
+     * The type represents a time value expressed with nanosecond-level
+     * precision.
+     */
+    DATETIME_NANOSECONDS,
+};
+
+/**
+ * \def IPX_CONVERT_EPOCHS_DIFF
+ * \brief Time difference between NTP and UNIX epoch in seconds
+ *
+ * NTP epoch (1 January 1900, 00:00h) vs. UNIX epoch (1 January 1970 00:00h)
+ * i.e. ((70 years * 365 days) + 17 leap-years) * 86400 seconds per day
+ */
+#define IPX_CONVERT_EPOCHS_DIFF (2208988800ULL)
+
+/**
+ * \brief Get a value of a low precision timestamp (stored in big endian order
+ *   a.k.a. network byte order)
+ *
+ * The \p value is read from a data \p field, converted from
+ * "network byte order" to host byte order and transformed to a corresponding
+ * data type.
+ * \param[in]  field  Pointer to the data field (in "network byte order")
+ * \param[in]  size   Size of the data field (in bytes)
+ * \param[in]  type   Type of the timestamp (see the remark)
+ * \param[out] value  Pointer to a variable for the result (Number of
+ *   milliseconds since the UNIX epoch)
+ * \remark The parameter \p type can be only one of the following types:
+ *   #DATETIME_SECONDS, #DATETIME_MILLISECONDS, #DATETIME_MICROSECONDS,
+ *   #DATETIME_NANOSECONDS
+ * \warning The \p size of the \p field MUST be 4 bytes
+ *   (#DATETIME_SECONDS) or 8 bytes (#DATETIME_MILLISECONDS,
+ *   #DATETIME_MICROSECONDS, #DATETIME_NANOSECONDS)
+ * \warning Wraparound for dates after 8 February 2036 is not implemented.
+ * \return On success returns 0 and fills the \p value.
+ *   Otherwise (usually the incorrect \p size of the field) returns
+ *   a non-zero value and the \p value is not filled.
+ */
+static inline int
+convert_datetime_lp_be(const void *field, size_t size, enum datetime type,
+    uint64_t *value)
+{
+    // One second to milliseconds
+    const uint64_t S1E3 = 1000ULL;
+
+    if ((size != sizeof(uint64_t) || type == DATETIME_SECONDS)
+        && (size != sizeof(uint32_t) || type != DATETIME_SECONDS)) {
+        return 1;
+    }
+
+    switch (type) {
+    case DATETIME_SECONDS:
+        *value = ntohl(*(const uint32_t *) field) * S1E3;
+        return 0;
+
+    case DATETIME_MILLISECONDS:
+        *value = be64toh(*(const uint64_t *) field);
+        return 0;
+
+    case DATETIME_MICROSECONDS:
+    case DATETIME_NANOSECONDS: {
+        // Conversion from NTP 64bit timestamp to UNIX timestamp
+        const uint32_t (*parts)[2] = (const uint32_t (*)[2]) field;
+        uint64_t result;
+
+        // Seconds
+        result = (ntohl((*parts)[0]) - IPX_CONVERT_EPOCHS_DIFF) * S1E3;
+
+        /*
+         * Fraction of second (1 / 2^32)
+         * The "value" uses 1/1000 sec as unit of subsecond fractions and NTP
+         * uses 1/(2^32) sec as its unit of fractional time.
+         * Conversion is easy: First, multiply by 1e3, then divide by 2^32.
+         * Warning: Calculation must use 64bit variable!!!
+         */
+        uint64_t fraction = ntohl((*parts)[1]);
+        if (type == DATETIME_MICROSECONDS) {
+            fraction &= 0xFFFFF800UL; // Make sure that last 11 bits are zeros
+        }
+
+        result += (fraction * S1E3) >> 32;
+        *value = result;
+    }
+
+        return 0;
+    default:
+        return 1;
+    }
+}
+
+/** Auxiliary structure for a field with a timestamp */
+struct time_field {
+    uint16_t id;          /**< Field ID              */
+    enum datetime type;   /**< Type of the timestamp */
+};
+
+/**
+ * \brief Get a one of 4 timestamps (in milliseconds)
+ * \param[in]  record Record data
+ * \param[in]  templ  Record template
+ * \param[in]  fields Array of field IDs
+ * \param[out] res    Result timestamp (filled only on success)
+ * \return On success returns 0. Otherwise returns a non-zero value.
+ */
+static inline int
+get_timestamp(uint8_t *record, struct ipfix_template *templ,
+    const struct time_field fields[4], uint64_t *res)
+{
+    uint8_t *data_ptr;
+    int data_len;
+    int idx;
+
+    for (idx = 0; idx < 4; ++idx) {
+        const uint16_t field_id = fields[idx].id;
+        data_ptr = data_record_get_field(record, templ, 0, field_id, &data_len);
+        if (!data_ptr) {
+            continue;
+        }
+
+        // Field found
+        const enum datetime type = fields[idx].type;
+        const size_t size = (size_t) data_len;
+        return (convert_datetime_lp_be(data_ptr, size, type, res) == 0)
+            ? 0 : 1;
+    }
+
+    // Not found
+    return 1;
+}
+
+/**
+ * \brief Get duration of a flow (in milliseconds)
+ * \param[in]  record Record data
+ * \param[in]  templ  Record template
+ * \param[out] res    Result (filled only on success)
+ * \return On success returns 0. Otherwise returns a non-zero value.
+ */
+static inline int
+get_duration(uint8_t *record, struct ipfix_template *templ, ff_uint64_t *res) {
+    static const struct time_field first_fields[] = {
+        {152, DATETIME_MILLISECONDS},
+        {150, DATETIME_SECONDS},
+        {154, DATETIME_MICROSECONDS},
+        {156, DATETIME_NANOSECONDS}
+    };
+
+    static const struct time_field last_fields[] = {
+        {153, DATETIME_MILLISECONDS},
+        {151, DATETIME_SECONDS},
+        {155, DATETIME_MICROSECONDS},
+        {157, DATETIME_NANOSECONDS}
+    };
+
+    uint64_t ts_start;
+    uint64_t ts_end;
+
+    // Get timestamp
+    if (get_timestamp(record, templ, first_fields, &ts_start) != 0
+        || get_timestamp(record, templ, last_fields, &ts_end) != 0) {
+        return 1;
+    }
+
+    if (ts_end < ts_start) {
+        return 1;
+    }
+
+    // Store the result
+    *res = ts_end - ts_start;
+    return 0;
+}
+
+/**
  * \brief set_external_ids
  * \param[in] item
  * \param     lvalue
@@ -535,9 +798,6 @@ ff_error_t ipf_lookup_func(ff_t *filter, const char *fieldstr, ff_lvalue_t *lval
     return FF_OK;
 }
 
-/* Flow duration calculation function */
-ff_uint64_t calc_record_duration(uint8_t *record, struct ipfix_template *templ);
-
 /* getting data callback */
 ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char **data, size_t *size)
 {
@@ -637,67 +897,83 @@ ff_error_t ipf_data_func(ff_t *filter, void *rec, ff_extern_id_t id, char **data
         ff_uint64_t flow_duration;
         ff_uint64_t tmp, tmp2;
 
-        //TODO: rewrite to safer form;
+        uint8_t *rec_data = msg_pair->rec->record;
+        struct ipfix_template *rec_tmplt = msg_pair->rec->templ;
+
         //TODO: add mpls handlers
-        //TODO: check that memcpy construction works
         switch (ie_id) {
-        case CALC_PPS:
-            flow_duration = calc_record_duration(msg_pair->rec->record, msg_pair->rec->templ);
-            if (!flow_duration) {
+        case CALC_PPS: // Packets per second
+            if (get_duration(rec_data, rec_tmplt, &flow_duration) != 0) {
                 return FF_ERR_OTHER;
             }
 
-            ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, 0, 2, &len);
-            if (!len) {
+            if (flow_duration == 0) {
+                tmp = 0;
+                len = sizeof(tmp);
+                break;
+            }
+
+            // Get packets (ID 2)
+            if (get_unsigned(rec_data, rec_tmplt, 2, &tmp) != 0) {
                 return FF_ERR_OTHER;
             }
-            memcpy(&tmp, ipf_field, len); //Not sure if this construction works for all lenghts
 
-            tmp = ((ntohll(tmp) * 1000) / flow_duration);
+            // Duration is in milliseconds!
+            tmp = (tmp * 1000) / flow_duration;
             len = sizeof(tmp);
-
             break;
-        case CALC_DURATION:
-            tmp = calc_record_duration(msg_pair->rec->record, msg_pair->rec->templ);
-            if (!tmp) {
+
+        case CALC_DURATION: // Flow duration
+            if (get_duration(rec_data, rec_tmplt, &flow_duration) != 0) {
                 return FF_ERR_OTHER;
             }
 
+            tmp = flow_duration;
             len = sizeof(tmp);
-
             break;
-        case CALC_BPS:
-            flow_duration = calc_record_duration(msg_pair->rec->record, msg_pair->rec->templ);
-            if (!len) {
-                return FF_ERR_OTHER;
-            }
-            ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, 0, 1, &len);
-            if (!len) {
-                return FF_ERR_OTHER;
-            }
-            memcpy(&tmp, ipf_field, len);
 
-            tmp = ((ntohll(tmp) * 1000) / flow_duration);
+        case CALC_BPS: // Bits per second
+            if (get_duration(rec_data, rec_tmplt, &flow_duration) != 0) {
+                return FF_ERR_OTHER;
+            }
+
+            if (flow_duration == 0) {
+                tmp = 0;
+                len = sizeof(tmp);
+                break;
+            }
+
+            // Get bytes (ID 1)
+            if (get_unsigned(rec_data, rec_tmplt, 1, &tmp) != 0) {
+                return FF_ERR_OTHER;
+            }
+
+            // Duration is in milliseconds (1000x) and bits (8x)
+            tmp = (8000 * tmp) / flow_duration;
             len = sizeof(tmp);
-
             break;
-        case CALC_BPP: ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, 0, 1, &len);
-            if (!len) {
+
+        case CALC_BPP: // Bytes per packet
+            if (get_unsigned(rec_data, rec_tmplt, 2, &tmp2) != 0) {
                 return FF_ERR_OTHER;
             }
-            memcpy(&tmp, ipf_field, len);
 
-            ipf_field = data_record_get_field((msg_pair->rec)->record, (msg_pair->rec)->templ, 0, 2, &len);
-            if (!len) {
+            if (tmp2 == 0) { // No packets!
+                tmp = 0;
+                len = sizeof(tmp);
+                break;
+            }
+
+            if (get_unsigned(rec_data, rec_tmplt, 1, &tmp) != 0) {
                 return FF_ERR_OTHER;
             }
-            memcpy(&tmp2, ipf_field, len);
 
-            tmp = ntohll(tmp) / ntohll(tmp2);
+            tmp = tmp / tmp2;
             len = sizeof(tmp);
-
             break;
-        default: return FF_ERR_OTHER;
+
+        default:
+            return FF_ERR_OTHER;
         }
         // Copy calculated data to provided buffer
         memcpy(*data, &tmp, len);
@@ -803,34 +1079,6 @@ ff_error_t ipf_rval_map_func(ff_t *filter, const char *valstr, ff_type_t type, f
     }
 
     return FF_ERR_OTHER;
-}
-
-ff_uint64_t calc_record_duration(uint8_t *record, struct ipfix_template *templ)
-{
-    int len;
-    char *ipf_data;
-    ff_uint64_t tend;
-    ff_uint64_t tstart;
-
-    ipf_data = NULL;
-    tend = tstart = 0;
-
-    ipf_data = data_record_get_field(record, templ, 0, 153, &len);
-    if (len) {
-        memcpy(&tend, ipf_data, len);
-        tend = ntohll(tend);
-        ipf_data = data_record_get_field(record, templ, 0, 152, &len);
-        if (len) {
-            memcpy(&tstart, ipf_data, len);
-            tstart = ntohll(tstart);
-        } else {
-            return 0;
-        }
-    } else {
-        return 0;
-    }
-
-    return abs(tend - tstart);
 }
 
 /* Constructor */
