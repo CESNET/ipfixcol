@@ -133,9 +133,16 @@ libsqlite3-dev libpq-dev libcpg-dev corosync-dev
 ```
 Moreover, you need to build the [FastBit library](#fastbit)
 
-First, get IPFIXcol git repository (do NOT forget to use `--recursive`):
+First, download IPFIXcol git repository (do NOT forget to use `--recursive` option):
 ```sh
 git clone --recursive https://github.com/CESNET/ipfixcol.git
+```
+
+Note: If you have updated from a previous revision of the repository without a submodule 
+or if you forgot to add `--recursive` option, you can just download submodule manually:
+```sh
+git submodule init
+git submodule update
 ```
 
 After installing all dependencies and downloading the repository, the whole framework can be build at once with
