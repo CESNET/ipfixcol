@@ -139,10 +139,9 @@ git clone --recursive https://github.com/CESNET/ipfixcol.git
 ```
 
 Note: If you have updated from a previous revision of the repository without a submodule 
-or if you forgot to add `--recursive` option, you can just download submodule manually:
+or if you forgot to add `--recursive` option, you can just download the submodule manually:
 ```sh
-git submodule init
-git submodule update
+git submodule update --init --recursive
 ```
 
 After installing all dependencies and downloading the repository, the whole framework can be build at once with
