@@ -22,11 +22,12 @@ RUN apt-get update && apt-get install -y \
 
 # checkout IPFIXcol
 WORKDIR /root/
-RUN git clone https://github.com/CESNET/ipfixcol.git
+RUN git clone --recursive https://github.com/CESNET/ipfixcol.git
 WORKDIR /root/ipfixcol/
 
 # select devel branch for installation
 RUN git checkout devel;
+RUN git submodule update --init --recursive
 
 # install IPFIXcol base
 RUN cd base; \
