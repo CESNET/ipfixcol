@@ -27,7 +27,6 @@
   with_items: "{{ build.cmds }}"
   tags: profiler
 
-
 # profile_stats
 - name: Build profile_stats intermediate plugin
   command: >

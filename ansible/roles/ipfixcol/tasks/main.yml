@@ -10,9 +10,14 @@
 
 - name: IPFIXcol intermediate plugins
   include: intermediate-plugins.yml
-  
+
 - name: IPFIXcol storage plugins
   include: storage-plugins.yml
-  
+
 - name: IPFIXcol tools
   include: tools.yml
+
+# This is included last since it requires that individual sources are 
+# configured already
+- name: Build RPMs
+  include: build-rpms.yml

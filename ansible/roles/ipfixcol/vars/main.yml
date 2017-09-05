@@ -16,3 +16,4 @@ build:
 
 # this can be easily changed from command line
 build_fastbit_compile: false
+build_rpms: false

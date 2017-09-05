@@ -66,3 +66,9 @@
   action: "{{ ansible_pkg_mgr }} name={{ item }} state=latest"
   with_items: "{{ packages.dhcp }}"
   tags: dhcp
+
+- name: RPM package dependencies
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=latest"
+  with_items: "{{ packages.build_rpms }}"
+  when: build_rpms | bool
+  tags: always

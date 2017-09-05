@@ -38,3 +38,9 @@ There is a tag for each plugin and its dependency. LibFastbit library can be ins
 ## <a name="libfastbit"></a>LibFastbit compilation
 
 The LibFastbit is a fairly large beast and takes some time to compile. Therefore, we usually install it using binaries, which are pre-compiled for all supported systems (see above). However, if you are installing on unsupported an distribution or you just want to build from sources, you can force this by using `--extra-vars "build_fastbit_compile=true"`
+
+## <a name="rpm-build"></a>Building RPM packages
+
+This is an experimental feature used by maintainers. You have been warned.
+
+On systems which support building of RPM packages, using `--extra-vars "build_rpms=true"` forces the playbook to try to build RPM packages for all plugins and tools. It was tested only on Centos 7 and will certainly fail for all non-RPM distributions.

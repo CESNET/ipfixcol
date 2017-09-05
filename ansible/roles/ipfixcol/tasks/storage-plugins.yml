@@ -9,7 +9,6 @@
   with_items: "{{ build.cmds }}"
   tags: fastbit
 
-
 # json
 - name: Build json storage plugin
   command: >
@@ -55,7 +54,7 @@
     creates=/usr/local/share/ipfixcol/plugins/ipfixcol-statistics-output.so
   with_items: "{{ build.cmds }}"
   tags: statistics
-  
+
 # unirec 
 # requires libunirec from https://github.com/CESNET/Nemea-Framework
 #- name: Build unirec storage plugin
