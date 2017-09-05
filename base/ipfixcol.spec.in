@@ -71,6 +71,7 @@ make test
 %{_mandir}/man1/ipfixcol-ipfix-input.1.gz
 #storage plugins
 %{_datadir}/%{name}/plugins/ipfixcol-ipfix-output.*
+%{_mandir}/man1/ipfixcol-ipfix-output.1.gz
 %{_datadir}/%{name}/plugins/ipfixcol-dummy-output.*
 %{_mandir}/man1/ipfixcol-dummy-output.1.gz
 %{_datadir}/%{name}/plugins/ipfixcol-forwarding-output.la
