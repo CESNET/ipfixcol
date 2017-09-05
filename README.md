@@ -131,6 +131,9 @@ git liblzo2-dev libtool libsctp-dev libssl-dev libxml2
 libxml2-dev pkg-config xsltproc libgeoip-dev librrd-dev
 libsqlite3-dev libpq-dev libcpg-dev corosync-dev
 ```
+
+IPFIXcol does not support openssl1.1, therefore you need to use libssl1.0-dev on Debian Jessie.
+
 Moreover, you need to build the [FastBit library](#fastbit)
 
 First, download IPFIXcol git repository (do NOT forget to use `--recursive` option):

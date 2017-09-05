@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
   liblzo2-dev \
   libtool \
   libsctp-dev \
-  libssl-dev \
+  libssl1.0-dev \
   libxml2 \
   libxml2-dev \
   pkg-config \
