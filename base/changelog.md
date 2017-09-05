@@ -1,5 +1,23 @@
 **Future release:**
 
+**Version 0.9.5**
+
+* Added an experimental option to build RPM packages using Ansible
+* Improved ipfix storage plugin to support file rotation
+* Added man page for ipfix storage plugin
+* Added man page for TCP input plugin
+* Fixed ansible and docker build for debian stretch
+* Add implementation of a new flow filter (called ffilter) as a git submodule
+* Add new tools for a profile configuration and a filter expression checking
+* Fixed reconfiguration in profilestat intermediate plugin
+* Greatly improved performance of json storage plugin
+* Added conditional kafka output support for json storage plugin (not in RPM package)
+* New tools: ipfixcol-profiles-check and ipfixcol-filter-check
+* Fixed reconfiguration call on signal reception
+* Config files no longer replaced upon RPM update
+* Removed unnecessary renumbering of IPFIX templates
+* Many more documentation improvements and code bugfixes
+
 **Version 0.9.4**
 
 * Fixed handling of empty values in JSON plugin
