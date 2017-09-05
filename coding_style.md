@@ -80,6 +80,12 @@ To ensure consistent usage of log verbosity levels, please use the following def
 * Info - I have something to say, but I don't expect you to listen.
 * Debug - All information that is only interesting for programmers.
 
+#### C and C++ standards
+
+The IPFIXcol C code must compile with GNU99 (`-std=gnu99`) standard. The ANSI C89 is not supported. Please document the use of GNU specific features so that they can be removed if the need to port IPFIXcol to non-GNU platform arises (in that case, `std=c99` will be used).
+
+The C++11 standard may be used for C++ code (`-std=c++11`). If you need any GNU specific features, feel free to use `-std=gnu++11`, but please document the use of these features.
+
 #### Other
 
 In case of any doubts or issues other than described in this document, the Linux kernel coding style [1] is leading.
