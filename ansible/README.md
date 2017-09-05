@@ -8,6 +8,8 @@ If you are familiar with Ansible, you can use it to easily install IPFIXcol on a
 
 The Ansible orchestration was tested on following systems:
 * Debian Jessie (8.5)
+* Debian Stretch (9.1)
+* Ubuntu Trusty Tahr (14.04 LTS)
 * Ubuntu Xenial (16.04 LTS)
 * CentOS 7 (7.2.1511)
 * Fedora 24
