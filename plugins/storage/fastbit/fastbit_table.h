@@ -128,9 +128,11 @@ public:
 	/**
 	 * \brief Flush data to disk and clean memory
 	 *
-	 * @param path path to direcotry where should be data flushed
+	 * @param path path to directory where should be data flushed
+	 * @param flushed_path path to directory where data was actually written
+	 * @return 0 on success, negative value otherwise
 	 */
-	void flush(std::string path);
+	int flush(std::string path, std::string &flushed_path);
 
 	time_t get_first_transmission() {
 		return _first_transmission;

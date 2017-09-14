@@ -110,8 +110,12 @@ struct fastbit_config {
 	/* size of buffer (number of values)*/
 	int buff_size;
 
-	/* semaphore for index building thread */
-	sem_t sem;
+	/* Handler for the index thread */
+	pthread_t index_thread;
+
+	/* Mutex for index building thread */
+	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+	pthread_cond_t mutex_cond = PTHREAD_COND_INITIALIZER;
 };
 
 #endif /* CONFIG_STRUCT_H_ */

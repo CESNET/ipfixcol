@@ -46,7 +46,6 @@ extern "C" {
 }
 
 #include <pthread.h>
-#include <semaphore.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -66,6 +65,8 @@ extern "C" {
 #include "fastbit_table.h"
 #include "fastbit_element.h"
 #include "config_struct.h"
+
+volatile bool terminate = false;
 
 void ipv6_addr_non_canonical(char *str, const struct in6_addr *addr)
 {
@@ -137,11 +138,30 @@ void *reorder_index(void *config)
 	std::string dir;
 	ibis::part *reorder_part;
 	ibis::table::stringArray ibis_columns;
+	bool no_dirs = true;
 
-	sem_wait(&(conf->sem));
+	while (!terminate || !no_dirs) {
 
-	for (unsigned int i = 0; i < conf->dirs->size(); i++) {
-		dir = (*conf->dirs)[i];
+		/* Sleep until there is a work to do */
+		pthread_mutex_lock(&conf->mutex);
+		while(!terminate && (*conf->dirs).empty()) {
+			pthread_cond_wait(&conf->mutex_cond, &conf->mutex);
+		}
+
+		/* Nothing to do, start again and check termination flag */
+		if ((*conf->dirs).empty()) {
+			pthread_mutex_unlock(&conf->mutex);
+			no_dirs = true;
+			continue;
+		}
+
+		/* Get the dir to process */
+		no_dirs = false;
+		dir = (*conf->dirs).back();
+		(*conf->dirs).pop_back();
+
+		pthread_mutex_unlock(&conf->mutex);
+
 		/* Reorder partitions */
 		if (conf->reorder) {
 			MSG_DEBUG(msg_module, "Reordering: %s", dir.c_str());
@@ -152,7 +172,7 @@ void *reorder_index(void *config)
 
 		/* Build indexes */
 		if (conf->indexes == 1) { /* Build all indexes */
-			MSG_DEBUG(msg_module, "Creating indexes: %s", dir.c_str());
+			MSG_INFO(msg_module, "Creating indexes: %s", dir.c_str());
 			index_table = ibis::table::create(dir.c_str());
 			index_table->buildIndexes(NULL);
 			delete index_table;
@@ -173,7 +193,6 @@ void *reorder_index(void *config)
 		ibis::fileManager::instance().flushDir(dir.c_str());
 	}
 
-	sem_post(&(conf->sem));
 	return NULL;
 }
 
@@ -232,18 +251,16 @@ void update_window_name(struct fastbit_config *conf)
  * @param conf Plugin configuration data structure
  * @param exporter_ip_addr Exporter IP address, as String
  * @param odid Observation domain ID
- * @param close Indicates whether plugin/thread should be closed after flushing all data
  */
 void flush_data(struct fastbit_config *conf, std::string exporter_ip_addr, uint32_t odid,
-		std::map<uint16_t,template_table*> *templates, bool close)
+		std::map<uint16_t,template_table*> *templates)
 {
 	std::map<uint16_t, template_table*>::iterator table;
-	int s;
 	std::stringstream ss;
-	pthread_t index_thread;
 
 	std::map<std::string, std::map<uint32_t, od_info>*>::iterator exporter_it;
 	std::map<uint32_t, od_info>::iterator odid_it;
+	std::string flushed_path;
 
 	/* Check whether exporter is listed in data structure */
 	if ((exporter_it = conf->od_infos->find(exporter_ip_addr)) == conf->od_infos->end()) {
@@ -259,18 +276,17 @@ void flush_data(struct fastbit_config *conf, std::string exporter_ip_addr, uint3
 
 	std::string path = odid_it->second.path;
 
-	sem_wait(&(conf->sem));
+	pthread_mutex_lock(&conf->mutex);;
 	{
-		conf->dirs->clear();
-
 		MSG_DEBUG(msg_module, "Flushing data to disk (exporter: %s, ODID: %u)",
 				odid_it->second.exporter_ip_addr.c_str(), odid);
 		MSG_DEBUG(msg_module, "    > Exported: %u", odid_it->second.flow_watch.exported_flows());
 		MSG_DEBUG(msg_module, "    > Received: %u", odid_it->second.flow_watch.received_flows());
 
 		for (table = templates->begin(); table != templates->end(); table++) {
-			conf->dirs->push_back(path + ((*table).second)->name() + "/");
-			(*table).second->flush(path);
+			if ((*table).second->flush(path, flushed_path) == 0) {
+				conf->dirs->push_back(flushed_path);
+			}
 			(*table).second->reset_rows();
 		}
 
@@ -280,30 +296,16 @@ void flush_data(struct fastbit_config *conf, std::string exporter_ip_addr, uint3
 
 		odid_it->second.flow_watch.reset_state();
 	}
-	sem_post(&(conf->sem));
-
-	if ((s = pthread_create(&index_thread, NULL, reorder_index, conf)) != 0) {
-		MSG_ERROR(msg_module, "pthread_create");
-	}
-
-	if (close) {
-		if ((s = pthread_join(index_thread, NULL)) != 0) {
-			MSG_ERROR(msg_module, "pthread_join");
-		}
-	} else {
-		if ((s = pthread_detach(index_thread)) != 0) {
-			MSG_ERROR(msg_module, "pthread_detach");
-		}
-	}
+	pthread_mutex_unlock(&conf->mutex);
+	pthread_cond_signal(&conf->mutex_cond);
 }
 
 /**
  * \brief Flushes the data for *all* exporters and ODIDs
  *
  * @param conf Plugin configuration data structure
- * @param close Indicates whether plugin/thread should be closed after flushing all data
  */
-void flush_all_data(struct fastbit_config *conf, bool close)
+void flush_all_data(struct fastbit_config *conf)
 {
 	std::map<std::string, std::map<uint32_t, od_info>*> *od_infos = conf->od_infos;
 	std::map<std::string, std::map<uint32_t, od_info>*>::iterator exporter_it;
@@ -312,7 +314,7 @@ void flush_all_data(struct fastbit_config *conf, bool close)
 	/* Iterate over all exporters and ODIDs and flush data */
 	for (exporter_it = od_infos->begin(); exporter_it != od_infos->end(); ++exporter_it) {
 		for (odid_it = exporter_it->second->begin(); odid_it != exporter_it->second->end(); ++odid_it) {
-			flush_data(conf, exporter_it->first, odid_it->first, &(odid_it->second.template_info), close);
+			flush_data(conf, exporter_it->first, odid_it->first, &(odid_it->second.template_info));
 		}
 	}
 }
@@ -429,11 +431,6 @@ int process_startup_xml(char *params, struct fastbit_config *c)
 
 			c->window_dir = c->prefix + "/";
 		}
-
-		if (sem_init(&(c->sem), 0, 1)) {
-			MSG_ERROR(msg_module, "Semaphore initialization error");
-			return 1;
-		}
 	} else {
 		return 1;
 	}
@@ -481,6 +478,12 @@ int storage_init(char *params, void **config)
 	
 	/* On startup we expect to write to new directory */
 	c->new_dir = true;
+
+	/* Create index thread */
+	if (pthread_create(&c->index_thread, NULL, reorder_index, c) != 0) {
+		MSG_ERROR(msg_module, "pthread_create");
+	}
+
 	return 0;
 }
 
@@ -578,7 +581,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 				old_templates->insert(std::pair<uint16_t, template_table*>(table->first, table->second));
 
 				/* Flush data */
-				flush_data(conf, exporter_ip_addr, odid, old_templates, false);
+				flush_data(conf, exporter_ip_addr, odid, old_templates);
 
 				/* Remove rewritten template */
 				delete table->second;
@@ -613,7 +616,7 @@ int store_packet(void *config, const struct ipfix_message *ipfix_msg,
 
 		if (flush_records || flush_time) {
 			/* Flush data for all exporters and ODIDs */
-			flush_all_data(conf, false);
+			flush_all_data(conf);
 
 			/* Time management differs between flush policies (records vs. time) */
 			if (flush_records) {
@@ -678,7 +681,7 @@ int storage_close(void **config)
 	for (exporter_it = od_infos->begin(); exporter_it != od_infos->end(); ++exporter_it) {
 		for (odid_it = exporter_it->second->begin(); odid_it != exporter_it->second->end(); ++odid_it) {
 			templates = &(odid_it->second.template_info);
-			flush_data(conf, exporter_it->first, odid_it->first, templates, true);
+			flush_data(conf, exporter_it->first, odid_it->first, templates);
 
 			/* Free templates */
 			for (table = templates->begin(); table != templates->end(); table++) {
@@ -688,6 +691,16 @@ int storage_close(void **config)
 
 		delete (*exporter_it).second;
 	}
+
+	/* Tell index thread to terminate */
+	terminate = true;
+	pthread_cond_signal(&conf->mutex_cond);
+
+	MSG_INFO(msg_module, "Waiting for the index thread to finish");
+	if (pthread_join(conf->index_thread, NULL) != 0) {
+		MSG_ERROR(msg_module, "pthread_join");
+	}
+	MSG_INFO(msg_module, "Index thread finished");
 
 	/* Free config structure */
 	delete od_infos;

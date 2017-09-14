@@ -263,17 +263,17 @@ int template_table::store(ipfix_data_set *data_set, std::string path, bool new_d
 	return record_cnt;
 }
 
-void template_table::flush(std::string path)
+int template_table::flush(std::string path, std::string &flushed_path)
 {
 	/* Check whether there is something to flush */
 	if (_rows_count <= 0) {
-		return;
+		return -1;
 	}
 
 	/* Check directory */
 	_rows_in_window += _rows_count;
 	if (this->dir_check(path + _name, this->_new_dir) != 0) {
-		return;
+		return -2;
 	}
 
 	/* Flush data */
@@ -286,11 +286,15 @@ void template_table::flush(std::string path)
 	_rows_count = 0;
 	_rows_in_window = 0;
 
+	flushed_path = path + _name;
+
 	/* Data on disk is consistent; try to go back to original name */
 	if (this->_orig_name[0] != '\0') {
 		strcpy(this->_name, this->_orig_name);
 		this->_orig_name[0] = '\0';
 	}
+
+	return 0;
 }
 
 int template_table::parse_template(struct ipfix_template *tmp, struct fastbit_config *config)
