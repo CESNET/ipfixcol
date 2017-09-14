@@ -172,7 +172,7 @@ void *reorder_index(void *config)
 
 		/* Build indexes */
 		if (conf->indexes == 1) { /* Build all indexes */
-			MSG_INFO(msg_module, "Creating indexes: %s", dir.c_str());
+			MSG_DEBUG(msg_module, "Creating indexes: %s", dir.c_str());
 			index_table = ibis::table::create(dir.c_str());
 			index_table->buildIndexes(NULL);
 			delete index_table;
