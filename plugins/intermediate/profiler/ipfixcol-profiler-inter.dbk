@@ -8,11 +8,19 @@
 		version="5.0" xml:lang="en">
 	<info>
 		<copyright>
-			<year>2015</year>
+			<year>2015-2017</year>
 			<holder>CESNET, z.s.p.o.</holder>
 		</copyright>
-		<date>14 January 2015</date>
+		<date>19 October 2017</date>
 		<authorgroup>
+			<author>
+				<personname>
+					<firstname>Lukas</firstname>
+					<surname>Hutak</surname>
+				</personname>
+				<email>lukas.hutak@cesnet.cz</email>
+				<contrib>developer</contrib>
+			</author>
 			<author>
 				<personname>
 					<firstname>Michal</firstname>
@@ -28,171 +36,685 @@
 	<refmeta>
 		<refentrytitle>ipfixcol-profiler-inter</refentrytitle>
 		<manvolnum>1</manvolnum>
-		<refmiscinfo otherclass="manual" class="manual">profiler plugin for IPFIXcol.</refmiscinfo>
+		<refmiscinfo otherclass="manual" class="manual">Profiler plugin for IPFIXcol.</refmiscinfo>
 	</refmeta>
 
 	<refnamediv>
 		<refname>ipfixcol-profiler-inter</refname>
-		<refpurpose>profiler plugin for IPFIXcol.</refpurpose>
+		<refpurpose>Profiler plugin for IPFIXcol.</refpurpose>
 	</refnamediv>
 
 	<refsect1>
 		<title>Description</title>
 		<simpara>
-			The <command>ipfix-profiler-inter</command> plugin is a part of IPFIXcol (IPFIX collector). It profiles IPFIX data records and fills in metadata information according to given
-                        set of profiles and their channels.
+		The <command>ipfix-profiler-inter</command> plugin is an intermediate plugin for IPFIXcol
+		(IPFIX collector). It profiles IPFIX data records and fills in metadata information
+		according to given set of profiles and their channels.
 		</simpara>
 	</refsect1>
 
 	<refsect1>
-		<title>Configuration</title>
-		<simpara>The collector must be configured to use profiler plugin in startup.xml configuration. 
-		The configuration specifies which plugins are used by the collector to process data and provides configuration for the plugins themselves. 
+		<title>Introduction to profiling</title>
+		<simpara>
+		The goal of flow profiling is multi-label classification (based on a set of rules) into
+		user-defined groups. These labels can be used for further flow processing. The basic
+		terminology includes profiles and channels.
 		</simpara>
-		<simpara><filename>startup.xml</filename> profiler example</simpara>
+		<simpara>
+		A profile is a view that represents a subset of data records received by a collector.
+		Consequently, this allows surfacing only the records that a user needs to see. Each profile
+		contains one or more channels, where each channel is represented by a filter and sources of
+		flow records. If a flow satisfies a condition of any channel of a profile, then the flow
+		will be labeled with the profile and the channel. Any flow can have as many labels as
+		possible. In other words, it can belong to multiple channels/profiles at the same time.
+		</simpara>
+		<simpara>
+		For example, let us consider that you store all flows and besides you want to store only
+		flows related to email communications (POP3, IMAP, SMTP). To do this, we can create
+		a profile "emails" with channels "pop3", "imap" and "smtp". When a flow with POP3
+		communication (port 110 or 995) is classified, it will meet the condition of the "pop3"
+		channel and will be labeled as the flow that belongs to the profile "emails" and the
+		channel "pop3".
+		</simpara>
+		<simpara>
+		Example of a profile hierarchy:
+		</simpara>
 		<programlisting>
-	<![CDATA[
-	<collectingProcess>
-		...
-		<profiles>/path/to/profiles.xml</profiles>
-	</collectingProcess>
-	...
-	<intermediatePlugins>
-		<profiler>
-		</profiler>
-		...
-	</intermediatePlugins>
-	]]>
-		</programlisting>
-
-		<para>
-			<variablelist>
-				<varlistentry>
-					<term><command>profiles</command></term>
-					<listitem>
-						<simpara>path to the file with profiles specification</simpara>
-					</listitem>
-				</varlistentry>
-			</variablelist>
-		</para>
-
-
-<simpara><filename>profile.xml</filename> profiler example</simpara>
-<programlisting>
 <![CDATA[
-<profile name="live">
-	<type>normal</type>
-	<directory>/some/directory/</directory>
+live (channels: ch1, ch2)
+├── emails (channels: pop3, smtp, imap)
+└── buildings (channels: net1, net2, net3)
+    ├── office (channels: http, voip)
+    └── factory (channels: http, voip)
+]]>
+		</programlisting>
+		<simpara>
+		The profiles can be nested and create a tree hierarchy (as shown above). A flow source of
+		a channel in a profile can be only one or more channels of the direct parent of the profile
+		to which the channel belongs. For example, the channel "http" in the profile "office" can
+		use only "net1", "net2" or "net3" channels as sources. The exception is the highest level
+		i.e. "live" profile. This profile must be always present, has exactly this name, and its
+		channels will receive all flow records intended for profiling.
+		</simpara>
+		<simpara>
+		How does flow profiling work? In a nutshell, if a record satisfies a filter of a channel,
+		it will be labeled with the channel and the profile to which the channel belongs and will
+		be also sent for evaluation to all subscribers of the channel.
+		For example, let us consider the tree hierarchy above. All flow records will be always sent
+		to all channels of "live" profile as mentioned earlier. If a flow record satisfies the
+		filter of the channel "ch1", the record will be labeled with the profile "live" and the
+		channel "ch1". Because the flow belongs to the channel "ch1" it will be also sent for
+		evaluation to all subscribers of this channel i.e. to the channels of the profiles "emails"
+		and "buildings" that have this channel ("ch1") in their source list.
+		If the record doesn't satisfy the filter, it will not be distributed to the subscribers.
+		However, if the record satisfies the channel "ch2" and the channels of the profiles
+		"emails" and "buildings" are also subscribers of the channel "ch2", the record will be sent
+		them too. Thus, the record can get to any channel in different ways but labeled can be only
+		once.
+		</simpara>
+		<simpara>
+		For now, following plugins support profiling provided by this plugin:
+		</simpara>
+		<itemizedlist>
+			<listitem>
+			<simpara>
+			<citerefentry><refentrytitle>ipfixcol-lnfstore-output</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+			- Convert and store IPFIX records into NfDump files. For more information see the manual
+			page of the plugin.
+			</simpara>
+			</listitem>
+			<listitem>
+			<simpara>
+			<citerefentry><refentrytitle>ipfixcol-profilestats-inter</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+			- Create and update RRD statistics per profile and channel. For more information
+			see manual page of the plugin.
+			</simpara>
+			</listitem>
+		</itemizedlist>
+	</refsect1>
 
-	<channelList>
-		<channel name="ch1">
-			<sourceList>
-				<source>*</source>
-			</sourceList>
-			<filter>ipVersion = 4</filter>
-		</channel>
-		<channel name="ch2">
-			<sourceList>
-				<source>*</source>
-			</sourceList>
-			<filter>odid != 5</filter>
-		</channel>
-	</channelList>
+	<refsect1>
+		<title>Plugin configuration</title>
+		<simpara>
+		The collector must be configured to use Profiler plugin in the startup.xml configuration.
+		The profiler plugin must be placed into the intermediate section before any other plugins
+		that use profiling results. Otherwise, no profiling information will be available for these
+		plugins.
+		</simpara>
+		<programlisting>
+<![CDATA[
+<collectingProcess>
+    ...
+    <profiles>/path/to/profiles.xml</profiles>
+</collectingProcess>
+...
+<intermediatePlugins>
+    ...
+    <profiler>
+    </profiler>
+    ...
+</intermediatePlugins>
+]]>
+		</programlisting>
+		<simpara>
+		The plugin does not accept any parameters, but the Collecting process must define parameter
+		<![CDATA[<profiles>]]> with an absolute path to the profiling configuration.
+		</simpara>
+	</refsect1>
 
-	<subprofileList>
-		<profile name="p1">
-			<type>normal</type>
-			<directory>/some/directory/p1/</directory>
+	<refsect1>
+		<title>Structure of the profiling configuration</title>
+		<simpara>
+		This section describes parts of the XML configuration file. Example configuration for an
+		email subprofile can be found in a section below.
+		</simpara>
+		<simpara>
+		Keep in mind that profile and channel names must match a format that corresponds to the
+		variables in the C language. In other words, a name can have letters (both uppercase and
+		lowercase), digits and underscore only. The first letter of a name should be either
+		a letter or an underscore. Consequently, the names must match regular expression
+		<![CDATA[[a-zA-Z_][a-zA-Z0-9_]*]]>.
+		</simpara>
+		<simpara>
+		<emphasis>Warning:</emphasis> Using complicated filters and multiple nested profiles
+		have a significant impact on the throughput of the collector!
+		</simpara>
 
-			<channelList>
-				<channel name="ch11">
-					<sourceList>
-						<source>ch1</source>
-						<source>ch2</source>
-					</sourceList>
-					<filter>sourceIPv4Address = 192.168.0.0/16</filter>
-				</channel>
-				<channel name="ch12">
-					<sourceList>
-						<source>ch1</source>
-					</sourceList>
-					<filter>sourceTransportPort == 25</filter>
-				</channel>
-			</channelList>
-		</profile>
-
-		<!-- other subprofiles -->
-	</subprofileList>
+		<refsect2>
+			<title>Profile (<![CDATA[<profile>]]>)</title>
+			<programlisting>
+<![CDATA[
+<profile name="...">
+    <type>...</type>
+    <directory>...</directory>
+    <channelList>...</channelList>
+    <subprofileList>...</subprofileList>
 </profile>
 ]]>
-</programlisting>
-
-		<para>
+			</programlisting>
+			<simpara>
+			Each profile has a name attribute (i.e. <![CDATA[<name>]]>) for identification among
+			other profiles. The attribute must be unique only among a group of profiles those
+			belong to the common parent profile. In the definition of each profile must be exactly
+			one definition of following elements:
+			</simpara>
 			<variablelist>
 				<varlistentry>
-					<term><command>profile</command></term>
-					<listitem>
-						<simpara>Profile definition with options, channels and subprofiles.</simpara>
-						<variablelist>
-
-							<varlistentry>
-								<term><command>type</command></term>
-								<listitem>
-									<simpara>Specifies the type of a profile - normal/shadow. <emphasis>normal</emphasis> profile means that IPFIXcol plugins should store all valuable data. <emphasis>shadow</emphasis> profile means that IPFIXcol plugins should store only statistics. </simpara>
-								</listitem>
-							</varlistentry>
-
-							<varlistentry>
-								<term><command>directory</command></term>
-								<listitem>
-									<simpara>Directory for data store of valuable data and statistics. Must be unique for each profile.</simpara>
-								</listitem>
-							</varlistentry>
-
-							<varlistentry>
-								<term><command>channelList</command></term>
-								<listitem>
-									<simpara>List of channels that belong to the profile. At least one channel must be specified. A number of channels are unlimited.</simpara>
-								</listitem>
-							</varlistentry>
-
-							<varlistentry>
-								<term><command>subprofileList</command></term>
-								<listitem>
-									<simpara>List of subprofiles that belong to the profile. This item is optional. A number of subprofiles are unlimited.</simpara>
-								</listitem>
-							</varlistentry>
-						</variablelist>
-
-					</listitem>
+				<term><command><![CDATA[<type>]]></command></term>
+				<listitem>
+					<simpara>
+					Profile type ("normal" or "shadow"). Normal profile means that IPFIXcol plugins
+					should store all valuable data (usually flow records and metadata). On the other
+					hand, for shadow profiles, the plugins should store only metadata. For example:
+					In case of the lnfstore plugin, only flows of normal profiles are stored. Others
+					are ignored.
+					</simpara>
+				</listitem>
 				</varlistentry>
 
 				<varlistentry>
-					<term><command>channel</command></term>
-					<listitem>
-						<simpara>Channel structure for profile's data filtering.</simpara>
-						<variablelist>
+				<term><command><![CDATA[<directory>]]></command></term>
+				<listitem>
+					<simpara>
+					The absolute path to a directory. All data records and metadata that belong to
+					the profile and its channels will be stored here. The directory MUST be unique
+					for each profile!
+					</simpara>
+				</listitem>
+				</varlistentry>
 
-							<varlistentry>
-								<term><command>sourceList</command></term>
-								<listitem>
-									<simpara>List of sources from which channel will receive data. Sources are channels from parent's profile (except top level channels). If a profile receive data from all parent's channels only one source with '*' can by used. <emphasis>shadow</emphasis> profiles must always use only '*' source!</simpara>
-								</listitem>
-							</varlistentry>
-
-							<varlistentry>
-								<term><command>filter</command></term>
-								<listitem>
-									<simpara>Filter applied on data records, specifying whether it belongs to the profile. It uses the same syntax as <citerefentry><refentrytitle>ipfixcol-filter-inter</refentrytitle><manvolnum>1</manvolnum></citerefentry></simpara>
-									<simpara>Except data fields, profile filter can contain elements from IP and IPFIX header. Supported fields are: odid, srcaddr, dstaddr, srcport, dstport</simpara>
-								</listitem>
-							</varlistentry>
-
-						</variablelist>
-					</listitem>
+				<varlistentry>
+				<term><command><![CDATA[<channelList>]]></command></term>
+				<listitem>
+					<simpara>
+					List of one or more channels (see the section below about channels).
+					</simpara>
+				</listitem>
 				</varlistentry>
 			</variablelist>
-		</para>
+
+			<simpara>
+			Optionally, each profile can contain up to one definition of an element:
+			</simpara>
+			<variablelist>
+				<varlistentry>
+				<term><command><![CDATA[<subprofileList>]]></command></term>
+				<listitem>
+					<simpara>
+					List of subprofiles that belongs to the profile. The list can be empty.
+					</simpara>
+				</listitem>
+				</varlistentry>
+			</variablelist>
+		</refsect2>
+
+		<refsect2>
+			<title>Channel (<![CDATA[<channel>]]>)</title>
+			<programlisting>
+<![CDATA[
+<channel name="...">
+    <sourceList>
+        ...
+        <source>...</source>
+        ...
+    </sourceList>
+    <filter>...</filter>
+</channel>
+]]>
+			</programlisting>
+			<simpara>
+			Each channel has a name attribute (i.e. <![CDATA[<name>]]>) for unique identification
+			amongst other channels within a profile. Each channel must have exactly one definition
+			of:
+			</simpara>
+			<variablelist>
+				<varlistentry>
+				<term><command><![CDATA[<sourceList>]]></command></term>
+				<listitem>
+					<simpara>
+					List of flow sources. In this case, a source of records should not be confused
+					with an IPFIX/NetFlow exporter. The source is basically a channel from a parent
+					profile from which this channel will receive flow records. Each source must be
+					specified in an element <![CDATA[<source>]]>. If the channel receives data
+					from all parent channels, the list of channels can be replaced with only one
+					source: <![CDATA[<source>*</source>]]>. Channels in the "live" profile always
+					have to use this notation.
+					</simpara>
+				</listitem>
+				</varlistentry>
+			</variablelist>
+			<simpara>
+			Each channel within any "shadow" profile must receive from all channels from a parent
+			profile i.e. it must always use only '*' source! It is due to the fact that for later
+			evaluation of queries over shadow profiles (for example by fdistdump or other tools)
+			the information about parent channels that belong to every flow has been already lost.
+			</simpara>
+			<simpara>
+			Optionally, each channel may contain one:
+			</simpara>
+			<variablelist>
+				<varlistentry>
+				<term><command><![CDATA[<filter>]]></command></term>
+				<listitem>
+					<simpara>
+					A flow filter expression that will be applied to flow records received from
+					sources. The records that satisfy the specified filter expression will be
+					labeled with this channel and the profile to which this channel belongs.
+					If the filter is not defined, the expression is always evaluated as true.
+					</simpara>
+				</listitem>
+				</varlistentry>
+			</variablelist>
+			<simpara>
+			<emphasis>Warning:</emphasis> User must always make sure that intersection of records
+			that belong to multiple channels of the same profile is always empty! Otherwise, the
+			record can be stored multiple times (in case of lnfstore) or added to the summary
+			statistic of the profile multiple times (in case of profilestats).
+			</simpara>
+		</refsect2>
+	</refsect1>
+
+	<refsect1>
+		<title>Example configuration</title>
+		<simpara>
+		Following configuration is based on the hierarchy mentioned earlier but few parts have been
+		simplified.
+		</simpara>
+		<programlisting>
+<![CDATA[
+<profile name="live">
+    <type>normal</type>
+    <directory>/some/directory/live/</directory>
+    <channelList>
+        <channel name="ch1">
+            <sourceList><source>*</source></sourceList>
+            <filter>odid 10</filter>
+        </channel>
+        <channel name="ch2">
+            <sourceList><source>*</source></sourceList>
+            <filter>odid 20</filter>
+        </channel>
+    </channelList>
+
+    <subprofileList>
+        <profile name="emails">
+            <type>normal</type>
+            <directory>/some/directory/emails/</directory>
+
+            <channelList>
+                <channel name="pop3">
+                    <sourceList>
+                        <source>ch1</source>
+                        <source>ch2</source>
+                        <!-- or just <source>*</source> -->
+                    </sourceList>
+                    <filter>port in [110, 995]</filter>
+                </channel>
+
+                <!--
+                <channel name="smtp">
+                    ...
+                </channel>
+                -->
+            </channelList>
+        </profile>
+
+        <!--
+        <profile name="buildings">
+            ...
+            <subprofileList>
+                <profile name="office">
+                    ...
+                </profile>
+                <profile name="factory">
+                    ...
+                </profile>
+            </subprofileList>
+        </profile>
+        -->
+    </subprofileList>
+</profile>
+]]>
+		</programlisting>
+		<refsect2>
+			<title>Tips</title>
+			<simpara>
+			If you need to distinguish individual flow exporters, we highly recommend configuring
+			each exporter to use unique Observation Domain ID (ODID) (IPFIX only), configure each
+			channel of the "live" profile to represent one exporter and use filter keyword "odid"
+			(see the filter syntax for more details and limitations). If the ODID method is not
+			applicable in your situation, you can also use "exporterip", "exporterport", etc.
+			keywords, but be aware, this doesn't make sense in case of the distributed collector
+			architecture because all flows are sent to the one active proxy collector and then
+			redistributed by the proxy to subcollectors that perform profiling. From the point of
+			view of any subcollector the proxy is the exporter, therefore these ODID replacements
+			don't work as expected. On the other hand, the ODID always works.
+			</simpara>
+			<simpara>
+			If you want to make sure that your configuration file is ready to use, you can use
+			a tool called <command>ipfixcol-profiles-check</command>. Use "-h" to show all available
+			parameters.
+			</simpara>
+		</refsect2>
+	</refsect1>
+
+	<refsect1>
+		<title>Filter syntax</title>
+		<simpara>
+		The filter syntax is based on the well-known
+		<citerefentry><refentrytitle>nfdump</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+		tool. Although keywords must be written with lowercase letters. Any filter consists of one
+		or more expressions <command>expr</command>.
+		</simpara>
+
+		<simpara>
+		Any number of <command>expr</command> can be linked together:
+		expr <command>and</command> expr, expr <command>or</command> expr,
+		<command>not</command> expr and <command>(</command> expr <command>)</command>.
+		</simpara>
+
+		<simpara>
+		An expression primitive usually consists of a keyword (a name of an Information Element),
+		optional comparator, and a value. By default, if the comparator is omitted, equality
+		operator <command>=</command> will be used. Numeric values can use scaling of following
+		supported scaling factor: k, m, g. The factor is 1000.
+		</simpara>
+
+		<simpara>
+		Following comparators <command>comp</command> are supported:
+		</simpara>
+
+		<itemizedlist>
+			<listitem>
+			<simpara>
+			equals sign (<command>=</command>, <command>==</command> or <command>eq</command>)
+			</simpara>
+			</listitem>
+
+			<listitem>
+			<simpara>
+			less than (<command><![CDATA[<]]></command> or <command>lt</command>)
+			</simpara>
+			</listitem>
+
+			<listitem>
+			<simpara>
+			more than (<command><![CDATA[>]]></command> or <command>gt</command>)
+			</simpara>
+			</listitem>
+
+			<listitem>
+			<simpara>
+			like/binary and (<command><![CDATA[&]]></command>)
+			</simpara>
+			</listitem>
+		</itemizedlist>
+
+		<simpara>
+		Below is the list of the most frequently used filter primitives that are universally
+		supported. If you cannot find the primitive you are looking for, try to use the
+		corresponding
+		<citerefentry><refentrytitle>nfdump</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+		expression or just use the name of IPFIX Information Element. If you need to preserve
+		compatibility with
+		<citerefentry><refentrytitle>fdistdump</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+		you have to use only nfdump expressions!
+		</simpara>
+
+		<variablelist>
+			<varlistentry>
+			<term><emphasis>IP version</emphasis></term>
+			<listitem>
+				<para>
+				<command>ipv4</command> or <command>inet4</command> for IPv4<sbr/><command>ipv6</command> or <command>inet6</command> for IPv6
+				</para>
+			</listitem>
+			</varlistentry>
+
+			<varlistentry>
+			<term><emphasis>Protocol</emphasis></term>
+			<listitem>
+				<para>
+				<command>proto <![CDATA[<protocol>]]></command><sbr/><command>proto <![CDATA[<number>]]></command><sbr/>where <emphasis><![CDATA[<protocol>]]></emphasis> is known protocol such as tcp,
+				udp, icmp, icmp6, etc. or a valid protocol number: 6, 17 etc.
+				</para>
+			</listitem>
+			</varlistentry>
+
+			<varlistentry>
+			<term><emphasis>IP address</emphasis></term>
+			<listitem>
+				<para>
+				<command><![CDATA[[src|dst] ip <ipaddr>]]></command><sbr/><command><![CDATA[[src|dst] host <ipaddr>]]></command><sbr/>with <emphasis><![CDATA[<ipaddr>]]></emphasis> as any valid IPv4 or IPv6 address.
+				<sbr/>
+				To check if an IP address is in a known IP list, use:<sbr/><command><![CDATA[[src|dst] ip in [ <iplist> ]]]></command><sbr/><command><![CDATA[[src|dst] host in [ <iplist> ]]]></command><sbr/>where <emphasis><![CDATA[<iplist>]]></emphasis> is a space or comma separated list of individual <emphasis><![CDATA[<ipaddr>]]></emphasis>.
+				<sbr/>
+				IP addresses, networks, ports, AS number etc. can be specifically selected by using
+				a direction qualifier, such as <emphasis>src</emphasis> or <emphasis>dst</emphasis>.
+				</para>
+			</listitem>
+			</varlistentry>
+
+			<varlistentry>
+			<term><emphasis>Network</emphasis></term>
+			<listitem>
+				<para>
+				<command><![CDATA[[src|dst] net a.b.c.d m.n.r.s]]></command><sbr/>Select
+				the IPv4 network a.b.c.d with netmask m.n.r.s.
+				<sbr/>
+				<command><![CDATA[[src|dst] net <net>/<num>]]></command><sbr/>with
+				<emphasis><![CDATA[<net>]]></emphasis> as a valid IPv4 or IPv6 network and
+				<emphasis><![CDATA[<num>]]></emphasis> as mask bits. The number of mask bits must
+				match the  appropriate address family in IPv4 or IPv6. Networks may be abbreviated
+				such as 172.16/16 if they are unambiguous.
+				</para>
+			</listitem>
+			</varlistentry>
+
+			<varlistentry>
+			<term><emphasis>Port</emphasis></term>
+			<listitem>
+				<para>
+				<command><![CDATA[[src|dst] port [comp] <num>]]></command><sbr/>with
+				<emphasis><![CDATA[<num>]]></emphasis> as any valid port number. If
+				<emphasis>comp</emphasis> is omitted, '=' is assumed.<sbr/>
+				<command><![CDATA[[src|dst] port in [ <portlist> ]]]></command><sbr/>A port can
+				be compared against a know list, where
+				<emphasis><![CDATA[<portlist>]]></emphasis> is a space or comma separated list of
+				individual port numbers.
+				</para>
+			</listitem>
+			</varlistentry>
+
+			<varlistentry>
+			<term><emphasis>Flags</emphasis></term>
+			<listitem>
+				<para>
+				<command><![CDATA[flags <tcpflags>]]></command><sbr/>with
+				<emphasis><![CDATA[<tcpflags>]]></emphasis> as a combination of:
+				<sbr/>
+				<simpara>
+					A - ACK<sbr/>S - SYN<sbr/>F - FIN<sbr/>R - Reset<sbr/>P - Push<sbr/>U - Urgent<sbr/>X -  All flags on
+				</simpara>
+				<sbr/>
+				The  ordering  of  the  flags is not relevant. Flags not mentioned are treated
+				as don't care. In order to get those flows with only the SYN flag set, use the
+				syntax <command>'flags S and not flags AFRPU'</command>.
+				</para>
+			</listitem>
+			</varlistentry>
+
+			<varlistentry>
+			<term><emphasis>Packets</emphasis></term>
+			<listitem>
+				<para>
+				<command><![CDATA[packets [comp] <num> [scale]]]></command><sbr/>To
+				filter for records with a specific packet count.<sbr/>Example: 'packets > 1k'
+				</para>
+			</listitem>
+			</varlistentry>
+
+			<varlistentry>
+			<term><emphasis>Bytes</emphasis></term>
+			<listitem>
+				<para>
+				<command><![CDATA[bytes [comp] <num> [scale]]]></command><sbr/>To
+				filter for records with a specific byte count.<sbr/>Example:
+				'bytes 46' or '<![CDATA[bytes > 100 and bytes < 200]]>'
+				</para>
+			</listitem>
+			</varlistentry>
+
+			<varlistentry>
+			<term><emphasis>Packets per second</emphasis> (calculated value)</term>
+			<listitem>
+				<para>
+				<command><![CDATA[pps [comp] num [scale]]]></command><sbr/>To
+				filter for flows with specific packets per second.
+				</para>
+			</listitem>
+			</varlistentry>
+
+			<varlistentry>
+			<term><emphasis>Duration</emphasis> (calculated value)</term>
+			<listitem>
+				<para>
+				<command><![CDATA[duration [comp] num]]></command><sbr/>To
+				filter for flows with specific duration in milliseconds.
+				</para>
+			</listitem>
+			</varlistentry>
+
+			<varlistentry>
+			<term><emphasis>Bits per second</emphasis> (calculated value)</term>
+			<listitem>
+				<para>
+				<command><![CDATA[bps [comp] num [scale]]]></command><sbr/>To
+				filter for flows with specific bits per second.
+				</para>
+			</listitem>
+			</varlistentry>
+
+			<varlistentry>
+			<term><emphasis>Bytes per packet</emphasis> (calculated value)</term>
+			<listitem>
+				<para>
+				<command><![CDATA[bpp [comp] num [scale]]]></command><sbr/>To
+				filter for flows with specific bytes per packet.
+				</para>
+			</listitem>
+			</varlistentry>
+		</variablelist>
+
+		<simpara>
+		Following expressions are available only for processing live IPFIX records and therefore
+		are not supported by fdistdump.
+		</simpara>
+
+		<variablelist>
+			<varlistentry>
+			<term><emphasis>Observation Domain ID (ODID)</emphasis></term>
+			<listitem>
+				<para>
+				<command><![CDATA[odid [comp] <number>]]></command><sbr/><command><![CDATA[odid [comp] in [ <numlist> ]]]></command><sbr/>To
+				filter IPFIX records with a specific Observation Domain ID.
+				</para>
+			</listitem>
+			</varlistentry>
+
+			<varlistentry>
+			<term><emphasis>Exporter IP</emphasis></term>
+			<listitem>
+				<para>
+				<command><![CDATA[exporterip <ipaddr>]]></command><sbr/><command><![CDATA[exporterip in [ <iplist> ]]]></command><sbr/>To
+				filter for exporters connected with specified IP addresses.
+				</para>
+			</listitem>
+			</varlistentry>
+
+			<varlistentry>
+			<term><emphasis>Exporter port</emphasis></term>
+			<listitem>
+				<para>
+				<command><![CDATA[exporterport <port>]]></command><sbr/><command><![CDATA[exporterport in [ <portlist> ]]]></command><sbr/>To
+				filter for exporters connected with specified port.
+				</para>
+			</listitem>
+			</varlistentry>
+
+			<varlistentry>
+			<term><emphasis>Collector IP</emphasis></term>
+			<listitem>
+				<para>
+				<command><![CDATA[collectorip <ipaddr>]]></command><sbr/><command><![CDATA[collectorip in [ <iplist> ]]]></command><sbr/>To
+				filter for an input IP address of a running collector.
+				</para>
+			</listitem>
+			</varlistentry>
+
+			<varlistentry>
+			<term><emphasis>Collector port</emphasis></term>
+			<listitem>
+				<para>
+				<command><![CDATA[collectorport <port>]]></command><sbr/><command><![CDATA[collectorport in [ <portlist> ]]]></command><sbr/>To
+				filter for an input port of a running collector.
+				</para>
+			</listitem>
+			</varlistentry>
+		</variablelist>
+
+		<simpara>
+		Instead of the identifiers above you can also use any IPFIX Information Element (IE) that is
+		supported by IPFIXcol. These IEs can be easily added to the configuration file of the
+		collector so even Private Enterprise IEs can be also used for filtering. See its manual
+		page for more information. Just keep in mind that these identifiers are not supported by
+		fdistdump right now.
+		</simpara>
+		<simpara>
+		For example, IPFIX IE for the source port in the transport header is called
+		"sourceTransportPort" and essentially corresponds to the filter expression "src port".
+		Therefore, the expressions <command>sourceTransportPort 80</command> and
+		<command>src port 80</command> represent the same filter.
+		</simpara>
+
+		<refsect2>
+			<title>Filter examples</title>
+			<simpara>
+			To dump all records of host 192.168.1.2:<sbr/><command>ip 192.168.1.2</command>
+			</simpara>
+
+			<simpara>
+			To dump all record of network 172.16.0.0/16:<sbr/><command>net 172.16.0.0/16</command>
+			</simpara>
+
+			<simpara>
+			To dump all port 80 IPv6 connections to any web server:<sbr/><command>inet6 and proto tcp and ( src port > 1024 and dst port 80 )</command>
+			</simpara>
+		</refsect2>
+
+		<refsect2>
+			<title>Use-case example</title>
+			<simpara>
+			Let's say that we would like to filter only POP3 flows. We know that ports of POP3 communication
+are 110 (unencrypted) or 995 (encrypted). So we can write:<sbr/><command>sourceTransportPort == 110</command><sbr/><command>or sourceTransportPort == 995</command><sbr/><command>or destinationTransportPort == 110</command><sbr/><command>or destinationTransportPort == 995</command>
+			</simpara>
+
+			<simpara>
+			Instead of IPFIX IEs, we can use universal identifiers:<sbr/><command>src port 110 or src port 995 or dst port 110 or dst port 995</command>
+			</simpara>
+
+			<simpara>
+			Source and destination port can be merged:<sbr/><command>port 110 or port 995</command>
+			</simpara>
+
+			<simpara>
+			This expression still can be simplified:<sbr/><command>port in [110, 995]</command>
+			</simpara>
+
+			<simpara>
+			All examples above represent the same filter.
+			</simpara>
+		</refsect2>
 	</refsect1>
 
 	<refsect1>
@@ -202,7 +724,9 @@
 			<variablelist>
 				<varlistentry>
 					<term>
-						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+						<citerefentry><refentrytitle>ipfixcol</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+						<citerefentry><refentrytitle>ipfixcol-lnfstore-output</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+						<citerefentry><refentrytitle>ipfixcol-profilestats-inter</refentrytitle><manvolnum>1</manvolnum></citerefentry>
 					</term>
 					<listitem>
 						<simpara>Man pages</simpara>

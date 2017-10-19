@@ -265,7 +265,7 @@ or just use the name of IPFIX Information Element. If you need to preserve compa
 
 - _IP version_ \
   `ipv4` or `inet4` for IPv4 \
-  `ipv6` or `inet6` for IPv4
+  `ipv6` or `inet6` for IPv6
 
 - _Protocol_ \
   `proto <protocol>` \
@@ -298,8 +298,8 @@ or just use the name of IPFIX Information Element. If you need to preserve compa
   `[src|dst] port [comp] <num>` \
   with <num> as any valid port number.  If *comp* is omitted, '=' is assumed. \
   `[src|dst] port in [ <portlist> ]` \
-  A port can be compared against a know list, where `<portlist>` is a space separated list of
-  individual port numbers.
+  A port can be compared against a know list, where `<portlist>` is a space or comma separated
+  list of individual port numbers.
 
 - _Flags_ \
   `flags <tcpflags>` \
