@@ -30,23 +30,17 @@ HB_TYPE                        uint8          1      e8057id700       TLS conten
 HB_DIR                         uint8          1      e8057id701       Heartbeat request/response byte
 HB_SIZE_MSG                    uint16 	      2      e8057id702       Heartbeat message size
 HB_SIZE_PAYLOAD                uint16 	      2      e8057id703       Heartbeat payload size 
-HTTP_REQUEST_METHOD_ID         uint32         4      e16982id500      HTTP request method id
-HTTP_REQUEST_HOST              string        -1      e16982id501      HTTP request host
-HTTP_REQUEST_URL               string        -1      e16982id502      HTTP request url
-HTTP_REQUEST_AGENT_ID          uint32         4      e16982id503      HTTP request agent id
-HTTP_REQUEST_AGENT             string        -1      e16982id504      HTTP request agent
-HTTP_REQUEST_REFERER           string        -1      e16982id505      HTTP referer
-HTTP_RESPONSE_STATUS_CODE      uint32         4      e16982id506      HTTP response status code
-HTTP_RESPONSE_CONTENT_TYPE     string        -1      e16982id507      HTTP response content type
-HTTP_SDM_REQUEST_METHOD_ID     uint32         4      e8057id800       Used method
-HTTP_SDM_REQUEST_HOST          string        -1      e8057id801       Host
-HTTP_SDM_REQUEST_URL           string        -1      e8057id802       URL
-HTTP_SDM_REQUEST_REFERER       string        -1      e8057id803       Referer
-HTTP_SDM_REQUEST_AGENT         string        -1      e8057id804       User-agent
-HTTP_SDM_REQUEST_RANGE         bytes         -1      e8057id821       Range
-HTTP_SDM_RESPONSE_STATUS_CODE  uint32         4      e8057id805       Status coce converted into integer
-HTTP_SDM_RESPONSE_CONTENT_TYPE string        -1      e8057id806       Content-type
-HTTP_SDM_RESPONSE_TIME         uint64         8      e8057id807       Application response time
+# HTTP elements from Flowmon HTTP plugin in MUNI PEN, and CESNET sdm-http and sdm-https plugins in CESNET PEN
+HTTP_REQUEST_METHOD_ID         uint32         4      e16982id500,e8057id800               HTTP request method id
+HTTP_REQUEST_HOST              string        -1      e16982id501,e8057id801,e8057id808    HTTP(S) request host
+HTTP_REQUEST_URL               string        -1      e16982id502,e8057id802               HTTP request url
+HTTP_REQUEST_AGENT_ID          uint32         4      e16982id503                          HTTP request agent id
+HTTP_REQUEST_AGENT             string        -1      e16982id504,e8057id804               HTTP request agent
+HTTP_REQUEST_REFERER           string        -1      e16982id505,e8057id803               HTTP referer
+HTTP_RESPONSE_STATUS_CODE      uint32         4      e16982id506,e8057id805               HTTP response status code
+HTTP_RESPONSE_CONTENT_TYPE     string        -1      e16982id507,e8057id806               HTTP response content type
+HTTP_REQUEST_RANGE             bytes         -1      e8057id821                           HTTP range
+HTTP_RESPONSE_TIME             uint64         8      e8057id807,e8057id809                HTTP(S) application response time
 IPV6_TUN_TYPE                  uint8          1      e16982id405      IPv6 tunnel type
 SMTP_COMMAND_FLAGS             uint32         4      e8057id810       SMTP command flags
 SMTP_MAIL_CMD_COUNT            uint32         4      e8057id811       SMTP MAIL command count
