@@ -1746,6 +1746,11 @@
 		<plainLevel>1</plainLevel>
 	</plugin>
 	<plugin>
+		<name>sip_msg_type</name>
+		<path>@pkgdatadir@/plugins/sip_msg_type.so</path>
+		<plainLevel>1</plainLevel>
+	</plugin>
+	<plugin>
 		<name>dns_rcode</name>
 		<path>@pkgdatadir@/plugins/dns_rcode.so</path>
 		<plainLevel>1</plainLevel>
