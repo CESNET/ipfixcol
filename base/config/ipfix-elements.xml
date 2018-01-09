@@ -2312,64 +2312,64 @@
 	</element>
 	<element>
 		<enterprise>8057</enterprise>
-		<id>830</id>
-		<name>SIPMethod</name>
-		<dataType>unsigned32</dataType>
+		<id>100</id>
+		<name>SIPMsgType</name>
+		<dataType>unsigned16</dataType>
 		<semantic></semantic>
 	</element>
 	<element>
 		<enterprise>8057</enterprise>
-		<id>831</id>
+		<id>101</id>
 		<name>SIPStatusCode</name>
-		<dataType>unsigned32</dataType>
+		<dataType>unsigned16</dataType>
 		<semantic></semantic>
 	</element>
 	<element>
 		<enterprise>8057</enterprise>
-		<id>832</id>
-		<name>SIPRequestURI</name>
+		<id>102</id>
+		<name>SIPCallID</name>
 		<dataType>string</dataType>
 		<semantic></semantic>
 	</element>
 	<element>
 		<enterprise>8057</enterprise>
-		<id>833</id>
-		<name>SIPFrom</name>
+		<id>103</id>
+		<name>SIPCallingParty</name>
 		<dataType>string</dataType>
 		<semantic></semantic>
 	</element>
 	<element>
 		<enterprise>8057</enterprise>
-		<id>834</id>
-		<name>SIPTo</name>
+		<id>104</id>
+		<name>SIPCalledParty</name>
 		<dataType>string</dataType>
 		<semantic></semantic>
 	</element>
 	<element>
 		<enterprise>8057</enterprise>
-		<id>835</id>
-		<name>SIPContact</name>
-		<dataType>string</dataType>
-		<semantic></semantic>
-	</element>
-	<element>
-		<enterprise>8057</enterprise>
-		<id>836</id>
+		<id>105</id>
 		<name>SIPVia</name>
 		<dataType>string</dataType>
 		<semantic></semantic>
 	</element>
 	<element>
 		<enterprise>8057</enterprise>
-		<id>837</id>
-		<name>SIPRoute</name>
+		<id>106</id>
+		<name>SIPUserAgent</name>
 		<dataType>string</dataType>
 		<semantic></semantic>
 	</element>
 	<element>
 		<enterprise>8057</enterprise>
-		<id>838</id>
-		<name>SIPRecordRoute</name>
+		<id>107</id>
+		<name>SIPRequestURI</name>
+		<dataType>string</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>8057</enterprise>
+		<id>108</id>
+		<name>SIPCseq</name>
 		<dataType>string</dataType>
 		<semantic></semantic>
 	</element>

@@ -1267,57 +1267,48 @@
 		</value>
 	</column>
 	<column>
-		<name>SIP Method</name>
-		<alias>%csipm</alias>
+		<name>SIP Msg Type</name>
+		<alias>%csipmt</alias>
 		<width>9</width>
 		<default-value>-</default-value>
 		<value type="plain">
-			<element semantics="sip_method">e8057id830</element>
+			<element semantics="sip_msg_type">e8057id100</element>
 		</value>
 	</column>
 	<column>
 		<name>SIP Status Code</name>
-		<alias>%csips</alias>
+		<alias>%csipsc</alias>
 		<width>3</width>
 		<default-value>-</default-value>
 		<value type="plain">
-			<element>e8057id831</element>
+			<element>e8057id101</element>
 		</value>
 	</column>
 	<column>
-		<name>SIP Request URI</name>
-		<alias>%csipu</alias>
+		<name>SIP Call ID</name>
+		<alias>%csipci</alias>
 		<width>64</width>
 		<default-value>-</default-value>
 		<value type="plain">
-			<element>e8057id832</element>
+			<element>e8057id102</element>
 		</value>
 	</column>
 	<column>
-		<name>SIP From</name>
-		<alias>%csipf</alias>
+		<name>SIP Calling Party</name>
+		<alias>%csipsrc</alias>
 		<width>64</width>
 		<default-value>-</default-value>
 		<value type="plain">
-			<element>e8057id833</element>
+			<element>e8057id103</element>
 		</value>
 	</column>
 	<column>
-		<name>SIP To</name>
-		<alias>%csipt</alias>
+		<name>SIP Called Party</name>
+		<alias>%csipdst</alias>
 		<width>64</width>
 		<default-value>-</default-value>
 		<value type="plain">
-			<element>e8057id834</element>
-		</value>
-	</column>
-	<column>
-		<name>SIP Contact</name>
-		<alias>%csipc</alias>
-		<width>64</width>
-		<default-value>-</default-value>
-		<value type="plain">
-			<element>e8057id835</element>
+			<element>e8057id104</element>
 		</value>
 	</column>
 	<column>
@@ -1326,25 +1317,34 @@
 		<width>64</width>
 		<default-value>-</default-value>
 		<value type="plain">
-			<element>e8057id836</element>
+			<element>e8057id105</element>
 		</value>
 	</column>
 	<column>
-		<name>SIP Route</name>
-		<alias>%csipr</alias>
+		<name>SIP User Agent</name>
+		<alias>%csipua</alias>
 		<width>64</width>
 		<default-value>-</default-value>
 		<value type="plain">
-			<element>e8057id837</element>
+			<element>e8057id106</element>
 		</value>
 	</column>
 	<column>
-		<name>SIP Record Route</name>
-		<alias>%csiprr</alias>
+		<name>SIP Request URI</name>
+		<alias>%csipru</alias>
 		<width>64</width>
 		<default-value>-</default-value>
 		<value type="plain">
-			<element>e8057id838</element>
+			<element>e8057id107</element>
+		</value>
+	</column>
+	<column>
+		<name>SIP Cseq</name>
+		<alias>%csipcseq</alias>
+		<width>64</width>
+		<default-value>-</default-value>
+		<value type="plain">
+			<element>e8057id108</element>
 		</value>
 	</column>
 
@@ -1702,7 +1702,7 @@
 	</format>
 	<format>
 		<formatName>sip4-cesnet</formatName>
-		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %csipm %csipc %csipu %csipf %csipt %csipc %csipv %csipr %csiprr</formatString>
+		<formatString>%ts %td %pr %sp %dp %sa4 %da4 %pkt %byt %fl %csipmt %csipsc %csipci %csipsrc %csipdst %csipv %csipua %csipru %csipcseq</formatString>
 	</format>
 	<format>
 		<formatName>voip</formatName>
