@@ -1,5 +1,8 @@
 **Future release:**
 
+**Version 0.4.3:**
+* Fixed configuration for CESNET SIP plugin
+
 **Version 0.4.2:**
 * Fixed markdown syntax
 * Support DocBook XSL Stylesheets v1.79

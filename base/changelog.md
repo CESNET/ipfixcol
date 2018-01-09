@@ -1,5 +1,8 @@
 **Future release:**
 
+**Version 0.9.6**
+* Fixed configuration for CESNET SIP plugin
+
 **Version 0.9.5**
 
 * Added an experimental option to build RPM packages using Ansible
