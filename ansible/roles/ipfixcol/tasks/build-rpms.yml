@@ -30,7 +30,7 @@
    - unirec
 
 - name: Install lnfstore dependency packages
-  yum: "name=libnf-devel,bloom_filter_indexes state=latest"
+  yum: "name=libnf-devel,bloom_filter_indexes,bzip2-devel state=latest"
   when: build_rpms | bool
   tags: lnfstore
 
