@@ -250,7 +250,7 @@
 								<varlistentry>
 									<term><command>timeWindow</command></term>
 									<listitem>
-										<simpara>Specifies the time interval in seconds to rotate files [default == 300].</simpara>
+										<simpara>Specifies the time interval in seconds to rotate files, minimum is 60 [default == 300].</simpara>
 									</listitem>
 								</varlistentry>
 

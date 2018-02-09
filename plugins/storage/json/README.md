@@ -122,7 +122,7 @@ Here is an example of configuration in **startup.xml**:
 	* **path** - The path specifies storage directory for data collected by JSON plugin. Path can contain format specifier for day, month, etc. This allows you to create directory hierarchy based on format specifiers. See "strftime" for conversion specification.
 	* **prefix** - Specifies name prefix for output files.
 	* **dumpInterval**
-		* **timeWindow** - Specifies the time interval in seconds to rotate files [default == 300].
+		* **timeWindow** - Specifies the time interval in seconds to rotate files, minimum is 60 [default == 300].
 		* **timeAlignment** - Align file rotation with next N minute interval [default == yes].
 * **output : server** - Sends data over the network to connected clients.
 	* **port** - Local port number.
