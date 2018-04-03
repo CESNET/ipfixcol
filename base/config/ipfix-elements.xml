@@ -16,6 +16,13 @@
 	</element>
 	<element>
 		<enterprise>0</enterprise>
+		<id>3</id>
+		<name>deltaFlowCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>deltaCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
 		<id>4</id>
 		<name>protocolIdentifier</name>
 		<dataType>unsigned8</dataType>
@@ -32,7 +39,7 @@
 		<enterprise>0</enterprise>
 		<id>6</id>
 		<name>tcpControlBits</name>
-		<dataType>unsigned8</dataType>
+		<dataType>unsigned16</dataType>
 		<semantic>flags</semantic>
 	</element>
 	<element>
@@ -47,7 +54,7 @@
 		<id>8</id>
 		<name>sourceIPv4Address</name>
 		<dataType>ipv4Address</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -75,7 +82,7 @@
 		<id>12</id>
 		<name>destinationIPv4Address</name>
 		<dataType>ipv4Address</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -96,7 +103,7 @@
 		<id>15</id>
 		<name>ipNextHopIPv4Address</name>
 		<dataType>ipv4Address</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -117,7 +124,7 @@
 		<id>18</id>
 		<name>bgpNextHopIPv4Address</name>
 		<dataType>ipv4Address</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -180,14 +187,14 @@
 		<id>27</id>
 		<name>sourceIPv6Address</name>
 		<dataType>ipv6Address</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>28</id>
 		<name>destinationIPv6Address</name>
 		<dataType>ipv6Address</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -254,6 +261,20 @@
 	</element>
 	<element>
 		<enterprise>0</enterprise>
+		<id>38</id>
+		<name>engineType</name>
+		<dataType>unsigned8</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>39</id>
+		<name>engineId</name>
+		<dataType>unsigned8</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
 		<id>40</id>
 		<name>exportedOctetTotalCount</name>
 		<dataType>unsigned64</dataType>
@@ -275,17 +296,24 @@
 	</element>
 	<element>
 		<enterprise>0</enterprise>
+		<id>43</id>
+		<name>ipv4RouterSc</name>
+		<dataType>ipv4Address</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
 		<id>44</id>
 		<name>sourceIPv4Prefix</name>
 		<dataType>ipv4Address</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>45</id>
 		<name>destinationIPv4Prefix</name>
 		<dataType>ipv4Address</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -299,6 +327,34 @@
 		<id>47</id>
 		<name>mplsTopLabelIPv4Address</name>
 		<dataType>ipv4Address</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>48</id>
+		<name>samplerId</name>
+		<dataType>unsigned8</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>49</id>
+		<name>samplerMode</name>
+		<dataType>unsigned8</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>50</id>
+		<name>samplerRandomInterval</name>
+		<dataType>unsigned32</dataType>
+		<semantic>quantity</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>51</id>
+		<name>classId</name>
+		<dataType>unsigned8</dataType>
 		<semantic>identifier</semantic>
 	</element>
 	<element>
@@ -334,14 +390,14 @@
 		<id>56</id>
 		<name>sourceMacAddress</name>
 		<dataType>macAddress</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>57</id>
 		<name>postDestinationMacAddress</name>
 		<dataType>macAddress</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -376,14 +432,14 @@
 		<id>62</id>
 		<name>ipNextHopIPv6Address</name>
 		<dataType>ipv6Address</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>63</id>
 		<name>bgpNextHopIPv6Address</name>
 		<dataType>ipv6Address</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -397,96 +453,103 @@
 		<id>70</id>
 		<name>mplsTopLabelStackSection</name>
 		<dataType>octetArray</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>71</id>
 		<name>mplsLabelStackSection2</name>
 		<dataType>octetArray</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>72</id>
 		<name>mplsLabelStackSection3</name>
 		<dataType>octetArray</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>73</id>
 		<name>mplsLabelStackSection4</name>
 		<dataType>octetArray</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>74</id>
 		<name>mplsLabelStackSection5</name>
 		<dataType>octetArray</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>75</id>
 		<name>mplsLabelStackSection6</name>
 		<dataType>octetArray</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>76</id>
 		<name>mplsLabelStackSection7</name>
 		<dataType>octetArray</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>77</id>
 		<name>mplsLabelStackSection8</name>
 		<dataType>octetArray</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>78</id>
 		<name>mplsLabelStackSection9</name>
 		<dataType>octetArray</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>79</id>
 		<name>mplsLabelStackSection10</name>
 		<dataType>octetArray</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>80</id>
 		<name>destinationMacAddress</name>
 		<dataType>macAddress</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>81</id>
 		<name>postSourceMacAddress</name>
 		<dataType>macAddress</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>82</id>
 		<name>interfaceName</name>
 		<dataType>string</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>83</id>
 		<name>interfaceDescription</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>84</id>
+		<name>samplerName</name>
 		<dataType>string</dataType>
 		<semantic></semantic>
 	</element>
@@ -506,38 +569,73 @@
 	</element>
 	<element>
 		<enterprise>0</enterprise>
-		<id>88</id>
-		<name>fragmentOffset</name>
-		<dataType>unsigned16</dataType>
+		<id>87</id>
+		<name>flagsAndSamplerId</name>
+		<dataType>unsigned32</dataType>
 		<semantic>identifier</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
-		<id>95</id>
-		<name>applicationId</name>
-		<dataType>unsigned32</dataType>
-		<semantic></semantic>
+		<id>88</id>
+		<name>fragmentOffset</name>
+		<dataType>unsigned16</dataType>
+		<semantic>quantity</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
-		<id>96</id>
-		<name>applicationName</name>
-		<dataType>string</dataType>
-		<semantic></semantic>
+		<id>89</id>
+		<name>forwardingStatus</name>
+		<dataType>unsigned8</dataType>
+		<semantic>identifier</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>90</id>
 		<name>mplsVpnRouteDistinguisher</name>
 		<dataType>octetArray</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>91</id>
 		<name>mplsTopLabelPrefixLength</name>
 		<dataType>unsigned8</dataType>
+		<semantic>quantity</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>92</id>
+		<name>srcTrafficIndex</name>
+		<dataType>unsigned32</dataType>
 		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>93</id>
+		<name>dstTrafficIndex</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>94</id>
+		<name>applicationDescription</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>95</id>
+		<name>applicationId</name>
+		<dataType>octetArray</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>96</id>
+		<name>applicationName</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -551,6 +649,41 @@
 		<id>99</id>
 		<name>multicastReplicationFactor</name>
 		<dataType>unsigned32</dataType>
+		<semantic>quantity</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>100</id>
+		<name>className</name>
+		<dataType>string</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>101</id>
+		<name>classificationEngineId</name>
+		<dataType>unsigned8</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>102</id>
+		<name>layer2packetSectionOffset</name>
+		<dataType>unsigned16</dataType>
+		<semantic>quantity</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>103</id>
+		<name>layer2packetSectionSize</name>
+		<dataType>unsigned16</dataType>
+		<semantic>quantity</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>104</id>
+		<name>layer2packetSectionData</name>
+		<dataType>octetArray</dataType>
 		<semantic></semantic>
 	</element>
 	<element>
@@ -572,14 +705,14 @@
 		<id>130</id>
 		<name>exporterIPv4Address</name>
 		<dataType>ipv4Address</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>131</id>
 		<name>exporterIPv6Address</name>
 		<dataType>ipv6Address</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -627,7 +760,7 @@
 		<enterprise>0</enterprise>
 		<id>138</id>
 		<name>observationPointId</name>
-		<dataType>unsigned32</dataType>
+		<dataType>unsigned64</dataType>
 		<semantic>identifier</semantic>
 	</element>
 	<element>
@@ -642,7 +775,7 @@
 		<id>140</id>
 		<name>mplsTopLabelIPv6Address</name>
 		<dataType>ipv6Address</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -691,7 +824,7 @@
 		<id>147</id>
 		<name>wlanSSID</name>
 		<dataType>string</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -712,56 +845,56 @@
 		<id>150</id>
 		<name>flowStartSeconds</name>
 		<dataType>dateTimeSeconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>151</id>
 		<name>flowEndSeconds</name>
 		<dataType>dateTimeSeconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>152</id>
 		<name>flowStartMilliseconds</name>
 		<dataType>dateTimeMilliseconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>153</id>
 		<name>flowEndMilliseconds</name>
 		<dataType>dateTimeMilliseconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>154</id>
 		<name>flowStartMicroseconds</name>
 		<dataType>dateTimeMicroseconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>155</id>
 		<name>flowEndMicroseconds</name>
 		<dataType>dateTimeMicroseconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>156</id>
 		<name>flowStartNanoseconds</name>
 		<dataType>dateTimeNanoseconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>157</id>
 		<name>flowEndNanoseconds</name>
 		<dataType>dateTimeNanoseconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -782,7 +915,7 @@
 		<id>160</id>
 		<name>systemInitTimeMilliseconds</name>
 		<dataType>dateTimeMilliseconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -845,14 +978,14 @@
 		<id>169</id>
 		<name>destinationIPv6Prefix</name>
 		<dataType>ipv6Address</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>170</id>
 		<name>sourceIPv6Prefix</name>
 		<dataType>ipv6Address</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -1132,21 +1265,21 @@
 		<id>210</id>
 		<name>paddingOctets</name>
 		<dataType>octetArray</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>211</id>
 		<name>collectorIPv4Address</name>
 		<dataType>ipv4Address</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>212</id>
 		<name>collectorIPv6Address</name>
 		<dataType>ipv6Address</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -1237,14 +1370,14 @@
 		<id>225</id>
 		<name>postNATSourceIPv4Address</name>
 		<dataType>ipv4Address</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>226</id>
 		<name>postNATDestinationIPv4Address</name>
 		<dataType>ipv4Address</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -1265,28 +1398,28 @@
 		<id>229</id>
 		<name>natOriginatingAddressRealm</name>
 		<dataType>unsigned8</dataType>
-		<semantic>flags</semantic>
+		<semantic>identifier</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>230</id>
 		<name>natEvent</name>
 		<dataType>unsigned8</dataType>
-		<semantic></semantic>
+		<semantic>identifier</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>231</id>
 		<name>initiatorOctets</name>
 		<dataType>unsigned64</dataType>
-		<semantic></semantic>
+		<semantic>deltaCounter</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>232</id>
 		<name>responderOctets</name>
 		<dataType>unsigned64</dataType>
-		<semantic></semantic>
+		<semantic>deltaCounter</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -1314,7 +1447,7 @@
 		<id>236</id>
 		<name>VRFname</name>
 		<dataType>string</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -1342,21 +1475,21 @@
 		<id>240</id>
 		<name>ethernetHeaderLength</name>
 		<dataType>unsigned8</dataType>
-		<semantic>identifier</semantic>
+		<semantic>quantity</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>241</id>
 		<name>ethernetPayloadLength</name>
 		<dataType>unsigned16</dataType>
-		<semantic>identifier</semantic>
+		<semantic>quantity</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>242</id>
 		<name>ethernetTotalLength</name>
 		<dataType>unsigned16</dataType>
-		<semantic>identifier</semantic>
+		<semantic>quantity</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -1391,7 +1524,7 @@
 		<id>247</id>
 		<name>metroEvcId</name>
 		<dataType>string</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -1468,7 +1601,7 @@
 		<id>258</id>
 		<name>collectionTimeMilliseconds</name>
 		<dataType>dateTimeMilliseconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -1482,21 +1615,21 @@
 		<id>260</id>
 		<name>maxExportSeconds</name>
 		<dataType>dateTimeSeconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>261</id>
 		<name>maxFlowEndSeconds</name>
 		<dataType>dateTimeSeconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>262</id>
 		<name>messageMD5Checksum</name>
 		<dataType>octetArray</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -1510,21 +1643,21 @@
 		<id>264</id>
 		<name>minExportSeconds</name>
 		<dataType>dateTimeSeconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>265</id>
 		<name>minFlowStartSeconds</name>
 		<dataType>dateTimeSeconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>266</id>
 		<name>opaqueOctets</name>
 		<dataType>octetArray</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -1538,63 +1671,63 @@
 		<id>268</id>
 		<name>maxFlowEndMicroseconds</name>
 		<dataType>dateTimeMicroseconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>269</id>
 		<name>maxFlowEndMilliseconds</name>
 		<dataType>dateTimeMilliseconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>270</id>
 		<name>maxFlowEndNanoseconds</name>
 		<dataType>dateTimeNanoseconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>271</id>
 		<name>minFlowStartMicroseconds</name>
 		<dataType>dateTimeMicroseconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>272</id>
 		<name>minFlowStartMilliseconds</name>
 		<dataType>dateTimeMilliseconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>273</id>
 		<name>minFlowStartNanoseconds</name>
 		<dataType>dateTimeNanoseconds</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>274</id>
 		<name>collectorCertificate</name>
 		<dataType>octetArray</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>275</id>
 		<name>exporterCertificate</name>
 		<dataType>octetArray</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>276</id>
 		<name>dataRecordsReliability</name>
 		<dataType>boolean</dataType>
-		<semantic>identifier</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -1606,14 +1739,14 @@
 	<element>
 		<enterprise>0</enterprise>
 		<id>278</id>
-		<name>connectionCountNew</name>
+		<name>newConnectionDeltaCount</name>
 		<dataType>unsigned32</dataType>
 		<semantic>deltaCounter</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>279</id>
-		<name>connectionSumDuration</name>
+		<name>connectionSumDurationSeconds</name>
 		<dataType>unsigned64</dataType>
 		<semantic></semantic>
 	</element>
@@ -1629,19 +1762,19 @@
 		<id>281</id>
 		<name>postNATSourceIPv6Address</name>
 		<dataType>ipv6Address</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>282</id>
 		<name>postNATDestinationIPv6Address</name>
 		<dataType>ipv6Address</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>283</id>
-		<name>natPoolID</name>
+		<name>natPoolId</name>
 		<dataType>unsigned32</dataType>
 		<semantic>identifier</semantic>
 	</element>
@@ -1650,7 +1783,7 @@
 		<id>284</id>
 		<name>natPoolName</name>
 		<dataType>string</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -1676,23 +1809,26 @@
 	<element>
 		<enterprise>0</enterprise>
 		<id>288</id>
-		<name>p2pTechnology</name>
+		<name>p2pTechnology
+</name>
 		<dataType>string</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>289</id>
-		<name>tunnelTechnology</name>
+		<name>tunnelTechnology
+</name>
 		<dataType>string</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>290</id>
-		<name>encryptedTechnology</name>
+		<name>encryptedTechnology
+</name>
 		<dataType>string</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -1717,6 +1853,55 @@
 	</element>
 	<element>
 		<enterprise>0</enterprise>
+		<id>294</id>
+		<name>bgpValidityState</name>
+		<dataType>unsigned8</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>295</id>
+		<name>IPSecSPI</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>296</id>
+		<name>greKey</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>297</id>
+		<name>natType</name>
+		<dataType>unsigned8</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>298</id>
+		<name>initiatorPackets</name>
+		<dataType>unsigned64</dataType>
+		<semantic>deltaCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>299</id>
+		<name>responderPackets</name>
+		<dataType>unsigned64</dataType>
+		<semantic>deltaCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>300</id>
+		<name>observationDomainName</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
 		<id>301</id>
 		<name>selectionSequenceId</name>
 		<dataType>unsigned64</dataType>
@@ -1726,7 +1911,7 @@
 		<enterprise>0</enterprise>
 		<id>302</id>
 		<name>selectorId</name>
-		<dataType>unsigned16</dataType>
+		<dataType>unsigned64</dataType>
 		<semantic>identifier</semantic>
 	</element>
 	<element>
@@ -1794,31 +1979,45 @@
 	</element>
 	<element>
 		<enterprise>0</enterprise>
+		<id>312</id>
+		<name>dataLinkFrameSize</name>
+		<dataType>unsigned16</dataType>
+		<semantic>quantity</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
 		<id>313</id>
 		<name>ipHeaderPacketSection</name>
 		<dataType>octetArray</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>314</id>
 		<name>ipPayloadPacketSection</name>
 		<dataType>octetArray</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>315</id>
+		<name>dataLinkFrameSection</name>
+		<dataType>octetArray</dataType>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>316</id>
 		<name>mplsLabelStackSection</name>
 		<dataType>octetArray</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>317</id>
 		<name>mplsPayloadPacketSection</name>
 		<dataType>octetArray</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -1853,28 +2052,28 @@
 		<id>322</id>
 		<name>observationTimeSeconds</name>
 		<dataType>dateTimeSeconds</dataType>
-		<semantic>quantity</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>323</id>
 		<name>observationTimeMilliseconds</name>
 		<dataType>dateTimeMilliseconds</dataType>
-		<semantic>quantity</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>324</id>
 		<name>observationTimeMicroseconds</name>
 		<dataType>dateTimeMicroseconds</dataType>
-		<semantic>quantity</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>325</id>
 		<name>observationTimeNanoseconds</name>
 		<dataType>dateTimeNanoseconds</dataType>
-		<semantic>quantity</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -1930,7 +2129,7 @@
 		<id>333</id>
 		<name>hashDigestOutput</name>
 		<dataType>boolean</dataType>
-		<semantic>quantity</semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -1944,7 +2143,7 @@
 		<id>335</id>
 		<name>selectorName</name>
 		<dataType>string</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -1979,14 +2178,14 @@
 		<id>340</id>
 		<name>informationElementDescription</name>
 		<dataType>string</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>341</id>
 		<name>informationElementName</name>
 		<dataType>string</dataType>
-		<semantic></semantic>
+		<semantic>default</semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
@@ -2025,22 +2224,932 @@
 	</element>
 	<element>
 		<enterprise>0</enterprise>
+		<id>347</id>
+		<name>virtualStationInterfaceId</name>
+		<dataType>octetArray</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>348</id>
+		<name>virtualStationInterfaceName</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>349</id>
+		<name>virtualStationUUID</name>
+		<dataType>octetArray</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>350</id>
+		<name>virtualStationName</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>351</id>
+		<name>layer2SegmentId</name>
+		<dataType>unsigned64</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>352</id>
+		<name>layer2OctetDeltaCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>deltaCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>353</id>
+		<name>layer2OctetTotalCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>354</id>
+		<name>ingressUnicastPacketTotalCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>355</id>
+		<name>ingressMulticastPacketTotalCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>356</id>
+		<name>ingressBroadcastPacketTotalCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>357</id>
+		<name>egressUnicastPacketTotalCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>358</id>
+		<name>egressBroadcastPacketTotalCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>359</id>
+		<name>monitoringIntervalStartMilliSeconds</name>
+		<dataType>dateTimeMilliseconds</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>360</id>
+		<name>monitoringIntervalEndMilliSeconds</name>
+		<dataType>dateTimeMilliseconds</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>361</id>
+		<name>portRangeStart</name>
+		<dataType>unsigned16</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>362</id>
+		<name>portRangeEnd</name>
+		<dataType>unsigned16</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>363</id>
+		<name>portRangeStepSize</name>
+		<dataType>unsigned16</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>364</id>
+		<name>portRangeNumPorts</name>
+		<dataType>unsigned16</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>365</id>
+		<name>staMacAddress</name>
+		<dataType>macAddress</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>366</id>
+		<name>staIPv4Address</name>
+		<dataType>ipv4Address</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>367</id>
+		<name>wtpMacAddress</name>
+		<dataType>macAddress</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>368</id>
+		<name>ingressInterfaceType</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>369</id>
+		<name>egressInterfaceType</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>370</id>
+		<name>rtpSequenceNumber</name>
+		<dataType>unsigned16</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>371</id>
+		<name>userName</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>372</id>
+		<name>applicationCategoryName</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>373</id>
+		<name>applicationSubCategoryName</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>374</id>
+		<name>applicationGroupName</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>375</id>
+		<name>originalFlowsPresent</name>
+		<dataType>unsigned64</dataType>
+		<semantic>deltaCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>376</id>
+		<name>originalFlowsInitiated</name>
+		<dataType>unsigned64</dataType>
+		<semantic>deltaCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>377</id>
+		<name>originalFlowsCompleted</name>
+		<dataType>unsigned64</dataType>
+		<semantic>deltaCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>378</id>
+		<name>distinctCountOfSourceIPAddress</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>379</id>
+		<name>distinctCountOfDestinationIPAddress</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>380</id>
+		<name>distinctCountOfSourceIPv4Address</name>
+		<dataType>unsigned32</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>381</id>
+		<name>distinctCountOfDestinationIPv4Address</name>
+		<dataType>unsigned32</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>382</id>
+		<name>distinctCountOfSourceIPv6Address</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>383</id>
+		<name>distinctCountOfDestinationIPv6Address</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>384</id>
+		<name>valueDistributionMethod</name>
+		<dataType>unsigned8</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>385</id>
+		<name>rfc3550JitterMilliseconds</name>
+		<dataType>unsigned32</dataType>
+		<semantic>quantity</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>386</id>
+		<name>rfc3550JitterMicroseconds</name>
+		<dataType>unsigned32</dataType>
+		<semantic>quantity</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>387</id>
+		<name>rfc3550JitterNanoseconds</name>
+		<dataType>unsigned32</dataType>
+		<semantic>quantity</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>388</id>
+		<name>dot1qDEI</name>
+		<dataType>boolean</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>389</id>
+		<name>dot1qCustomerDEI</name>
+		<dataType>boolean</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>390</id>
+		<name>flowSelectorAlgorithm</name>
+		<dataType>unsigned16</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>391</id>
+		<name>flowSelectedOctetDeltaCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>deltaCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>392</id>
+		<name>flowSelectedPacketDeltaCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>deltaCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>393</id>
+		<name>flowSelectedFlowDeltaCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>deltaCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>394</id>
+		<name>selectorIDTotalFlowsObserved</name>
+		<dataType>unsigned64</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>395</id>
+		<name>selectorIDTotalFlowsSelected</name>
+		<dataType>unsigned64</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>396</id>
+		<name>samplingFlowInterval</name>
+		<dataType>unsigned64</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>397</id>
+		<name>samplingFlowSpacing</name>
+		<dataType>unsigned64</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>398</id>
+		<name>flowSamplingTimeInterval</name>
+		<dataType>unsigned64</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>399</id>
+		<name>flowSamplingTimeSpacing</name>
+		<dataType>unsigned64</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>400</id>
+		<name>hashFlowDomain</name>
+		<dataType>unsigned16</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>401</id>
+		<name>transportOctetDeltaCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>deltaCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>402</id>
+		<name>transportPacketDeltaCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>deltaCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
 		<id>403</id>
 		<name>originalExporterIPv4Address</name>
 		<dataType>ipv4Address</dataType>
-		<semantic>identifier</semantic>
+		<semantic></semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>404</id>
 		<name>originalExporterIPv6Address</name>
 		<dataType>ipv6Address</dataType>
-		<semantic>identifier</semantic>
+		<semantic></semantic>
 	</element>
 	<element>
 		<enterprise>0</enterprise>
 		<id>405</id>
 		<name>originalObservationDomainId</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>406</id>
+		<name>intermediateProcessId</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>407</id>
+		<name>ignoredDataRecordTotalCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>408</id>
+		<name>dataLinkFrameType</name>
+		<dataType>unsigned16</dataType>
+		<semantic>flags</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>409</id>
+		<name>sectionOffset</name>
+		<dataType>unsigned16</dataType>
+		<semantic>quantity</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>410</id>
+		<name>sectionExportedOctets</name>
+		<dataType>unsigned16</dataType>
+		<semantic>quantity</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>411</id>
+		<name>dot1qServiceInstanceTag</name>
+		<dataType>octetArray</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>412</id>
+		<name>dot1qServiceInstanceId</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>413</id>
+		<name>dot1qServiceInstancePriority</name>
+		<dataType>unsigned8</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>414</id>
+		<name>dot1qCustomerSourceMacAddress</name>
+		<dataType>macAddress</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>415</id>
+		<name>dot1qCustomerDestinationMacAddress</name>
+		<dataType>macAddress</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>417</id>
+		<name>postLayer2OctetDeltaCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>deltaCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>418</id>
+		<name>postMCastLayer2OctetDeltaCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>deltaCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>420</id>
+		<name>postLayer2OctetTotalCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>421</id>
+		<name>postMCastLayer2OctetTotalCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>422</id>
+		<name>minimumLayer2TotalLength</name>
+		<dataType>unsigned64</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>423</id>
+		<name>maximumLayer2TotalLength</name>
+		<dataType>unsigned64</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>424</id>
+		<name>droppedLayer2OctetDeltaCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>deltaCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>425</id>
+		<name>droppedLayer2OctetTotalCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>426</id>
+		<name>ignoredLayer2OctetTotalCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>427</id>
+		<name>notSentLayer2OctetTotalCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>428</id>
+		<name>layer2OctetDeltaSumOfSquares</name>
+		<dataType>unsigned64</dataType>
+		<semantic>deltaCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>429</id>
+		<name>layer2OctetTotalSumOfSquares</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>430</id>
+		<name>layer2FrameDeltaCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>deltaCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>431</id>
+		<name>layer2FrameTotalCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>432</id>
+		<name>pseudoWireDestinationIPv4Address</name>
+		<dataType>ipv4Address</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>433</id>
+		<name>ignoredLayer2FrameTotalCount</name>
+		<dataType>unsigned64</dataType>
+		<semantic>totalCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>434</id>
+		<name>mibObjectValueInteger</name>
+		<dataType>signed32</dataType>
+		<semantic>quantity</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>435</id>
+		<name>mibObjectValueOctetString</name>
+		<dataType>octetArray</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>436</id>
+		<name>mibObjectValueOID</name>
+		<dataType>octetArray</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>437</id>
+		<name>mibObjectValueBits</name>
+		<dataType>octetArray</dataType>
+		<semantic>flags</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>438</id>
+		<name>mibObjectValueIPAddress</name>
+		<dataType>ipv4Address</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>439</id>
+		<name>mibObjectValueCounter</name>
+		<dataType>unsigned64</dataType>
+		<semantic>snmpCounter</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>440</id>
+		<name>mibObjectValueGauge</name>
+		<dataType>unsigned32</dataType>
+		<semantic>snmpGauge</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>441</id>
+		<name>mibObjectValueTimeTicks</name>
+		<dataType>unsigned32</dataType>
+		<semantic>quantity</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>442</id>
+		<name>mibObjectValueUnsigned</name>
+		<dataType>unsigned32</dataType>
+		<semantic>quantity</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>443</id>
+		<name>mibObjectValueTable</name>
+		<dataType>subTemplateList</dataType>
+		<semantic>list</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>444</id>
+		<name>mibObjectValueRow</name>
+		<dataType>subTemplateList</dataType>
+		<semantic>list</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>445</id>
+		<name>mibObjectIdentifier</name>
+		<dataType>octetArray</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>446</id>
+		<name>mibSubIdentifier</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>447</id>
+		<name>mibIndexIndicator</name>
+		<dataType>unsigned64</dataType>
+		<semantic>flags</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>448</id>
+		<name>mibCaptureTimeSemantics</name>
+		<dataType>unsigned8</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>449</id>
+		<name>mibContextEngineID</name>
+		<dataType>octetArray</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>450</id>
+		<name>mibContextName</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>451</id>
+		<name>mibObjectName</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>452</id>
+		<name>mibObjectDescription</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>453</id>
+		<name>mibObjectSyntax</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>454</id>
+		<name>mibModuleName</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>455</id>
+		<name>mobileIMSI</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>456</id>
+		<name>mobileMSISDN</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>457</id>
+		<name>httpStatusCode</name>
+		<dataType>unsigned16</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>458</id>
+		<name>sourceTransportPortsLimit</name>
+		<dataType>unsigned16</dataType>
+		<semantic>quantity</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>459</id>
+		<name>httpRequestMethod</name>
+		<dataType>string</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>460</id>
+		<name>httpRequestHost</name>
+		<dataType>string</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>461</id>
+		<name>httpRequestTarget</name>
+		<dataType>string</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>462</id>
+		<name>httpMessageVersion</name>
+		<dataType>string</dataType>
+		<semantic></semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>463</id>
+		<name>natInstanceID</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>464</id>
+		<name>internalAddressRealm</name>
+		<dataType>octetArray</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>465</id>
+		<name>externalAddressRealm</name>
+		<dataType>octetArray</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>466</id>
+		<name>natQuotaExceededEvent</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>467</id>
+		<name>natThresholdEvent</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>468</id>
+		<name>httpUserAgent</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>469</id>
+		<name>httpContentType</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>470</id>
+		<name>httpReasonPhrase</name>
+		<dataType>string</dataType>
+		<semantic>default</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>471</id>
+		<name>maxSessionEntries</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>472</id>
+		<name>maxBIBEntries</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>473</id>
+		<name>maxEntriesPerUser</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>474</id>
+		<name>maxSubscribers</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>475</id>
+		<name>maxFragmentsPendingReassembly</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>476</id>
+		<name>addressPoolHighThreshold</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>477</id>
+		<name>addressPoolLowThreshold</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>478</id>
+		<name>addressPortMappingHighThreshold</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>479</id>
+		<name>addressPortMappingLowThreshold</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>480</id>
+		<name>addressPortMappingPerUserHighThreshold</name>
+		<dataType>unsigned32</dataType>
+		<semantic>identifier</semantic>
+	</element>
+	<element>
+		<enterprise>0</enterprise>
+		<id>481</id>
+		<name>globalAddressMappingHighThreshold</name>
 		<dataType>unsigned32</dataType>
 		<semantic>identifier</semantic>
 	</element>
