@@ -161,9 +161,10 @@ to configure packages in subdirectories and generate Makefiles.
 
 ```sh
 make
-make install
+sudo make install
+sudo ldconfig
 ```
-to build and install all projects.
+to build and install all projects. The call to ldconfig is necessary to update the cache of fynamic linker to find dependency library.
 
 Or you can build each part (collector, tool(s), external plugin(s)) separately.
 
