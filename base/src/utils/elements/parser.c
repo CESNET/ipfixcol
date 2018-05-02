@@ -368,20 +368,26 @@ int xml_elem_get_semantic(const xmlNodePtr node, enum ELEMENT_SEMANTIC *res)
 		// Not defined -> default
 		SEMANTIC_RESULT(ES_DEFAULT);
 	}
-
 	// Try to match with known types - case insensitive
-	if (!strcasecmp(buffer, "quantity"))
+	else if (!strcasecmp(buffer, "default")) {
+		SEMANTIC_RESULT(ES_DEFAULT);
+	} else if (!strcasecmp(buffer, "quantity")) {
 		SEMANTIC_RESULT(ES_QUANTITY);
-	if (!strcasecmp(buffer, "totalcounter"))
+	} else if (!strcasecmp(buffer, "totalcounter")) {
 		SEMANTIC_RESULT(ES_TOTAL_COUNTER);
-	if (!strcasecmp(buffer, "deltacounter"))
+	} else if (!strcasecmp(buffer, "deltacounter")) {
 		SEMANTIC_RESULT(ES_DELTA_COUNTER);
-	if (!strcasecmp(buffer, "identifier"))
+	} else if (!strcasecmp(buffer, "identifier")) {
 		SEMANTIC_RESULT(ES_IDENTIFIER);
-	if (!strcasecmp(buffer, "flags"))
+	} else if (!strcasecmp(buffer, "flags")) {
 		SEMANTIC_RESULT(ES_FLAGS);
-	if (!strcasecmp(buffer, "list"))
+	} else if (!strcasecmp(buffer, "list")) {
 		SEMANTIC_RESULT(ES_LIST);
+	} else if (!strcasecmp(buffer, "snmpcounter")) {
+		SEMANTIC_RESULT(ES_LIST);
+	} else if (!strcasecmp(buffer, "snmpgauge")) {
+		SEMANTIC_RESULT(ES_LIST);
+	}
 	#undef SEMANTIC_RESULT
 	
 	// Not found
