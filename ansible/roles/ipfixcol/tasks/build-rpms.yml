@@ -1,20 +1,18 @@
-# FDependency repos
+# Dependency repos
 
 - name: Add IPFIXcol repo
   get_url:
     url: https://copr.fedorainfracloud.org/coprs/g/CESNET/IPFIXcol/repo/epel-7/group_CESNET-IPFIXcol-epel-7.repo
     dest: /etc/yum.repos.d/copr-ipfixcol.repo
     mode:  664
-  when: build_rpms | bool
-  tags: 
+  tags:
    - fastbit
    - fbitdump
    - fbitmerge
 
 - name: Install fastbit dependency packages
   yum: "name=libfastbit-devel,graphviz state=latest"
-  when: build_rpms | bool
-  tags: 
+  tags:
    - fastbit
    - fbitdump
    - fbitmerge
@@ -24,19 +22,16 @@
     url: https://copr.fedorainfracloud.org/coprs/g/CESNET/NEMEA/repo/epel-7/group_CESNET-NEMEA-epel-7.repo
     dest: /etc/yum.repos.d/copr-nemea.repo
     mode:  664
-  when: build_rpms | bool
-  tags: 
+  tags:
    - lnfstore
    - unirec
 
 - name: Install lnfstore dependency packages
   yum: "name=libnf-devel,bloom_filter_indexes state=latest"
-  when: build_rpms | bool
   tags: lnfstore
 
 - name: Install unirec dependency packages
   yum: "name=libtrap-devel state=latest"
-  when: build_rpms | bool
   tags: unirec
 
 # Base
@@ -48,7 +43,6 @@
   with_items:
    - make rpm
    - yum info ipfixcol-devel | grep installed > /dev/null || yum install -y {{ build.dir }}/base/RPMBUILD/RPMS/*/*.rpm
-  when: build_rpms | bool
   tags: base
 
 # Input plugins
@@ -58,7 +52,6 @@
     make rpm
     chdir={{ build.dir }}/plugins/input/nfdump
     creates={{ build.dir }}/plugins/input/nfdump/RPMBUILD/SRPMS/*.src.rpm
-  when: build_rpms | bool
   tags: nfdump-input
 
 - name: Build UDP CPG input plugin rpm
@@ -66,7 +59,6 @@
     make rpm
     chdir={{ build.dir }}/plugins/input/udp_cpg
     creates={{ build.dir }}/plugins/input/udp_cpg/RPMBUILD/SRPMS/*.src.rpm
-  when: build_rpms | bool
   tags: udp_cpg
 
 # Intermediate plugins
@@ -76,7 +68,6 @@
     make rpm
     chdir={{ build.dir }}/plugins/intermediate/dhcp
     creates={{ build.dir }}/plugins/intermediate/dhcp/RPMBUILD/SRPMS/*.src.rpm
-  when: build_rpms | bool
   tags: dhcp
 
 - name: Build geoip intermediate plugin rpm
@@ -84,7 +75,6 @@
     make rpm
     chdir={{ build.dir }}/plugins/intermediate/geoip
     creates={{ build.dir }}/plugins/intermediate/geoip/RPMBUILD/SRPMS/*.src.rpm
-  when: build_rpms | bool
   tags: geoip
 
 - name: Build profiler intermediate plugin rpm
@@ -92,7 +82,6 @@
     make rpm
     chdir={{ build.dir }}/plugins/intermediate/profiler
     creates={{ build.dir }}/plugins/intermediate/profiler/RPMBUILD/SRPMS/*.src.rpm
-  when: build_rpms | bool
   tags: profiler
 
 - name: Build profile_stats intermediate plugin rpm
@@ -100,7 +89,6 @@
     make rpm
     chdir={{ build.dir }}/plugins/intermediate/profile_stats
     creates={{ build.dir }}/plugins/intermediate/profile_stats/RPMBUILD/SRPMS/*.src.rpm
-  when: build_rpms | bool
   tags: profile_stats
 
 - name: Build stats intermediate plugin rpm
@@ -108,7 +96,6 @@
     make rpm
     chdir={{ build.dir }}/plugins/intermediate/stats
     creates={{ build.dir }}/plugins/intermediate/stats/RPMBUILD/SRPMS/*.src.rpm
-  when: build_rpms | bool
   tags: stats
 
 - name: Build uid intermediate plugin rpm
@@ -116,7 +103,6 @@
     make rpm
     chdir={{ build.dir }}/plugins/intermediate/uid
     creates={{ build.dir }}/plugins/intermediate/uid/RPMBUILD/SRPMS/*.src.rpm
-  when: build_rpms | bool
   tags: uid
 
 # Storage plugins
@@ -126,7 +112,6 @@
     make rpm
     chdir={{ build.dir }}/plugins/storage/fastbit
     creates={{ build.dir }}/plugins/storage/fastbit/RPMBUILD/SRPMS/*.src.rpm
-  when: build_rpms | bool
   tags: fastbit
 
 - name: Build json storage plugin rpm
@@ -134,7 +119,6 @@
     make rpm
     chdir={{ build.dir }}/plugins/storage/json
     creates={{ build.dir }}/plugins/storage/json/RPMBUILD/SRPMS/*.src.rpm
-  when: build_rpms | bool
   tags: json
 
 - name: Build nfdump storage plugin rpm
@@ -142,7 +126,6 @@
     make rpm
     chdir={{ build.dir }}/plugins/storage/nfdump
     creates={{ build.dir }}/plugins/storage/nfdump/RPMBUILD/SRPMS/*.src.rpm
-  when: build_rpms | bool
   tags: nfdump
 
 - name: Build postgres storage plugin rpm
@@ -150,7 +133,6 @@
     make rpm
     chdir={{ build.dir }}/plugins/storage/postgres
     creates={{ build.dir }}/plugins/storage/postgres/RPMBUILD/SRPMS/*.src.rpm
-  when: build_rpms | bool
   tags: postgres
 
 - name: Build statistics storage plugin rpm
@@ -158,7 +140,6 @@
     make rpm
     chdir={{ build.dir }}/plugins/storage/statistics
     creates={{ build.dir }}/plugins/storage/statistics/RPMBUILD/SRPMS/*.src.rpm
-  when: build_rpms | bool
   tags: statistics
 
 #These need to be build first:
@@ -190,7 +171,6 @@
     make rpm
     chdir={{ build.dir }}/tools/fbitconvert
     creates={{ build.dir }}tools/fbitconvert/RPMBUILD/SRPMS/*.src.rpm
-  when: build_rpms | bool
   tags: fbitconvert
 
 
@@ -199,7 +179,6 @@
     make rpm
     chdir={{ build.dir }}/tools/fbitdump
     creates={{ build.dir }}/tools/fbitdump/RPMBUILD/SRPMS/*.src.rpm
-  when: build_rpms | bool
   tags: fbitdump
 
 
@@ -208,7 +187,6 @@
     make rpm
     chdir={{ build.dir }}/tools/fbitexpire
     creates={{ build.dir }}/tools/fbitexpire/RPMBUILD/SRPMS/*.src.rpm
-  when: build_rpms | bool
   tags: fbitexpire
 
 
@@ -217,7 +195,6 @@
     make rpm
     chdir={{ build.dir }}/tools/fbitmerge
     creates={{ build.dir }}/tools/fbitmerge/RPMBUILD/SRPMS/*.src.rpm
-  when: build_rpms | bool
   tags: fbitmerge
 
 
@@ -226,5 +203,4 @@
     make rpm
     chdir={{ build.dir }}/tools/profilesdaemon
     creates={{ build.dir }}/tools/profilesdaemon/RPMBUILD/SRPMS/*.src.rpm
-  when: build_rpms | bool
   tags: profilesdaemon

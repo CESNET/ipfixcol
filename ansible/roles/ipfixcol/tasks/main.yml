@@ -21,3 +21,4 @@
 # configured already
 - name: Build RPMs
   include: build-rpms.yml
+  when: build_rpms | bool
