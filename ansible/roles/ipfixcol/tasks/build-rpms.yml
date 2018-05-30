@@ -4,7 +4,7 @@
   get_url:
     url: https://copr.fedorainfracloud.org/coprs/g/CESNET/IPFIXcol/repo/epel-7/group_CESNET-IPFIXcol-epel-7.repo
     dest: /etc/yum.repos.d/copr-ipfixcol.repo
-    mode:  664
+    mode:  0664
   tags:
    - fastbit
    - fbitdump
@@ -21,7 +21,7 @@
   get_url:
     url: https://copr.fedorainfracloud.org/coprs/g/CESNET/NEMEA/repo/epel-7/group_CESNET-NEMEA-epel-7.repo
     dest: /etc/yum.repos.d/copr-nemea.repo
-    mode:  664
+    mode:  0664
   tags:
    - lnfstore
    - unirec
