@@ -364,7 +364,8 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
                         break;
                      case UNIREC_FIELD_DBF:
                         // Handle DIR_BIT_FIELD
-                        *(uint8_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) = ((*(uint16_t*)(data_record + offset + size_length)) >> 8) & 0x1;
+                        // Just read the least significant byte directly and use only the least significant bit
+                        *(uint8_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) = (*(uint8_t*)(data_record + offset + (length - 1))) & 0x1;
                         break;
                      case UNIREC_FIELD_LBF:
                         // Handle LINK_BIT_FIELD, is BIG ENDIAN but we are using only LSB
