@@ -638,8 +638,8 @@ static int8_t getUnirecFieldTypeFromIpfixId(ipfixElement ipfix_el)
    } else if (en == 0 && (id == 152 || id == 153)) {
       // Timestamps
       return UNIREC_FIELD_TS;
-   } else if (en == 0 && id == 10) {
-      // DIR_BIT_FIELD
+   } else if (en == 0 && (id == 10 || id == 14)) {
+      // DIR_BIT_FIELD (in/out interface numbers)
       return UNIREC_FIELD_DBF;
    } else if (en == 0 && id == 405) {
       // LINK_BIT_FIELD
