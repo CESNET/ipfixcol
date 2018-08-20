@@ -285,15 +285,15 @@ void scan_dir(std::string dir_name, std::string src_dir, DIRMAP *bigMap)
 
 int same_data(innerDirMap *first, innerDirMap *second)
 {
-	if ((*first).size() != (*second).size()) {
+	if (first->size() != second->size()) {
 		return NOT_OK;
 	}
 
-	for (innerDirMap::iterator it = (*first).begin(); it != (*first).end(); it++) {
-		if ((*second).find((*it).first) == (*second).end()) {
+	for (innerDirMap::iterator it = first->begin(); it != first->end(); it++) {
+		if (second->find(it->first) == second->end()) {
 			return NOT_OK;
 		}
-		if ((*it).second != (*second)[(*it).first]) {
+		if (it->second != (*second)[it->first]) {
 			return NOT_OK;
 		}
 	}
@@ -381,10 +381,10 @@ int merge_couple(std::string src_dir, std::string dst_dir, std::string work_dir)
 	/* Iterate through whole dst_map and src_map and find folders with same data (and data types) */
 	for (DIRMAP::iterator dst_i = dst_map.begin(); dst_i != dst_map.end(); ++dst_i) {
 		for (DIRMAP::iterator src_i = src_map.begin(); src_i != src_map.end(); ) {
-			if (same_data(&((*dst_i).second), &((*src_i).second)) == OK) {
+			if (same_data(&dst_i->second, &src_i->second) == OK) {
 				/* If found, merge it */
-				if (merge_dirs(src_dir_path + "/" + (*src_i).first,
-						dst_dir_path + "/" + (*dst_i).first) != OK) {
+				if (merge_dirs(src_dir_path + "/" + src_i->first,
+						dst_dir_path + "/" + dst_i->first) != OK) {
 					closedir(sdir);
 					closedir(ddir);
 					return NOT_OK;
@@ -405,21 +405,21 @@ int merge_couple(std::string src_dir, std::string dst_dir, std::string work_dir)
 		char suffix = 'a';
 
 		/* Add suffix to the name */
-		while (stat((dst_dir_path + "/" + (*src_i).first).c_str(), &st) == 0) {
+		while (stat((dst_dir_path + "/" + src_i->first).c_str(), &st) == 0) {
 			if (suffix == 'z') {
 				suffix = 'A';
 			} else if (suffix == 'Z') {
 				/* \TODO do it better */
-				std::cerr << "Not enough suffixes for folder '" << (*src_i).first << "'" << std::endl;
+				std::cerr << "Not enough suffixes for folder '" << src_i->first << "'" << std::endl;
 				break;
 			} else {
 				suffix++;
 			}
 		}
 
-		if (rename((src_dir_path + "/" + (*src_i).first).c_str(),
-				(dst_dir_path + "/" + (*src_i).first).c_str()) != 0) {
-			std::cerr << "Cannot rename folder '" << (src_dir_path + "/" + (*src_i).first) << "'" << std::endl;
+		if (rename((src_dir_path + "/" + src_i->first).c_str(),
+				(dst_dir_path + "/" + src_i->first).c_str()) != 0) {
+			std::cerr << "Cannot rename folder '" << (src_dir_path + "/" + src_i->first) << "'" << std::endl;
 		}
 	}
 
@@ -431,15 +431,15 @@ int merge_couple(std::string src_dir, std::string dst_dir, std::string work_dir)
 				continue;
 			}
 
-			if (same_data(&((*dst_i).second), &((*it).second)) == OK) {
-				if (merge_dirs(dst_dir_path + "/" + (*it).first,
-						dst_dir_path + "/" + (*dst_i).first) != OK) {
+			if (same_data(&dst_i->second, &it->second) == OK) {
+				if (merge_dirs(dst_dir_path + "/" + it->first,
+						dst_dir_path + "/" + dst_i->first) != OK) {
 					closedir(sdir);
 					closedir(ddir);
 					return NOT_OK;
 				}
 
-				remove_folder_tree((dst_dir_path + "/" + (*it).first).c_str());
+				remove_folder_tree((dst_dir_path + "/" + it->first).c_str());
 				it = dst_map.erase(it);
 			}
 
