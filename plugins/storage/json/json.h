@@ -56,6 +56,7 @@ class Storage;
  */
 struct json_conf {
 	bool metadata;
+	bool odid;           /**< Add ODID to json output */
 	Storage *storage;
 	bool tcpFlags;       /**< TCP flags format - true(formatted), false(RAW)  */
 	bool timestamp;      /**< timestamp format - true(formatted), false(UNIX) */

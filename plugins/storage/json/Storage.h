@@ -64,7 +64,7 @@ public:
      */
 	Storage();
 	~Storage();
-    
+
 	/**
 	 * \brief Add new output processor
 	 * \param[in] output
@@ -72,19 +72,19 @@ public:
 	void addOutput(Output *output) { outputs.push_back(output); }
 
 	bool hasSomeOutput() { return !outputs.empty(); }
-    
+
     /**
      * \brief Store IPFIX message
-     * 
+     *
      * @param msg IPFIX message
      */
 	void storeDataSets(const struct ipfix_message *msg, struct json_conf * config);
-    
+
 	/**
 	 * \brief Set metadata processing enabled/disabled
-	 * 
-     * @param enabled
-     */
+	 *
+	 * @param enabled
+	 */
 	void setMetadataProcessing(bool enabled) { processMetadata = enabled; }
 
 	/**
@@ -93,64 +93,64 @@ public:
 	 * \param enabled
 	 */
 	void setPrintOnly(bool enabled) { printOnly = enabled; }
-	
+
 private:
 
     Translator translator;          /**< number -> string translator */
-    
+
     /**
      * \brief Get real field length
-     * 
+     *
      * @param length length from template
      * @param data data record
      * @param offset field offset
      * @return real length;
      */
     uint16_t realLength(uint16_t length, uint8_t *data, uint16_t &offset) const;
-    
+
     /**
      * \brief Read string field
-     * 
+     *
      * @param length length from template
      * @param data data record
      * @param offset field offset
      */
 	void readString(uint16_t &length, uint8_t *data, uint16_t &offset);
-    
+
     /**
      * \brief Read raw data from record on given offset
-     * 
+     *
      * @param field_len length from template
      * @param data data record
      * @param offset field offset (will be changed)
      */
 	void readRawData(uint16_t &length, uint8_t *data, uint16_t &offset);
-    
+
     /**
      * \brief Store data record
-     * 
+     *
      * @param mdata Data record's metadata
      */
-	void storeDataRecord(struct metadata *mdata, struct json_conf * config);
+	void storeDataRecord(struct metadata *mdata, struct input_info *input_info, struct json_conf *config);
 
     /**
 	 * \brief Store metadata
-	 * 
+	 *
      * @param mdata Data record's metadata
      */
 	void storeMetadata(struct metadata *mdata);
-	
+
     /**
      * \brief Create raw name for unknown elements
      */
     const char* rawName(uint32_t en, uint16_t id) const;
-    
-    
+
+
 	/**
 	 * \brief Send JSON data to output processors
      */
 	void sendData() const;
-    
+
 	bool processMetadata{false};	/**< Metadata processing enabled */
 	bool printOnly{false};
 	uint8_t addr6[IPV6_LEN];
