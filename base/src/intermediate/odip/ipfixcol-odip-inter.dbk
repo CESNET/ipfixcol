@@ -67,8 +67,8 @@
 		<programlisting>
 	<![CDATA[
 	<intermediatePlugins>
-		<odip_ip>
-		</odip_ip>
+		<odip>
+		</odip>
 	</intermediatePlugins>
 	]]>
 		</programlisting>

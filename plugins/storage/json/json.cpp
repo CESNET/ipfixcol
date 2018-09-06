@@ -63,22 +63,27 @@ IPFIXCOL_API_VERSION;
 
 static const char *msg_module = "json_storage";
 
-void process_startup_xml(struct json_conf *conf, char *params) 
+void process_startup_xml(struct json_conf *conf, char *params)
 {
 	pugi::xml_document doc;
 	pugi::xml_parse_result result = doc.load(params);
-	
+
 	if (!result) {
 		throw std::invalid_argument(std::string("Error when parsing parameters: ") + result.description());
 	}
 
 	/* Get configuration */
 	pugi::xpath_node ie = doc.select_single_node("fileWriter");
-	
+
 	/* Check metadata processing */
 	std::string meta = ie.node().child_value("metadata");
 	conf->metadata = (strcasecmp(meta.c_str(), "yes") == 0 || meta == "1" ||
 		strcasecmp(meta.c_str(), "true") == 0);
+
+	/* Check ODID processing */
+	std::string odid = ie.node().child_value("odid");
+	conf->odid = (strcasecmp(odid.c_str(), "yes") == 0 || odid == "1" ||
+		strcasecmp(odid.c_str(), "true") == 0);
 
 	/* Format of TCP flags */
 	std::string tcpFlags = ie.node().child_value("tcpFlags");
@@ -153,21 +158,21 @@ void process_startup_xml(struct json_conf *conf, char *params)
 /* plugin inicialization */
 extern "C"
 int storage_init (char *params, void **config)
-{	
+{
 	struct json_conf *conf;
 	try {
 		/* Create configuration */
 		conf = new struct json_conf;
-		
+
 		/* Create storage */
 		conf->storage = new Storage();
 
 		/* Process params */
 		process_startup_xml(conf, params);
-		
+
 		/* Configure metadata processing */
 		conf->storage->setMetadataProcessing(conf->metadata);
-		
+
 		/* Save configuration */
 		*config = conf;
 	} catch (std::exception &e) {
@@ -180,7 +185,7 @@ int storage_init (char *params, void **config)
 
 		return 1;
 	}
-	
+
 	MSG_DEBUG(msg_module, "initialized");
 	return 0;
 }
@@ -192,7 +197,7 @@ int store_packet (void *config, const struct ipfix_message *ipfix_msg,
 {
 	(void) template_mgr;
 	struct json_conf *conf = (struct json_conf *) config;
-	
+
 	conf->storage->storeDataSets(ipfix_msg, conf);
 	return 0;
 }
@@ -209,15 +214,15 @@ int storage_close (void **config)
 {
 	MSG_DEBUG(msg_module, "CLOSING");
 	struct json_conf *conf = (struct json_conf *) *config;
-	
+
 	/* Destroy storage */
 	delete conf->storage;
-	
+
 	/* Destroy configuration */
 	delete conf;
-	
+
 	*config = NULL;
-	
+
 	return 0;
 }
 

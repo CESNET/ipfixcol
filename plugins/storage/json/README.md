@@ -46,7 +46,7 @@ Default plugin configuration in **internalcfg.xml**
 Or as `ipfixconf` output:
 
 ```
-     Plugin type         Name/Format     Process/Thread         File        
+     Plugin type         Name/Format     Process/Thread         File
  ----------------------------------------------------------------------------
        storage              json             json          /usr/share/ipfixcol/plugins/ipfixcol-json-output.so
 ```
@@ -59,6 +59,7 @@ Here is an example of configuration in **startup.xml**:
 	<fileWriter>
 		<fileFormat>json</fileFormat>
 		<metadata>no</metadata>
+		<odid>no</odid>
 		<tcpFlags>formatted</tcpFlags>
 		<timestamp>formatted</timestamp>
 		<protocol>formatted</protocol>
@@ -104,6 +105,7 @@ Here is an example of configuration in **startup.xml**:
 </destination>
 ```
 * **metadata** - Add record metadata to the output (yes/no) [default == no].
+* **odid** - Add source ODID to the output (yes/no) [default == no].
 * **tcpFlags** - Convert TCP flags to formatted style of dots and letters (formatted) or to a number (raw) [default == raw].
 * **timestamp** - Convert time to formatted style (formatted) or to a number (unix) [default == unix].
 * **protocol** - Convert protocol identification to formatted style (formatted) or to a number (raw) [default == formatted].

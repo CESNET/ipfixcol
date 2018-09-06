@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<refentry 
-		xmlns:db="http://docbook.org/ns/docbook" 
-		xmlns:xlink="http://www.w3.org/1999/xlink" 
+<refentry
+		xmlns:db="http://docbook.org/ns/docbook"
+		xmlns:xlink="http://www.w3.org/1999/xlink"
 		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 		xsi:schemaLocation="http://www.w3.org/1999/xlink http://docbook.org/xml/5.0/xsd/xlink.xsd
 			http://docbook.org/ns/docbook http://docbook.org/xml/5.0/xsd/docbook.xsd"
@@ -53,7 +53,7 @@
 		<refname>ipfixcol-json-output</refname>
 		<refpurpose>JSON output plugin for IPFIXcol.</refpurpose>
 	</refnamediv>
-	
+
 	<refsect1>
 		<title>Description</title>
 		<simpara>
@@ -64,8 +64,8 @@
 
 	<refsect1>
 		<title>Configuration</title>
-		<simpara>The collector must be configured to use json output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>). 
-		The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves. 
+		<simpara>The collector must be configured to use json output plugin in startup.xml configuration (<filename>/etc/ipfixcol/startup.xml</filename>).
+		The configuration specifies which plugins (destinations) are used by the collector to store data and provides configuration for the plugins themselves.
 		</simpara>
 		<simpara><filename>startup.xml</filename> json example</simpara>
 		<programlisting>
@@ -75,6 +75,7 @@
 		<fileWriter>
 			<fileFormat>json</fileFormat>
 			<metadata>no</metadata>
+			<odid>no</odid>
 			<tcpFlags>formatted</tcpFlags>
 			<timestamp>formatted</timestamp>
 			<protocol>formatted</protocol>
@@ -138,12 +139,19 @@
 				</varlistentry>
 
 				<varlistentry>
+					<term><command>odid</command></term>
+					<listitem>
+						<simpara>Add source ODID to the output (yes/no) [default == no].</simpara>
+					</listitem>
+				</varlistentry>
+
+				<varlistentry>
 					<term><command>tcpFlags</command></term>
 					<listitem>
 						<simpara>Convert TCP flags to formatted style of dots and letters (formatted) or to a number (raw) [default == raw].</simpara>
 					</listitem>
 				</varlistentry>
-		
+
 				<varlistentry>
 					<term><command>timestamp</command></term>
 					<listitem>
