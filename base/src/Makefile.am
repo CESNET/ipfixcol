@@ -3,7 +3,7 @@ SUBDIRS = utils \
 	input/tcp input/udp input/ipfix \
 	intermediate/anonymization intermediate/dummy intermediate/joinflows \
 	intermediate/filter intermediate/odip intermediate/hooks intermediate/timenow \
-	storage/ipfix storage/dummy storage/forwarding \
+	intermediate/timecheck storage/ipfix storage/dummy storage/forwarding \
 	ipfixviewer
 
 if HAVE_SCTP
