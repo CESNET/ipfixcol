@@ -154,14 +154,14 @@ void timecheck_check_timestamps(struct ipfix_record *record, uint64_t future_tim
 	ts = (uint64_t *) data_record_get_field(record->record, record->templ, 0, 152, NULL);
 	if (ts && be64toh(*ts) > future_time) {
 		// Report error
-		MSG_ERROR(msg_module, "Flow start timestamp from the future was detected! [%ull]", *ts);
+		MSG_ERROR(msg_module, "Flow start timestamp from the future was detected! [%llu]", *ts);
 	}
 
 	/* Get flow end time (element ID 153) */
 	te = (uint64_t *) data_record_get_field(record->record, record->templ, 0, 153, NULL);
 	if (te && be64toh(*te) > future_time) {
 		// Report error
-		MSG_ERROR(msg_module, "Flow end timestamp from the future was detected! [%ull]", *te);
+		MSG_ERROR(msg_module, "Flow end timestamp from the future was detected! [%llu]", *te);
 	}
 
 	return;
