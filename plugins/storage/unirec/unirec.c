@@ -394,8 +394,12 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
             }
          } else {
             // Dynamic element
-            matchField->valueSize = length;
             matchField->value     = (void*) (data_record + offset + size_length);
+            if (matchField->unirec_type == 0) { // string value should be trimmed
+                matchField->valueSize = strnlen(data_record + offset + size_length, length);
+            } else {
+                matchField->valueSize = length;
+            }
             matchField->valueFilled = 1;
             // Fill required count for Unirec where this element is required
             for (int i = 0; i < conf->ifc_count; i++) {
