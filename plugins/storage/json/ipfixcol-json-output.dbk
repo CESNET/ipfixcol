@@ -81,6 +81,7 @@
 			<protocol>formatted</protocol>
 			<ignoreUnknown>yes</ignoreUnknown>
 			<nonPrintableChar>yes</nonPrintableChar>
+			<detailedInfo>no</detailedInfo>
 			<prefix>ipfix.</prefix>
 
 			<output>
@@ -177,6 +178,13 @@
 					<term><command>nonPrintableChar</command></term>
 					<listitem>
 						<simpara>Convert non-printable characters (control characters, tab, newline, etc.) from IPFIX fields with data type of a string. (yes/no) [default == yes].</simpara>
+					</listitem>
+				</varlistentry>
+
+				<varlistentry>
+					<term><command>detailedInfo</command></term>
+					<listitem>
+						<simpara>Add detailed info about the IPFIX message (export time, sequence number, ...) to each record under "ipfixcol." prefix. (yes/no) [default == no].</simpara>
 					</listitem>
 				</varlistentry>
 

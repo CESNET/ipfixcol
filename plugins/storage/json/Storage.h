@@ -131,7 +131,7 @@ private:
      *
      * @param mdata Data record's metadata
      */
-	void storeDataRecord(struct metadata *mdata, struct input_info *input_info, struct json_conf *config);
+	void storeDataRecord(struct metadata *mdata, const struct ipfix_message *ipfix_msg, struct json_conf *config);
 
     /**
 	 * \brief Store metadata

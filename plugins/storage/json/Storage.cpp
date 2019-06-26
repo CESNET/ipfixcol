@@ -103,7 +103,7 @@ void Storage::storeDataSets(const ipfix_message* ipfix_msg, struct json_conf * c
 {
 	/* Iterate through all data records */
 	for (int i = 0; i < ipfix_msg->data_records_count; ++i) {
-		storeDataRecord(&(ipfix_msg->metadata[i]), ipfix_msg->input_info, config);
+		storeDataRecord(&(ipfix_msg->metadata[i]), ipfix_msg, config);
 	}
 }
 
@@ -186,7 +186,7 @@ const char* Storage::rawName(uint32_t en, uint16_t id) const
 /**
  * \brief Store data record
  */
-void Storage::storeDataRecord(struct metadata *mdata, struct input_info *input_info, struct json_conf *config)
+void Storage::storeDataRecord(struct metadata *mdata, const struct ipfix_message *ipfix_msg, struct json_conf *config)
 {
 	const char *element_name = NULL;
 	ELEMENT_TYPE element_type;
@@ -329,8 +329,25 @@ void Storage::storeDataRecord(struct metadata *mdata, struct input_info *input_i
 		record += config->prefix;
 		STR_APPEND(record, "odid\": ");
 		/* Convert ODID efficiently */
-		char *odid_buf_pos = u32toa_branchlut2(input_info->odid, odid_buf);
+		char *odid_buf_pos = u32toa_branchlut2(ipfix_msg->input_info->odid, odid_buf);
 		record.append(odid_buf, odid_buf_pos - odid_buf);
+	}
+
+	/* Store Detailed Information */
+	if (config->detailedInfo) {
+		char conv_buf[sizeof("4294967295")], *conv_buf_pos = NULL;
+
+		STR_APPEND(record, ", \"ipfixcol.packet_length\": ");
+		conv_buf_pos = u32toa_branchlut2(ntohs(ipfix_msg->pkt_header->length), conv_buf);
+		record.append(conv_buf, conv_buf_pos - conv_buf);
+
+		STR_APPEND(record, ", \"ipfixcol.export_time\": ");
+		conv_buf_pos = u32toa_branchlut2(ntohl(ipfix_msg->pkt_header->export_time), conv_buf);
+		record.append(conv_buf, conv_buf_pos - conv_buf);
+
+		STR_APPEND(record, ", \"ipfixcol.sequence_number\": ");
+		conv_buf_pos = u32toa_branchlut2(ntohl(ipfix_msg->pkt_header->sequence_number), conv_buf);
+		record.append(conv_buf, conv_buf_pos - conv_buf);
 	}
 
 	STR_APPEND(record, "}\n");

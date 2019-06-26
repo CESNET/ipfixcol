@@ -115,6 +115,14 @@ void process_startup_xml(struct json_conf *conf, char *params)
 		conf->whiteSpaces = false;
 	}
 
+	/* Detailed information in records */
+	std::string detailedInfo = ie.node().child_value("detailedInfo");
+	conf->detailedInfo = false;
+	if (strcasecmp(detailedInfo.c_str(), "true") == 0 || detailedInfo == "1" ||
+			strcasecmp(detailedInfo.c_str(), "yes") == 0) {
+		conf->detailedInfo = true;
+	}
+
 	/* Prefix for IPFIX elements */
 	/* Set default rpefix */
 	conf->prefix = "ipfix.";
