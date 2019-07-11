@@ -965,7 +965,7 @@ out:
  *
  * Compares L3 protocol, IP addresses and source port. ODID is not checked.
  *
- * \param[in] input_info structure to compare
+ * \param[in] info_list structure to compare
  * \param[in] address structure to compare
  * \return 0 if input_info matches the address, 1 otherwise
  */
