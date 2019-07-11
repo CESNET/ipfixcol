@@ -136,7 +136,7 @@ int rbuffer_write(struct ring_buffer* rbuffer, struct ipfix_message* record, uin
 	}
 	/* it will be never more than ring buffer size, but just to be sure I'm checking it 
 	 * leave one position in buffer free, so that faster thread cannot read 
-	 * data yet not procees by slower one */
+	 * data yet not processed by slower one */
 	while (rbuffer->count + 1 >= rbuffer->size) {
 		if (pthread_cond_wait(&(rbuffer->cond), &(rbuffer->mutex)) != 0) {
 			MSG_ERROR(msg_module, "Condition wait failed (%s:%d)", __FILE__, __LINE__);
