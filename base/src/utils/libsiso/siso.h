@@ -118,7 +118,7 @@ extern "C" {
     
 	/**
 	 * \brief Check if a destination is connected
-	 * \paramf[in] conf
+	 * \param[in] conf
 	 * \return When the destination is NOT connected, returns 0. Otherwise
 	 *   returns non-zero value.
 	 */
