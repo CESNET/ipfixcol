@@ -46,7 +46,7 @@
 #include <map>
 #include <string>
 #include <stdexcept>
-#include "fastbit/ibis.h"
+#include <fastbit/ibis.h>
 
 /* Get defines from configure */
 #ifdef HAVE_CONFIG_H
