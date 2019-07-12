@@ -39,7 +39,7 @@
 
 /* generate C++ parser */
 %language "C++"
-%define namespace "parser"
+%define api.namespace "parser"
 %defines
 /* Use locations (built-in feature to track position in input) */
 %locations
