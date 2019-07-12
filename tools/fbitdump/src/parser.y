@@ -39,7 +39,7 @@
 
 /* generate C++ parser */
 %language "C++"
-%define api.namespace "parser"
+%define api.namespace { parser }
 %defines
 /* Use locations (built-in feature to track position in input) */
 %locations
@@ -47,7 +47,7 @@
 %error-verbose
 
 /* parse class name */
-%define parser_class_name "Parser"
+%define parser_class_name { Parser }
 
 %code requires {
 /* Forward declaration of Filter in fbitdump namespace*/
