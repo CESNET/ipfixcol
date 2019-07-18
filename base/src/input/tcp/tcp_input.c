@@ -398,7 +398,7 @@ void remove_input_info(struct plugin_conf *conf, struct input_info_list *info, i
 }
 
 /**
- * \brief Funtion that listens for new connections
+ * \brief Function that listens for new connections
  *
  * Runs in a thread and adds new connections to plugin_conf->master set
  *
