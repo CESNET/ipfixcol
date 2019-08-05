@@ -120,7 +120,7 @@ struct ring_buffer* rbuffer_init(uint16_t size)
  *
  * @param[in] rbuffer Ring buffer.
  * @param[in] record IPFIX message structure to be added into the ring buffer.
- * @param[in] ref_count Initial refference count - number of reading threads.
+ * @param[in] ref_count Initial reference count - number of reading threads.
  * @return 0 on success, nonzero on error.
  */
 int rbuffer_write(struct ring_buffer* rbuffer, struct ipfix_message* record, uint16_t ref_count)
@@ -136,7 +136,7 @@ int rbuffer_write(struct ring_buffer* rbuffer, struct ipfix_message* record, uin
 	}
 	/* it will be never more than ring buffer size, but just to be sure I'm checking it 
 	 * leave one position in buffer free, so that faster thread cannot read 
-	 * data yet not procees by slower one */
+	 * data yet not processed by slower one */
 	while (rbuffer->count + 1 >= rbuffer->size) {
 		if (pthread_cond_wait(&(rbuffer->cond), &(rbuffer->mutex)) != 0) {
 			MSG_ERROR(msg_module, "Condition wait failed (%s:%d)", __FILE__, __LINE__);

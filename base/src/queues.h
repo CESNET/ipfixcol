@@ -82,14 +82,6 @@ struct ring_buffer {
  */
 struct ring_buffer* rbuffer_init(uint16_t size);
 
-/**
- * \brief Add new record into the ring buffer.
- *
- * @param[in] rbuffer Ring buffer.
- * @param[in] record IPFIX message structure to be added into the ring buffer.
- * @param[in] refcount Initial refference count - number of reading threads.
- * @return 0 on success, nonzero on error.
- */
 int rbuffer_write(struct ring_buffer* rbuffer, struct ipfix_message* record, uint16_t ref_count);
 
 /**

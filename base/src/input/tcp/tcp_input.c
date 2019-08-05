@@ -398,7 +398,7 @@ void remove_input_info(struct plugin_conf *conf, struct input_info_list *info, i
 }
 
 /**
- * \brief Funtion that listens for new connections
+ * \brief Function that listens for new connections
  *
  * Runs in a thread and adds new connections to plugin_conf->master set
  *
@@ -965,7 +965,7 @@ out:
  *
  * Compares L3 protocol, IP addresses and source port. ODID is not checked.
  *
- * \param[in] input_info structure to compare
+ * \param[in] info_list structure to compare
  * \param[in] address structure to compare
  * \return 0 if input_info matches the address, 1 otherwise
  */
