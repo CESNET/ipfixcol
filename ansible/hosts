@@ -1,2 +1,2 @@
-[ipfixcol-hosts]
-localhost
+[ipfixcol_hosts]
+vagrant-test
