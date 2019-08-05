@@ -348,6 +348,10 @@ void Storage::storeDataRecord(struct metadata *mdata, const struct ipfix_message
 		STR_APPEND(record, ", \"ipfixcol.sequence_number\": ");
 		conv_buf_pos = u32toa_branchlut2(ntohl(ipfix_msg->pkt_header->sequence_number), conv_buf);
 		record.append(conv_buf, conv_buf_pos - conv_buf);
+
+		STR_APPEND(record, ", \"ipfixcol.template_id\": ");
+		conv_buf_pos = u32toa_branchlut2(templ->original_id, conv_buf);
+		record.append(conv_buf, conv_buf_pos - conv_buf);
 	}
 
 	STR_APPEND(record, "}\n");
