@@ -1553,7 +1553,6 @@ static void readFlowSample_APP_ACTOR_TGT(SFSample *sample)
 
 static void readExtendedSocket4(SFSample *sample)
 {
-  char buf[51] = { 0 };
   skipBytes(sample, 4);
   sample->ipsrc.type = SFLADDRESSTYPE_IP_V4;
   sample->ipsrc.address.ip_v4.addr = getData32_nobswap(sample);
@@ -1561,8 +1560,7 @@ static void readExtendedSocket4(SFSample *sample)
   sample->ipdst.address.ip_v4.addr = getData32_nobswap(sample);
   skipBytes(sample, 8);
   if(sfConfig.outputFormat == SFLFMT_CLF) {
-    memcpy(sfCLF.client, buf, 50);
-    sfCLF.client[50] = '\0';
+    memset(sfCLF.client, 0, 51);
   }
 
 }
@@ -1584,7 +1582,6 @@ static void readExtendedProxySocket4(SFSample *sample)
 
 static void readExtendedSocket6(SFSample *sample)
 {
-  char buf[51] = { 0 };
   skipBytes(sample, 4);
   sample->ipsrc.type = SFLADDRESSTYPE_IP_V6;
   memcpy(&sample->ipsrc.address.ip_v6, sample->datap, 16);
@@ -1594,8 +1591,7 @@ static void readExtendedSocket6(SFSample *sample)
   skipBytes(sample, 24);
 
   if(sfConfig.outputFormat == SFLFMT_CLF) {
-    memcpy(sfCLF.client, buf, 51);
-    sfCLF.client[50] = '\0';
+    memset(sfCLF.client, 0, 51);
   }
 }
 
