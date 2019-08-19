@@ -173,7 +173,7 @@ struct ipfix_template_mgr_record {
 };
 
 /**
- * \brief Registre an exporter template record
+ * \brief Register an exporter template record
  *
  * This function protects ODID templates in case of short disconnection
  * of an IPFIX exporter (shorter than closing time of a storage plugin).
