@@ -195,12 +195,12 @@ void merge_flows_stats(std::string first, std::string second)
 	std::fstream file_f;
 	std::fstream file_s;
 
-	file_f.open(first.c_str(), std::fstream::in);
+	file_f.open(first, std::fstream::in);
 	if (!file_f.is_open()) {
 		std::cerr << "Can't open file '" << first << "' for reading\n";
 	}
 
-	file_s.open(second.c_str(), std::fstream::in);
+	file_s.open(second, std::fstream::in);
 	if (!file_s.is_open()) {
 		std::cerr << "Can't open file '" << second << "' for reading\n";
 		file_f.close();
@@ -234,7 +234,7 @@ void merge_flows_stats(std::string first, std::string second)
 	}
 
 	/* Save data into second file */
-	file_s.open(second.c_str(), std::fstream::out | std::fstream::trunc);
+	file_s.open(second, std::fstream::out | std::fstream::trunc);
 	if (!file_s.is_open()) {
 		std::cerr << "Cannot open file '" << second << "' for writing\n";
 	} else {
