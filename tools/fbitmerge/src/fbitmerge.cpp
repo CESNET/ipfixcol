@@ -450,8 +450,8 @@ int merge_couple(std::string src_dir, std::string dst_dir, std::string work_dir)
 	}
 
 	/* Finally merge flowsStats.txt files */
-	merge_flows_stats(src_dir_path + "/" + "flowsStats.txt",
-			dst_dir_path + "/" + "flowsStats.txt");
+	merge_flows_stats(src_dir_path + "/flowsStats.txt",
+			dst_dir_path + "/flowsStats.txt");
 
 	closedir(sdir);
 	closedir(ddir);
