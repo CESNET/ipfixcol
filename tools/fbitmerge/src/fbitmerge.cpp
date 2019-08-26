@@ -92,16 +92,14 @@ void usage()
  */
 void remove_folder_tree(std::string dir_name)
 {
-	DIR *dir;
-	struct dirent *subdir;
-
-	dir = opendir(dir_name.c_str());
+	DIR *dir = opendir(dir_name.c_str());
 	if (dir == NULL) {
 		std::cerr << "Error while initializing directory '" << dir_name << "'" << std::endl;
 		return;
 	}
 
 	/* Go through all files and subfolders */
+	struct dirent *subdir;
 	while ((subdir = readdir(dir)) != NULL) {
 		if (subdir->d_name[0] == '.') {
 			continue;
@@ -471,8 +469,7 @@ int merge_couple(std::string src_dir, std::string dst_dir, std::string work_dir)
  */
 int merge_all(std::string work_dir, uint16_t key, std::string prefix)
 {
-	DIR *dir = NULL;
-	dir = opendir(work_dir.c_str());
+	DIR *dir = opendir(work_dir.c_str());
 	if (dir == NULL) {
 		std::cerr << "Error while initializing directory '" << work_dir << "'" << std::endl;
 		return NOT_OK;
@@ -503,8 +500,6 @@ int merge_all(std::string work_dir, uint16_t key, std::string prefix)
 	std::map<uint32_t, std::string> dir_map;
 	std::map<uint32_t, time_t> dir_map_max_mtime;
 	struct dirent *subdir = NULL;
-	char key_str[size + 1];
-	std::string full_subdir_path;
 
 	while ((subdir = readdir(dir)) != NULL) {
 		if (subdir->d_name[0] == '.') {
@@ -512,12 +507,13 @@ int merge_all(std::string work_dir, uint16_t key, std::string prefix)
 		}
 
 		/* Get key value */
+		char key_str[size + 1];
 		memset(key_str, 0, size + 1);
 		memcpy(key_str, subdir->d_name + prefix.length(), size);
 		uint32_t key_int = atoi(key_str);
 
 		/* Get mtime */
-		full_subdir_path = work_dir + "/" + subdir->d_name;
+		std::string full_subdir_path = work_dir + "/" + subdir->d_name;
 		time_t dir_mtime = get_file_mtime(full_subdir_path);
 
 		/* If it is the first occurrence of the key, store it in the map.
@@ -603,16 +599,14 @@ int merge_all(std::string work_dir, uint16_t key, std::string prefix)
  */
 int move_prefixed_dirs(std::string base_dir, std::string work_dir, std::string prefix, int key)
 {
-	DIR *dir;
-	struct dirent *subdir;
-
-	dir = opendir(work_dir.c_str());
+	DIR *dir = opendir(work_dir.c_str());
 	if (dir == NULL) {
 		std::cerr << "Error while initializing directory '" << work_dir << "'" << std::endl;
 		return NOT_OK;
 	}
 
 	/* Cycle through all files subfolders */
+	struct dirent *subdir;
 	while ((subdir = readdir(dir)) != NULL) {
 		if (subdir->d_name[0] == '.') {
 			continue;
