@@ -238,9 +238,9 @@ void merge_flows_stats(std::string first, std::string second)
 	if (!file_s.is_open()) {
 		std::cerr << "Cannot open file '" << second << "' for writing\n";
 	} else {
-		file_s << "Exported flows: " << exported_flows << std::endl;
-		file_s << "Received flows: " << received_flows << std::endl;
-		file_s << "Lost flows: " << lost_flows << std::endl;
+		file_s << "Exported flows: " << exported_flows << '\n';
+		file_s << "Received flows: " << received_flows << '\n';
+		file_s << "Lost flows: " << lost_flows << '\n';
 		file_s.close();
 	}
 }
