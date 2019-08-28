@@ -252,7 +252,7 @@ void merge_flows_stats(std::string first, std::string second)
 int merge_dirs(std::string src_dir, std::string dst_dir)
 {
 	/* Table initialization */
-	ibis::part part(dst_dir.c_str(), static_cast<const char*>(0));
+	ibis::part part(dst_dir.c_str(), nullptr);
 
 	/* If there are no rows, we have nothing to do */
 	if (part.nRows() == 0) {
@@ -269,7 +269,7 @@ int merge_dirs(std::string src_dir, std::string dst_dir)
 
 void scan_dir(std::string dir_name, std::string src_dir, DIRMAP *bigMap)
 {
-	ibis::part part(src_dir.c_str(), static_cast<const char*>(0));
+	ibis::part part(src_dir.c_str(), nullptr);
 
 	if (part.nRows() == 0) {
 		return;
