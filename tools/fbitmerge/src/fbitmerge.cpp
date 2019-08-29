@@ -690,7 +690,6 @@ int main(int argc, char *argv[])
 	int moveOnly = 0;
 
 	std::string base_dir;
-	std::stringstream ss;
 	std::string prefix;
 
 	while ((option = getopt_long(argc, argv, OPTSTRING, long_opts, NULL)) != -1) {
@@ -711,16 +710,10 @@ int main(int argc, char *argv[])
 
 			break;
 		case 'b':
-			ss << optarg;
-			base_dir = ss.str();
-			ss.str(std::string());
-			ss.clear();
+			base_dir = optarg;
 			break;
 		case 'p':
-			ss << optarg;
-			prefix = ss.str();
-			ss.str(std::string());
-			ss.clear();
+			prefix = optarg;
 			break;
 		case 's':
 			separated = 1;
