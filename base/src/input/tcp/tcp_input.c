@@ -814,8 +814,8 @@ int input_init(char *params, void **config)
 		}
 	
 		/* load private keys into the CTX structure */
-		SSL_CTX_use_PrivateKey_file(ctx, conf->server_pkey_file, SSL_FILETYPE_PEM);
-		if (ret <= 0) {
+		ret = SSL_CTX_use_PrivateKey_file(ctx, conf->server_pkey_file, SSL_FILETYPE_PEM);
+		if (ret != 1) {
 			MSG_ERROR(msg_module, "Unable to load server's private key from %s", conf->server_pkey_file);
 			ERR_print_errors_fp(stderr);
 			retval = 1;
