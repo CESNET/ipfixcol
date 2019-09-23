@@ -92,16 +92,14 @@ void usage()
  */
 void remove_folder_tree(std::string dir_name)
 {
-	DIR *dir;
-	struct dirent *subdir;
-
-	dir = opendir(dir_name.c_str());
+	DIR *dir = opendir(dir_name.c_str());
 	if (dir == NULL) {
 		std::cerr << "Error while initializing directory '" << dir_name << "'" << std::endl;
 		return;
 	}
 
 	/* Go through all files and subfolders */
+	struct dirent *subdir;
 	while ((subdir = readdir(dir)) != NULL) {
 		if (subdir->d_name[0] == '.') {
 			continue;
@@ -195,12 +193,12 @@ void merge_flows_stats(std::string first, std::string second)
 	std::fstream file_f;
 	std::fstream file_s;
 
-	file_f.open(first.c_str(), std::fstream::in);
+	file_f.open(first, std::fstream::in);
 	if (!file_f.is_open()) {
 		std::cerr << "Can't open file '" << first << "' for reading\n";
 	}
 
-	file_s.open(second.c_str(), std::fstream::in);
+	file_s.open(second, std::fstream::in);
 	if (!file_s.is_open()) {
 		std::cerr << "Can't open file '" << second << "' for reading\n";
 		file_f.close();
@@ -234,13 +232,13 @@ void merge_flows_stats(std::string first, std::string second)
 	}
 
 	/* Save data into second file */
-	file_s.open(second.c_str(), std::fstream::out | std::fstream::trunc);
+	file_s.open(second, std::fstream::out | std::fstream::trunc);
 	if (!file_s.is_open()) {
 		std::cerr << "Cannot open file '" << second << "' for writing\n";
 	} else {
-		file_s << "Exported flows: " << exported_flows << std::endl;
-		file_s << "Received flows: " << received_flows << std::endl;
-		file_s << "Lost flows: " << lost_flows << std::endl;
+		file_s << "Exported flows: " << exported_flows << '\n';
+		file_s << "Received flows: " << received_flows << '\n';
+		file_s << "Lost flows: " << lost_flows << '\n';
 		file_s.close();
 	}
 }
@@ -254,7 +252,7 @@ void merge_flows_stats(std::string first, std::string second)
 int merge_dirs(std::string src_dir, std::string dst_dir)
 {
 	/* Table initialization */
-	ibis::part part(dst_dir.c_str(), static_cast<const char*>(0));
+	ibis::part part(dst_dir.c_str(), nullptr);
 
 	/* If there are no rows, we have nothing to do */
 	if (part.nRows() == 0) {
@@ -271,7 +269,7 @@ int merge_dirs(std::string src_dir, std::string dst_dir)
 
 void scan_dir(std::string dir_name, std::string src_dir, DIRMAP *bigMap)
 {
-	ibis::part part(src_dir.c_str(), static_cast<const char*>(0));
+	ibis::part part(src_dir.c_str(), nullptr);
 
 	if (part.nRows() == 0) {
 		return;
@@ -285,15 +283,15 @@ void scan_dir(std::string dir_name, std::string src_dir, DIRMAP *bigMap)
 
 int same_data(innerDirMap *first, innerDirMap *second)
 {
-	if ((*first).size() != (*second).size()) {
+	if (first->size() != second->size()) {
 		return NOT_OK;
 	}
 
-	for (innerDirMap::iterator it = (*first).begin(); it != (*first).end(); it++) {
-		if ((*second).find((*it).first) == (*second).end()) {
+	for (innerDirMap::iterator it = first->begin(); it != first->end(); it++) {
+		if (second->find(it->first) == second->end()) {
 			return NOT_OK;
 		}
-		if ((*it).second != (*second)[(*it).first]) {
+		if (it->second != (*second)[it->first]) {
 			return NOT_OK;
 		}
 	}
@@ -381,10 +379,10 @@ int merge_couple(std::string src_dir, std::string dst_dir, std::string work_dir)
 	/* Iterate through whole dst_map and src_map and find folders with same data (and data types) */
 	for (DIRMAP::iterator dst_i = dst_map.begin(); dst_i != dst_map.end(); ++dst_i) {
 		for (DIRMAP::iterator src_i = src_map.begin(); src_i != src_map.end(); ) {
-			if (same_data(&((*dst_i).second), &((*src_i).second)) == OK) {
+			if (same_data(&dst_i->second, &src_i->second) == OK) {
 				/* If found, merge it */
-				if (merge_dirs(src_dir_path + "/" + (*src_i).first,
-						dst_dir_path + "/" + (*dst_i).first) != OK) {
+				if (merge_dirs(src_dir_path + "/" + src_i->first,
+						dst_dir_path + "/" + dst_i->first) != OK) {
 					closedir(sdir);
 					closedir(ddir);
 					return NOT_OK;
@@ -405,21 +403,21 @@ int merge_couple(std::string src_dir, std::string dst_dir, std::string work_dir)
 		char suffix = 'a';
 
 		/* Add suffix to the name */
-		while (stat((dst_dir_path + "/" + (*src_i).first).c_str(), &st) == 0) {
+		while (stat((dst_dir_path + "/" + src_i->first).c_str(), &st) == 0) {
 			if (suffix == 'z') {
 				suffix = 'A';
 			} else if (suffix == 'Z') {
 				/* \TODO do it better */
-				std::cerr << "Not enough suffixes for folder '" << (*src_i).first << "'" << std::endl;
+				std::cerr << "Not enough suffixes for folder '" << src_i->first << "'" << std::endl;
 				break;
 			} else {
 				suffix++;
 			}
 		}
 
-		if (rename((src_dir_path + "/" + (*src_i).first).c_str(),
-				(dst_dir_path + "/" + (*src_i).first).c_str()) != 0) {
-			std::cerr << "Cannot rename folder '" << (src_dir_path + "/" + (*src_i).first) << "'" << std::endl;
+		if (rename((src_dir_path + "/" + src_i->first).c_str(),
+				(dst_dir_path + "/" + src_i->first).c_str()) != 0) {
+			std::cerr << "Cannot rename folder '" << (src_dir_path + "/" + src_i->first) << "'" << std::endl;
 		}
 	}
 
@@ -431,15 +429,15 @@ int merge_couple(std::string src_dir, std::string dst_dir, std::string work_dir)
 				continue;
 			}
 
-			if (same_data(&((*dst_i).second), &((*it).second)) == OK) {
-				if (merge_dirs(dst_dir_path + "/" + (*it).first,
-						dst_dir_path + "/" + (*dst_i).first) != OK) {
+			if (same_data(&dst_i->second, &it->second) == OK) {
+				if (merge_dirs(dst_dir_path + "/" + it->first,
+						dst_dir_path + "/" + dst_i->first) != OK) {
 					closedir(sdir);
 					closedir(ddir);
 					return NOT_OK;
 				}
 
-				remove_folder_tree((dst_dir_path + "/" + (*it).first).c_str());
+				remove_folder_tree((dst_dir_path + "/" + it->first).c_str());
 				it = dst_map.erase(it);
 			}
 
@@ -450,8 +448,8 @@ int merge_couple(std::string src_dir, std::string dst_dir, std::string work_dir)
 	}
 
 	/* Finally merge flowsStats.txt files */
-	merge_flows_stats(src_dir_path + "/" + "flowsStats.txt",
-			dst_dir_path + "/" + "flowsStats.txt");
+	merge_flows_stats(src_dir_path + "/flowsStats.txt",
+			dst_dir_path + "/flowsStats.txt");
 
 	closedir(sdir);
 	closedir(ddir);
@@ -471,8 +469,7 @@ int merge_couple(std::string src_dir, std::string dst_dir, std::string work_dir)
  */
 int merge_all(std::string work_dir, uint16_t key, std::string prefix)
 {
-	DIR *dir = NULL;
-	dir = opendir(work_dir.c_str());
+	DIR *dir = opendir(work_dir.c_str());
 	if (dir == NULL) {
 		std::cerr << "Error while initializing directory '" << work_dir << "'" << std::endl;
 		return NOT_OK;
@@ -503,8 +500,6 @@ int merge_all(std::string work_dir, uint16_t key, std::string prefix)
 	std::map<uint32_t, std::string> dir_map;
 	std::map<uint32_t, time_t> dir_map_max_mtime;
 	struct dirent *subdir = NULL;
-	char key_str[size + 1];
-	std::string full_subdir_path;
 
 	while ((subdir = readdir(dir)) != NULL) {
 		if (subdir->d_name[0] == '.') {
@@ -512,12 +507,13 @@ int merge_all(std::string work_dir, uint16_t key, std::string prefix)
 		}
 
 		/* Get key value */
+		char key_str[size + 1];
 		memset(key_str, 0, size + 1);
 		memcpy(key_str, subdir->d_name + prefix.length(), size);
 		uint32_t key_int = atoi(key_str);
 
 		/* Get mtime */
-		full_subdir_path = work_dir + "/" + subdir->d_name;
+		std::string full_subdir_path = work_dir + "/" + subdir->d_name;
 		time_t dir_mtime = get_file_mtime(full_subdir_path);
 
 		/* If it is the first occurrence of the key, store it in the map.
@@ -545,7 +541,7 @@ int merge_all(std::string work_dir, uint16_t key, std::string prefix)
 
 	/* Rename folders, if necessary - reset name values after key to 0. Also
 	 * update folder mtime. */
-	for (std::map<uint32_t, std::string>::iterator i = dir_map.begin(); i != dir_map.end(); i++) {
+	for (std::map<uint32_t, std::string>::iterator i = dir_map.begin(); i != dir_map.end(); ++i) {
 		if (prefix.length() + size > i->second.length()) {
 			std::cerr << "Error while preparing to rename folder '" << i->second << \
 					"': folder name shorther than expected" << std::endl;
@@ -603,16 +599,14 @@ int merge_all(std::string work_dir, uint16_t key, std::string prefix)
  */
 int move_prefixed_dirs(std::string base_dir, std::string work_dir, std::string prefix, int key)
 {
-	DIR *dir;
-	struct dirent *subdir;
-
-	dir = opendir(work_dir.c_str());
+	DIR *dir = opendir(work_dir.c_str());
 	if (dir == NULL) {
 		std::cerr << "Error while initializing directory '" << work_dir << "'" << std::endl;
 		return NOT_OK;
 	}
 
 	/* Cycle through all files subfolders */
+	struct dirent *subdir;
 	while ((subdir = readdir(dir)) != NULL) {
 		if (subdir->d_name[0] == '.') {
 			continue;
@@ -696,7 +690,6 @@ int main(int argc, char *argv[])
 	int moveOnly = 0;
 
 	std::string base_dir;
-	std::stringstream ss;
 	std::string prefix;
 
 	while ((option = getopt_long(argc, argv, OPTSTRING, long_opts, NULL)) != -1) {
@@ -717,16 +710,10 @@ int main(int argc, char *argv[])
 
 			break;
 		case 'b':
-			ss << optarg;
-			base_dir = ss.str();
-			ss.str(std::string());
-			ss.clear();
+			base_dir = optarg;
 			break;
 		case 'p':
-			ss << optarg;
-			prefix = ss.str();
-			ss.str(std::string());
-			ss.clear();
+			prefix = optarg;
 			break;
 		case 's':
 			separated = 1;

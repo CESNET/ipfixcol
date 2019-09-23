@@ -68,7 +68,7 @@
 // 1 second in nanoseconds
 #define NANO_SEC 1000000000L
 
-static int stop_sending = 0;
+static volatile int stop_sending = 0;
 static struct timeval begin = {0};
 
 void sender_stop()
