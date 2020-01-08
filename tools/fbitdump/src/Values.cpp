@@ -145,7 +145,7 @@ std::string Values::toString(bool plainNumbers) const
 
 		/* Convert the value to hexa */
 		for (uint64_t i=0; i < this->opaque.size(); i++) {
-			ss << std::setw(2) << static_cast<uint16_t>((this->opaque.address()[i]));
+			ss << std::setw(2) << static_cast<uint16_t>((uint8_t)(this->opaque.address()[i]));
 		}
 
 		valStr = ss.str();

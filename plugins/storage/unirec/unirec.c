@@ -364,7 +364,8 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
                         break;
                      case UNIREC_FIELD_DBF:
                         // Handle DIR_BIT_FIELD
-                        *(uint8_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) = ((*(uint16_t*)(data_record + offset + size_length)) >> 8) & 0x1;
+                        // Just read the least significant byte directly and use only the least significant bit
+                        *(uint8_t*)(conf->ifc[i].buffer + matchField->offset_ar[i]) = (*(uint8_t*)(data_record + offset + (length - 1))) & 0x1;
                         break;
                      case UNIREC_FIELD_LBF:
                         // Handle LINK_BIT_FIELD, is BIG ENDIAN but we are using only LSB
@@ -393,8 +394,12 @@ static uint16_t process_record(char *data_record, struct ipfix_template *templat
             }
          } else {
             // Dynamic element
-            matchField->valueSize = length;
             matchField->value     = (void*) (data_record + offset + size_length);
+            if (matchField->unirec_type == 0) { // string value should be trimmed
+                matchField->valueSize = strnlen(data_record + offset + size_length, length);
+            } else {
+                matchField->valueSize = length;
+            }
             matchField->valueFilled = 1;
             // Fill required count for Unirec where this element is required
             for (int i = 0; i < conf->ifc_count; i++) {
@@ -638,8 +643,8 @@ static int8_t getUnirecFieldTypeFromIpfixId(ipfixElement ipfix_el)
    } else if (en == 0 && (id == 152 || id == 153)) {
       // Timestamps
       return UNIREC_FIELD_TS;
-   } else if (en == 0 && id == 10) {
-      // DIR_BIT_FIELD
+   } else if (en == 0 && (id == 10 || id == 14)) {
+      // DIR_BIT_FIELD (in/out interface numbers)
       return UNIREC_FIELD_DBF;
    } else if (en == 0 && id == 405) {
       // LINK_BIT_FIELD

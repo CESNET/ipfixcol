@@ -138,9 +138,15 @@ const char *Translator::formatProtocol(uint8_t proto)
  * \brief Format timestamp
  */
 const char *Translator::formatTimestamp(uint64_t tstamp, t_units units, struct json_conf * config)
-{	
-	if(config->timestamp) {
+{
+	/* Convert to host byte order. Seconds are stored in uint32_t */
+	if (units == t_units::SEC) {
+		tstamp = ntohl(tstamp);
+	} else {
 		tstamp = be64toh(tstamp);
+	}
+
+	if(config->timestamp) {
 	
 		/* Convert to milliseconds */
 		switch (units) {
@@ -165,7 +171,6 @@ const char *Translator::formatTimestamp(uint64_t tstamp, t_units units, struct j
 		/* append miliseconds */
 		sprintf(&(buffer[20]), ".%03u\"", (const unsigned int) msec);
 	} else {
-		tstamp = be64toh(tstamp);
 		sprintf(buffer, "%" PRIu64 , tstamp);
 	}	
 

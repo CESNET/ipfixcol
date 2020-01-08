@@ -26,7 +26,7 @@ AC_DEFUN([LBR_SET_DISTRO],
 # Autodetect current distribution
 if test -f /etc/redhat-release; then
 	DISTRO=redhat
-elif test -f /etc/SuSE-release; then
+elif test -f /etc/SuSE-release -o -f /etc/SUSE-brand; then
 	DISTRO=suse
 elif test -f /etc/mandrake-release; then
 	DISTRO='mandrake'

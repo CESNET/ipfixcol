@@ -46,7 +46,7 @@ Default plugin configuration in **internalcfg.xml**
 Or as `ipfixconf` output:
 
 ```
-     Plugin type         Name/Format     Process/Thread         File        
+     Plugin type         Name/Format     Process/Thread         File
  ----------------------------------------------------------------------------
        storage              json             json          /usr/share/ipfixcol/plugins/ipfixcol-json-output.so
 ```
@@ -59,11 +59,13 @@ Here is an example of configuration in **startup.xml**:
 	<fileWriter>
 		<fileFormat>json</fileFormat>
 		<metadata>no</metadata>
+		<odid>no</odid>
 		<tcpFlags>formatted</tcpFlags>
 		<timestamp>formatted</timestamp>
 		<protocol>formatted</protocol>
 		<ignoreUnknown>yes</ignoreUnknown>
 		<nonPrintableChar>yes</nonPrintableChar>
+		<detailedInfo>no</detailedInfo>
 		<prefix>ipfix.</prefix>
 
 		<output>
@@ -104,11 +106,13 @@ Here is an example of configuration in **startup.xml**:
 </destination>
 ```
 * **metadata** - Add record metadata to the output (yes/no) [default == no].
+* **odid** - Add source ODID to the output (yes/no) [default == no].
 * **tcpFlags** - Convert TCP flags to formatted style of dots and letters (formatted) or to a number (raw) [default == raw].
 * **timestamp** - Convert time to formatted style (formatted) or to a number (unix) [default == unix].
 * **protocol** - Convert protocol identification to formatted style (formatted) or to a number (raw) [default == formatted].
 * **ignoreUnknown** - Skip elements with unknown semantics (yes/no). Data of unknown elements are formatted as unsigned integer (1, 2, 4, 8 bytes length) or binary values. Names will have format 'eXXidYY' where XX is enterprise number and YY is element ID [default == yes].
 * **nonPrintableChar** - Convert non-printable characters (control characters, tab, newline, etc.) from IPFIX fields with data type of a string. (yes/no) [default == yes].
+* **detailedInfo** - Add detailed info about the IPFIX message (export time, sequence number, ...) to each record under "ipfixcol." prefix. (yes/no) [default == no].
 * **prefix** - Prefix of the IPFIX element names. [default == ipfix.].
 
 * **output** - Specifies JSON data processor. Multiple outputs are supported.

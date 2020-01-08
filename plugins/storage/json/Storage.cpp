@@ -56,6 +56,7 @@ extern "C" {
 #include <sstream>
 #include <iostream>
 #include <iomanip>
+#include "branchlut2.h"
 
 static const char *msg_module = "json_storage";
 
@@ -102,7 +103,7 @@ void Storage::storeDataSets(const ipfix_message* ipfix_msg, struct json_conf * c
 {
 	/* Iterate through all data records */
 	for (int i = 0; i < ipfix_msg->data_records_count; ++i) {
-		storeDataRecord(&(ipfix_msg->metadata[i]), config);
+		storeDataRecord(&(ipfix_msg->metadata[i]), ipfix_msg, config);
 	}
 }
 
@@ -115,16 +116,16 @@ uint16_t Storage::realLength(uint16_t length, uint8_t *data_record, uint16_t &of
 	if (length != VAR_IE_LENGTH) {
 		return length;
 	}
-	
+
 	/* Variable length */
 	length = static_cast<int>(read8(data_record + offset));
 	offset++;
-	
+
 	if (length == 255) {
 		length = ntohs(read16(data_record + offset));
 		offset += 2;
 	}
-	
+
 	return length;
 }
 
@@ -185,7 +186,7 @@ const char* Storage::rawName(uint32_t en, uint16_t id) const
 /**
  * \brief Store data record
  */
-void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
+void Storage::storeDataRecord(struct metadata *mdata, const struct ipfix_message *ipfix_msg, struct json_conf *config)
 {
 	const char *element_name = NULL;
 	ELEMENT_TYPE element_type;
@@ -206,12 +207,12 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 		id = templ->fields[index].ie.id;
 		length = templ->fields[index].ie.length;
 		enterprise = 0;
-		
+
 		if (id & 0x8000) {
 			id &= 0x7fff;
 			enterprise = templ->fields[++index].enterprise_number;
 		}
-		
+
 		/* Get element informations */
 		const ipfix_element_t * element = get_element_by_id(id, enterprise);
 		if (element != NULL) {
@@ -300,7 +301,7 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 				config);
 			break;
 		case ET_BOOLEAN:
-		case ET_UNASSIGNED: 
+		case ET_UNASSIGNED:
 		default:
 			readRawData(length, data_record, offset);
 			break;
@@ -309,14 +310,50 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 		offset += length;
 		added++;
 	}
-	
+
 	/* Store metadata */
 	if (processMetadata) {
-		STR_APPEND(record, ", \"ipfix.metadata\": {");
+		STR_APPEND(record, ", \"");
+		record += config->prefix;
+		STR_APPEND(record, "metadata\": {");
 		storeMetadata(mdata);
 		STR_APPEND(record, "}");
 	}
-	
+
+	/* Store ODID */
+	if (config->odid) {
+		/* Temporary buffer for the ODID, must be as big as UINT_MAX converted to string */
+		char odid_buf[sizeof("4294967295")];
+
+		STR_APPEND(record, ", \"");
+		record += config->prefix;
+		STR_APPEND(record, "odid\": ");
+		/* Convert ODID efficiently */
+		char *odid_buf_pos = u32toa_branchlut2(ipfix_msg->input_info->odid, odid_buf);
+		record.append(odid_buf, odid_buf_pos - odid_buf);
+	}
+
+	/* Store Detailed Information */
+	if (config->detailedInfo) {
+		char conv_buf[sizeof("4294967295")], *conv_buf_pos = NULL;
+
+		STR_APPEND(record, ", \"ipfixcol.packet_length\": ");
+		conv_buf_pos = u32toa_branchlut2(ntohs(ipfix_msg->pkt_header->length), conv_buf);
+		record.append(conv_buf, conv_buf_pos - conv_buf);
+
+		STR_APPEND(record, ", \"ipfixcol.export_time\": ");
+		conv_buf_pos = u32toa_branchlut2(ntohl(ipfix_msg->pkt_header->export_time), conv_buf);
+		record.append(conv_buf, conv_buf_pos - conv_buf);
+
+		STR_APPEND(record, ", \"ipfixcol.sequence_number\": ");
+		conv_buf_pos = u32toa_branchlut2(ntohl(ipfix_msg->pkt_header->sequence_number), conv_buf);
+		record.append(conv_buf, conv_buf_pos - conv_buf);
+
+		STR_APPEND(record, ", \"ipfixcol.template_id\": ");
+		conv_buf_pos = u32toa_branchlut2(templ->original_id, conv_buf);
+		record.append(conv_buf, conv_buf_pos - conv_buf);
+	}
+
 	STR_APPEND(record, "}\n");
 	sendData();
 }
@@ -327,7 +364,7 @@ void Storage::storeDataRecord(struct metadata *mdata, struct json_conf * config)
 void Storage::storeMetadata(metadata* mdata)
 {
 	std::stringstream ss;
-	
+
 	/* Geolocation info */
 	ss << "\"srcAS\": \"" << mdata->srcAS << "\", ";
 	ss << "\"dstAS\": \"" << mdata->dstAS << "\", ";
@@ -338,7 +375,7 @@ void Storage::storeMetadata(metadata* mdata)
 
 	record += ss.str();
 
-	
+
 	/* Profiles */
 	STR_APPEND(record, "\"profiles\": [");
 	if (mdata->channels) {

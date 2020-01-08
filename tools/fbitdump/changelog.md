@@ -1,5 +1,9 @@
 **Future release:**
 
+**Version 0.4.4:**
+* Fixed blob hex output
+* Fixed TCP flags example in man page
+
 **Version 0.4.3:**
 * Fixed configuration for CESNET SIP plugin
 

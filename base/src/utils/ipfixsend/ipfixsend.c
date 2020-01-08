@@ -79,7 +79,7 @@ do { \
 	} \
 } while (0)
 
-static int stop = 0;
+static volatile int stop = 0;
 
 /**
  * \brief Print usage

@@ -56,12 +56,14 @@ class Storage;
  */
 struct json_conf {
 	bool metadata;
+	bool odid;           /**< Add ODID to json output */
 	Storage *storage;
 	bool tcpFlags;       /**< TCP flags format - true(formatted), false(RAW)  */
 	bool timestamp;      /**< timestamp format - true(formatted), false(UNIX) */
 	bool protocol;       /**< protocol format  - true(RAW), false(formatted)  */
 	bool ignoreUnknown;  /**< Ignore unknown elements                        */
 	bool whiteSpaces;    /**< Convert white spaces in strings (do not skip)  */
+	bool detailedInfo;   /**< Add detailed information about to each record */
 	std::string prefix;  /**< Prefix for IPFIX elements */
 };
 

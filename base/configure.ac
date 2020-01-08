@@ -131,7 +131,7 @@ AC_CHECK_LIB([xml2], [main],
 ### TLS support ###
 save_libs="$LIBS"
 AS_IF([test "x$with_openssl" != xno],
-  [AC_SEARCH_LIBS([SSL_library_init], [ssl :libssl.so.10],
+  [AC_SEARCH_LIBS([SSL_library_init], [ssl :libssl.so.10 :libssl.so.1.0.0],
     [TLS_SUPPORT="yes"
     # Check for pkg-config
 	AC_CHECK_PROG([PKG_CONFIG], [pkg-config], ["yes"], ["no"])
@@ -231,6 +231,7 @@ AC_CONFIG_FILES([Makefile
 				src/intermediate/odip/Makefile
 				src/intermediate/hooks/Makefile
 				src/intermediate/timenow/Makefile
+				src/intermediate/timecheck/Makefile
 				src/utils/Makefile
 				src/utils/ipfixconf/Makefile
 				src/utils/ipfixsend/Makefile

@@ -97,9 +97,9 @@ static char *msg_module = "TCP input";
  * \brief  List structure for input info
  *
  * Input info list structures are used as follows.
- * There is a template input_info_network structure stored in plugin_conf. This 
- * structure is filled during init and used to initialize new input info 
- * structures for new connections. 
+ * There is a template input_info_network structure stored in plugin_conf. This
+ * structure is filled during init and used to initialize new input info
+ * structures for new connections.
  *
  * When connection is accepted, new input_info_list
  * is created and added to global list. This input info does not have ODID filled yet.
@@ -188,7 +188,7 @@ void input_listen_tls_cleanup(void *config, struct cleanup *maid)
 	struct plugin_conf *conf;
 	int fd;
 	int ret;
-	
+
 	conf = (struct plugin_conf *) config;
 
 	/* TLS enabled? */
@@ -297,7 +297,7 @@ void destroy_sock_addresses(struct plugin_conf *conf)
  *
  * Adds new input_info_list to the list held in plugin configuration
  * Address or src_info argument should be used to set source address
- * 
+ *
  * \param conf Plugin configuration
  * \param src_info Input info to use as source for the new one. Use info from conf if NULL
  * \param address Address structure to use for input_info. Can be NULL
@@ -305,7 +305,7 @@ void destroy_sock_addresses(struct plugin_conf *conf)
  */
 struct input_info_list *create_input_info(struct plugin_conf *conf,
 	struct input_info_list *src_info, struct sockaddr_in6 *address)
-{	
+{
 	struct input_info_list *input_info = NULL;
 	struct input_info_network *src_info_net = NULL;
 
@@ -398,7 +398,7 @@ void remove_input_info(struct plugin_conf *conf, struct input_info_list *info, i
 }
 
 /**
- * \brief Funtion that listens for new connections
+ * \brief Function that listens for new connections
  *
  * Runs in a thread and adds new connections to plugin_conf->master set
  *
@@ -432,7 +432,7 @@ void *input_listen(void *config)
 			break;
 		}
 
-		/* ensure that address will be freed when thread is canceled */ 
+		/* ensure that address will be freed when thread is canceled */
 		pthread_cleanup_push(input_listen_cleanup, (void *) address);
 
 		if ((new_sock = accept(conf->socket, (struct sockaddr*) address, &addr_length)) == -1) {
@@ -501,10 +501,11 @@ void *input_listen(void *config)
 			for (i = 0; i < conf->ssl_list_size; i++) {
 				if (conf->ssl_list[i] == NULL) {
 					conf->ssl_list[i] = ssl;
+					break;
 				}
 			}
 
-			if (conf->ssl_list[i] != ssl) {
+			if (i == conf->ssl_list_size) {
 				/* limit reached. no space for new SSL structure */
 				MSG_WARNING(msg_module, "Reached limit on the number of TLS connections; tearing down this connection...");
 				/* cleanup */
@@ -632,7 +633,7 @@ int input_init(char *params, void **config)
 		if (xmlStrEqual(cur_node->name, BAD_CAST "transportLayerSecurity")) {
 			MSG_INFO(msg_module, "TLS enabled");
 			conf->tls = 1;   /* TLS enabled */
-			cur_node_parent = cur_node;	
+			cur_node_parent = cur_node;
 
 			/* TLS configuration options */
 			for (cur_node = cur_node->xmlChildrenNode; cur_node; cur_node = cur_node->next) {
@@ -647,7 +648,7 @@ int input_init(char *params, void **config)
 						goto out;
 					}
 					strncpy_safe(tmp_val, (char *)cur_node->children->content, tmp_val_len);
-					
+
 					if (xmlStrEqual(cur_node->name, BAD_CAST "localCAfile")) {
 						/* location of the CA certificate */
 						conf->ca_cert_file = tmp_val;
@@ -790,11 +791,11 @@ int input_init(char *params, void **config)
 #ifdef TLS_SUPPORT
 	if (conf->tls) {
 		/* configure TLS */
-	
+
 		/* initialize library */
 		SSL_load_error_strings();
 		SSL_library_init();
-	
+
 		/* create CTX structure for TLS */
 		ctx = SSL_CTX_new(TLSv1_server_method());
 		if (!ctx) {
@@ -803,7 +804,7 @@ int input_init(char *params, void **config)
 			retval = 1;
 			goto out;
 		}
-	
+
 		/* load server certificate into the CTX structure */
 		ret = SSL_CTX_use_certificate_file(ctx, conf->server_cert_file, SSL_FILETYPE_PEM);
 		if (ret != 1) {
@@ -812,11 +813,28 @@ int input_init(char *params, void **config)
 			retval = 1;
 			goto out;
 		}
-	
+
 		/* load private keys into the CTX structure */
-		SSL_CTX_use_PrivateKey_file(ctx, conf->server_pkey_file, SSL_FILETYPE_PEM);
-		if (ret <= 0) {
+		ret = SSL_CTX_use_PrivateKey_file(ctx, conf->server_pkey_file, SSL_FILETYPE_PEM);
+		if (ret != 1) {
 			MSG_ERROR(msg_module, "Unable to load server's private key from %s", conf->server_pkey_file);
+			ERR_print_errors_fp(stderr);
+			retval = 1;
+			goto out;
+		}
+
+		/* check consistency of a private key with the corresponding certificate  */
+		ret = SSL_CTX_check_private_key(ctx);
+		if (ret != 1) {
+			MSG_ERROR(msg_module, "Private key is not consistent with the server certificate.", '\0');
+			ERR_print_errors_fp(stderr);
+			retval = 1;
+			goto out;
+		}
+
+		ret = SSL_CTX_load_verify_locations(ctx, conf->ca_cert_file, NULL);
+		if (ret != 1) {
+			MSG_ERROR(msg_module, "Unable to load CA certificate from %s", conf->ca_cert_file);
 			ERR_print_errors_fp(stderr);
 			retval = 1;
 			goto out;
@@ -824,7 +842,7 @@ int input_init(char *params, void **config)
 
 		/* set peer certificate verification parameters */
 		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE, NULL);
-		
+
 		ssl_list = (SSL **) malloc(sizeof(SSL *) * DEFAULT_SIZE_SSL_LIST);
 		if (ssl_list == NULL) {
 			MSG_ERROR(msg_module, "Memory allocation failed (%s:%d)", __FILE__, __LINE__);
@@ -947,7 +965,7 @@ out:
  *
  * Compares L3 protocol, IP addresses and source port. ODID is not checked.
  *
- * \param[in] input_info structure to compare
+ * \param[in] info_list structure to compare
  * \param[in] address structure to compare
  * \return 0 if input_info matches the address, 1 otherwise
  */
@@ -973,6 +991,68 @@ int compare_input_info(struct input_info_list *info_list, struct sockaddr_in6 *a
 	return 1;
 }
 
+#ifdef TLS_SUPPORT
+/**
+ * \brief Wrapper function for SSL_read() function
+ *
+ * The wrapper function prints error messages and handles operation repeat in suitable situations.
+ * \param[in]  ssl TLS/SSL connection
+ * \param[in]  buf Buffer where to store loaded data
+ * \param[in]  num Number of bytes to read
+ * \param[out] err Error code from SSL_get_error (if NULL, no value is set)
+ * \return Same as SSL_read()
+ */
+int wrapper_SSL_read(SSL *ssl, void *buf, int num, int *err)
+{
+	while (true) {
+		// First, clear all current thread's errors, or SSL_get_error() will not work reliably
+		ERR_clear_error();
+		// Try to read the message
+		const int res = SSL_read(ssl, buf, num);
+		if (res > 0) {
+			// Success
+			if (err != NULL) {
+				*err = SSL_ERROR_NONE;
+			}
+			return res;
+		}
+
+		// Something bad happened
+		int ssl_err = SSL_get_error(ssl, res);
+		int errno_backup = errno; // Preserve errno!
+
+		switch (ssl_err) {
+		case SSL_ERROR_WANT_READ:
+		case SSL_ERROR_WANT_WRITE:
+			MSG_DEBUG(msg_module, "SSL_read() failed: WANT_READ/WANT_WRITE", '\0');
+			continue; // Try again...
+		case SSL_ERROR_ZERO_RETURN:
+			MSG_WARNING(msg_module, "SSL_read() failed: TLS/SSL connection closed!", '\0');
+			break;
+		case SSL_ERROR_SYSCALL:
+			MSG_WARNING(msg_module, "SSL_read() failed: non-recoverable I/O error", '\0');
+			break;
+		case SSL_ERROR_SSL:
+			MSG_WARNING(msg_module, "SSL_read() failed: SSL library failure", '\0');
+			break;
+		default:
+			MSG_WARNING(msg_module, "SSL_read() failed: unexpected return code '%d'", ssl_err);
+			break;
+		}
+
+		// Failed!
+		if (err != NULL) {
+			*err = ssl_err;
+		}
+
+		errno = errno_backup;
+		return res;
+	}
+}
+#endif
+
+
+
 /**
  * \brief Pass input data from the input plugin into the ipfixcol core.
  *
@@ -983,15 +1063,16 @@ int compare_input_info(struct input_info_list *info_list, struct sockaddr_in6 *a
  * \param[out] info   Information structure describing the source of the data.
  * \param[out] packet Flow information data in the form of IPFIX packet.
  * \param[out] source_status Status of source (new, opened, closed)
- * \return the length of packet on success, INPUT_CLOSE when some connection 
+ * \return the length of packet on success, INPUT_CLOSE when some connection
  *  closed, INPUT_ERROR on error or INPUT_SIGINT when interrupted.
  */
 int get_packet(void *config, struct input_info **info, char **packet, int *source_status)
 {
 	/* temporary socket set */
 	fd_set tmp_set;
-	ssize_t len = 0, packet_len;
+	ssize_t len = 0;
 	uint16_t max_msg_len = BUFF_LEN * sizeof(char);
+	uint16_t packet_len;
 	struct timeval tv;
 	char src_addr[INET6_ADDRSTRLEN];
 	struct sockaddr_in6 *address;
@@ -1024,9 +1105,10 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 		*packet = malloc(max_msg_len);
 		if (*packet == NULL) {
 			MSG_ERROR(msg_module, "Cannot allocate memory for the packet, malloc failed: %s", strerror(errno));
+			return INPUT_ERROR;
 		}
 	}
-   
+
 	/* wait until some socket is ready */
 	while (retval <= 0) {
 		/* copy all sockets from master to tmp_set */
@@ -1071,10 +1153,11 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 			}
 		}
 
-		len = SSL_read(ssl, *packet, IPFIX_HEADER_LENGTH);
-		if (len < 0) {
+		int ssl_err;
+		len = wrapper_SSL_read(ssl, *packet, IPFIX_HEADER_LENGTH, &ssl_err);
+		if (len <= 0) {
 			/* read operation was not successful */
-			if (SSL_get_error(ssl, len) == SSL_ERROR_SYSCALL) {
+			if (ssl_err == SSL_ERROR_SYSCALL) {
 				if (errno == EINTR) {
 					return INPUT_INTR;
 				}
@@ -1082,6 +1165,9 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 				MSG_ERROR(msg_module, "Failed to receive IPFIX packet header: %s", strerror(errno));
 				return INPUT_ERROR;
 			}
+
+			// This will close the connection
+			len = 0;
 		}
 	} else {
 #endif
@@ -1098,12 +1184,16 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 #ifdef TLS_SUPPORT
 	}
 #endif
-	
-	if (len >= IPFIX_HEADER_LENGTH) { /* header received */
-		/* get packet total length */
-		packet_len = ntohs(((struct ipfix_header *) *packet)->length);
 
-		/* check whether buffer is big enough */
+	if (len >= IPFIX_HEADER_LENGTH) { /* header received */
+		if (ntohs(((struct ipfix_header *) *packet)->version) != IPFIX_VERSION) {
+			// Unexpected version
+			MSG_WARNING(msg_module, "Received invalid message: IPFIX version doesn't match.", '\0');
+			return INPUT_ERROR;
+		}
+
+		/* get packet total length and check whether buffer is big enough */
+		packet_len = ntohs(((struct ipfix_header *) *packet)->length);
 		if (packet_len > BUFF_LEN) {
 			*packet = realloc(*packet, packet_len);
 			if (*packet == NULL) {
@@ -1112,33 +1202,37 @@ int get_packet(void *config, struct input_info **info, char **packet, int *sourc
 			}
 		}
 
-		/* receive the rest of the ipfix packet */
-		if (ntohs(((struct ipfix_header *) *packet)->version) == IPFIX_VERSION) {
-			len = recv(sock, (*packet) + IPFIX_HEADER_LENGTH, packet_len - IPFIX_HEADER_LENGTH, MSG_WAITALL);
-		} else {
-			len = recv(sock, (*packet) + IPFIX_HEADER_LENGTH, BUFF_LEN - IPFIX_HEADER_LENGTH, 0);
-		}
-
-		if (len == -1) {
-			if (errno == EINTR) {
-				return INPUT_INTR;
+		char *body_ptr = (*packet) + IPFIX_HEADER_LENGTH;
+		int body_size = packet_len - IPFIX_HEADER_LENGTH;
+#ifdef TLS_SUPPORT
+		if (conf->tls) {
+			int ssl_err;
+			len = wrapper_SSL_read(ssl, body_ptr, body_size, &ssl_err);
+			if (len <= 0) {
+				if (ssl_err == SSL_ERROR_SYSCALL && errno == EINTR) {
+					return INPUT_INTR;
+				}
+				return INPUT_ERROR;
 			}
-			MSG_WARNING(msg_module, "Failed to receive IPFIX packet: %s", strerror(errno));
-			return INPUT_ERROR;
-
-		} else if (len < packet_len - IPFIX_HEADER_LENGTH) {
+		} else {
+#endif
+			len = recv(sock, (*packet) + IPFIX_HEADER_LENGTH, packet_len - IPFIX_HEADER_LENGTH,
+				MSG_WAITALL);
+			if (len == -1) {
+				if (errno == EINTR) {
+					return INPUT_INTR;
+				}
+				MSG_WARNING(msg_module, "Failed to receive IPFIX packet: %s", strerror(errno));
+				return INPUT_ERROR;
+			}
+#ifdef TLS_SUPPORT
+		}
+#endif
+		if (len < body_size) {
 			MSG_WARNING(msg_module, "Read IPFIX data is too short (%i): %s", len, strerror(errno));
 		}
 
 		len += IPFIX_HEADER_LENGTH;
-
-		/* Convert packet from Netflow v5/v9/sflow to IPFIX format */
-		if (htons(((struct ipfix_header *) (*packet))->version) != IPFIX_VERSION) {
-			if (convert_packet(packet, &len, max_msg_len, NULL) != 0) {
-				MSG_WARNING(msg_module, "Message conversion error; skipping message...");
-				return INPUT_INTR;
-			}
-		}
 
 		/* Check if lengths are the same */
 		if (len < htons(((struct ipfix_header *) *packet)->length)) {
@@ -1295,12 +1389,12 @@ int input_close(void **config)
 
 			SSL_free(conf->ssl_list[sock]);
 		}
-	
+
 		/* we are done here */
 		SSL_CTX_free(conf->ctx);
 	}
 #endif
-	
+
 	/* close listening socket */
 	if ((ret = close(conf->socket)) == -1) {
 		error++;

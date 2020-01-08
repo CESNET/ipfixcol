@@ -242,10 +242,10 @@ void fill_basic_data(struct ipfix_data_set *data_set, struct record_header_s *re
 	data_set->records[data_set->header.length+1] = record->tcp_flags;
 	data_set->header.length += 2;
 	// protocolIdentifier
-	data_set->records[data_set->header.length] =record->prot;
+	data_set->records[data_set->header.length] = record->prot;
 	data_set->header.length += 1;
 	// ipClassOfService
-	data_set->records[data_set->header.length] =record->tos;
+	data_set->records[data_set->header.length] = record->tos;
 	data_set->header.length += 1;
 	// sourceTransportPort
 	*((uint16_t *) &(data_set->records[data_set->header.length])) = htons(record->srcport);
