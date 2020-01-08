@@ -1,5 +1,14 @@
 # <a name="top"></a>IPFIXcol framework
 
+> **:warning: [IPFIXcol2](https://github.com/CESNET/ipfixcol2) has been released!**
+> 
+> The next generation of the collector is more stable, up to 2x faster, and adds support 
+> for new features (e.g. biflow, structured data types, etc.). The code 
+> was completely rewritten and some plugins might not be available. 
+> 
+> Since the release of the new collector, this old framework is **not** supported anymore!
+> Please, consider upgrading to the [new release](https://github.com/CESNET/ipfixcol2). 
+
 <!--
 [![Build Status](https://travis-ci.org/CESNET/ipfixcol.svg?branch=coverity_scan)](https://travis-ci.org/CESNET/ipfixcol)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/5119/badge.svg)](https://scan.coverity.com/projects/cesnet-ipfixcol)
