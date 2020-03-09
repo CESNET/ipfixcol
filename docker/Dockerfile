@@ -1,4 +1,4 @@
-FROM debian:latest
+FROM ubuntu:18.04
 
 MAINTAINER Petr Velan <petr.velan@cesnet.cz>
 
